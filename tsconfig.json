@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "skipLibCheck": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@merrymen/core": ["packages/core/src/index.ts"]
+    }
+  },
+  "include": ["worker/src", "packages/core/src"]
+}
