@@ -1,5 +1,4 @@
 import { sizeOf, type LiveAgent, type Thesis } from "./live";
-import { SAMPLE_CHG } from "./sample";
 import { strategyForSlug, type StrategyId } from "./strategy";
 import { takeFor } from "./why";
 
@@ -16,7 +15,6 @@ export interface Part {
   actor: Actor;
   at: number;
   sizeUsd: number | null;
-  weight: number | null;
   reason: string;
 }
 
@@ -26,10 +24,6 @@ interface Core {
   action: Action;
   symbol: string;
   sizeUsd: number | null;
-  /** Share of the actor's book this name carries. A dollar figure alone says nothing. */
-  weight: number | null;
-  /** Agents holding this name right now, the actor included. */
-  crowd: Actor[];
 }
 
 /**
@@ -42,8 +36,7 @@ export type Beat =
 
 /** What the rail draws, top to bottom. Presentation, not domain. */
 export type Lane =
-  | { kind: "span"; id: string; label: string; trades: number; agents: number; movedUsd: number }
-  | { kind: "beat"; id: string; beat: Beat; big: number | null }
+  | { kind: "beat"; id: string; beat: Beat }
   | { kind: "lull"; id: string; ms: number };
 
 export function castOf(b: Beat): Actor[] {
@@ -77,15 +70,6 @@ export function spellCast(names: string[]): string {
   return names.length > 3 ? `${shown} +${names.length - 3}` : shown;
 }
 
-/** A sell only stings if the name kept going. Real 24h change, sells only. */
-export function regretOf(b: Beat): number | null {
-  if (b.action !== "sell") return null;
-  const chg = SAMPLE_CHG[b.symbol];
-  return chg != null && chg > 0 ? chg : null;
-}
-
-const CHORUS_WINDOW_MS = 2 * 3_600_000;
-
 function actorOf(t: Thesis, agents: Map<string, LiveAgent>): Actor | null {
   const slug = t.slug;
   if (!slug) return null;
@@ -97,43 +81,13 @@ function actorOf(t: Thesis, agents: Map<string, LiveAgent>): Actor | null {
   };
 }
 
-function weightOf(agent: LiveAgent | undefined, symbol: string): number | null {
-  const legs = agent?.glance.legs;
-  if (!legs?.length) return null;
-  const total = legs.reduce((n, l) => n + (l.weight || 1), 0) || 1;
-  const leg = legs.find((l) => l.symbol.toUpperCase() === symbol);
-  return leg ? Math.round(((leg.weight || 1) / total) * 100) : null;
-}
-
-/** An agent is in a name until it sells: the newest action per agent per symbol decides. */
-function crowdsOf(theses: Thesis[], agents: Map<string, LiveAgent>): Map<string, Actor[]> {
-  const last = new Map<string, { state: "in" | "out"; actor: Actor }>();
-  for (const t of [...theses].sort((a, b) => (a.at ?? 0) - (b.at ?? 0))) {
-    if (!t.symbol || !t.slug) continue;
-    if (t.action !== "buy" && t.action !== "sell" && t.action !== "hold") continue;
-    const actor = actorOf(t, agents);
-    if (!actor) continue;
-    last.set(`${t.slug}|${t.symbol.toUpperCase()}`, { state: t.action === "sell" ? "out" : "in", actor });
-  }
-  const crowds = new Map<string, Actor[]>();
-  for (const [key, held] of last) {
-    if (held.state === "out") continue;
-    const symbol = key.split("|")[1]!;
-    const list = crowds.get(symbol) ?? [];
-    list.push(held.actor);
-    crowds.set(symbol, list);
-  }
-  return crowds;
-}
-
 export function beatsOf(theses: Thesis[], agents: LiveAgent[]): Beat[] {
   const bySlug = new Map(agents.map((a) => [a.slug, a]));
-  const crowds = crowdsOf(theses, bySlug);
   const parts: (Part & { action: Action; symbol: string })[] = [];
 
   for (const t of theses) {
     const action = t.action;
-    if (action !== "buy" && action !== "sell" && action !== "hold") continue;
+    if (action !== "buy" && action !== "sell") continue;
     if (!t.symbol || t.at == null) continue;
     const actor = actorOf(t, bySlug);
     if (!actor) continue;
@@ -142,7 +96,6 @@ export function beatsOf(theses: Thesis[], agents: LiveAgent[]): Beat[] {
       actor,
       at: t.at,
       sizeUsd: sizeOf(t),
-      weight: weightOf(bySlug.get(actor.slug), symbol),
       reason: takeFor(actor.slug, t.symbol, t.reason, bySlug.get(actor.slug)?.thesis, actor.strategy),
       action,
       symbol,
@@ -151,103 +104,28 @@ export function beatsOf(theses: Thesis[], agents: LiveAgent[]): Beat[] {
 
   parts.sort((a, b) => b.at - a.at);
 
-  const groups: (typeof parts)[] = [];
-  const openBy = new Map<string, (typeof parts)[number][]>();
-  for (const p of parts) {
-    const key = `${p.symbol}|${p.action}`;
-    const open = openBy.get(key);
-    if (open && open[0]!.at - p.at <= CHORUS_WINDOW_MS && !open.some((q) => q.actor.slug === p.actor.slug)) {
-      open.push(p);
-      continue;
-    }
-    const fresh = [p];
-    openBy.set(key, fresh);
-    groups.push(fresh);
-  }
-
-  return groups.map((g) => {
-    const head = g[0]!;
-    const sized = g.filter((p) => p.sizeUsd != null);
-    const sizeUsd = sized.length > 0 ? sized.reduce((n, p) => n + (p.sizeUsd ?? 0), 0) : null;
-    const core: Core = {
-      id: `${head.symbol}-${head.action}-${head.at}`,
-      at: head.at,
-      action: head.action,
-      symbol: head.symbol,
-      sizeUsd,
-      weight: head.weight,
-      crowd: crowds.get(head.symbol) ?? [],
-    };
-    if (g.length === 1) {
-      return { ...core, kind: "trade", actor: head.actor, reason: head.reason };
-    }
-    return {
-      ...core,
-      kind: "chorus",
-      weight: null,
-      actors: g.map((p) => p.actor),
-      parts: g.map(({ actor, at, sizeUsd: s, weight, reason }) => ({ actor, at, sizeUsd: s, weight, reason })),
-    };
-  });
+  return parts.map((p) => ({
+    id: `${p.symbol}-${p.action}-${p.actor.slug}-${p.at}`,
+    at: p.at,
+    action: p.action,
+    symbol: p.symbol,
+    sizeUsd: p.sizeUsd,
+    kind: "trade" as const,
+    actor: p.actor,
+    reason: p.reason,
+  }));
 }
-
-const SPANS: { label: string; withinMs: number }[] = [
-  { label: "in the last five minutes", withinMs: 5 * 60_000 },
-  { label: "five to fifteen minutes ago", withinMs: 15 * 60_000 },
-  { label: "fifteen to thirty minutes ago", withinMs: 30 * 60_000 },
-  { label: "thirty to sixty minutes ago", withinMs: 3_600_000 },
-  { label: "earlier today", withinMs: 24 * 3_600_000 },
-  { label: "earlier this week", withinMs: 7 * 24 * 3_600_000 },
-  { label: "more than a week ago", withinMs: Number.POSITIVE_INFINITY },
-];
 
 const LULL_MS = 3 * 3_600_000;
-const BIG_MULTIPLE = 3;
 
-/** A trade only counts as outsized against what a normal one looks like here. */
-function typicalSize(beats: Beat[]): number {
-  const sizes = beats
-    .filter((b) => b.kind === "trade" && b.sizeUsd != null)
-    .map((b) => b.sizeUsd!)
-    .sort((a, b) => a - b);
-  if (sizes.length === 0) return Number.POSITIVE_INFINITY;
-  return sizes[Math.floor(sizes.length / 2)]!;
-}
-
-export function lanesOf(beats: Beat[], now: number): Lane[] {
+export function lanesOf(beats: Beat[]): Lane[] {
   const out: Lane[] = [];
-  const typical = typicalSize(beats);
-  let spanAt = -1;
 
   beats.forEach((beat, i) => {
-    const age = now - beat.at;
-    const next = SPANS.findIndex((s) => age < s.withinMs);
-    const idx = next === -1 ? SPANS.length - 1 : next;
-    if (idx !== spanAt) {
-      spanAt = idx;
-      const within = beats.filter((b) => {
-        const a = now - b.at;
-        const lower = idx === 0 ? 0 : SPANS[idx - 1]!.withinMs;
-        return a >= lower && a < SPANS[idx]!.withinMs;
-      });
-      out.push({
-        kind: "span",
-        id: `span-${idx}`,
-        label: SPANS[idx]!.label,
-        trades: within.reduce((n, b) => n + (b.kind === "chorus" ? b.parts.length : 1), 0),
-        agents: new Set(within.flatMap((b) => castOf(b).map((a) => a.slug))).size,
-        movedUsd: within.reduce((n, b) => n + (b.sizeUsd ?? 0), 0),
-      });
-    } else {
-      const prev = beats[i - 1];
-      const gap = prev ? prev.at - beat.at : 0;
-      if (gap >= LULL_MS && idx <= 4) out.push({ kind: "lull", id: `lull-${beat.id}`, ms: gap });
-    }
-    const big =
-      beat.kind === "trade" && beat.sizeUsd != null && beat.sizeUsd >= typical * BIG_MULTIPLE
-        ? Math.round(beat.sizeUsd / typical)
-        : null;
-    out.push({ kind: "beat", id: beat.id, beat, big });
+    const prev = beats[i - 1];
+    const gap = prev ? prev.at - beat.at : 0;
+    if (gap >= LULL_MS) out.push({ kind: "lull", id: `lull-${beat.id}`, ms: gap });
+    out.push({ kind: "beat", id: beat.id, beat });
   });
 
   return out;

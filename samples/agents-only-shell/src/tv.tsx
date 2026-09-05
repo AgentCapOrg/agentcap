@@ -27,10 +27,16 @@ export function TvChart({
 }) {
   const box = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
-  const seriesRef = useRef<ISeriesApi<"Candlestick"> | ISeriesApi<"Line"> | null>(null);
-  const [pins, setPins] = useState<{ seat: Seat; x: number; y: number; z: number }[]>([]);
+  const seriesRef = useRef<
+    ISeriesApi<"Candlestick"> | ISeriesApi<"Line"> | null
+  >(null);
+  const [pins, setPins] = useState<
+    { seat: Seat; x: number; y: number; z: number }[]
+  >([]);
   const [ohlc, setOhlc] = useState<Bar | null>(null);
-  const [tip, setTip] = useState<{ x: number; y: number; px: number } | null>(null);
+  const [tip, setTip] = useState<{ x: number; y: number; px: number } | null>(
+    null,
+  );
 
   useEffect(() => {
     const el = box.current;
@@ -82,7 +88,9 @@ export function TvChart({
             priceLineVisible: false,
           });
     if (kind === "line") {
-      series.setData(bars.map((b) => ({ time: b.time as UTCTimestamp, value: b.close })));
+      series.setData(
+        bars.map((b) => ({ time: b.time as UTCTimestamp, value: b.close })),
+      );
     } else {
       series.setData(
         bars.map((b) => ({
@@ -117,11 +125,28 @@ export function TvChart({
       }
       const tx = chart.timeScale().timeToCoordinate(last.time as UTCTimestamp);
       const ty = series.priceToCoordinate(last.close);
-      setTip(tx == null || ty == null ? null : { x: tx, y: ty, px: last.close });
+      setTip(
+        tx == null || ty == null ? null : { x: tx, y: ty, px: last.close },
+      );
     };
 
     const fit = () => {
-      chart.applyOptions({ width: el.clientWidth });
+      const desktop = window.matchMedia("(min-width: 1100px)").matches;
+      chart.applyOptions({
+        width: el.clientWidth,
+        layout: { fontSize: desktop ? 13 : 11 },
+        height: el.clientHeight || 220,
+        rightPriceScale: { visible: desktop },
+        timeScale: {
+          visible: desktop,
+          timeVisible: true,
+          secondsVisible: false,
+        },
+        grid: {
+          vertLines: { visible: desktop, color: "#24261e66" },
+          horzLines: { visible: desktop, color: "#24261e66" },
+        },
+      });
       chart.timeScale().fitContent();
       place();
     };
@@ -132,19 +157,44 @@ export function TvChart({
     chart.timeScale().subscribeVisibleLogicalRangeChange(place);
     chart.subscribeCrosshairMove((param) => {
       if (kind === "line") {
-        const d = param.seriesData.get(series) as { value?: number; time?: number } | undefined;
+        const d = param.seriesData.get(series) as
+          { value?: number; time?: number } | undefined;
         if (d?.value != null && d.time != null) {
-          setOhlc({ time: Number(d.time), open: d.value, high: d.value, low: d.value, close: d.value });
+          setOhlc({
+            time: Number(d.time),
+            open: d.value,
+            high: d.value,
+            low: d.value,
+            close: d.value,
+          });
           return;
         }
         setOhlc(null);
         return;
       }
       const d = param.seriesData.get(series) as
-        | { open?: number; high?: number; low?: number; close?: number; time?: number }
+        | {
+            open?: number;
+            high?: number;
+            low?: number;
+            close?: number;
+            time?: number;
+          }
         | undefined;
-      if (d?.open != null && d.high != null && d.low != null && d.close != null && d.time != null) {
-        setOhlc({ time: Number(d.time), open: d.open, high: d.high, low: d.low, close: d.close });
+      if (
+        d?.open != null &&
+        d.high != null &&
+        d.low != null &&
+        d.close != null &&
+        d.time != null
+      ) {
+        setOhlc({
+          time: Number(d.time),
+          open: d.open,
+          high: d.high,
+          low: d.low,
+          close: d.close,
+        });
         return;
       }
       setOhlc(null);
@@ -158,20 +208,24 @@ export function TvChart({
     };
   }, [bars, seats, kind, down]);
 
+  const readout = ohlc ?? bars.at(-1);
   return (
     <div className="tv">
-      {ohlc && kind === "candle" && (
-        <p className="tv-ohlc">
-          <span>O {coinPrice(ohlc.open)}</span>
-          <span>H {coinPrice(ohlc.high)}</span>
-          <span>L {coinPrice(ohlc.low)}</span>
-          <span>C {coinPrice(ohlc.close)}</span>
+      {readout && kind === "candle" && (
+        <p className={`tv-ohlc ${ohlc ? "is-hovered" : ""}`}>
+          <span>O {coinPrice(readout.open)}</span>
+          <span>H {coinPrice(readout.high)}</span>
+          <span>L {coinPrice(readout.low)}</span>
+          <span>C {coinPrice(readout.close)}</span>
         </p>
       )}
       <div className="tv-box">
         <div ref={box} className="tv-canvas" />
         {tip && (
-          <em className={down ? "tv-last down" : "tv-last up"} style={{ left: tip.x, top: tip.y }}>
+          <em
+            className={down ? "tv-last down" : "tv-last up"}
+            style={{ left: tip.x, top: tip.y }}
+          >
             {coinPrice(tip.px)}
           </em>
         )}
@@ -208,15 +262,19 @@ function barAt(bars: Bar[], time: number): Bar | undefined {
   return best;
 }
 
-function layerPins(raw: { seat: Seat; x: number; y: number }[]): { seat: Seat; x: number; y: number; z: number }[] {
+function layerPins(
+  raw: { seat: Seat; x: number; y: number }[],
+): { seat: Seat; x: number; y: number; z: number }[] {
   const ordered = [...raw].sort((a, b) => a.x - b.x || a.y - b.y);
   const out: { seat: Seat; x: number; y: number; z: number }[] = [];
   for (const p of ordered) {
-    const stack = out.filter((q) => Math.hypot(q.x - p.x, q.y - p.y) < 12).length;
+    const stack = ordered
+      .slice(0, out.length)
+      .filter((q) => Math.hypot(q.x - p.x, q.y - p.y) < 24).length;
     out.push({
       seat: p.seat,
-      x: p.x + stack * 5,
-      y: p.y,
+      x: Math.max(12, p.x - stack * 18),
+      y: Math.max(12, p.y - stack * 9),
       z: stack + 1,
     });
   }
