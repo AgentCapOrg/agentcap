@@ -285,10 +285,10 @@ test("a late old completion cannot cancel a newer animation", async () => {
   assert.equal(controller.transition, current); assert.ok(current.scene!.element.childElementCount > 0);
 });
 
-test("App places the offered switch in the desktop search row and visible mobile header, outside Solana", () => {
+test("App places the offered switch in the desktop search row and visible mobile header", () => {
   const app = readFileSync(new URL("./App.tsx", import.meta.url), "utf8");
   const header = readFileSync(new URL("./Desktop.tsx", import.meta.url), "utf8");
-  assert.match(app, /modeOffered = perps && screen\.kind !== "solana" && selectedWallet !== "invalid"/);
+  assert.match(app, /modeOffered = perps && selectedWallet !== "invalid"/);
   assert.match(app, /DesktopHeader tradingMode=\{tradingMode\}/);
   assert.match(app, /!desktop && tradingMode && <div className="mobile-mode-bar"/);
   assert.match(header, /className="desktop-mode-controls">\{searchButton\}\{tradingMode\}/);

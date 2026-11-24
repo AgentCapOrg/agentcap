@@ -252,7 +252,7 @@ function board(window: string, ids: readonly string[], trades = 120): Record<str
       trades,
       followers: 1,
       holdings: 1,
-      wallets: { solana: null, evm: null },
+      wallets: { evm: null },
       topTokens: [],
       verified: false,
     })),
@@ -1059,7 +1059,7 @@ describe("tails", () => {
     const db = await freshDb();
     const Z1 = rh("77"); // STAR's coin: nobody holds, watches or follows it in the cohort
     const Z2 = rh("88"); // FRANK's coin
-    const SOLC = "solana:1399811149:So11111111111111111111111111111111111111112"; // a thesis off Robinhood Chain: not public discovery
+    const SOLC = "eip155:56:0x00000000000000000000000000000000000b5c01"; // a thesis off Robinhood Chain: not public discovery
     await seedCohort(db, [member(KALEO, "CryptoKaleo")]);
     await tail(db, T1, STAR, { consider: true, handle: "starboy" });
     await tail(db, T1, FRANK, { consider: false });
@@ -2205,7 +2205,7 @@ describe("the orchestrator's wiring", () => {
     assert.equal(fomoFailureText(`connect failed for ${STREAM_URL} (owner ${T1})`), "connect failed for wss://stream.test/[redacted] (owner 0x…)");
     // A key in the URL's path, which no ?key= scrub reaches: Alchemy's /v2/<key>, Triton's and Syndica's.
     for (const url of ["https://eth-mainnet.g.alchemy.com/v2/AbCdEf0123456789GhIjKlMn", "https://agentcap.mainnet.rpcpool.com/0b7c4a1e-2f3d-4c5b-9a8e-1d2c3b4a5f6e",
-      "https://solana-mainnet.api.syndica.io/api-key/2xYzAbCdEf0123456789"]) {
+      "https://bsc-mainnet.api.syndica.io/api-key/2xYzAbCdEf0123456789"]) {
       const line = fomoFailureText(`pass failed — fetch ${url} timed out`);
       assert.equal(line, `pass failed — fetch ${url.slice(0, url.indexOf("/", 8))}/[redacted] timed out`, url);
     }

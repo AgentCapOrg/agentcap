@@ -2,19 +2,16 @@
  * A DECISION THAT CARRIES AN ADDRESS IS REFUSED WHOLE, AT THE CLIENT.
  *
  * Against a real local HTTP server standing in for Brain: the thesis, an
- * evidence ref or a risk line holding a 0x address, or a Solana key or
- * signature (Solana P0), is "malformed", and the same decision without one is
+ * evidence ref or a risk line holding a 0x address, is "malformed", and the same decision without one is
  * accepted.
  */
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { after, before, describe, it } from "node:test";
-import { base58Encode, SOLANA_USDG_MINT } from "../../packages/core/src/ids";
 import { decide, type BrainDecision } from "./brain-client";
 import { buildShadowSnapshot, type ShadowInputs } from "./brain-shadow";
 
 const now = Math.floor(Date.now() / 1000);
-const SIG = base58Encode(Uint8Array.from({ length: 64 }, (_, i) => (i * 37 + 11) & 0xff));
 
 let over: Partial<BrainDecision> = {};
 const server = createServer(async (req, res) => {
@@ -61,7 +58,7 @@ describe("a Brain decision carrying an address", () => {
     assert.equal((await ask()).ok, true);
   });
 
-  for (const [label, id] of [["a 0x address", `0x${"ab".repeat(20)}`], ["a Solana mint", SOLANA_USDG_MINT], ["a Solana signature", SIG]] as const) {
+  for (const [label, id] of [["a 0x address", `0x${"ab".repeat(20)}`]] as const) {
     it(`is refused whole when a field holds ${label}`, async () => {
       for (const fields of [
         { thesis: `Rotating into ${id} while depth holds.` },
@@ -73,8 +70,7 @@ describe("a Brain decision carrying an address", () => {
         assert.equal(result.ok, false, JSON.stringify(fields));
         if (!result.ok) {
           assert.equal(result.kind, "malformed");
-          // A 0x address in its old words; a Solana id named for what it is (the Solana pass after them).
-          assert.match(result.detail, /carries (?:an address|a Solana (?:address|signature or secret key))/);
+          assert.match(result.detail, /carries an address/);
         }
       }
     });

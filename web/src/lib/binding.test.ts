@@ -246,7 +246,7 @@ test("a claim that names no wallet the deployment knows is refused, never read a
   const { wallet, owner } = actors();
   const nonce = issueChallengeNonce(ORIGIN);
   const message = bindingMessage({ origin: ORIGIN, nonce, owner: owner.address, smartAccount: SMART, chainId: CHAIN });
-  for (const purpose of [undefined, "Spot", "solana", ""]) {
+  for (const purpose of [undefined, "Spot", "other", ""]) {
     const r = await verifyGrantBinding({
       origin: ORIGIN,
       tenant: wallet.address.toLowerCase() as `0x${string}`,

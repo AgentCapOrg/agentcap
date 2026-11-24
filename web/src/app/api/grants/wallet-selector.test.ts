@@ -93,7 +93,7 @@ describe("self-hosted: no Perps wallet is made while perps is off, and the kill 
     ["?wallet=perps with a Perps grant, perps off", "?wallet=perps", { ...spotGrant, purpose: "perps" }, 403, "perps-wallet-not-offered"],
     ["a Perps grant with no selector", "", { ...spotGrant, purpose: "perps" }, 400, "wallet-mismatch"],
     // The code every wallet-aware route answers a wallet it cannot read with (route-guard.ts walletUnknown).
-    ["a wallet nobody knows", "?wallet=solana", spotGrant, 400, "wallet-unknown"],
+    ["a wallet nobody knows", "?wallet=other", spotGrant, 400, "wallet-unknown"],
     ["two wallets at once", "?wallet=spot&wallet=perps", spotGrant, 400, "wallet-unknown"],
     ["a grant naming a wallet nobody knows", "", { ...spotGrant, purpose: "other" }, 400, undefined],
   ] as const) {
@@ -210,7 +210,7 @@ describe("hosted: a permission replacement stops the wallet it names, and only t
   });
 
   it("an unknown wallet is refused before the body is read", async () => {
-    const res = await json(await del("?wallet=solana", { purpose: "delete-agent", expectedTenant: T }));
+    const res = await json(await del("?wallet=other", { purpose: "delete-agent", expectedTenant: T }));
     assert.equal(res.status, 400);
     assert.ok(await stores.getGrantStore("spot").get(T));
     assert.ok(existsSync(path.join(home, "tenants-perps", `${T}.json`)));

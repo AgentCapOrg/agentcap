@@ -91,7 +91,7 @@ describe("two wallets (perps slice 5b)", () => {
       // Relabelling a signed grant moves it to neither wallet.
       const spot = await signedGrant(privy);
       assert.equal(await trustedSavedGrant({ ...spot, purpose: "perps" }, session, ORIGIN), false);
-      assert.equal(await trustedSavedGrant({ ...spot, purpose: "solana" } as unknown as Grant, session, ORIGIN), false);
+      assert.equal(await trustedSavedGrant({ ...spot, purpose: "other" } as unknown as Grant, session, ORIGIN), false);
     }
   });
 
@@ -114,9 +114,9 @@ describe("two wallets (perps slice 5b)", () => {
   });
 
   it("a saved record naming a wallet this build does not know blocks a fresh mint in either wallet", () => {
-    localStorage.setItem("agentcap.permission-recovery.v1.4663.0xbad", JSON.stringify({ purpose: "solana", smartAccount: "0x1", owner: "0x2", caps: {} }));
+    localStorage.setItem("agentcap.permission-recovery.v1.4663.0xbad", JSON.stringify({ purpose: "other", smartAccount: "0x1", owner: "0x2", caps: {} }));
     assert.throws(() => loadRecoveryGrants("spot"), /could not be read/);
     assert.throws(() => loadRecoveryGrants("perps"), /could not be read/);
-    assert.throws(() => loadRecoveryGrants("solana" as never), /Unrecognised wallet/);
+    assert.throws(() => loadRecoveryGrants("other" as never), /Unrecognised wallet/);
   });
 });

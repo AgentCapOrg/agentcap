@@ -67,7 +67,7 @@ const grant = (tenant: `0x${string}`, account: `0x${string}`, sessionKey: `0x${s
   caps: { perTradeUsdg: 25, dailyUsdg: 100, expiryDays: 14, maxDrawdownPct: 5, maxOpsPerDay: 4 },
   ...extra,
 });
-const NOT_A_WALLET = ["Perps", "", "solana", undefined] as const;
+const NOT_A_WALLET = ["Perps", "", "other", undefined] as const;
 const perpsHome = () => path.join(home, "accounts", "perps");
 const T = addr(0x11), SPOT = addr(0x22), PERPS = addr(0x33);
 

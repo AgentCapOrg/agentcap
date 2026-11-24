@@ -1187,13 +1187,13 @@ function majorsFake(o: { markets?: Record<string, CoinMarket | null>; searchFail
 describe("majors: a coin by name or ticker, read on coingecko's list (2026-10-12)", () => {
   it("only the allowlist's plain shapes ask about a coin by name or ticker", () => {
     const yes: [string, string][] = [
-      ["how's eth doing?", "eth"], ["thoughts on doge?", "doge"], ["$SOL today?", "sol"], ["how's bitcoin doing today?", "bitcoin"],
-      ["what do you think about solana?", "solana"], ["is btc up today?", "btc"], ["btc price?", "btc"], ["what's up with eth?", "eth"],
-      ["how's shiba inu doing?", "shiba inu"], ["gm, how's eth looking?", "eth"], ["thoughts on $BTC2?", "btc2"], ["yo alan, where's sol at?", "sol"],
+      ["how's eth doing?", "eth"], ["thoughts on doge?", "doge"], ["$BNB today?", "bnb"], ["how's bitcoin doing today?", "bitcoin"],
+      ["what do you think about bnb?", "bnb"], ["is btc up today?", "btc"], ["btc price?", "btc"], ["what's up with eth?", "eth"],
+      ["how's shiba inu doing?", "shiba inu"], ["gm, how's eth looking?", "eth"], ["thoughts on $BTC2?", "btc2"], ["yo alan, where's bnb at?", "bnb"],
     ];
     for (const [text, query] of yes) assert.equal(majorAsk(text), query, text);
     for (const text of ["how's the market doing?", "thoughts on your trades?", "tell me about yourself", "cool pfp?", "thoughts on crypto?",
-      "how's sherwood doing?", "how's sherw00d doing?", "thoughts on claude?", "did you buy eth?", "what's hot?", "eth vs sol?", "thoughts on eth and sol?",
+      "how's sherwood doing?", "how's sherw00d doing?", "thoughts on claude?", "did you buy eth?", "what's hot?", "eth vs bnb?", "thoughts on eth and bnb?",
       "how's your wallet doing?", "what about tomorrow?", "how's it going?", "how's life?", "thoughts on eth? 🚀", "how's eth doing? should i buy",
       "thoughts on $ eth?", "how's еth doing?", "is eth going to pump?", "how's agentcap doing?", "thoughts on robinhood chain?"]) {
       assert.equal(majorAsk(text), null, text);
@@ -1303,17 +1303,17 @@ describe("majors: a coin by name or ticker, read on coingecko's list (2026-10-12
     const resolved: string[] = [];
     const down = majorsFake({ searchFails: "http-429" });
     const r = await createXResearch({ majors: down.reader, resolveTicker: async (t) => { resolved.push(t); return CA; }, now: () => Date.now() })
-      .gather(input({ kind: "major", query: "sol", fallback: { kind: "coin", ticker: "SOL", address: null } }));
+      .gather(input({ kind: "major", query: "bnb", fallback: { kind: "coin", ticker: "BNB", address: null } }));
     assert.deepEqual(r.facts, []);
-    assert.deepEqual(resolved, [], "a $SOL on the chain is not the solana asked about");
+    assert.deepEqual(resolved, [], "a $BNB on the chain is not the bnb asked about");
     assert.ok(r.notes.includes("coins-http-429"));
     assert.equal(r.intent, undefined, "told it couldn't look it up");
     const off = majorsFake({ off: true });
     const asIfBefore: string[] = [];
     const before = await createXResearch({ majors: off.reader, resolveTicker: async (t) => { asIfBefore.push(t); return null; }, now: () => Date.now() })
-      .gather(input({ kind: "major", query: "sol", fallback: { kind: "coin", ticker: "SOL", address: null } }));
+      .gather(input({ kind: "major", query: "bnb", fallback: { kind: "coin", ticker: "BNB", address: null } }));
     assert.deepEqual(off.asked, [], "nothing asked, nothing spent");
-    assert.deepEqual(asIfBefore, ["SOL"]);
+    assert.deepEqual(asIfBefore, ["BNB"]);
     assert.equal(before.intent, "coin");
   });
 
@@ -1370,7 +1370,7 @@ function pool(n: number, over: Partial<GeckoPool> = {}): GeckoPool {
 /** A pool's own symbol, as its name shows it. */
 const poolSymbol = (p: GeckoPool): string => p.name.split(" / ")[0]!;
 /** A slice of CoinGecko's biggest coins, as /coins/markets lists them: the names no chain coin in what's hot may go by. */
-const TOP: CoinHit[] = ([["BTC", "Bitcoin"], ["ETH", "Ethereum"], ["SOL", "Solana"], ["XRP", "XRP"], ["DOGE", "Dogecoin"], ["HYPE", "Hyperliquid"], ["WIF", "dogwifhat"],
+const TOP: CoinHit[] = ([["BTC", "Bitcoin"], ["ETH", "Ethereum"], ["BNB", "BNB"], ["SOL", "Solana"], ["XRP", "XRP"], ["DOGE", "Dogecoin"], ["HYPE", "Hyperliquid"], ["WIF", "dogwifhat"],
   ["WLFI", "World Liberty Financial"], ["MNT", "Mantle"], ["S", "Sonic"], ["LDO", "Lido DAO"], ["ASTER", "Aster"], ["CRV", "Curve DAO Token"], ["PEPE", "Pepe"],
   ["TAO", "Bittensor"], ["LINEA", "Linea"]] as const).map(([symbol, name], i) => ({ id: name.toLowerCase().replace(/\s+/g, "-"), symbol: symbol.toLowerCase(), name, rank: i + 1 }));
 
@@ -1422,7 +1422,7 @@ describe("what's hot: the chain's trending coins past the fleet's floors, fomo's
       assert.equal(hotAsk(text), true, text);
       assert.equal(classifyTag(text).kind, "hot", text);
     }
-    for (const text of ["what's hot to buy?", "what's pumping, should i ape?", "what's hot on solana?", "what's hot 🔥", "what's hot? $PEPE", "what's sherwood trending?",
+    for (const text of ["what's hot to buy?", "what's pumping, should i ape?", "what's hot on bnb?", "what's hot 🔥", "what's hot? $PEPE", "what's sherwood trending?",
       "what's hot in your bag?", "what's trending on fomo?", "what are people talking about sherwood?", "top gainers pls tell me what to buy", "whats h0t?"]) {
       assert.equal(hotAsk(text), false, text);
     }
@@ -1452,7 +1452,7 @@ describe("what's hot: the chain's trending coins past the fleet's floors, fomo's
   it("a big memecoin one letter off, its letters doubled, or inside the ticker between a copy's affixes is a copy too (red-team review of 1ed46625, 2026-10-12)", () => {
     // Each posted at 1ed46625 as a trending chain coin, or as fomo's most bought.
     for (const sym of ["PEPPE", "DOGGE", "BOONK", "LILPEPEAI", "BABYWIFAI", "MINIBONKAI", "POPCAAT", "FLOKKI", "SHIIB", "PEPA", "BONKK", "XWIFX", "KINGSHIBX",
-      "SUPERDOGEAI", "BITCOINN", "ETHHER", "USDCC", "SOLLANA"]) {
+      "SUPERDOGEAI", "BITCOINN", "ETHHER", "USDCC", "BNBB", "SOLLANA"]) {
       assert.ok(copycatTicker(sym), sym);
     }
     for (const sym of ["CHUMP", "COINA", "FROGGY", "QRTZ", "ZAPX", "MOLT", "ZORBLAT", "FENDRO"]) assert.equal(copycatTicker(sym), false, sym);
@@ -1470,11 +1470,11 @@ describe("what's hot: the chain's trending coins past the fleet's floors, fomo's
     // Each posted at daaae961 as a trending chain coin, listed on coingecko by its contract under the same symbol.
     const swapped = ["BTICOIN", "ETEHREUM", "SOALNA", "TEHTER", "BITCION", "RIPLPE", "CARDNAO", "DOEG", "BNOK", "SHBI", "HYEP"];
     for (const sym of swapped) assert.ok(copycatTicker(sym), sym);
-    const top = topCopyOf([{ symbol: "btc", name: "Bitcoin" }, { symbol: "eth", name: "Ethereum" }, { symbol: "sol", name: "Solana" }, { symbol: "usdt", name: "Tether" },
+    const top = topCopyOf([{ symbol: "btc", name: "Bitcoin" }, { symbol: "eth", name: "Ethereum" }, { symbol: "bnb", name: "BNB" }, { symbol: "sol", name: "Solana" }, { symbol: "usdt", name: "Tether" },
       { symbol: "xrp", name: "XRP" }, { symbol: "ada", name: "Cardano" }, { symbol: "doge", name: "Dogecoin" }, { symbol: "shib", name: "Shiba Inu" },
       { symbol: "bonk", name: "Bonk" }, { symbol: "pepe", name: "Pepe" }]);
     for (const t of ["BTICOIN", "ETEHREUM", "SOALNA", "TEHTER", "BITCION", "CARDNAO", "DOGECION"]) assert.ok(topCopycat(t, top), t);
-    for (const name of ["Bticoin", "Etehreum Classic", "Soalna Robinhood"]) assert.ok(copycatName(name, top), name);
+    for (const name of ["Bticoin", "Etehreum Classic", "Bnbb Robinhood", "Soalna Robinhood"]) assert.ok(copycatName(name, top), name);
     // A coin no screen knows still passes, and so does a swap of letters that are not neighbours to anything big.
     for (const sym of ["CHUMP", "COINA", "FROGGY", "QRTZ", "ZAPX", "MOLT", "ZORBLAT", "FENDRO"]) {
       assert.equal(copycatTicker(sym), false, sym);
@@ -1484,7 +1484,7 @@ describe("what's hot: the chain's trending coins past the fleet's floors, fomo's
 
   it("never a big coin's ticker or name, or one built on it, read off coingecko's own biggest coins; and none without them (red-team 2026-10-12)", async () => {
     const top = topCopyOf(TOP);
-    for (const t of ["WLFI", "MNT", "SONIC", "LIDO", "MANTLE", "ASTER", "HYPEX", "XRPAI", "WIFX", "CURVE", "LINEA", "BABYWIF", "SOLANAX", "BITTENSOR", "WORLDCAT", "S"]) {
+    for (const t of ["WLFI", "MNT", "SONIC", "LIDO", "MANTLE", "ASTER", "HYPEX", "XRPAI", "WIFX", "CURVE", "LINEA", "BABYWIF", "BNBX", "SOLANAX", "BITTENSOR", "WORLDCAT", "S"]) {
       assert.ok(topCopycat(t, top), t);
     }
     for (const t of ["CHUMP", "COINA", "QRTZ", "ZAPX", "FROGGY", "MOLT"]) assert.equal(topCopycat(t, top), false, t);
@@ -1556,7 +1556,7 @@ describe("what's hot: the chain's trending coins past the fleet's floors, fomo's
 
   it("never a copycat of the chain's stock tokens, bitcoin, ether or a dollar, whatever its address (red-team 2026-10-12)", () => {
     // The red team's pools: memecoins at addresses that are no stock token's, each past every floor.
-    const copycats = ["TSLA", "BITCOIN", "NVDA", "AAPL", "SPY", "XBT", "USDC2", "PYUSD", "ETH2", "QQQ", "TESLA", "BABYNVDA", "TSLAX", "WBTC", "SOLANA", "MSFT", "COIN", "AMZN"];
+    const copycats = ["TSLA", "BITCOIN", "NVDA", "AAPL", "SPY", "XBT", "USDC2", "PYUSD", "ETH2", "QQQ", "TESLA", "BABYNVDA", "TSLAX", "WBTC", "BNB", "SOLANA", "MSFT", "COIN", "AMZN"];
     const kept = hotScreen([...copycats.map((sym, i) => pool(20 + i, { name: `${sym} / WETH 1%` })), pool(1, { name: "CHUMP / WETH 1%" })]);
     assert.deepEqual(kept.map((k) => k.ticker), ["CHUMP"]);
     for (const sym of copycats) assert.ok(copycatTicker(sym), sym);
@@ -1565,7 +1565,7 @@ describe("what's hot: the chain's trending coins past the fleet's floors, fomo's
   });
 
   it("never a big coin's or a stablecoin's ticker or name, a copy built on one, a house name, or a name on coingecko's own list today (red-team 2026-10-12)", async () => {
-    for (const sym of ["PEPE", "WIF", "BONK", "SHIB", "USDS", "FDUSD", "PYUSD", "EURC", "PAXG", "DOGECOIN", "BABYPEPE", "DOGEAI", "SOLANA", "TAO"]) {
+    for (const sym of ["PEPE", "WIF", "BONK", "SHIB", "USDS", "FDUSD", "PYUSD", "EURC", "PAXG", "DOGECOIN", "BABYPEPE", "DOGEAI", "BNB", "SOLANA", "TAO"]) {
       assert.ok(copycatTicker(sym), sym);
     }
     for (const sym of ["TRENCHER", "FOMO", "SHOGUN", "AGENTCAP"]) assert.equal(showTicker(sym), null, sym);
@@ -1775,7 +1775,7 @@ describe("answer anything: every tag past the screens has a lane, and silence on
       ["how's the market", "market"], ["market update", "market"], ["how are things looking", "market"], ["what's the market doing", "market"],
       ["how's crypto today", "market"], ["is it a green day", "market"], ["how's the market looking today?", "market"], ["gm, any market update?", "market"],
       // b) coin facts: majors, what's hot, a $ticker or a contract on the chain.
-      ["how's eth doing", "major"], ["$SOL today?", "major"], ["what's hot?", "hot"], ["is $wojak legit?", "coin"],
+      ["how's eth doing", "major"], ["$BNB today?", "major"], ["what's hot?", "hot"], ["is $wojak legit?", "coin"],
       // c) itself: its own trades and how it trades, by the plain questions (generalTradesQuestion, below).
       ["what are you trading lately?", "own-trades"],
       // d) chat, banter and opinion: a casual draft that states nothing it was not handed.
@@ -1784,9 +1784,9 @@ describe("answer anything: every tag past the screens has a lane, and silence on
       // ...and its own mood about the market's direction: code's non-committal line.
       ["wen moon", "vibe"], ["are you bullish", "vibe"], ["are you bullish?", "vibe"], ["bullish or bearish?", "vibe"], ["are we so back", "vibe"], ["gm, wagmi?", "vibe"],
       ["wen lambo", "vibe"], ["you bearish today?", "vibe"], ["vibe check", "vibe"],
-      // e) advice or a forecast, however asked: code's playful decline, under no coin or bitcoin, ether and solana alone.
+      // e) advice or a forecast, however asked: code's playful decline, under no coin or bitcoin, ether and bnb alone.
       ["what should i buy", "advice"], ["is it going up", "advice"], ["should i sell now?", "advice"], ["is bitcoin a good investment", "advice"],
-      ["will eth pump", "advice"], ["is $SOL going to moon?", "advice"],
+      ["will eth pump", "advice"], ["is $BNB going to moon?", "advice"], ["is $SOL going to moon?", "advice"],
       // ...any other name, and nothing (red-team review of daaae961: "should i buy $SANDYHOOK?" got "heh, a frequent request").
       ["should i buy pepe", "unanswered"], ["is pepe going up", "unanswered"], ["pepe price target?", "unanswered"], ["is pepe a good investment", "unanswered"],
       ["are you bullish on pepe?", "unanswered"], ["wen moon for $WIF", "unanswered"], ["is $pepe going to moon?", "unanswered"], ["should i buy $SANDYHOOK?", "unanswered"],
@@ -1827,7 +1827,7 @@ describe("answer anything: every tag past the screens has a lane, and silence on
       assert.equal(classifyTag(text, { advice: true }).kind, "unanswered", text);
     }
     // Hype words are what advice is made of: still declined, never silence, under no coin or the big coins alone.
-    for (const text of ["what should i buy", "is eth a good investment", "should i buy $BTC or $SOL?", "should i accumulate eth?"]) {
+    for (const text of ["what should i buy", "is eth a good investment", "should i buy $BTC or $BNB?", "should i buy $BTC or $SOL?", "should i accumulate eth?"]) {
       assert.equal(unshowableName(text), false, text);
       assert.equal(classifyTag(text, { advice: true }).kind, "advice", text);
     }
@@ -1921,22 +1921,6 @@ describe("answer anything: every tag past the screens has a lane, and silence on
       assert.equal(classifyTag(text, { advice: true }).kind, "advice", text);
     }
     assert.equal(declinable("should i buy it?", CA), false, "never beside a contract");
-    // Nor beside a Solana one (Solana P0). The system program's id has no letters, so no word of it read as a name.
-    assert.equal(declinable("should i buy 2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH?"), false);
-    assert.equal(declinable(`should i buy ${"1".repeat(32)}?`), false);
-    // Nor beside one glued to a word (audit regressions F3): on the default scan, its letters are read as a coin's name.
-    const letters = "EEuxbXvdXfvgGiFWKYyEksxzabPKjwhYTNvGXFitaqqT";
-    for (const text of ["should i buy CA2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH?", `should i buy ca${letters}?`, `is ${letters}is going up?`,
-      `should i buy CA ${letters}?`, "should i buy 2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWHnow?"]) {
-      assert.equal(declinable(text), false, text);
-      assert.equal(classifyTag(text, { advice: true }).kind, "unanswered", text);
-    }
-    // A glued key with no letter run read as a name can be declined: the system program, which names no coin.
-    // Harmless: the decline is code's own line, never quotes the tag, and is checked again at send (review GE, round 2).
-    for (const text of [`should i buy CA${"1".repeat(32)}?`, `should i buy CA${"1".repeat(43)}?`, `should i buy ${"1".repeat(32)}now?`]) {
-      assert.equal(declinable(text), true, text);
-      assert.equal(classifyTag(text, { advice: true }).kind, "advice", text);
-    }
   });
 
   it("its own mood is a strict allowlist too: a coin, a word more or another script and it is not one", () => {
@@ -1945,7 +1929,7 @@ describe("answer anything: every tag past the screens has a lane, and silence on
       "are we gonna make it", "vibe check", "what's the vibe", "how's your mood today", "gm ser, are you bullish?"]) {
       assert.equal(vibeAsk(text), true, text);
     }
-    for (const text of ["are you bullish on pepe", "are you bullish on $wif", "wen moon $pepe", "wen moon for wojak", "is eth bullish", "bullish on sol?",
+    for (const text of ["are you bullish on pepe", "are you bullish on $wif", "wen moon $pepe", "wen moon for wojak", "is eth bullish", "bullish on bnb?",
       "are you bullish on sherwood", "wen sherwood", "are you bullish? 🚀", "should i be bullish", "are we so back? buy?", "", null]) {
       assert.equal(vibeAsk(text), false, String(text));
     }
@@ -1956,7 +1940,7 @@ describe("answer anything: every tag past the screens has a lane, and silence on
 function marketFake(o: { markets?: CoinMarket[] | "fail"; off?: boolean; pools?: GeckoPool[]; poolsFail?: string } = {}) {
   const asked: string[] = [];
   const BTC: CoinMarket = { id: "bitcoin", symbol: "btc", name: "Bitcoin", rank: 1, priceUsd: 97_400, marketCapUsd: 1.9e12, volume24hUsd: 41e9, change24hPct: 1.21, change7dPct: 2 };
-  const SOL: CoinMarket = { id: "solana", symbol: "sol", name: "Solana", rank: 6, priceUsd: 182, marketCapUsd: 85e9, volume24hUsd: 4e9, change24hPct: 3.08, change7dPct: -1 };
+  const BNB: CoinMarket = { id: "binancecoin", symbol: "bnb", name: "BNB", rank: 6, priceUsd: 182, marketCapUsd: 85e9, volume24hUsd: 4e9, change24hPct: 3.08, change7dPct: -1 };
   const pools = o.pools ?? [pool(1), pool(2, { change24hPct: -8.3 }), pool(3)];
   const research = createXResearch({
     hotPools: async () => { asked.push("pools"); return o.poolsFail ? { pools: [], failed: true, failure: o.poolsFail } : { pools, failed: false }; },
@@ -1966,7 +1950,7 @@ function marketFake(o: { markets?: CoinMarket[] | "fail"; off?: boolean; pools?:
       market: async () => ({ market: null, failed: true, failure: "unused" }),
       markets: async (ids) => {
         asked.push(`markets:${ids.join(",")}`);
-        return o.markets === "fail" ? { markets: [], failed: true, failure: "http-503" } : { markets: o.markets ?? [BTC, { ...ETH_MARKET, change24hPct: -0.84 }, SOL], failed: false };
+        return o.markets === "fail" ? { markets: [], failed: true, failure: "http-503" } : { markets: o.markets ?? [BTC, { ...ETH_MARKET, change24hPct: -0.84 }, BNB], failed: false };
       },
       trending: async () => { asked.push("trending"); return { coins: [], failed: false }; },
       top: async () => { asked.push("top"); return { coins: TOP, failed: false }; },
@@ -1978,15 +1962,15 @@ function marketFake(o: { markets?: CoinMarket[] | "fail"; off?: boolean; pools?:
     },
     now: () => Date.now(),
   });
-  return { research, asked, BTC, SOL };
+  return { research, asked, BTC, BNB };
 }
 
 describe("how's the market: the big coins' day and the chain's movers, read for code's words and figures (2026-10-12)", () => {
-  it("reads bitcoin, ether and solana in one coingecko read, beside what's hot, and hands back a typed read, words and figures", async () => {
+  it("reads bitcoin, ether and bnb in one coingecko read, beside what's hot, and hands back a typed read, words and figures", async () => {
     const m = marketFake();
     const b = await m.research.gather(input({ kind: "market" }, { xUserId: "m1" }));
-    assert.deepEqual(MARKET_MAJORS.map((x) => x.id), ["bitcoin", "ethereum", "solana"]);
-    assert.equal(m.asked[0], "markets:bitcoin,ethereum,solana", "the big coins' slot first");
+    assert.deepEqual(MARKET_MAJORS.map((x) => x.id), ["bitcoin", "ethereum", "binancecoin"]);
+    assert.equal(m.asked[0], "markets:bitcoin,ethereum,binancecoin", "the big coins' slot first");
     assert.ok(m.asked.includes("pools"));
     assert.deepEqual(b.market, { majors: { dir: "mixed" }, chain: { coins: 3, lead: { dir: "up", size: "sharply" } } });
     assert.ok(b.facts.length > 0 && b.facts.every((f) => sayable(f)), b.facts.join(" | "));
@@ -1994,7 +1978,7 @@ describe("how's the market: the big coins' day and the chain's movers, read for 
     assert.ok(b.lookups <= RESEARCH_BUDGET.maxLookups);
     assert.ok(b.notes.includes("market"));
     // The figures: the big coins by their day, the chain's coins by theirs only (no volume), never coingecko's global list.
-    assert.equal(renderFiguresLine(b.figures!), "24h: BTC +1.2%, ETH -0.8%, SOL +3.1%; trending: COINA 24h +12%, COINB 24h -8.3%, COINC 24h +12%.");
+    assert.equal(renderFiguresLine(b.figures!), "24h: BTC +1.2%, ETH -0.8%, BNB +3.1%; trending: COINA 24h +12%, COINB 24h -8.3%, COINC 24h +12%.");
     assert.ok(!b.figures!.some((s) => s.kind === "trending"));
     // And for an active owner's insight post (2026-10-13): the day, the week read the same way, the chain, and Fomo not read.
     assert.equal(b.insight?.day?.dir, "mixed");
@@ -2024,8 +2008,8 @@ describe("how's the market: the big coins' day and the chain's movers, read for 
 
   it("a row that is not the coin asked, under another symbol or past the majors' rank, is no read of it", async () => {
     const m = marketFake();
-    const fake = await marketFake({ markets: [{ ...m.BTC, symbol: "btc2" }, { ...ETH_MARKET, rank: 900 }, m.SOL, { ...m.SOL, id: "solana-2" }] }).research.gather(input({ kind: "market" }, { xUserId: "m6" }));
-    // Solana alone is left, and one coin is no "majors" (red-team 2026-10-12): no read of them, and no line.
+    const fake = await marketFake({ markets: [{ ...m.BTC, symbol: "btc2" }, { ...ETH_MARKET, rank: 900 }, m.BNB, { ...m.BNB, id: "binancecoin-2" }] }).research.gather(input({ kind: "market" }, { xUserId: "m6" }));
+    // BNB alone is left, and one coin is no "majors" (red-team 2026-10-12): no read of them, and no line.
     assert.deepEqual(fake.figures?.filter((s) => s.kind === "majors") ?? [], []);
     assert.equal(fake.market?.majors, null);
   });

@@ -1,11 +1,10 @@
 /**
- * ETH OR SOL INTO USDG ON ROBINHOOD CHAIN, PRICED BY RELAY AND SIGNED ON RELAY.
+ * ETH INTO USDG ON ROBINHOOD CHAIN, PRICED BY RELAY AND SIGNED ON RELAY.
  *
  * Milla picked Relay on 2026-11-19, from live quotes taken that day. It was the
- * one provider that priced all three routes the deposit panel offers:
+ * one provider that priced all two routes the deposit panel offers:
  * - ETH on Robinhood Chain itself
  * - ETH on Ethereum or an L2
- * - SOL on Solana
  * Robinhood's own bridging page names it too. The comparison is in the
  * deposit-path plan.
  *
@@ -39,7 +38,7 @@
  * check there.
  */
 import { CASH, USDG_DECIMALS } from "@agentcap/core";
-import { EVM_NATIVE, SOL_NATIVE, formatAmount, formatFixed, type DepositSource } from "./deposit-math";
+import { EVM_NATIVE, formatAmount, formatFixed, type DepositSource } from "./deposit-math";
 
 export const RELAY_API = "https://api.relay.link";
 export const RELAY_APP = "https://relay.link";
@@ -50,7 +49,6 @@ export const ROBINHOOD_CHAIN_ID = 4663;
 /** Senders `/price` accepts that are nobody's wallet. See the header. */
 export const PRICE_SENDER: Readonly<Record<DepositSource["family"], string>> = Object.freeze({
   evm: "0x0000000000000000000000000000000000000001",
-  solana: SOL_NATIVE,
 });
 
 const USDG = CASH.USDG.toLowerCase();

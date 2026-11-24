@@ -519,7 +519,6 @@ function sameAddress(a: string, b: string): boolean {
 
 function thesisNetworkOf(t: TokenIdentity): ThesisNetwork | undefined {
   if (isRobinhoodToken(t)) return "robinhood";
-  if (t.chain.namespace === "solana") return "sol";
   if (t.chain.slug === "arc" && t.chain.networkId === 5042) return "arc";
   if (t.chain.namespace === "eip155" && t.chain.slug === "base") return "base";
   if (t.chain.namespace === "eip155" && t.chain.slug === "eth") return "eth";
@@ -530,7 +529,6 @@ function thesisNetworkOf(t: TokenIdentity): ThesisNetwork | undefined {
 /** The provider's chain filter spelling for a token, when we know one. */
 function feedChainOf(t: TokenIdentity): string | undefined {
   if (isRobinhoodToken(t)) return "robinhood";
-  if (t.chain.namespace === "solana" && t.chain.networkId !== null) return "solana";
   return undefined;
 }
 

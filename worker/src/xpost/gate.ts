@@ -1560,9 +1560,9 @@ const SAYS_REAL_MONEY = /(?<!\b(?:not|no|never|isn'?t|wasn'?t|aren'?t)\s+(?:with
  * their own words. In a reply, fail closed on what either money is called.
  */
 const PLAY_MONEY =
-  /\b(?:play|fake|pretend|test|demo|simulated|sim|monopoly|imaginary|virtual|toy|funny|make[\s-]?believe)\s+(?:money|funds|cash|dollars|bucks|coins|sol|usd|trades?|trading|account|mode|portfolio)\b|\bnothing\s+(?:real\s+)?(?:at\s+stake|on\s+the\s+line)\b|\bno\s+(?:real\s+)?(?:stakes|risk|skin\s+in\s+the\s+game)\b|\bsimulat\w+|\bdemo\s+mode\b|\b(?:none|nothing)\s+of\s+it(?:'s|\s+is)\s+real\b|\bnothing\s+real\b|\bnot\s+real\b/i;
+  /\b(?:play|fake|pretend|test|demo|simulated|sim|monopoly|imaginary|virtual|toy|funny|make[\s-]?believe)\s+(?:money|funds|cash|dollars|bucks|coins|sol|bnb|usd|trades?|trading|account|mode|portfolio)\b|\bnothing\s+(?:real\s+)?(?:at\s+stake|on\s+the\s+line)\b|\bno\s+(?:real\s+)?(?:stakes|risk|skin\s+in\s+the\s+game)\b|\bsimulat\w+|\bdemo\s+mode\b|\b(?:none|nothing)\s+of\s+it(?:'s|\s+is)\s+real\b|\bnothing\s+real\b|\bnot\s+real\b/i;
 const REAL_IN_OTHER_WORDS =
-  /\b(?:real|actual|live|hard)\s+(?:dollars|funds|stakes|usd|sol|eth|cash|capital|bucks)\b|\b(?:the\s+)?money(?:'s|\s+is|\s+was)\s+(?:real|actual|live)\b|(?<!\b(?:nothing|no|not)\b[\w\s']{0,24})\b(?:on\s+the\s+line|skin\s+in\s+the\s+game)\b|\bfeels?\s+like\s+real\b|\b(?:kidding|jk|j\/k|not\s+really|just\s+joking|joking)\b/i;
+  /\b(?:real|actual|live|hard)\s+(?:dollars|funds|stakes|usd|sol|bnb|eth|cash|capital|bucks)\b|\b(?:the\s+)?money(?:'s|\s+is|\s+was)\s+(?:real|actual|live)\b|(?<!\b(?:nothing|no|not)\b[\w\s']{0,24})\b(?:on\s+the\s+line|skin\s+in\s+the\s+game)\b|\bfeels?\s+like\s+real\b|\b(?:kidding|jk|j\/k|not\s+really|just\s+joking|joking)\b/i;
 
 function paperOfCoin(text: string, coins: readonly string[]): boolean {
   return coins.some((c) => c.trim() !== "" && new RegExp(`\\bpaper[\\s-]+\\$?${escapeRe(c.trim())}(?![\\p{L}\\p{N}_])`, "iu").test(text));

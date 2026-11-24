@@ -1,17 +1,16 @@
 /**
- * THE LEDGER FOLDS AN EVM HASH AND NOTHING ELSE (Solana P0).
+ * THE LEDGER FOLDS AN EVM HASH AND NOTHING ELSE .
  *
  * Two places case-folded every tx hash they touched: the migration that runs on
  * every ledger open, and insertFlowWithJournal, which writes a flow row and its
  * hash-chained journal entry. Right for an EVM hash, which is case-insensitive.
- * Wrong for a Solana signature, which is base58 and case-sensitive: lowercased,
- * it names nothing on chain. Both now fold only a 0x + 64 hex hash.
+ * Wrong for any case-sensitive non-EVM id, which lowercased names nothing. Both now fold only a 0x + 64 hex hash.
  *
  * WHAT HAS TO BE PROVEN FIRST is that this changes nothing that is there, since
  * every hash on the books today is 0x + 64 hex. So the migration is run over the
  * same rows twice, once as it was (the old statement, pinned verbatim below) and
  * once as it is, and the two books must match row for row. Then the case the
- * change exists for: a signature survives every open exactly as written, where
+ * change exists for: a non-EVM hash survives every open exactly as written, where
  * the old statement would have lowercased it.
  */
 import assert from "node:assert/strict";
@@ -40,7 +39,6 @@ const {
 } = await import("./store");
 const { wrapSqlite } = await import("./db");
 const { verifyChain } = await import("./audit");
-const { base58Encode, idFamily } = await import("../../packages/core/src/ids");
 const { homePaths } = await import("./home");
 
 after(() => {
@@ -49,7 +47,7 @@ after(() => {
 });
 
 /** The fold as it shipped before this change, word for word. */
-const PRE_SOLANA_FOLD = "UPDATE flows SET tx_hash = LOWER(tx_hash) WHERE tx_hash IS NOT NULL AND tx_hash <> LOWER(tx_hash)";
+const PRE_EVM_ONLY_FOLD = "UPDATE flows SET tx_hash = LOWER(tx_hash) WHERE tx_hash IS NOT NULL AND tx_hash <> LOWER(tx_hash)";
 
 const ACCOUNT = "0x00000000000000000000000000000000000000c1";
 const CHAIN = 4663;
@@ -62,8 +60,8 @@ const MIXED = `0x${"aBcDeF01".repeat(8)}`;
 /** bookInitialCapital admits the prefix in either case (/^0x[0-9a-f]{64}$/i). */
 const CAPITAL_X = `0X${"FEDCBA98".repeat(8)}`;
 
-/** A real signature's shape: base58 decoding to 64 bytes. */
-const SIGNATURE = base58Encode(Uint8Array.from({ length: 64 }, (_, i) => (i * 37 + 11) % 256));
+/** A case-sensitive non-EVM hash, upper case in it to lose. */
+const SIGNATURE = "5VERv8NMvzbJMEkV8xnrLkEaWRtSz9CosKDYjCJjBRnbJLgp8uirBgmQpjKhoR4tjF3ZpRzrFmBV6UjKdiSZkQUW";
 
 /** A ledger as it stands before this open: the full schema, its index dropped and its flows emptied, as accounting-migration.test.ts builds one. */
 async function ledger(): Promise<{ db: ReturnType<typeof wrapSqlite>; raw: DatabaseSync }> {
@@ -107,7 +105,7 @@ describe("the open-time fold, over the rows that are there today", () => {
     // nothing left to fold after it, so this is the book the last release made.
     const before = await ledger();
     seed(before.raw, TODAYS_ROWS);
-    before.raw.exec(PRE_SOLANA_FOLD);
+    before.raw.exec(PRE_EVM_ONLY_FOLD);
     await applyLedgerSchema(before.db);
 
     // AFTER: the schema alone, as an open does now.
@@ -125,9 +123,8 @@ describe("the open-time fold, over the rows that are there today", () => {
   });
 });
 
-describe("a Solana signature", () => {
-  it("is a signature, and has upper case in it to lose", () => {
-    assert.equal(idFamily(SIGNATURE), "solana");
+describe("a non-EVM hash", () => {
+  it("has upper case in it to lose", () => {
     assert.notEqual(SIGNATURE, SIGNATURE.toLowerCase());
   });
 
@@ -140,8 +137,8 @@ describe("a Solana signature", () => {
     // The old fold would have destroyed it: the test can tell the difference.
     const old = await ledger();
     seed(old.raw, rows);
-    old.raw.exec(PRE_SOLANA_FOLD);
-    assert.equal(flows(old.raw)[0]!.tx_hash, SIGNATURE.toLowerCase(), "the old fold lowercased the signature");
+    old.raw.exec(PRE_EVM_ONLY_FOLD);
+    assert.equal(flows(old.raw)[0]!.tx_hash, SIGNATURE.toLowerCase(), "the old fold lowercased it");
 
     const now = await ledger();
     seed(now.raw, rows);
@@ -199,7 +196,7 @@ describe("the writer, and the journal entry it chains", () => {
     assert.deepEqual(verifyChain(journal), []);
   });
 
-  it("books a signature as written, in the row and in the journal, and an open does not touch either", async () => {
+  it("books a non-EVM hash as written, in the row and in the journal, and an open does not touch either", async () => {
     await initStore();
     const id = await ensureAgent(grant("0x00000000000000000000000000000000000000c3"));
     assert.equal(await addFlow({ agentId: id, direction: "out", amountUsdg: 5, source: "transfer-intent", txHash: SIGNATURE, mode: "live" }), true);
@@ -227,7 +224,7 @@ describe("the writer, and the journal entry it chains", () => {
  * books a transfer home from its receipt; hasChainFlow is the same question
  * with a log index. Both used to lowercase every hash they were handed, which
  * matched the writer while the writer lowercased everything too. Now that a
- * signature is booked as written, a lowercasing lookup would miss it and the
+ * hash is booked as written, a lowercasing lookup would miss it and the
  * same transfer would be booked twice, moving the peak again. Both ask under
  * ledgerTxHash now: for an EVM hash that is the lowercased hash, as before.
  */
@@ -252,7 +249,7 @@ describe("the lookups that stop a second booking", () => {
     assert.equal(await hasFlowForTx(id, CAPITAL_X), false, "nor is a tx that was never booked");
   });
 
-  it("find a signature booked as written, and only under that spelling", async () => {
+  it("find a non-EVM hash booked as written, and only under that spelling", async () => {
     await initStore();
     const id = await ensureAgent(grant("0x00000000000000000000000000000000000000c5"));
     assert.equal(await hasFlowForTx(id, SIGNATURE), false, "nothing booked yet");
@@ -261,10 +258,10 @@ describe("the lookups that stop a second booking", () => {
     // The resolver's question before it books the same transfer from its
     // receipt. A lowercasing lookup answers false here, and it books again.
     assert.equal(await hasFlowForTx(id, SIGNATURE), true, "the transfer is seen as booked");
-    // Base58 is case-sensitive: the lowercased string is some other signature.
-    assert.equal(await hasFlowForTx(id, SIGNATURE.toLowerCase()), false, "a different signature is not");
+    // Case-sensitive: the lowercased string is some other hash.
+    assert.equal(await hasFlowForTx(id, SIGNATURE.toLowerCase()), false, "a different hash is not");
 
-    const other = base58Encode(Uint8Array.from({ length: 64 }, (_, i) => (i * 53 + 7) % 256));
+    const other = "3NGW7mkqWR84fuKhxiUmVTJg8AehpcEQHKZcivruB5449akQiFvm2Ej6AvJGLnfwW15Cb2wn1D6UAFMJtXh6tigd";
     assert.notEqual(other, other.toLowerCase());
     assert.equal(
       await addFlow({ agentId: id, direction: "in", amountUsdg: 7, source: "chain-log", txHash: other, blockNumber: 100, logIndex: 2, mode: "live" }),
@@ -272,7 +269,7 @@ describe("the lookups that stop a second booking", () => {
     );
     assert.equal(await hasChainFlow(id, other, 2), true, "the log is seen as booked");
     assert.equal(await hasChainFlow(id, other, 3), false, "another log of it is not");
-    assert.equal(await hasChainFlow(id, other.toLowerCase(), 2), false, "nor the same log of a different signature");
+    assert.equal(await hasChainFlow(id, other.toLowerCase(), 2), false, "nor the same log of a different hash");
 
     // And after a reopen, which runs the fold again, the answers are the same.
     closeStoreForTest();

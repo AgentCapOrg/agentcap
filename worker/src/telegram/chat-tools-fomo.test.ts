@@ -152,7 +152,7 @@ describe("the research lookups the DM model may call", () => {
 
   it("the local lines know only Robinhood Chain coins, and say nothing when there is nothing installed", () => {
     assert.equal(localResearchLines(PONS_ID, NOW_MS), null, "no funnel, no book: nothing");
-    assert.equal(localResearchLines({ ...PONS_ID, chain: { namespace: "solana", networkId: 1399811149, slug: "solana" } }, NOW_MS), null);
+    assert.equal(localResearchLines({ ...PONS_ID, chain: { namespace: "eip155", networkId: 56, slug: "bsc" } }, NOW_MS), null);
     installDecisionFunnel(new FunnelRecorder({ now: () => NOW_MS }));
     assert.match(localResearchLines(PONS_ID, NOW_MS)!, /No record: this coin was not on the tape/);
   });

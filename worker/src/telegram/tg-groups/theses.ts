@@ -232,7 +232,7 @@ const PLAIN_TEXT_NOT = /[^\x20-\x7e‘’–—]/u;
  * one phrase.
  */
 const NAME_OK: ReadonlySet<string> = new Set(
-  ("robinhood solana base ethereum binance coinbase twitter x telegram discord ai us usa uk eu nft nfts defi lp cex dex eth btc sol bnb bsc evm " +
+  ("robinhood base ethereum binance coinbase twitter x telegram discord ai us usa uk eu nft nfts defi lp cex dex eth btc bnb bsc evm " +
     "ath og kol kols ct tg ui ux api ca dev devs fomo chain " +
     "monday tuesday wednesday thursday friday saturday sunday january february march april may june july august september october november december").split(" "),
 );

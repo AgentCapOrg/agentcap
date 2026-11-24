@@ -3,7 +3,7 @@
  * NOTHING ELSE.
  *
  * Nothing checked chainId before, and what reads it downstream maps any id
- * but the testnet to mainnet, so a grant for chain 1, a Solana grant or one
+ * but the testnet to mainnet, so a grant for chain 1 or one
  * with no chainId was stored and read as Robinhood Chain. Driven through the
  * real handler, self-hosted, against a real home: a refusal must leave
  * grant.json and the archive exactly as they were. The hosted refusal, with a
@@ -57,7 +57,7 @@ async function post(grant: Record<string, unknown>) {
 
 describe("POST /api/grants, self-hosted — the chain id", () => {
   it("refuses every id that is not 4663 or 46630, and leaves grant.json and the archive alone", async () => {
-    const refused: unknown[] = [1, 0, -1, 46631, 4663.5, 8453, "4663", "46630", null, true, [4663], { id: 4663 }, CHAINS.robinhood, CHAINS.solana];
+    const refused: unknown[] = [1, 0, -1, 46631, 4663.5, 8453, "4663", "46630", null, true, [4663], { id: 4663 }, CHAINS.robinhood];
     for (const chainId of refused) {
       const res = await post({ smartAccount: B, serialized: "0xserialized", chainId });
       assert.equal(res.status, 400, `${JSON.stringify(chainId)}: ${JSON.stringify(res.body)}`);

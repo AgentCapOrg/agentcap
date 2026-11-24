@@ -149,7 +149,7 @@ export function parseResumePreview(raw: string | undefined): ResumePreviewScope 
 
 /**
  * An entry naming a tenant whose id is not 0x and 40 hex (fleet-id.ts): a
- * Solana one, or a mistyped address. Refused, by position, as every malformed
+ * mistyped address, or another chain's. Refused, by position, as every malformed
  * entry is; said as what it is, since this build resumes no other chain.
  */
 const notEvmTenant = (i: number) => `entry ${i + 1} names a tenant that is not a complete Robinhood Chain address (0x and 40 hex), and this build resumes no other chain's`;

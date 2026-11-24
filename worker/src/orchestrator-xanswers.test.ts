@@ -3799,7 +3799,7 @@ function marketResearch(pools: GeckoPool[], o: { markets?: "fail" } = {}) {
       markets: async (ids) => {
         reads.push(`markets:${ids.join(",")}`);
         return o.markets === "fail" ? { markets: [], failed: true, failure: "http-503" }
-          : { markets: [row("bitcoin", "btc", 1, 1.21), row("ethereum", "eth", 2, 2.4), row("solana", "sol", 6, 4.8)], failed: false };
+          : { markets: [row("bitcoin", "btc", 1, 1.21), row("ethereum", "eth", 2, 2.4), row("binancecoin", "bnb", 6, 4.8)], failed: false };
       },
       trending: async () => ({ coins: [], failed: false }), top: TOP_READ },
     chainListings: listingsOf(pools),
@@ -3814,13 +3814,13 @@ test("how's the market: the big coins' day and the chain's movers, in code's cas
     w.setInbox([tag({ text })]);
     const r = await w.step();
     assert.deepEqual(w.asked(), [], `${text}: no model call, the words are code's`);
-    assert.equal(m.reads[0], "markets:bitcoin,ethereum,solana");
+    assert.equal(m.reads[0], "markets:bitcoin,ethereum,binancecoin");
     const sent = String(w.sends[0]?.text ?? "");
-    // BTC +1.2% and ETH +2.4% a little, SOL +4.8% a fair bit: all up, by uneven margins (red-team review of 1ed46625, never "climbing steadily").
+    // BTC +1.2% and ETH +2.4% a little, BNB +4.8% a fair bit: all up, by uneven margins (red-team review of 1ed46625, never "climbing steadily").
     const read: MarketRead = { majors: { dir: "up", size: "uneven" }, chain: { coins: 2, lead: { dir: "up", size: "sharply" } } };
     const words = /^(.*?) 24h: /.exec(sent)?.[1] ?? "";
     assert.ok(marketAnswers(read, MENTION, { lower: true }).includes(words), `${text}: ${sent}`);
-    assert.match(sent, / 24h: BTC \+1\.2%, ETH \+2\.4%, SOL \+4\.8%; trending: COINA 24h \+42\.1%, COINB 24h -8\.3%\.$/, sent);
+    assert.match(sent, / 24h: BTC \+1\.2%, ETH \+2\.4%, BNB \+4\.8%; trending: COINA 24h \+42\.1%, COINB 24h -8\.3%\.$/, sent);
     assert.ok(xWeightedLength(sent) <= X_MAX_WEIGHTED);
     assert.doesNotMatch(sent, /should|buy|good day/i, "never the draft");
     assert.match(r.log ?? "", /answer-intent-market 1/);
@@ -3858,7 +3858,7 @@ test("how's the market for someone already told they can say stop: the figures l
   w.setInbox([tag({ text: "@pine_stoat how's the market?" })]);
   await w.step();
   const sent = String(w.sends[0]?.text ?? "");
-  assert.match(sent, / 24h: BTC \+1\.2%, ETH \+2\.4%, SOL \+4\.8%; trending: COINA 24h \+42\.1%\.$/, sent);
+  assert.match(sent, / 24h: BTC \+1\.2%, ETH \+2\.4%, BNB \+4\.8%; trending: COINA 24h \+42\.1%\.$/, sent);
   assert.doesNotMatch(sent, /opt out/i);
 });
 
@@ -3918,14 +3918,14 @@ test("chat is never silence by default: banter gets code's friendly line whateve
   assert.deepEqual(w.sends, []);
 });
 
-test("how's the market keeps bitcoin, ether and solana in its line whatever its own buys are called; the chain's coins are still screened by them (2026-10-12)", async (t) => {
+test("how's the market keeps bitcoin, ether and bnb in its line whatever its own buys are called; the chain's coins are still screened by them (2026-10-12)", async (t) => {
   // A buy called SOLX, and one called WETH: either used to read as $SOL or $ETH being its own coin, and took the whole line out.
   const facts: AgentFacts = { ...FACTS, calls: [{ ...CALL, decisionId: "fill-solx", symbol: "SOLX", name: "Sol X" }, { ...CALL, decisionId: "fill-weth", symbol: "WETH", name: "Wrapped Ether" }] };
   const m = marketResearch([hotPool(1, 42.07, 1.21e6)]);
   const w = await world(t, { env: RESEARCH_ON, research: m.research, facts });
   w.setInbox([tag({ text: "@pine_stoat how's the market?" })]);
   await w.step();
-  assert.match(String(w.sends[0]?.text ?? ""), / 24h: BTC \+1\.2%, ETH \+2\.4%, SOL \+4\.8%; trending: COINA 24h \+42\.1%\.$/);
+  assert.match(String(w.sends[0]?.text ?? ""), / 24h: BTC \+1\.2%, ETH \+2\.4%, BNB \+4\.8%; trending: COINA 24h \+42\.1%\.$/);
   // A chain coin under a name its own buys go by never shows, as in what's hot.
   const own: AgentFacts = { ...FACTS, calls: [{ ...CALL, decisionId: "fill-coina", symbol: "COINA", name: "Coin A" }] };
   const w2 = await world(t, { env: RESEARCH_ON, research: marketResearch([hotPool(1, 42.07, 1.21e6)]).research, facts: own });
@@ -3945,7 +3945,7 @@ test("the owner's questions, end to end: each gets one answer in its lane, and n
       market: async (id) => id === "ethereum"
         ? { failed: false, observedAt: NOW, market: { id, symbol: "eth", name: "Ethereum", rank: 2, priceUsd: 3412.5, marketCapUsd: 411e9, volume24hUsd: 18.2e9, change24hPct: 1.24, change7dPct: -3.4 } }
         : { failed: true, failure: "invalid-shape", market: null },
-      markets: async () => ({ failed: false, markets: [row("bitcoin", "btc", 1, 1.21), row("ethereum", "eth", 2, -0.84), row("solana", "sol", 6, 3.08)] }),
+      markets: async () => ({ failed: false, markets: [row("bitcoin", "btc", 1, 1.21), row("ethereum", "eth", 2, -0.84), row("binancecoin", "bnb", 6, 3.08)] }),
       trending: async () => ({ coins: [], failed: false }), top: TOP_READ },
     chainListings: listingsOf(pools),
     resolveTicker: async () => null, coinFacts: async () => ({ ok: false, why: "unavailable" }), projectDescription: async () => null, publicTheses: async () => [],
@@ -3975,7 +3975,7 @@ test("the owner's questions, end to end: each gets one answer in its lane, and n
     if (lane === "advice") assert.ok(oneOf(declineAnswers, id, sent), `${text}: ${sent}`);
     if (lane === "market") {
       assert.ok(marketAnswers({ majors: { dir: "mixed" }, chain: { coins: 3, lead: { dir: "up", size: "sharply" } } }, id, { lower: true }).includes(words), sent);
-      assert.match(sent, /24h: BTC \+1\.2%, ETH -0\.8%, SOL \+3\.1%; trending: COINA 24h \+42\.1%/);
+      assert.match(sent, /24h: BTC \+1\.2%, ETH -0\.8%, BNB \+3\.1%; trending: COINA 24h \+42\.1%/);
     }
     if (lane === "major") assert.match(sent, /ETH #2, ~\$3\.4k, mcap ~\$411B, vol ~\$18B, 24h \+1\.2%, 7d -3\.4%\.$/);
     if (lane === "chat") assert.ok(oneOf(banterFor(text), id, sent), `${text}: ${sent}`);
@@ -4160,12 +4160,12 @@ test("how's the market: the big coins' words agree with the figures beside them,
     chainListings: listingsOf([hotPool(1, -30, 1.21e6)]),
   });
   const chain = { coins: 1, lead: { dir: "down", size: "sharply" } } as const;
-  // POSTED at 58ba9fd0 as "majors lean green today, … coingecko 24h: BTC +0.5%, ETH -0.5%, SOL -0.5%; …" (…702) and "big caps are grinding upward, …" (…705).
+  // POSTED at 58ba9fd0 as "majors lean green today, … coingecko 24h: BTC +0.5%, ETH -0.5%, BNB -0.5%; …" (…702) and "big caps are grinding upward, …" (…705).
   for (const [id, rows, line] of [
-    ["100000000000000702", [row("bitcoin", "btc", 1, 0.5), row("ethereum", "eth", 2, -0.49), row("solana", "sol", 6, -0.49)], "BTC +0.5%, ETH -0.5%, SOL -0.5%"],
-    ["100000000000000705", [row("bitcoin", "btc", 1, 0.5), row("ethereum", "eth", 2, -0.49), row("solana", "sol", 6, -0.49)], "BTC +0.5%, ETH -0.5%, SOL -0.5%"],
-    ["100000000000000702", [row("bitcoin", "btc", 1, 2.4), row("ethereum", "eth", 2, -0.45), row("solana", "sol", 6, -0.48)], "BTC +2.4%, ETH -0.4%, SOL -0.5%"],
-    ["100000000000000702", [row("bitcoin", "btc", 1, 0.6), row("ethereum", "eth", 2, -0.4), row("solana", "sol", 6, -0.4)], "BTC +0.6%, ETH -0.4%, SOL -0.4%"],
+    ["100000000000000702", [row("bitcoin", "btc", 1, 0.5), row("ethereum", "eth", 2, -0.49), row("binancecoin", "bnb", 6, -0.49)], "BTC +0.5%, ETH -0.5%, BNB -0.5%"],
+    ["100000000000000705", [row("bitcoin", "btc", 1, 0.5), row("ethereum", "eth", 2, -0.49), row("binancecoin", "bnb", 6, -0.49)], "BTC +0.5%, ETH -0.5%, BNB -0.5%"],
+    ["100000000000000702", [row("bitcoin", "btc", 1, 2.4), row("ethereum", "eth", 2, -0.45), row("binancecoin", "bnb", 6, -0.48)], "BTC +2.4%, ETH -0.4%, BNB -0.5%"],
+    ["100000000000000702", [row("bitcoin", "btc", 1, 0.6), row("ethereum", "eth", 2, -0.4), row("binancecoin", "bnb", 6, -0.4)], "BTC +0.6%, ETH -0.4%, BNB -0.4%"],
     ["100000000000000702", [row("bitcoin", "btc", 1, 0.5), row("ethereum", "eth", 2, -0.49)], "BTC +0.5%, ETH -0.5%"],
   ] as const) {
     const w = await world(t, { ...ALAN, env: RESEARCH_ON, research: research([...rows]), answer: "PASS" });
@@ -4603,17 +4603,17 @@ test("how's the market says a crash is a crash and a melt-up a melt-up, and the 
   const research = (big: number[], pools: GeckoPool[]) => createXResearch({
     hotPools: async () => ({ pools, failed: false }),
     majors: { configured: () => true, search: async () => ({ hits: [], failed: true }), market: async () => ({ market: null, failed: true }),
-      markets: async () => ({ markets: [row("bitcoin", "btc", 1, big[0]!), row("ethereum", "eth", 2, big[1]!), row("solana", "sol", 6, big[2]!)], failed: false }),
+      markets: async () => ({ markets: [row("bitcoin", "btc", 1, big[0]!), row("ethereum", "eth", 2, big[1]!), row("binancecoin", "bnb", 6, big[2]!)], failed: false }),
       trending: async () => ({ coins: [], failed: false }), top: TOP_READ },
     chainListings: listingsOf(pools),
   });
   // POSTED at a964a74c: ...775 "the giants dipped slightly, and a single token is moving on robinhood. no tips attached whatsoever. coingecko 24h:
-  // $BTC -15.2%, $ETH -21.7%, $SOL -28.3%; geckoterminal robinhood: trending CHUMP 24h -62.5%. say stop to opt out.", ...780 "the leaders are
+  // $BTC -15.2%, $ETH -21.7%, $BNB -28.3%; geckoterminal robinhood: trending CHUMP 24h -62.5%. say stop to opt out.", ...780 "the leaders are
   // taking a breather, and geckoterminal shows a solo runner", ...776 "the bellwethers are inching forward" beside +18.4/+24.9/+31, and
   // ...780/...781 "geckoterminal shows several runners", ...770 "the trending page has a pack running" beside chain coins at -55% and -48%.
   const worlds: [number[], GeckoPool[], RegExp][] = [
-    [[-15.2, -21.7, -28.3], [namedPool("CHUMP", 1, -62.5, 1.21e6)], /BTC -15\.2%, ETH -21\.7%, SOL -28\.3%; trending: CHUMP 24h -62\.5%/],
-    [[18.4, 24.9, 31], [namedPool("CHUMP", 1, 41.2, 1.21e6)], /BTC \+18\.4%, ETH \+24\.9%, SOL \+31%/],
+    [[-15.2, -21.7, -28.3], [namedPool("CHUMP", 1, -62.5, 1.21e6)], /BTC -15\.2%, ETH -21\.7%, BNB -28\.3%; trending: CHUMP 24h -62\.5%/],
+    [[18.4, 24.9, 31], [namedPool("CHUMP", 1, 41.2, 1.21e6)], /BTC \+18\.4%, ETH \+24\.9%, BNB \+31%/],
     [[1.2, 2.4, 4.8], [namedPool("CHUMP", 1, -55, 1.21e6), namedPool("DUMPR", 2, -48, 900_000)], /trending: CHUMP 24h -55%, DUMPR 24h -48%/],
   ];
   for (const [big, pools, figures] of worlds) {
@@ -4637,7 +4637,7 @@ test("how's the market never says the majors crashed or soared when bitcoin and 
   const research = (big: number[]) => createXResearch({
     hotPools: async () => ({ pools: [], failed: false }),
     majors: { configured: () => true, search: async () => ({ hits: [], failed: true }), market: async () => ({ market: null, failed: true }),
-      markets: async () => ({ markets: [row("bitcoin", "btc", 1, big[0]!), row("ethereum", "eth", 2, big[1]!), row("solana", "sol", 6, big[2]!)], failed: false }),
+      markets: async () => ({ markets: [row("bitcoin", "btc", 1, big[0]!), row("ethereum", "eth", 2, big[1]!), row("binancecoin", "bnb", 6, big[2]!)], failed: false }),
       trending: async () => ({ coins: [], failed: false }), top: TOP_READ },
     chainListings: listingsOf([]),
   });
@@ -4646,10 +4646,10 @@ test("how's the market never says the majors crashed or soared when bitcoin and 
   const BIG = /\b(?:plung\w*|beating|tumbl\w*|steep\w*|surg\w*|soar\w*|racing|leapt|heavily|hammered|sharply|dramatic\w*|fast|sinking|spiked|shot)\b/;
   const SIZED = /\b(?:slightly|a touch|gently|inching|a hair|mildly|breather|perky|nudged|tired|easing|softening|drifting|sagging|edging|lean green|solid ground|steadily|decently|noticeably|a fair way|front foot|back foot|grinding|pushing ahead|retreating)\b/;
   const worlds: [number[], RegExp, "up" | "down"][] = [
-    [[-1.2, -2.0, -10.5], /24h: BTC -1\.2%, ETH -2%, SOL -10\.5%/, "down"],
-    [[0.8, 1.1, 10.3], /24h: BTC \+0\.8%, ETH \+1\.1%, SOL \+10\.3%/, "up"],
-    [[-0.1, -0.2, -14], /24h: BTC -0\.1%, ETH -0\.2%, SOL -14%/, "down"],
-    [[-1.2, -2, -4.5], /24h: BTC -1\.2%, ETH -2%, SOL -4\.5%/, "down"],
+    [[-1.2, -2.0, -10.5], /24h: BTC -1\.2%, ETH -2%, BNB -10\.5%/, "down"],
+    [[0.8, 1.1, 10.3], /24h: BTC \+0\.8%, ETH \+1\.1%, BNB \+10\.3%/, "up"],
+    [[-0.1, -0.2, -14], /24h: BTC -0\.1%, ETH -0\.2%, BNB -14%/, "down"],
+    [[-1.2, -2, -4.5], /24h: BTC -1\.2%, ETH -2%, BNB -4\.5%/, "down"],
   ];
   for (const [big, figures, dir] of worlds) {
     for (const id of ["100000000000000775", "100000000000000780", "100000000000000781", "100000000000000770", "100000000000000776", "100000000000000777"]) {
@@ -4791,7 +4791,7 @@ test("how's the market and what's hot never show a political or hate copy one le
     const research = createXResearch({
       hotPools: async () => ({ pools, failed: false }), chainListings: listingsOf(pools),
       majors: { configured: () => true, search: async () => ({ hits: [], failed: true }), market: async () => ({ market: null, failed: true }),
-        markets: async () => ({ markets: [row("bitcoin", "btc", 1, 1.2), row("ethereum", "eth", 2, 2.4), row("solana", "sol", 6, 4.8)], failed: false }),
+        markets: async () => ({ markets: [row("bitcoin", "btc", 1, 1.2), row("ethereum", "eth", 2, 2.4), row("binancecoin", "bnb", 6, 4.8)], failed: false }),
         trending: async () => ({ coins: [], failed: false }), top: TOP_READ },
     });
     for (const [text, r] of [["how's the market", research], ["what's hot?", fomo]] as const) {
@@ -4947,7 +4947,7 @@ test("no decline under a coin named after a shooting, terror, the holocaust, rel
       }
     }
   }
-  // A decline still goes up under advice that names no coin, or bitcoin, ether or solana alone; and none of its lines laughs.
+  // A decline still goes up under advice that names no coin, or bitcoin, ether or bnb alone; and none of its lines laughs.
   for (const text of ["should i buy?", "is it going up?", "what should i buy?", "should i buy $BTC?", "is eth going up?"]) {
     const w = await world(t, { ...ALAN });
     w.setInbox([alanTag("100000000000000021", text)]);
@@ -4960,7 +4960,7 @@ test("no decline under a coin named after a shooting, terror, the holocaust, rel
 });
 
 test("how's the market and what's hot never show a tragedy, terror, a faith's holy names, a drug or a notorious person as a coin, listed or not (red-team review of daaae961, 2026-10-12)", async (t) => {
-  // POSTED at daaae961 with the real readers, every contract listed on coingecko: "… coingecko 24h: BTC +1.2%, ETH +2.4%, SOL +4.8%;
+  // POSTED at daaae961 with the real readers, every contract listed on coingecko: "… coingecko 24h: BTC +1.2%, ETH +2.4%, BNB +4.8%;
   // geckoterminal robinhood: trending EPSTEIN 24h +312%, OSAMA 24h +88%, SANDYHOOK 24h +41%." and the same under "what's hot?" with volumes.
   const figures = [{ change: 312, vol: 2_310_000 }, { change: 88, vol: 940_000 }, { change: 41, vol: 310_000 }];
   const sets = [["EPSTEIN", "OSAMA", "SANDYHOOK"], ["COLUMBINE", "FENTANYL", "QANON"], ["MANGIONE", "SHOAH", "ADOLPH"], ["DAHMER", "UVALDE", "PIZZAGATE"],

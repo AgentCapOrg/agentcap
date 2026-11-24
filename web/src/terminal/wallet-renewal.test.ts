@@ -795,7 +795,7 @@ describe("the funded wallet's re-sign control", () => {
   /**
    * A LOGIN'S TWO WALLETS SHARE ONE OWNER KEY, and the grant POST that ends a
    * restore refuses another one. Self-hosted, the restore's stop had already
-   * removed the running Spot grant.json (and stopped Solana) and its revocation
+   * removed the running Spot grant.json and its revocation
    * had been paid for when that POST was refused. So the restore asks the
    * Perps wallet first (restore-perps-owner.ts), before even the fee check.
    */

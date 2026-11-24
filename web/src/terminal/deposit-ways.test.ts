@@ -9,7 +9,7 @@ import { SOURCE_RPC } from "../lib/source-balance";
 
 // React DOM decides whether `input` events exist when it first loads, so a DOM
 // is in place before the harness (and react-dom with it) is imported. Typing
-// then reaches the real onChange, as in SolanaScreen.test.ts.
+// then reaches the real onChange.
 let testDom: typeof import("./test-dom").testDom;
 let DepositWays: typeof import("./DepositWays").DepositWays;
 before(async () => {
@@ -27,7 +27,6 @@ before(async () => {
 
 const AGENT = "0x12aB000000000000000000000000000000c0DEF0";
 const OWNER = "0x00000000000000000000000000000000000000aa";
-const SOL_WALLET = "9mAdjznSUjrVFJKuacoFg8tkA6UfTqTboeuqN3eGr842";
 const ETH = 10n ** 18n;
 
 type Call = { url: string; body: Record<string, unknown> };
@@ -37,17 +36,16 @@ let opened: string[];
 
 /** Relay's /price answer for exactly the request it was sent. */
 function priceFor(body: Record<string, unknown>, over: { recipient?: string } = {}) {
-  const sol = body.originChainId === 792703809;
-  const currency = { chainId: body.originChainId, address: body.originCurrency, symbol: sol ? "SOL" : "ETH", decimals: sol ? 9 : 18 };
+  const currency = { chainId: body.originChainId, address: body.originCurrency, symbol: "ETH", decimals: 18 };
   const amount = BigInt(String(body.amount));
-  // $1,796 per ETH and $74.56 per SOL, as on the day; USDG out is 99.8% of that.
-  const usdMicros = sol ? (amount * 74_560_000n) / 10n ** 9n : (amount * 1_796_000_000n) / ETH;
+  // $1,796 per ETH, as on the day; USDG out is 99.8% of that.
+  const usdMicros = (amount * 1_796_000_000n) / ETH;
   const out = (usdMicros * 998n) / 1000n;
   const bps = BigInt(String(body.slippageTolerance));
   return {
     fees: {
-      gas: { currency, amount: sol ? "8975" : "211615385242", amountUsd: "0.000398" },
-      relayer: { currency, amount: sol ? "851245" : "26897566254439", amountUsd: "0.048310" },
+      gas: { currency, amount: "211615385242", amountUsd: "0.000398" },
+      relayer: { currency, amount: "26897566254439", amountUsd: "0.048310" },
       app: { currency, amount: "0", amountUsd: "0" },
     },
     details: {
@@ -80,9 +78,7 @@ function stubFetch(options: { balance?: Balance | (() => Balance); relay?: "ok" 
       const balance = typeof options.balance === "function" ? options.balance() : options.balance;
       if (balance === "fail") return json({ error: { code: 403, message: "Access forbidden" } }, 403);
       const value = balance ?? ETH;
-      return body.method === "getBalance"
-        ? json({ jsonrpc: "2.0", id: 1, result: { context: { slot: 1 }, value: Number(value) } })
-        : json({ jsonrpc: "2.0", id: 1, result: `0x${value.toString(16)}` });
+      return json({ jsonrpc: "2.0", id: 1, result: `0x${value.toString(16)}` });
     }
     throw new Error(`unexpected request ${url}`);
   }) as typeof fetch;
@@ -140,7 +136,7 @@ describe("Send USDG, the way that shows first", () => {
   it("shows the address as text and QR code, names the network and token, and warns against any other chain", async () => {
     await ui.render(view());
     const tabs = Array.from(ui.container.querySelectorAll('[role="tab"]'));
-    assert.deepEqual(tabs.map((t) => [t.textContent, t.getAttribute("aria-selected")]), [["Send USDG", "true"], ["From ETH", "false"], ["From SOL", "false"]]);
+    assert.deepEqual(tabs.map((t) => [t.textContent, t.getAttribute("aria-selected")]), [["Send USDG", "true"], ["From ETH", "false"]]);
     assert.equal(ui.container.querySelector(".funding-address")!.textContent, AGENT);
     const qr = ui.container.querySelector('svg[role="img"]')!;
     assert.match(qr.getAttribute("aria-label")!, new RegExp(AGENT));
@@ -397,41 +393,6 @@ describe("From ETH", () => {
     await settle(450);
     assert.ok(ui.container.querySelector(".deposit-quote"));
     assert.equal(ui.container.querySelector(".deposit-gas"), null);
-  });
-});
-
-describe("From SOL", () => {
-  it("prices SOL from Solana with the 1% cap and a 0.005 SOL reserve, and links Relay from Solana", async () => {
-    await ui.render(view({ fetchImpl: stubFetch({ balance: 1_000_000_000n }) }));
-    await tab("From SOL");
-    assert.equal(ui.container.querySelector(".deposit-sources"), null, "one source, no picker");
-    assert.equal(inputs()[0]!.value, "", "no EVM address is offered for Solana");
-    assert.match(text(), /Add the wallet you're sending from to use Max\. Max keeps 0\.005 SOL so your wallet stays open and can pay its next fee\./);
-    await typeInto(inputs()[0]!, SOL_WALLET);
-    await settle();
-    assert.equal(calls[0]!.url, "https://solana-rpc.publicnode.com");
-    assert.equal(calls[0]!.body.method, "getBalance");
-    assert.match(text(), /This wallet holds 1 SOL on Solana/);
-    await ui.click("Max");
-    assert.equal(inputs()[1]!.value, "0.995");
-    await settle(450);
-    const price = calls.find((c) => c.url === "https://api.relay.link/price")!;
-    assert.equal(price.body.originChainId, 792703809);
-    assert.equal(price.body.user, "11111111111111111111111111111111");
-    assert.equal(price.body.slippageTolerance, "100");
-    assert.match(ui.container.querySelector(".deposit-quote")!.textContent!, /Slippage cap1%/);
-    const link = new URL(ui.container.querySelector<HTMLAnchorElement>("a.flow-primary")!.href);
-    assert.equal(link.searchParams.get("fromChainId"), "792703809");
-    assert.equal(link.searchParams.get("fromCurrency"), "11111111111111111111111111111111");
-    assert.equal(link.searchParams.get("amount"), "0.995");
-  });
-
-  it("calls an EVM address no Solana wallet", async () => {
-    await ui.render(view());
-    await tab("From SOL");
-    await typeInto(inputs()[0]!, OWNER);
-    assert.match(text(), /That isn't a Solana address\./);
-    assert.equal(calls.length, 0);
   });
 });
 

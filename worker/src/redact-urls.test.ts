@@ -212,9 +212,6 @@ describe("redactUrls", () => {
       `https://etherscan.io/tx/0x${"ef".repeat(32)}`,
       // A news slug mixes letters and digits and is not a key.
       "https://www.reuters.com/markets/us/fed-holds-rates-steady-signals-cut-2026-10-17/",
-      // Base58, mixed case and digits — a key's shape — on an explorer that is public.
-      "https://solscan.io/tx/5VERv8NMvzbJMEkV8xnrLkEaWRtSz9CosKDYjCJjBRnbJLgp8uirBgmQpjKhoR4tjF3ZpRzrFmBV6UjKdiSZkQUW",
-      "https://solscan.io/token/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
     ]) {
       assert.equal(redactUrls(`see ${url} now`), `see ${url} now`, url);
     }

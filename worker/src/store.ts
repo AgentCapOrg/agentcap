@@ -469,10 +469,7 @@ const SQLITE_SCHEMA = `
  * 0x and 64 hex digits, either case, exactly as bookInitialCapital admits one
  * (bookCapitalFlow admits the same with a lowercase x only). An EVM hash is
  * case-insensitive, so it is kept lowercased: 0xAB… and 0xab… are one log to
- * `flows_chain_identity`. Anything else is kept EXACTLY AS WRITTEN. A Solana
- * signature is base58 and case-sensitive (packages/core/src/ids.ts), so a
- * lowercased one names a signature that does not exist; and base58 has no "0",
- * so no Solana id can ever take this shape.
+ * `flows_chain_identity`. Anything else is kept EXACTLY AS WRITTEN.
  *
  * Every hash on the books today has this shape, so the rule changes nothing
  * that is there: each one is still folded, to the same string as before.
@@ -1287,7 +1284,7 @@ const SQLITE_ALTERS: string[] = [
     // because that is the chain the transaction was actually on.
     //
     // ONLY AN EVM HASH IS FOLDED (EVM_TX_HASH above). This runs on every open,
-    // so a Solana signature booked as written would otherwise be lowercased on
+    // so a non-EVM id booked as written would otherwise be lowercased on
     // the next one, out from under its own row and its journal entry.
     `UPDATE flows SET tx_hash = LOWER(tx_hash)
        WHERE tx_hash IS NOT NULL AND tx_hash <> LOWER(tx_hash) AND ${EVM_TX_HASH_SQL}`,

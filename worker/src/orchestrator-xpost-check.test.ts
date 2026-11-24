@@ -19,7 +19,7 @@ function facts(o: Partial<CoinFacts> = {}): CoinFacts {
 function page(o: Partial<PageScan> = {}, findings: Partial<PageScan["findings"]> = {}): PageScan {
   return { status: 200, title: "Acme — onchain widgets", description: "acme builds onchain widgets for traders", text: "x".repeat(2000), truncated: false, links: [],
     finalUrl: "https://acme.example/", allText: `Acme. CA: ${CA}. ` + "y".repeat(2000),
-    findings: { evm: [{ address: CA, chain: "evm", where: ["text"] }], solana: [], github: [{ owner: "acme", repo: "acme-app", where: ["link"] }], x: ["acme"], telegram: true, discord: false, docs: true, ...findings },
+    findings: { evm: [{ address: CA, chain: "evm", where: ["text"] }], github: [{ owner: "acme", repo: "acme-app", where: ["link"] }], x: ["acme"], telegram: true, discord: false, docs: true, ...findings },
     loaded: { scripts: 4, scriptBytes: 900_000, ownCalls: 6, callHosts: ["api.acme.example"] }, ...o };
 }
 const repoRead = (o: Record<string, unknown> = {}): GithubRead => ({ ok: true, record: { readAt: NOW, owner: "acme", pickedFromOwner: false, ownerRepos: null,
@@ -146,11 +146,10 @@ describe("the larp check's legwork", () => {
 describe("the browser's /scan, as this side trusts it", () => {
   it("drops every malformed field rather than believe it", () => {
     const p = scanOf({ status: 200, title: 5, text: "hi", links: [{ href: "https://a.example", text: "a" }, { nope: 1 }], allText: "all",
-      findings: { evm: [{ address: CA, where: ["text", "bogus"] }, { address: "0x123" }], solana: [{ address: "not base58 0OIl" }], github: [{ owner: "../x", repo: "y" }, { owner: "acme", repo: "a/b" }], x: ["acme", 5], docs: "yes" },
+      findings: { evm: [{ address: CA, where: ["text", "bogus"] }, { address: "0x123" }], github: [{ owner: "../x", repo: "y" }, { owner: "acme", repo: "a/b" }], x: ["acme", 5], docs: "yes" },
       loaded: { ownCalls: -1, callHosts: ["api.acme.example"] } });
     assert.ok(p);
     assert.deepEqual(p!.findings.evm, [{ address: CA, chain: "evm", where: ["text"] }]);
-    assert.deepEqual(p!.findings.solana, []);
     assert.deepEqual(p!.findings.github, [{ owner: "acme", repo: null, where: [] }]);
     assert.deepEqual([p!.findings.x, p!.findings.docs, p!.loaded.ownCalls, p!.title], [["acme"], false, 0, ""]);
     assert.equal(scanOf("nope"), null);

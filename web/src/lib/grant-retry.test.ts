@@ -181,7 +181,7 @@ it("a Privy Spot resume still matches its server view after perps slice 5b, and 
   // naming no wallet this build knows, matches nothing.
   assert.equal(sameGrantPermission({ ...spotView, purpose: "perps" }, grant), false);
   assert.equal(sameGrantPermission(spotView, { ...grant, purpose: "perps" }), false);
-  assert.equal(sameGrantPermission({ ...spotView, purpose: "solana" } as never, grant), false);
+  assert.equal(sameGrantPermission({ ...spotView, purpose: "other" } as never, grant), false);
 });
 
 

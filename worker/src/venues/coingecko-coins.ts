@@ -1,6 +1,6 @@
 /**
  * COINS BY NAME OR TICKER, FROM COINGECKO'S MAIN API — what an active agent
- * reads when someone tags it about bitcoin, eth or $SOL (docs/x-posting.md
+ * reads when someone tags it about bitcoin, eth or $BNB (docs/x-posting.md
  * "Research for answers"). Three reads, each on the fleet's CoinGecko Pro lane
  * (geckoterminal.ts cachedCoinGecko: the spacing slot, cooldown, plan latch,
  * monthly credit ceiling and a minute's cache per page):
@@ -179,7 +179,7 @@ export const MARKETS_MAX = 5;
 
 /**
  * SEVERAL COINS' MARKETS IN ONE READ (2026-10-12): what "how's the market?"
- * reads for the big coins (bitcoin, ethereum, solana), one /coins/markets
+ * reads for the big coins (bitcoin, ethereum, bnb), one /coins/markets
  * page on the fleet's CoinGecko Pro lane instead of one read per coin. Ids
  * that are no lookup key, past MARKETS_MAX, or repeated are dropped before
  * anything is asked; a row for an id not asked is never read as one asked.

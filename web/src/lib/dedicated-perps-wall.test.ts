@@ -158,7 +158,7 @@ describe("a Perps signature refuses what a Perps wallet cannot hold, before the 
     const { owner, signatures } = countingOwner();
     const { prepareAgentGrant } = await import("./session");
     await withStubChain(ACCOUNT, () =>
-      assert.rejects(prepareAgentGrant(owner, { purpose: "solana" as never, caps: TEST_CAPS, onStatus: () => {}, chainId: 4663 }), /Nothing was signed/),
+      assert.rejects(prepareAgentGrant(owner, { purpose: "other" as never, caps: TEST_CAPS, onStatus: () => {}, chainId: 4663 }), /Nothing was signed/),
     );
     assert.equal(signatures(), 0);
   });

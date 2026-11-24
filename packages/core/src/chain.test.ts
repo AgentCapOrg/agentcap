@@ -2,7 +2,7 @@
  * THE STRICT CHAIN HELPERS NAME TWO CHAINS AND THROW ON EVERYTHING ELSE; THE
  * LENIENT ONES ARE PINNED AS THEY ARE.
  *
- * chainForId maps any id but the testnet to mainnet, so a Solana grant or a
+ * chainForId maps any id but the testnet to mainnet, so a typo or a
  * missing id reads as Robinhood Chain. The strict pair is for new code that
  * must never guess. The lenient pair is pinned here so that flipping it, which
  * needs a read of prod first, is a decision and not an accident.
@@ -37,7 +37,6 @@ const NOT_ROBINHOOD: readonly unknown[] = [
   {},
   [4663],
   CHAINS.robinhood, // a CAIP-2 ref is not an EVM chain id
-  CHAINS.solana,
 ];
 
 describe("chainForIdStrict / explorerForStrict", () => {

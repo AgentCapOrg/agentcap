@@ -32,7 +32,7 @@ before(() => {
   const intercepted = mock.method(loader, "_load", function (this: typeof loader, id: string, parent: { filename?: string }, isMain: boolean) {
     if (parent?.filename !== appPath || keep.has(id)) return load.call(this, id, parent, isMain);
     if (id === "next/navigation") return { usePathname: () => "/settings", useSearchParams: () => new URLSearchParams(), useRouter: () => ({ push: noop }) };
-    // A lazy, unrelated Solana screen must stay outside this Settings harness.
+    // A lazy, unrelated screen must stay outside this Settings harness.
     if (id === "next/dynamic") return { __esModule: true, default: () => noop };
     if (id === "./HostedControls") return { AccountEntry: noop, FundingPanel: noop, LimitsPanel: noop, requestJson };
     if (id === "./live") return { seedSources, liveOf: () => live };

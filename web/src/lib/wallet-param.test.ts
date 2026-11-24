@@ -12,7 +12,7 @@ it("no selector is Spot, so every existing client keeps its account", () => {
 it("names exactly one wallet, or the request is refused", () => {
   assert.equal(at("?wallet=spot"), "spot");
   assert.equal(at("?wallet=perps"), "perps");
-  for (const query of ["?wallet=", "?wallet=Perps", "?wallet=solana", "?wallet=spot&wallet=perps", "?wallet=perps&wallet=perps"]) {
+  for (const query of ["?wallet=", "?wallet=Perps", "?wallet=other", "?wallet=spot&wallet=perps", "?wallet=perps&wallet=perps"]) {
     assert.equal(at(query), null, query);
   }
 });
@@ -56,7 +56,7 @@ describe("walletUrl, the one client builder", () => {
   });
 
   it("refuses a wallet it does not know rather than building a Spot URL", () => {
-    for (const wallet of ["Perps", "", "solana", undefined]) {
+    for (const wallet of ["Perps", "", "other", undefined]) {
       assert.throws(() => walletUrl("/api/grants", wallet as never), /wallet purpose/, String(wallet));
     }
   });

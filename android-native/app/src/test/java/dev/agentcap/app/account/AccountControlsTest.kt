@@ -107,7 +107,7 @@ class AccountControlsTest {
   @Test fun stopNamesEveryWalletAndDoesNotPromiseAnOnChainRevocation() {
     for (owner in listOf("0x1111111111111111111111111111111111111111", null)) {
       val note = stopArmedNote(owner)
-      assertTrue(note.contains("Spot, Perps and Solana"))
+      assertTrue(note.contains("Spot and Perps"))
       assertTrue(note.contains("does not close positions"))
       assertTrue(note.contains("withdraw assets"))
     }

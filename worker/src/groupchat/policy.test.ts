@@ -403,6 +403,8 @@ describe("clause 6 — secret shapes", () => {
     }
   });
 
+
+
   it("refuses a wallet export an owner pastes — the keypair as bytes or as base58", () => {
     // Longer than an agent line, so only the owner door can meet these as secrets.
     ownerRefuses(`[${Array.from({ length: 64 }, (_, i) => (i * 37) % 256).join(",")}]`, "secret");

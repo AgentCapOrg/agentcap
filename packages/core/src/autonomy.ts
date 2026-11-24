@@ -185,9 +185,6 @@ export const RENEW_SOON_DAYS = 3;
  * panel offers. The exceptions are paths with no signed caps to copy —
  * restoring a lost key, starting over — which open on the presets and so on
  * this default, and say "for N days" before the signature.
- *
- * Solana is not covered: its hosted limit is 168 hours, enforced by the vault
- * program itself (solana.ts `SOLANA_MAX_PERMISSION_MS`).
  */
 export const DEFAULT_PERMISSION_DAYS = 30;
 

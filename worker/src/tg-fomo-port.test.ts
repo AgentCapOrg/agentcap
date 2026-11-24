@@ -238,7 +238,7 @@ describe("createTgFomoPort", () => {
 
   it("reply context never replaces another explicit coin, chain or trader", async () => {
     const address = "0x39dbed3a00000000000000000000000000000c0d";
-    for (const text of ["what are the theses on $OTHER on fomo", "what are fomo theses saying about it on solana", "what are trader CryptoKaleo's theses on fomo", "who is buying other on fomo"]) {
+    for (const text of ["what are the theses on $OTHER on fomo", "what are fomo theses saying about it on bsc", "what are trader CryptoKaleo's theses on fomo", "who is buying other on fomo"]) {
       const plain = await setup();
       const replied = await setup();
       const a = await createTgFomoPort(() => plain.broker, { now: () => NOW }).ask({ text, chatId: GROUP });
@@ -305,7 +305,7 @@ describe("createTgFomoPort", () => {
     const s = await setup();
     const port = createTgFomoPort(() => s.broker, { now: () => s.clock.now });
     const asks: Array<[string, string, Record<string, unknown>, RegExp]> = [
-      ["who is trader CryptoKaleo on fomo?", "fomo_get_trader_context", { trader: "CryptoKaleo" }, /^CryptoKaleo on Fomo holds 2 coins worth \$3\.1k \(source-reported snapshot, valued at current prices\)\.\nLargest held by CryptoKaleo: PONS on robinhood \$3\.1k, FU2O on solana \$13\./],
+      ["who is trader CryptoKaleo on fomo?", "fomo_get_trader_context", { trader: "CryptoKaleo" }, /^CryptoKaleo on Fomo holds 2 coins worth \$3\.1k \(source-reported snapshot, valued at current prices\)\.\nLargest held by CryptoKaleo: PONS on robinhood \$3\.1k, FU2O on bsc \$13\./],
       ["what is @CryptoKaleo holding on fomo?", "fomo_get_trader_context", { trader: "CryptoKaleo" }, /^CryptoKaleo on Fomo holds 2 coins/],
       ["what has @CryptoKaleo bought on fomo this week?", "fomo_get_trader_activity", { trader: "CryptoKaleo", side: "buy", window: "7d" }, /^CryptoKaleo in the last 7d: \d+ buys? in the feed\./],
       ["what did trader CryptoKaleo make money on on fomo today?", "fomo_get_trader_activity", { trader: "CryptoKaleo", window: "24h", limit: 50 }, /^CryptoKaleo on trades opened or closed in the last 24h \(source-reported, realised to date\): made the most on ROO \+\$4\.2k; lost the most on plumber -\$10\.9k\./],
@@ -493,7 +493,7 @@ describe("createTgFomoPort", () => {
   it("looseCoin: only a word where one coin's name goes, never a chain, a time or filler", () => {
     const p = (t: string) => classifyFomoQuestion(t, { memory: null, now: NOW })!;
     for (const t of ["who's selling pons on fomo?", "research pons on fomo", "what's going on with pons on fomo"]) assert.equal(looseCoin(t, p(t)), true, t);
-    for (const t of ["who's selling on fomo?", "who's buying solana coins on fomo", "who's selling the most on fomo", "who's selling $PONS on fomo", "what are fomo traders buying", "who's buying rn on fomo"]) {
+    for (const t of ["who's selling on fomo?", "who's buying bsc coins on fomo", "who's selling the most on fomo", "who's selling $PONS on fomo", "what are fomo traders buying", "who's buying rn on fomo"]) {
       assert.equal(looseCoin(t, p(t)), false, t);
     }
     // With a coin remembered: the same coin is the planner's; another name is not that coin.
@@ -734,9 +734,9 @@ describe("a model's checked choice, asked as the planner's own question", () => 
     });
   }
   it("a chain on a list request is asked in the planner's own chain words, and plans that chain on every list", () => {
-    const want: Record<string, string> = { robinhood: "robinhood", solana: "solana", base: "base", ethereum: "eth", bsc: "bsc" };
+    const want: Record<string, string> = { robinhood: "robinhood", base: "base", ethereum: "eth", bsc: "bsc" };
     for (const [chain, slug] of Object.entries(want)) {
-      const c = chain as "robinhood" | "solana" | "base" | "ethereum" | "bsc";
+      const c = chain as "robinhood" | "bsc" | "base" | "ethereum" | "bsc";
       const lists: Array<[Parameters<typeof requestText>[0], string, Record<string, unknown>]> = [
         [{ kind: "board", board: "trending", chain: c }, "fomo_get_rankings", { board: "trending-tokens", chain: slug }],
         [{ kind: "board", board: "graduated", chain: c }, "fomo_get_rankings", { board: "graduated-tokens", chain: slug }],
@@ -803,14 +803,14 @@ describe("a model's checked choice, asked as the planner's own question", () => 
   });
 });
 
-/** A trending board shaped like the 2026-10-07 one: Solana on top, PONS 12th and CACHE 31st of `n`. */
+/** A trending board shaped like the 2026-10-07 one: BSC on top, PONS 12th and CACHE 31st of `n`. */
 function incidentBoard(n = 100, hood = true): Rec {
-  const b58 = (i: number) => String(i).padStart(3, "1").replace(/0/g, "z");
+  const idx = (i: number) => String(i).padStart(3, "1").replace(/0/g, "z");
   const tokens: Rec[] = [];
   for (let rank = 1; rank <= n; rank++) {
     if (hood && rank === 12) tokens.push({ rank, network: "robinhood", token: { symbol: "PONS", name: "Pons", address: "0x39DBED3A00000000000000000000000000000C0D" }, marketCapUsd: 2_080_000 });
     else if (hood && rank === 31) tokens.push({ rank, network: "robinhood", token: { symbol: "CACHE", name: "Cache", address: "0x7Fe9950000000000000000000000000000000ca5" }, marketCapUsd: 1_234_567 });
-    else tokens.push({ rank, network: "solana", token: { symbol: ["ETAC", "CATE", "STONK", "ANYPS"][rank - 1] ?? `SOLX${b58(rank)}`, name: "x", address: `So1abcdefghijkmnopqrstuvwxyz${b58(rank)}ABCDEFGHJKLMNp`.slice(0, 43) }, marketCapUsd: 874_600 });
+    else tokens.push({ rank, network: "bsc", token: { symbol: ["ETAC", "CATE", "STONK", "ANYPS"][rank - 1] ?? `BSCX${idx(rank)}`, name: "x", address: `0x${rank.toString(16).padStart(40, "b")}` }, marketCapUsd: 874_600 });
   }
   return { board: "trending", count: n, tokens };
 }
@@ -831,9 +831,9 @@ describe("a board on one chain or every chain, as a room hears it", () => {
     assert.ok(all && !all.deflect);
     assert.deepEqual(all.text.split("\n"), [
       "Trending on Fomo (board position is popularity, not quality):",
-      "1. ETAC on solana, market cap $874.6k",
-      "2. CATE on solana, market cap $874.6k",
-      "3. STONK on solana, market cap $874.6k",
+      "1. ETAC on bsc, market cap $874.6k",
+      "2. CATE on bsc, market cap $874.6k",
+      "3. STONK on bsc, market cap $874.6k",
       "On Robinhood Chain, the chain I trade: PONS (12th), CACHE (31st).",
     ]);
     sayable(all.text);
@@ -882,7 +882,7 @@ describe("a board on one chain or every chain, as a room hears it", () => {
   });
 
   it("a chain-cut crowd answer keeps its limits line in a room: Fomo ignored the chain filter, never 'the provider'", async () => {
-    // The alerts page carries a Solana row on a chain=robinhood read.
+    // The alerts page carries a BSC row on a chain=robinhood read.
     const s = await setup();
     const port = createTgFomoPort(() => s.broker, { now: () => s.clock.now });
     const a = await port.ask({ text: "what are fomo traders selling on robinhood?", chatId: GROUP });
@@ -905,14 +905,14 @@ describe("a board on one chain or every chain, as a room hears it", () => {
     assert.doesNotMatch(b!.text, /newest page does not reach back/, b!.text);
   });
 
-  it("her moves after a board with Solana on top start with the Robinhood Chain coins she can act on", async () => {
+  it("her moves after a board with BSC on top start with the Robinhood Chain coins she can act on", async () => {
     const s = await setup({ trending: () => incidentBoard() });
     const port = createTgFomoPort(() => s.broker, { now: () => s.clock.now, buyable: (sym) => sym === "PONS" });
     const a = await port.ask({ text: "what's trending on fomo?", owner: true, chatId: GROUP });
     assert.ok(a?.moves);
     assert.match(a.moves.dm, /^<b>Your moves on these coins<\/b>:\n\n<b>PONS<\/b> \(Robinhood Chain\)\n• <code>\/buy PONS 5<\/code>/);
     assert.match(a.moves.dm, /<b>CACHE<\/b> \(Robinhood Chain\)/);
-    assert.equal((a.moves.dm.match(/not tradeable from here/g) ?? []).length, 1, "one Solana row, not three");
+    assert.equal((a.moves.dm.match(/not tradeable from here/g) ?? []).length, 1, "one BSC row, not three");
   });
 });
 
@@ -956,7 +956,7 @@ describe("the owner's moves", () => {
     assert.match(a.moves.dm, /<code>\/buy PONS 5<\/code>/);
     assert.match(a.moves.dm, /<code>0x39dbed3a00000000000000000000000000000c0d<\/code>/i);
     assert.match(a.moves.dm, /<code>watch PONS on fomo<\/code>/);
-    assert.match(a.moves.dm, /FU2O<\/b> \(solana\)\n• not tradeable from here/);
+    assert.match(a.moves.dm, /FU2O<\/b> \(bsc\)\n• not tradeable from here/);
     assert.doesNotMatch(a.moves.dm, /\/buy FU2O|\/buy CACHE/, "never /buy for a coin /buy would refuse");
     assert.equal(classifyFomoQuestion("watch PONS on fomo", { memory: null, now: NOW })?.intent, "watch");
   });
@@ -2157,7 +2157,7 @@ describe("live 2026-10-07, 23:01-23:03 replayed through the real handler, port, 
     const first = (base.tokens as Rec[])[0]!;
     const w = await world({ tokensSearch: () => ({ tokens: [first,
       { ...first, address: "0x1111111111111111111111111111111111111111" },
-      { ...first, address: "AnsemAnsemAnsemAnsemAnsemAnsemAnsemAnsempump", networkId: 1399811149 },
+      { ...first, address: "0x1aa89d397343e93bff8fa7e28fc429b31d809157", networkId: 56 },
     ] }) });
     const ambiguous = await w.say("shogun what are the theses on $PONS on fomo?");
     assert.match(ambiguous, /more than one/i);
@@ -2172,17 +2172,17 @@ describe("live 2026-10-07, 23:01-23:03 replayed through the real handler, port, 
     assert.deepEqual(w.coinActions, [], "a contract requested for research cannot nominate a trade");
   });
 
-  for (const explicitChain of [false, true]) it(`a Solana mint answering a thesis clarification keeps its case and remains research (explicit chain: ${explicitChain})`, async () => {
-    const mint = "AnsemAnsemAnsemAnsemAnsemAnsemAnsemAnsempump";
+  for (const explicitChain of [false, true]) it(`a BSC mint answering a thesis clarification keeps its case and remains research (explicit chain: ${explicitChain})`, async () => {
+    const mint = "0x1aa89d397343e93bff8fa7e28fc429b31d809157";
     const base = fixture("tokens-search");
     const first = (base.tokens as Rec[])[1]!;
     const w = await world({ tokensSearch: () => ({ tokens: [first,
-      { ...first, address: "Fu2oZoGxFtCDp29NKA4A89xcn255khq9xbxG7Mmtpump" },
+      { ...first, address: "0xc66101b7bbddc5e8738608b393c2eac96bbfef6a" },
     ] }) });
-    const ambiguous = await w.say("shogun what are the theses on $ANSEM on solana on fomo?");
+    const ambiguous = await w.say("shogun what are the theses on $ANSEM on bsc on fomo?");
     assert.match(ambiguous, /contract address/i);
-    await w.say(`${mint}${explicitChain ? " on solana" : ""}`, w.lastOwn());
-    assert.deepEqual(w.s.calls.at(-1)?.args, { token: mint, chain: "solana" });
+    await w.say(`${mint}${explicitChain ? " on bsc" : ""}`, w.lastOwn());
+    assert.deepEqual(w.s.calls.at(-1)?.args, { token: mint, chain: "bsc" });
     assert.equal(w.routePrompts.length, 0);
     assert.deepEqual(w.coinActions, []);
   });
@@ -2449,31 +2449,31 @@ describe("live 2026-10-07, 23:01-23:03 replayed through the real handler, port, 
   it("a chain only the replied board's rows name never narrows 'send it?'", async () => {
     const w = await world();
     await w.say("shogun what's trending on fomo?");
-    w.picks.push({ action: "fomo_board", board: "trending", chain: "solana" });
+    w.picks.push({ action: "fomo_board", board: "trending", chain: "bsc" });
     const out = await w.say("send it?", w.lastOwn(), 2 * 60_000);
-    assert.match(out, /^Trending on Fomo \(board position is popularity, not quality\):\n1\. ETAC on solana/);
+    assert.match(out, /^Trending on Fomo \(board position is popularity, not quality\):\n1\. ETAC on bsc/);
     assert.doesNotMatch(out, /only/);
   });
 });
 
 // ─── A coin's theses, quoted on an explicit ask (Milla, 2026-10-09) ─────────
 
-const AUTON_MINT = "39ahtL8ynzE4amH26J29C93PA5172V3ft9UuUcqQS8fz";
-/** The provider's token search, answering AUTON on Solana. */
-const AUTON_SEARCH = (): Rec => ({ tokens: [{ symbol: "AUTON", address: AUTON_MINT, name: "auton", image: null, marketCapUsd: 36_000, networkId: 1399811149 }] });
+const AUTON_MINT = "0x2980a1f1bcd7307ff6b9084a435357d5cb8d30cb";
+/** The provider's token search, answering AUTON on BSC. */
+const AUTON_SEARCH = (): Rec => ({ tokens: [{ symbol: "AUTON", address: AUTON_MINT, name: "auton", image: null, marketCapUsd: 36_000, networkId: 56 }] });
 /** 2026-10-09 01:15 UTC: when the AUTON rows were probed. */
 const AUTON_NOW = Date.parse("2026-10-09T01:15:00Z");
 
 describe("a coin's theses, quoted: the newest up to ten, each checked, never repaired (WP5)", () => {
   it("a quote request is asked as one fixed question the planner reads as quotes, on the named chain", () => {
-    assert.equal(requestText({ kind: "coin", symbol: "AUTON", chain: "solana", aspect: "theses", quotes: 10 }), "quote the newest 10 theses on $AUTON on solana on fomo");
+    assert.equal(requestText({ kind: "coin", symbol: "AUTON", chain: "bsc", aspect: "theses", quotes: 10 }), "quote the newest 10 theses on $AUTON on bsc on fomo");
     assert.equal(requestText({ kind: "coin", symbol: "auton", aspect: "theses", quotes: 25 }), "quote the newest 10 theses on $AUTON on fomo");
-    assert.equal(requestText({ kind: "coin", symbol: "AUTON", chain: "solana", aspect: "theses" }), "what are the theses on $AUTON on solana on fomo?");
+    assert.equal(requestText({ kind: "coin", symbol: "AUTON", chain: "bsc", aspect: "theses" }), "what are the theses on $AUTON on bsc on fomo?");
     assert.equal(requestText({ kind: "coin", symbol: "AUTON", aspect: "facts", ask: "what" }), null, "facts never reach the Fomo planner");
-    const plan = classifyFomoQuestion(requestText({ kind: "coin", symbol: "AUTON", chain: "solana", aspect: "theses", quotes: 10 })!, { memory: null, now: NOW })!;
+    const plan = classifyFomoQuestion(requestText({ kind: "coin", symbol: "AUTON", chain: "bsc", aspect: "theses", quotes: 10 })!, { memory: null, now: NOW })!;
     assert.equal(plan.intent, "token-theses");
     assert.equal(plan.quotes, 10);
-    assert.deepEqual(plan.toolCalls.map((c) => [c.tool, c.args]), [["fomo_get_token_theses", { token: "AUTON", chain: "solana" }]]);
+    assert.deepEqual(plan.toolCalls.map((c) => [c.tool, c.args]), [["fomo_get_token_theses", { token: "AUTON", chain: "bsc" }]]);
     const five = classifyFomoQuestion(requestText({ kind: "coin", symbol: "AUTON", aspect: "theses", quotes: 5 })!, { memory: null, now: NOW })!;
     assert.equal(five.quotes, 5);
   });
@@ -2482,11 +2482,11 @@ describe("a coin's theses, quoted: the newest up to ten, each checked, never rep
     const s = await setup({ theses: () => fixture("theses-auton"), tokensSearch: AUTON_SEARCH });
     s.clock.now = AUTON_NOW;
     const port = createTgFomoPort(() => s.broker, { now: () => s.clock.now });
-    const a = await port.ask({ text: "quote the newest 10 theses on $AUTON on solana on fomo", chatId: GROUP, owner: true });
+    const a = await port.ask({ text: "quote the newest 10 theses on $AUTON on bsc on fomo", chatId: GROUP, owner: true });
     assert.ok(a && !a.deflect && a.quotes, JSON.stringify(a));
     const q = a.quotes!;
     assert.equal(q.coin, "AUTON");
-    assert.equal(q.where, "Solana");
+    assert.equal(q.where, "BSC");
     assert.equal(q.n, 10);
     assert.equal(q.asked, 10);
     assert.equal(q.total, 4199);
@@ -2506,9 +2506,9 @@ describe("a coin's theses, quoted: the newest up to ten, each checked, never rep
       assert.ok(admitTgLine(l, { agentName: "Pine", kind: "quote", recentOwn: [], rug: { coins: ["AUTON"], brag: false } }).ok, l);
     }
     // The digest stays the fallback, and no paraphrase material is handed over: no model call for a quote ask.
-    assert.match(a.text, /^What traders on Fomo are saying about AUTON on Solana/);
+    assert.match(a.text, /^What traders on Fomo are saying about AUTON on BSC/);
     assert.equal(a.theses, undefined);
-    assert.deepEqual(a.coin, { symbol: "AUTON", chain: "solana", aspect: "quotes" });
+    assert.deepEqual(a.coin, { symbol: "AUTON", chain: "bsc", aspect: "quotes" });
   });
 
   it("past the newest ten: a cut at three sentences, and every lure, target and accusation of the probes left out", async () => {
@@ -2517,7 +2517,7 @@ describe("a coin's theses, quoted: the newest up to ten, each checked, never rep
     const s = await setup({ theses: () => ({ ...page, theses: rows.slice(10) }), tokensSearch: AUTON_SEARCH });
     s.clock.now = AUTON_NOW;
     const port = createTgFomoPort(() => s.broker, { now: () => s.clock.now });
-    const q = (await port.ask({ text: "quote the newest 10 theses on $AUTON on solana on fomo", chatId: GROUP, owner: true }))!.quotes!;
+    const q = (await port.ask({ text: "quote the newest 10 theses on $AUTON on bsc on fomo", chatId: GROUP, owner: true }))!.quotes!;
     assert.deepEqual(q.quotes.map((x) => x.text), ["Great team. Strong community. Clear roadmap."]);
     assert.equal(q.leftOut, 9);
   });
@@ -2526,7 +2526,7 @@ describe("a coin's theses, quoted: the newest up to ten, each checked, never rep
     const s = await setup({ theses: () => fixture("theses-auton"), tokensSearch: AUTON_SEARCH });
     s.clock.now = AUTON_NOW;
     const port = createTgFomoPort(() => s.broker, { now: () => s.clock.now });
-    const q = (await port.ask({ text: "pine list the last 25 theses on $AUTON on solana on fomo", chatId: GROUP, selfNames: ["Pine"], owner: true }))!.quotes!;
+    const q = (await port.ask({ text: "pine list the last 25 theses on $AUTON on bsc on fomo", chatId: GROUP, selfNames: ["Pine"], owner: true }))!.quotes!;
     assert.equal(q.n, 10);
     assert.equal(q.asked, 25);
   });
@@ -2535,14 +2535,14 @@ describe("a coin's theses, quoted: the newest up to ten, each checked, never rep
     const s = await setup({ theses: () => fixture("theses-auton"), tokensSearch: AUTON_SEARCH });
     s.clock.now = AUTON_NOW;
     const port = createTgFomoPort(() => s.broker, { now: () => s.clock.now });
-    await port.ask({ text: "what are the theses on $AUTON on solana on fomo?", chatId: GROUP });
+    await port.ask({ text: "what are the theses on $AUTON on bsc on fomo?", chatId: GROUP });
     const before = s.provider.length;
     s.clock.now += 30_000;
     const a = await port.ask({ text: "can you list the last 10", request: { kind: "coin", symbol: "AUTON", aspect: "theses", quotes: 10 }, chatId: GROUP, owner: true });
     assert.ok(a?.quotes, JSON.stringify(a));
     assert.equal(s.calls[s.calls.length - 1]!.args.token, AUTON_MINT, "the remembered mint, never a search by symbol");
-    assert.equal(s.provider.length, before, "no provider call: the room's kept copy");
-    assert.equal(a!.free, true);
+    // An unnumbered chain's address is confirmed by one search; the theses themselves come from the kept copy.
+    assert.deepEqual(s.provider.slice(before).filter((route) => route.startsWith("/v2/thesis/")), [], "no theses call: the room's kept copy");
     // A request for another chain's AUTON is asked by its own words.
     s.clock.now += 30_000;
     await port.ask({ text: "x", request: { kind: "coin", symbol: "AUTON", chain: "base", aspect: "theses" }, chatId: GROUP });
@@ -2554,14 +2554,14 @@ describe("a coin's theses, quoted: the newest up to ten, each checked, never rep
     s.clock.now = AUTON_NOW;
     const port = createTgFomoPort(() => s.broker, { now: () => s.clock.now });
     for (const ask of [
-      { text: "quote the newest 10 theses on $AUTON on solana on fomo", chatId: GROUP },
-      { text: "can you list the last 10", request: { kind: "coin" as const, symbol: "AUTON", chain: "solana" as const, aspect: "theses" as const, quotes: 10 }, chatId: GROUP },
-      { text: "show me these thesis, dont summarise", request: { kind: "coin" as const, symbol: "AUTON", chain: "solana" as const, aspect: "theses" as const, quotes: 10 }, chatId: GROUP, owner: false },
+      { text: "quote the newest 10 theses on $AUTON on bsc on fomo", chatId: GROUP },
+      { text: "can you list the last 10", request: { kind: "coin" as const, symbol: "AUTON", chain: "bsc" as const, aspect: "theses" as const, quotes: 10 }, chatId: GROUP },
+      { text: "show me these thesis, dont summarise", request: { kind: "coin" as const, symbol: "AUTON", chain: "bsc" as const, aspect: "theses" as const, quotes: 10 }, chatId: GROUP, owner: false },
     ]) {
       const a = await port.ask(ask);
       assert.ok(a && !a.deflect, JSON.stringify(a));
       assert.equal(a.quotes, undefined, ask.text);
-      assert.match(a.text, /^What traders on Fomo are saying about AUTON on Solana/, ask.text);
+      assert.match(a.text, /^What traders on Fomo are saying about AUTON on BSC/, ask.text);
       // No stranger's words in the digest either.
       assert.doesNotMatch(a.text, /team is still building|top holders own way too much/u, ask.text);
       s.clock.now += 1_000;
@@ -2571,7 +2571,7 @@ describe("a coin's theses, quoted: the newest up to ten, each checked, never rep
   it("never a trader's own theses, and never from a compound or empty read", () => {
     const view = { evidenceId: "e", author: { userId: "u", handle: "kaleo" }, token: null, postedAt: AUTON_NOW - 60_000, stance: "neutral", excerpt: "im holding, team is still building", likes: 1, isDev: false, family: "f" };
     const env = (data: Rec) => ({ tool: "fomo_get_token_theses", status: "ok", data, coverage: { providerTotal: 1 }, freshness: {} });
-    const token = { key: "solana:mainnet:x", chain: { slug: "solana" } };
+    const token = { key: "bsc:mainnet:x", chain: { slug: "bsc" } };
     const base = { handled: true, text: "", toolsCalled: [], analysis: false, clarification: false, plan: { intent: "token-theses", quotes: 10 } };
     const r = (envelopes: unknown[]) => ({ ...base, envelopes }) as unknown as AnswerFomoResult;
     assert.ok(thesesQuotes(r([env({ token, label: { symbol: "AUTON" }, trader: null, theses: [view] })]), AUTON_NOW));
@@ -2598,7 +2598,7 @@ function autonIndex(): { fetch: FactsFetch; routes: string[] } {
   return { fetch, routes };
 }
 const PINNED_WHAT = [
-  "AUTON on Solana, from GeckoTerminal at 01:15 UTC:",
+  "AUTON on BSC, from GeckoTerminal at 01:15 UTC:",
   "About $36k now (fully diluted); its highest hourly close on its main pool was about $5.75M, Oct 7 at 05:00 UTC, so it is 99.4% below that.",
   "The biggest drop: about 95% in three hours from 13:00 UTC on Oct 8.",
   "Main pool liquidity about $16k; in the last 24h, 1,576 sellers and 1,157 buyers.",
@@ -2610,7 +2610,7 @@ describe("a coin's facts: measured, with their source and time, and what could n
 
   it("the pinned lines for each kind of question, every one a research line the room may hear", async () => {
     const idx = autonIndex();
-    const r = await createCoinFactsReader({ fetchJson: idx.fetch, now: () => AUTON_NOW })({ network: "solana", address: AUTON_MINT, chatId: GROUP, timeoutMs: 10_000, withInfo: true });
+    const r = await createCoinFactsReader({ fetchJson: idx.fetch, now: () => AUTON_NOW })({ network: "bsc", address: AUTON_MINT, chatId: GROUP, timeoutMs: 10_000, withInfo: true });
     assert.ok(r.ok);
     const research = { agentName: "Shogun", kind: "research" as const, recentOwn: [] };
     assert.deepEqual(coinFactsLines(r.facts, "AUTON", "what", AUTON_NOW), PINNED_WHAT);
@@ -2641,16 +2641,16 @@ describe("a coin's facts: measured, with their source and time, and what could n
     s.clock.now = AUTON_NOW;
     const idx = autonIndex();
     const port = createTgFomoPort(() => s.broker, { now: () => s.clock.now, facts: createCoinFactsReader({ fetchJson: idx.fetch, now: () => s.clock.now }) });
-    await port.ask({ text: "what are the theses on $AUTON on solana on fomo?", chatId: GROUP });
+    await port.ask({ text: "what are the theses on $AUTON on bsc on fomo?", chatId: GROUP });
     const calls = s.calls.length;
     const provider = s.provider.length;
-    const a = await port.ask({ text: "what happened to it", request: { kind: "coin", symbol: "AUTON", chain: "solana", aspect: "facts", ask: "what" }, chatId: GROUP });
+    const a = await port.ask({ text: "what happened to it", request: { kind: "coin", symbol: "AUTON", chain: "bsc", aspect: "facts", ask: "what" }, chatId: GROUP });
     assert.deepEqual(a!.text.split("\n"), PINNED_WHAT);
     assert.equal(s.calls.length, calls, "no Fomo tool call: the room's memory held the coin");
     assert.equal(s.provider.length, provider);
     assert.equal(a!.free, true);
-    assert.deepEqual(a!.coin, { symbol: "AUTON", chain: "solana", aspect: "facts" });
-    assert.deepEqual(a!.collapse, { coin: "AUTON", chain: "solana", collapsed: true, atMs: AUTON_NOW });
+    assert.deepEqual(a!.coin, { symbol: "AUTON", chain: "bsc", aspect: "facts" });
+    assert.deepEqual(a!.collapse, { coin: "AUTON", chain: "bsc", collapsed: true, atMs: AUTON_NOW });
     assert.ok(idx.routes.every((r) => r.includes(AUTON_MINT) || r.includes("FiYyzx")), "the remembered mint, verbatim");
   });
 
@@ -2658,11 +2658,11 @@ describe("a coin's facts: measured, with their source and time, and what could n
     const s = await setup({ tokensSearch: AUTON_SEARCH });
     s.clock.now = AUTON_NOW;
     const port = createTgFomoPort(() => s.broker, { now: () => s.clock.now, facts: createCoinFactsReader({ fetchJson: autonIndex().fetch, now: () => s.clock.now }) });
-    const a = await port.ask({ text: "why did auton rug on solana?", request: { kind: "coin", symbol: "AUTON", chain: "solana", aspect: "facts", ask: "why" }, chatId: GROUP });
+    const a = await port.ask({ text: "why did auton rug on bsc?", request: { kind: "coin", symbol: "AUTON", chain: "bsc", aspect: "facts", ask: "why" }, chatId: GROUP });
     assert.deepEqual(s.calls.map((c) => c.tool), ["fomo_resolve_subject"]);
     assert.equal(s.calls[0]!.opts.groupId, String(GROUP), "a group charge, keyed on the room");
     assert.equal(s.calls[0]!.opts.audience, "group");
-    assert.deepEqual(s.calls[0]!.args, { query: "$AUTON", kind: "token", chain: "solana" });
+    assert.deepEqual(s.calls[0]!.args, { query: "$AUTON", kind: "token", chain: "bsc" });
     assert.match(a!.text.split("\n").slice(-1)[0]!, /^The data shows when and how far it fell, not why/);
     assert.notEqual(a!.free, true, "the resolver read from the provider");
   });
@@ -2673,25 +2673,25 @@ describe("a coin's facts: measured, with their source and time, and what could n
     const busy: CoinFactsReader = async () => ({ ok: false, why: "busy" });
     const down: CoinFactsReader = async () => ({ ok: false, why: "unavailable" });
     const none: CoinFactsReader = async () => ({ ok: false, why: "not-found" });
-    const req = { kind: "coin" as const, symbol: "AUTON", chain: "solana" as const, aspect: "facts" as const, ask: "what" as const };
+    const req = { kind: "coin" as const, symbol: "AUTON", chain: "bsc" as const, aspect: "facts" as const, ask: "what" as const };
     const ask = (reader?: CoinFactsReader) => createTgFomoPort(() => s.broker, { now: () => s.clock.now, ...(reader ? { facts: reader } : {}) }).ask({ text: "x", request: req, chatId: GROUP });
     assert.equal((await ask(busy))!.text, "I've looked up enough market data in here for now; ask again in a few minutes.");
     assert.equal((await ask(down))!.text, "Couldn't read the market data for AUTON just now, try again in a bit.");
-    assert.equal((await ask(none))!.text, "I couldn't find a market for AUTON on Solana to measure.");
+    assert.equal((await ask(none))!.text, "I couldn't find a market for AUTON on BSC to measure.");
     assert.equal(await ask(), null, "no reader wired: not answered here");
     const unknown = await createTgFomoPort(() => s.broker, { now: () => s.clock.now, facts: busy }).ask({ text: "x", request: { ...req, symbol: "NOPE", chain: undefined }, chatId: GROUP - 7 });
     assert.match(unknown!.text, /^I couldn't find NOPE on Fomo\.$|^Which NOPE do you mean\?/);
-    for (const t of ["I've looked up enough market data in here for now; ask again in a few minutes.", "Couldn't read the market data for AUTON just now, try again in a bit.", "I couldn't find a market for AUTON on Solana to measure.", "I couldn't find NOPE on Fomo.", "Which AUTON do you mean? Fomo lists it on more than one chain; say the chain.", "Fomo lists more than one AUTON on Solana, so I can't tell which one you mean."]) {
+    for (const t of ["I've looked up enough market data in here for now; ask again in a few minutes.", "Couldn't read the market data for AUTON just now, try again in a bit.", "I couldn't find a market for AUTON on BSC to measure.", "I couldn't find NOPE on Fomo.", "Which AUTON do you mean? Fomo lists it on more than one chain; say the chain.", "Fomo lists more than one AUTON on BSC, so I can't tell which one you mean."]) {
       assert.ok(admitTgLine(t, { agentName: "Pine", kind: "research", recentOwn: [] }).ok, t);
     }
   });
 
-  it("a coin whose ticker the gate refuses keeps its source and time: 'This coin on Solana, from GeckoTerminal at …' (review r2)", async () => {
-    const r = await createCoinFactsReader({ fetchJson: autonIndex().fetch, now: () => AUTON_NOW })({ network: "solana", address: AUTON_MINT, chatId: GROUP, timeoutMs: 10_000, withInfo: false });
+  it("a coin whose ticker the gate refuses keeps its source and time: 'This coin on BSC, from GeckoTerminal at …' (review r2)", async () => {
+    const r = await createCoinFactsReader({ fetchJson: autonIndex().fetch, now: () => AUTON_NOW })({ network: "bsc", address: AUTON_MINT, chatId: GROUP, timeoutMs: 10_000, withInfo: false });
     assert.ok(r.ok);
     for (const sym of ["SCAM", "RUG", "HONEYPOT"]) {
       const lines = coinFactsLines(r.facts, sym, "what", AUTON_NOW);
-      assert.equal(lines[0], "This coin on Solana, from GeckoTerminal at 01:15 UTC:", sym);
+      assert.equal(lines[0], "This coin on BSC, from GeckoTerminal at 01:15 UTC:", sym);
       for (const l of lines) assert.ok(admitTgLine(l, { agentName: "Shogun", kind: "research", recentOwn: [] }).ok, `${sym}: ${l}`);
     }
     assert.deepEqual(coinFactsLines(r.facts, "AUTON", "what", AUTON_NOW), PINNED_WHAT, "a sayable ticker is named as before");
@@ -2699,16 +2699,16 @@ describe("a coin's facts: measured, with their source and time, and what could n
 
   it("two coins of one ticker on the chain asked are said plainly, never 'say the chain' again (review r2)", async () => {
     const two = (): Rec => ({ tokens: [
-      { symbol: "AUTON", address: AUTON_MINT, name: "auton", image: null, marketCapUsd: 36_000, networkId: 1399811149 },
-      { symbol: "AUTON", address: "So11111111111111111111111111111111111111112", name: "auton two", image: null, marketCapUsd: 9_000, networkId: 1399811149 },
+      { symbol: "AUTON", address: AUTON_MINT, name: "auton", image: null, marketCapUsd: 36_000, networkId: 56 },
+      { symbol: "AUTON", address: "0xd77cf5c8a1c79d6b78408a3f545dea88441790fb", name: "auton two", image: null, marketCapUsd: 9_000, networkId: 56 },
     ] });
     const s = await setup({ theses: () => fixture("theses-auton"), tokensSearch: two });
     s.clock.now = AUTON_NOW;
     const reader: CoinFactsReader = async () => ({ ok: false, why: "busy" });
     const req = { kind: "coin" as const, symbol: "AUTON", aspect: "facts" as const, ask: "what" as const };
-    for (const [chatId, chain] of [[GROUP - 11, "solana"], [GROUP - 12, undefined]] as const) {
+    for (const [chatId, chain] of [[GROUP - 11, "bsc"], [GROUP - 12, undefined]] as const) {
       const r = await createTgFomoPort(() => s.broker, { now: () => s.clock.now, facts: reader }).ask({ text: "x", request: { ...req, ...(chain ? { chain } : {}) }, chatId });
-      assert.equal(r!.text, "Fomo lists more than one AUTON on Solana, so I can't tell which one you mean.", String(chain));
+      assert.equal(r!.text, "Fomo lists more than one AUTON on BSC, so I can't tell which one you mean.", String(chain));
       assert.doesNotMatch(r!.text, /more than one chain|say the chain/u);
     }
   });
@@ -2722,14 +2722,14 @@ describe("a coin's facts: measured, with their source and time, and what could n
       return [t, f(o!), Math.max(f(h!), f(o!), f(c!)), Math.min(f(l!), f(o!), f(c!)), f(c!), v];
     }) } } };
     const pools = deskFixture("auton-pools") as { data: Array<{ id: string; attributes: Record<string, unknown> }> };
-    const pricey = { data: pools.data.map((p) => p.id.endsWith("FiYyzxapRvkbUhF5ZD3mJigWwqBGhtVLH49MDSgCLHdB") ? { ...p, attributes: { ...p.attributes, base_token_price_usd: String(top * 0.6), fdv_usd: String(top * 0.6 * 997_462_970), price_change_percentage: { h24: "-5" } } } : p) };
+    const pricey = { data: pools.data.map((p) => p.id.endsWith("0x0b8e0770dda3fd26b2f81254be3cc4b6b2ec1e8d") ? { ...p, attributes: { ...p.attributes, base_token_price_usd: String(top * 0.6), fdv_usd: String(top * 0.6 * 997_462_970), price_change_percentage: { h24: "-5" } } } : p) };
     const fetch: FactsFetch = async (route) => route.includes("/ohlcv/") ? { ok: true, body: gentle, observedAt: AUTON_NOW } : route.includes("/pools?") ? { ok: true, body: pricey, observedAt: AUTON_NOW } : { ok: false, failure: "http-404" };
     const s = await setup({ tokensSearch: AUTON_SEARCH });
     s.clock.now = AUTON_NOW;
     const a = await createTgFomoPort(() => s.broker, { now: () => s.clock.now, facts: createCoinFactsReader({ fetchJson: fetch, now: () => AUTON_NOW, limiter: new FactsLimiter({ now: () => AUTON_NOW }) }) })
-      .ask({ text: "x", request: { kind: "coin", symbol: "AUTON", chain: "solana", aspect: "facts", ask: "what" }, chatId: GROUP });
+      .ask({ text: "x", request: { kind: "coin", symbol: "AUTON", chain: "bsc", aspect: "facts", ask: "what" }, chatId: GROUP });
     assert.match(a!.text, /so it is 40% below that\./, a!.text);
-    assert.deepEqual(a!.collapse, { coin: "AUTON", chain: "solana", collapsed: false, atMs: AUTON_NOW });
+    assert.deepEqual(a!.collapse, { coin: "AUTON", chain: "bsc", collapsed: false, atMs: AUTON_NOW });
   });
 });
 
@@ -2841,19 +2841,19 @@ describe("the AUTON quotes, facts and rug banter (live 2026-10-09)", () => {
   }
 
   const QUOTE_LINE = /^• (?:[A-Za-z0-9_]{2,30}|a trader), (?:just now|\d+ min ago|\d+h ago|\d+ days ago): “[^“”]{1,161}”$/u;
-  const NEVER_IN_QUOTES = /dm me|alpha group|t\.me|join|send 1|SOL to get|这|connect your wallet|pulled the liquidity|dumped on|scam|honeypot|50m|100x|ngmi|\[link\]|@|\$|#|Against it:|39ahtL8ynzE4amH26J29C93PA5172V3ft9UuUcqQS8fz/u;
+  const NEVER_IN_QUOTES = /dm me|alpha group|t\.me|join|send 1|BNB to get|这|connect your wallet|pulled the liquidity|dumped on|scam|honeypot|50m|100x|ngmi|\[link\]|@|\$|#|Against it:|0x2980a1f1bcd7307ff6b9084a435357d5cb8d30cb/u;
 
   it("steps 1 to 10: activity, the digest, the quotes asked for, the facts, the banter, never a trader's theses", async () => {
     const r = await shogunRoom();
     try {
       // 1. Shogun's AUTON activity answer on an empty feed: "activity was", never "were".
-      const one = (await r.say("shogun what's happening with $AUTON on solana on fomo?")).join("\n");
+      const one = (await r.say("shogun what's happening with $AUTON on bsc on fomo?")).join("\n");
       assert.match(one, /No matching activity was returned for AUTON/, one);
       assert.doesNotMatch(one, /were returned/);
 
       // 2. "what are people saying about it on thesis on fomo" under it: the digest, one page read.
       const two = (await r.say("what are people saying about it on thesis on fomo", { under: r.lastOwn(), advanceMs: 30_000 })).join("\n");
-      assert.match(two, /^What traders on Fomo are saying about AUTON on Solana \(/, two);
+      assert.match(two, /^What traders on Fomo are saying about AUTON on BSC \(/, two);
       assert.match(two, /Their claims, not facts; read \d+ of 4199/, two);
       assert.equal(r.theses(), 1);
       const digest = r.lastOwn();
@@ -2872,7 +2872,7 @@ describe("the AUTON quotes, facts and rug banter (live 2026-10-09)", () => {
       assert.equal(r.dms().length, dmsBefore + 1, "one DM: the quotes");
       const dm3 = r.dms().slice(-1)[0]!;
       const lines = dm3.split("\n");
-      assert.equal(lines[0], "The newest 10 theses on AUTON on Solana, in their words (not facts):");
+      assert.equal(lines[0], "The newest 10 theses on AUTON on BSC, in their words (not facts):");
       const quotes = lines.filter((l) => l.startsWith("• "));
       assert.ok(quotes.length >= 1 && quotes.length <= 10, dm3);
       for (const l of quotes) assert.match(l, QUOTE_LINE);
@@ -2887,7 +2887,7 @@ describe("the AUTON quotes, facts and rug banter (live 2026-10-09)", () => {
 
       // 3b. The same ask from anyone else is the digest in the room: no quotes, no DM.
       const bob = (await r.say("can you list the last 10", { under: digest, fromId: 31337, advanceMs: 20_000 })).join("\n");
-      assert.match(bob, /^What traders on Fomo are saying about AUTON on Solana/, bob);
+      assert.match(bob, /^What traders on Fomo are saying about AUTON on BSC/, bob);
       assert.doesNotMatch(bob, /•|“|The newest/u, bob);
       assert.equal(r.dms().length, dmsBefore + 1, "no DM for anyone else's ask");
 
@@ -2896,18 +2896,18 @@ describe("the AUTON quotes, facts and rug banter (live 2026-10-09)", () => {
       assert.match(four, /DM/u, four);
       const dm4 = r.dms().slice(-1)[0]!;
       assert.equal(r.dms().length, dmsBefore + 2);
-      assert.equal(dm4.split("\n")[0], "The newest 10 theses on AUTON on Solana, in their words (not facts):");
+      assert.equal(dm4.split("\n")[0], "The newest 10 theses on AUTON on BSC, in their words (not facts):");
       assert.match(dm4, /\nFrom a copy fetched a minute ago\.$/, dm4);
       assert.doesNotMatch(dm4, /just now\.$/m);
       assert.equal(r.s.provider.length, providerBefore);
 
       // 6a. "summarise them" is the digest again, in the room, never quotes.
       const six = (await r.say("summarise them", { under: digest, advanceMs: 20_000 })).join("\n");
-      assert.match(six, /^What traders on Fomo are saying about AUTON on Solana/, six);
+      assert.match(six, /^What traders on Fomo are saying about AUTON on BSC/, six);
       assert.doesNotMatch(six, /The newest/);
       // 6c. "shogun summarise them", replying to nothing, is the digest again too.
       const sixC = (await r.say("shogun summarise them", { advanceMs: 20_000 })).join("\n");
-      assert.match(sixC, /^What traders on Fomo are saying about AUTON on Solana/, sixC);
+      assert.match(sixC, /^What traders on Fomo are saying about AUTON on BSC/, sixC);
       assert.equal(r.dms().length, dmsBefore + 2, "a digest is never a DM");
 
       // 7. Twenty minutes on, past the follow-up window, under the digest: "show me the last 5", asked by code, memory first.
@@ -2915,7 +2915,7 @@ describe("the AUTON quotes, facts and rug banter (live 2026-10-09)", () => {
       const seven = (await r.say("show me the last 5", { under: digest, advanceMs: 20 * 60_000 })).join("\n");
       assert.match(seven, /DM/u, seven);
       const dm7 = r.dms().slice(-1)[0]!;
-      assert.equal(dm7.split("\n")[0], "The newest 5 theses on AUTON on Solana, in their words (not facts):", dm7);
+      assert.equal(dm7.split("\n")[0], "The newest 5 theses on AUTON on BSC, in their words (not facts):", dm7);
       assert.ok(dm7.split("\n").filter((l) => l.startsWith("• ")).length <= 5);
       assert.equal(r.s.provider.filter((p) => p === "/v2/tokens/search").length, searches, "no tokens search: the remembered coin");
       assert.equal(r.theses(), 1, "still the one page");
@@ -2981,7 +2981,7 @@ describe("the AUTON quotes, facts and rug banter (live 2026-10-09)", () => {
   /** Steps 1 and 2, a board with kaleo on it, and the measured fall: a measured AUTON permit. */
   async function measuredRoom() {
     const r = await shogunRoom({ leaderboard: KALEO_BOARD });
-    await r.say("shogun what's happening with $AUTON on solana on fomo?");
+    await r.say("shogun what's happening with $AUTON on bsc on fomo?");
     await r.say("what are people saying about it on thesis on fomo", { under: r.lastOwn(), advanceMs: 30_000 });
     await heardKaleo(r);
     await r.say("shogun what happened to auton", { advanceMs: 60_000 });
@@ -2995,23 +2995,23 @@ describe("the AUTON quotes, facts and rug banter (live 2026-10-09)", () => {
   };
 
   it("a coin named like a trader the room heard on a board gets no facts lookup on a bare name and no permit (review r2)", async () => {
-    // Fomo lists a KALEO coin on Solana (the index measures it collapsed): the room heard kaleo as a trader on the board.
+    // Fomo lists a KALEO coin on BSC (the index measures it collapsed): the room heard kaleo as a trader on the board.
     let symbol = "AUTON";
-    const r = await shogunRoom({ leaderboard: KALEO_BOARD, tokensSearch: () => ({ tokens: [{ symbol, address: AUTON_MINT, name: symbol.toLowerCase(), image: null, marketCapUsd: 36_000, networkId: 1399811149 }] }) });
+    const r = await shogunRoom({ leaderboard: KALEO_BOARD, tokensSearch: () => ({ tokens: [{ symbol, address: AUTON_MINT, name: symbol.toLowerCase(), image: null, marketCapUsd: 36_000, networkId: 56 }] }) });
     try {
-      await r.say("shogun what's happening with $AUTON on solana on fomo?");
+      await r.say("shogun what's happening with $AUTON on bsc on fomo?");
       await r.say("what are people saying about it on thesis on fomo", { under: r.lastOwn(), advanceMs: 30_000 });
       await heardKaleo(r);
       symbol = "KALEO";
-      const facts = (await r.say("shogun why did kaleo dump on solana?", { advanceMs: 60_000 })).join("\n");
-      assert.doesNotMatch(facts, /^KALEO on Solana, from GeckoTerminal/mu, facts);
+      const facts = (await r.say("shogun why did kaleo dump on bsc?", { advanceMs: 60_000 })).join("\n");
+      assert.doesNotMatch(facts, /^KALEO on BSC, from GeckoTerminal/mu, facts);
       assert.ok(!r.logs.includes("[tg-groups] collapse measured"), r.logs.join("\n"));
       r.model.content = "kaleo rugged lol";
       const out = await r.say("shogun lmao kaleo", { fromId: 31337, advanceMs: 30_000 });
       assert.ok(!out.includes("kaleo rugged lol"), out.join(" | "));
       // Asked as "$KALEO" it is the coin's facts, measured; the collapse still sets no permit for a trader's name.
-      const tagged = (await r.say("shogun why did $KALEO dump on solana?", { advanceMs: 60_000 })).join("\n");
-      assert.match(tagged, /^KALEO on Solana, from GeckoTerminal/mu, tagged);
+      const tagged = (await r.say("shogun why did $KALEO dump on bsc?", { advanceMs: 60_000 })).join("\n");
+      assert.match(tagged, /^KALEO on BSC, from GeckoTerminal/mu, tagged);
       const again = await r.say("shogun lmao kaleo", { fromId: 31337, advanceMs: 30_000 });
       assert.ok(!again.includes("kaleo rugged lol"), again.join(" | "));
     } finally {
@@ -3060,7 +3060,7 @@ describe("the AUTON quotes, facts and rug banter (live 2026-10-09)", () => {
   it("past the follow-up window, under the digest or her DM notice, only her explicit ask or a bare count is quoted by code, to her DM; anything else is routed (review, 2026-10-09)", async () => {
     const r = await shogunRoom();
     try {
-      await r.say("shogun what's happening with $AUTON on solana on fomo?");
+      await r.say("shogun what's happening with $AUTON on bsc on fomo?");
       await r.say("what are people saying about it on thesis on fomo", { under: r.lastOwn(), advanceMs: 30_000 });
       const digest = r.lastOwn();
       await r.say("can you list the last 10", { under: digest, advanceMs: 30_000 });
@@ -3083,7 +3083,7 @@ describe("the AUTON quotes, facts and rug banter (live 2026-10-09)", () => {
         assert.match(out, /DM/u, `${line} -> ${out}`);
         assert.doesNotMatch(out, /•|“|The newest/u, `${line} -> ${out}`);
         assert.equal(r.dms().length, dms + 1, line);
-        assert.equal(r.dms().slice(-1)[0]!.split("\n")[0], `The newest ${n} theses on AUTON on Solana, in their words (not facts):`, line);
+        assert.equal(r.dms().slice(-1)[0]!.split("\n")[0], `The newest ${n} theses on AUTON on BSC, in their words (not facts):`, line);
       }
       // Anyone else, under either: the digest in the room, no DM, no quote.
       for (const under of [digest, notice]) {
@@ -3100,7 +3100,7 @@ describe("the AUTON quotes, facts and rug banter (live 2026-10-09)", () => {
   it("past the follow-up window, a reply under her DM notice alone asks again for the same coin, to her DM (review)", async () => {
     const r = await shogunRoom();
     try {
-      await r.say("shogun what's happening with $AUTON on solana on fomo?");
+      await r.say("shogun what's happening with $AUTON on bsc on fomo?");
       await r.say("what are people saying about it on thesis on fomo", { under: r.lastOwn(), advanceMs: 30_000 });
       await r.say("can you list the last 10", { under: r.lastOwn(), advanceMs: 30_000 });
       const notice = r.lastOwn();
@@ -3110,7 +3110,7 @@ describe("the AUTON quotes, facts and rug banter (live 2026-10-09)", () => {
       const out = (await r.say("show me the last 5", { under: notice, advanceMs: 20 * 60_000 })).join("\n");
       assert.match(out, /DM/u, out);
       assert.equal(r.dms().length, dms + 1);
-      assert.equal(r.dms().slice(-1)[0]!.split("\n")[0], "The newest 5 theses on AUTON on Solana, in their words (not facts):");
+      assert.equal(r.dms().slice(-1)[0]!.split("\n")[0], "The newest 5 theses on AUTON on BSC, in their words (not facts):");
     } finally {
       r.restore();
     }
@@ -3122,12 +3122,12 @@ describe("the AUTON quotes, facts and rug banter (live 2026-10-09)", () => {
     const spanish = { ...page, theses: (page.theses as Rec[]).map((t) => ({ ...t, text: "esto se va a la luna, el equipo sigue construyendo" })) };
     const r = await shogunRoom({ theses: () => spanish });
     try {
-      await r.say("shogun what's happening with $AUTON on solana on fomo?");
+      await r.say("shogun what's happening with $AUTON on bsc on fomo?");
       await r.say("what are people saying about it on thesis on fomo", { under: r.lastOwn(), advanceMs: 30_000 });
       const digest = r.lastOwn();
       const dms = r.dms().length;
       const out = (await r.say("can you list the last 10", { under: digest, advanceMs: 30_000 })).join("\n");
-      assert.match(out, /^None of the newest 10 theses on AUTON on Solana can be quoted here \(10 left out\)\.\nWhat traders on Fomo are saying about AUTON on Solana/u, out);
+      assert.match(out, /^None of the newest 10 theses on AUTON on BSC can be quoted here \(10 left out\)\.\nWhat traders on Fomo are saying about AUTON on BSC/u, out);
       assert.doesNotMatch(out, /DM|•|“|esto/u, out);
       assert.equal(r.dms().length, dms, "no DM");
       assert.ok(r.logs.includes("[tg-groups] theses quoted for the owner's DM (0 quoted, 10 left out)"), r.logs.join("\n"));
@@ -3144,15 +3144,15 @@ describe("the AUTON quotes, facts and rug banter (live 2026-10-09)", () => {
     try {
       // A first ask is a fresh read; this one takes 27 s of the 30.
       slowMs = 27_000;
-      const out = (await r.say("shogun quote the newest 10 theses on $AUTON on solana on fomo")).join("\n");
+      const out = (await r.say("shogun quote the newest 10 theses on $AUTON on bsc on fomo")).join("\n");
       assert.equal(r.theses(), 1);
-      assert.match(out, /^What traders on Fomo are saying about AUTON on Solana/u, out);
+      assert.match(out, /^What traders on Fomo are saying about AUTON on BSC/u, out);
       assert.doesNotMatch(out, /DM|•|“/u, out);
       assert.equal(r.dms().length, 0);
       assert.ok(r.logs.includes("[tg-groups] theses quotes: too little time left for the owner's DM, the digest in the room"), r.logs.join("\n"));
       // With time to spare, the same ask goes to her DM.
       slowMs = 0;
-      const again = (await r.say("shogun quote the newest 10 theses on $AUTON on solana on fomo", { advanceMs: 60_000 })).join("\n");
+      const again = (await r.say("shogun quote the newest 10 theses on $AUTON on bsc on fomo", { advanceMs: 60_000 })).join("\n");
       assert.match(again, /DM/u, again);
       assert.equal(r.dms().length, 1);
     } finally {
@@ -3167,7 +3167,7 @@ describe("the AUTON quotes, facts and rug banter (live 2026-10-09)", () => {
     try {
       // A newer line of her burst arrives while the theses are read: the quote answer is no longer wanted.
       during = () => r!.inject("shogun gm");
-      await r.say("shogun quote the newest 10 theses on $AUTON on solana on fomo");
+      await r.say("shogun quote the newest 10 theses on $AUTON on bsc on fomo");
       assert.equal(r.theses(), 1);
       assert.equal(r.dms().length, 0, "no DM for an answer she moved on from");
       assert.ok(!r.logs.includes("[tg-groups] theses quotes sent to the owner's DM"), r.logs.join("\n"));
@@ -3187,7 +3187,7 @@ describe("the AUTON quotes, facts and rug banter (live 2026-10-09)", () => {
     try {
       // The room refuses every send for this ask; her DM still lands.
       r.tg.failChats.add(GROUP);
-      await r.say("shogun quote the newest 10 theses on $AUTON on solana on fomo");
+      await r.say("shogun quote the newest 10 theses on $AUTON on bsc on fomo");
       assert.equal(r.dms().length, 1, "her DM landed");
       assert.ok(r.logs.some((l) => l.startsWith("[tg-groups] theses quotes: the room's DM notice was not said")), r.logs.join("\n"));
       r.tg.failChats.delete(GROUP);
@@ -3205,12 +3205,12 @@ describe("the AUTON quotes, facts and rug banter (live 2026-10-09)", () => {
   it("her quotes never reach the room when her DM fails: the digest instead, and no claim they were sent", async () => {
     const r = await shogunRoom();
     try {
-      await r.say("shogun what's happening with $AUTON on solana on fomo?");
+      await r.say("shogun what's happening with $AUTON on bsc on fomo?");
       await r.say("what are people saying about it on thesis on fomo", { under: r.lastOwn(), advanceMs: 30_000 });
       const digest = r.lastOwn();
       r.tg.failChats.add(MILLA);
       const out = (await r.say("can you list the last 10", { under: digest, advanceMs: 30_000 })).join("\n");
-      assert.match(out, /^What traders on Fomo are saying about AUTON on Solana/, out);
+      assert.match(out, /^What traders on Fomo are saying about AUTON on BSC/, out);
       assert.doesNotMatch(out, /•|“|The newest|DM/u, out);
       assert.ok(r.logs.includes("[tg-groups] theses quotes: the owner's DM failed, the digest in the room"), r.logs.join("\n"));
     } finally {
@@ -3237,7 +3237,7 @@ function quotedFrom(rows: readonly ReviewRow[], agentName = "Shogun"): { quotes:
       likes: 1, isDev: false, family: `f${i}`,
     };
   });
-  const env = { tool: "fomo_get_token_theses", status: "ok", data: { token: { key: "solana:mainnet:x", chain: { slug: "solana" } }, label: { symbol: "AUTON" }, trader: null, theses }, coverage: { providerTotal: 4199 }, freshness: {} };
+  const env = { tool: "fomo_get_token_theses", status: "ok", data: { token: { key: "bsc:mainnet:x", chain: { slug: "bsc" } }, label: { symbol: "AUTON" }, trader: null, theses }, coverage: { providerTotal: 4199 }, freshness: {} };
   const r = { handled: true, text: "", toolsCalled: [], analysis: false, clarification: false, plan: { intent: "token-theses", quotes: 10 }, envelopes: [env] } as unknown as AnswerFomoResult;
   const quotes = thesesQuotes(r, REVIEW_NOW);
   assert.ok(quotes, "a quote ask on a coin's page is answered with quotes");
@@ -3287,7 +3287,7 @@ describe("quotes a room never hears (review, 2026-10-09)", () => {
       "use the auton refund bot",
       "search auton refund on telegram",
       "open a support ticket on their discord to get refunded",
-      "admins are giving back sol",
+      "admins are giving back bnb",
       "auton v2 is live, swap at the official link",
       "reimbursement for holders announced",
       "join the vip group for the next one",
@@ -3301,20 +3301,20 @@ describe("quotes a room never hears (review, 2026-10-09)", () => {
 
   it("a doubling or a send, reworded: a coin sent, something coming back, a send to verify or unlock", () => {
     leftOut([
-      "send 1 sol to the dev wallet and he sends 2 back, legit",
-      "send 0.1 sol to verify and they send 1 sol back",
-      "transfer 1 sol, they return 2 within an hour",
-      "deposit 1 sol get 2 sol",
-      "give 1 sol take 2 sol",
-      "send sol to the burn address to unlock refund",
+      "send 1 bnb to the dev wallet and he sends 2 back, legit",
+      "send 0.1 bnb to verify and they send 1 bnb back",
+      "transfer 1 bnb, they return 2 within an hour",
+      "deposit 1 bnb get 2 bnb",
+      "give 1 bnb take 2 bnb",
+      "send bnb to the burn address to unlock refund",
       "sent 2 and they sent 4 back",
-      "send sol to the dev wallet, it comes back",
+      "send bnb to the dev wallet, it comes back",
     ]);
     quoted(["if this sends we are so back", "send it back to the highs", "sent the chart to my friends", "dev sent supply to a cex"]);
   });
 
   it("a send with many words before what comes back", () => {
-    leftOut(["send 1 sol to the dev wallet and get 2 back", "send 2 sol to this wallet, get 4 back instantly", "send any amount of sol to the dev and it comes back doubled", "send any amount to the dev wallet and it comes back doubled", "s3nd 1 sol to get 2 back"]);
+    leftOut(["send 1 bnb to the dev wallet and get 2 back", "send 2 bnb to this wallet, get 4 back instantly", "send any amount of bnb to the dev and it comes back doubled", "send any amount to the dev wallet and it comes back doubled", "s3nd 1 bnb to get 2 back"]);
     quoted(["sending this, it already doubled", "dev sent the lp to the burn address, never getting it back", "sent it to 10m and it came back down"]);
   });
 
@@ -3366,7 +3366,7 @@ describe("quotes a room never hears (review, 2026-10-09)", () => {
 
   it("a doxxing thesis is never quoted, however the name, the town or the contact is put", () => {
     leftOut(["the dev's real name is john smith, lives at 12 baker street london", "the dev lives in lagos and his name is tunde", "his name is tunde, from lagos", "the dev's first name is tunde", "dev's whatsapp is out there", "found his facebook, same guy", "the deployer hangs out at 4 park close"]);
-    quoted(["the number one ai coin on sol", "big wallets are holding"]);
+    quoted(["the number one ai coin on bnb", "big wallets are holding"]);
   });
 
   it("contact lures and channel pointers are never quoted", () => {
@@ -3412,7 +3412,7 @@ describe("quotes a room never hears (review, 2026-10-09)", () => {
       "devs moved everything to autonlabs io",
       "hxxps autonhub xyz",
     ]);
-    quoted(["launched on pumpfun, graduated fast", "auton/sol pair is thin", "safety net is gone", "net flows positive"]);
+    quoted(["launched on pumpfun, graduated fast", "auton/bnb pair is thin", "safety net is gone", "net flows positive"]);
   });
 
   it("plain letters only: a lookalike Latin letter or a digit written for a letter leaves the quote out (review r2)", () => {
@@ -3637,7 +3637,7 @@ describe("quotes a room never hears (review, 2026-10-09)", () => {
       const line = said?.text.split("\n").find((l) => l.startsWith("• ")) ?? "";
       return line.replace(/^• /u, "").replace(/, 3 min ago: .*$/u, "");
     };
-    for (const h of ["AgentCapOfficial", "agentcap_official", "airdrop_bot", "AirdropBot", "free_tokens", "dm_me_now", "fomo_support", "FomoSupport", "Telegram_Admin", "claim_refund", "auton_refund", "refund_bot", "send_1_sol", "kill_yourself"]) {
+    for (const h of ["AgentCapOfficial", "agentcap_official", "airdrop_bot", "AirdropBot", "free_tokens", "dm_me_now", "fomo_support", "FomoSupport", "Telegram_Admin", "claim_refund", "auton_refund", "refund_bot", "send_1_bnb", "send_1_sol", "kill_yourself"]) {
       assert.equal(shown(h), "a trader", h);
     }
     // Under agent Shogun, its own name is never a quote's author.
@@ -3654,7 +3654,7 @@ describe("quotes a room never hears (review, 2026-10-09)", () => {
       const line = said?.text.split("\n").find((l) => l.startsWith("• ")) ?? "";
       return line.replace(/^• /u, "").replace(/, 3 min ago: .*$/u, "");
     };
-    for (const h of ["fomoadmin", "agentcapofficial", "telegramsupport", "freeairdrop", "hangthedev", "killyourself", "fomosupport", "fomoteam", "fomostaff", "agentcapbot", "customercare", "verified", "rapist", "devisascammer", "f0m0admin", "supp0rt", "buyauton", "sendsolget2x", "sh0gun", "SH0GUN", "5hogun"]) {
+    for (const h of ["fomoadmin", "agentcapofficial", "telegramsupport", "freeairdrop", "hangthedev", "killyourself", "fomosupport", "fomoteam", "fomostaff", "agentcapbot", "customercare", "verified", "rapist", "devisascammer", "f0m0admin", "supp0rt", "buyauton", "sendbnbget2x", "sendsolget2x", "sh0gun", "SH0GUN", "5hogun"]) {
       assert.equal(shown(h), "a trader", h);
     }
     for (const h of ["kaleo", "frankdegods", "CryptoKaleo", "moonboy", "degen_ape", "wagmi_will", "cn_trader", "ansem", "gainzy222"]) assert.equal(shown(h), h);
@@ -3687,7 +3687,7 @@ describe("quotes a room never hears (review, 2026-10-09)", () => {
     resetDeskReadsForTest();
     const idx = autonIndex();
     const failInfo: FactsFetch = async (route, timeoutMs) => (route.includes("/info") ? { ok: false, failure: "http-429" } : idx.fetch(route, timeoutMs));
-    const r = await createCoinFactsReader({ fetchJson: failInfo, now: () => AUTON_NOW })({ network: "solana", address: AUTON_MINT, chatId: GROUP, timeoutMs: 10_000, withInfo: true });
+    const r = await createCoinFactsReader({ fetchJson: failInfo, now: () => AUTON_NOW })({ network: "bsc", address: AUTON_MINT, chatId: GROUP, timeoutMs: 10_000, withInfo: true });
     assert.ok(r.ok);
     assert.equal(r.facts.info, "failed");
     const dev = coinFactsLines(r.facts, "AUTON", "dev", AUTON_NOW);
@@ -3700,7 +3700,7 @@ describe("quotes a room never hears (review, 2026-10-09)", () => {
     for (const l of [...dev, ...data, "GeckoTerminal doesn't list a holding share for its creator."]) assert.ok(admitTgLine(l, { agentName: "Shogun", kind: "research", recentOwn: [] }).ok, l);
     // Not asked for (a "what" ask): nothing about the holders at all.
     resetDeskReadsForTest();
-    const plain = await createCoinFactsReader({ fetchJson: idx.fetch, now: () => AUTON_NOW })({ network: "solana", address: AUTON_MINT, chatId: GROUP, timeoutMs: 10_000, withInfo: false });
+    const plain = await createCoinFactsReader({ fetchJson: idx.fetch, now: () => AUTON_NOW })({ network: "bsc", address: AUTON_MINT, chatId: GROUP, timeoutMs: 10_000, withInfo: false });
     assert.ok(plain.ok);
     assert.equal(plain.facts.info, "not-asked");
   });

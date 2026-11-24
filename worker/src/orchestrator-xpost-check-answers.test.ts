@@ -37,7 +37,7 @@ function coin(o: Partial<CoinFacts> = {}): CoinFacts {
 }
 const PAGE: PageScan = { status: 200, title: "Acme", description: "acme builds onchain widgets for traders", text: "x".repeat(2000), truncated: false, links: [],
   finalUrl: "https://acme.example/", allText: `Acme. CA: ${CA}. ` + "y".repeat(2000),
-  findings: { evm: [{ address: CA, chain: "evm", where: ["text"] }], solana: [], github: [{ owner: "acme", repo: "acme-app", where: ["link"] }], x: [], telegram: false, discord: false, docs: true },
+  findings: { evm: [{ address: CA, chain: "evm", where: ["text"] }], github: [{ owner: "acme", repo: "acme-app", where: ["link"] }], x: [], telegram: false, discord: false, docs: true },
   loaded: { scripts: 3, scriptBytes: 1000, ownCalls: 5, callHosts: [] } };
 const REPO: GithubRead = { ok: true, record: { readAt: NOW, owner: "acme", pickedFromOwner: false, ownerRepos: null,
   repo: { owner: "acme", repo: "acme-app", createdAtMs: NOW - 300 * DAY, pushedAtMs: NOW - 2 * DAY, stars: 52, forks: 4, fork: false, archived: false, sizeKb: 9000, commits30d: 41, commitsPartial: false, lastCommitAtMs: NOW - 2 * DAY } } };

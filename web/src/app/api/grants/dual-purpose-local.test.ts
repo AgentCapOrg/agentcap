@@ -355,7 +355,7 @@ describe("self-hosted: GET ?wallet=perps reads the Perps home, never the Spot on
 
   it("A PERPS grant.json THAT IS THERE BUT CANNOT BE READ IS A 503, never none; a BOM is stripped as the POST strips it; and the Wallet screen's restore check sees each", async () => {
     // The restore asks this before its stop, which self-hosted removes Spot's
-    // grant.json and stops Solana; the POST that ends it reads the Perps file
+    // grant.json; the POST that ends it reads the Perps file
     // this same way (otherLocalWalletRefusal) and would refuse it after.
     const viaGet = (async (url: string | URL | Request) => get(String(url).replace(/^\/api\/grants/, ""))) as typeof fetch;
     const stranger = privateKeyToAccount(generatePrivateKey()).address;

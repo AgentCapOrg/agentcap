@@ -373,9 +373,8 @@ function hasMnemonicRun(t: string): boolean {
 const ADDRESS_SHAPES: readonly RegExp[] = [/0x[0-9a-f]{6,}/i, /\brh:[a-z0-9-]/i, /0\s*x(?:[\s._:,-]?[0-9a-f]){20,}/i];
 
 /**
- * An address without a prefix: a long run mixing letters and digits (base58,
- * bech32, bare hex), or a long mixed-case run (base58 that happens to hold no
- * digit). No English word does either; an address-derived ticker is 12
+ * An address without a prefix: a long run mixing letters and digits (bech32,
+ * bare hex), or a long mixed-case run. No English word does either; an address-derived ticker is 12
  * characters and a sanitised coin name at most 24, both under the floor.
  */
 function hasEncodedRun(t: string): boolean {

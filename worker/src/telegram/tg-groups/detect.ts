@@ -187,7 +187,7 @@ const CHAIN_PARAM = /(?:^|[?&#;])(?:chain|chainid|chain_id|chainname|network|net
 
 /**
  * Other chains by the names links use for them: Ethereum and its testnets,
- * the L2s, BNB, the other EVM chains, Solana, Tron and the rest. A value
+ * the L2s, BNB, the other EVM chains, Tron and the rest. A value
  * here in a chain parameter, or a path segment of a swap link, is another
  * chain's coin.
  */
@@ -203,7 +203,7 @@ const OTHER_CHAINS: ReadonlySet<string> = new Set([
 /**
  * Explorers, launchpads and DEXes of one other chain. Also every host with a
  * label ending in "scan" (etherscan, bscscan, basescan, arbiscan, polygonscan,
- * ftmscan, blastscan, lineascan, solscan, tronscan…) and every Blockscout
+ * ftmscan, blastscan, lineascan, tronscan…) and every Blockscout
  * other than Robinhood Chain's own; see isOtherChainHost.
  */
 const OTHER_CHAIN_HOSTS: readonly string[] = [
@@ -320,7 +320,7 @@ const TX_PARTS: ReadonlySet<string> = new Set(["tx", "txs", "txn", "txns", "tran
  * A run in a link that can only be an on-chain id: 32 or more of [0-9a-z_-],
  * a digit among them, and a stretch of at least 20 with no "-" or "_".
  * Every chain's coin, pair, pool and account ids qualify, in either case: an
- * EVM or Sui 0x id of any length, a Solana or Tron base58 one lowercased, a
+ * EVM or Sui 0x id of any length, a Tron base58 one lowercased, a
  * TON base64url one. A slug of words ("what-is-a-liquidity-pool-and-how-it-works")
  * does not.
  */
@@ -340,8 +340,8 @@ function carriesCoinId(rest: string): boolean {
  * True when the line carries a link that names another chain and holds a
  * coin, pair, pool or account id: another chain's coin even when no 0x +
  * 40-hex address and no mint shape is in it. That is how DexScreener itself
- * hands out a Solana pair ("dexscreener.com/solana/4hzt…", all lowercase, so
- * hasForeignMint cannot see it), and how TON, Sui and Tron pairs and a
+ * hands out a Tron pair (all lowercase, so
+ * hasForeignMint cannot see it), and how TON and Sui pairs and a
  * Uniswap v4 pool id ("dexscreener.com/base/0x" + 64 hex) are posted. Like
  * hasForeignMint, recognised only so the coin flow can own the line and say
  * nothing about it.
@@ -373,9 +373,9 @@ export function hasOtherChainLink(text: string): boolean {
 }
 
 /**
- * A Solana-style base58 run: 32–44 characters from the base58 alphabet (no 0,
+ * A Tron-style base58 run: 32–44 characters from the base58 alphabet (no 0,
  * O, I or l), a whole alphanumeric token on its own. Tron's "T…" addresses
- * (34) are base58 too.
+ * (34) are of this shape.
  *
  * Bounded by any alphanumeric, not just base58, so the "x…" after a CA's "0"
  * can never be read as a mint, and neither can a slice of a longer token.
@@ -393,7 +393,7 @@ const MOVE_COIN = /(?<![0-9a-z])0x[0-9a-f]{1,64}::[a-z_][a-z0-9_]*::[a-z_][a-z0-
 
 /**
  * True when the line carries another chain's coin address in a shape no EVM
- * chain uses: a Solana (or Tron) base58 mint, a TON address, a Sui or Aptos
+ * chain uses: a Tron base58 address, a TON address, a Sui or Aptos
  * coin type. The coin flow owns such a line only to stay silent about it. It
  * is never looked up, never nominated and never answered.
  *
@@ -474,7 +474,7 @@ export function selfNamesOf(self: BotSelf | null | undefined): string[] {
  * "quiet", "morning", "green", "winter" as in crypto winter), common given
  * names that are words, the band's own names that are words, and crypto words
  * someone might name an agent after. Short ones are here too: the stoplist
- * also guards a ONE-word full name ("Max", "Sol").
+ * also guards a ONE-word full name ("Max", "Rex").
  */
 const COMMON_WORD_NAMES: ReadonlySet<string> = new Set([
   // given names that are everyday words
@@ -1465,7 +1465,7 @@ const PRIVATE_RES: readonly RegExp[] = [
   new RegExp(String.raw`\b${YOUR} (?:wallet|wallets|addy|address|addr|public key|pubkey|private keys?|priv key|pk|keys?|seed(?: phrase)?|mnemonic|recovery phrase|secret phrase|smart account|vault|api key|bot token|token key|link code|password)\b`, "u"),
   /\bhow much (?:are|r|is|did|do|have|has) (?:you|u|ya) (?:up|down|made|make|lost|lose|earned|earn|won|win|got|have|holding|hold|invested|invest|put in|worth|in profit|in the green|in the red)\b/u,
   /\bhow much (?:you|u|ya) (?:up|down|made|lost|got|have|holding|worth|make)\b/u,
-  /\bhow much (?:money|cash|usdg|usdc|usdt|eth|weth|sol|btc|crypto|bucks|dollars|\$) (?:do |does |did |have |has |would |will |are |r |could |should )?(?:you|u|ya)\b/u,
+  /\bhow much (?:money|cash|usdg|usdc|usdt|eth|weth|sol|bnb|btc|crypto|bucks|dollars|\$) (?:do |does |did |have |has |would |will |are |r |could |should )?(?:you|u|ya)\b/u,
   // how much it would put in: a size, whatever the unit ("how much would you ape into this")
   /\bhow much (?:would|will|do|did|are|r|could|should) (?:you|u|ya) (?:ape|aping|put|putting|buy|buying|spend|spending|risk|risking|throw|invest|investing|bet|allocate|size)\b/u,
   // "are you up?" / "are you down bad" ask how it is doing; "are you down to
@@ -1528,7 +1528,7 @@ export function isPrivateAsk(text: string, opts: { research?: boolean } = {}): b
   return PRIVATE_RES.some((re) => re.test(t)) || (MONEY_NOUN.test(t) && ASKING.test(t));
 }
 
-const MONEYISH = String.raw`(?:\$?\d|money|funds|crypto|coins?|tokens?|usdg|usdc|usdt|eth|weth|sol|btc|bucks|dollars|cash|everything|it all|agentcap|bags?|stack|keys?|seed|a tip|some)`;
+const MONEYISH = String.raw`(?:\$?\d|money|funds|crypto|coins?|tokens?|usdg|usdc|usdt|eth|weth|sol|bnb|btc|bucks|dollars|cash|everything|it all|agentcap|bags?|stack|keys?|seed|a tip|some)`;
 const MONEY_TRADE_STEERING = /\b(?:buy|sell|ape|dump|market buy)\s+(?:me\s+)?(?:\$?\d|all\b|everything|max\b|your (?:whole|entire))/u;
 /** Research questions stay read-only; this never grants command authority. */
 export function isReadOnlyTradeQuestion(text: string): boolean {
@@ -1576,7 +1576,7 @@ const TRADE_STRONG: ReadonlySet<string> = new Set([
   "mcap", "marketcap", "liquidity", "liq", "rug", "rugs", "rugged", "rugpull", "moon", "mooning",
   "mooned", "degen", "degens", "memecoin", "memecoins", "shitcoin", "shitcoins", "altcoin", "altcoins",
   "alts", "whale", "whales", "jeet", "jeets", "jeeting", "ath", "atl", "fdv", "candle", "candles",
-  "bullish", "bearish", "hodl", "hodling", "eth", "btc", "sol", "usdg", "usdc", "usdt", "weth", "dex",
+  "bullish", "bearish", "hodl", "hodling", "eth", "btc", "sol", "bnb", "usdg", "usdc", "usdt", "weth", "dex",
   "uniswap", "geckoterminal", "dexscreener", "presale", "airdrop", "airdrops", "trenches", "trencher",
   "trading", "trader", "traders", "crypto", "defi", "onchain", "perps", "leverage", "slippage", "rekt",
   "sniper", "snipers", "sniped", "dca", "ca", "mc", "lp", "agentcap", "tp", "sl", "stonks", "nvda",
@@ -2113,10 +2113,10 @@ const FOMO_REQUEST = /^(?:(?:pls|please|yo|hey|ok|so|can (?:you|u)|could (?:you|
  * words and the platform, so "top fomo moment lol" and "fomo traders are
  * wild" stay chat; the planner still decides what, if anything, it plans.
  */
-const LIST_MOD = String.raw`(?:top|best|hottest|biggest|trending|new|newest|fresh|small|early|graduated|most held|robinhood(?: chain)?|rh|solana|sol|base|eth(?:ereum)?|bsc|bnb)`;
+const LIST_MOD = String.raw`(?:top|best|hottest|biggest|trending|new|newest|fresh|small|early|graduated|most held|robinhood(?: chain)?|rh|base|eth(?:ereum)?|bsc|bnb)`;
 const LIST_NOUN = String.raw`(?:coins|tokens|memecoins|memes|tickers|plays|gems|launches|traders|whales|leaderboard|boards?|theses|ones)`;
-/** A chain before the platform: "trending on base on fomo", "solana ones on fomo". */
-const LIST_CHAIN = String.raw`(?:(?:on|in) (?:the )?(?:robinhood(?: chain)?|base|solana|sol|eth(?:ereum)?|bsc|bnb)\s+)?`;
+/** A chain before the platform: "trending on base on fomo", "bsc ones on fomo". */
+const LIST_CHAIN = String.raw`(?:(?:on|in) (?:the )?(?:robinhood(?: chain)?|base|eth(?:ereum)?|bsc|bnb)\s+)?`;
 const FOMO_LIST_ASK = new RegExp(
   String.raw`^(?:(?:the|any|some|latest|current)\s+)?(?:(?:${LIST_MOD}\s+){1,3}${LIST_NOUN}?|${LIST_NOUN})\s*${LIST_CHAIN}(?:on|from|in) (?:the )?fomo(?:\s+(?:today|rn|right now|now|this week|lately|atm))?(?:\s+(?:pls|please))?[.!]*$`,
   "u",
@@ -2167,7 +2167,7 @@ export function fomoAskOf(text: string, selfNames: readonly string[] = []): Fomo
  * nothing.
  */
 const FOMO_FOLLOW_UP =
-  /\b(?:sellers|buyers|holders|theses|thesis|flow|activity|refresh|latest|updated?|again|this week|last week|today|24 ?h|7 ?d|30 ?d|this month|changed|change|since|research|deep ?dive|contradict\w*|said|saying|trending|boards?|top|robinhood|chain|solana|sol|base|eth|ethereum|bsc|bnb|quotes?|quoted|verbatim|word for word|exactly|summar(?:is|iz)\w*|summary|summaries|digest|recap|tl;?dr|sum (?:it|them|these|those) up|paraphras\w*|posts|in their words|(?:the )?(?:last|latest|newest|recent) (?:\d{1,2}|ten|five))\b/u;
+  /\b(?:sellers|buyers|holders|theses|thesis|flow|activity|refresh|latest|updated?|again|this week|last week|today|24 ?h|7 ?d|30 ?d|this month|changed|change|since|research|deep ?dive|contradict\w*|said|saying|trending|boards?|top|robinhood|chain|base|eth|ethereum|bsc|bnb|quotes?|quoted|verbatim|word for word|exactly|summar(?:is|iz)\w*|summary|summaries|digest|recap|tl;?dr|sum (?:it|them|these|those) up|paraphras\w*|posts|in their words|(?:the )?(?:last|latest|newest|recent) (?:\d{1,2}|ten|five))\b/u;
 /** "Don't summarise", "no summary", "without paraphrasing": an ask, with no question mark (the theses themselves). */
 const NEGATED_SUMMARY = /\b(?:don'?t|dont|do not|no need to|without|stop|no|not|never|instead of)\s+(?:a\s+|the\s+)?(?:summar(?:is|iz)\w*|summary|summaries|paraphras\w*|digest|tldr)\b/u;
 /** "Summarise them", "sum it up", "recap": asked for, with no question mark (the digest, again). */

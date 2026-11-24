@@ -173,7 +173,7 @@ function parseRollout(raw: string): FleetRollout {
     const m = ENTRY.exec(entry);
     const id = m ? parseFleetId(m[1]) : null;
     if (!m || !id) throw refuse(`entry ${i + 1} is not none, all or 0x<40 hex>:observe|exits-only|trade`);
-    // A Solana id, or any other that is not 0x and 40 hex: this build runs
+    // Any id that is not 0x and 40 hex: this build runs
     // no such tenant, so naming one is a promise it cannot keep.
     if (id.kind !== "evm") throw refuse(`entry ${i + 1} names a tenant that is not a complete Robinhood Chain address (0x and 40 hex), and this build admits no other chain's`);
     const tenant = id.id;

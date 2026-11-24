@@ -71,7 +71,6 @@ class FakeProc extends EventEmitter {
 const spawned: FakeProc[] = [];
 orch.setSpawnForTest((_c: string, _a: readonly string[], o: SpawnOptions) => { const p = new FakeProc(o.env ?? {}); spawned.push(p); return p as unknown as ChildProcess; });
 orch.setKillConfirmForTest(async () => {});
-orch.setSolanaKillForTest(async () => {});
 orch.setPaperRestoreForTest(async () => ({ ok: true, line: null }));
 orch.setPerpsFeedStartForTest(() => ({ stop: () => {} }));
 const said: string[] = [];

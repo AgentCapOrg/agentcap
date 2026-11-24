@@ -58,15 +58,15 @@ describe("the server tree is handed nothing to format", () => {
     // One prop carrying a balance or a price would be rendered server-side, in
     // whatever locale the server guessed, and then re-rendered on the client in
     // the reader's own. This is the edit that would break everything below it.
-    // Only the explicit Solana and paper-Perps capability booleans are allowed.
+    // Only the explicit paper-Perps capability boolean is allowed.
     // Neither carries account data or a figure. Match the complete element so
     // an added data prop, JSX spread, or substituted value still fails.
     const layout = read("app/(app)/layout.tsx").replace(
-      /<App\s+solana=\{solanaEnabled\(\)\}\s+perps=\{perpsOffered\(\)\}\s*\/>/,
+      /<App\s+perps=\{perpsOffered\(\)\}\s*\/>/,
       "<App />",
     );
     assert.equal(layout.match(/<App\b/g)?.length, 1, "the terminal has exactly one App boundary");
-    assert.match(layout, /<App \/>/, "App may receive only the two server capability flags");
+    assert.match(layout, /<App \/>/, "App may receive only the server capability flag");
     assert.ok(!/<App\s+(?!\/)/.test(layout), "an unapproved prop on <App/> would put server data in the tree");
   });
 

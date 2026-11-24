@@ -53,12 +53,7 @@ export function exploreViewOf(screen: Screen): (typeof EXPLORE)[number]["id"] | 
   return null;
 }
 
-/**
- * `solana` is whether this deployment offers Solana (solanaEnabled, handed down
- * from the server). Without it /solana is an unknown path and opens Home, so a
- * Back into an old /solana entry cannot mount the screen.
- */
-export function screenForPath(path: string, solana = false, perps = false): Screen {
+export function screenForPath(path: string, perps = false): Screen {
   if (path.startsWith("/t/")) return { kind: "token", id: decodeURIComponent(path.slice(3)) };
   if (path.startsWith("/a/")) return { kind: "profile", slug: decodeURIComponent(path.slice(3)) };
   if (path === "/search") return { kind: "search" };
@@ -66,7 +61,6 @@ export function screenForPath(path: string, solana = false, perps = false): Scre
   if (path === "/settings") return { kind: "settings" };
   if (path === "/grant") return { kind: "grant" };
   if (path === "/perps" && perps) return { kind: "perps" };
-  if (path === "/solana" && solana) return { kind: "solana" };
   if (path === "/limits") return { kind: "limits" };
   // The room every agent is in. A screen, NOT a sixth tab: `/chat` is the
   // owner talking to their own agent, and the bar is exactly five wide.

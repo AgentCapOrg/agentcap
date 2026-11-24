@@ -22,7 +22,7 @@ describe("wallet purpose", () => {
     assert.equal(grantPurpose(null), "spot");
     assert.equal(grantPurpose({ purpose: "spot" }), "spot");
     assert.equal(grantPurpose({ purpose: "perps" }), "perps");
-    for (const purpose of ["Perps", "", "solana", 1, null]) {
+    for (const purpose of ["Perps", "", "other", 1, null]) {
       assert.throws(() => grantPurpose({ purpose }), /wallet purpose/, String(purpose));
       assert.equal(isGrantPurpose(purpose), false);
     }

@@ -2,7 +2,7 @@
  * A TENANT WHOSE ID IS NOT 0x, THROUGH THE REAL reconcile() (fleet-id.ts).
  *
  * Every fleet path that reads a tenant id asks fleet-id.ts, and an id that is
- * not 0x and 40 hex (a Solana agent's, `sol:<pubkey>`) is never passed over
+ * not 0x and 40 hex (an agent's, `agent:<id>`) is never passed over
  * without a word: it is said, and it fails closed.
  *
  *  - A grant for one is held under `all`: never leased, spawned or armed, and
@@ -62,9 +62,9 @@ const grant = (account: `0x${string}`): StoredGrant => ({
   grantFeatures: ["tradeable-v2"], grantTokens: [], demoSessionPrivateKey: `0x${"ab".repeat(32)}`,
 }) as unknown as StoredGrant;
 
-/** A real Solana key. A Solana build names its agent `sol:<key>`, case and all. */
+/** A non-0x agent id, case and all. */
 const KEY = "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH";
-const SOL_AGENT = `sol:${KEY}`;
+const SOL_AGENT = `agent:${KEY}`;
 /** As the file grant store keeps every tenant (lowercased): still not 0x, which is all that matters here. */
 const SOL_STORED = SOL_AGENT.toLowerCase() as `0x${string}`;
 
@@ -171,7 +171,7 @@ describe("a tenant whose id is not 0x", () => {
     assert.equal(existsSync(path.join(children, SOL_STORED)), false, "no home is made for it");
     assert.deepEqual(rolloutCountsForTest(), { trade: 1, "exits-only": 0, observe: 0, held: 1, expired: 0, absent: 0 });
     assert.ok(await store.get(SOL_STORED), "held, not removed: its grant stays stored");
-    assert.equal(saidOf(/\[alert\] fleet: the grant roster holds (Solana )?id "sol:2u1tsz.*not a Robinhood Chain address — this build never leases, starts or arms it/).length, 1,
+    assert.equal(saidOf(/\[alert\] fleet: the grant roster holds id "agent:2u1tsz.*not a Robinhood Chain address — this build never leases, starts or arms it/).length, 1,
       "said once over three passes, not every pass");
   });
 
@@ -191,7 +191,7 @@ describe("a tenant whose id is not 0x", () => {
   });
 
   it("a home that is not a tenant's is said, by the order ferry and by reconcile, its pending kill named, and never wiped", async () => {
-    // As a Solana build would name its home, and a 0x home not as childHome spells any.
+    // As another build would name its home, and a 0x home not as childHome spells any.
     const solHome = path.join(children, SOL_AGENT);
     const upperHome = path.join(children, address(0xabc121).toUpperCase().replace("0X", "0x"));
     mkdirSync(solHome, { recursive: true });
@@ -205,7 +205,7 @@ describe("a tenant whose id is not 0x", () => {
         await reconcile();
         await settle();
       }
-      assert.equal(saidOf(/\[alert\] fleet: children\/Solana id "sol:2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH" holds a pending Telegram kill.*\(held, must-stop\)/).length, 1,
+      assert.equal(saidOf(/\[alert\] fleet: children\/id "agent:2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH" holds a pending Telegram kill.*\(held, must-stop\)/).length, 1,
         said.join("\n"));
       assert.equal(saidOf(/\[alert\] fleet: children\/id "0x0+ABC121" is not a Robinhood Chain tenant home — this build never starts a worker in it or wipes it$/).length, 1,
         said.join("\n"));
@@ -237,9 +237,9 @@ describe("a tenant whose id is not 0x", () => {
       await settle();
     }
     assert.deepEqual(newTenantAdmissionsForTest(), [], "a record for it admits nobody");
-    assert.equal(saidOf(/\[alert\] new tenants: fleet_new_tenant_admissions records Solana id "sol:2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH", .*admits nobody/).length, 1,
+    assert.equal(saidOf(/\[alert\] new tenants: fleet_new_tenant_admissions records id "agent:2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH", .*admits nobody/).length, 1,
       "named as the row holds it, once");
-    assert.equal(saidOf(/\[alert\] new tenants: fleet_new_tenant_admissions records (Solana )?id "sol:2u1tszseqz/).length, 1);
+    assert.equal(saidOf(/\[alert\] new tenants: fleet_new_tenant_admissions records id "agent:2u1tszseqz/).length, 1);
     assert.deepEqual(spawned.map((p) => p.env.AGENTCAP_HOME), [childHome(named)]);
     assert.ok(!leaseAsks.includes(SOL_STORED));
     assert.deepEqual(saidOf(/could not be (read|checked)|not admitted this pass/), [], "never put through the proof, so never a failed read");

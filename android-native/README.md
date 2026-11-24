@@ -377,5 +377,5 @@ state instead of equating a saved token with a running bot. Positions display
 verified ticker metadata without changing ledger identities. You links to the
 current Trades & P&L cards.
 
-Perpetual and Solana trading on separate, unmerged branches are not included.
+Perpetual trading on separate, unmerged branches are not included.
 This build is based on main at `fc6758fd`, plus the prior Play release preparation.

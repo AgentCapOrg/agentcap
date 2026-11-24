@@ -73,8 +73,8 @@ const B = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 
 const EVM = `0x${"ab".repeat(20)}`;
 const TOKEN: TokenIdentity = { chain: { namespace: "eip155", networkId: 4663, slug: "robinhood" }, address: EVM, key: `eip155:4663:${EVM}` };
-const MINT = "So11111111111111111111111111111111111111112";
-const SOL: TokenIdentity = { chain: { namespace: "solana", networkId: 1_399_811_149, slug: "solana" }, address: MINT, key: `solana:1399811149:${MINT}` };
+const MINT = "0xd77cf5c8a1c79d6b78408a3f545dea88441790fb";
+const BNB: TokenIdentity = { chain: { namespace: "eip155", networkId: 56, slug: "bsc" }, address: MINT, key: `eip155:56:${MINT}` };
 
 function ev(eventKey: string, o: Partial<TraderEvent> = {}): TraderEvent {
   return {
@@ -236,7 +236,7 @@ describe("events", () => {
   it("insert returns only the NEW keys, across calls and within one", async () => {
     const { db } = await fresh();
     assert.deepEqual(await S.insertEvents(db, [ev("ev:1"), ev("ev:2", { observedAt: T0 + 1 }), ev("ev:1", { text: "a replayed copy" })]), ["ev:1", "ev:2"]);
-    assert.deepEqual(await S.insertEvents(db, [ev("ev:1", { replay: true }), ev("ev:3", { observedAt: T0 + 2, token: SOL, trader: { userId: "u-2", handle: null, displayName: null, verified: null } })]), ["ev:3"]);
+    assert.deepEqual(await S.insertEvents(db, [ev("ev:1", { replay: true }), ev("ev:3", { observedAt: T0 + 2, token: BNB, trader: { userId: "u-2", handle: null, displayName: null, verified: null } })]), ["ev:3"]);
     assert.deepEqual(await S.insertEvents(db, [ev("ev:2"), ev("ev:3")]), [], "a reconnect replay inserts nothing");
     assert.deepEqual(await S.insertEvents(db, []), []);
 
@@ -246,7 +246,7 @@ describe("events", () => {
     assert.equal(forToken[1]!.replay, false);
     assert.equal(forToken[0]!.positionValueUsd, 40_000);
     assert.equal(forToken[0]!.fillUsd, null, "unknown stays null");
-    assert.deepEqual((await S.eventsForToken(db, SOL.key, 0, 10)).map((e) => e.token?.address), [MINT], "Solana case preserved");
+    assert.deepEqual((await S.eventsForToken(db, BNB.key, 0, 10)).map((e) => e.token?.address), [MINT]);
     assert.deepEqual((await S.eventsForToken(db, TOKEN.key, T0 + 1, 10)).map((e) => e.eventKey), ["ev:2"], "since is inclusive");
     assert.deepEqual((await S.eventsForTrader(db, "u-2", 0, 10)).map((e) => e.eventKey), ["ev:3"]);
     assert.equal((await S.eventsForToken(db, TOKEN.key, 0, 1)).length, 1, "limit");
@@ -330,7 +330,7 @@ describe("events", () => {
       ev("ev:a1", { ...who("u-1"), observedAt: T0 - 10 * MIN }),
       ev("ev:a2", { ...who("u-1"), observedAt: T0 - 5 * MIN, kind: "sell" }),
       ev("ev:a3", { ...who("u-2"), observedAt: T0 - 4 * MIN }),
-      ev("ev:b1", { ...who("u-2"), token: SOL, observedAt: T0 - 2 * MIN, kind: "thesis" }),
+      ev("ev:b1", { ...who("u-2"), token: BNB, observedAt: T0 - 2 * MIN, kind: "thesis" }),
       ev("ev:c1", { ...who("u-3"), token: OTHER, observedAt: T0 - MIN }),
       ev("ev:old", { ...who("u-1"), observedAt: T0 - 2 * HOUR }),
       ev("ev:gone", { ...who("u-1"), token: OTHER, observedAt: T0 }),
@@ -339,12 +339,12 @@ describe("events", () => {
     await S.markRetracted(db, "ev:gone");
     const since = T0 - HOUR;
     assert.deepEqual(await S.recentActiveTokens(db, since, 10, { userIds: ["u-1", "u-2"] }), [
-      { tokenKey: SOL.key, events: 1, distinctTraders: 1, newestAt: T0 - 2 * MIN },
+      { tokenKey: BNB.key, events: 1, distinctTraders: 1, newestAt: T0 - 2 * MIN },
       { tokenKey: TOKEN.key, events: 3, distinctTraders: 2, newestAt: T0 - 4 * MIN },
     ]);
-    assert.deepEqual((await S.recentActiveTokens(db, since, 10)).map((a) => a.tokenKey), [OTHER.key, SOL.key, TOKEN.key], "everyone, newest first");
+    assert.deepEqual((await S.recentActiveTokens(db, since, 10)).map((a) => a.tokenKey), [OTHER.key, BNB.key, TOKEN.key], "everyone, newest first");
     assert.deepEqual(await S.recentActiveTokens(db, since, 10, { userIds: [] }), [], "an empty set of traders is nobody, not everybody");
-    assert.deepEqual((await S.recentActiveTokens(db, since, 10, { kinds: ["thesis"] })).map((a) => a.tokenKey), [SOL.key]);
+    assert.deepEqual((await S.recentActiveTokens(db, since, 10, { kinds: ["thesis"] })).map((a) => a.tokenKey), [BNB.key]);
     assert.deepEqual((await S.recentActiveTokens(db, since, 10, { tokenKeyPrefix: "eip155:4663:" })).map((a) => a.tokenKey), [OTHER.key, TOKEN.key]);
     assert.deepEqual((await S.recentActiveTokens(db, since, 1, { userIds: ["u-1", "u-2", "u-3"] })).map((a) => a.tokenKey), [OTHER.key], "limit");
     await assert.rejects(S.recentActiveTokens(db, since, 10, { tokenKeyPrefix: "eip155:%" }), /plain prefix/);
@@ -528,7 +528,7 @@ describe("dossiers", () => {
     assert.deepEqual((await S.latestDossier(db, TOKEN.key))?.dossier, { claims: ["two"] });
     assert.equal((await S.dossierRevision(db, TOKEN.key, 1))?.inputsHash, "h1");
     assert.equal(await S.dossierRevision(db, TOKEN.key, 9), null);
-    assert.equal((await S.insertDossierRevision(db, SOL.key, "h1", {}, T0)).dossier.revision, 1, "revisions are per token");
+    assert.equal((await S.insertDossierRevision(db, BNB.key, "h1", {}, T0)).dossier.revision, 1, "revisions are per token");
   });
 
   it("a concurrent insert of the next revision is absorbed, not an error", async () => {
@@ -815,11 +815,11 @@ describe("jobs", () => {
     assert.ok(one.ok && one.created);
     const same = await S.enqueueJob(db, { ...base, tenant: a, idempotencyKey: "k1", params: { token: TOKEN.key }, deadlineMs: T0 + HOUR, nowMs: T0 + 1 });
     assert.ok(same.ok && !same.created && same.job.id === one.job.id);
-    const other = await S.enqueueJob(db, { ...base, tenant: A, idempotencyKey: "k1", params: { token: SOL.key }, deadlineMs: T0 + HOUR, nowMs: T0 + 2 });
+    const other = await S.enqueueJob(db, { ...base, tenant: A, idempotencyKey: "k1", params: { token: BNB.key }, deadlineMs: T0 + HOUR, nowMs: T0 + 2 });
     assert.equal(other.ok, false);
     assert.equal(!other.ok && other.reason, "idempotency-conflict");
     // The same key for another owner is another job.
-    const theirs = await S.enqueueJob(db, { ...base, tenant: B, idempotencyKey: "k1", params: { token: SOL.key }, deadlineMs: T0 + HOUR, nowMs: T0 });
+    const theirs = await S.enqueueJob(db, { ...base, tenant: B, idempotencyKey: "k1", params: { token: BNB.key }, deadlineMs: T0 + HOUR, nowMs: T0 });
     assert.ok(theirs.ok && theirs.created && theirs.job.id !== one.job.id);
     await assert.rejects(S.enqueueJob(db, { ...base, tenant: A, idempotencyKey: null, params: {}, deadlineMs: T0, nowMs: T0 }), /in the future/);
   });
@@ -937,13 +937,13 @@ describe("watches", () => {
     const { db } = await fresh();
     await add(db, A, TOKEN.key, T0);
     await add(db, B, TOKEN.key, T0, T0 + HOUR);
-    await add(db, B, SOL.key, T0);
+    await add(db, B, BNB.key, T0);
     assert.deepEqual(await S.tenantsWatching(db, TOKEN.key, T0 + 1), [a, B]);
     assert.deepEqual(await S.tenantsWatching(db, TOKEN.key, T0 + HOUR), [a], "expired watches route nothing");
-    assert.deepEqual(await S.watchedTokenKeys(db, T0 + 1, 10), [TOKEN.key, SOL.key].sort());
+    assert.deepEqual(await S.watchedTokenKeys(db, T0 + 1, 10), [TOKEN.key, BNB.key].sort());
     assert.equal(await S.removeWatch(db, A, TOKEN.key), true);
     assert.equal(await S.removeWatch(db, A, TOKEN.key), false);
-    assert.deepEqual((await S.activeWatches(db, B, T0 + 1)).map((w) => [w.tokenKey, w.label.symbol, w.createdVia]), [[TOKEN.key, "W", "app-chat"], [SOL.key, "W", "app-chat"]]);
+    assert.deepEqual((await S.activeWatches(db, B, T0 + 1)).map((w) => [w.tokenKey, w.label.symbol, w.createdVia]), [[TOKEN.key, "W", "app-chat"], [BNB.key, "W", "app-chat"]]);
   });
 });
 
@@ -1131,7 +1131,7 @@ describe("assessments and outcomes", () => {
     assert.equal(await S.insertAssessment(db, assessment("as-1", A, T0)), true);
     assert.equal(await S.insertAssessment(db, assessment("as-1", A, T0 + 1, { state: "ENTRY_CANDIDATE" })), false, "immutable");
     await S.insertAssessment(db, assessment("as-2", A, T0 + 10, { state: "PROBE_CANDIDATE", sizeCeilingUsdg6: null, decisionQuote: null }));
-    await S.insertAssessment(db, assessment("as-3", A, T0 + 5, { token: SOL }));
+    await S.insertAssessment(db, assessment("as-3", A, T0 + 5, { token: BNB }));
     const latest = await S.latestAssessment(db, A, TOKEN.key);
     assert.deepEqual([latest?.id, latest?.state, latest?.tenant, latest?.sizeCeilingUsdg6], ["as-2", "PROBE_CANDIDATE", a, null]);
     assert.deepEqual((await S.recentAssessments(db, a, 10)).map((x) => x.id), ["as-2", "as-3", "as-1"]);
@@ -1219,7 +1219,7 @@ describe("decision funnel", () => {
       S.insertFunnel(db, { tenant: A, tokenKey, stage, detail: "stage detail", decisionId: null, atMs });
     await put(TOKEN.key, "RESEARCH_INCOMPLETE", T0);
     await put(TOKEN.key, "MODEL_HOLD", T0 + 10);
-    await put(SOL.key, "UNSUPPORTED_ROUTE", T0 + 5);
+    await put(BNB.key, "UNSUPPORTED_ROUTE", T0 + 5);
     await put("k:old", "LANDED", T0 - DAY);
     assert.deepEqual((await S.funnelForToken(db, A, TOKEN.key, 10)).map((f) => f.stage), ["MODEL_HOLD", "RESEARCH_INCOMPLETE"]);
     assert.deepEqual(await S.funnelSummary(db, A, T0), {

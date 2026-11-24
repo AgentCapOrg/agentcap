@@ -15,8 +15,7 @@
  * MCP control list, the hosted Telegram kill's fallback), so it revokes the
  * Perps grant as every kill does (perps-kill.ts), whatever happens to the Spot
  * grant, and says the Start over is incomplete while that half fails. A retry
- * is safe. The practice reset stays the Spot book's. It does not stop the
- * Solana strategy, which it never did.
+ * is safe. The practice reset stays the Spot book's.
  */
 import { NextResponse } from "next/server";
 import { isHostedMode } from "@agentcap/core";

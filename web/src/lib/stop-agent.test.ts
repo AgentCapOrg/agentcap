@@ -48,7 +48,7 @@ it("a replacement names its wallet: Spot's request is the one it always was, Per
   await stopAgentForReplacement("perps", "0xowner", "0xperpsaccount", "0xsession");
   assert.deepEqual(urls, ["/api/grants", "/api/grants?wallet=perps"]);
   // A wallet this build does not know sends nothing: never read as Spot.
-  await assert.rejects(stopAgentForReplacement("solana" as never, "0xowner", "0xaccount"), /Unrecognised wallet/);
+  await assert.rejects(stopAgentForReplacement("other" as never, "0xowner", "0xaccount"), /Unrecognised wallet/);
   assert.equal(urls.length, 2);
 });
 

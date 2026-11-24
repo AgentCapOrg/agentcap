@@ -23,15 +23,15 @@
     },
     {
       "swapId": "sw-0002",
-      "chainId": 1399811149,
-      "chain": "solana",
+      "chainId": 56,
+      "chain": "bsc",
       "tokenIn": {
-        "address": "Fu2oZoGxFtCDp29NKA4A89xcn255khq9xbxG7Mmtpump",
+        "address": "0xc66101b7bbddc5e8738608b393c2eac96bbfef6a",
         "amount": 1000,
         "usd": 3
       },
       "tokenOut": {
-        "address": "So11111111111111111111111111111111111111112",
+        "address": "0xd77cf5c8a1c79d6b78408a3f545dea88441790fb",
         "amount": 0.02,
         "usd": 3
       },

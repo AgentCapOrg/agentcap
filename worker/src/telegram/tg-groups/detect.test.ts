@@ -146,7 +146,7 @@ describe("extractCaHits: the chain the link around a CA names", () => {
     ["ave, the chain after the address", `https://ave.ai/token/${CA}-bsc`, "other"],
     // Launchpads, DEXes and terminals of other chains.
     ["pump.fun", `https://pump.fun/coin/${CA}`, "other"],
-    ["photon", `https://photon-base.tinyastro.io/en/lp/${CA}`, "other"],
+    ["photon", `https://photon-sol.tinyastro.io/en/lp/${CA}`, "other"],
     ["bullx", `https://neo.bullx.io/terminal?chainId=8453&address=${CA}`, "other"],
     ["pancakeswap", `https://pancakeswap.finance/swap?outputCurrency=${CA}`, "other"],
     ["uniswap on another chain, by param", `https://app.uniswap.org/swap?chain=base&outputCurrency=${CA}`, "other"],
@@ -197,25 +197,26 @@ describe("extractCaHits: the chain the link around a CA names", () => {
 });
 
 describe("hasForeignMint", () => {
+  const TRON_A = "TaT7QGZPs78kvRYtQaaPMJyup38kP4X1ea";
   const USDC_SOL = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
   const PUMP = "7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr";
-  const WSOL = "So11111111111111111111111111111111111111112";
   const cases: Array<[string, string, boolean]> = [
+    ["a Tron-style address", TRON_A, true],
     ["a Solana mint", USDC_SOL, true],
     ["a pump-style mint in a sentence", `ape this ${PUMP} now`, true],
-    ["wrapped SOL", WSOL, true],
+    ["wrapped SOL", "So11111111111111111111111111111111111111112", true],
     ["inside a pump.fun URL", `https://pump.fun/coin/${PUMP}`, true],
-    ["inside a dexscreener URL", `https://dexscreener.com/solana/${USDC_SOL}`, true],
-    ["beside a CA", `${CA} or ${USDC_SOL}`, true],
+    ["45 characters is too long", `${USDC_SOL}x`, false],
+    ["inside a dexscreener URL", `https://dexscreener.com/bsc/${TRON_A}`, true],
+    ["beside a CA", `${CA} or ${TRON_A}`, true],
     ["an EVM CA is not a mint", CA, false],
     ["a bare 40-hex is not a mint", CA.slice(2), false],
     ["a 64-hex is not a mint", "ab12".repeat(16), false],
     ["laughing is not a mint", "hahahahahahahahahahahahahahahahahahaha", false],
     ["a held key is not a mint", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", false],
-    ["31 characters is too short", USDC_SOL.slice(0, 31), false],
-    ["45 characters is too long", `${USDC_SOL}x`, false],
-    ["a 0 inside breaks the alphabet", `${USDC_SOL.slice(0, 20)}0${USDC_SOL.slice(21)}`, false],
-    ["an 88-char keypair is not a mint", `${USDC_SOL}${USDC_SOL}`, false],
+    ["31 characters is too short", TRON_A.slice(0, 31), false],
+    ["a 0 inside breaks the alphabet", `${TRON_A.slice(0, 20)}0${TRON_A.slice(21)}`, false],
+    ["an 88-char keypair is not a mint", `${TRON_A}${TRON_A}`, false],
     ["a Tron address", "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", true],
     ["a TON address", TON, true],
     ["a non-bounceable TON address", `UQ${TON.slice(2)}`, true],
@@ -233,38 +234,42 @@ describe("hasForeignMint", () => {
 });
 
 describe("hasOtherChainLink: another chain's coin link with no EVM address in it", () => {
-  // The links DexScreener's own API hands out: Solana pair ids lowercased,
+  // The links DexScreener's own API hands out: BSC pair ids lowercased,
   // so no mint shape survives (hasForeignMint is false for every one).
-  const SOL_PAIR = "4hzthuyzrpwtvqgru8trxb5tkaslgphuamdgtks2rdai";
+  const TRON_PAIR = "4hzthuyzrpwtvqgru8trxb5tkaslgphuamdgtks2rdai";
   const TON_PAIR = TON.toLowerCase();
   const cases: Array<[string, string, boolean]> = [
-    ["dexscreener solana, lowercased", `https://dexscreener.com/solana/${SOL_PAIR}`, true],
-    ["addressed, in a sentence", `@pinebot thoughts on https://dexscreener.com/solana/${SOL_PAIR} ?`, true],
-    ["no scheme", `dexscreener.com/solana/${SOL_PAIR}`, true],
+    ["dexscreener bsc, lowercased", `https://dexscreener.com/bsc/${TRON_PAIR}`, true],
+    ["addressed, in a sentence", `@pinebot thoughts on https://dexscreener.com/bsc/${TRON_PAIR} ?`, true],
+    ["no scheme", `dexscreener.com/bsc/${TRON_PAIR}`, true],
+    ["dexscreener solana, lowercased", `https://dexscreener.com/solana/${TRON_PAIR}`, true],
+    ["geckoterminal solana, lowercased", `https://www.geckoterminal.com/solana/pools/${TRON_PAIR}`, true],
+    ["dextools solana", `https://www.dextools.io/app/en/solana/pair-explorer/${TRON_PAIR}`, true],
+    ["gmgn sol, lowercased", `https://gmgn.ai/sol/token/${TRON_PAIR}`, true],
+    ["birdeye, by chain param", `https://birdeye.so/token/${TRON_PAIR}?chain=solana`, true],
+    ["pump.fun, lowercased", `https://pump.fun/coin/${TRON_PAIR}`, true],
     ["dexscreener ton", `https://dexscreener.com/ton/${TON_PAIR}`, true],
     ["dexscreener sui, a 64-hex pair", `https://dexscreener.com/sui/${HASH64}`, true],
     ["dexscreener base, a v4 pool id", `https://dexscreener.com/base/${HASH64}`, true],
     ["dexscreener tron", "https://dexscreener.com/tron/tqn9y2khehb2i6xjmaxbvwokzqn5t6jqpy", true],
-    ["geckoterminal solana, lowercased", `https://www.geckoterminal.com/solana/pools/${SOL_PAIR}`, true],
-    ["dextools solana", `https://www.dextools.io/app/en/solana/pair-explorer/${SOL_PAIR}`, true],
-    ["gmgn sol, lowercased", `https://gmgn.ai/sol/token/${SOL_PAIR}`, true],
-    ["birdeye, by chain param", `https://birdeye.so/token/${SOL_PAIR}?chain=solana`, true],
-    ["pump.fun, lowercased", `https://pump.fun/coin/${SOL_PAIR}`, true],
+    ["geckoterminal bsc, lowercased", `https://www.geckoterminal.com/bsc/pools/${TRON_PAIR}`, true],
+    ["dextools bsc", `https://www.dextools.io/app/en/bsc/pair-explorer/${TRON_PAIR}`, true],
+    ["gmgn bnb, lowercased", `https://gmgn.ai/bnb/token/${TRON_PAIR}`, true],
     ["a sui explorer's coin page", `https://suivision.xyz/coin/${HASH64}::froggy::froggy`, true],
-    ["a redirect is read as where it goes", `https://t.co/r?u=https%3A%2F%2Fdexscreener.com%2Fsolana%2F${SOL_PAIR}`, true],
+    ["a redirect is read as where it goes", `https://t.co/r?u=https%3A%2F%2Fdexscreener.com%2Ftron%2F${TRON_PAIR}`, true],
     ["one link beside chatter and another link", `lol https://x.com/a/status/1 and https://dexscreener.com/ton/${TON_PAIR}`, true],
     // Not another chain's coin.
     ["a Robinhood Chain v4 pool", `https://dexscreener.com/robinhood/${HASH64}`, false],
     ["a Robinhood Chain explorer tx", `https://robinhoodchain.blockscout.com/tx/${HASH64}`, false],
     ["another chain's tx is a tx, not a coin", `https://etherscan.io/tx/${HASH64}`, false],
     ["a hash-routed tx", `https://tronscan.org/#/transaction/${"ab12".repeat(16)}`, false],
-    ["a solana tx", `https://solscan.io/tx/${SOL_PAIR}${SOL_PAIR}`, false],
-    ["a chain's front page", "https://dexscreener.com/solana", false],
+    ["a bsc tx", `https://tronscan.org/#/transaction/${TRON_PAIR}${TRON_PAIR}`, false],
+    ["a chain's front page", "https://dexscreener.com/bsc", false],
     ["an explorer page with no id", "https://etherscan.io/gastracker", false],
     ["an article slug", "https://www.coingecko.com/learn/what-are-the-best-crypto-wallets-for-beginners", false],
-    ["a link that names no chain", `https://t.me/somebot?start=${SOL_PAIR}`, false],
+    ["a link that names no chain", `https://t.me/somebot?start=${TRON_PAIR}`, false],
     ["a post on x", "https://x.com/someone/status/1839283746273645678", false],
-    ["a bare lowercased id is not a link", SOL_PAIR, false],
+    ["a bare lowercased id is not a link", TRON_PAIR, false],
     ["plain chat", "gm frens, dexscreener is lagging", false],
     ["empty", "", false],
   ];
@@ -282,7 +287,7 @@ describe("extractCashtags", () => {
   const cases: Array<[string, string[]]> = [
     ["$pepe", ["PEPE"]],
     ["$PEPE and $pepe", ["PEPE"]],
-    ["$ETH, $sol and $WIF", ["ETH", "SOL", "WIF"]],
+    ["$ETH, $bnb and $WIF", ["ETH", "BNB", "WIF"]],
     ["($ETH)", ["ETH"]],
     ["$ETH/USDG", ["ETH"]],
     ["$eth's chart", ["ETH"]],
@@ -761,7 +766,7 @@ describe("isPrivateAsk", () => {
     "where does your owner live", "what's your owner's name", "your owner's wallet?", "what model are you",
     "which llm is this", "dox your owner", "how's your portfolio", "show me your pnl", "flex your portfolio",
     // how much it would put in, in any unit: a size, whatever it is priced in
-    "@pine how much sol would you ape into this?", "how much would you put in", "how much eth do you have",
+    "@pine how much bnb would you ape into this?", "@pine how much sol would you ape into this?", "how much would you put in", "how much eth do you have",
     // how it is doing, however it goes on
     "agentcapavatar are you up?", "are you down bad", "are you up for the week?", "are you down to your last usdg",
   ];
@@ -966,13 +971,13 @@ describe("isPrivateAsk: who it follows, copies or watches is the owner's configu
 
 describe("a chain on its own is a Fomo follow-up, and a list ask may name a chain before the platform (review 2026-10-08)", () => {
   const names = ["pine", "shogun"];
-  for (const t of ["shogun on base?", "solana ones?", "and on solana?", "what about eth?", "robinhood ones?"]) {
+  for (const t of ["shogun on base?", "bsc ones?", "and on bsc?", "what about eth?", "robinhood ones?"]) {
     it(`follow-up: ${t}`, () => assert.equal(fomoFollowUpOf(t, names), true));
   }
   for (const t of ["shogun lol based", "shogun basically yes"]) {
     it(`not a follow-up: ${t}`, () => assert.equal(fomoFollowUpOf(t, names), false));
   }
-  for (const t of ["shogun trending on base on fomo", "shogun solana ones on fomo", "robinhood ones on fomo"]) {
+  for (const t of ["shogun trending on base on fomo", "shogun bsc ones on fomo", "robinhood ones on fomo"]) {
     it(`list ask: ${t}`, () => assert.deepEqual(fomoAskOf(t, names), { kind: "platform" }));
   }
 });
@@ -1010,7 +1015,7 @@ describe("fomoAskOf: an addressed social-trading research ask, conservatively", 
     ["robinhood chain coins on fomo", "platform"],
     ["top robinhood coins on fomo", "platform"],
     ["@pinebot top traders on fomo today", "platform"],
-    ["solana memecoins on fomo pls", "platform"],
+    ["bsc memecoins on fomo pls", "platform"],
     ["the leaderboard on fomo", "platform"],
     // A coin's theses as the room's Fomo help says to ask, with no question mark (review r2).
     ["pine theses on $PONS", "theses"],
@@ -1095,7 +1100,7 @@ describe("consents and offerShaped: a yes under its own offer (live 2026-10-07)"
     }
   });
   it("a question, a reaction, a no, or a yes with something of its own is not", () => {
-    for (const t of ["lol", "lol ok", "no", "nah", "do it?", "send it?", "what about pons", "done?", "yes but on solana", "", "ok ok ok ok ok ok ok"]) {
+    for (const t of ["lol", "lol ok", "no", "nah", "do it?", "send it?", "what about pons", "done?", "yes but on bsc", "", "ok ok ok ok ok ok ok"]) {
       assert.equal(consents(t, self), false, t);
     }
     assert.equal(consents(undefined), false);
@@ -1206,8 +1211,8 @@ describe("the theses themselves, a coin's facts, and a room saying it rugged (Mi
   it("an explicit quote ask reaches the research: 'quotes pls', 'no summary, just the posts', 'last 10?', 'quote the theses on …' (review, 2026-10-09)", () => {
     for (const t of ["quotes pls", "word for word pls", "no summary, just the posts", "the last 10 please", "last 10?"]) assert.equal(fomoFollowUpOf(t, names), true, t);
     for (const t of ["nice quote", "the posts are mid", "my last 2 trades were trash", "the last one lol", "gm pls"]) assert.equal(fomoFollowUpOf(t, names), false, t);
-    assert.notEqual(fomoAskOf("quote the theses on $AUTON on solana on fomo", names), null);
-    assert.notEqual(fomoAskOf("shogun quote the theses on $AUTON on solana on fomo", names), null);
+    assert.notEqual(fomoAskOf("quote the theses on $AUTON on bsc on fomo", names), null);
+    assert.notEqual(fomoAskOf("shogun quote the theses on $AUTON on bsc on fomo", names), null);
     assert.equal(fomoAskOf("quote me on that", names), null);
   });
 
@@ -1234,7 +1239,7 @@ describe("the theses themselves, a coin's facts, and a room saying it rugged (Mi
       ["shogun what happened to it", { ask: "what", coin: null }],
       // The present is the coin's activity on Fomo, never its facts.
       ["what's happening with pons", null],
-      ["what's happening with $AUTON on solana on fomo?", null],
+      ["what's happening with $AUTON on bsc on fomo?", null],
       ["what went wrong with pons?", { ask: "what", coin: "PONS" }],
       ["why did it rug", { ask: "why", coin: null }],
       ["why did auton rug?", { ask: "why", coin: "AUTON" }],
@@ -1245,6 +1250,7 @@ describe("the theses themselves, a coin's facts, and a room saying it rugged (Mi
       ["the dev dumped lol", null],
       ["auton rugged", null],
       ["what happened to the market today", null],
+      ["what happened to bnb", null],
       ["what happened to sol", null],
       // A person, the room or anything but a coin, and a bare "facts" (review, 2026-10-09).
       ["shogun what happened to you last night?", null],

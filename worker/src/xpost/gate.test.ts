@@ -124,7 +124,7 @@ describe("an answer says only the buys it was told of (red-team 2026-10-12)", ()
       assert.equal(reason(draft, live), "mode-false", draft);
     }
     for (const draft of ["i trade on paper, kidding, it's real dollars on the line. say stop to opt out.", "on paper trades, but the money is real. say stop to opt out.",
-      "on paper trades, real sol on the line though. say stop to opt out.", "i trade on paper, but my owner's actual cash is in it too. say stop to opt out.",
+      "on paper trades, real bnb on the line though. say stop to opt out.", "on paper trades, real sol on the line though. say stop to opt out.", "i trade on paper, but my owner's actual cash is in it too. say stop to opt out.",
       "on paper, though it feels like real stakes. say stop to opt out."]) {
       assert.match(reason(draft, paper), /^(?:mode-false|quantity)$/, draft);
     }
@@ -1335,7 +1335,7 @@ describe("a ticker in code's figures line is read as the gate reads words (red-t
       "TARGET", "PNL", "ROI", "PROFIT", "USD", "BUCKS", "DOLLARS", "OFFICIAL"]) {
       assert.notEqual(tickerRefusal(bad), null, bad);
     }
-    for (const ok of ["BTC", "ETH", "SOL", "PEPE", "WIF", "BONK", "DOGE", "CHUMP", "FROGGY", "TAO", "HYPE"]) assert.equal(tickerRefusal(ok), null, ok);
+    for (const ok of ["BTC", "ETH", "BNB", "SOL", "PEPE", "WIF", "BONK", "DOGE", "CHUMP", "FROGGY", "TAO", "HYPE"]) assert.equal(tickerRefusal(ok), null, ok);
     for (const bad of ["1B", "100X", "", "B", "PEPE🐸", null]) assert.equal(tickerRefusal(bad), "charset", String(bad));
   });
 

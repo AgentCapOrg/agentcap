@@ -32,10 +32,9 @@ import { usd as formatUsd } from "@/lib/format";
 import { QrCode } from "./QrCode";
 
 /**
- * THREE WAYS IN, ONE ADDRESS. The Add money panel's body:
+ * TWO WAYS IN, ONE ADDRESS. The Add money panel's body:
  * - send USDG on Robinhood Chain straight to the agent account
  * - convert ETH, from Robinhood Chain itself, Ethereum, Base or Arbitrum
- * - convert SOL from Solana
  *
  * Every way ends as USDG at the same agent account.
  *
@@ -49,11 +48,10 @@ import { QrCode } from "./QrCode";
  * already land on, with the copy button they expect.
  */
 
-type Way = "usdg" | "eth" | "sol";
+type Way = "usdg" | "eth";
 const WAYS: readonly { id: Way; label: string }[] = [
   { id: "usdg", label: "Send USDG" },
   { id: "eth", label: "From ETH" },
-  { id: "sol", label: "From SOL" },
 ];
 
 export interface DepositWaysProps {
@@ -115,10 +113,6 @@ export function DepositWays({ agent, chainId, balances, gasSponsored, ownerAddre
         {way === "eth" && converts && (
           <Convert key="eth" sources={ETH_SOURCES} agent={agent} balances={balances} gasSponsored={gasSponsored}
             defaultFrom={ownerAddress ?? ""} fetchImpl={fetchImpl} onLeave={startWatch} />
-        )}
-        {way === "sol" && converts && (
-          <Convert key="sol" sources={["sol-solana"]} agent={agent} balances={balances} gasSponsored={gasSponsored}
-            defaultFrom="" fetchImpl={fetchImpl} onLeave={startWatch} />
         )}
       </div>
       {watch && <ArrivalNote watch={watch} current={agentUsdg} now={now} onDone={() => setWatch(null)} />}
@@ -290,7 +284,7 @@ function Convert({ sources, agent, balances, gasSponsored, defaultFrom, fetchImp
         <input
           value={fromText}
           onChange={(e) => setFromText(e.target.value)}
-          placeholder={source.family === "evm" ? "0x…" : "Your Solana address"}
+          placeholder="0x…"
           autoComplete="off"
           spellCheck={false}
           inputMode="text"
@@ -353,7 +347,7 @@ function Convert({ sources, agent, balances, gasSponsored, defaultFrom, fetchImp
 
 function balanceLine(source: DepositSource, from: string, fromValid: boolean, read: BalanceRead | null): string {
   if (from === "") return "Add the wallet you're sending from to use Max.";
-  if (!fromValid) return source.family === "evm" ? "That isn't an Ethereum-style address (0x and 40 characters)." : "That isn't a Solana address.";
+  if (!fromValid) return "That isn't an Ethereum-style address (0x and 40 characters).";
   if (!read || !read.done) return "Reading this wallet's balance…";
   if (read.value === null) return `Couldn't read this wallet's ${source.asset} on ${source.network}, so Max is off. Type an amount instead.`;
   return `This wallet holds ${formatAmount(read.value, source.decimals, source.inputDecimals)} ${source.asset} on ${source.network}.`;

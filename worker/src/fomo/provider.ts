@@ -486,7 +486,7 @@ export interface AlertsQuery {
 }
 
 /** The thesis-by-token `network` values. `robinhood` is ours: the vendor's enum lacks it. */
-export type ThesisNetwork = "robinhood" | "sol" | "bnb" | "base" | "eth" | "arc";
+export type ThesisNetwork = "robinhood" | "bnb" | "base" | "eth" | "arc";
 
 export interface FomoClient {
   leaderboard(window: RankingWindow, limit?: number): Promise<ProviderResult<LeaderboardPage>>;
@@ -674,7 +674,7 @@ export function buildFomoUrl(
 type Rec = Record<string, unknown>;
 type Norm<T> = { ok: true; data: T } | { ok: false; detail: string };
 
-const { EVM_ADDRESS, SOLANA_MINT } = IDENTITY_GUARDS;
+const { EVM_ADDRESS } = IDENTITY_GUARDS;
 const UUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 const HANDLE = /^@?[A-Za-z0-9_.-]{1,40}$/;
 /** Ids that go into a path: no dots, so no dot-segment can be formed. */
@@ -687,7 +687,7 @@ const CURSOR = /^[A-Za-z0-9_.:-]{1,160}$/;
 const KEY_SHAPE = /^[\x21-\x7e]{8,512}$/;
 const TOKEN_SYMBOL = /^\$?[A-Za-z0-9._-]{1,24}$/;
 const ALERT_TYPE = /^[a-z][a-z_]{0,23}$/;
-const TOKEN_HINT = /^(?:0x[0-9a-fA-F]{1,40}|[1-9A-HJ-NP-Za-km-z]{1,44})$/;
+const TOKEN_HINT = /^0x[0-9a-fA-F]{1,40}$/;
 /** The app feed's alert id: `alrt_<13-digit ms>_<global sequence>`. */
 const PROVIDER_ALERT_ID = /^alrt_\d{13}_(\d{1,12})$/;
 /** Short provider vocabulary echoed back (filter values, a price source). */
@@ -834,9 +834,9 @@ function walletStatusOf(wallets: unknown): TraderProfile["walletStatus"] {
   const w = obj(wallets);
   return w.status === "resolving"
     ? "resolving"
-    : typeof w.evm === "string" || typeof w.solana === "string"
+    : typeof w.evm === "string"
       ? "resolved"
-      : isObj(wallets) && (w.evm === null || w.solana === null)
+      : isObj(wallets) && w.evm === null
         ? "none"
         : "unknown";
 }
@@ -873,7 +873,7 @@ function tokenFrom(address: unknown, networkId: unknown, slug: unknown): TokenId
 }
 
 function isTokenAddress(raw: string): boolean {
-  return EVM_ADDRESS.test(raw) || SOLANA_MINT.test(raw);
+  return EVM_ADDRESS.test(raw);
 }
 
 /**
@@ -894,7 +894,7 @@ function chainFilter(raw: string): { param: string; identity: ChainIdentity } | 
   }
   const c = chainFromUserText(t);
   if (!c || !c.slug) return null;
-  // Our canonical slugs (robinhood, solana, base, bsc, eth, arc, monad,
+  // Our canonical slugs (robinhood, base, bsc, eth, arc, monad,
   // hyperliquid, …) are the vendor's own filter spellings.
   return { param: c.slug, identity: filterCheckIdentity(c) };
 }
@@ -1224,7 +1224,7 @@ export interface AlertsStreamFilters {
 }
 
 export interface TradesStreamFilters {
-  chain?: "robinhood" | "solana";
+  chain?: "robinhood";
   /** A handle. Wallet filters are not offered: wallets are not surfaced by this subsystem. */
   trader?: string;
   token?: string;
@@ -1257,7 +1257,7 @@ function streamUrl(path: string, apiKey: string, filters: Array<[string, string]
 function tokenFilter(raw: string): string | null {
   const t = raw.trim();
   if (EVM_ADDRESS.test(t)) return t.toLowerCase();
-  if (SOLANA_MINT.test(t) || TOKEN_SYMBOL.test(t)) return t;
+  if (TOKEN_SYMBOL.test(t)) return t;
   return null;
 }
 
@@ -1292,7 +1292,7 @@ export function alertsStreamUrl(apiKey: string, filters: AlertsStreamFilters = {
 export function tradesStreamUrl(apiKey: string, filters: TradesStreamFilters = {}): StreamUrl {
   const out: Array<[string, string]> = [];
   if (filters.chain !== undefined) {
-    if (filters.chain !== "robinhood" && filters.chain !== "solana") return { ok: false, failure: "bad-request", detail: "the on-chain stream covers robinhood and solana only" };
+    if (filters.chain !== "robinhood") return { ok: false, failure: "bad-request", detail: "the on-chain stream covers robinhood only" };
     out.push(["chain", filters.chain]);
   }
   if (filters.trader !== undefined) {
@@ -1302,7 +1302,7 @@ export function tradesStreamUrl(apiKey: string, filters: TradesStreamFilters = {
   }
   if (filters.token !== undefined) {
     const t = tokenFilter(filters.token);
-    if (!t || !(EVM_ADDRESS.test(t) || SOLANA_MINT.test(t))) return { ok: false, failure: "bad-request", detail: "token must be a contract address" };
+    if (!t || !EVM_ADDRESS.test(t)) return { ok: false, failure: "bad-request", detail: "token must be a contract address" };
     out.push(["token", t]);
   }
   if (filters.side !== undefined) {
@@ -1502,20 +1502,18 @@ function legChainOf(l: Rec): ChainIdentity | null {
 
 /**
  * One leg of a fill. The row's chain describes the NON-cash leg only: live
- * fills on Robinhood, Ethereum and BNB pay with a Solana USDC leg. So a leg is
+ * fills on Robinhood, Ethereum and BNB pay with a USDC leg on another chain. So a leg is
  * placed on the row's chain only when it IS the row's own token (`own`: the
  * leg a position id names) or when the leg names its own chain. Any other leg
  * is the cash side and is placed by its shape alone, on an unknown network: a
- * base58 mint becomes Solana with no network id, a 0x address EVM with no
- * network id. Readable, never executable: an EVM-shaped cash leg is never
+ * 0x address is EVM with no network id. Readable, never executable: an EVM-shaped cash leg is never
  * assumed to be on the row's chain, so a stablecoin on another EVM chain can
- * never pass for a Robinhood token. (A base58 leg on a Solana row stays on it:
- * its shape alone places it there.)
+ * never pass for a Robinhood token.
  */
 function leg(raw: unknown, rowChain: ChainIdentity, own: boolean): FillRow["tokenIn"] {
   const l = obj(raw);
   const stated = legChainOf(l);
-  const place = stated ?? (own || rowChain.namespace === "solana" ? rowChain : NO_CHAIN);
+  const place = stated ?? (own ? rowChain : NO_CHAIN);
   const token = tokenIdentity(place, l.address) ?? tokenIdentity(NO_CHAIN, l.address);
   return { token, amount: nonNeg(l.amount), usd: nonNeg(l.usd) };
 }
@@ -2609,8 +2607,7 @@ export function createFomoClient(opts: FomoClientOptions): FomoClient {
     if (typeof raw !== "string") return null;
     const t = raw.trim();
     if (EVM_ADDRESS.test(t)) return t.toLowerCase();
-    // Base58 is case-sensitive: a mint is passed exactly as given.
-    return SOLANA_MINT.test(t) ? t : null;
+    return null;
   }
 
   const userIdError = "per-trader routes are keyed on the FOMO user id (UUID); resolve a handle first";
@@ -2663,7 +2660,7 @@ export function createFomoClient(opts: FomoClientOptions): FomoClient {
         if (!u) return refuse("swaps", userIdError);
         if (o.cursor !== undefined && !CURSOR.test(o.cursor)) return refuse("swaps", "cursor is not one this API issued");
         const tokenAddress = o.tokenAddress === undefined ? undefined : addressOf(o.tokenAddress);
-        if (tokenAddress === null) return refuse("swaps", "tokenAddress must be an EVM address or a Solana mint");
+        if (tokenAddress === null) return refuse("swaps", "tokenAddress must be an EVM address");
         const l = limitOf("swaps", o.limit);
         if (!l.ok) return refuse("swaps", "limit must be a number");
         return call("swaps", { userId: u }, { cursor: o.cursor, limit: l.value, tokenAddress }, (b) => normalizeSwaps(b, u));
@@ -2706,10 +2703,10 @@ export function createFomoClient(opts: FomoClientOptions): FomoClient {
 
       thesesByToken(address, o = {}) {
         const a = addressOf(address);
-        if (!a) return refuse("thesesByToken", "address must be an EVM address or a Solana mint");
+        if (!a) return refuse("thesesByToken", "address must be an EVM address");
         const net = o.network;
-        const NETWORKS: Record<ThesisNetwork, string> = { robinhood: "robinhood", sol: "solana", bnb: "bsc", base: "base", eth: "eth", arc: "arc" };
-        if (net !== undefined && !(net in NETWORKS)) return refuse("thesesByToken", "network must be robinhood, sol, bnb, base, eth or arc");
+        const NETWORKS: Record<ThesisNetwork, string> = { robinhood: "robinhood", bnb: "bsc", base: "base", eth: "eth", arc: "arc" };
+        if (net !== undefined && !(net in NETWORKS)) return refuse("thesesByToken", "network must be robinhood, bnb, base, eth or arc");
         const requested = net !== undefined ? chainFromUserText(NETWORKS[net]) : null;
         if (requested && !tokenIdentity(requested, a)) return refuse("thesesByToken", "the address does not fit that network");
         if (o.sort !== undefined && o.sort !== "likes" && o.sort !== "recent") return refuse("thesesByToken", "sort must be likes or recent");
@@ -2719,7 +2716,7 @@ export function createFomoClient(opts: FomoClientOptions): FomoClient {
         const l = limitOf("thesesByToken", o.limit);
         if (!l.ok) return refuse("thesesByToken", "limit must be a number");
         // THE VENDOR'S `network` ENUM HAS NO ROBINHOOD VALUE (openapi, fetched
-        // 2026-10-04: sol|bnb|base|eth|arc). Sending a value it does not know
+        // 2026-10-04: bnb|base|eth|arc). Sending a value it does not know
         // could be ignored or misread, so for Robinhood we send none and check
         // every returned row's own network instead.
         const param = net === undefined || net === "robinhood" ? undefined : net;
@@ -2750,7 +2747,7 @@ export function createFomoClient(opts: FomoClientOptions): FomoClient {
         const u = uuidOf(userId);
         if (!u) return refuse("thesesByUserToken", userIdError);
         const a = addressOf(address);
-        if (!a) return refuse("thesesByUserToken", "address must be an EVM address or a Solana mint");
+        if (!a) return refuse("thesesByUserToken", "address must be an EVM address");
         const l = limitOf("thesesByUserToken", o.limit);
         if (!l.ok) return refuse("thesesByUserToken", "limit must be a number");
         return call("thesesByUserToken", { userId: u, address: a }, { limit: l.value }, (b) =>
@@ -2774,21 +2771,21 @@ export function createFomoClient(opts: FomoClientOptions): FomoClient {
 
       tokenStats(address, o = {}) {
         const a = addressOf(address);
-        if (!a) return refuse("tokenStats", "address must be an EVM address or a Solana mint");
+        if (!a) return refuse("tokenStats", "address must be an EVM address");
         if (o.networkId !== undefined && !(Number.isSafeInteger(o.networkId) && o.networkId > 0)) return refuse("tokenStats", "networkId must be a positive integer");
         return call("tokenStats", { address: a }, { networkId: o.networkId }, (b) => normalizeTokenStats(b, a));
       },
 
       tokenDevs(address, o = {}) {
         const a = addressOf(address);
-        if (!a) return refuse("tokenDevs", "address must be an EVM address or a Solana mint");
+        if (!a) return refuse("tokenDevs", "address must be an EVM address");
         if (o.networkId !== undefined && !(Number.isSafeInteger(o.networkId) && o.networkId > 0)) return refuse("tokenDevs", "networkId must be a positive integer");
         return call("tokenDevs", { address: a }, { networkId: o.networkId }, (b) => normalizeDevs(b, a));
       },
 
       tokenHolders(address, o = {}) {
         const a = addressOf(address);
-        if (!a) return refuse("tokenHolders", "address must be an EVM address or a Solana mint");
+        if (!a) return refuse("tokenHolders", "address must be an EVM address");
         const l = limitOf("tokenHolders", o.limit);
         if (!l.ok) return refuse("tokenHolders", "limit must be a number");
         return call("tokenHolders", { address: a }, { limit: l.value }, (b) => normalizeHolders(b));

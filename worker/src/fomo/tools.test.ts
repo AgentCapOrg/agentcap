@@ -13,7 +13,7 @@ import type { SubjectMemory } from "./subject-memory";
 
 const NOW = 1_800_000_000_000;
 const A = `0x${"a1".repeat(20)}`;
-const MINT = "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU";
+const MINT = "0xf0f571fa2e7ec7b5470df5574dd1fc2db2929528";
 const USER = "3f2a9c1e-5b6d-4e7f-8a9b-0c1d2e3f4a5b";
 
 const tokenMemory: SubjectMemory = {
@@ -34,7 +34,7 @@ const PHRASES: [string, SubjectMemory | null][] = [
   ["what are the theses on $PEPE", null],
   [`What are the theses on this coin ${A}?`, null],
   [`theses for ${MINT}`, null],
-  ["what are the theses on $PEPE on solana", null],
+  ["what are the theses on $PEPE on bsc", null],
   ["what is @CryptoKaleo holding?", null],
   ["what has trader laifu bought this week", null],
   ["how is @CryptoKaleo doing this month", null],
@@ -46,7 +46,7 @@ const PHRASES: [string, SubjectMemory | null][] = [
   ["what are the most held tokens on fomo", null],
   ["any newly graduated coins on fomo?", null],
   ["find smaller coins getting attention", null],
-  ["find small caps our traders are buying on solana", null],
+  ["find small caps our traders are buying on bsc", null],
   ["which traders are buying $PEPE right now", null],
   ["who is selling $WIF on fomo", null],
   ["what are our 150 traders buying today", null],
@@ -135,7 +135,7 @@ describe("validation", () => {
     assert.deepEqual(parseTraderRef("@CryptoKaleo"), { kind: "handle", value: "CryptoKaleo" });
     assert.deepEqual(parseTraderRef(USER.toUpperCase()), { kind: "user-id", value: USER });
     assert.equal(parseChain("Robinhood"), "robinhood");
-    assert.equal(parseChain("sol"), "solana");
+    assert.equal(parseChain("bnb"), "bsc");
     assert.equal(parseChain("narnia"), null);
   });
 

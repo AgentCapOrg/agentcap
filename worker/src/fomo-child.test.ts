@@ -63,8 +63,8 @@ const U = (n: number) => BigInt(Math.round(n * 100)) * 10_000n;
 const P = (usd: number) => BigInt(Math.round(usd * 1e8));
 const coin = (n: number) => `0x${(0x7a000 + n).toString(16).padStart(40, "0")}`;
 const tok = (address: string): TokenIdentity => tokenIdentity(robinhoodChain(), address)!;
-const MINT = "So11111111111111111111111111111111111111112";
-const SOL = tokenIdentity(chainFromProvider(1_399_811_149, "solana"), MINT)!;
+const MINT = "0x00000000000000000000000000000000000b5c01";
+const SOL = tokenIdentity(chainFromProvider(56, "bsc"), MINT)!;
 const LENS = "Source: trader activity grouped by AgentCap. Two distinct buyers in the window. [ref:dabc123r3c1]";
 
 const homes: string[] = [];
@@ -405,7 +405,7 @@ async function loaded(o: HarnessOpts) {
 const DAY = new Date(T0).toISOString().slice(0, 10);
 
 function stateOf(as: readonly FollowAssessment[], address: string): FollowAssessment | undefined {
-  // EVM addresses are lowercase identity; a Solana mint keeps its case.
+  // EVM addresses are lowercase identity.
   return [...as].reverse().find((a) => a.token.address === address || a.token.address === address.toLowerCase());
 }
 

@@ -56,8 +56,8 @@ export function resetStopFenceForTest() { fence = NO_STOPS; stoppedKeys.clear();
 
 /**
  * THE LOGIN-WIDE KILL, ON THE PERPS SCREENS. DELETE /api/grants with purpose
- * "delete-agent" and no wallet stops every wallet the login has: Spot, Perps
- * and Solana (grants route DELETE). The Spot screen offers it only beside a
+ * "delete-agent" and no wallet stops every wallet the login has: Spot and Perps
+ * (grants route DELETE). The Spot screen offers it only beside a
  * Spot grant, so an owner with only a Perps wallet had no way to send it from
  * the web; the phones gained the same button for that owner in #373.
  *
@@ -163,7 +163,7 @@ export function StopAllAgents({ session: confirmed, onSend, onDone }: {
         try { clearGrant(wallet); return false; } catch { return true; }
       });
       cleared = true;
-      say("Stop request accepted for Spot, Perps and Solana. Existing assets remain in their accounts." +
+      say("Stop request accepted for Spot and Perps. Existing assets remain in their accounts." +
         (kept.length ? ` This browser's saved ${kept.join(" and ")} permission could not be cleared; it was kept with its recovery data. Do not re-activate it; reload before renewing.` : ""));
       onDone?.();
     } finally {
@@ -187,8 +187,8 @@ export function StopAllAgents({ session: confirmed, onSend, onDone }: {
   return <section className="perps-stop-all" aria-label="Stop all agents">
     <h2>Stop all agents</h2>
     <p>{hosted
-      ? "Stops Spot, Perps and Solana for this login. It removes active server permissions and agent memory. It does not withdraw assets or revoke permissions on-chain."
-      : "Stops Spot, Perps and Solana on this install. It removes their active permissions; local agent history is kept. It does not withdraw assets or revoke permissions on-chain."}</p>
+      ? "Stops Spot and Perps for this login. It removes active server permissions and agent memory. It does not withdraw assets or revoke permissions on-chain."
+      : "Stops Spot and Perps on this install. It removes their active permissions; local agent history is kept. It does not withdraw assets or revoke permissions on-chain."}</p>
     {!review && <button type="button" className="perps-stop-all-button" disabled={!ready || sending} onClick={() => { setMessage(""); setFence({ answer: null }); setReview(session); }}>Stop all agents</button>}
     {!ready && (ownFailed
       ? <p role="status">Your login could not be confirmed, and the stop is bound to it. <button type="button" onClick={() => setOwnRevision((value) => value + 1)}>Check again</button></p>
@@ -197,8 +197,8 @@ export function StopAllAgents({ session: confirmed, onSend, onDone }: {
       <h3>Stop all agents for this login?</h3>
       {review.hosted && <p>Signed in as <code>{review.address}</code></p>}
       <p>{review.hosted
-        ? "Spot, Perps and Solana for this login will stop managing positions. Active server permissions and agent memory are removed; re-signing does not restore that memory. This does not close or sell positions, withdraw assets, or revoke permissions on-chain."
-        : "Spot, Perps and Solana on this install will stop managing positions. Their active permissions are removed; local agent history is kept. This does not close or sell positions, withdraw assets, or revoke permissions on-chain."}</p>
+        ? "Spot and Perps for this login will stop managing positions. Active server permissions and agent memory are removed; re-signing does not restore that memory. This does not close or sell positions, withdraw assets, or revoke permissions on-chain."
+        : "Spot and Perps on this install will stop managing positions. Their active permissions are removed; local agent history is kept. This does not close or sell positions, withdraw assets, or revoke permissions on-chain."}</p>
       <button type="button" className="perps-stop-all-button" disabled={sending} onClick={() => void stop()}>{sending ? "Stopping…" : "Stop all agents now"}</button>
       <button type="button" disabled={sending} onClick={() => setReview(null)}>Cancel</button>
     </section>}

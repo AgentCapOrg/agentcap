@@ -53,7 +53,6 @@ import { getSettingsStore } from "@agentcap/settings-store";
 import { ledgerHasAgent, mintAndNameAgent } from "@/lib/first-name";
 import { deriveKernelAccountAddress } from "@/lib/derive-account";
 import { archiveCurrentGrant, GrantArchiveError, removeSelfHostedGrant } from "@/lib/grant-archive";
-import { stopLocalSolanaForKill, stopSolanaForKill } from "../../../../../worker/src/solana-kill";
 import { perpsHalf, stopLocalPerpsForKill, stopLocalPerpsGrantForRenewal, stopPerpsForKill, type PerpsHalf } from "../../../../../worker/src/perps-kill";
 import { readWalletParam, WALLET_PARAM } from "@/lib/wallet-param";
 import { readFleetRecoveryView, type FleetRecoveryView } from "../../../../../worker/src/fleet-recovery";
@@ -279,7 +278,7 @@ export async function POST(req: Request) {
   //
   // Nothing checked chainId before, and what reads it downstream (chainForId,
   // the derivation, the balance reads) turns any id but the testnet into
-  // mainnet: a grant naming chain 1, a Solana grant or one with no chainId at
+  // mainnet: a grant naming chain 1 or one with no chainId at
   // all was accepted and read as Robinhood Chain. Every grant our signers make
   // carries 4663 or 46630 (chain.id), so this refuses only what they never
   // send. For every mode, before the hosted checks read the id, and pure, so
@@ -944,15 +943,13 @@ export async function DELETE(req: Request) {
       return stop();
     }
     if (walletNamed) return killNamesWallet();
-    // The Solana strategy and the Perps wallet are stopped whatever happens to the Robinhood
-    // grant: a store that throws here still leaves the owner's autonomous Solana trading off and
-    // their Perps grant revoked. Neither half waits on the other.
+    // The Perps wallet is stopped whatever happens to the Robinhood
+    // grant: a store that throws here still leaves their Perps grant revoked.
     let removal: unknown = null;
     try { await getGrantStore("spot").remove(tenant); } catch (e) { removal = e ?? new Error("grant removal failed"); }
-    const solana = await solanaStopped(() => stopSolanaForKill(tenant));
     const perps = await perpsHalf(() => stopPerpsForKill(tenant));
     if (removal !== null) throw removal;
-    return killed(solana, perps);
+    return killed(perps);
   }
   // A SELF-HOSTED RENEWAL STOPS THE WALLET IT NAMES, NOT THE OTHER ONE. Every
   // self-hosted DELETE has always removed grant.json, renewals too (the new grant
@@ -981,22 +978,20 @@ export async function DELETE(req: Request) {
   }
   // The kill switch destroys the session key, NOT the wallet — archived first.
   // The web's Start over removes it the same way, from /api/grants/discard.
-  // The local Solana strategy and the local Perps wallet are stopped first, whatever happens to
+  // The local Perps wallet is stopped first, whatever happens to
   // the Robinhood grant: an archive it cannot write keeps grant.json (and pauses trading
-  // instead), and must never leave autonomous Solana trading or a Perps grant behind a
-  // "paused" answer.
-  const solana = await solanaStopped(() => stopLocalSolanaForKill());
+  // instead), and must never leave a Perps grant behind a "paused" answer.
   const perps: PerpsHalf = renewal ? { state: "none" } : await perpsHalf(() => stopLocalPerpsForKill());
   try {
     await removeSelfHostedGrant("spot");
   } catch (e) {
     if (e instanceof GrantArchiveError) {
-      return NextResponse.json({ error: `${e.message}${solana ? " Your Solana strategy was stopped." : " Your Solana strategy could not be stopped either: try the kill again."}${perpsAfterKeptGrant(perps)}`,
-        paused: e.paused, solana: solana ? "stopped" : "not-stopped", ...(perps.state === "none" ? {} : { perps: perps.state }) }, { status: 409 });
+      return NextResponse.json({ error: `${e.message}${perpsAfterKeptGrant(perps)}`,
+        paused: e.paused, ...(perps.state === "none" ? {} : { perps: perps.state }) }, { status: 409 });
     }
     throw e;
   }
-  return killed(solana, perps);
+  return killed(perps);
 }
 
 /**
@@ -1022,7 +1017,7 @@ function perpsRenewalNotOffered(): NextResponse {
 /**
  * A self-hosted Perps renewal's first step, as hosted's stopForReplacement of the
  * Perps grant: the Perps home's grant.json archived, then removed. Nothing of the
- * Spot wallet's, or Solana's, is touched. The new Perps grant is posted straight
+ * Spot wallet's is touched. The new Perps grant is posted straight
  * after (POST ?wallet=perps), which archives nothing more: this already kept it.
  */
 async function selfHostedPerpsRenewalStop(expectedAccount: string, expectedSession: string): Promise<NextResponse> {
@@ -1043,14 +1038,6 @@ function killNamesWallet(): NextResponse {
   );
 }
 
-/**
- * "Kill all agents" stops autonomous Solana trading too: the strategy is turned
- * off with a revision bump that fences any admission already in flight. True
- * when it is off (or there was none), false when it could not be stopped.
- */
-async function solanaStopped(stop: () => Promise<unknown>): Promise<boolean> {
-  try { await stop(); return true; } catch { return false; }
-}
 /** What the Perps half did, said after a Robinhood grant the kill had to keep. */
 function perpsAfterKeptGrant(perps: PerpsHalf): string {
   if (perps.state === "stopped") return " Your Perps wallet's grant was revoked.";
@@ -1066,17 +1053,13 @@ function perpsLeft(perps: PerpsHalf): string {
     : "your Perps wallet's grant could not be revoked yet";
 }
 /**
- * A kill that could not stop the Solana strategy or revoke the Perps grant is reported
- * incomplete, never as done. A retry is safe. An owner with neither sees exactly what
- * they always saw.
+ * A kill that could not revoke the Perps grant is reported
+ * incomplete, never as done. A retry is safe.
  */
-function killed(solana: boolean, perps: PerpsHalf): NextResponse {
-  const perpsDown = perps.state === "not-stopped";
-  if (!solana || perpsDown) {
-    const what = !solana && perpsDown ? `your Solana strategy could not be stopped and ${perpsLeft(perps)}`
-      : !solana ? "your Solana strategy could not be stopped yet" : perpsLeft(perps);
-    return NextResponse.json({ error: `Kill incomplete: your Robinhood Chain agent is stopped, but ${what}.${perps.why ? ` ${perps.why}` : ""} Try the kill again.`,
-      ownerFacing: true, solana: solana ? "stopped" : "not-stopped", ...(perps.state === "none" ? {} : { perps: perps.state }) }, { status: 503 });
+function killed(perps: PerpsHalf): NextResponse {
+  if (perps.state === "not-stopped") {
+    return NextResponse.json({ error: `Kill incomplete: your Robinhood Chain agent is stopped, but ${perpsLeft(perps)}.${perps.why ? ` ${perps.why}` : ""} Try the kill again.`,
+      ownerFacing: true, perps: perps.state }, { status: 503 });
   }
   return NextResponse.json(perps.state === "stopped" ? { ok: true, perps: "stopped" } : { ok: true });
 }

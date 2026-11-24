@@ -1,10 +1,10 @@
 {
- "_fixture": "trimmed from GeckoTerminal's public API, read 2026-10-09 ~01:15 UTC (AUTON on Solana); fields the facts reader does not use removed; the creator's address replaced with a fabricated one of the same shape (the reader must never keep it)",
+ "_fixture": "trimmed from GeckoTerminal's public API, read 2026-10-09 ~01:15 UTC (AUTON on BSC); fields the facts reader does not use removed; the creator's address replaced with a fabricated one of the same shape (the reader must never keep it)",
  "data": {
-  "id": "solana_39ahtL8ynzE4amH26J29C93PA5172V3ft9UuUcqQS8fz",
+  "id": "bsc_0x2980a1f1bcd7307ff6b9084a435357d5cb8d30cb",
   "type": "token",
   "attributes": {
-   "address": "39ahtL8ynzE4amH26J29C93PA5172V3ft9UuUcqQS8fz",
+   "address": "0x2980a1f1bcd7307ff6b9084a435357d5cb8d30cb",
    "name": "auton",
    "symbol": "AUTON",
    "holders": {
@@ -18,7 +18,7 @@
     "last_updated": "2026-10-08T14:48:21Z"
    },
    "is_honeypot": "unknown",
-   "developer_address": "CreatorAddressFabricatedForTests1111111111",
+   "developer_address": "0x67e55b97cb52cd180f6ecbcd7e8b9b0497563926",
    "developer_holding_percentage": "4.81"
   }
  }

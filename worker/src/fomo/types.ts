@@ -36,17 +36,17 @@
 // ── Identity ──────────────────────────────────────────────────────────────
 
 /** CAIP-2 style namespace. `unknown` means the provider gave nothing usable. */
-export type ChainNamespace = "eip155" | "solana" | "hyperliquid" | "unknown";
+export type ChainNamespace = "eip155" | "hyperliquid" | "unknown";
 
 export interface ChainIdentity {
   namespace: ChainNamespace;
   /**
    * The network id AS RETURNED by the provider (4663 Robinhood Chain,
-   * 1399811149 Solana, 5042 Arc, 1337 Hyperliquid). Null when the row carried
+   * 5042 Arc, 1337 Hyperliquid). Null when the row carried
    * none — a missing id is never assumed to be the chain we asked for.
    */
   networkId: number | null;
-  /** The provider's slug as returned ("robinhood", "solana", …), sanitised. */
+  /** The provider's slug as returned ("robinhood", "bsc", …), sanitised. */
   slug: string | null;
 }
 
@@ -54,7 +54,6 @@ export interface ChainIdentity {
  * A token is (namespace, network, address). Symbols and names are NOT identity.
  *
  *   EVM      address lowercased; the SAME hex on two networks is two tokens.
- *   Solana   base58 mint, case PRESERVED (base58 is case-sensitive).
  */
 export interface TokenIdentity {
   chain: ChainIdentity;
@@ -266,8 +265,8 @@ export interface FillRow {
   at: number | null;
   /**
    * The two legs are on different chains: the provider routes fills through
-   * a cash leg on another chain (observed live: a Solana USDC leg on a
-   * Robinhood, Ethereum or BNB fill), so `chain` describes only the non-cash
+   * a cash leg on another chain (observed live: a USDC leg on another
+   * chain on a Robinhood, Ethereum or BNB fill), so `chain` describes only the non-cash
    * leg. Null when a leg could not be placed. Optional for older cached pages.
    */
   crossChain?: boolean | null;

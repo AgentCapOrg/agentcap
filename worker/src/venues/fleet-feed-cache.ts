@@ -162,8 +162,8 @@ export function isPlanRefusal(failure: string | undefined): boolean {
  */
 export function endpointFamily(route: string): string {
   const pathOnly = route.split(/[?#]/, 1)[0]!.replace(/^\/+/, "");
-  // A hex id (an EVM address, a v4 poolId) or a base58 one (a Solana mint).
-  const isId = (seg: string) => /0x[\da-f]{6,}/i.test(seg) || /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(seg);
+  // A hex id (an EVM address, a v4 poolId).
+  const isId = (seg: string) => /0x[\da-f]{6,}/i.test(seg);
   return pathOnly.split("/").map(seg => isId(seg) ? "{id}" : seg).join("/").slice(0, 160);
 }
 

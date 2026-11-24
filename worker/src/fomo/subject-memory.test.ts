@@ -163,7 +163,7 @@ describe("applyPlan (before the lookup)", () => {
   // C11: a chain stated for a still-unplaced coin is kept on it; a placed coin keeps its own.
   for (const [text, before, want] of [
     ["the one on base", { kind: "token", symbol: "PEPE", chain: null }, { kind: "token", symbol: "PEPE", chain: "base" }],
-    ["on solana", { kind: "token", symbol: "PEPE", chain: null }, { kind: "token", symbol: "PEPE", chain: "solana" }],
+    ["on bsc", { kind: "token", symbol: "PEPE", chain: null }, { kind: "token", symbol: "PEPE", chain: "bsc" }],
     ["theses on $PEPE on base", { kind: "token", symbol: "PEPE", chain: null }, { kind: "token", symbol: "PEPE", chain: "base" }],
     ["on base", { kind: "token", address: A, chain: null }, { kind: "token", address: A, chain: "base" }],
     [`theses on ${A} on robinhood`, { kind: "token", tokenKey: `eip155:4663:${A}`, address: A, chain: "robinhood", symbol: "PEPE" }, { kind: "token", tokenKey: `eip155:4663:${A}`, address: A, chain: "robinhood", symbol: "PEPE" }],
@@ -258,8 +258,8 @@ describe("applyResult (after the lookup)", () => {
   });
 
   it("keeps the same hex on two networks as two coins", () => {
-    const solanaish = chainFromProvider(undefined, "base");
-    const onBase = tokenIdentity(solanaish, A)!;
+    const otherEvm = chainFromProvider(undefined, "base");
+    const onBase = tokenIdentity(otherEvm, A)!;
     const m = applyResult(resolvedMemory(), { subjects: [{ kind: "token", token: onBase, label: { symbol: "PEPE", name: null } }], requestId: "r" }, NOW);
     assert.deepEqual(m.subjects, [{ kind: "token", tokenKey: `eip155:?:${A}`, address: A, chain: "base", symbol: "PEPE" }]);
     assert.equal(m.dossierRevision, null, "a different network is a different coin");
@@ -311,7 +311,7 @@ describe("serialize / deserialize", () => {
   it("round-trips", () => {
     const m = resolvedMemory({
       subjects: [
-        { kind: "token", tokenKey: `solana:1399811149:${"7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"}`, address: "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU", chain: "solana", symbol: "BONK" },
+        { kind: "token", tokenKey: `eip155:56:${"0xf0f571fa2e7ec7b5470df5574dd1fc2db2929528"}`, address: "0xf0f571fa2e7ec7b5470df5574dd1fc2db2929528", chain: "bsc", symbol: "BONK" },
         { kind: "trader", userId: USER, handle: "CryptoKaleo" },
       ],
       window: "24h",

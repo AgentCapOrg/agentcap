@@ -41,7 +41,7 @@ const BOT: BotSelf = { id: 999999, username: "pinebot", name: "Pine" };
 const ca = (n: number) => "0x" + n.toString(16).padStart(4, "0").repeat(10);
 const CA1 = ca(0xa1);
 const CA2 = ca(0xb2);
-const MINT = "7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr";
+const MINT = "TaR7j2Cz5kvAFq9WUV11k3BD3SBAffythP";
 
 interface Call {
   method: string;
@@ -473,7 +473,7 @@ describe("docs/tg-groups.md Scenarios, through the group handler", () => {
     assert.deepEqual(port.nominations.map((x) => x.address), [CA1, CA2]);
   });
 
-  it("Another chain's coin with no 0x address in it (DexScreener's own Solana, TON, Sui and v4 links; a TON address) → nothing at all, addressed or not, ready or not, coins on or off", async () => {
+  it("Another chain's coin with no 0x address in it (DexScreener's own BSC, TON, Sui and v4 links; a TON address) → nothing at all, addressed or not, ready or not, coins on or off", async () => {
     // A model that would answer, and odds that would join in: any reply here
     // is the chatter path talking about another chain's coin.
     const seen = fakeModel(() => "lol that one looks mid");
@@ -481,9 +481,9 @@ describe("docs/tg-groups.md Scenarios, through the group handler", () => {
     dice = () => 0.01;
     const H64 = "0x" + "ab12".repeat(16);
     const coins = [
-      // Exactly as DexScreener's API hands them out: a Solana pair id all
+      // Exactly as DexScreener's API hands them out: a BSC pair id all
       // lowercase, so it has no mint shape, and no 0x + 40 hex anywhere.
-      "https://dexscreener.com/solana/4hzthuyzrpwtvqgru8trxb5tkaslgphuamdgtks2rdai",
+      "https://dexscreener.com/bsc/4hzthuyzrpwtvqgru8trxb5tkaslgphuamdgtks2rdai",
       "https://dexscreener.com/ton/eqcxe6mutqjkfngfarotkot1lzbdiix1kcixrv7nw2id_sds",
       `https://dexscreener.com/sui/${H64}`,
       // A Uniswap v4 pool id on Base: 64 hex, never read as a CA.
@@ -636,7 +636,7 @@ describe("docs/tg-groups.md Scenarios, through the group handler", () => {
     assert.equal(tg.sends(CHAT).length, 5);
   });
 
-  it("Solana mint → silence", async () => {
+  it("BSC mint → silence", async () => {
     make();
     approve();
     await said(msg(`${MINT} 🚀`));

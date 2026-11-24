@@ -141,7 +141,7 @@ describe("grantWallOptions takes perpsOnly from the signed purpose, and only fro
   });
 
   it("a purpose that names no wallet is refused, never rebuilt as Spot", () => {
-    for (const purpose of ["Perps", "", "solana", 1, null]) {
+    for (const purpose of ["Perps", "", "other", 1, null]) {
       assert.throws(() => grantWallOptions({ ...spot, purpose }), /wallet purpose/, String(purpose));
     }
   });

@@ -447,13 +447,12 @@ export async function answerFomoQuestion(input: AnswerFomoInput): Promise<Answer
 
 /**
  * A COMPOSED ANSWER THAT TYPES AN ADDRESS IS NOT SENT. The evidence carries
- * shortened addresses only, so a full 20-byte hex, a tx-hash-length hex or a
- * mint-length base58 run in the reply came from the model (or from text it
- * was shown and echoed). One wrong character in a retyped address sends
+ * shortened addresses only, so a full 20-byte hex or a tx-hash-length hex
+ * in the reply came from the model (or from text it was shown and echoed). One wrong character in a retyped address sends
  * someone's funds where nobody can recover them, and the house rule is that a
  * model never types one; the deterministic answer, which renders addresses
  * shortened, is used instead.
  */
 export function typesExecutable(text: string): boolean {
-  return /0x[0-9a-fA-F]{40}/.test(text) || /\b[1-9A-HJ-NP-Za-km-z]{32,}\b/.test(text) || /\b[0-9a-fA-F]{64}\b/.test(text);
+  return /0x[0-9a-fA-F]{40}/.test(text) || /\b[0-9a-fA-F]{64}\b/.test(text);
 }

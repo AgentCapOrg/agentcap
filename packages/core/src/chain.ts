@@ -65,7 +65,7 @@ export function isRobinhoodChainId(id: unknown): id is RobinhoodChainId {
 
 /**
  * STRICT VARIANTS, FOR NEW CODE. chainForId and explorerFor above map every id
- * but the testnet to mainnet, which is what lets a Solana grant, a typo or a
+ * but the testnet to mainnet, which is what lets a typo or a
  * missing id read as Robinhood Chain. These throw on anything that is not one
  * of the two Robinhood chain ids instead, as ids.ts requireChain does.
  *

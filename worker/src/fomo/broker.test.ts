@@ -29,8 +29,8 @@ const NOW = 1_800_000_000_000;
 const ORCH_TENANT = "0x00000000000000000000000000000000000000a1";
 const A = `0x${"a1".repeat(20)}`;
 const RH_KEY = `eip155:4663:${A}`;
-const MINT = "So11111111111111111111111111111111111111112";
-const SOL_KEY = `solana:1399811149:${MINT}`;
+const MINT = "0xd77cf5c8a1c79d6b78408a3f545dea88441790fb";
+const BSC_KEY = `eip155:56:${MINT}`;
 
 const DM: BrokerCallOptions = { surface: "telegram-dm", audience: "owner", conversationKey: "tg:dm:1", priority: "interactive" };
 
@@ -508,9 +508,9 @@ describe("parseBrokerRequest and validateBrokerReport", () => {
     assert.equal(validateBrokerReport({ kind: "funnel", tokenKey: RH_KEY.toUpperCase(), stage: "MODEL_HOLD", detail: "", decisionId: null, atMs: NOW }, ORCH_TENANT).ok, false);
     assert.equal(validateBrokerReport({ kind: "funnel", tokenKey: RH_KEY, stage: "BOUGHT", detail: "", decisionId: null, atMs: NOW }, ORCH_TENANT).ok, false);
     assert.equal(validateBrokerReport({ kind: "held-tokens", tokenKeys: [RH_KEY, `eip155:4663:0x${"A1".repeat(20)}`], atMs: NOW }, ORCH_TENANT).ok, false);
-    assert.deepEqual(validateBrokerReport({ kind: "held-tokens", tokenKeys: [RH_KEY, SOL_KEY, RH_KEY], atMs: NOW }, ORCH_TENANT), {
+    assert.deepEqual(validateBrokerReport({ kind: "held-tokens", tokenKeys: [RH_KEY, BSC_KEY, RH_KEY], atMs: NOW }, ORCH_TENANT), {
       ok: true,
-      report: { kind: "held-tokens", tokenKeys: [RH_KEY, SOL_KEY], atMs: NOW },
+      report: { kind: "held-tokens", tokenKeys: [RH_KEY, BSC_KEY], atMs: NOW },
     });
     assert.equal(validateBrokerReport({ kind: "outcome", assessmentId: "fa_1", horizonLabel: "1h", observedAtMs: NOW, price8: "1.123456789", note: null }, ORCH_TENANT).ok, false);
     assert.equal(validateBrokerReport({ kind: "outcome", assessmentId: "fa_1", horizonLabel: "1h", observedAtMs: NOW, price8: "1.12345678", note: null }, ORCH_TENANT).ok, true);
@@ -528,7 +528,7 @@ describe("parseBrokerRequest and validateBrokerReport", () => {
     assert.equal(validateBrokerReport({ kind: "review-candidates", tokenKeys: ten, atMs: NOW }, ORCH_TENANT).ok, true);
     assert.equal(validateBrokerReport({ kind: "review-candidates", tokenKeys: [...ten, rh(11)], atMs: NOW }, ORCH_TENANT).ok, false, "more than ten");
     assert.equal(validateBrokerReport({ kind: "review-candidates", tokenKeys: [], atMs: NOW }, ORCH_TENANT).ok, false, "an empty report says nothing");
-    assert.equal(validateBrokerReport({ kind: "review-candidates", tokenKeys: [RH_KEY, SOL_KEY], atMs: NOW }, ORCH_TENANT).ok, false, "not a chain a review acts on");
+    assert.equal(validateBrokerReport({ kind: "review-candidates", tokenKeys: [RH_KEY, BSC_KEY], atMs: NOW }, ORCH_TENANT).ok, false, "not a chain a review acts on");
     assert.equal(validateBrokerReport({ kind: "review-candidates", tokenKeys: [`eip155:4663:0x${"A1".repeat(20)}`], atMs: NOW }, ORCH_TENANT).ok, false, "not canonical");
     assert.equal(validateBrokerReport({ kind: "review-candidates", tokenKeys: [`eip155:1:${A}`], atMs: NOW }, ORCH_TENANT).ok, false, "another network");
     assert.equal(validateBrokerReport({ kind: "review-candidates", tokenKeys: [RH_KEY] }, ORCH_TENANT).ok, false, "no time");
@@ -723,7 +723,7 @@ describe("IPC broker round trip", () => {
     assert.equal(svc.reports[0]!.tenant, ORCH_TENANT);
     await broker.report({ kind: "held-tokens", tokenKeys: [RH_KEY, "eip155:4663:not-an-address"], atMs: NOW });
     assert.equal(svc.reports.length, 1, "a held-tokens report with a forged key is refused whole");
-    assert.equal(await broker.report({ kind: "review-candidates", tokenKeys: [RH_KEY, SOL_KEY], atMs: NOW }), false, "refused: not accepted");
+    assert.equal(await broker.report({ kind: "review-candidates", tokenKeys: [RH_KEY, BSC_KEY], atMs: NOW }), false, "refused: not accepted");
     assert.equal(svc.reports.length, 1, "a review-candidates report naming another chain is refused whole");
     assert.equal(await broker.report({ kind: "review-candidates", tokenKeys: [RH_KEY], atMs: NOW }), true, "accepted");
     assert.equal(svc.reports.length, 2);
@@ -755,7 +755,7 @@ describe("IPC broker round trip", () => {
     // In process: refused, accepted, or the service failing.
     const svc = new FakeService();
     const direct = createDirectBroker(svc, ORCH_TENANT, { now: () => NOW });
-    assert.equal(await direct.report({ ...report, tokenKeys: [SOL_KEY] }), false);
+    assert.equal(await direct.report({ ...report, tokenKeys: [BSC_KEY] }), false);
     assert.equal(await direct.report(report), true);
     svc.report = async () => {
       throw new Error("store down");

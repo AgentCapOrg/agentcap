@@ -60,27 +60,16 @@ const KEYED_HOSTS: readonly string[] = [
   "stackup.sh",
   "biconomy.io",
   "candide.dev",
-  // Solana RPC providers. Helius takes ?api-key= (removed on any host by name),
-  // but its dedicated and older endpoints too; Triton (rpcpool.com) and Syndica
-  // put a lower-case token in the path, which the shape test does not read as a
-  // key. Alchemy, QuickNode, Ankr and Chainstack are listed above.
-  "helius-rpc.com", // mainnet.helius-rpc.com/?api-key=<key>
-  "helius.xyz", // rpc.helius.xyz/?api-key=<key>
-  "rpcpool.com", // <name>.mainnet.rpcpool.com/<token>
-  "syndica.io", // solana-mainnet.api.syndica.io/api-key/<key>
 ];
 
 /**
  * Public pages whose PATH is an identifier people are meant to share — a
- * Solana signature or mint in base58, a handle, a repository — and which the
+ * transaction hash, a handle, a repository — and which the
  * shape test below would otherwise take for a key. Their query is still
  * checked by parameter name. (Etherscan-style APIs carry their key as
  * `apikey=`, which that check removes on any host.)
  */
 const PUBLIC_PATH_HOSTS: readonly string[] = [
-  "solscan.io",
-  "solana.fm",
-  "explorer.solana.com",
   "dexscreener.com",
   "geckoterminal.com",
   "birdeye.so",

@@ -31,7 +31,7 @@ const RH_A = "0x1111111111111111111111111111111111111111";
 const RH_B = "0x2222222222222222222222222222222222222222";
 const RH_C = "0x3333333333333333333333333333333333333333";
 const RH_KEY = (a: string) => `eip155:4663:${a}`;
-const SOL_MINT = "So11111111111111111111111111111111111111112";
+const BSC_MINT = "0xd77cf5c8a1c79d6b78408a3f545dea88441790fb";
 
 async function settle(): Promise<void> {
   for (let i = 0; i < 25; i++) await new Promise<void>((r) => setImmediate(r));
@@ -827,7 +827,7 @@ describe("coalescing and priority", () => {
     assert.equal(s.ing.health().dropped["not-of-interest"], 1);
 
     for (let i = 2; i <= 5; i++) await s.live(raw(i, T0, { userId: `stranger-${i}`, alertType: "thesis", tokenAddress: RH_C }));
-    await s.live(raw(6, T0, { userId: "stranger", alertType: "thesis", tokenAddress: SOL_MINT, chainId: 1399811149, chain: "solana" }));
+    await s.live(raw(6, T0, { userId: "stranger", alertType: "thesis", tokenAddress: BSC_MINT, chainId: 56, chain: "bsc" }));
     assert.deepEqual(s.routed.map((r) => r.item.eventKey), [keyOf(2), keyOf(3)]);
     assert.deepEqual(s.routed[0]?.item.reasons, ["robinhood-thesis"]);
     const h = s.ing.health();

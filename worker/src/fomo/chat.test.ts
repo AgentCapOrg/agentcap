@@ -28,7 +28,7 @@ type Rec = Record<string, unknown>;
 const NOW = Date.UTC(2026, 9, 4, 16, 5);
 const PONS = "0x39dbed3a00000000000000000000000000000c0d";
 const OTHER = "0x" + "b2".repeat(20);
-const FU2O = "Fu2oZoGxFtCDp29NKA4A89xcn255khq9xbxG7Mmtpump";
+const FU2O = "0xc66101b7bbddc5e8738608b393c2eac96bbfef6a";
 const ALERTS_NEWEST = 1788378000000;
 const OWNER = "0xowner00000000000000000000000000000000001";
 
@@ -215,7 +215,7 @@ describe("answerFomoQuestion", () => {
     const s = await setup();
     s.serve.set("/v2/tokens/search", () => {
       const b = fixture("tokens-search");
-      (b.tokens as Rec[]).push({ symbol: "PONS", address: FU2O, name: "Other Pons", networkId: 1399811149 });
+      (b.tokens as Rec[]).push({ symbol: "PONS", address: FU2O, name: "Other Pons", networkId: 56 });
       return json(b);
     });
     const r = await s.ask("what are the theses on $PONS");
@@ -223,7 +223,7 @@ describe("answerFomoQuestion", () => {
     assert.equal(r.envelopes[0]!.status, "needs-clarification");
     assert.match(r.text, /Which one do you mean\?/);
     assert.match(r.text, /robinhood/);
-    assert.match(r.text, /solana/);
+    assert.match(r.text, /bsc/);
     assert.ok(!s.provider.some((p) => p.includes("/thesis/")), "no thesis read for an unresolved coin");
     // Nothing was resolved, so nothing is remembered as "it".
     const mem = deserialize(await s.service.memoryGet(OWNER, "conv-1"));
@@ -233,15 +233,15 @@ describe("answerFomoQuestion", () => {
   it("C11: answering the which-chain question places the coin on that chain instead of asking again", async () => {
     for (const [answer, chain, address] of [
       ["robinhood", "robinhood", PONS],
-      ["solana", "solana", FU2O],
+      ["bsc", "bsc", FU2O],
       ["the one on robinhood", "robinhood", PONS],
-      ["on solana", "solana", FU2O],
+      ["on bsc", "bsc", FU2O],
       ["I mean on robinhood", "robinhood", PONS],
     ] as const) {
       const s = await setup();
       s.serve.set("/v2/tokens/search", () => {
         const b = fixture("tokens-search");
-        (b.tokens as Rec[]).push({ symbol: "PONS", address: FU2O, name: "Other Pons", networkId: 1399811149 });
+        (b.tokens as Rec[]).push({ symbol: "PONS", address: FU2O, name: "Other Pons", networkId: 56 });
         return json(b);
       });
       const first = await s.ask("what are the theses on $PONS");
@@ -262,7 +262,7 @@ describe("answerFomoQuestion", () => {
     s.serve.set("/v2/tokens/search", () => json({ tokens: [
       { symbol: "BOOMER", address: PONS, networkId: 4663 },
       { symbol: "BOOMER", address: OTHER, networkId: 4663 },
-      { symbol: "BOOMER", address: FU2O, networkId: 1399811149 },
+      { symbol: "BOOMER", address: FU2O, networkId: 56 },
     ] }));
     const group = { audience: "group" as const, surface: "telegram-group" as const, groupId: "-100123" };
     const first = await s.ask("what are the theses on $BOOMER", group);
@@ -390,7 +390,7 @@ describe("answerFomoQuestion", () => {
     assert.ok(r.handled);
     assert.notEqual(r.text, GROUP_DM_DEFLECTION);
     assert.deepEqual(s.brokerCalls.map((c) => [c.tool, c.args, c.opts.audience]), [["fomo_get_trader_context", { trader: "CryptoKaleo" }, "group"]]);
-    assert.match(r.text, /^CryptoKaleo on Fomo holds 2 coins worth \$3\.1k \(provider-reported snapshot, valued at current prices\)\.\nLargest held by CryptoKaleo: PONS on robinhood \$3\.1k, FU2O on solana \$13\./);
+    assert.match(r.text, /^CryptoKaleo on Fomo holds 2 coins worth \$3\.1k \(provider-reported snapshot, valued at current prices\)\.\nLargest held by CryptoKaleo: PONS on robinhood \$3\.1k, FU2O on bsc \$13\./);
     assert.doesNotMatch(r.text, /cohort|watched|follow|P&L|@|0x[0-9a-f]{6}|\$PONS/i, "never who AgentCap watches, never an owner-side figure or an address");
     // The owner's own answer about the same trader keeps its detail.
     const owner = await s.ask("what is @CryptoKaleo holding?");

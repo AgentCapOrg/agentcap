@@ -14,7 +14,7 @@
  * as the index lists it.
  */
 
-export type FactsNetwork = "robinhood" | "solana" | "base" | "ethereum" | "bsc";
+export type FactsNetwork = "robinhood" | "base" | "ethereum" | "bsc";
 
 export interface CoinFacts {
   network: FactsNetwork;

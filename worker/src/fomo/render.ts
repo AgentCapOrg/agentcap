@@ -258,7 +258,6 @@ export function groupScrub(text: string): string {
     .replace(/\bhttps?:\/\/\S+/gi, "[link]")
     .replace(/\bwww\.\S+/gi, "[link]")
     .replace(/0x[0-9a-fA-F]{6,}/g, "[address]")
-    .replace(/(^|[^A-Za-z0-9])[1-9A-HJ-NP-Za-km-z]{32,}/g, "$1[address]")
     .replace(/(^|[^A-Za-z0-9_])@[A-Za-z0-9_]{1,30}/g, "$1[someone]")
     .replace(/\$([A-Za-z][A-Za-z0-9_-]{0,19})\b/g, "$1");
 }
@@ -845,10 +844,10 @@ function windowWords(w: string | null | undefined): string {
   return w === "all" ? "all time" : w ? `last ${w}` : "";
 }
 
-/** A chain as people say it: "Robinhood Chain", "Solana", "Ethereum". */
+/** A chain as people say it: "Robinhood Chain", "Base", "Ethereum". */
 export function chainLabel(slug: string | null | undefined): string {
   const s = typeof slug === "string" ? chainFromUserText(slug)?.slug ?? slug : "";
-  const named: Record<string, string> = { robinhood: "Robinhood Chain", solana: "Solana", base: "Base", eth: "Ethereum", bsc: "BSC", arc: "Arc", hyperliquid: "Hyperliquid" };
+  const named: Record<string, string> = { robinhood: "Robinhood Chain", base: "Base", eth: "Ethereum", bsc: "BSC", arc: "Arc", hyperliquid: "Hyperliquid" };
   return named[s] ?? (/^[a-z][a-z0-9-]{0,23}$/.test(s) ? s : "that chain");
 }
 
@@ -1355,15 +1354,14 @@ function subjectText(s: ResolvedSubject | null, audience: Audience): string {
  * An evidence ref as the model may see it. Ref ids are minted from full token
  * keys (`…:0x<40 hex>`), transaction hashes and provider user ids, and the
  * model is told never to type a full address or reveal internal identifiers,
- * so it is never handed one: long hex, base58 mints and uuids are shortened
+ * so it is never handed one: long hex and uuids are shortened
  * the way the subject line shortens them. A ref is a citation label, not a
  * handle anything resolves, so the short form loses nothing.
  */
 export function refForModel(id: string): string {
   return sanitizeText(id, 400)
     .replace(/0x[0-9a-fA-F]{16,}/g, (h) => shortAddress(h))
-    .replace(/\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b/g, (u) => `${u.slice(0, 8)}…`)
-    .replace(/(^|[^A-Za-z0-9])([1-9A-HJ-NP-Za-km-z]{32,})/g, (_m, pre: string, b58: string) => `${pre}${shortAddress(b58)}`);
+    .replace(/\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b/g, (u) => `${u.slice(0, 8)}…`);
 }
 
 function asOfText(env: FomoEnvelope, now: number): string {

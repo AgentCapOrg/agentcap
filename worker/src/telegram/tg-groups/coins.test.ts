@@ -8,7 +8,7 @@
  *   - only the address and where it came from cross into a nomination, and a
  *     stale post is never nominated;
  *   - only a Robinhood Chain coin gets anything: a CA in another chain's link,
- *     a Solana mint, and an address the look does not show is one (a wallet,
+ *     a BSC mint, and an address the look does not show is one (a wallet,
  *     which is what an Ethereum token is here) get silence and no memo, ready
  *     or not, coins on or off;
  *   - nothing is said in a room that is not approved, and coins-off is
@@ -53,7 +53,7 @@ const BOB = 8;
 const ca = (n: number) => "0x" + n.toString(16).padStart(4, "0").repeat(10);
 const CA1 = ca(0xa1);
 const CA2 = ca(0xb2);
-const MINT = "7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr";
+const MINT = "TaR7j2Cz5kvAFq9WUV11k3BD3SBAffythP";
 
 class FakePort implements TgCoinsPort {
   ready: TrencherReadiness = { kind: "ready-paper", ownerReason: "Trencher mode is ready." };
@@ -231,7 +231,7 @@ afterEach(() => {
 // ─── Lines with no CA ──────────────────────────────────────────────────────
 
 describe("a line with no CA", () => {
-  it("a Solana mint is another chain's coin: handled, so nothing else answers it, and silent — ready or not, coins on or off, fresh or stale", async () => {
+  it("a BSC mint is another chain's coin: handled, so nothing else answers it, and silent — ready or not, coins on or off, fresh or stale", async () => {
     const flow = makeFlow();
     for (const [ready, on] of [[true, true], [false, true], [true, false], [false, false]] as const) {
       port!.ready = ready ? { kind: "ready-paper", ownerReason: "ready" } : { kind: "off", ownerReason: "off" };
@@ -246,11 +246,11 @@ describe("a line with no CA", () => {
     assert.equal(store.room(CHAT)!.lastDropCaAtMs, undefined);
   });
 
-  it("another chain's coin with no EVM address or mint shape (DexScreener's lowercase Solana, TON, Sui and v4 links, a TON address) is handled the same: silent", async () => {
+  it("another chain's coin with no EVM address or mint shape (DexScreener's lowercase BSC, TON, Sui and v4 links, a TON address) is handled the same: silent", async () => {
     const flow = makeFlow();
     const h64 = "0x" + "ab12".repeat(16);
     const texts = [
-      "https://dexscreener.com/solana/4hzthuyzrpwtvqgru8trxb5tkaslgphuamdgtks2rdai",
+      "https://dexscreener.com/bsc/4hzthuyzrpwtvqgru8trxb5tkaslgphuamdgtks2rdai",
       "https://dexscreener.com/ton/eqcxe6mutqjkfngfarotkot1lzbdiix1kcixrv7nw2id_sds",
       `https://dexscreener.com/sui/${h64}`,
       `$FROG https://dexscreener.com/base/${h64}`,
@@ -1445,7 +1445,7 @@ describe("the coin lane: a post's reads never hold the chat's queue", () => {
     port!.looks.set(CA1, { kind: "wallet" });
     assert.equal(await code(CA1), "coin-not-here");
     assert.equal(await code(`https://etherscan.io/token/${CA2}`), "coin-not-here", "another chain's link");
-    assert.equal(await code(`${MINT} 🚀`), "coin-not-here", "a Solana mint");
+    assert.equal(await code(`${MINT} 🚀`), "coin-not-here", "a BSC mint");
     assert.equal(await code(ca(0x401), { dateSec: Math.floor((clock - 11 * MIN) / 1000) }), "coin-stale");
     assert.equal(await code(ca(0x402), { id: 703 }), undefined, "said: no code");
     assert.equal(await code(ca(0x402), { id: 703 }), "coin-replay");

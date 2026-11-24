@@ -17,7 +17,7 @@ import type { CoinDossier, DossierClaim, RetrievalPriority, TokenIdentity, Trade
 
 const NOW = 1_800_000_000_000;
 const TENANT = "0x00000000000000000000000000000000000000a1";
-const MINT = "So11111111111111111111111111111111111111112";
+const MINT = "0xd77cf5c8a1c79d6b78408a3f545dea88441790fb";
 
 const homes: string[] = [];
 after(() => {
@@ -32,7 +32,7 @@ function home(): string {
 function evm(n: number): TokenIdentity {
   return tokenIdentity(robinhoodChain(), `0x${n.toString(16).padStart(40, "0")}`)!;
 }
-const SOL = tokenIdentity(chainFromProvider(1_399_811_149, "solana"), MINT)!;
+const BNB = tokenIdentity(chainFromProvider(56, "bsc"), MINT)!;
 
 function event(token: TokenIdentity, i: number, over: Partial<TraderEvent> = {}): TraderEvent {
   return {
@@ -138,7 +138,7 @@ function file(over: Partial<ChildFomoFile> = {}): ChildFomoFile {
     tenant: TENANT,
     access: { dataAccess: true, monitoring: true, follow: false },
     health: { state: "receiving-fresh-data", detail: "Stream connected.", cohortSize: 142, cohortVersion: 7, cohortTarget: 150, lastEventAt: NOW - 40_000 },
-    signals: [signal(evm(1), "position-protection", { reasons: ["held", "cohort"] }), signal(evm(2), "interactive"), signal(SOL, "discovery", { dossier: null, lens: null, lensRefs: [] })],
+    signals: [signal(evm(1), "position-protection", { reasons: ["held", "cohort"] }), signal(evm(2), "interactive"), signal(BNB, "discovery", { dossier: null, lens: null, lensRefs: [] })],
     ...over,
   };
 }
@@ -268,14 +268,11 @@ describe("child fomo file: signals", () => {
     const upperKey = { ...signal(t), token: { ...t, key: t.key.replace("0x", "0X").toUpperCase(), address: t.address.toUpperCase() } };
     const keyAddressMismatch = { ...signal(t), token: { ...t, address: evm(7).address } };
     const networkMismatch = { ...signal(t), token: { ...t, chain: { ...t.chain, networkId: 1 } } };
-    // A mint is case-sensitive: a key folded to lowercase no longer names the address it sits beside.
-    const lowercasedMint = { ...signal(SOL), token: { ...SOL, key: SOL.key.toLowerCase() } };
     const garbageKey = { ...signal(t), token: { ...t, key: "eip155:4663:not-an-address", address: "not-an-address" } };
-    const solMintOnEvm = { ...signal(t), token: { chain: robinhoodChain(), address: MINT, key: `eip155:4663:${MINT}` } };
-    writeRaw(h, { ...file(), signals: [good, upperKey, keyAddressMismatch, networkMismatch, lowercasedMint, garbageKey, solMintOnEvm, "nope", null] });
+    writeRaw(h, { ...file(), signals: [good, upperKey, keyAddressMismatch, networkMismatch, garbageKey, "nope", null] });
     const r = readChildFomoFile(h, TENANT, NOW);
     assert.equal(r.reason, "ok");
-    assert.equal(r.droppedSignals, 8);
+    assert.equal(r.droppedSignals, 6);
     assert.deepEqual(r.file!.signals.map((s) => s.token.key), [evm(5).key]);
   });
 

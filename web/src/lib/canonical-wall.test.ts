@@ -439,7 +439,7 @@ describe("a Perps wallet's grant (perps slice 5b): the Perps wall, and in this b
 
   it("a purpose that names no wallet is refused by name, never rebuilt as Spot", async () => {
     const { grant } = await signerGrant({ account: PERPS_ACCOUNT });
-    for (const purpose of ["Perps", "", "solana", 1, null]) {
+    for (const purpose of ["Perps", "", "other", 1, null]) {
       const v = refusedWith({ ...grant, purpose }, "invalid_grant");
       assert.match(v.ok ? "" : v.why, /names a wallet this service does not know/, String(purpose));
     }

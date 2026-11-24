@@ -14,7 +14,6 @@
  * stopped holding, so it moved here where it can be executed by a test rather
  * than argued about.
  */
-import { onchainIdIn } from "../../packages/core/src/ids";
 
 /** Only the fields the rule reads — so a test need not build a whole token. */
 export interface NameableToken {
@@ -44,10 +43,9 @@ export function coinDisplayName(token: NameableToken | undefined | null): string
   // before the pair separator, and the rest is the venue, not the name.
   const head = raw.split("/")[0]!.trim();
   const kept = head.replace(/[^A-Za-z0-9 ._-]/g, "").trim();
-  // A Solana key has no 0x, and cut to 24 it would no longer read as one: checked whole, first.
   // This also refuses a whole 0x address anywhere in the name ("PEPE 0x…"),
   // which the cut used to print as a partial one.
-  if (onchainIdIn(head) || onchainIdIn(kept)) return null;
+  if (/0x[0-9a-fA-F]{6,}/.test(head) || /0x[0-9a-fA-F]{6,}/.test(kept)) return null;
   const clean = kept.slice(0, 24);
   if (!clean || clean === token.symbol || /^0x/i.test(clean) || !/[A-Za-z]/.test(clean)) return null;
   return clean;

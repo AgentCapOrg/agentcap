@@ -418,8 +418,6 @@ export interface KillHalves {
    * call. Absent for a Spot home's request, whose store is Spot's.
    */
   spot?: (coveredSec: number) => Promise<boolean>;
-  /** Turn the tenant's Solana strategy off (solana-kill.ts). */
-  solana?: () => Promise<unknown>;
   /**
    * Revoke the tenant's Perps grant if it was stored at or before
    * `coveredSec`, the same second the Robinhood grant was judged by
@@ -441,7 +439,7 @@ export interface KillHalves {
  * stored after it, comes back `newer`, and supersedes it.
  *
  * THE ROBINHOOD GRANT GOES FIRST. `halves` stop what that grant does not
- * cover: the tenant's Solana strategy, and its Perps wallet, whose grant is
+ * cover: the tenant's Perps wallet, whose grant is
  * judged by the same cutoff as the Robinhood one, so a Perps grant signed
  * after the kill stays. They run on every pass that finds a readable request,
  * after the conditional DELETE, so nothing on their side can keep a killed
@@ -478,8 +476,8 @@ export async function honourKillRequest(
   const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
   // FIRST, BUT NOT ALONE. A Robinhood removal that fails (a store that cannot
   // be read, a broken grant file) is recorded, and the other halves still run:
-  // otherwise the same fault on every retry would keep the Perps key stored and
-  // the Solana strategy on for as long as it lasted. The kill is then `failed`
+  // otherwise the same fault on every retry would keep the Perps key stored for
+  // as long as it lasted. The kill is then `failed`
   // and stays pending, and the next pass tries every half again.
   let result: "removed" | "absent" | "newer" | { failed: string };
   try {
@@ -492,9 +490,6 @@ export async function honourKillRequest(
   let spotRemoved = false;
   if (halves.spot) {
     try { spotRemoved = await halves.spot(coveredSec); } catch (e) { failures.push(`the Spot wallet could not be stopped: ${message(e)}`); }
-  }
-  if (halves.solana) {
-    try { await halves.solana(); } catch (e) { failures.push(`the Solana strategy could not be stopped: ${message(e)}`); }
   }
   if (halves.perps) {
     try { perpsRemoved = await halves.perps(coveredSec); } catch (e) {

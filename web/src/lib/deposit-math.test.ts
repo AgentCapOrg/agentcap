@@ -17,9 +17,7 @@ import {
 
 const base = DEPOSIT_SOURCES["eth-base"];
 const ethereum = DEPOSIT_SOURCES["eth-ethereum"];
-const sol = DEPOSIT_SOURCES["sol-solana"];
 const ETH = 10n ** 18n;
-const SOL = 10n ** 9n;
 
 describe("amounts the owner types", () => {
   it("parses decimals exactly into base units", () => {
@@ -35,8 +33,8 @@ describe("amounts the owner types", () => {
     for (const text of ["", ".", "-1", "+1", "1e18", "1,000", "0x10", "1.2.3", "abc", "１"]) {
       assert.equal(parseAmount(text, 18), null, text);
     }
-    // One digit past what SOL has: refused, not rounded down to a different amount.
-    assert.equal(parseAmount("0.0000000001", 9), null);
+    // One digit past what ETH has: refused, not rounded down to a different amount.
+    assert.equal(parseAmount("0.0000000000000000001", 18), null);
   });
 
   it("formats by truncation, never rounding a figure up", () => {
@@ -65,7 +63,6 @@ describe("the reserve Max keeps on the source wallet", () => {
     for (const id of ["eth-base", "eth-arbitrum", "eth-robinhood"] as const) {
       assert.equal(reserveFor(DEPOSIT_SOURCES[id]), 300_000_000_000_000n, id); // 0.0003 ETH
     }
-    assert.equal(reserveFor(sol), 5_000_000n); // 0.005 SOL
   });
 
   it("covers twice the transfer's own fee when that is larger than the floor", () => {
@@ -77,16 +74,8 @@ describe("the reserve Max keeps on the source wallet", () => {
     assert.equal(reserveFor(base, null), base.floor);
   });
 
-  it("covers SOL rent plus a token account plus fees", () => {
-    const rentExempt = 890_880n;
-    const tokenAccountRent = 2_039_280n;
-    const feeWithPriority = 105_000n;
-    assert.ok(sol.floor > rentExempt + tokenAccountRent + feeWithPriority);
-  });
-
   it("says what it keeps in one quiet line", () => {
     assert.equal(reserveLine(base, reserveFor(base)), "Max keeps 0.0003 ETH on Base so this wallet can pay its next fee.");
-    assert.equal(reserveLine(sol, reserveFor(sol)), "Max keeps 0.005 SOL so your wallet stays open and can pay its next fee.");
     assert.equal(reserveLine(base, reserveFor(base), 1_114_000_000_000_000n),
       "Max keeps 0.0003 ETH on Base so this wallet can pay its next fee, and sets aside 0.001114 ETH for your agent's gas.");
   });
@@ -108,8 +97,6 @@ describe("Max", () => {
       const max = maxSendable(base, balance, base.floor);
       assert.equal(max.kind, "short", String(balance));
     }
-    const sol1 = maxSendable(sol, SOL, sol.floor);
-    assert.deepEqual(sol1, { kind: "ok", amount: 995_000_000n, balance: SOL, reserve: sol.floor });
   });
 
   it("is unavailable, not zero, when the balance was not read", () => {
@@ -147,9 +134,6 @@ describe("the agent's own gas on Robinhood Chain", () => {
     // 0.02 ETH priced at $35.921563 → $2 is 0.0011134…, rounded UP to 0.001114 ETH.
     const eth = amountForUsd(base, 20_000_000_000_000_000n, "35.921563");
     assert.equal(eth, 1_114_000_000_000_000n);
-    // 0.25 SOL priced at $18.639957 → $2 is 0.02682…, rounded UP to 0.0269 SOL.
-    const s = amountForUsd(sol, 250_000_000n, "18.639957");
-    assert.equal(s, 26_900_000n);
     assert.equal(amountForUsd(base, 20_000_000_000_000_000n, null), null);
     assert.equal(amountForUsd(base, 20_000_000_000_000_000n, "0"), null);
     assert.equal(amountForUsd(base, 0n, "35.9"), null);

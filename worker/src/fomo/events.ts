@@ -30,7 +30,7 @@ import type { ActivityKind, EventIdentityBasis, TraderEvent } from "./types";
 
 const UUIDISH = /^[0-9a-fA-F]{8}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{12}$/;
 const OPAQUE_ID = /^[A-Za-z0-9_.:-]{1,128}$/;
-const TX_HASH = /^(0x[0-9a-fA-F]{64}|[1-9A-HJ-NP-Za-km-z]{64,90})$/;
+const TX_HASH = /^0x[0-9a-fA-F]{64}$/;
 
 export interface EventIdentityInput {
   eventId?: unknown;
@@ -65,8 +65,8 @@ function txHashOf(raw: unknown): string | null {
   if (typeof raw !== "string") return null;
   const s = raw.trim();
   if (!TX_HASH.test(s)) return null;
-  // EVM hashes are case-insensitive hex; Solana signatures are base58 and are not.
-  return s.startsWith("0x") ? s.toLowerCase() : s;
+  // EVM hashes are case-insensitive hex.
+  return s.toLowerCase();
 }
 
 /** Round a float to a few significant figures so a re-serialised copy hashes the same. */

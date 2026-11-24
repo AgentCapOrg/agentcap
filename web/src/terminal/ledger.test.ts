@@ -105,8 +105,6 @@ describe("Ledger, the terminal's look", () => {
     const outside = css.replace(/@media[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, "");
     assert.doesNotMatch(outside, /\.feed-views/, "no feed-view rule outside a media query");
     assert.match(css, /@media \(max-width: 1099px\) \{\s*\.terminal-host \.feed-views button\[aria-pressed="true"\]\s*\{[^}]*color:\s*var\(--tx\)/);
-    // The chain that is not open is quieter than the one that is, and outweighs the rule for unstyled links.
-    assert.match(bare(read("SolanaNavigation.css")), /a:not\(\[aria-current\]\)\s*\{\s*color:\s*var\(--tx-2,/);
   });
 
   it("does not paint over a state of what it restyles: a disabled or pressed control keeps its own colours", () => {
@@ -149,17 +147,5 @@ describe("Ledger, the terminal's look", () => {
     assert.deepEqual([...new Set(painted)], []);
     // The two that slipped through once.
     assert.match(bare(read("ledger.css")), /\.gc-composer button:disabled,\s*\.terminal-host \.desk-composer button:disabled\s*\{\s*background:\s*var\(--raised\);\s*color:\s*var\(--faint\)/);
-  });
-
-  it("the Solana screen has no palette of its own: its colours are the terminal's, with matching fallbacks", () => {
-    const css = bare(read("SolanaScreen.css")), t = tokens();
-    // Solana's green is gone from the screen and from the switch between the two chains.
-    for (const sheet of [css, bare(read("SolanaNavigation.css"))]) assert.doesNotMatch(sheet, /#14f195|#223b32|#30353b/i);
-    assert.match(bare(read("SolanaNavigation.css")), /a\[aria-current=page\]\s*\{[^}]*color:\s*var\(--tx,/, "the chain you are on is cream");
-    // Of two sign-in buttons only the first is the cream pill.
-    assert.match(css, /\.solana-screen \.flow-secondary\s*\{[^}]*background:\s*transparent/);
-    const mapped = [...css.matchAll(/--s-([a-z0-9]+):\s*var\(--([a-z0-9-]+),\s*(#[0-9a-f]{6})\)/g)];
-    assert.ok(mapped.length >= 9);
-    for (const [, local, token, fallback] of mapped) assert.equal(fallback, t[token!], `--s-${local} falls back to --${token}'s own value`);
   });
 });

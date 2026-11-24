@@ -49,7 +49,6 @@ export type Screen =
   | { kind: "create" }
   | { kind: "settings" }
   | { kind: "grant" }
-  | { kind: "solana" }
   | { kind: "perps" }
   | { kind: "limits" }
   | { kind: "groupchat" }

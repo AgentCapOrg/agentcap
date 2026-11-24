@@ -21,7 +21,6 @@ const gate = (text: string, mode: Mode, recentOwn: string[] = []) => admitXPost(
   mode, coins: [], paperCoins: [], recentOwn, recentFleet: [] }, (r, c) => admitAgentLine(r, c));
 
 const CA = "0x86aF99052DB086a66aF7D764bB04d3abb81b485F";
-const MINT = "t9bnCGiZVUYsRKvx4d5dPcoDCSyuBM9C33ZNGNULARP";
 const SIGNALS: CheckSignal[] = ["names-other", "names-coin", "names-none", "site-app", "site-up", "site-thin", "site-down", "no-site", "docs",
   "git-active", "git-recent", "git-quiet", "git-stale", "git-none", "git-linked-only", "git-fork", "git-empty", "git-archived", "git-new", "git-old", "git-busy",
   "holders-concentrated", "creator-heavy", "liq-thin", "coin-young"];
@@ -35,7 +34,7 @@ describe("what counts as a larp check", () => {
   it("takes the plain ways of asking, around handles, links, a contract and an emoji", () => {
     for (const t of ["@proj @alanaidale larp check", "@alanaidale is this real?", "@alanaidale larp?", "@alanaidale real or larp", "yo @alanaidale check this out pls",
       `@alanaidale ${CA} larp check`, "@alanaidale scan this https://t.co/abc", "@alanaidale is this legit 👀", "@alanaidale dyor this", "@alanaidale what is this project?",
-      "@alanaidale anything behind this?", "larp check @alanaidale", `@alanaidale ca: ${MINT} real?`]) {
+      "@alanaidale anything behind this?", "larp check @alanaidale", `@alanaidale ca: ${CA} real?`]) {
       assert.equal(checkAsk(t, "alanaidale"), true, t);
     }
   });
@@ -52,7 +51,6 @@ describe("what a check reads", () => {
   it("the tag's own contract or site first", () => {
     assert.deepEqual(checkTargetOf(tag(`@alanaidale ${CA} larp check`)), { target: { kind: "coin", address: CA, chain: "evm", site: null }, from: "tag" });
     assert.deepEqual(checkTargetOf(tag("@alanaidale check", { links: ["https://x.com/a/status/1", "https://acme.example/app#top"] })), { target: { kind: "site", url: "https://acme.example/app" }, from: "tag" });
-    assert.deepEqual(checkTargetOf(tag("@alanaidale check", { links: [`https://pump.fun/coin/${MINT}`] })), { target: { kind: "coin", address: MINT, chain: "solana", site: null }, from: "tag" });
   });
 
   it("then the post it sits under: its contract with its site, or its site", () => {
@@ -79,7 +77,7 @@ describe("what a check reads", () => {
     const own = tag("@alanaidale larp check", { context: [{ id: "490", relation: "replied_to", text: `bought ${CA}`, links: [], authorId: "111" }] });
     assert.equal(checkTargetOf(own, { ownId: "111" }), null);
     assert.equal(checkTargetOf(own, { ownPosts: new Set(["490"]) }), null);
-    for (const u of ["https://x.com/a", "https://t.me/a", "http://acme.example", "https://agentcap.xyz", "https://dexscreener.com/solana/abc", "https://localhost/x", "https://10.0.0.1/"]) {
+    for (const u of ["https://x.com/a", "https://t.me/a", "http://acme.example", "https://agentcap.xyz", "https://dexscreener.com/bnb/abc", "https://localhost/x", "https://10.0.0.1/"]) {
       assert.equal(siteLink(u), null, u);
     }
   });

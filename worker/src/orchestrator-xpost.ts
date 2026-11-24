@@ -847,7 +847,7 @@ function exactBuys(f: AgentFacts, address: string | null): { label: string; pape
  * again here), naming no sherwood, and every ticker it shows clearing the
  * gate's own vocabulary (tickerRefusal), naming no agentcap in any spelling,
  * none of `ownNames` (the agent's own name and its words) and no model or
- * provider; and, but for bitcoin, ether and solana in the big coins' day, no
+ * provider; and, but for bitcoin, ether and bnb in the big coins' day, no
  * name its own buys go by (`ownCoins`, ownCoinTicker).
  */
 function figuresFor(admitted: string, spec: FiguresSpec, ownNames: readonly string[], ownCoins: readonly string[]): ReturnType<typeof withFigures> | null {
@@ -2374,7 +2374,7 @@ export function makeXPoster(o: { creds: LlmCreds | null; knobs: XPostEnv; app: X
       // hot or major answer whose figures would show a ticker the author's
       // handle or display name holds, or the name coingecko lists such a coin
       // under (red-team review of daaae961: "@chimpplanet" was shown CHMP,
-      // listed as "Chimp Planet") (authorShows; bitcoin, ether and solana
+      // listed as "Chimp Planet") (authorShows; bitcoin, ether and bnb
       // aside, the same for every asker) is answered by nothing: a skipped row,
       // and the allowances taken for a draft go back.
       const lineTickers = (figures ?? []).flatMap((s) => (s.kind === "pools" || s.kind === "majors" ? s.coins.map((c) => c.symbol)
@@ -2684,9 +2684,9 @@ export function makeXPoster(o: { creds: LlmCreds | null; knobs: XPostEnv; app: X
       // (ownCoinTicker). Never for a major: the asker named that coin, and a
       // line that came or went by its name would say which names it bought.
       // HOW'S THE MARKET TOO, for the chain's coins (2026-10-12); never for its
-      // big coins (bitcoin, ether, solana), which are the same three for every
+      // big coins (bitcoin, ether, bnb), which are the same three for every
       // asker and say nothing of what it bought: a buy called "SOLX" or "WETH"
-      // would otherwise take the whole line out for $SOL or $ETH.
+      // would otherwise take the whole line out for $BNB or $ETH.
       const ownCoins = hotCoded || marketCoded ? [...bought, ...olderBought] : [];
       const lined = admitted && lineFigures?.length && !templated && active.has(account.tenant.toLowerCase()) ? figuresFor(admitted, lineFigures, ownNames, ownCoins) : null;
       if (figures && admitted) bump(lined ? (lined.dropped > 0 ? "answer-figures-shortened" : "answer-figures") : "answer-figures-left-out");

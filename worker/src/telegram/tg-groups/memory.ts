@@ -30,7 +30,6 @@
  * NAMING: never write the web room's name (group + chat, joined or separated)
  * in code here. See types.ts.
  */
-import { secretScanBudget } from "../../../../packages/core/src/ids";
 import { containsSecret, redactSecrets } from "../agent";
 import { callText, type TgModel, type TgModelGate } from "./model";
 import { TG_LIMITS, type TgGroupsStore } from "./store";
@@ -70,7 +69,7 @@ const LINK = /\b(?:[a-z][a-z0-9+.-]*:\/\/|www\d*\.)\S+|\b[\w-]+(?:\.[\w-]+)*\.(?
 const EMAIL = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g;
 const LONG_NUMBER = /\+?\d(?:[\s().-]?\d){5,}/g;
 
-/** A mixed run long enough to be a key, a base58 mint or an encoded blob. */
+/** A mixed run long enough to be a key or an encoded blob. */
 function encodedRuns(s: string): string {
   return s.replace(/[A-Za-z0-9]{26,}/g, (run) =>
     (/[0-9]/.test(run) && /[A-Za-z]/.test(run)) || (run.length >= 32 && /[a-z]/.test(run) && /[A-Z]/.test(run)) ? "(a code)" : run,
@@ -93,10 +92,7 @@ export function promptSafe(text: unknown, max: number): string {
   if (!(cap > 0) || typeof text !== "string") return "";
   let s = text.slice(0, cap * 8 + 64).normalize("NFKC").replace(INVISIBLE, "").replace(CONTROL, " ");
   // Secrets first, whole: a key's prefix ("sk-proj-") must not survive its body.
-  // Exact candidates only, no glued-key windows (secretScanBudget({ windows: false })):
-  // encodedRuns below turns every run a glued key could hide in into "(a code)", and
-  // the windows cost tens of ms of CPU on each new 400-character base58 line.
-  s = redactSecrets(s, [], secretScanBudget({ windows: false })).replace(/\[redacted\]/g, "(a code)");
+  s = redactSecrets(s, []).replace(/\[redacted\]/g, "(a code)");
   s = s.replace(ADDRESS, "(an address)").replace(LONG_HEX, "(a code)").replace(EMAIL, "(an email)").replace(LINK, "(a link)");
   s = encodedRuns(s);
   s = s.replace(LONG_NUMBER, "(a long number)");
@@ -138,7 +134,7 @@ const SENSITIVE: readonly RegExp[] = [
 const MONEY: readonly RegExp[] = [
   /[%％‰]/,
   /[$＄﹩€£¥₿₹₽₩¢]\s*\d|\d\s*[$€£¥₿₹₽₩¢]/,
-  /\d[\d.,]*\s*(?:k|m|b|bn|mil|mill|x|usd\w?|usdg|usdc|usdt|eth|weth|btc|sol|dollars?|bucks?|grand|euros?|pounds?|cents?)\b/i,
+  /\d[\d.,]*\s*(?:k|m|b|bn|mil|mill|x|usd\w?|usdg|usdc|usdt|eth|weth|btc|sol|bnb|dollars?|bucks?|grand|euros?|pounds?|cents?)\b/i,
   /\b(?:a|one|two|three|four|five|ten|twenty|fifty|hundred|thousand|million|billion|couple|few)\s+(?:hundred\s+|thousand\s+|million\s+)?(?:dollars?|bucks|usd\w?|usdg|eth|grand|k|mil|racks|bands)\b/i,
 ];
 

@@ -357,7 +357,7 @@ describe("checkWording", () => {
       assert.deepEqual([...w.forIt, ...w.against, ...w.waitingOn], [], x);
     }
     // Venues, chains, acronyms, the header's own words and a sentence-case first word stay; so do "lies in" and "lying low".
-    const fair = ["hopes the Robinhood app picks it up", "rides the AI narrative", "Strong community on Telegram", "a cheaper bet than SOL memes", "the value lies in the meme", "the dev is lying low for now"];
+    const fair = ["hopes the Robinhood app picks it up", "rides the AI narrative", "Strong community on Telegram", "a cheaper bet than BNB memes", "the value lies in the meme", "the dev is lying low for now"];
     const kept = checkWording({ for: fair.slice(0, 3), against: fair.slice(3) }, MATERIAL, "Shogun").wording;
     assert.deepEqual([...kept.forIt, ...kept.against], fair);
     // A plural, a common noun or a non-person verb opening the phrase is no name (review r4).

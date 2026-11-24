@@ -592,7 +592,7 @@ export const RESEARCH_PRIORITY: Readonly<Record<RetrievalPriority, number>> = {
 // member of the union in types.ts is listed and nothing else is, so a value
 // added there cannot be silently refused (or an old one accepted) here.
 
-const NAMESPACES: Record<ChainNamespace, true> = { eip155: true, solana: true, hyperliquid: true, unknown: true };
+const NAMESPACES: Record<ChainNamespace, true> = { eip155: true, hyperliquid: true, unknown: true };
 const ACTIVITY_KINDS: Record<ActivityKind, true> = {
   buy: true, sell: true, "transfer-in": true, "transfer-out": true, airdrop: true, thesis: true, perp: true, listing: true, other: true,
 };
@@ -663,7 +663,7 @@ function tenantOf(tenant: string): string {
   return t;
 }
 
-/** An exact key (token key, event key, id). Never trimmed or case-folded: Solana mints are case-sensitive. */
+/** An exact key (token key, event key, id). Never trimmed or case-folded. */
 function keyOf(v: unknown, what: string, max: number = FOMO_LIMITS.keyChars): string {
   if (typeof v !== "string" || v.length === 0 || v.length > max || v.includes("\u0000")) {
     throw new TypeError(`fomo store: ${what} must be a non-empty string of at most ${max} characters`);

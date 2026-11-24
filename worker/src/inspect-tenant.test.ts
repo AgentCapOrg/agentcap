@@ -224,7 +224,7 @@ describe("IT CANNOT PRINT A SECRET", () => {
     const body = orch.slice(at, at + orch.slice(at).search(/^}/m));
     assert.match(body, /fleetIdTarget\("AGENTCAP_INSPECT_TENANT", process\.env\.AGENTCAP_INSPECT_TENANT\)/, "the env value is validated before any read");
     assert.ok(body.indexOf("fleetIdTarget(") < body.indexOf("DATABASE_URL"));
-    for (const value of ["0x123", "sol:9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin", "everyone"]) {
+    for (const value of ["0x123", "agent:9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin", "everyone"]) {
       const target = fleetIdTarget("AGENTCAP_INSPECT_TENANT", value);
       assert.ok(target && "refused" in target && /refusing to guess/.test(target.refused), value);
     }

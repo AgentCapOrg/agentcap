@@ -217,9 +217,9 @@ describe("grant.json changes only after the archive — and a kill without one d
     for (const route of [ROUTE, DISCARD]) assert.match(route, /removeSelfHostedGrant/);
     // Start over answers the archive refusal the same way, and says what its Perps half did.
     assert.match(DISCARD, /if \(e instanceof GrantArchiveError\) \{\s*return NextResponse\.json\(\{ error: e\.message, paused: e\.paused, \.\.\.\(perps\.state === "none" \? \{\} : \{ perps: perps\.state \}\) \}, \{ status: 409 \}\);/);
-    // The kill switch says whether it stopped the local Solana strategy and the local Perps
+    // The kill switch says whether it stopped the local Perps
     // wallet too, which it does first.
-    assert.match(ROUTE, /if \(e instanceof GrantArchiveError\) \{\s*return NextResponse\.json\(\{ error: `\$\{e\.message\}[^`]*`,\s*paused: e\.paused, solana: solana \? "stopped" : "not-stopped", \.\.\.\(perps\.state === "none" \? \{\} : \{ perps: perps\.state \}\) \}, \{ status: 409 \}\);/);
+    assert.match(ROUTE, /if \(e instanceof GrantArchiveError\) \{\s*return NextResponse\.json\(\{ error: `\$\{e\.message\}[^`]*`,\s*paused: e\.paused, \.\.\.\(perps\.state === "none" \? \{\} : \{ perps: perps\.state \}\) \}, \{ status: 409 \}\);/);
   });
 
   it("the worker's Telegram /kill: archive, then remove the SAME file; a failed archive pauses and returns first", () => {

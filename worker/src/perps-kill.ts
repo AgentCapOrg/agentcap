@@ -2,9 +2,8 @@
  * THE PERPS HALF OF EVERY KILL.
  *
  * A login's Perps wallet (Kernel index 1) has a grant of its own, and nothing
- * that stops the Spot wallet reaches it: not removing the Spot grant, not
- * Solana's switch. So every kill path calls this beside its Solana half
- * (solana-kill.ts): the web's "Kill all agents" (DELETE /api/grants,
+ * that stops the Spot wallet reaches it: not removing the Spot grant. So every kill path
+ * calls this: the web's "Kill all agents" (DELETE /api/grants,
  * delete-agent, which the phone apps send too), the orchestrator's honourKill
  * for a hosted Telegram /kill, the self-hosted Telegram /kill (index.ts) and
  * `agentcap kill` (perps-kill-cli.ts). From the moment a Perps wallet can
@@ -32,7 +31,7 @@
  * executor, after the paper slices, and this half grows a third answer then:
  * closing.
  *
- * THE SAME GUARANTEES AS SOLANA'S HALF:
+ * THE GUARANTEES:
  *  - a half that fails throws (or, for self-hosted Telegram, answers
  *    "not-stopped"), and the caller reports the kill incomplete, never done —
  *    the grant revoked but the paper strategy left on is a failed half too;

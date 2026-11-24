@@ -501,7 +501,7 @@ const pos = (o: Partial<PositionRow> & { key?: string }): PositionRow => {
     ...rest,
   };
 };
-const SOL_KEY = `solana:1399811149:So11111111111111111111111111111111111111112`;
+const BSC_KEY = `eip155:56:0xd77cf5c8a1c79d6b78408a3f545dea88441790fb`;
 
 describe("leaderboard-only evidence", () => {
   it("is calibrated as documented: four boards clear the floor, three clear it with a real record, two never do", () => {
@@ -555,9 +555,9 @@ describe("enrichment", () => {
       pos({ tradeId: "t2", openedAt: T0 - 8 * DAY, closedAt: T0 - 8 * DAY + 2 * 3_600_000, realizedPnlUsd: -200, costBasisUsd: 1_000 }),
       pos({ tradeId: "t3", openedAt: T0 - 6 * DAY, closedAt: T0 - 6 * DAY + 4 * 3_600_000, realizedPnlUsd: 0, costBasisUsd: 3_000 }),
       pos({ tradeId: "t4", status: "open", closedAt: null, realizedPnlUsd: 0, unrealizedPnlUsd: -50, costBasisUsd: 6_000 }),
-      pos({ tradeId: "t5", status: "open", closedAt: null, realizedPnlUsd: 0, unrealizedPnlUsd: 80, costBasisUsd: 2_000, key: SOL_KEY }),
+      pos({ tradeId: "t5", status: "open", closedAt: null, realizedPnlUsd: 0, unrealizedPnlUsd: 80, costBasisUsd: 2_000, key: BSC_KEY }),
       pos({ tradeId: "t5", status: "open", closedAt: null, costBasisUsd: 9e9 }), // a duplicate row of t5: ignored
-      pos({ tradeId: "t6", status: "open", boughtAmount: 0, avgEntryPrice: null, costBasisUsd: 12.5, key: SOL_KEY }), // received, never bought
+      pos({ tradeId: "t6", status: "open", boughtAmount: 0, avgEntryPrice: null, costBasisUsd: 12.5, key: BSC_KEY }), // received, never bought
       pos({ tradeId: "t7", token: null, status: "closed", realizedPnlUsd: Number.NaN, openedAt: null, costBasisUsd: null }),
     ];
     const m = measurePositions(rows);
@@ -583,10 +583,10 @@ describe("enrichment", () => {
     ).concat([0, 1, 2, 3].map((i) => pos({ tradeId: `go${i}`, status: "open", closedAt: null, unrealizedPnlUsd: 50, costBasisUsd: 2_000 })));
     // Two-minute flips off our chain, and a book of bags: one oversized, all underwater.
     const bad = Array.from({ length: 6 }, (_, i) =>
-      pos({ tradeId: `b${i}`, key: SOL_KEY, openedAt: T0 - 30 * DAY + i * DAY, closedAt: T0 - 30 * DAY + i * DAY + 120_000, realizedPnlUsd: -80, costBasisUsd: 40 }),
+      pos({ tradeId: `b${i}`, key: BSC_KEY, openedAt: T0 - 30 * DAY + i * DAY, closedAt: T0 - 30 * DAY + i * DAY + 120_000, realizedPnlUsd: -80, costBasisUsd: 40 }),
     ).concat(
       Array.from({ length: 14 }, (_, i) =>
-        pos({ tradeId: `bo${i}`, ...(i === 0 ? {} : { key: SOL_KEY }), status: "open", closedAt: null, unrealizedPnlUsd: -50, costBasisUsd: i === 0 ? 9_000 : 30 }),
+        pos({ tradeId: `bo${i}`, ...(i === 0 ? {} : { key: BSC_KEY }), status: "open", closedAt: null, unrealizedPnlUsd: -50, costBasisUsd: i === 0 ? 9_000 : 30 }),
       ),
     );
     const up = scoreCandidate(withEvidence(base, measurePositions(good)), opts);

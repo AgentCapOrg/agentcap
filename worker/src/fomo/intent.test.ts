@@ -8,7 +8,7 @@ import type { ResolvedSubject } from "./types";
 const NOW = 1_800_000_000_000;
 const A = `0x${"a1".repeat(20)}`;
 const B = `0x${"b2".repeat(20)}`;
-const MINT = "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU";
+const MINT = "0xf0f571fa2e7ec7b5470df5574dd1fc2db2929528";
 const USER = "3f2a9c1e-5b6d-4e7f-8a9b-0c1d2e3f4a5b";
 
 function mem(over: Partial<SubjectMemory> = {}): SubjectMemory {
@@ -80,7 +80,7 @@ const CORPUS: Row[] = [
   { text: "any newly graduated coins on fomo?", intent: "rankings-tokens", calls: [["fomo_get_rankings", { board: "graduated-tokens" }]] },
   { text: "what's trending on fomo this week", intent: "rankings-tokens", calls: [["fomo_get_rankings", { board: "trending-tokens" }]] },
   { text: "find smaller coins getting attention", intent: "opportunities", calls: [["fomo_find_opportunities", {}]] },
-  { text: "find small caps our traders are buying on solana", intent: "opportunities", calls: [["fomo_find_opportunities", { chain: "solana", cohort_only: true }]], flags: { cohortScope: true } },
+  { text: "find small caps our traders are buying on bsc", intent: "opportunities", calls: [["fomo_find_opportunities", { chain: "bsc", cohort_only: true }]], flags: { cohortScope: true } },
   { text: "which traders are buying $PEPE right now", intent: "token-buyers", calls: [["fomo_get_token_activity", { token: "PEPE", side: "buy", freshness: "force-refresh" }]] },
   { text: "who is selling $WIF on fomo", intent: "token-sellers", calls: [["fomo_get_token_activity", { token: "WIF", side: "sell" }]] },
   { text: "who is dumping $PEPE on fomo", intent: "token-sellers", calls: [["fomo_get_token_activity", { token: "PEPE", side: "sell" }]] },
@@ -117,7 +117,7 @@ const CORPUS: Row[] = [
   { text: "fomo status?", intent: "health", calls: [["fomo_get_research_status", {}]] },
   { text: "@AgentCapBot is fomo down?", intent: "health", calls: [["fomo_get_research_status", {}]] },
   { text: "research status on fomo", intent: "research-status", calls: [["fomo_get_research_status", {}]] },
-  { text: "what are the theses on $PEPE on solana", intent: "token-theses", calls: [["fomo_get_token_theses", { token: "PEPE", chain: "solana" }]] },
+  { text: "what are the theses on $PEPE on bsc", intent: "token-theses", calls: [["fomo_get_token_theses", { token: "PEPE", chain: "bsc" }]] },
   { text: `theses for ${MINT}`, intent: "token-theses", calls: [["fomo_get_token_theses", { token: MINT }]] },
   { text: "what are people on fomo saying about pepe", intent: "token-theses", calls: [["fomo_get_token_theses", { token: "PEPE" }]] },
   { text: "what did @CryptoKaleo say about $PEPE", intent: "token-theses", calls: [["fomo_get_token_theses", { token: "PEPE", trader: "CryptoKaleo" }]] },
@@ -166,7 +166,7 @@ const CORPUS: Row[] = [
   { text: "what's the status of your research on it", mem: "token", intent: "research-status", calls: [["fomo_get_research_status", RH]] },
   { text: "who is selling it right now", mem: "token", intent: "token-sellers", calls: [["fomo_get_token_activity", { ...RH, side: "sell", freshness: "force-refresh" }]] },
   { text: "wrong coin", mem: "token", intent: "token-theses", clarify: "Which coin did you mean? Send its ticker or contract address.", flags: { correction: true } },
-  { text: "what about on solana?", mem: "token", intent: "token-theses", clarify: /^Which coin on Solana do you mean\?/ },
+  { text: "what about on bsc?", mem: "token", intent: "token-theses", clarify: /^Which coin on Bsc do you mean\?/ },
 
   // ── Follow-ups against a remembered trader ──
   { text: "what did this trader buy recently", mem: "trader", intent: "trader-activity", calls: [["fomo_get_trader_activity", { trader: USER, side: "buy" }]] },
@@ -188,8 +188,7 @@ const CORPUS: Row[] = [
 
   // ── One focused question when ambiguity changes the answer ──
   { text: "what are the theses on $PEPE and $WIF?", intent: "token-theses", clarify: "Which coin do you mean: PEPE or WIF?" },
-  { text: "theses on $PEPE on solana or base?", intent: "token-theses", clarify: "Which chain do you mean: Solana or Base?" },
-  { text: `theses on ${A} on solana`, intent: "token-theses", clarify: "That address can't be on Solana. Which chain is it on?" },
+  { text: "theses on $PEPE on bsc or base?", intent: "token-theses", clarify: "Which chain do you mean: Bsc or Base?" },
   { text: "compare the theses on these two coins", intent: "compare-theses", clarify: "Which two coins should I compare?" },
   { text: "what did this trader buy recently", intent: "trader-activity", clarify: "Which trader do you mean? Send their Fomo handle." },
   { text: "what are people on Fomo saying about this coin", intent: "token-theses", clarify: "Which coin do you mean? Send its ticker or contract address." },
@@ -321,18 +320,16 @@ const FINDINGS: FindingRow[] = [
   { id: "C11", mem: "pending", text: "on base", intent: "token-sellers", calls: [["fomo_get_token_activity", { token: "PEPE", chain: "base", side: "sell" }]] },
   { id: "C11", mem: "pending", text: "robinhood", intent: "token-sellers", calls: [["fomo_get_token_activity", { token: "PEPE", chain: "robinhood", side: "sell" }]] },
   { id: "C11", mem: "pending", text: "base", intent: "token-sellers", calls: [["fomo_get_token_activity", { token: "PEPE", chain: "base", side: "sell" }]] },
-  { id: "C11", mem: "pending", text: "solana", intent: "token-sellers", calls: [["fomo_get_token_activity", { token: "PEPE", chain: "solana", side: "sell" }]] },
+  { id: "C11", mem: "pending", text: "bsc", intent: "token-sellers", calls: [["fomo_get_token_activity", { token: "PEPE", chain: "bsc", side: "sell" }]] },
   { id: "C11", mem: "pendingAddr", text: "Robinhood", intent: "token-theses", calls: [["fomo_get_token_theses", { token: A, chain: "robinhood" }]] },
-  { id: "C11", mem: "pendingAddr", text: "solana", intent: "token-theses", clarify: "That address can't be on Solana. Which chain is it on?" },
   { id: "C11", mem: "pending", text: "the one on base", intent: "token-sellers", calls: [["fomo_get_token_activity", { token: "PEPE", chain: "base", side: "sell" }]] },
   { id: "C11", mem: "pending", text: "base chain", intent: "token-sellers", calls: [["fomo_get_token_activity", { token: "PEPE", chain: "base", side: "sell" }]] },
   { id: "C11", mem: "pending", text: "I mean on base", intent: "token-sellers", calls: [["fomo_get_token_activity", { token: "PEPE", chain: "base", side: "sell" }]] },
-  { id: "C11", mem: "pending", text: "on solana", intent: "token-sellers", calls: [["fomo_get_token_activity", { token: "PEPE", chain: "solana", side: "sell" }]] },
+  { id: "C11", mem: "pending", text: "on bsc", intent: "token-sellers", calls: [["fomo_get_token_activity", { token: "PEPE", chain: "bsc", side: "sell" }]] },
   { id: "C11", mem: "pending", text: "sellers on base", intent: "token-sellers", calls: [["fomo_get_token_activity", { token: "PEPE", chain: "base", side: "sell" }]] },
   { id: "C11", mem: "pendingAddr", text: "on base", intent: "token-theses", calls: [["fomo_get_token_theses", { token: A, chain: "base" }]] },
-  { id: "C11", mem: "pendingAddr", text: "on solana", intent: "token-theses", clarify: "That address can't be on Solana. Which chain is it on?" },
   { id: "C11", mem: "two", text: "on base", intent: "token-theses", clarify: "Which coin do you mean: PEPE or WIF?" },
-  { id: "C11", mem: "token", text: "what about on solana?", intent: "token-theses", clarify: /^Which coin on Solana do you mean\?/ },
+  { id: "C11", mem: "token", text: "what about on bsc?", intent: "token-theses", clarify: /^Which coin on Bsc do you mean\?/ },
 
   // C12: singular they/their/them after a trader answer is that trader, never the owner's ledger.
   { id: "C12", mem: "trader", text: "show their trades", intent: "trader-activity", calls: [["fomo_get_trader_activity", { trader: USER }]] },
@@ -416,7 +413,7 @@ const NAME_ROWS: FindingRow[] = [
   // The platform, a chain or a time word in the name is never dropped.
   { id: "R10", self: ["Fomo Bot", "@fomo_bot"], text: "trending on fomo", intent: "rankings-tokens", calls: [["fomo_get_rankings", { board: "trending-tokens" }]] },
   { id: "R10", self: ["Fomo"], text: "what's trending on fomo, fomo?", intent: "rankings-tokens", calls: [["fomo_get_rankings", { board: "trending-tokens" }]] },
-  { id: "R10", self: ["Sol"], mem: "token", text: "who is buying on sol", intent: "token-activity", calls: [["fomo_get_token_activity", { chain: "solana", side: "buy" }]] },
+  { id: "R10", self: ["Bnb"], mem: "token", text: "who is buying on bnb", intent: "token-activity", calls: [["fomo_get_token_activity", { chain: "bsc", side: "buy" }]] },
   { id: "R10", self: ["Morning Wren"], text: "what did the top traders buy this morning", intent: "rankings-traders", calls: [["fomo_get_rankings", { board: "traders", window: "24h" }]] },
   { id: "R10", self: ["Evening Hare"], mem: "token", text: "who sold this evening", intent: "token-activity", calls: [["fomo_get_token_activity", { side: "sell" }]] },
   { id: "R10", self: ["Evening Hare"], mem: "token", text: "who sold this evening, evening hare?", intent: "token-activity", calls: [["fomo_get_token_activity", { side: "sell" }]] },
@@ -467,8 +464,8 @@ describe("review findings, planned", () => {
       const p = classifyFomoQuestion("robinhood", { memory, now: NOW });
       assert.ok(!p || p.toolCalls.length === 0, JSON.stringify(p));
     }
-    const p = classifyFomoQuestion("$SOL", { memory: PENDING, now: NOW });
-    assert.deepEqual(p?.toolCalls, [{ tool: "fomo_get_token_activity", args: { token: "SOL", side: "sell" } }]);
+    const p = classifyFomoQuestion("$BNB", { memory: PENDING, now: NOW });
+    assert.deepEqual(p?.toolCalls, [{ tool: "fomo_get_token_activity", args: { token: "BNB", side: "sell" } }]);
   });
 
   it("only a bare contract clarification inherits the pending ticker's chain", () => {
@@ -481,9 +478,6 @@ describe("review findings, planned", () => {
     }
     assert.deepEqual(classifyFomoQuestion(`${A} on base`, { memory, now: NOW })?.toolCalls,
       [{ tool: "fomo_get_token_theses", args: { token: A, chain: "base" } }]);
-    const mismatch = classifyFomoQuestion(MINT, { memory, now: NOW });
-    assert.match(mismatch?.clarification ?? "", /That address can't be on Robinhood/);
-    assert.deepEqual(mismatch?.toolCalls, []);
   });
 
   it("R9: a crowd question that says 'they' neither uses nor re-remembers the last trader, so the next one is not captured either", () => {
@@ -695,12 +689,12 @@ describe("arguments", () => {
   });
 
   it("a chain word in a chain position is a chain, elsewhere a coin", () => {
-    const chain = classifyFomoQuestion("trending coins on fomo on sol", { memory: null, now: NOW });
+    const chain = classifyFomoQuestion("trending coins on fomo on bnb", { memory: null, now: NOW });
     assert.ok(chain);
-    assert.deepEqual(chain.toolCalls[0]!.args, { board: "trending-tokens", chain: "solana" });
-    const coin = classifyFomoQuestion("what are the theses on SOL", { memory: null, now: NOW });
+    assert.deepEqual(chain.toolCalls[0]!.args, { board: "trending-tokens", chain: "bsc" });
+    const coin = classifyFomoQuestion("what are the theses on BNB", { memory: null, now: NOW });
     assert.ok(coin);
-    assert.deepEqual(coin.toolCalls[0]!.args, { token: "SOL" });
+    assert.deepEqual(coin.toolCalls[0]!.args, { token: "BNB" });
   });
 });
 
@@ -755,7 +749,7 @@ describe("a chain's coins, a row of the trader board, and what a trader made mon
       ["top robinhood coins on fomo", { board: "trending-tokens", chain: "robinhood" }],
       ["trending hood coins on fomo?", { board: "trending-tokens", chain: "robinhood" }],
       ["graduated base tokens on fomo", { board: "graduated-tokens", chain: "base" }],
-      ["most held sol coins on fomo?", { board: "most-held-tokens", chain: "solana" }],
+      ["most held bnb coins on fomo?", { board: "most-held-tokens", chain: "bsc" }],
       ["any eth memes on fomo", { board: "trending-tokens", chain: "eth" }],
       ["bsc coins on fomo?", { board: "trending-tokens", chain: "bsc" }],
     ];
@@ -773,19 +767,19 @@ describe("a chain's coins, a row of the trader board, and what a trader made mon
     for (const [q, args] of want) assert.deepEqual(callsOf(q), [["fomo_get_rankings", args]], q);
     // "latest" also asks for a fresh read; the board is still the graduated one.
     assert.equal(plan("latest launches on fomo on base?")!.toolCalls[0]!.args.board, "graduated-tokens");
-    assert.equal(plan("what are the latest coins on fomo on solana")!.toolCalls[0]!.args.board, "graduated-tokens");
+    assert.equal(plan("what are the latest coins on fomo on bsc")!.toolCalls[0]!.args.board, "graduated-tokens");
   });
 
   it("a chain the line leaves out is no chain at all: the board on every chain", () => {
     for (const q of [
       "what's trending on fomo other than robinhood coins",
       "what's trending on fomo but not on robinhood",
-      "what's trending on fomo besides solana coins",
+      "what's trending on fomo besides bsc coins",
       "trending on fomo that isn't on base",
     ]) assert.deepEqual(callsOf(q), [["fomo_get_rankings", { board: "trending-tokens" }]], q);
     // A chain it does ask for keeps its cut; the one it leaves out does not join it.
-    assert.deepEqual(callsOf("what's trending on fomo on base, not solana"), [["fomo_get_rankings", { board: "trending-tokens", chain: "base" }]]);
-    assert.deepEqual(callsOf("what's trending over on solana on fomo"), [["fomo_get_rankings", { board: "trending-tokens", chain: "solana" }]]);
+    assert.deepEqual(callsOf("what's trending on fomo on base, not bsc"), [["fomo_get_rankings", { board: "trending-tokens", chain: "base" }]]);
+    assert.deepEqual(callsOf("what's trending over on bsc on fomo"), [["fomo_get_rankings", { board: "trending-tokens", chain: "bsc" }]]);
   });
 
   it("'the top trader we watch' is the watched set, never the public board's #1; 'the most followed trader' stays public", () => {
@@ -799,8 +793,8 @@ describe("a chain's coins, a row of the trader board, and what a trader made mon
 
   it("unchanged: a shouted ticker, the switch, the owner's own coins, discovery", () => {
     assert.equal(plan("is fomo on robinhood?"), null);
-    assert.deepEqual(callsOf("theses on SOL coins"), [["fomo_get_token_theses", { token: "SOL" }]]);
-    assert.deepEqual(callsOf("SOL coins on fomo?"), [["fomo_get_token_activity", { token: "SOL" }]]);
+    assert.deepEqual(callsOf("theses on BNB coins"), [["fomo_get_token_theses", { token: "BNB" }]]);
+    assert.deepEqual(callsOf("BNB coins on fomo?"), [["fomo_get_token_activity", { token: "BNB" }]]);
     assert.equal(plan("my robinhood coins are down"), null);
     assert.equal(plan("my robinhood coins on fomo"), null, "the owner's own coins are never a board");
     assert.deepEqual(callsOf("new coins on base on fomo?"), [["fomo_find_opportunities", { chain: "base" }]]);
@@ -1022,9 +1016,9 @@ describe("a chain's coins, a row of the trader board, and what a trader made mon
 });
 
 describe("the theses themselves, on an explicit ask (Milla, 2026-10-09)", () => {
-  const AUTON_MINT = "39ahtL8ynzE4amH26J29C93PA5172V3ft9UuUcqQS8fz";
+  const AUTON_MINT = "0x2980a1f1bcd7307ff6b9084a435357d5cb8d30cb";
   const auton = (lastIntent: FomoIntent | null): SubjectMemory =>
-    mem({ subjects: [{ kind: "token", tokenKey: `solana:mainnet:${AUTON_MINT}`, address: AUTON_MINT, chain: "solana", symbol: "AUTON" }], lastIntent });
+    mem({ subjects: [{ kind: "token", tokenKey: `bsc:mainnet:${AUTON_MINT}`, address: AUTON_MINT, chain: "bsc", symbol: "AUTON" }], lastIntent });
   const plan = (text: string, memory: SubjectMemory | null = auton("token-theses")) => classifyFomoQuestion(text, { memory, now: NOW });
 
   it("the live lines, after AUTON's digest: the newest ten, from memory, on the remembered mint", () => {
@@ -1033,7 +1027,7 @@ describe("the theses themselves, on an explicit ask (Milla, 2026-10-09)", () => 
       assert.equal(p?.intent, "token-theses", text);
       assert.equal(p?.quotes, 10, text);
       assert.equal(p?.quotesAsked, undefined, text);
-      assert.deepEqual(p?.toolCalls, [{ tool: "fomo_get_token_theses", args: { token: AUTON_MINT, chain: "solana" } }], text);
+      assert.deepEqual(p?.toolCalls, [{ tool: "fomo_get_token_theses", args: { token: AUTON_MINT, chain: "bsc" } }], text);
       assert.ok(p?.usesMemory.includes("token"), text);
     }
     assert.deepEqual(plan("can you list the last 10")?.usesMemory, ["intent", "token"]);
@@ -1082,7 +1076,7 @@ describe("the theses themselves, on an explicit ask (Milla, 2026-10-09)", () => 
       const p = named(text);
       assert.equal(p?.intent, "token-theses", text);
       assert.equal(p?.quotes, undefined, text);
-      assert.deepEqual(p?.toolCalls, [{ tool: "fomo_get_token_theses", args: { token: AUTON_MINT, chain: "solana" } }], text);
+      assert.deepEqual(p?.toolCalls, [{ tool: "fomo_get_token_theses", args: { token: AUTON_MINT, chain: "bsc" } }], text);
     }
     assert.equal(named("shogun summarise the market"), null, "the cue is still the whole line");
   });

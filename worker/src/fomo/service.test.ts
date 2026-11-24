@@ -66,7 +66,7 @@ const KEY = "test_key_not_a_credential_0000";
 const PONS = "0x39dbed3a00000000000000000000000000000c0d";
 const PONS_KEY = `eip155:4663:${PONS}`;
 const CACHE_TOKEN = "0x7fe9950000000000000000000000000000000ca5";
-const FU2O = "Fu2oZoGxFtCDp29NKA4A89xcn255khq9xbxG7Mmtpump";
+const FU2O = "0xc66101b7bbddc5e8738608b393c2eac96bbfef6a";
 const KALEO = "1f08e6ab-5c73-5443-9225-bfc496cde51f";
 const FRANK = "6dcf7c78-2537-522a-8307-3f9970c081be";
 const STAR = "254245a7-575a-51be-9bc3-090a924789eb";
@@ -298,13 +298,13 @@ describe("fomo_resolve_subject", () => {
     const h = await harness();
     h.routes.set("tokens-search", () => {
       const b = fixture("tokens-search");
-      (b.tokens as Rec[]).push({ symbol: "PONS", address: FU2O, name: "Pons on Solana", networkId: 1399811149 });
+      (b.tokens as Rec[]).push({ symbol: "PONS", address: FU2O, name: "Pons on BSC", networkId: 56 });
       return json(b);
     });
     const env = await h.invoke<ResolveData>("fomo_resolve_subject", { query: "PONS" });
     assert.equal(env.status, "needs-clarification");
     assert.equal(env.candidates.length, 2);
-    assert.deepEqual(env.candidates.map((c) => (c.subject.kind === "token" ? c.subject.token.chain.slug : null)).sort(), ["robinhood", "solana"]);
+    assert.deepEqual(env.candidates.map((c) => (c.subject.kind === "token" ? c.subject.token.chain.slug : null)).sort(), ["bsc", "robinhood"]);
     assert.equal(env.data, null);
     assert.equal(env.subject, null);
     // A chain hint narrows it to one.
@@ -319,7 +319,7 @@ describe("fomo_resolve_subject", () => {
     h.routes.set("tokens-search", () => json({ tokens: [
       { symbol: "BOOMER", address: PONS, networkId: 4663, marketCapUsd: 2_080_000 },
       { symbol: "BOOMER", address: other, networkId: 4663, marketCapUsd: 1 },
-      { symbol: "BOOMER", address: FU2O, networkId: 1399811149 },
+      { symbol: "BOOMER", address: FU2O, networkId: 56 },
     ] }));
     const group = { audience: "group" as const, surface: "telegram-group" as const, groupId: "-100123" };
     const ambiguous = await h.invoke<TokenThesesData>("fomo_get_token_theses", { token: "BOOMER", chain: "robinhood" }, group);
@@ -373,13 +373,6 @@ describe("fomo_resolve_subject", () => {
     });
   }
 
-  it("rejects an incompatible address before trying to place an unnumbered named chain", async () => {
-    const h = await harness();
-    const answer = await h.invoke<ResolveData>("fomo_resolve_subject", { query: FU2O, chain: "base" });
-    assert.equal(answer.status, "needs-clarification");
-    assert.equal(answer.reason, "address-chain-mismatch");
-    assert.equal(h.calls.length, 0);
-  });
 
   it("never chooses between same-address unnumbered chains or asks for the chain again", async () => {
     const h = await harness();
@@ -475,7 +468,7 @@ describe("trader tools", () => {
     assert.equal(d.holdings?.totalValueUsdFloor, 3133);
     assert.equal(d.holdings?.rows[0]?.robinhood, true);
     assert.equal(d.holdings?.rows[1]?.robinhood, false);
-    assert.deepEqual(d.holdings?.byChain.map((c) => c.chain).sort(), ["robinhood", "solana"]);
+    assert.deepEqual(d.holdings?.byChain.map((c) => c.chain).sort(), ["bsc", "robinhood"]);
     assert.equal(d.cohort?.member, false);
     assert.equal(h.count("/v2/users/id/"), 0, "no profile read on a standard question");
     assert.ok(env.evidence.some((e) => e.id.startsWith(`fomo:holdings/${KALEO}@`)));
@@ -525,7 +518,7 @@ describe("token tools", () => {
     const h = await harness();
     h.routes.set("thesis-token", () => {
       const rows = fixture("theses-token").theses as Rec[];
-      return json({ totalAvailable: 3, theses: [rows[0], { ...rows[1], token: { address: FU2O } }, { ...rows[2], token: { address: "broken" } }] });
+      return json({ totalAvailable: 3, theses: [rows[0], { ...rows[1], token: { address: "also-broken" } }, { ...rows[2], token: { address: "broken" } }] });
     });
     const answer = await h.invoke<TokenThesesData>("fomo_get_token_theses", { token: PONS, chain: "robinhood" });
     assert.equal(answer.status, "partial");
@@ -637,11 +630,11 @@ describe("token tools", () => {
     assert.equal(lb.data?.traders.length, 2);
     assert.ok(lb.coverage.notes.some((n) => /not a measure of skill/.test(n)));
     assert.ok(await store.traderById(h.db, FRANK), "leaderboard identities are persisted to the shared trader table");
-    const sol = await h.invoke<RankingsData>("fomo_get_rankings", { board: "trending-tokens", chain: "solana" });
-    assert.equal(sol.status, "ok");
-    assert.equal(sol.data?.tokens.length, 1);
-    assert.equal(sol.data?.tokens[0]?.marketCapUsd, null);
-    assert.ok(sol.coverage.notes.some((n) => /unknown, not zero/.test(n)));
+    const bnb = await h.invoke<RankingsData>("fomo_get_rankings", { board: "trending-tokens", chain: "bsc" });
+    assert.equal(bnb.status, "ok");
+    assert.equal(bnb.data?.tokens.length, 1);
+    assert.equal(bnb.data?.tokens[0]?.marketCapUsd, null);
+    assert.ok(bnb.coverage.notes.some((n) => /unknown, not zero/.test(n)));
   });
 
   it("fomo_find_opportunities: ranked by cohort early signals, not size; unknown caps kept and labelled", async () => {
@@ -670,8 +663,8 @@ describe("token tools", () => {
 });
 
 describe("a token board narrowed to one chain says what the filter did (Milla, 2026-10-07)", () => {
-  /** A Solana row at `rank`, placeable. */
-  const solRow = (rank: number) => ({ rank, network: "solana", token: { symbol: `SOL${rank}`, name: `Sol ${rank}`, address: `So1${"abcdefghijkmnopqrstuvwxyz".slice(0, 26)}${String(rank).padStart(3, "1").replace(/0/g, "z")}ABCDEFGHJKLMNp`.slice(0, 43) }, marketCapUsd: 100_000 * rank });
+  /** A BSC row at `rank`, placeable. */
+  const bscRow = (rank: number) => ({ rank, network: "bsc", token: { symbol: `BNB${rank}`, name: `Bnb ${rank}`, address: `0x${rank.toString(16).padStart(40, "b")}` }, marketCapUsd: 100_000 * rank });
 
   it("a chain read reports the board's rows, the matches and the unplaced, from the one board read", async () => {
     const h = await harness();
@@ -685,8 +678,8 @@ describe("a token board narrowed to one chain says what the filter did (Milla, 2
     assert.deepEqual(hood.data?.tokens.map((t) => t.rank), [1, 4], "rows keep their board rank");
     // The same board for every chain: the second read is the cached copy.
     const before = h.count("/v2/leaderboard/tokens/trending");
-    const sol = await h.invoke<RankingsData>("fomo_get_rankings", { board: "trending-tokens", chain: "solana" });
-    assert.equal(sol.data?.matched, 1);
+    const bnb = await h.invoke<RankingsData>("fomo_get_rankings", { board: "trending-tokens", chain: "bsc" });
+    assert.equal(bnb.data?.matched, 1);
     assert.equal(h.count("/v2/leaderboard/tokens/trending"), before, "a chain filter is never a second paid read");
   });
 
@@ -699,9 +692,9 @@ describe("a token board narrowed to one chain says what the filter did (Milla, 2
     assert.deepEqual(all.data?.robinhood?.top.map((t) => t.label.symbol), ["PONS", "CACHE"]);
   });
 
-  it("an all-Solana board asked for Robinhood Chain is empty, with the board's size known; unplaced rows are counted", async () => {
+  it("an all-BSC board asked for Robinhood Chain is empty, with the board's size known; unplaced rows are counted", async () => {
     const h = await harness();
-    h.routes.set("board-trending", () => json({ board: "trending", count: 31, tokens: [...Array.from({ length: 30 }, (_, i) => solRow(i + 1)), { rank: 31, token: { symbol: "LOST", name: "Lost" } }] }));
+    h.routes.set("board-trending", () => json({ board: "trending", count: 31, tokens: [...Array.from({ length: 30 }, (_, i) => bscRow(i + 1)), { rank: 31, token: { symbol: "LOST", name: "Lost" } }] }));
     const hood = await h.invoke<RankingsData>("fomo_get_rankings", { board: "trending-tokens", chain: "robinhood" });
     assert.equal(hood.status, "empty");
     assert.equal(hood.data?.boardRows, 30);
@@ -1541,7 +1534,7 @@ describe("reports, memory, health", () => {
     const h = await harness();
     const rh = (n: number) => `eip155:4663:0x${n.toString(16).padStart(2, "0").repeat(20)}`;
     const many = Array.from({ length: 14 }, (_, i) => rh(i + 1));
-    await h.service.report(OWNER, { kind: "review-candidates", tokenKeys: [PONS_KEY, "not-a-key", `solana:1399811149:${"So1".padEnd(43, "1")}`], atMs: NOW }, NOW);
+    await h.service.report(OWNER, { kind: "review-candidates", tokenKeys: [PONS_KEY, "not-a-key", `eip155:56:${"So1".padEnd(43, "1")}`], atMs: NOW }, NOW);
     await h.service.report(OWNER, { kind: "review-candidates", tokenKeys: many, atMs: NOW }, NOW + 1_000);
     const mine = h.service.reviewCandidatesSnapshot(OWNER, NOW + 2_000);
     assert.equal(mine.length, 10, "ten coins a window, whatever the child sends");
@@ -2342,7 +2335,7 @@ describe("live provider shapes, as the service reads them (2026-10-04)", () => {
     h.routes.set("balances", () => json({ ...fixture("live-shape-balances"), key: KALEO }));
     const env = await h.invoke<TraderContextData>("fomo_get_trader_context", { trader: KALEO, focus: "holdings" });
     const d = env.data!.holdings!;
-    assert.equal(d.totalValueUsdFloor, 3600);
+    assert.equal(d.totalValueUsdFloor, 3500);
     const base = d.byChain.find((c) => c.chain === "base")!;
     assert.deepEqual(base, { chain: "base", rows: 1, valueUsd: null, unpricedRows: 1 });
     assert.deepEqual(d.byChain.find((c) => c.chain === "bsc"), { chain: "bsc", rows: 1, valueUsd: 0, unpricedRows: 0 }, "dust is priced at ~0");

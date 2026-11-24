@@ -199,8 +199,8 @@ trading. The historical October 30 audit below is retained as a dated record.
   worker/src/perps-child-process.test.ts`; ordinary CI skips this OS-specific
   drill. Synthetic grant homes were removed after execution.
 - **Phone stop fixes:** iOS now offers the login-wide stop even when the Spot
-  grant is absent or unreadable. Both clients describe the Spot, Perps and
-  Solana scope and bind confirmation to the current owner and session
+  grant is absent or unreadable. Both clients describe the Spot and Perps
+  scope and bind confirmation to the current owner and session
   generation. Android sends one DELETE, requires an explicit successful reply,
   and no longer treats absence of a Spot grant as proof that Perps stopped
   after a lost response. Android passed 728 unit tests, release lint, SDK

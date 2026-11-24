@@ -18,7 +18,7 @@ import type { ActivityKind, CoinDossier, DossierClaim, FollowAssessment, TokenId
 const NOW = 1_800_000_000_000;
 const ADDR = "0x2222222222222222222222222222222222222222";
 const TOKEN = tokenIdentity(robinhoodChain(), ADDR)!;
-const SOL = tokenIdentity(chainFromProvider(1399811149, "solana"), "So11111111111111111111111111111111111111112")!;
+const BNB = tokenIdentity(chainFromProvider(56, "bsc"), "0xd77cf5c8a1c79d6b78408a3f545dea88441790fb")!;
 const P = (usd: number) => BigInt(Math.round(usd * 1e8));
 const U = (n: number) => BigInt(Math.round(n * 100)) * 10_000n;
 
@@ -193,7 +193,7 @@ describe("assessFollow: entries", () => {
   });
 
   it("transfers and airdrops are never buys; other tokens' events are ignored", () => {
-    const a = assessFollow(setup({ triggers: [ev("u-a", { kind: "transfer-in" }), ev("u-b", { kind: "airdrop" }), ev("u-c", { token: SOL })] }));
+    const a = assessFollow(setup({ triggers: [ev("u-a", { kind: "transfer-in" }), ev("u-b", { kind: "airdrop" }), ev("u-c", { token: BNB })] }));
     assert.equal(a.state, "WATCH");
     assert.ok(a.reasonCodes.includes("awaiting-cohort-buyer"));
   });
@@ -232,12 +232,12 @@ describe("assessFollow: refusals", () => {
   });
 
   it("unsupported chain → RESEARCH_ONLY with the research intact", () => {
-    const sol = (e: TraderEvent) => ({ ...e, token: SOL });
+    const bnb = (e: TraderEvent) => ({ ...e, token: BNB });
     const a = assessFollow(
       setup({
-        token: SOL,
-        triggers: [sol(ev("u-alice")), sol(ev("u-bob", { at: NOW - 60_000 }))],
-        dossier: dossier(undefined, { token: SOL }),
+        token: BNB,
+        triggers: [bnb(ev("u-alice")), bnb(ev("u-bob", { at: NOW - 60_000 }))],
+        dossier: dossier(undefined, { token: BNB }),
         availability: "unsupported-chain",
         route: { verified: null, depthUsd: null, quoteAgeMs: null, impactBps: null },
       }),
@@ -249,15 +249,15 @@ describe("assessFollow: refusals", () => {
     assert.equal(a.priceMovePct, 3);
     assert.equal(a.signalDelayMs, 10_000);
     assert.deepEqual(a.dossierRevision, { dossierId: "dos-1", revision: 3 });
-    assert.equal(a.token.address, SOL.address, "a Solana mint keeps its case");
+    assert.equal(a.token.address, BNB.address, "a BSC mint keeps its case");
     assert.deepEqual(toExecutionHint(a), { kind: "none" });
   });
 
   it("a supported-authorized label on a non-Robinhood token never produces a hint", () => {
-    const a = assessFollow(setup({ token: SOL, triggers: [], dossier: null }));
+    const a = assessFollow(setup({ token: BNB, triggers: [], dossier: null }));
     assert.equal(a.state, "RESEARCH_ONLY");
     assert.ok(a.reasonCodes.includes("execution:identity-not-robinhood"));
-    assert.deepEqual(toExecutionHint({ ...assessFollow(setup()), token: SOL }), { kind: "none" });
+    assert.deepEqual(toExecutionHint({ ...assessFollow(setup()), token: BNB }), { kind: "none" });
   });
 
   it("stale quote → REJECT_SETUP", () => {
@@ -302,7 +302,7 @@ describe("assessFollow: refusals", () => {
     assert.equal(conflict.state, "WATCH");
     assert.ok(conflict.reasonCodes.includes("conflicting-opinions"));
     assert.equal(assessFollow(setup({ dossier: null })).state, "WATCH");
-    assert.ok(assessFollow(setup({ dossier: dossier(undefined, { token: SOL }) })).reasonCodes.includes("dossier-token-mismatch"));
+    assert.ok(assessFollow(setup({ dossier: dossier(undefined, { token: BNB }) })).reasonCodes.includes("dossier-token-mismatch"));
     assert.ok(assessFollow(setup({ quote: null })).reasonCodes.includes("quote-missing"));
     assert.ok(assessFollow(setup({ route: { verified: true, depthUsd: null, quoteAgeMs: 1_000, impactBps: null } })).reasonCodes.includes("route-depth-unknown"));
   });
@@ -512,7 +512,7 @@ describe("revalidate", () => {
     assert.equal(revalidate(a, current(a, { latest: assessFollow(setup({ now: NOW + 1_000 })) })).ok, true);
     assert.equal(revalidate(a, current(a, { latest: null })).ok, true);
     // Another coin's verdict is not this one's.
-    const other = assessFollow(setup({ token: SOL }));
+    const other = assessFollow(setup({ token: BNB }));
     assert.equal(revalidate(a, current(a, { latest: other })).ok, true);
   });
 

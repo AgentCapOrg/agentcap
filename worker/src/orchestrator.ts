@@ -97,8 +97,7 @@ import { drainPerpsBotRequests, readPerpsBotAuthority, writePerpsBotSnapshot } f
 import { queuePerpsBotExit, readPerpsBotView } from "./perps/telegram-admission";
 import { applyPerpsBotControl } from "./perps/telegram-controls";
 import { KILL_CLOCK_SLACK_SEC, KILL_DONE_PERPS_HOME_TEXT, KILL_DONE_PERPS_TEXT, KILL_DONE_TEXT, honourKillRequest, killRequested, readKillRequest, writeKillRequest, type KillOutcome } from "./kill-request";
-import { stopSolanaForKill } from "./solana-kill";
-import { stopPerpsForKill } from "./perps-kill";
+import { stopPerpsForKill, type PerpsPaperKill } from "./perps-kill";
 import { CONTROLS_ARMED_FILE, CONTROL_RECEIPTS_SCHEMA, LEGACY_EVENTS_BOT, PAUSED_FILE, armOwnerControls, durablePauseLifted, foldRecoveryControls, readControlsEvidence, readRecoveryControls, type ControlScope } from "./recovery-reply-arm";
 import { hostedRecipient, telegramSend } from "./mcp/notify";
 import { getIdentityStore } from "./identity-store";
@@ -6604,27 +6603,20 @@ export function setKillConfirmForTest(fn: (tenant: `0x${string}`, done?: { perps
 }
 
 /**
- * A Telegram kill stops the tenant's Solana strategy as well as its grant
- * (the separate Solana worker reads only the binding). It runs after the
- * grant's removal, and throws when it cannot: the grant stays removed, and the
- * kill stays pending until a later pass stops Solana.
- */
-let stopSolana: (tenant: `0x${string}`) => Promise<unknown> = (tenant) => stopSolanaForKill(tenant);
-/** Test seam: replace the Solana stop. */
-export function setSolanaKillForTest(fn: (tenant: `0x${string}`) => Promise<unknown>): void {
-  stopSolana = fn;
-}
-
-/**
  * A Telegram kill revokes the tenant's Perps grant too (perps-kill.ts), by the
  * same cutoff as the Robinhood grant: one signed after the kill stays. True
  * when this call revoked one. Throws when it could not, and the kill stays
- * pending until a later pass gets through, exactly as the Solana stop does.
+ * pending until a later pass gets through.
  */
+let perpsPaperKillForTest: PerpsPaperKill | undefined;
+/** Test seam: replace the paper-strategy switch-off inside the real Perps stop. */
+export function setPerpsPaperKillForTest(fn: PerpsPaperKill | undefined): void {
+  perpsPaperKillForTest = fn;
+}
 let stopPerps: (tenant: `0x${string}`, coveredSec: number) => Promise<boolean> = async (tenant, coveredSec) => {
   let perps: Awaited<ReturnType<typeof stopPerpsForKill>> | undefined;
   try {
-    perps = await stopPerpsForKill(tenant, { coveredSec });
+    perps = await stopPerpsForKill(tenant, { coveredSec, ...(perpsPaperKillForTest ? { paper: perpsPaperKillForTest } : {}) });
   } finally {
     // AND ITS RUNNING WORKER, before the ✅ can go: revoked in the store is not
     // stopped here, and the reconcile that would stand it down may be a pass
@@ -6672,7 +6664,7 @@ export function setPerpsKillForTest(fn: (tenant: `0x${string}`, coveredSec: numb
 /**
  * A KILL SITTING IN A LOGIN'S PERPS WORKER HOME — where the bot a Perps
  * worker runs once it holds its owner's bot seat (slice 6a) writes one —
- * carried out as the owner's whole kill, every wallet and Solana too, from
+ * carried out as the owner's whole kill, every wallet too, from
  * the home the request sits in. Wired now so that the day a Perps worker can
  * take a /kill, it is already the login's.
  *
@@ -6680,7 +6672,7 @@ export function setPerpsKillForTest(fn: (tenant: `0x${string}`, coveredSec: numb
  * request's cutoff, and the one whose re-sign supersedes it — a Perps grant
  * signed after the kill lifts this home's latch, as a Spot re-sign lifts a
  * Spot home's. The rest are halves, each run whatever the others did: the
- * Spot grant by the same cutoff, the Solana strategy, and the Perps wallet's
+ * Spot grant by the same cutoff, and the Perps wallet's
  * paper strategy turned off unless a newer Perps grant replaced the one
  * killed. Each worker a half revokes is stood down before the ✅ can go
  * (standDownForKill). No request here: nothing is read beyond the listing.
@@ -6704,7 +6696,6 @@ async function honourPerpsHomeKill(owner: `0x${string}`, nowSec: number): Promis
       }
       return spot === "removed";
     },
-    solana: () => stopSolana(owner),
     perps: async (coveredSec) => {
       // Its grant was this request's store's, above: what is left is the paper
       // strategy (perps-kill.ts), judged by what that store answered. The
@@ -6933,8 +6924,8 @@ async function perpsOwnerControls(owner: `0x${string}`, account: `0x${string}`, 
  * overlap, which is safe: the DELETE is conditional and atomic, so exactly
  * one call sees `removed` and confirms to the owner (or, when another half
  * failed, the call that finishes it: honourKillRequest). The Robinhood grant
- * goes first; the Solana stop and the Perps revocation run after it on every
- * pass, and both are idempotent.
+ * goes first; the Perps revocation runs after it on every
+ * pass, and is idempotent.
  */
 async function honourKill(tenant: `0x${string}`, nowSec: number): Promise<KillOutcome> {
   // A KILL SENT TO THE BOT A PERPS WORKER RUNS sits in that worker's home, and
@@ -6942,7 +6933,6 @@ async function honourKill(tenant: `0x${string}`, nowSec: number): Promise<KillOu
   // Spot half is in the store before this home's request is judged.
   const perpsHome = evmFleetId(tenant) !== null ? await honourPerpsHomeKill(tenant, nowSec) : null;
   const k = await honourKillRequest(getGrantStore("spot"), tenant, childHome(tenant), nowSec, {
-    solana: () => stopSolana(tenant),
     perps: (coveredSec) => stopPerps(tenant, coveredSec),
   });
   // NO REQUEST IN THE SPOT HOME: what the Perps home's says, as THIS wallet's
@@ -6972,7 +6962,7 @@ async function honourKill(tenant: `0x${string}`, nowSec: number): Promise<KillOu
  * Every tenant with a home on this container's disk, whether or not its child is running.
  *
  * ANY OTHER NAME THERE IS SAID, never passed over (fleet-id.ts): a home this
- * build did not make, a Solana tenant's or one in the wrong case (childHome
+ * build did not make, or one in the wrong case (childHome
  * lowercases). Nothing that reads this list starts a worker in it or wipes
  * it; a pending kill in one is said as such, since the order ferry and the
  * drain that read this list cannot carry it out.
@@ -8215,7 +8205,7 @@ export async function reconcile(): Promise<void> {
       const home = childHome(tenant);
       // A TELEGRAM KILL NOT CARRIED OUT YET KEEPS ITS HOME. Its grant is removed
       // first (honourKillRequest), so the tenant is no longer wanted while its
-      // Solana stop may still be failing; the pending request is what retries
+      // Perps stop may still be failing; the pending request is what retries
       // that stop, and wiped with the home it would never run again. Carried out
       // now, the home goes below as before; still failing (or its kill state
       // unreadable, which never clears by itself), only the wipe waits: the
@@ -9663,7 +9653,7 @@ async function runHwmRepairIfAsked(): Promise<void> {
   }
   const applying = mode === "apply";
   // BOTH LISTS READ WHOLE, OR NOTHING DONE (fleet-id.ts). Each used to keep
-  // only its entries starting with 0x, so a value naming none (a Solana id, a
+  // only its entries starting with 0x, so a value naming none (a non-0x id, a
   // typo, a lone comma) came out empty and passed the check below, and an
   // empty scope is the whole roster: an apply to every tenant.
   const hwmOnly = fleetIdScope("AGENTCAP_REPAIR_HWM_ONLY", process.env.AGENTCAP_REPAIR_HWM_ONLY);
@@ -13176,11 +13166,10 @@ function noteFomoFailure(text: string): void {
 
 /**
  * Never a tenant, never a URL with its key. redactUrls first (redact-urls.ts):
- * a provider that keys its URL by path (Alchemy's /v2/<key>, Triton, Syndica)
+ * a provider that keys its URL by path (Alchemy's /v2/<key>)
  * or by host keeps only scheme and host, so this line never relies on
  * guardStdio alone if it is ever stored or sent elsewhere. Then the scrub the
- * pass uses for its own lines (redactUrl), `api-key=` included, the name
- * Solana RPCs such as Helius take a key under, for a key outside a URL.
+ * pass uses for its own lines (redactUrl), `api-key=` included, for a key outside a URL.
  */
 export function fomoFailureText(text: string): string {
   return redactUrls(text).replace(/0x[0-9a-fA-F]{40}/g, "0x…").replace(/([?&](?:key|api[-_]?key)=)[^&\s]*/gi, "$1***").slice(0, 300);

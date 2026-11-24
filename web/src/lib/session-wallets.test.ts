@@ -110,8 +110,8 @@ describe("the storage slots", () => {
     assert.equal(loadGrant("spot"), null);
     assert.equal(localGrantsSnapshot("spot").current, undefined);
     // A wallet this build does not know reads nothing.
-    assert.equal(loadGrant("solana" as never), null);
-    assert.throws(() => clearGrant("solana" as never));
+    assert.equal(loadGrant("other" as never), null);
+    assert.throws(() => clearGrant("other" as never));
   });
 });
 

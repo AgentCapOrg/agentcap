@@ -60,7 +60,6 @@
  * PURE. No database, no fetch, no environment. It takes a row and returns a
  * post or null, so the whole policy is testable as a table.
  */
-import { onchainIdIn } from "../../packages/core/src/ids";
 
 /** A joined decision + its outcome, exactly as the route selects it. */
 export interface ThesisRow {
@@ -732,20 +731,9 @@ export function markFigures(d: string): string {
  *
  * `rh:` is included because the brokerage rail's agent id embeds an account
  * number, and a reason that quoted one would publish it.
- *
- * A Solana key or signature has no 0x, so `addressy` also asks core's
- * detector, which finds base58 ids and Solana explorer links. Its glued scan
- * (audit regressions F3), as X and social takes use it: a model post ending
- * "CA<mint>" or "<mint>is" names the mint as surely as one with a space
- * before it. The cost is a run of 43 or more base58 characters with no break
- * (a long camelCase hashtag, "commit<sha>", a long number glued to a word as
- * in "<digits>tokens"), which may read as an id glued to its neighbours: the
- * post is withheld, which is the failure this gate is allowed. Prose, tickers,
- * URLs and short hashtags never do.
  */
 const ADDRESSY = /\b(?:0x[0-9a-fA-F]{6,}|rh:[A-Za-z0-9-]{1,64})\b/;
-const GLUED = { glued: true } as const;
-const addressy = (s: string): boolean => ADDRESSY.test(s) || onchainIdIn(s, GLUED);
+const addressy = (s: string): boolean => ADDRESSY.test(s);
 
 /** Matches the `/why` truncation point, so no surface cuts one mid-word. */
 /**

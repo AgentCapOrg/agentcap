@@ -1142,7 +1142,7 @@ words and never on what they mean:
 
 | | what is asked | how it is answered |
 |---|---|---|
-| a) market | "how's the market", "market update", "how are things looking", "what's the market doing", "how's crypto today", "is it a green day" (`marketAsk`: a strict allowlist of whole plain tags, after at most two greeting words, a "today" or the like) | Bitcoin, ether and solana's day in one CoinGecko read (`MARKET_MAJORS`, `readCoinMarkets`) beside what's hot on Robinhood Chain (every floor and screen of what's hot), in code's casual words (`marketAnswers`: the big coins up, down, split, flat or unread, read from the very figures the line shows as it rounds them (`majorsDirOf`: up only when every coin shown is above +0%, down only when every one is below, flat only when all are +0%, split otherwise; one coin read is no read of "majors", and the line shows none), all up or all down said as big as the move only when every coin the line shows is in the same band (`moveOf`'s bands: a little under three percent, a fair bit under ten, sharply past it; red-team review of a964a74c: "the giants dipped slightly" went out beside BTC -15.2%, ETH -21.7%, SOL -28.3%), and in different bands with no size at all ("fell unevenly", "are up in varying degrees"; red-team review of 1ed46625: sized by the coin that moved most, "majors are plunging" went out beside BTC -1.2%, ETH -2%, SOL -10.5%, and "majors are surging" beside +0.8%, +1.1%, +10.3%); the chain's coins counted one, some, none or unread, never with a direction ("a solo runner" went out beside $CHUMP -62.5%); a close that says it is a read) and code's figures line (`24h: BTC +1.2%, ETH -0.8%, SOL +3.1%; trending: ABC 24h +42.1%`). Never drafted. Research off or nothing read: a line that says so, no figures |
+| a) market | "how's the market", "market update", "how are things looking", "what's the market doing", "how's crypto today", "is it a green day" (`marketAsk`: a strict allowlist of whole plain tags, after at most two greeting words, a "today" or the like) | Bitcoin and ether's day in one CoinGecko read (`MARKET_MAJORS`, `readCoinMarkets`) beside what's hot on Robinhood Chain (every floor and screen of what's hot), in code's casual words (`marketAnswers`: the big coins up, down, split, flat or unread, read from the very figures the line shows as it rounds them (`majorsDirOf`: up only when every coin shown is above +0%, down only when every one is below, flat only when all are +0%, split otherwise; one coin read is no read of "majors", and the line shows none), all up or all down said as big as the move only when every coin the line shows is in the same band (`moveOf`'s bands: a little under three percent, a fair bit under ten, sharply past it; red-team review of a964a74c: "the giants dipped slightly" went out beside BTC -15.2%, ETH -21.7%, SOL -28.3%), and in different bands with no size at all ("fell unevenly", "are up in varying degrees"; red-team review of 1ed46625: sized by the coin that moved most, "majors are plunging" went out beside BTC -1.2%, ETH -2%, SOL -10.5%, and "majors are surging" beside +0.8%, +1.1%, +10.3%); the chain's coins counted one, some, none or unread, never with a direction ("a solo runner" went out beside $CHUMP -62.5%); a close that says it is a read) and code's figures line (`24h: BTC +1.2%, ETH -0.8%, SOL +3.1%; trending: ABC 24h +42.1%`). Never drafted. Research off or nothing read: a line that says so, no figures |
 | b) coin facts | a major by name or ticker, what's hot, a `$ticker` or a contract on the chain | as before ("Research for answers", "Market intel"), with every rule that keeps it from confirming a buy by name |
 | c) itself | what it trades: the plain questions (`generalTradesQuestion`); and how it trades and what it has been up to on an allowlist of their own (`selfAsk`: "what have you been up to", "what are you up to", "what's your strategy", "tell me about your trading", "how do you decide what to buy") | **in code's words since the red-team review of daaae961, never a draft**: what it bought lately, the coins it bought with the money it trades with now and nothing else said of them (`tradesAnswers`; none it can name, and it says only that), and how it trades, the strategy it runs by name and what its rules are like (`selfAnswers`; "how do you pick your coins" is one of these). Drafted, "doing good, i'm up on every trade this month", "the top isn't in yet, relax", "just hold and chill", "i run the biggest fund on robinhood chain" and "fresh launches, pepe is the strongest coin on the chain" went out. Before that review: drafted, told its buys only for the plain questions about what it trades; the `selfAsk` questions told none of them (red-team review of a964a74c: told its buys, "the next one i grab is gonna be a big one", "whatever is trending tonight is what i grab next" and "snipe early and never sell" were posted). Whatever it was told, no reply says a buy to come in any words ("gonna snipe", "about to grab", "tonight i grab", "what i grab next": `REPLY_CURRENT_OR_ACTION`), no answer forecasts how big one will be ("gonna be huge": `ANSWER_PREDICTION`) or gives a strategy as an order ("never sell": `ANSWER_CALL`). No drafted answer, in any lane, says who or what decides its trades: an owner at all, anyone else picking, telling, asking or choosing, "buy whatever people ask", "whatever gets the most replies" (`DECIDER_CLAIM`, refused as `decider-claim`, red-team review of a964a74c: "my owner picks my trades" and "i buy whatever people ask me to" were posted under "what's your strategy?") |
 | d) greetings, praise, banter, its mood | a greeting ("hiii", "gm"), praise ("nice trade", "congrats", "lfg"), banter ("how are you", "how's it going alan", "tell me a joke", "who are you", "what do you do for fun"), its mood ("are you bullish?", "wen moon") | **in code's words again since 2026-10-18** (the owner's decision; answered by nothing from 2026-10-13): a hello back (`greetingAnswers`), a thanks (`reactionAnswers`), a friendly line about itself (`chatAnswers`), a non-committal line about itself (`vibeAnswers`), in his house voice; never a draft, nothing looked up, within small talk's own caps and depth (see "Small talk, answered again") |
@@ -1249,7 +1249,7 @@ launch, LP burned" asking "what's hot?" got "trending $ZAPX 24h +64.3% …;
 fomo: most bought $ZAPX", and "@alanaidale @ZapXOfficial are you bullish?"
 got "in a patient sort of way"). A market, hot or major line goes only to an
 author X named, and never when the figures would show a ticker the author's
-handle or display name holds, or whose name as CoinGecko lists it the author goes by (any word of four letters or more, or all its letters run together; red-team review of daaae961: "@chimpplanet · Chimp Planet | stealth launch" was shown CHMP, listed as "Chimp Planet"), the handle and the name read on their letters as a name is (look-alike, enclosed and regional-indicator letters as theirs, red-team review of daaae961: "ZОRP | stealth launch" with a Cyrillic O was shown ZORP), and a letter code cannot read a yes (`authorShows`; bitcoin, ether and solana
+handle or display name holds, or whose name as CoinGecko lists it the author goes by (any word of four letters or more, or all its letters run together; red-team review of daaae961: "@chimpplanet · Chimp Planet | stealth launch" was shown CHMP, listed as "Chimp Planet"), the handle and the name read on their letters as a name is (look-alike, enclosed and regional-indicator letters as theirs, red-team review of daaae961: "ZОRP | stealth launch" with a Cyrillic O was shown ZORP), and a letter code cannot read a yes (`authorShows`; bitcoin and ether
 aside): a skipped `research:author-ticker` row. Under a reply prefix that
 names anyone else, no market, hot, major, mood or decline line. And the
 mood line's parts that read as a yes ("in a patient sort of way",
@@ -1453,7 +1453,7 @@ other owner's agent, and its posting and reply warnings, are unchanged.
   plain words, on a strict allowlist of shapes, after at most two greeting
   words and before at most one "today" or the like: `$SOL today?`, "how's
   eth doing / looking?", "thoughts on doge?", "what do you think of
-  solana?", "what's up with bitcoin?", "what about / tell me about <coin>",
+  ethereum?", "what's up with bitcoin?", "what about / tell me about <coin>",
   "is btc up?", "<coin> price / update / stats?", "where's sol at?". The
   coin is a cashtag, or one to three words of which at least one is no
   everyday word ("how's the market doing", "thoughts on your trades", "tell
@@ -1470,8 +1470,8 @@ other owner's agent, and its posting and reply warnings, are unchanged.
   word is no coin until CoinGecko matched it, red-team 2026-10-12: "what do
   you think of immigrants?" was chat, and a draft said "they should go back
   home"). CoinGecko unreadable this time
-  is nothing at all, never a guess on the chain (a `$SOL` there is not the
-  Solana asked about), and so is a ranked coin whose ticker the figures
+  is nothing at all, never a guess on the chain (a `$ETH` there is not the
+  Ethereum asked about), and so is a ranked coin whose ticker the figures
   line's sanitiser refuses (a political name, a hype word). With no
   CoinGecko Pro key, majors are off and nothing is asked; a tag goes on
   exactly as before. A named major is a named coin
@@ -1562,8 +1562,8 @@ other owner's agent, and its posting and reply warnings, are unchanged.
   symbol of three letters or more, holds its company's name ("TESLA",
   "BABYNVDA"), or is one letter changed, added or dropped from a stock
   symbol of four letters or more (`$GOOG` beside the chain's GOOGL was
-  posted up 412%, red-team 2026-10-12; COIN and META only exactly); and never one that starts or ends with bitcoin's, ether's,
-  solana's or the dollar's (`BITCOIN`, `XBT`, `ETH2`, `PYUSD`, `USDC2`);
+  posted up 412%, red-team 2026-10-12; COIN and META only exactly); and never one that starts or ends with bitcoin's, ether's
+  or the dollar's (`BITCOIN`, `XBT`, `ETH2`, `PYUSD`, `USDC2`);
   never a big coin's or big memecoin's ticker or name, a stablecoin's or
   tokenised gold's (`$PEPE`, `$WIF`, `$USDS`, `$FDUSD`, `$PAXG`), one built
   on a big memecoin's or a currency's name (`BABYPEPE`, `DOGEAI`, `EURX`),
@@ -1993,7 +1993,7 @@ and inside the answer caps (sixty a day, six a person).
 
 **What is read** (orchestrator-xpost-check.ts), inside fifty seconds:
 1. A coin: its facts on the index, Robinhood Chain first, then Base,
-   Ethereum and BSC (a Solana mint on Solana), with the website the token's
+   Ethereum and BSC, with the website the token's
    info lists. A coin the index lists with no website is a finding.
 2. The site, through the research browser's new `POST /scan`
    (browser/server.ts): every link and word, the markup, up to a dozen

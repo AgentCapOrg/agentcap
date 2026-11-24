@@ -15,7 +15,7 @@
  * link to an explorer, one in the HTML's attributes, and one buried in a
  * minified bundle are four different claims. A bundle carries every address
  * the dapp's libraries know: the multicall, the permit contract, wrapped
- * ether, the stablecoins, the system programs of Solana. A link the site
+ * ether, the stablecoins. A link the site
  * chose to show its visitors is the site speaking. So every finding keeps
  * `where`, and the caller weighs a visible mention over a bundled one rather
  * than this file guessing which is "the" contract.
@@ -41,9 +41,9 @@ export type FoundWhere = "link" | "text" | "html" | "script";
 export const WHERE_RANK: Readonly<Record<FoundWhere, number>> = Object.freeze({ link: 0, text: 1, html: 2, script: 3 });
 
 export interface FoundAddress {
-  /** An EVM address as written (checksum case kept), or a Solana base58 string exactly as written. */
+  /** An EVM address as written (checksum case kept). */
   address: string;
-  chain: "evm" | "solana";
+  chain: "evm";
   /** Every place it was seen, strongest first. */
   where: FoundWhere[];
 }
@@ -58,7 +58,6 @@ export interface FoundRepo {
 
 export interface SiteFindings {
   evm: FoundAddress[];
-  solana: FoundAddress[];
   github: FoundRepo[];
   /** X handles the page links to (not handles merely written in its text). */
   x: string[];
@@ -88,16 +87,6 @@ const SOURCE_MAX = 4_000_000;
 const EVM_RUN = /(?<![0-9a-fA-F])0x[0-9a-fA-F]{40}(?![0-9a-fA-F])/g;
 
 /**
- * BASE58, THIRTY-TWO TO FORTY-FOUR LONG, ON ITS OWN. Visible text and links
- * rarely hold a run like this by accident; a bundle holds plenty (hashes,
- * keys, ids), so in a script only a quoted string that is the run and
- * nothing else counts (`SOLANA_QUOTED`).
- */
-const B58 = "1-9A-HJ-NP-Za-km-z";
-const SOLANA_RUN = new RegExp(`(?<![${B58}])[${B58}]{32,44}(?![${B58}])`, "g");
-const SOLANA_QUOTED = new RegExp(`(?<=["'\`])[${B58}]{32,44}(?=["'\`])`, "g");
-
-/**
  * ADDRESSES EVERY DAPP'S LIBRARIES CARRY, which say nothing about the project:
  * the zero and dead addresses, Multicall3, Permit2, the canonical wrapped
  * ether and the big stablecoins on the chains a memecoin site is usually on.
@@ -118,40 +107,6 @@ const EVM_INFRA: ReadonlySet<string> = new Set([
   "0x55d398326f99059ff775485246999027b3197955", // USDT, BSC
   "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d", // USDC, BSC
 ]);
-
-/** Solana's own programs and the coins every Solana dapp quotes: never the project's. */
-const SOLANA_INFRA: ReadonlySet<string> = new Set([
-  "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-  "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
-  "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
-  "So11111111111111111111111111111111111111112",
-  "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-  "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
-  "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s",
-  "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P",
-  "ComputeBudget111111111111111111111111111111",
-  "SysvarRent111111111111111111111111111111111",
-  "SysvarC1ock11111111111111111111111111111111",
-  "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr",
-  "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc",
-  "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4",
-  "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",
-  "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK",
-  "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo",
-  "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA",
-  "11111111111111111111111111111111",
-]);
-
-/**
- * A SOLANA ADDRESS, NOT A WORD THAT HAPPENS TO BE BASE58: upper case, lower
- * case and a digit, as a random thirty-two bytes almost always are and as an
- * English word, a slug or a class name almost never is. Fails closed: a real
- * mint written in one case only is missed, never a sentence read as a mint.
- */
-function solanaShaped(s: string): boolean {
-  // A run of 1s at the end is a padded system id (SysvarRecentB1ockHashes111…, Stake111…, Vote111…), never a mint.
-  return /[A-Z]/.test(s) && /[a-z]/.test(s) && /[1-9]/.test(s) && !SOLANA_INFRA.has(s) && !/1{8,}$/.test(s);
-}
 
 /**
  * GITHUB, WRITTEN ANY OF THE USUAL WAYS: github.com/owner[/repo], with or
@@ -197,7 +152,6 @@ function seen(list: FoundWhere[], where: FoundWhere): void {
  */
 export function findInSources(sources: readonly ScanSource[]): SiteFindings {
   const evm = new Map<string, FoundAddress>();
-  const solana = new Map<string, FoundAddress>();
   const github = new Map<string, FoundRepo>();
   const x = new Set<string>();
   let telegram = false, discord = false, docs = false;
@@ -207,8 +161,7 @@ export function findInSources(sources: readonly ScanSource[]): SiteFindings {
     .sort((a, b) => WHERE_RANK[a.s.where] - WHERE_RANK[b.s.where] || a.i - b.i)
     .map(({ s }) => s);
   for (const { where, text: raw } of ordered) {
-    // An inline image is base64, and base64 between its "+" and "/" is often a
-    // run of base58 long enough to read as a mint: taken out before anything.
+    // An inline image is base64: taken out before anything.
     const text = (raw.length > SOURCE_MAX ? raw.slice(0, SOURCE_MAX) : raw).replace(DATA_URI, " ");
     for (const m of text.matchAll(EVM_RUN)) {
       const key = m[0].toLowerCase();
@@ -216,12 +169,6 @@ export function findInSources(sources: readonly ScanSource[]): SiteFindings {
       const hit = evm.get(key);
       if (hit) seen(hit.where, where);
       else if (evm.size < FINDINGS_MAX) evm.set(key, { address: m[0], chain: "evm", where: [where] });
-    }
-    for (const m of text.matchAll(where === "script" ? SOLANA_QUOTED : SOLANA_RUN)) {
-      if (!solanaShaped(m[0])) continue;
-      const hit = solana.get(m[0]);
-      if (hit) seen(hit.where, where);
-      else if (solana.size < FINDINGS_MAX) solana.set(m[0], { address: m[0], chain: "solana", where: [where] });
     }
     const repo = (owner: string, name: string | null): void => {
       if (GITHUB_RESERVED.has(owner.toLowerCase())) return;
@@ -245,7 +192,7 @@ export function findInSources(sources: readonly ScanSource[]): SiteFindings {
     discord ||= DISCORD.test(text);
     docs ||= DOCS.test(text);
   }
-  return { evm: [...evm.values()], solana: [...solana.values()], github: [...github.values()], x: [...x], telegram, discord, docs };
+  return { evm: [...evm.values()], github: [...github.values()], x: [...x], telegram, discord, docs };
 }
 
 /**

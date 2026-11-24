@@ -292,7 +292,7 @@ describe("renderEnvelope", () => {
     const empty = renderEnvelope(env("fomo_get_token_activity", "empty", act), O);
     assert.match(empty, /No matching sells were returned/);
     assert.match(empty, /not the same as nobody trading/);
-    // Live 2026-10-09: "No matching activity were returned for AUTON on solana…".
+    // Live 2026-10-09: "No matching activity were returned for AUTON on bsc…".
     const anySide = renderEnvelope(env("fomo_get_token_activity", "empty", { ...act, side: null }), O);
     assert.match(anySide, /No matching activity was returned for /);
     assert.doesNotMatch(anySide, /activity were/);
@@ -336,18 +336,18 @@ describe("renderEnvelope", () => {
   });
 
   it("asks one question for an ambiguous ticker, without addresses in a group", () => {
-    const sol = tokenIdentity({ namespace: "solana", networkId: 1399811149, slug: "solana" }, "Fu2oZoGxFtCDp29NKA4A89xcn255khq9xbxG7Mmtpump")!;
+    const bnb = tokenIdentity({ namespace: "eip155", networkId: 56, slug: "bsc" }, "0xc66101b7bbddc5e8738608b393c2eac96bbfef6a")!;
     const e = env("fomo_get_token_theses", "needs-clarification", null, {
       subject: null,
       candidates: [
         { subject: { kind: "token", token: T, label: { symbol: "PONS", name: null } }, match: "symbol" },
-        { subject: { kind: "token", token: sol, label: { symbol: "PONS", name: null } }, match: "symbol" },
+        { subject: { kind: "token", token: bnb, label: { symbol: "PONS", name: null } }, match: "symbol" },
       ],
     });
     const owner = renderEnvelope(e, O);
-    assert.match(owner, /matches more than one: \$PONS on robinhood \(0x39db…0c0d\); \$PONS on solana \(Fu2oZo…pump\)\. Which one do you mean\?/);
+    assert.match(owner, /matches more than one: \$PONS on robinhood \(0x39db…0c0d\); \$PONS on bsc \(0xc661…ef6a\)\. Which one do you mean\?/);
     const group = renderEnvelope(e, G);
-    assert.equal(group, "PONS matches more than one: PONS on robinhood; PONS on solana. Which one do you mean?");
+    assert.equal(group, "PONS matches more than one: PONS on robinhood; PONS on bsc. Which one do you mean?");
   });
 
   it("explains same-chain ticker collisions instead of asking a group to choose between identical labels", () => {
@@ -568,14 +568,14 @@ describe("review fixes", () => {
   it("the model's evidence refs never carry a full address, tx hash or provider user id (C42)", () => {
     const addr = "0x39dbed3a00000000000000000000000000000c0d";
     const tx = "0x" + "ab".repeat(32);
-    const mint = "Fu2oZoGxFtCDp29NKA4A89xcn255khq9xbxG7Mmtpump";
+    const mint = "0xc66101b7bbddc5e8738608b393c2eac96bbfef6a";
     const e = env("fomo_get_token_activity", "ok", null, {
       evidence: [
         { id: `fomo:token-stats/eip155:4663:${addr}@${NOW}`, kind: "token-stats", sourceUrl: null },
         { id: `fomo:fills/${FRANK}:eip155:4663:${addr}@${NOW}`, kind: "fills", sourceUrl: null },
         { id: `fomo:event/log:${tx}:3`, kind: "event", sourceUrl: null },
         { id: `fomo:holdings/${FRANK}`, kind: "holdings", sourceUrl: null },
-        { id: `fomo:token-stats/solana:1399811149:${mint}`, kind: "token-stats", sourceUrl: null },
+        { id: `fomo:token-stats/eip155:56:${mint}`, kind: "token-stats", sourceUrl: null },
         { id: "fomo:thesis/th-0001", kind: "thesis", sourceUrl: null },
       ],
     });
@@ -618,15 +618,15 @@ describe("the watched-trader cohort, in words", () => {
 });
 
 describe("a board says what its chain filter did, and where Robinhood Chain stands (Milla, 2026-10-07)", () => {
-  const SOL = { namespace: "solana" as const, networkId: 1_399_811_149, slug: "solana" };
-  const solToken = (i: number): TokenIdentity => ({ chain: SOL, address: `So1${i}`, key: `solana:1399811149:So1${i}` });
+  const BNB = { namespace: "eip155" as const, networkId: 56, slug: "bsc" };
+  const solToken = (i: number): TokenIdentity => ({ chain: BNB, address: `So1${i}`, key: `eip155:56:So1${i}` });
   const row = (rank: number, symbol: string, token: TokenIdentity | null, cap = 874_600) => ({
     rank, token, label: { symbol, name: symbol }, holders: null, priceUsd: null, change24hPct: null, marketCapUsd: cap, volume24hUsd: null, executionAvailability: "unknown" as never,
   });
   const CACHE = tokenIdentity(robinhoodChain(), "0x7fe9950000000000000000000000000000000ca5")!;
   const board = (over: Partial<RankingsData>): FomoEnvelope<RankingsData> =>
     env("fomo_get_rankings", "ok", { board: "trending-tokens", window: null, basis: "x", traders: [], tokens: [], ...over } as RankingsData, { subject: { kind: "market" } });
-  /** The incident: Solana on top, PONS 12th and CACHE 31st of 100. */
+  /** The incident: BSC on top, PONS 12th and CACHE 31st of 100. */
   const incident = board({
     tokens: ["ETAC", "CATE", "STONK", "AnyPS5", "MOO", "BAA", "CAW", "WOOF", "HOOT", "PURR"].map((s, i) => row(i + 1, s, solToken(i + 1))),
     boardRows: 100, matched: 100, unplaced: 0,
@@ -637,14 +637,14 @@ describe("a board says what its chain filter did, and where Robinhood Chain stan
     const g = renderEnvelope(incident, G).split("\n");
     assert.deepEqual(g, [
       "Trending on Fomo (board position is popularity, not quality):",
-      "1. ETAC on solana, market cap $874.6k",
-      "2. CATE on solana, market cap $874.6k",
-      "3. STONK on solana, market cap $874.6k",
+      "1. ETAC on bsc, market cap $874.6k",
+      "2. CATE on bsc, market cap $874.6k",
+      "3. STONK on bsc, market cap $874.6k",
       "On Robinhood Chain, the chain I trade: PONS (12th), CACHE (31st).",
     ]);
     // The owner sees ten rows and the same line, with her cashtags.
     const o = renderEnvelope(incident, O);
-    assert.match(o, /\n10\. \$PURR on solana/);
+    assert.match(o, /\n10\. \$PURR on bsc/);
     assert.match(o, /\nOn Robinhood Chain, the chain I trade: \$PONS \(12th\), \$CACHE \(31st\)\./);
   });
 
@@ -687,7 +687,7 @@ describe("a board says what its chain filter did, and where Robinhood Chain stan
     // An answer without the counts (built before they existed) still reads as a sentence.
     const bare = board({ chain: "robinhood", tokens: [row(1, "PONS", T)] });
     assert.match(renderEnvelope(bare, G), /^Trending on Fomo, Robinhood Chain only:\n1\. PONS on robinhood/);
-    assert.equal(renderEnvelope({ ...board({ chain: "solana", tokens: [] }), status: "empty" }, G), "None of the trending coins on Fomo are on Solana right now.");
+    assert.equal(renderEnvelope({ ...board({ chain: "bsc", tokens: [] }), status: "empty" }, G), "None of the trending coins on Fomo are on BSC right now.");
   });
 
   it("the trader board with a chain asked says it covers every chain, and still fits a room", () => {
@@ -708,7 +708,7 @@ describe("a board says what its chain filter did, and where Robinhood Chain stan
       topTokens: [{ token: T, label: { symbol: "PONS", name: null }, buyers: 5, sellers: 1 }, { token: solToken(1), label: { symbol: "ROO", name: null }, buyers: 1, sellers: 0 }],
     };
     const g = renderEnvelope(env("fomo_get_token_activity", "ok", act, { subject: { kind: "market" } }), G);
-    assert.match(g, /\nMost bought in the newest Fomo trades read: PONS on robinhood \(5 buyers\), ROO on solana \(1 buyer\)\./);
+    assert.match(g, /\nMost bought in the newest Fomo trades read: PONS on robinhood \(5 buyers\), ROO on bsc \(1 buyer\)\./);
     const sold = renderEnvelope(env("fomo_get_token_activity", "ok", { ...act, side: "sell", topTokens: [{ ...act.topTokens![0]!, sellers: 2 }] }, { subject: { kind: "market" } }), G);
     assert.match(sold, /\nMost sold in the newest Fomo trades read: PONS on robinhood \(2 sellers\)\./);
   });

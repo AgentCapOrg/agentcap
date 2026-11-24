@@ -25,7 +25,7 @@ export type PerpsCeiling = (typeof PERPS_CEILINGS)[number];
 /**
  * AGENTCAP_PERPS, read restrict-only (docs/perps.md rule 1).
  *
- * UNSET IS OFF, hosted and self-hosted, as AGENTCAP_SOLANA is: perps land on
+ * UNSET IS OFF, hosted and self-hosted: perps land on
  * main in slices, and the next deploy of anything else ships every slice
  * already merged, so nothing may depend on an operator remembering to set
  * `off`. An operator turns paper on by writing `paper`. (The perps branch

@@ -314,6 +314,7 @@ describe("redactExecutables (C29): no third-party link or mention survives into 
     ["docs at docs.example.co.uk/x", "docs at [link]"],
     ["visit pons-claim。xyz", "visit [link]"],
     ["send to " + "0x" + "ab".repeat(20), "send to [address]"],
+    ["mint 0xf0f571fa2e7ec7b5470df5574dd1fc2db2929528 here", "mint [address] here"],
     ["mint 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU here", "mint [address] here"],
     // Ordinary prose stays as written.
     ["Up 3.5x since launch, e.g. strong buyers. Target 0.05 by Friday.", "Up 3.5x since launch, e.g. strong buyers. Target 0.05 by Friday."],

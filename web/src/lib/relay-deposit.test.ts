@@ -15,30 +15,29 @@ import {
 const AGENT = "0x1111111111111111111111111111111111111111";
 const base = DEPOSIT_SOURCES["eth-base"];
 const robinhood = DEPOSIT_SOURCES["eth-robinhood"];
-const sol = DEPOSIT_SOURCES["sol-solana"];
 
 /**
  * The shape of Relay's `/price` answer, trimmed to the fields read, with the
- * figures of the live Base and Solana answers taken on 2026-11-19 (dummy
+ * figures of the live Base answers taken on 2026-11-19 (dummy
  * recipient, no wallet).
  */
 function relayPrice(source: DepositSource, amount: string, over: { out?: string; min?: string; slippage?: string; recipient?: string; outToken?: string; outChain?: number; outDecimals?: number; inChain?: number; inAmount?: string; eta?: unknown; app?: string } = {}) {
   const sourceCurrency = { chainId: source.relayChainId, address: source.currency, symbol: source.asset, decimals: source.decimals };
   return {
     fees: {
-      gas: { currency: sourceCurrency, amount: source.family === "solana" ? "8975" : "211615385242", amountUsd: source.family === "solana" ? "0.000669" : "0.000398" },
-      relayer: { currency: sourceCurrency, amount: source.family === "solana" ? "851245" : "26897566254439", amountUsd: source.family === "solana" ? "0.063469" : "0.048310" },
+      gas: { currency: sourceCurrency, amount: "211615385242", amountUsd: "0.000398" },
+      relayer: { currency: sourceCurrency, amount: "26897566254439", amountUsd: "0.048310" },
       app: { currency: sourceCurrency, amount: over.app ?? "0", amountUsd: "0" },
     },
     details: {
       operation: "swap",
       sender: PRICE_SENDER[source.family],
       recipient: over.recipient ?? AGENT,
-      currencyIn: { currency: { ...sourceCurrency, chainId: over.inChain ?? source.relayChainId }, amount: over.inAmount ?? amount, amountUsd: source.family === "solana" ? "18.639957" : "35.921563" },
+      currencyIn: { currency: { ...sourceCurrency, chainId: over.inChain ?? source.relayChainId }, amount: over.inAmount ?? amount, amountUsd: "35.921563" },
       currencyOut: {
         currency: { chainId: over.outChain ?? 4663, address: over.outToken ?? "0x5fc5360d0400a0fd4f2af552add042d716f1d168", symbol: "USDG", decimals: over.outDecimals ?? 6 },
-        amount: over.out ?? (source.family === "solana" ? "18540697" : "35850921"),
-        minimumAmount: over.min ?? (source.family === "solana" ? "18355290" : "35671666"),
+        amount: over.out ?? ("35850921"),
+        minimumAmount: over.min ?? ("35671666"),
         amountUsd: "35.84",
       },
       totalImpact: { usd: "-0.090568", percent: "-0.25" },
@@ -63,11 +62,6 @@ describe("asking Relay for a price", () => {
       tradeType: "EXACT_INPUT",
       slippageTolerance: "50",
     });
-    const s = priceRequest(sol, 250_000_000n, AGENT);
-    assert.equal(s.user, "11111111111111111111111111111111");
-    assert.equal(s.originChainId, 792703809);
-    assert.equal(s.originCurrency, "11111111111111111111111111111111");
-    assert.equal(s.slippageTolerance, "100");
     assert.equal(priceRequest(robinhood, AMOUNT, AGENT).originChainId, 4663);
   });
 });
@@ -88,16 +82,6 @@ describe("reading Relay's answer", () => {
     assert.equal(q.route, "Relay: ETH on Base → USDG on Robinhood Chain");
     assert.deepEqual(q.fees.map((f) => [f.label, f.symbol, f.usd]), [["Relay fee", "ETH", "0.048310"], ["Network fee on Base", "ETH", "0.000398"]]);
     assert.equal(q.sourceNetworkFee, 211_615_385_242n);
-  });
-
-  it("reads the Solana answer the same way", () => {
-    const parsed = parseRelayPrice(relayPrice(sol, "250000000"), { source: sol, amount: 250_000_000n, agent: AGENT });
-    assert.equal(parsed.ok, true);
-    if (!parsed.ok) return;
-    assert.equal(parsed.quote.minOut, 18_355_290n);
-    assert.equal(parsed.quote.slippageBps, 100);
-    assert.equal(parsed.quote.sourceNetworkFee, 8975n);
-    assert.equal(parsed.quote.route, "Relay: SOL on Solana → USDG on Robinhood Chain");
   });
 
   it("shows an app fee if one ever appears, rather than hiding it", () => {
@@ -160,15 +144,6 @@ describe("the deep link to Relay", () => {
       amount: "0.02",
       tradeType: "EXACT_INPUT",
     });
-  });
-
-  it("starts Solana from SOL, and the agent's gas top-up asks for ETH", () => {
-    const solUrl = new URL(relayDeepLink(sol, 26_900_000n, AGENT, "ETH"));
-    assert.equal(solUrl.searchParams.get("fromChainId"), "792703809");
-    assert.equal(solUrl.searchParams.get("fromCurrency"), "11111111111111111111111111111111");
-    assert.equal(solUrl.searchParams.get("toCurrency"), "0x0000000000000000000000000000000000000000");
-    assert.equal(solUrl.searchParams.get("amount"), "0.0269");
-    assert.equal(solUrl.searchParams.get("toAddress"), AGENT);
   });
 
   it("names the route and the wait the way an owner reads them", () => {

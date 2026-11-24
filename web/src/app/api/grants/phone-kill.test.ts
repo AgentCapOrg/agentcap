@@ -6,8 +6,8 @@
  * accident. The web kill switch names it ("delete-agent"); the phones never
  * did. iOS "Stand down agent" (AccountScreens.swift) sent `{}`, and Android
  * "Stop my agent" (AgentCapApi.revokeGrant) sent a null body, which sendJson
- * turns into `{}`. Both were refused 400, the Robinhood grant and the Solana
- * strategy kept trading, and the phone showed "Reload your wallet", which no
+ * turns into `{}`. Both were refused 400, the Robinhood grant
+ * kept trading, and the phone showed "Reload your wallet", which no
  * phone screen can act on.
  *
  * Each request carries its app's own headers and goes through the hosted API
@@ -36,7 +36,6 @@ let middleware: typeof import("@/middleware").middleware;
 let auth: typeof import("@/lib/auth");
 const removed: string[] = [];
 const replacements: unknown[][] = [];
-const solanaStopped: string[] = [];
 const perpsAsked: string[] = [];
 
 before(async () => {
@@ -59,8 +58,6 @@ before(async () => {
   const settings = createRequire(import.meta.url)("../../../../../worker/src/settings-store.ts") as typeof import("../../../../../worker/src/settings-store");
   settings.resetSettingsStoreForTest();
   mock.method(settings.getSettingsStore("perps") as InstanceType<typeof settings.PgSettingsStore>, "disablePerpsForKill", async () => "none" as const);
-  const solana = await import("@/lib/solana-binding-store");
-  mock.method(solana.getSolanaBindingStore(), "disableForKill", async (tenant: string) => { solanaStopped.push(tenant); return true; });
   ({ DELETE } = await import("./route"));
   // The middleware reads AGENTCAP_HOSTED and the public origin once, at import.
   ({ middleware } = await import("@/middleware"));
@@ -74,7 +71,7 @@ after(() => {
   }
   rmSync(home, { recursive: true, force: true });
 });
-beforeEach(() => { removed.length = 0; replacements.length = 0; solanaStopped.length = 0; perpsAsked.length = 0; });
+beforeEach(() => { removed.length = 0; replacements.length = 0; perpsAsked.length = 0; });
 
 /** One phone's stop button: the headers its client puts on the request, signed in as `tenant`. */
 interface Phone { app: string; headers: (tenant: `0x${string}`) => Record<string, string> }
@@ -107,7 +104,7 @@ async function stop(phone: Phone, tenant: `0x${string}`, body: string): Promise<
   return DELETE(new Request(`${ORIGIN}/api/grants`, init()));
 }
 
-it("the phones' stop as they shipped it ({}) is refused 400, and the agent keeps trading on both chains", async () => {
+it("the phones' stop as they shipped it ({}) is refused 400, and the agent keeps trading", async () => {
   for (const phone of PHONES) {
     const response = await stop(phone, OWNER, "{}");
     assert.equal(response.status, 400, phone.app);
@@ -116,19 +113,17 @@ it("the phones' stop as they shipped it ({}) is refused 400, and the agent keeps
     assert.equal(body.ownerFacing, true, phone.app);
   }
   assert.deepEqual(removed, [], "the Robinhood grant was never removed");
-  assert.deepEqual(solanaStopped, [], "and the Solana strategy was never stopped");
   assert.deepEqual(perpsAsked, [], "nor was the Perps wallet asked to stop");
   assert.deepEqual(replacements, []);
 });
 
-it("the phones' stop naming delete-agent and the signed-in wallet removes the grant, stops the Solana strategy and reaches the Perps wallet", async () => {
+it("the phones' stop naming delete-agent and the signed-in wallet removes the grant and reaches the Perps wallet", async () => {
   for (const phone of PHONES) {
-    removed.length = 0; solanaStopped.length = 0; perpsAsked.length = 0;
+    removed.length = 0; perpsAsked.length = 0;
     const response = await stop(phone, OWNER, JSON.stringify({ purpose: "delete-agent", expectedTenant: OWNER }));
     assert.equal(response.status, 200, phone.app);
     assert.deepEqual(await response.json(), { ok: true }, phone.app);
     assert.deepEqual(removed, [OWNER], `${phone.app}: the Robinhood grant is removed`);
-    assert.deepEqual(solanaStopped, [OWNER], `${phone.app}: the Solana strategy is stopped`);
     assert.deepEqual(perpsAsked, [OWNER], `${phone.app}: the Perps half runs as well`);
   }
   assert.deepEqual(replacements, [], "a kill is never taken for a permission replacement");
@@ -140,6 +135,5 @@ it("a phone whose session became another wallet since the tap is refused 409, an
     assert.equal(response.status, 409, phone.app);
   }
   assert.deepEqual(removed, []);
-  assert.deepEqual(solanaStopped, []);
   assert.deepEqual(perpsAsked, []);
 });

@@ -493,8 +493,7 @@ export function theirWords(raw: string | null | undefined): string | null {
   let t = sanitizeText(raw, 2_000);
   t = t
     .replace(/0x[0-9a-fA-F]{40,64}/g, (m) => shortAddress(m))
-    .replace(/\b[0-9a-fA-F]{64}\b/g, (m) => shortAddress(m))
-    .replace(/\b[1-9A-HJ-NP-Za-km-z]{32,}\b/g, (m) => shortAddress(m));
+    .replace(/\b[0-9a-fA-F]{64}\b/g, (m) => shortAddress(m));
   t = redactExecutables(t).replace(/\[link\]/g, "").replace(/\s+/g, " ").trim();
   t = t.replace(/["“”]/g, "'").replace(/`/g, "'");
   if (t.length > TAIL_NOTICE_LIMITS.quoteChars) t = `${t.slice(0, TAIL_NOTICE_LIMITS.quoteChars - 1).trimEnd()}…`;
