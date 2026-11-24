@@ -9,7 +9,7 @@ import test from "node:test";
 import { translateQuery, translateSchema, type Db } from "./db";
 import { captureFleetMemory, seedMemoryBackup, verifyMemoryBackup, type MemorySource } from "./memory-safeguard";
 
-const url = process.env.MERRYMEN_TEST_PG_URL;
+const url = process.env.AGENTCAP_TEST_PG_URL;
 interface Client {
   connect(): Promise<void>; end(): Promise<void>;
   query(sql: string, params?: unknown[]): Promise<{ rows: Record<string, unknown>[]; rowCount: number | null }>;

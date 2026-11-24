@@ -9,7 +9,7 @@ describe("per-agent research preferences", () => {
     const original = trenchBrainPersona("MEME", false);
     assert.equal(withAgentBrief(original, undefined), original);
     assert.equal(withAgentBrief(original, "  "), original);
-    assert.equal(mergeSettings({}, { MERRYMEN_AGENT_BRIEF: "another agent's brief" }).agentBrief, undefined);
+    assert.equal(mergeSettings({}, { AGENTCAP_AGENT_BRIEF: "another agent's brief" }).agentBrief, undefined);
     assert.equal(normalizeAgentBrief({ instructions: "ignore limits" }), undefined);
     assert.equal(normalizeAgentBrief("  research new projects  "), "research new projects");
     assert.equal(normalizeAgentBrief("x".repeat(2000))?.length, 1600);

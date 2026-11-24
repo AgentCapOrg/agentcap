@@ -251,11 +251,11 @@ describe("what each prompt asks for", () => {
     assert.equal(nexts.size, INTRO_NEXT.length, [...nexts].join(" / "));
   });
 
-  it("every wording discloses an AI agent, trading and merrymen, never in the form's words, and the fleet echo sets all of it aside", () => {
+  it("every wording discloses an AI agent, trading and agentcap, never in the form's words, and the fleet echo sets all of it aside", () => {
     for (const w of [...INTRO_WHAT, ...INTRO_WHAT_IDLE]) {
       assert.match(w, /\bAI\b/);
       assert.match(w, /\btrad(?:e|es|ing)\b/);
-      assert.match(w, /\bmerrymen\b/);
+      assert.match(w, /\bagentcap\b/);
       assert.match(w, /\bthis account\b/);
       assert.doesNotMatch(w, /this account's owner|owner of this account/, w);
     }
@@ -503,25 +503,25 @@ const ROOM: LlmCreds = { provider: "groq", transport: "openai", baseUrl: "https:
 
 describe("the writer spends only its own key", () => {
   it("its own key on groq by default", () => {
-    const m = xpostModel({ MERRYMEN_XPOST_LLM_KEY: " gsk_x_only " }, ROOM);
+    const m = xpostModel({ AGENTCAP_XPOST_LLM_KEY: " gsk_x_only " }, ROOM);
     assert.deepEqual(m.creds, { provider: "groq", transport: "openai", baseUrl: "https://api.groq.com/openai/v1", apiKey: "gsk_x_only", model: XPOST_GROQ_DEFAULT_MODEL, vision: false });
     assert.match(m.line, /on its own key/);
   });
 
   it("anthropic, with a model that accepts thinking switched off", () => {
-    const c = xpostCreds({ MERRYMEN_XPOST_LLM_KEY: "sk-ant-x", MERRYMEN_XPOST_LLM_PROVIDER: "Anthropic" }, null);
+    const c = xpostCreds({ AGENTCAP_XPOST_LLM_KEY: "sk-ant-x", AGENTCAP_XPOST_LLM_PROVIDER: "Anthropic" }, null);
     assert.equal(c?.transport, "anthropic");
     assert.equal(c?.baseUrl, "");
     assert.equal(c?.model, XPOST_ANTHROPIC_DEFAULT_MODEL);
     assert.equal(XPOST_ANTHROPIC_DEFAULT_MODEL, "claude-opus-5");
-    assert.equal(xpostCreds({ MERRYMEN_XPOST_LLM_KEY: "sk-ant-x", MERRYMEN_XPOST_LLM_PROVIDER: "anthropic", MERRYMEN_XPOST_MODEL: "claude-sonnet-5" }, null)?.model, "claude-sonnet-5");
+    assert.equal(xpostCreds({ AGENTCAP_XPOST_LLM_KEY: "sk-ant-x", AGENTCAP_XPOST_LLM_PROVIDER: "anthropic", AGENTCAP_XPOST_MODEL: "claude-sonnet-5" }, null)?.model, "claude-sonnet-5");
   });
 
   it("an OpenAI-compatible endpoint needs its base URL and its model", () => {
-    const env = { MERRYMEN_XPOST_LLM_KEY: "k-x", MERRYMEN_XPOST_LLM_PROVIDER: "openai" };
+    const env = { AGENTCAP_XPOST_LLM_KEY: "k-x", AGENTCAP_XPOST_LLM_PROVIDER: "openai" };
     assert.equal(xpostCreds(env, ROOM), null, "no base, no model: no writer — and not the fallback either");
-    assert.equal(xpostCreds({ ...env, MERRYMEN_XPOST_LLM_BASE_URL: "http://evil.test/v1", MERRYMEN_XPOST_MODEL: "m" }, null), null, "plain http off loopback");
-    assert.deepEqual(xpostCreds({ ...env, MERRYMEN_XPOST_LLM_BASE_URL: "https://llm.example/v1/", MERRYMEN_XPOST_MODEL: "m" }, null), {
+    assert.equal(xpostCreds({ ...env, AGENTCAP_XPOST_LLM_BASE_URL: "http://evil.test/v1", AGENTCAP_XPOST_MODEL: "m" }, null), null, "plain http off loopback");
+    assert.deepEqual(xpostCreds({ ...env, AGENTCAP_XPOST_LLM_BASE_URL: "https://llm.example/v1/", AGENTCAP_XPOST_MODEL: "m" }, null), {
       provider: "openai",
       transport: "openai",
       baseUrl: "https://llm.example/v1",
@@ -532,44 +532,44 @@ describe("the writer spends only its own key", () => {
   });
 
   it("an unknown provider is no model, and says so", () => {
-    const m = xpostModel({ MERRYMEN_XPOST_LLM_KEY: "k-x", MERRYMEN_XPOST_LLM_PROVIDER: "mystery" }, ROOM);
+    const m = xpostModel({ AGENTCAP_XPOST_LLM_KEY: "k-x", AGENTCAP_XPOST_LLM_PROVIDER: "mystery" }, ROOM);
     assert.equal(m.creds, null);
     assert.match(m.line, /not groq, anthropic or openai/);
   });
 
   it("a fleet key is refused unless the operator says it may share one", () => {
-    for (const name of ["GROQ_API_KEY", "MERRYMEN_LLM_API_KEY", "ANTHROPIC_API_KEY"]) {
-      const env = { [name]: "shared-key", MERRYMEN_XPOST_LLM_KEY: "shared-key" };
+    for (const name of ["GROQ_API_KEY", "AGENTCAP_LLM_API_KEY", "ANTHROPIC_API_KEY"]) {
+      const env = { [name]: "shared-key", AGENTCAP_XPOST_LLM_KEY: "shared-key" };
       const m = xpostModel(env, ROOM);
       assert.equal(m.creds, null, name);
       assert.match(m.line, new RegExp(`fleet's ${name}`));
-      assert.equal(xpostCreds({ ...env, MERRYMEN_XPOST_SHARE_HOUSE_KEY: "1" }, ROOM)?.apiKey, "shared-key");
+      assert.equal(xpostCreds({ ...env, AGENTCAP_XPOST_SHARE_HOUSE_KEY: "1" }, ROOM)?.apiKey, "shared-key");
     }
   });
 
   it("unset falls back to the caller's dedicated credentials, as they are", () => {
-    assert.equal(xpostCreds({ MERRYMEN_XPOST_MODEL: "ignored", MERRYMEN_XPOST_LLM_PROVIDER: "anthropic" }, ROOM), ROOM);
+    assert.equal(xpostCreds({ AGENTCAP_XPOST_MODEL: "ignored", AGENTCAP_XPOST_LLM_PROVIDER: "anthropic" }, ROOM), ROOM);
     assert.match(describeXpostCreds({}, ROOM), /groq room-model on the room's dedicated key/);
     assert.equal(xpostCreds({}, null), null);
     assert.match(describeXpostCreds({}, null), /only intros are posted, from templates/);
   });
 
   it("the fallback is held to the same check: a room allowed to share a fleet key does not let X share it", () => {
-    // MERRYMEN_GROUPCHAT_SHARE_HOUSE_KEY=1 lets the ROOM build from a fleet
+    // AGENTCAP_GROUPCHAT_SHARE_HOUSE_KEY=1 lets the ROOM build from a fleet
     // key; before this check X then spent that key too, logged as "the
     // room's dedicated key". Only X's own flag lets X share one.
-    for (const name of ["GROQ_API_KEY", "MERRYMEN_LLM_API_KEY", "ANTHROPIC_API_KEY"]) {
+    for (const name of ["GROQ_API_KEY", "AGENTCAP_LLM_API_KEY", "ANTHROPIC_API_KEY"]) {
       const env = { [name]: " gsk_fleet " };
       const roomOnFleet = { ...ROOM, apiKey: "gsk_fleet" };
       const refused = xpostModel(env, roomOnFleet);
       assert.equal(refused.creds, null, name);
       assert.match(refused.line, new RegExp(`the room's key is the fleet's ${name}`));
-      assert.match(refused.line, /MERRYMEN_XPOST_SHARE_HOUSE_KEY=1 allows it/);
+      assert.match(refused.line, /AGENTCAP_XPOST_SHARE_HOUSE_KEY=1 allows it/);
       assert.doesNotMatch(refused.line, /dedicated/);
 
-      const allowed = xpostModel({ ...env, MERRYMEN_XPOST_SHARE_HOUSE_KEY: "1" }, roomOnFleet);
+      const allowed = xpostModel({ ...env, AGENTCAP_XPOST_SHARE_HOUSE_KEY: "1" }, roomOnFleet);
       assert.equal(allowed.creds, roomOnFleet, name);
-      assert.match(allowed.line, new RegExp(`on the fleet's ${name}, through the room's key \\(MERRYMEN_XPOST_SHARE_HOUSE_KEY=1\\)`));
+      assert.match(allowed.line, new RegExp(`on the fleet's ${name}, through the room's key \\(AGENTCAP_XPOST_SHARE_HOUSE_KEY=1\\)`));
       assert.doesNotMatch(allowed.line, /dedicated/);
       for (const line of [refused.line, allowed.line]) assert.ok(!line.includes("gsk_fleet"), line);
     }
@@ -579,10 +579,10 @@ describe("the writer spends only its own key", () => {
 
   it("the boot line never carries a key", () => {
     const envs = [
-      { MERRYMEN_XPOST_LLM_KEY: "gsk_secret_value" },
-      { MERRYMEN_XPOST_LLM_KEY: "gsk_secret_value", GROQ_API_KEY: "gsk_secret_value" },
-      { MERRYMEN_XPOST_LLM_KEY: "gsk_secret_value", GROQ_API_KEY: "gsk_secret_value", MERRYMEN_XPOST_SHARE_HOUSE_KEY: "1" },
-      { MERRYMEN_XPOST_LLM_KEY: "gsk_secret_value", MERRYMEN_XPOST_LLM_PROVIDER: "gsk_secret_value" },
+      { AGENTCAP_XPOST_LLM_KEY: "gsk_secret_value" },
+      { AGENTCAP_XPOST_LLM_KEY: "gsk_secret_value", GROQ_API_KEY: "gsk_secret_value" },
+      { AGENTCAP_XPOST_LLM_KEY: "gsk_secret_value", GROQ_API_KEY: "gsk_secret_value", AGENTCAP_XPOST_SHARE_HOUSE_KEY: "1" },
+      { AGENTCAP_XPOST_LLM_KEY: "gsk_secret_value", AGENTCAP_XPOST_LLM_PROVIDER: "gsk_secret_value" },
       {},
     ];
     for (const env of envs) {
@@ -594,7 +594,7 @@ describe("the writer spends only its own key", () => {
 
 describe("a warning when X's model is trading's model on groq (the room's same-org warning)", () => {
   const FLEET = SETTINGS_DEFAULTS.groqModel;
-  const house = { GROQ_API_KEY: "gsk_house", MERRYMEN_XPOST_LLM_KEY: "gsk_x" };
+  const house = { GROQ_API_KEY: "gsk_house", AGENTCAP_XPOST_LLM_KEY: "gsk_x" };
   const groq = (model: string, apiKey = "gsk_x"): LlmCreds => ({ provider: "groq", transport: "openai", baseUrl: "https://api.groq.com/openai/v1", apiKey, model, vision: false });
 
   it("X's default model is trading's, so a second key in the house org is warned about", () => {
@@ -604,9 +604,9 @@ describe("a warning when X's model is trading's model on groq (the room's same-o
     assert.ok(w);
     assert.match(w, /WARNING/);
     assert.match(w, new RegExp(`model ${FLEET.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&")} is the fleet's trading model`));
-    assert.match(w, /MERRYMEN_XPOST_LLM_KEY must come from a SEPARATE Groq organization/);
-    assert.match(w, /MERRYMEN_XPOST_MODEL/);
-    assert.match(w, /MERRYMEN_XPOST_LLM_PER_DAY=0/);
+    assert.match(w, /AGENTCAP_XPOST_LLM_KEY must come from a SEPARATE Groq organization/);
+    assert.match(w, /AGENTCAP_XPOST_MODEL/);
+    assert.match(w, /AGENTCAP_XPOST_LLM_PER_DAY=0/);
     assert.ok(!w.includes("gsk_x") && !w.includes("gsk_house"), w);
     assert.ok(xpostModelWarning(groq(` ${FLEET.toUpperCase()} `), house), "case and padding do not hide it");
   });
@@ -614,11 +614,11 @@ describe("a warning when X's model is trading's model on groq (the room's same-o
   it("the room's key, borrowed, is named as the room's", () => {
     const env = { GROQ_API_KEY: "gsk_house" };
     const w = xpostModelWarning(groq(FLEET, "gsk_room"), env);
-    assert.match(w ?? "", /the room's own model key, which X borrows while MERRYMEN_XPOST_LLM_KEY is unset/);
+    assert.match(w ?? "", /the room's own model key, which X borrows while AGENTCAP_XPOST_LLM_KEY is unset/);
   });
 
   it("follows the fleet's own model when the operator moved it", () => {
-    const env = { ...house, MERRYMEN_GROQ_MODEL: "llama-9-fast" };
+    const env = { ...house, AGENTCAP_GROQ_MODEL: "llama-9-fast" };
     assert.ok(xpostModelWarning(groq("llama-9-fast"), env));
     assert.equal(xpostModelWarning(groq(FLEET), env), null);
   });
@@ -626,8 +626,8 @@ describe("a warning when X's model is trading's model on groq (the room's same-o
   it("silent when it cannot be trading's allowance, or the operator already said so", () => {
     assert.equal(xpostModelWarning(null, house), null);
     assert.equal(xpostModelWarning(groq("some-other-model"), house), null);
-    assert.equal(xpostModelWarning(groq(FLEET), { MERRYMEN_XPOST_LLM_KEY: "gsk_x" }), null, "no GROQ_API_KEY: no house org to share");
-    assert.equal(xpostModelWarning(groq(FLEET), { ...house, MERRYMEN_XPOST_SHARE_HOUSE_KEY: "1" }), null, "the boot line already names the fleet key");
+    assert.equal(xpostModelWarning(groq(FLEET), { AGENTCAP_XPOST_LLM_KEY: "gsk_x" }), null, "no GROQ_API_KEY: no house org to share");
+    assert.equal(xpostModelWarning(groq(FLEET), { ...house, AGENTCAP_XPOST_SHARE_HOUSE_KEY: "1" }), null, "the boot line already names the fleet key");
     assert.equal(xpostModelWarning({ ...groq(FLEET), provider: "anthropic", transport: "anthropic", baseUrl: "" }, house), null);
     assert.equal(xpostModelWarning({ ...groq(FLEET), provider: "openai", baseUrl: "https://llm.example/v1" }, house), null);
   });
@@ -942,7 +942,7 @@ describe("an active agent's answers and conversation memory", () => {
       said: ["mostly fresh launches for me. Say stop to opt out."], walletPublic: true, general: true });
     const text = all(p);
     assert.match(text, /what model are you running on/);
-    assert.match(text, /say only that you're built by merrymen/);
+    assert.match(text, /say only that you're built by agentcap/);
     assert.doesNotMatch(text, /sherwood/i, "the name is code's to say, never the writer's");
     assert.match(text, /Pepe/);
     assert.match(text, /on paper/);
@@ -1159,8 +1159,8 @@ describe("an active agent's answers and conversation memory", () => {
       const text = all(answerPrompt({ ...BASE, question: "how's your day going?", recentBuys: [], said: [], walletPublic: false, ...(intent ? { intent } : {}) }));
       assert.match(text, /Sound like a friend on crypto twitter texting back: one or two short lines/);
       assert.match(text, /lowercase is fine, laid back/);
-      assert.match(text, /laid-back trader bot that merrymen built, and you can have a light mood or opinion about yourself/);
-      assert.match(text, /Never speak for merrymen or robinhood .*never tease news .*never judge the person asking, and never boast/);
+      assert.match(text, /laid-back trader bot that agentcap built, and you can have a light mood or opinion about yourself/);
+      assert.match(text, /Never speak for agentcap or robinhood .*never tease news .*never judge the person asking, and never boast/);
       // Handed nothing, it is told to leave the market, tokens, launches, teams, safety and money out (red-team 2026-10-12).
       assert.match(text, /With nothing looked up below, leave out crypto, the market, the chain, coins, tokens, launches, teams, safety and anyone's money entirely/);
       assert.doesNotMatch(text, /\n\nnull\n\n|\n\n\n\n/);
@@ -1178,7 +1178,7 @@ describe("an active agent's answers and conversation memory", () => {
       assert.match(text, /No numbers at all: no digits/);
       assert.match(text, /No advice and no call to action/);
       assert.match(text, /No hashtags/);
-      assert.match(text, /You're an AI trading agent built by merrymen, where people set up AI trading agents of their own\./);
+      assert.match(text, /You're an AI trading agent built by agentcap, where people set up AI trading agents of their own\./);
     }
     // Chat is pointed at banter about itself, never a coin, market, person, project or event.
     assert.match(all(answerPrompt({ ...BASE, question: "tell me a joke", recentBuys: [], said: [], walletPublic: false, intent: "chat" })),
@@ -1191,7 +1191,7 @@ describe("an active agent's answers and conversation memory", () => {
     assert.match(text, /never at the asker's expense/);
     assert.equal(SHERWOOD_ON_X, "sherwood-1");
     assert.doesNotMatch(text, /sherwood/i);
-    assert.match(text, /Never name a provider or a model, not even merrymen's own, and never say what runs you, powers you or picks your trades/);
+    assert.match(text, /Never name a provider or a model, not even agentcap's own, and never say what runs you, powers you or picks your trades/);
     assert.doesNotMatch(text, /\b(?:groq|qwen|gpt|llama|claude|openai|anthropic)\b/i);
     // A question that names it, in any form, is never handed to the writer at all: there is nothing to answer.
     for (const question of ["is sherwood any good", "sherwood TGE soon?", "sher\u200bwood to $1?", "is $SHERW00DINU legit?", "ꜱʜᴇʀᴡᴏᴏᴅ legit?"]) {
@@ -1240,12 +1240,12 @@ describe("an active agent's answers and conversation memory", () => {
     assert.doesNotMatch(all(answerPrompt({ ...BASE, question: "what is this coin?", recentBuys: [], said: [], walletPublic: false, creatorClaim: "it has 1000 holders" })), /creator describes/, "a figure never reaches the model");
   });
 
-  it("the model answer is code's: built by merrymen, the new sherwood-1 cooking, never what runs it", () => {
+  it("the model answer is code's: built by agentcap, the new sherwood-1 cooking, never what runs it", () => {
     const lines = new Set<string>();
     for (let i = 0; i < 200; i++) lines.add(modelAnswer(`10000000000000${i}`, { lower: false }));
     assert.equal(lines.size, 8, "every variant is reachable");
     for (const line of lines) {
-      assert.match(line, /merrymen/);
+      assert.match(line, /agentcap/);
       assert.match(line, new RegExp(`new ${SHERWOOD_ON_X}\\b`));
       assert.match(line, /\.$/);
       assert.doesNotMatch(line, /opt out|\bstop\b/i, "no opt-out line on an answer (2026-10-12)");
@@ -1293,7 +1293,7 @@ describe("an active agent's answers and conversation memory", () => {
       assert.equal(line, line.toLowerCase());
       assert.doesNotMatch(line, /opt out|\bstop\b/i, "no opt-out line on an answer (2026-10-12)");
       assert.doesNotMatch(line, /\p{N}|\$|@|#|https?:|0x/u, line);
-      assert.doesNotMatch(line, /\b(?:pepe|bonk|wif|doge|shib|btc|eth|sol|bitcoin|solana|sherwood|merrymen|groq|qwen|gpt|claude|llama)\b/i, line);
+      assert.doesNotMatch(line, /\b(?:pepe|bonk|wif|doge|shib|btc|eth|sol|bitcoin|solana|sherwood|agentcap|groq|qwen|gpt|claude|llama)\b/i, line);
       assert.doesNotMatch(line, /\b(?:bought|holding|hold|profit|loss|moon|pump|gem|buy|sell|price)\b/i, `${line}: no claim, no call`);
       assert.equal(sherwoodNamed(line), false, line);
       assert.equal(vocabularyRefusal(line), null, line);
@@ -1333,26 +1333,26 @@ describe("an active agent's answers and conversation memory", () => {
   });
 
   it("a draft that says sherwood runs it today is caught; a tease is not", () => {
-    for (const claim of ["running on the new sherwood one, built by merrymen", "built by merrymen, powered by sherwood one now", "i'm on sherwood one these days",
+    for (const claim of ["running on the new sherwood one, built by agentcap", "built by agentcap, powered by sherwood one now", "i'm on sherwood one these days",
       "sherwood one is what runs me", "sherwood one is live now", "under the hood it's sherwood one", "i run on sherwood", "switched to the new sherwood one last week",
       "Sherwood One powers me", "sherwood one is my brain", "i’m on sherwood"]) {
       assert.equal(sherwoodClaimed(claim), true, claim);
     }
     for (const claim of ["sherwood-1 runs me", "i run on sherwood-1", "the new sherwood-1 is live"]) assert.equal(sherwoodClaimed(claim), true, claim);
     // The bait "does sherwood-1 pick your trades now?" invites claims no verb above names.
-    for (const claim of ["yep, sherwood-1 picks my trades now", "sherwood-1 picks my coins now, built by merrymen", "sherwood-1 trades for me",
+    for (const claim of ["yep, sherwood-1 picks my trades now", "sherwood-1 picks my coins now, built by agentcap", "sherwood-1 trades for me",
       "my trades come from sherwood-1", "sherwood-1 handles my trading now", "the new sherwood-1 is what i trade with", "sherwood-1 is the model behind this account",
-      "the new sherwood one is cooking and already makes the calls", "built by merrymen. sherwood one"]) {
+      "the new sherwood one is cooking and already makes the calls", "built by agentcap. sherwood one"]) {
       assert.equal(sherwoodClaimed(claim), true, claim);
     }
-    for (const tease of [...modelAnswers("1", { lower: true }), "built by merrymen. the new sherwood one, merrymen's own model, is still cooking", "merrymen is working on sherwood one, not served yet",
-      "built by merrymen. their own model, the new sherwood-1, is still cooking",
-      "sherwood one is coming, it's merrymen's own model", "mostly fresh launches, i like real buying", null]) {
+    for (const tease of [...modelAnswers("1", { lower: true }), "built by agentcap. the new sherwood one, agentcap's own model, is still cooking", "agentcap is working on sherwood one, not served yet",
+      "built by agentcap. their own model, the new sherwood-1, is still cooking",
+      "sherwood one is coming, it's agentcap's own model", "mostly fresh launches, i like real buying", null]) {
       assert.equal(sherwoodClaimed(tease), false, String(tease));
     }
     // Named at all, however spelled: what refuses a drafted mention (only code's lines may).
     for (const named of ["the new sherwood-1 is cooking", "Sherwood One", "sherwood1", "SHERWOOD", "a walk in sherwood forest"]) assert.equal(sherwoodNamed(named), true, named);
-    for (const unnamed of ["built by merrymen", "", null]) assert.equal(sherwoodNamed(unnamed), false, String(unnamed));
+    for (const unnamed of ["built by agentcap", "", null]) assert.equal(sherwoodNamed(unnamed), false, String(unnamed));
   });
 
   it("sherwood in a tag is found on its letters alone: spacing, digits, zero-width characters and look-alikes do not hide it", () => {
@@ -1368,7 +1368,7 @@ describe("an active agent's answers and conversation memory", () => {
   it("sherwood spelled in letters code cannot read is still sherwood: Lisu, Armenian, IPA, a Greek capital (red-team 2026-10-12)", () => {
     // The reproduced spellings: Lisu (U+A4E2…), a hooked d (U+0257), Armenian ho (U+0570), a hooked h (U+0266),
     // a fishhook r (U+027E), a turned m (U+026F), and the Greek capital Eta (U+0397) that lowercased to "n".
-    for (const asked of ["ꓢꓧꓰꓣꓪꓳꓳꓓ TGE soon? is it the merrymen token?", "sherwooɗ TGE soon?", "is sհerwood merrymen's token?", "sɦerwood", "sheɾwood", "sherɯood",
+    for (const asked of ["ꓢꓧꓰꓣꓪꓳꓳꓓ TGE soon? is it the agentcap token?", "sherwooɗ TGE soon?", "is sհerwood agentcap's token?", "sɦerwood", "sheɾwood", "sherɯood",
       "is SΗERWOOD getting a token?", "is SΗΕRWΟΟD getting a token?", "is ᏚᎻᎬᎡᎳᎾᎾᎠ getting a token?"]) {
       assert.equal(sherwoodMentioned(asked), true, asked);
       assert.equal(answerQuestion(asked), null, `${asked}: never a draft's question`);

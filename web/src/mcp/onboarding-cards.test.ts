@@ -17,7 +17,7 @@ function draft(over: Record<string, unknown> = {}) {
     proposal_id: PID, kind: "agent_draft", status: "awaiting_approval", approval_url: APPROVAL,
     expires_at: FUTURE, binding_hash: BINDING, created: true,
     summary: {
-      action: "Create a new Merryman", purpose: "create", risk_level: "careful", requested_by: "Grok Bot",
+      action: "Create a new AgentCapAvatar", purpose: "create", risk_level: "careful", requested_by: "Grok Bot",
       settings: {
         agentName: "Marian", strategy: "steady-basket", basketSymbols: ["NVDA", "AAPL"],
         assetMode: "stocks", slippageBps: 50, buyPerTickUsdg: 10, classMaxHoldSec: 7200,
@@ -25,7 +25,7 @@ function draft(over: Record<string, unknown> = {}) {
       left_out: [{ key: "maxImpactBps", why: "The price-impact safety floor stays unchanged." }],
       after_approval: "Owner wallet creation and permission signing are still required.",
     },
-    next_steps: "Review the exact setup and sign the wallet permission in Merrymen.",
+    next_steps: "Review the exact setup and sign the wallet permission in AgentCap.",
     risk_profile: null, left_out: [], diff: null, ...over,
   };
 }
@@ -63,7 +63,7 @@ test("setup card leads with one owner action and keeps reference data in a close
   const m = await show(draft());
   const card = m.doc.querySelector(".mm-setup-card");
   assert.ok(card);
-  assert.match(initiallyVisibleText(card), /merrymen/i);
+  assert.match(initiallyVisibleText(card), /agentcap/i);
   assert.match(initiallyVisibleText(card), /Marian/);
   assert.equal(card.querySelectorAll("a.cta").length, 1);
   assert.equal(card.querySelector("a.cta")!.getAttribute("href"), APPROVAL);

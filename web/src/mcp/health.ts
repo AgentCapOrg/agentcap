@@ -3,7 +3,7 @@
  * enabled, whether its database answers, the version, and the two addresses it
  * serves: the canonical endpoint and the directory profile's (or why that one
  * is off), so an operator can see a misconfigured
- * MERRYMEN_MCP_DIRECTORY_RESOURCE_URL without reading logs. 503 (with
+ * AGENTCAP_MCP_DIRECTORY_RESOURCE_URL without reading logs. 503 (with
  * Retry-After) when not ready, so a load balancer or client backs off instead
  * of hammering.
  */
@@ -24,12 +24,12 @@ export interface DirectoryHealth {
  */
 export function directoryHealth(cfg: McpConfig, env: NodeJS.ProcessEnv = process.env): DirectoryHealth {
   if (cfg.directoryResource) return { endpoint: cfg.directoryResource, why: null };
-  if (env.MERRYMEN_MCP_DIRECTORY === "0") return { endpoint: null, why: "switched off (MERRYMEN_MCP_DIRECTORY=0)" };
+  if (env.AGENTCAP_MCP_DIRECTORY === "0") return { endpoint: null, why: "switched off (AGENTCAP_MCP_DIRECTORY=0)" };
   // Checked before the override: with no usable canonical endpoint (a bad
-  // MERRYMEN_MCP_RESOURCE_URL, including one at any path but /mcp) no override
+  // AGENTCAP_MCP_RESOURCE_URL, including one at any path but /mcp) no override
   // can help, so name the variable that can.
-  if (!cfg.resource) return { endpoint: null, why: "no canonical endpoint to derive it from (MERRYMEN_MCP_RESOURCE_URL)" };
-  return { endpoint: null, why: `MERRYMEN_MCP_DIRECTORY_RESOURCE_URL is not usable: it must be an https URL (http only for localhost) with no query, fragment or credentials, whose path is ${DIRECTORY_ROUTE_PATH} (the only path the directory profile is served at; only the origin may change)` };
+  if (!cfg.resource) return { endpoint: null, why: "no canonical endpoint to derive it from (AGENTCAP_MCP_RESOURCE_URL)" };
+  return { endpoint: null, why: `AGENTCAP_MCP_DIRECTORY_RESOURCE_URL is not usable: it must be an https URL (http only for localhost) with no query, fragment or credentials, whose path is ${DIRECTORY_ROUTE_PATH} (the only path the directory profile is served at; only the origin may change)` };
 }
 
 export interface HealthDeps {

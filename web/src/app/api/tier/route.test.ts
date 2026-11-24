@@ -1,8 +1,8 @@
 /**
  * ONE STANDING, THREE ROUTES: THE OWNER'S WALLET AND THE AGENT'S ACCOUNT.
  *
- * The worker's Circle gate and its energy count $MERRYMEN in both places. These
- * routes used to count only the owner's wallet — so "send $MERRYMEN to my
+ * The worker's Circle gate and its energy count $AGENTCAP in both places. These
+ * routes used to count only the owner's wallet — so "send $AGENTCAP to my
  * account" would have cleared the worker's gate while the Circle banner, the
  * create and settings standing, the Android banner and the iOS screens all went
  * on saying "isn't running — you hold 0". Two surfaces, two confident answers.
@@ -17,7 +17,7 @@
  *
  * The reader the three routes share is run against a stub client, and each
  * route's use of it is pinned in its source. /api/tier's GET is ALSO run for
- * real (bottom of this file): a temp MERRYMEN_HOME holding settings.json and
+ * real (bottom of this file): a temp AGENTCAP_HOME holding settings.json and
  * grant.json, and a JSON-RPC chain stubbed at fetch — the one seam the route
  * already has, so nothing in it changes to be tested.
  */
@@ -29,7 +29,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, afterEach, before, describe, it } from "node:test";
 import { decodeFunctionData, encodeFunctionResult, erc20Abi, multicall3Abi, toHex } from "viem";
-import { CIRCLE_TIERS, MERRYMEN_TOKEN, robinhoodChain, tierForBalance } from "@merrymen/core";
+import { CIRCLE_TIERS, AGENTCAP_TOKEN, robinhoodChain, tierForBalance } from "@agentcap/core";
 import {
   AGENT_BALANCE_TTL_MS,
   HOLDER_BALANCE_TTL_MS,
@@ -39,13 +39,13 @@ import {
   standingTokens,
   type BalanceCache,
   type StandingClient,
-} from "../../../lib/merrymen-standing";
+} from "../../../lib/agentcap-standing";
 import { UNREADABLE_TIER } from "../../../terminal/tier";
 
-const WHOLE = 10n ** BigInt(MERRYMEN_TOKEN.decimals);
+const WHOLE = 10n ** BigInt(AGENTCAP_TOKEN.decimals);
 const HOLDER = "0xAaAaAaAaAaAaAaAaAaAaAaAaAaAaAaAaAaAaAaAa" as const;
 const AGENT = "0xBbBbBbBbBbBbBbBbBbBbBbBbBbBbBbBbBbBbBbBb" as const;
-const MAINNET = MERRYMEN_TOKEN.chainId;
+const MAINNET = AGENTCAP_TOKEN.chainId;
 const NEED = CIRCLE_TIERS.find((t) => t.bonusStrategies)!.minTokens;
 
 type Answer = bigint | "fail" | "empty";
@@ -79,7 +79,7 @@ describe("the combined standing", () => {
     assert.equal(calls.length, 1, "one multicall, not two reads");
     assert.deepEqual(calls[0]!.map((c) => c.who), [h, a]);
     for (const c of calls[0]!) {
-      assert.equal(c.token, MERRYMEN_TOKEN.address, "the $MERRYMEN contract and nothing else");
+      assert.equal(c.token, AGENTCAP_TOKEN.address, "the $AGENTCAP contract and nothing else");
       assert.equal(c.fn, "balanceOf");
     }
   });
@@ -290,7 +290,7 @@ describe("/api/alpha uses it", () => {
  * case below uses addresses no other case reads.
  */
 describe("/api/tier GET, run", () => {
-  const KEYS = ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_SESSION_SECRET", "MERRYMEN_ENERGY_GATE", "DATABASE_URL"] as const;
+  const KEYS = ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_SESSION_SECRET", "AGENTCAP_ENERGY_GATE", "DATABASE_URL"] as const;
   const original = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
   const RPC = "https://rpc.example.test/operator-own";
   const MULTICALL = robinhoodChain.contracts!.multicall3!.address.toLowerCase();
@@ -302,7 +302,7 @@ describe("/api/tier GET, run", () => {
   let n = 0;
   const fresh = () => `0x${(++n).toString(16).padStart(4, "0")}${"c".repeat(36)}` as `0x${string}`;
 
-  /** The chain, at fetch: answers the $MERRYMEN multicall per address and records who was asked, where. */
+  /** The chain, at fetch: answers the $AGENTCAP multicall per address and records who was asked, where. */
   function chainAt(balances: Record<string, bigint>, o: { status?: number } = {}) {
     const asked: { url: string; who: string[] }[] = [];
     globalThis.fetch = (async (url: unknown, init?: { body?: unknown }) => {
@@ -316,7 +316,7 @@ describe("/api/tier GET, run", () => {
         const calls = decodeFunctionData({ abi: multicall3Abi, data }).args[0] as readonly { target: string; callData: `0x${string}` }[];
         const who: string[] = [];
         const results = calls.map((c) => {
-          assert.equal(c.target.toLowerCase(), MERRYMEN_TOKEN.address.toLowerCase(), "the $MERRYMEN contract and nothing else");
+          assert.equal(c.target.toLowerCase(), AGENTCAP_TOKEN.address.toLowerCase(), "the $AGENTCAP contract and nothing else");
           const inner = decodeFunctionData({ abi: erc20Abi, data: c.callData });
           assert.equal(inner.functionName, "balanceOf");
           const address = String(inner.args![0]).toLowerCase();
@@ -348,17 +348,17 @@ describe("/api/tier GET, run", () => {
   };
 
   before(async () => {
-    dir = mkdtempSync(path.join(tmpdir(), "merrymen-tier-get-"));
-    process.env.MERRYMEN_HOME = dir;
-    process.env.MERRYMEN_SESSION_SECRET = randomBytes(32).toString("hex");
-    delete process.env.MERRYMEN_HOSTED;
-    delete process.env.MERRYMEN_ENERGY_GATE;
+    dir = mkdtempSync(path.join(tmpdir(), "agentcap-tier-get-"));
+    process.env.AGENTCAP_HOME = dir;
+    process.env.AGENTCAP_SESSION_SECRET = randomBytes(32).toString("hex");
+    delete process.env.AGENTCAP_HOSTED;
+    delete process.env.AGENTCAP_ENERGY_GATE;
     delete process.env.DATABASE_URL;
     ({ GET } = await import("./route"));
   });
   afterEach(() => {
     globalThis.fetch = realFetch;
-    delete process.env.MERRYMEN_HOSTED;
+    delete process.env.AGENTCAP_HOSTED;
   });
   after(() => {
     globalThis.fetch = realFetch;
@@ -453,7 +453,7 @@ describe("/api/tier GET, run", () => {
   });
 
   it("HOSTED, SIGNED OUT: sign-in, and nothing is read about anybody", async () => {
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOSTED = "1";
     disk({ settings: { holderAddress: fresh() }, grant: { smartAccount: fresh(), chainId: MAINNET } });
     const asked = chainAt({});
     const v = await tier();
@@ -463,7 +463,7 @@ describe("/api/tier GET, run", () => {
   });
 
   it("HOSTED, WHOSE WALLET COUNTS CANNOT BE READ: unreadable before any balance is asked for", async () => {
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOSTED = "1";
     const { mintSession } = await import("@/lib/auth");
     // THROUGH require, ON PURPOSE (holder/route.test.ts): the route reaches
     // worker modules by require, and a stub on the ESM instance of the same
@@ -488,7 +488,7 @@ describe("/api/tier GET, run", () => {
   });
 
   it("HOSTED, THE GRANT STORE CANNOT BE READ: unreadable — never 'no agent', which would drop half the sum", async () => {
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOSTED = "1";
     const { mintSession } = await import("@/lib/auth");
     const { getGrantStore, resetGrantStoreForTest } = createRequire(import.meta.url)(
       "../../../../../worker/src/grant-store.ts",

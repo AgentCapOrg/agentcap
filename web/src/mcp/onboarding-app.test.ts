@@ -27,9 +27,9 @@ const TIME = "2026-10-14T10:00:00.000Z";
 const FUTURE = "2099-01-01T00:00:00.000Z";
 const PID = "prp_" + "a".repeat(32);
 const SID = "nsub_" + "b".repeat(32);
-const CAPABILITIES = ["get_merryman_setup", "get_agent_settings", "get_agent_controls", "create_agent_draft", "propose_settings_change", "list_proposals", "get_proposal", "cancel_proposal", "list_notification_channels", "list_subscriptions", "subscribe", "unsubscribe"];
+const CAPABILITIES = ["get_agentcapavatar_setup", "get_agent_settings", "get_agent_controls", "create_agent_draft", "propose_settings_change", "list_proposals", "get_proposal", "cancel_proposal", "list_notification_channels", "list_subscriptions", "subscribe", "unsubscribe"];
 const AGENT = { id: SLUG, name: "Old worker name", account: ADDR, chain_id: 4663, status: "active", mode: "paper", strategy: "trencher", permission_expires_at: FUTURE, heartbeat_at: TIME, worker_fresh: true, live_blocker: null, energy: null };
-const setup = (over: Record<string, unknown> = {}) => sample("get_merryman_setup", {
+const setup = (over: Record<string, unknown> = {}) => sample("get_agentcapavatar_setup", {
   phase: "paper", summary: "The worker reports paper mode. Practice uses simulated funds.",
   connection: { id: "connection-test-a", profile: "full", can_read_agents: true, can_create_draft: true, can_propose_settings: true, shared_agent_count: 1, available_tools: CAPABILITIES },
   agent: AGENT, next_steps: [], links: { create: ISSUER + "/create", wallet: ISSUER + "/grant", settings: ISSUER + "/settings", funding: ISSUER + "/deposit", connected_apps: ISSUER + "/connect/apps" },
@@ -93,12 +93,12 @@ function submit(m: Mount, label: string) { const input = field(m, label); assert
 async function loadSettings(m: Mount) { click(m, "Settings"); const call = last(m, "get_agent_settings"); assert.deepEqual(call.params!.arguments, { agent: SLUG }); await answer(m, call, settings()); }
 
 test("new connected identity has a creation-first home, no unknown worker or portfolio panels", async () => {
-  const m = await start(setup({ phase: "permission_required", agent: { ...AGENT, account: null, mode: "unknown", strategy: null, heartbeat_at: null, worker_fresh: null }, connection: { ...setup().connection, available_tools: [...CAPABILITIES, "create_merryman", "get_portfolio", "get_trades"] } }));
-  assert.match(m.text(), /Meet your next Merryman/); assert.doesNotMatch(m.text(), /LAST REPORTED MODE|Smart account|Not known/);
+  const m = await start(setup({ phase: "permission_required", agent: { ...AGENT, account: null, mode: "unknown", strategy: null, heartbeat_at: null, worker_fresh: null }, connection: { ...setup().connection, available_tools: [...CAPABILITIES, "create_agentcapavatar", "get_portfolio", "get_trades"] } }));
+  assert.match(m.text(), /Meet your next AgentCapAvatar/); assert.doesNotMatch(m.text(), /LAST REPORTED MODE|Smart account|Not known/);
   assert.deepEqual([...m.doc.querySelectorAll('[role="tab"]')].map(t => t.textContent), ["Overview", "Approvals"]);
-  assert.equal(field(m, "Name").value, "My Merryman"); assert.equal(calls(m).length, 0);
+  assert.equal(field(m, "Name").value, "My AgentCapAvatar"); assert.equal(calls(m).length, 0);
   change(m, "Assets to consider", "stocks"); change(m, "Basket symbols", "NVDA, AAPL"); submit(m, "Name");
-  assert.deepEqual(last(m, "create_merryman").params!.arguments?.basket, ["NVDA", "AAPL"]);
+  assert.deepEqual(last(m, "create_agentcapavatar").params!.arguments?.basket, ["NVDA", "AAPL"]);
 });
 
 test("saved settings initialize edits instead of stale worker reports, and unchanged values are omitted", async () => {
@@ -114,7 +114,7 @@ test("unsent settings survive tab reads and errors; retries reuse the exact idem
   click(m, "Overview"); click(m, "Settings"); await fail(m, last(m, "get_agent_settings"));
   assert.equal(field(m, "Name").value, "Night Owl"); assert.equal(field(m, "Strategy").value, "dip-hunter");
   submit(m, "Name"); const first = last(m, "create_agent_draft"); await fail(m, first); submit(m, "Name"); assert.deepEqual(last(m, "create_agent_draft").params!.arguments, first.params!.arguments);
-  await show(m, setup({ agent: { ...AGENT, id: OTHER }, connection: { ...setup().connection, available_tools: ["get_merryman_setup"] } }));
+  await show(m, setup({ agent: { ...AGENT, id: OTHER }, connection: { ...setup().connection, available_tools: ["get_agentcapavatar_setup"] } }));
   assert.doesNotMatch(m.text(), /Night Owl|Saved name/); click(m, "Settings"); assert.equal(m.doc.querySelector("form"), null);
 });
 
@@ -193,12 +193,12 @@ test("a failed rename stays name-only when a refresh reveals newer saved strateg
 });
 
 function draftResult(purpose = "settings") {
-  return { proposal_id: PID, kind: "agent_draft", status: "awaiting_approval", approval_url: `${ISSUER}/connect/approve/${PID}`, expires_at: FUTURE, binding_hash: "ab".repeat(32), summary: { action: purpose === "create" ? "Create a new Merryman" : "Update settings", purpose, settings: { agentName: "Marian" } }, next_steps: "Owner review required.", created: true, risk_profile: null, left_out: [], diff: null };
+  return { proposal_id: PID, kind: "agent_draft", status: "awaiting_approval", approval_url: `${ISSUER}/connect/approve/${PID}`, expires_at: FUTURE, binding_hash: "ab".repeat(32), summary: { action: purpose === "create" ? "Create a new AgentCapAvatar" : "Update settings", purpose, settings: { agentName: "Marian" } }, next_steps: "Owner review required.", created: true, risk_profile: null, left_out: [], diff: null };
 }
 
-test("a host approval longer than 30 seconds still delivers the new Merryman handoff", async () => {
-  const m = await start(setup({ agent: null, phase: "no_shared_agent", connection: { ...setup().connection, shared_agent_count: 0, available_tools: ["get_merryman_setup", "create_merryman"] } }));
-  change(m, "Name", "Marian"); submit(m, "Name"); const call = last(m, "create_merryman");
+test("a host approval longer than 30 seconds still delivers the new AgentCapAvatar handoff", async () => {
+  const m = await start(setup({ agent: null, phase: "no_shared_agent", connection: { ...setup().connection, shared_agent_count: 0, available_tools: ["get_agentcapavatar_setup", "create_agentcapavatar"] } }));
+  change(m, "Name", "Marian"); submit(m, "Name"); const call = last(m, "create_agentcapavatar");
   m.expireLastToolWait();
   assert.equal(field(m, "Name").value, "Marian", "waiting preserves the submitted setup");
   assert.equal(calls(m).length, 1, "waiting does not repeat a host approval or create another draft");
@@ -209,12 +209,12 @@ test("a host approval longer than 30 seconds still delivers the new Merryman han
 });
 
 test("optional assets survive a delayed host response and the resulting approval has a single branded view", async () => {
-  const m = await start(setup({ agent: null, phase: "no_shared_agent", connection: { ...setup().connection, shared_agent_count: 0, available_tools: ["get_merryman_setup", "create_merryman"] } }));
+  const m = await start(setup({ agent: null, phase: "no_shared_agent", connection: { ...setup().connection, shared_agent_count: 0, available_tools: ["get_agentcapavatar_setup", "create_agentcapavatar"] } }));
   const advanced = field(m, "Assets to consider").closest("details")!;
   assert.equal(advanced.open, false, "optional fields start folded");
   advanced.open = true;
   change(m, "Name", "Marian"); change(m, "Assets to consider", "stocks"); change(m, "Basket symbols", "NVDA, AAPL"); submit(m, "Name");
-  const call = last(m, "create_merryman");
+  const call = last(m, "create_agentcapavatar");
   assert.equal(call.params!.arguments!.asset_mode, "stocks");
   assert.deepEqual(call.params!.arguments!.basket, ["NVDA", "AAPL"]);
   m.expireLastToolWait();
@@ -265,12 +265,12 @@ test("retrying a slow host request keeps its key and ignores an older result dur
 });
 
 test("a delayed host approval cannot restore the previous connection's setup", async () => {
-  const initial = setup({ agent: null, phase: "no_shared_agent", connection: { ...setup().connection, shared_agent_count: 0, available_tools: ["get_merryman_setup", "create_merryman"] } });
-  const m = await start(initial); change(m, "Name", "Private draft"); submit(m, "Name"); const call = last(m, "create_merryman");
+  const initial = setup({ agent: null, phase: "no_shared_agent", connection: { ...setup().connection, shared_agent_count: 0, available_tools: ["get_agentcapavatar_setup", "create_agentcapavatar"] } });
+  const m = await start(initial); change(m, "Name", "Private draft"); submit(m, "Name"); const call = last(m, "create_agentcapavatar");
   m.expireLastToolWait();
   await show(m, setup({ ...initial, connection: { ...initial.connection, id: "connection-test-b" } }));
   await answer(m, call, draftResult("create"));
-  assert.equal(field(m, "Name").value, "My Merryman");
+  assert.equal(field(m, "Name").value, "My AgentCapAvatar");
   assert.equal(m.doc.querySelector(`a[href="${ISSUER}/connect/approve/${PID}"]`), null);
   assert.doesNotMatch(m.text(), /Draft prepared|Private draft/);
 });
@@ -290,12 +290,12 @@ test("percent and hour fields convert exactly to bounded stored units, without s
 });
 
 test("switching agentless OAuth connections clears unsent forms, proposal data and retry keys", async () => {
-  const initial = setup({ agent: null, phase: "no_shared_agent", connection: { ...setup().connection, shared_agent_count: 0, available_tools: ["get_merryman_setup", "create_merryman"] } });
+  const initial = setup({ agent: null, phase: "no_shared_agent", connection: { ...setup().connection, shared_agent_count: 0, available_tools: ["get_agentcapavatar_setup", "create_agentcapavatar"] } });
   const m = await start(initial); change(m, "Name", "Private draft");
-  await show(m, setup({ ...initial, connection: { ...initial.connection, id: "connection-test-b" } })); assert.equal(field(m, "Name").value, "My Merryman");
-  change(m, "Name", "Marian"); submit(m, "Name"); const first = last(m, "create_merryman"); await answer(m, first, draftResult("create")); assert.ok(m.doc.querySelector(`a[href="${ISSUER}/connect/approve/${PID}"]`));
-  await show(m, initial); assert.equal(m.doc.querySelector(`a[href="${ISSUER}/connect/approve/${PID}"]`), null); assert.equal(field(m, "Name").value, "My Merryman");
-  change(m, "Name", "Marian"); submit(m, "Name"); assert.notEqual(last(m, "create_merryman").params!.arguments?.idempotency_key, first.params!.arguments?.idempotency_key);
+  await show(m, setup({ ...initial, connection: { ...initial.connection, id: "connection-test-b" } })); assert.equal(field(m, "Name").value, "My AgentCapAvatar");
+  change(m, "Name", "Marian"); submit(m, "Name"); const first = last(m, "create_agentcapavatar"); await answer(m, first, draftResult("create")); assert.ok(m.doc.querySelector(`a[href="${ISSUER}/connect/approve/${PID}"]`));
+  await show(m, initial); assert.equal(m.doc.querySelector(`a[href="${ISSUER}/connect/approve/${PID}"]`), null); assert.equal(field(m, "Name").value, "My AgentCapAvatar");
+  change(m, "Name", "Marian"); submit(m, "Name"); assert.notEqual(last(m, "create_agentcapavatar").params!.arguments?.idempotency_key, first.params!.arguments?.idempotency_key);
 });
 
 test("reviewing an unrelated terminal proposal does not discard the current pending draft's retry key", async () => {

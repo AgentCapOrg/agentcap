@@ -1,9 +1,9 @@
 /**
- * ENERGY — what $MERRYMEN is for on the hosted service, written down once.
+ * ENERGY — what $AGENTCAP is for on the hosted service, written down once.
  *
  * An agent's energy is how much it may do ON ITS OWN each day: the paid AI
  * reviews it runs and the new trades it opens without being asked. While the
- * owner's wallet and the agent's own account hold ENERGY.fullTokens $MERRYMEN
+ * owner's wallet and the agent's own account hold ENERGY.fullTokens $AGENTCAP
  * between them it runs at full strength. Below that it still runs, on about a
  * tenth of a normal day, resetting at 00:00 UTC. Stop-losses, take-profits and
  * the owner's own orders are never limited by it, and no exit counts as a new
@@ -24,15 +24,15 @@
  * price, where it is going, or returns.
  */
 
-import { CIRCLE_TIERS, MERRYMEN_TOKEN } from "./token";
+import { CIRCLE_TIERS, AGENTCAP_TOKEN } from "./token";
 import type { StoredGrant } from "./grant";
 
 /** The one tier whose threshold is full energy — the Merry Man tier, never a literal. */
-const FULL_TIER = CIRCLE_TIERS.find((t) => t.id === "merryman");
-if (!FULL_TIER) throw new Error("energy: the merryman tier is missing from CIRCLE_TIERS");
+const FULL_TIER = CIRCLE_TIERS.find((t) => t.id === "agentcapavatar");
+if (!FULL_TIER) throw new Error("energy: the agentcapavatar tier is missing from CIRCLE_TIERS");
 
 export const ENERGY = Object.freeze({
-  /** Whole $MERRYMEN between the owner's wallet and the agent's account for full energy. */
+  /** Whole $AGENTCAP between the owner's wallet and the agent's account for full energy. */
   fullTokens: FULL_TIER.minTokens,
   /** Share of a normal day a low-energy agent gets, in bps. 1_000 = about a tenth. */
   lowBps: 1_000,
@@ -49,7 +49,7 @@ export const ENERGY = Object.freeze({
    */
   lastGoodMaxAgeSec: 86_400,
   /**
-   * The highest $MERRYMEN buy tax (bps) the energy buy will accept. The tax is
+   * The highest $AGENTCAP buy tax (bps) the energy buy will accept. The tax is
    * set by the token's own owner and can change without a line of our code
    * changing; a floor computed from a freshly read tax would silently accept a
    * hike, so above this the buy refuses instead.
@@ -63,8 +63,8 @@ export const ENERGY = Object.freeze({
   estimateEverySec: 1_800,
 });
 
-/** Raw (18dp) $MERRYMEN for full energy. */
-export const ENERGY_FULL_RAW: bigint = BigInt(ENERGY.fullTokens) * 10n ** BigInt(MERRYMEN_TOKEN.decimals);
+/** Raw (18dp) $AGENTCAP for full energy. */
+export const ENERGY_FULL_RAW: bigint = BigInt(ENERGY.fullTokens) * 10n ** BigInt(AGENTCAP_TOKEN.decimals);
 
 /**
  * How every "today's energy is spent" notice begins. The worker writes it, the
@@ -82,7 +82,7 @@ export const ENERGY_NOTICE_PREFIX = "Energy spent for ";
  * outside the trading book the way ETH gas does.
  */
 export const ENERGY_RESERVE_TOKENS: Readonly<Record<number, readonly `0x${string}`[]>> = Object.freeze({
-  [MERRYMEN_TOKEN.chainId]: Object.freeze([MERRYMEN_TOKEN.address.toLowerCase() as `0x${string}`]),
+  [AGENTCAP_TOKEN.chainId]: Object.freeze([AGENTCAP_TOKEN.address.toLowerCase() as `0x${string}`]),
 });
 
 export function energyReserveTokens(chainId: number): readonly `0x${string}`[] {
@@ -98,11 +98,11 @@ export function isEnergyReserveToken(addr?: string | null): boolean {
 
 // ── the one route the agent's key may use to buy its energy ───────────────
 
-/** VIRTUAL on Robinhood Chain — the middle hop; $MERRYMEN's deep pool is against it. */
+/** VIRTUAL on Robinhood Chain — the middle hop; $AGENTCAP's deep pool is against it. */
 export const VIRTUAL_TOKEN = "0xc6911796042b15d7fa4f6cde69e245ddcd3d9c31" as const;
 
 /**
- * grantFeatures marker: "this signature can buy $MERRYMEN energy over
+ * grantFeatures marker: "this signature can buy $AGENTCAP energy over
  * ENERGY_ROUTE_V1, and nothing else, into its own account".
  *
  * VERSIONED, because the permission is built from the route below rather than
@@ -116,9 +116,9 @@ export const GRANT_ENERGY = "energy-buy-v1";
 
 /**
  * The energy route, FROZEN LITERALS (lowercase) on purpose — see GRANT_ENERGY.
- * Uniswap v2 Router02, USDG → VIRTUAL → $MERRYMEN, output to the account itself.
+ * Uniswap v2 Router02, USDG → VIRTUAL → $AGENTCAP, output to the account itself.
  *
- * Why v2 and why two hops, measured on chain 2026-09-27: $MERRYMEN has no
+ * Why v2 and why two hops, measured on chain 2026-09-27: $AGENTCAP has no
  * Uniswap v3 pool and no v2 pair against USDG or WETH; its depth is a v2 pair
  * against VIRTUAL, and VIRTUAL has a v2 pair against USDG on the same factory.
  * energy-route.test.ts pins that these literals equal the registry constants.
@@ -199,9 +199,9 @@ export interface EnergyStatus {
   gated: boolean;
   mode: EnergyMode;
   level: EnergyLevel;
-  /** Whole $MERRYMEN in the agent's account; null = unread or not counted (not mainnet). */
+  /** Whole $AGENTCAP in the agent's account; null = unread or not counted (not mainnet). */
   agentTokens: number | null;
-  /** Whole $MERRYMEN in the counted owner wallet; null = unread or no wallet (holderCounted says which). */
+  /** Whole $AGENTCAP in the counted owner wallet; null = unread or no wallet (holderCounted says which). */
   holderTokens: number | null;
   /**
    * Was an owner wallet counted at all? true = one was, so a null

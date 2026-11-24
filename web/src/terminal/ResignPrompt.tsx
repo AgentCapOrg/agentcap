@@ -53,7 +53,7 @@ import { useEffect, useRef, useState } from "react";
  * core, so this imports the date rather than keeping a second copy — a second
  * copy is a second thing to forget to bump.
  */
-import { WALL_CHANGED_AT as WALL_RELEASE } from "@merrymen/core";
+import { WALL_CHANGED_AT as WALL_RELEASE } from "@agentcap/core";
 import { isPrivyOwned, loadGrant } from "@/lib/session";
 import { usePrivyOwner } from "@/terminal/usePrivyOwner";
 /**
@@ -73,7 +73,7 @@ import { resignPromptApplies, resignPromptState } from "./resign-prompt-state";
  * able to ask again — the same reason TOUR_VERSION namespaces its own record.
  */
 const seenKey = (tenant: string | null, changedAt: number) =>
-  `merrymen.resign.wall.v${changedAt}${tenant ? `:${tenant.toLowerCase()}` : ""}`;
+  `agentcap.resign.wall.v${changedAt}${tenant ? `:${tenant.toLowerCase()}` : ""}`;
 
 export function ResignPrompt({
   exists,

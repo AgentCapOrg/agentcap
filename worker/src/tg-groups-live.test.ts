@@ -29,7 +29,7 @@ import { readDexTokenPairs } from "./venues/dexscreener";
 const T0 = Date.UTC(2026, 8, 29, 12, 0, 0);
 const CHAT = -1001234567890;
 const OWNER = 424242;
-const BOT = { id: 999999, username: "merrymanme_bot", name: "Pine" };
+const BOT = { id: 999999, username: "agentcapavatarme_bot", name: "Pine" };
 /** The coin that was posted: AppShare, on the Pons bonding curve. */
 const CA = "0x0338a1b7fa2ae1cd997b541432d01af011754b0e";
 
@@ -195,9 +195,9 @@ describe("a Pons coin posted while the chain reads are declined: the real look, 
     assert.equal(store.coin(CHAT, CA)?.verdict, "curve", "remembered as the Robinhood Chain coin it is");
 
     // Then "@bot didnt you see" (a reply to the CA) and "@bot ??": answered.
-    const didnt = msg("@merrymanme_bot didnt you see", { replyTo: { messageId: post.messageId!, fromId: OWNER, fromIsBot: false } });
+    const didnt = msg("@agentcapavatarme_bot didnt you see", { replyTo: { messageId: post.messageId!, fromId: OWNER, fromIsBot: false } });
     await said(didnt);
-    await said(msg("@merrymanme_bot ??"));
+    await said(msg("@agentcapavatarme_bot ??"));
     assert.equal(sends.length, 3);
     assert.equal(replyOf(sends[1]), didnt.messageId);
     assert.ok(!logs.join("\n").includes(CA.slice(2, 12)), "never the address in a log");
@@ -213,7 +213,7 @@ describe("a Pons coin posted while the chain reads are declined: the real look, 
     await said(msg(CA));
     assert.equal(sends.length, 0, "a look that could not be made is not a Robinhood Chain coin shown");
     assert.deepEqual(store.room(CHAT)?.coins, []);
-    const asked = msg(`@merrymanme_bot ${CA}?`);
+    const asked = msg(`@agentcapavatarme_bot ${CA}?`);
     await said(asked);
     assert.equal(sends.length, 1);
     assert.equal(replyOf(sends[0]), asked.messageId);
@@ -353,10 +353,10 @@ describe("the Shogun exchange: a Robinhood coin while the chain AND GeckoTermina
       now: () => clock,
       rand: () => 0.99,
       env: {
-        MERRYMEN_TG_GROUPS_LLM_KEY: "k-test",
-        MERRYMEN_TG_GROUPS_LLM_PROVIDER: "openai",
-        MERRYMEN_TG_GROUPS_LLM_BASE_URL: "https://llm.test/v1",
-        MERRYMEN_TG_GROUPS_MODEL: "fake",
+        AGENTCAP_TG_GROUPS_LLM_KEY: "k-test",
+        AGENTCAP_TG_GROUPS_LLM_PROVIDER: "openai",
+        AGENTCAP_TG_GROUPS_LLM_BASE_URL: "https://llm.test/v1",
+        AGENTCAP_TG_GROUPS_MODEL: "fake",
       },
       hosted: true,
       sleep: async (ms) => {

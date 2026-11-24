@@ -280,7 +280,7 @@ export interface ResolveData {
   match: string;
   /** The handle typed is one this trader used before, not the current one. */
   formerHandle: boolean;
-  /** Tokens: whether Merrymen could act at all (research is always available). */
+  /** Tokens: whether AgentCap could act at all (research is always available). */
   executionAvailability: ExecutionAvailability | null;
   /** Provider-reported market cap; null is unknown, never zero. */
   marketCapUsd: number | null;
@@ -382,7 +382,7 @@ export interface ThesisView {
   author: { userId: string; handle: string | null };
   token: TokenIdentity | null;
   postedAt: number | null;
-  /** Merrymen's lexicon reading of the text; not the author's label. */
+  /** AgentCap's lexicon reading of the text; not the author's label. */
   stance: "supporting" | "opposing" | "neutral";
   /** THEIR words: sanitised, links and addresses redacted, at most 280 characters. */
   excerpt: string;
@@ -390,7 +390,7 @@ export interface ThesisView {
   isDev: boolean | null;
   family: string;
   /**
-   * Merrymen's reading of the full text for a group's digest (digest.ts):
+   * AgentCap's reading of the full text for a group's digest (digest.ts):
    * the cues that are not negated, the topics, what it says holders wait on.
    * Labels from fixed tables only, never the author's words.
    */
@@ -411,7 +411,7 @@ export interface TokenThesesData {
   /** The provider's own "available" flag on the page: false means it had nothing ready, not that there is nothing. */
   available?: boolean | null;
   /**
-   * How many rows the provider's own page held, before Merrymen's chain,
+   * How many rows the provider's own page held, before AgentCap's chain,
    * author and window filters; null when no page was read. 0 is the
    * provider answering "nothing here"; rows filtered off here are not that
    * (render.ts says "didn't return just now" only for the former).
@@ -492,7 +492,7 @@ export interface RankingsData {
   unplaced?: number;
   /**
    * Token boards with no chain asked: the board's Robinhood Chain rows (the
-   * chain Merrymen trades), how many and the top three by board rank, from
+   * chain AgentCap trades), how many and the top three by board rank, from
    * the same read (no extra credits).
    */
   robinhood?: { rows: number; top: RankingTokenRow[] };
@@ -542,7 +542,7 @@ export interface OpportunitiesData {
 export interface ClaimView {
   claimKey: string;
   stance: "supporting" | "opposing" | "neutral";
-  /** Merrymen's paraphrase. */
+  /** AgentCap's paraphrase. */
   summary: string;
   support: string;
   familyCount: number;
@@ -586,7 +586,7 @@ export interface ResearchStatusData {
   watches: { tokenKey: string; symbol: string | null; expiresAtMs: number }[];
   /** The owner's active tails (fomo_tail_trader). Absent from older producers. */
   tails?: { userId: string; handle: string | null; expiresAtMs: number; consider: boolean }[];
-  /** True when tails are stored but the operator switched tails off (MERRYMEN_FOMO_TAILS=0): nothing is told about them. */
+  /** True when tails are stored but the operator switched tails off (AGENTCAP_FOMO_TAILS=0): nothing is told about them. */
   tailsOff?: boolean;
   /**
    * The owner's recent research jobs. `status` is the stored status, except
@@ -600,9 +600,9 @@ export interface ResearchStatusData {
   health: { state: string; detail: string; configured: boolean; creditsRemaining: number | null };
   /** Provider capabilities by status: the documented baseline with every observation folded in. */
   capabilities: Record<string, number>;
-  /** Capabilities Merrymen uses that no call has verified yet (still only documented). Absent from older producers. */
+  /** Capabilities AgentCap uses that no call has verified yet (still only documented). Absent from older producers. */
   capabilitiesUnverified?: string[];
-  /** Capabilities Merrymen uses that the provider refused or could not serve when last called. */
+  /** Capabilities AgentCap uses that the provider refused or could not serve when last called. */
   capabilitiesDown?: string[];
 }
 
@@ -837,7 +837,7 @@ const S = {
     description: "force-refresh only when the user asks for the latest / right now.",
   },
   depth: { type: "string", enum: [...DEPTHS] },
-  cohortOnly: { type: "boolean", description: "Only Merrymen's watched traders." },
+  cohortOnly: { type: "boolean", description: "Only AgentCap's watched traders." },
   limit: (max: number) => ({ type: "integer", minimum: 1, maximum: max }),
 } as const;
 
@@ -896,7 +896,7 @@ export const FOMO_TOOL_DEFS: { [K in FomoToolName]: FomoToolDef<ToolArgs[K]> } =
   fomo_get_trader_context: {
     description:
       "A Fomo trader's current holdings snapshot (provider-reported, valued at current prices; a truncated list is a floor, not a total) " +
-      "and whether they are in Merrymen's watched-trader cohort. A snapshot is not transaction history.",
+      "and whether they are in AgentCap's watched-trader cohort. A snapshot is not transaction history.",
     schema: schema(
       {
         trader: S.trader,
@@ -998,7 +998,7 @@ export const FOMO_TOOL_DEFS: { [K in FomoToolName]: FomoToolDef<ToolArgs[K]> } =
   fomo_get_token_activity: {
     description:
       "Who has been buying or selling on Fomo in a window, for one coin or the whole feed. The feed only carries positions above roughly $3,000, " +
-      "so counts are a floor. cohort_only limits it to Merrymen's watched traders.",
+      "so counts are a floor. cohort_only limits it to AgentCap's watched traders.",
     schema: schema({
       token: S.token,
       chain: S.chain,
@@ -1092,7 +1092,7 @@ export const FOMO_TOOL_DEFS: { [K in FomoToolName]: FomoToolDef<ToolArgs[K]> } =
 
   fomo_research_coin: {
     description:
-      "Merrymen's shared research dossier for a coin: strongest support and objection, trader flow, words versus actions, unknowns and what " +
+      "AgentCap's shared research dossier for a coin: strongest support and objection, trader flow, words versus actions, unknowns and what " +
       "would change the view. since_revision reports what changed. Analysis only, never permission to trade.",
     schema: schema(
       {

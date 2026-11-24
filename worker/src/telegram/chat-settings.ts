@@ -23,7 +23,7 @@
  * orchestrator calls it.
  */
 
-import type { MerrymenSettings } from "../../../packages/core/src/index";
+import type { AgentCapSettings } from "../../../packages/core/src/index";
 import { CHAT_SETTING_KEYS, validStoredSetting } from "./setting-spec";
 
 /**
@@ -108,9 +108,9 @@ export function readChatSettings(v: unknown): ChatSettings | null {
  * never lands at all. Closing it properly needs one writer, not two.
  */
 export function promotedSettings(
-  stored: Partial<MerrymenSettings>,
+  stored: Partial<AgentCapSettings>,
   chat: ChatSettings | null,
-): Partial<MerrymenSettings> | null {
+): Partial<AgentCapSettings> | null {
   if (!chat) return null;
   const promotedAt = typeof stored.telegramSettingsAt === "number" ? stored.telegramSettingsAt : 0;
   if (chat.at <= promotedAt) return null;
@@ -129,5 +129,5 @@ export function promotedSettings(
   // The marker moves even when the allowlist emptied the patch, so a value this
   // build does not accept is refused ONCE rather than retried every fifteen
   // seconds for the life of the tenant.
-  return { ...stored, ...patch, telegramSettingsAt: chat.at } as Partial<MerrymenSettings>;
+  return { ...stored, ...patch, telegramSettingsAt: chat.at } as Partial<AgentCapSettings>;
 }

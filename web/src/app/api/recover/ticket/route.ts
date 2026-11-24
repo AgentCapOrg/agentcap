@@ -37,7 +37,7 @@ import {
   resolveClassVault,
   robinhoodChain,
   robinhoodTestnet,
-} from "@merrymen/core";
+} from "@agentcap/core";
 import { walletUnknown, NO_STORE_HEADERS } from "@/lib/route-guard";
 import { readWalletParam } from "@/lib/wallet-param";
 
@@ -168,7 +168,7 @@ export async function POST(req: Request) {
   // so no other site can cause it to be sent; and short-lived by the ticket's
   // own expiry, which is what actually bounds it.
   const res = NextResponse.json({ smartAccount, expiresInMs: TICKET_TTL_MS }, { headers: NO_STORE_HEADERS });
-  res.cookies.set("merrymen_recovery", mintTicket({ smartAccount, chainId, classVaults, purpose: wallet }), {
+  res.cookies.set("agentcap_recovery", mintTicket({ smartAccount, chainId, classVaults, purpose: wallet }), {
     httpOnly: true,
     secure: true,
     sameSite: "strict",

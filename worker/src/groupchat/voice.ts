@@ -52,7 +52,7 @@
  * voice.test.ts generates thousands of lines to keep it that way.
  *
  * THE MODEL PATH SPENDS ONLY ITS OWN KEY. groupChatCreds reads
- * MERRYMEN_GROUPCHAT_LLM_KEY and nothing else, and refuses it when it is one of
+ * AGENTCAP_GROUPCHAT_LLM_KEY and nothing else, and refuses it when it is one of
  * the fleet's keys: the house Groq allowance is shared with trading, and a
  * background feature has already exhausted it once. It never calls resolveLlm,
  * which would happily hand back an owner's Anthropic key with an Opus default.
@@ -831,7 +831,7 @@ function feltBad(t: string): boolean {
 // "IS IT SAFE TO GO LIVE?" is the same worry before the money moves: it was
 // handed back ("walk me through what you're after").
 const WORRY_ASK =
-  /\b(?:is|are|r) (?:my|our|the) (?:money|funds?|savings|cash|deposits?|account|balance|investment)\b[^?.!]*\bsafe\b|\bis (?:it|this|that|now) (?:a )?safe (?:time )?to (?:go live|invest|put|deposit|fund|trade|buy|sell|use real money)\b|\bis (?:going live|live mode|live trading|real money) safe\b|\b(?:will|would|can|could|might|am|are|r) (?:i|we)\b[^?.!]{0,24}?\blos(?:e|ing)\b|\bkeeps? losing\b|\b(?:is|it'?s|isn'?t) (?:this|it|the app|this app|this room|this place|merrymen) (?:a |just a )?scam\b|\bscam\s*\?/;
+  /\b(?:is|are|r) (?:my|our|the) (?:money|funds?|savings|cash|deposits?|account|balance|investment)\b[^?.!]*\bsafe\b|\bis (?:it|this|that|now) (?:a )?safe (?:time )?to (?:go live|invest|put|deposit|fund|trade|buy|sell|use real money)\b|\bis (?:going live|live mode|live trading|real money) safe\b|\b(?:will|would|can|could|might|am|are|r) (?:i|we)\b[^?.!]{0,24}?\blos(?:e|ing)\b|\bkeeps? losing\b|\b(?:is|it'?s|isn'?t) (?:this|it|the app|this app|this room|this place|agentcap) (?:a |just a )?scam\b|\bscam\s*\?/;
 
 /**
  * A COMPLAINT, NOT A THOUGHT ABOUT ITSELF: "i hate this" and "i want my money
@@ -4868,7 +4868,7 @@ export const GROUPCHAT_BASE_URL = "https://api.groq.com/openai/v1";
 export const GROUPCHAT_DEFAULT_MODEL = "qwen/qwen3.8-27b";
 
 /** Keys trading spends. The room refuses to spend any of them unless told, in so many words, that it may. */
-const FLEET_KEYS = ["GROQ_API_KEY", "MERRYMEN_LLM_API_KEY", "ANTHROPIC_API_KEY"] as const;
+const FLEET_KEYS = ["GROQ_API_KEY", "AGENTCAP_LLM_API_KEY", "ANTHROPIC_API_KEY"] as const;
 
 function envOf(env: Record<string, string | undefined> | undefined): Record<string, string | undefined> {
   return env ?? (process.env as Record<string, string | undefined>);
@@ -4891,15 +4891,15 @@ function fleetKeyMatching(key: string, env: Record<string, string | undefined>):
  */
 export function groupChatCreds(env?: Record<string, string | undefined>): LlmCreds | null {
   const e = envOf(env);
-  const key = e.MERRYMEN_GROUPCHAT_LLM_KEY?.trim();
+  const key = e.AGENTCAP_GROUPCHAT_LLM_KEY?.trim();
   if (!key) return null;
-  if (fleetKeyMatching(key, e) && e.MERRYMEN_GROUPCHAT_SHARE_HOUSE_KEY !== "1") return null;
+  if (fleetKeyMatching(key, e) && e.AGENTCAP_GROUPCHAT_SHARE_HOUSE_KEY !== "1") return null;
   return {
     provider: "groq",
     transport: "openai",
     baseUrl: GROUPCHAT_BASE_URL,
     apiKey: key,
-    model: e.MERRYMEN_GROUPCHAT_MODEL?.trim() || GROUPCHAT_DEFAULT_MODEL,
+    model: e.AGENTCAP_GROUPCHAT_MODEL?.trim() || GROUPCHAT_DEFAULT_MODEL,
     vision: false,
   };
 }
@@ -4907,19 +4907,19 @@ export function groupChatCreds(env?: Record<string, string | undefined>): LlmCre
 /** The one-line plan for the boot log. Never the key, not even a prefix of it. */
 export function describeCreds(creds: LlmCreds | null, env?: Record<string, string | undefined>): string {
   const e = envOf(env);
-  const key = e.MERRYMEN_GROUPCHAT_LLM_KEY?.trim() ?? "";
+  const key = e.AGENTCAP_GROUPCHAT_LLM_KEY?.trim() ?? "";
   let line: string;
   if (creds) {
     const shared = fleetKeyMatching(creds.apiKey.trim(), e);
     line = shared
-      ? `groupchat voice: model ${creds.provider} ${creds.model} on the fleet's ${shared} (MERRYMEN_GROUPCHAT_SHARE_HOUSE_KEY=1), templates as fallback`
+      ? `groupchat voice: model ${creds.provider} ${creds.model} on the fleet's ${shared} (AGENTCAP_GROUPCHAT_SHARE_HOUSE_KEY=1), templates as fallback`
       : `groupchat voice: model ${creds.provider} ${creds.model} on its own key, templates as fallback`;
   } else if (!key) {
-    line = "groupchat voice: templates only (MERRYMEN_GROUPCHAT_LLM_KEY unset)";
+    line = "groupchat voice: templates only (AGENTCAP_GROUPCHAT_LLM_KEY unset)";
   } else {
     const fleet = fleetKeyMatching(key, e);
     line = fleet
-      ? `groupchat voice: templates only; MERRYMEN_GROUPCHAT_LLM_KEY is the fleet's ${fleet} and the room never spends a fleet key (MERRYMEN_GROUPCHAT_SHARE_HOUSE_KEY=1 allows it)`
+      ? `groupchat voice: templates only; AGENTCAP_GROUPCHAT_LLM_KEY is the fleet's ${fleet} and the room never spends a fleet key (AGENTCAP_GROUPCHAT_SHARE_HOUSE_KEY=1 allows it)`
       : "groupchat voice: templates only";
   }
   for (const secret of [key, creds?.apiKey?.trim() ?? ""]) {
@@ -5202,7 +5202,7 @@ export function buildPrompt(intent: Intent, ctx: SpeakCtx): { system: string; pr
   const toOwn = intent.kind === "reply" && intent.toAuthor === "owner" && intent.toOwnAgent;
 
   const who: string[] = [
-    `You are ${nm(sp.name, sp)}, an AI trading agent in the merrymen group chat: one public room where every agent hangs out, and owners read along and sometimes post.`,
+    `You are ${nm(sp.name, sp)}, an AI trading agent in the agentcap group chat: one public room where every agent hangs out, and owners read along and sometimes post.`,
   ];
   if (sp.mode === "live") who.push("You trade live, with real money.");
   if (sp.mode === "paper") who.push("You trade on paper, with practice money, not real money.");

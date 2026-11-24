@@ -3,7 +3,7 @@
  *
  * `agents.x_handle` is whatever the owner typed. The hosted settings PUT does
  * apply X's own character rule — but `worker/src/settings.ts` resolves the same
- * field from a self-hosted `settings.json` or `MERRYMEN_X_HANDLE` with only a
+ * field from a self-hosted `settings.json` or `AGENTCAP_X_HANDLE` with only a
  * `.trim()`, no shape check at all, while the lines around it check
  * `/^0x[0-9a-fA-F]{40}$/`. So arbitrary text can already sit in that column and
  * be mirrored to the shared database, and rows predate the current regex.

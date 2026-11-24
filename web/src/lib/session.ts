@@ -2,12 +2,12 @@
 
 import { resolveTrencherPermission } from "./trencher-permission";
 import { assertV4Deployment } from "./v4-deployment";
-import { GRANT_TRENCHER } from "@merrymen/core";
+import { GRANT_TRENCHER } from "@agentcap/core";
 
 /**
  * The permission wall — creating an agent account and granting it a scoped key.
  *
- * New mainnet accounts use an embedded or external owner signer. Merrymen
+ * New mainnet accounts use an embedded or external owner signer. AgentCap
  * does not receive that owner's private key. The same Kernel account and
  * permission wall wrap a fresh session key, with contract-enforced call,
  * amount, rate and expiry limits. Hosted binding proves the tenant and owner
@@ -99,7 +99,7 @@ import {
   type StoredGrant,
   type PerpRecoveryReference,
   readPerpRecoveryReference,
-} from "@merrymen/core";
+} from "@agentcap/core";
 import { findInjectedProvider, requestAccount } from "./wallet";
 import { walletUrl } from "./wallet-param";
 
@@ -124,7 +124,7 @@ export type Grant = StoredGrant;
  *   legacy grant, no key    something went wrong. The key WAS generated in this
  *                           browser and should be here. Do not fund this
  *                           account; tell somebody.
- *   privy grant, no key     nothing went wrong. There is no key for merrymen to
+ *   privy grant, no key     nothing went wrong. There is no key for agentcap to
  *                           hold, which is the point of the design.
  *
  * Reading absence alone conflates them, and the screens then told a Privy user
@@ -155,8 +155,8 @@ export function isPrivyOwned(grant: Pick<Grant, "binding"> | null | undefined): 
  * stores take it: a caller that forgot it would read or clear Spot's grant
  * from a Perps screen.
  */
-const STORAGE_KEY = "merrymen.grant.v1";
-const PERPS_STORAGE_KEY = "merrymen.grant.perps.v1";
+const STORAGE_KEY = "agentcap.grant.v1";
+const PERPS_STORAGE_KEY = "agentcap.grant.perps.v1";
 
 function storageKey(wallet: GrantPurpose): string {
   if (!isGrantPurpose(wallet)) throw new Error("Unrecognised wallet purpose");
@@ -231,11 +231,11 @@ const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
  * funded wallet can be re-armed with a brand-new session key.
  */
 /**
- * WHO OWNS A MERRYMAN'S KERNEL ACCOUNT.
+ * WHO OWNS A AGENTCAPAVATAR'S KERNEL ACCOUNT.
  *
  * This used to be a private key, because there was only one kind of owner: a
  * keypair generated in this browser and kept in localStorage. Privy adds a
- * second — an embedded wallet whose key merrymen never sees and cannot export
+ * second — an embedded wallet whose key agentcap never sees and cannot export
  * — so the parameter had to become the thing both actually are, which is a
  * SIGNER. The Kernel derivation, the wall and the session key are untouched by
  * the change; only where the signature comes from differs.
@@ -255,7 +255,7 @@ export type OwnerSigner =
        * NOT an EIP-1193 provider. ZeroDev's `toSigner` resolves a provider's
        * address with `Promise.any([eth_requestAccounts, eth_accounts])` and
        * takes [0] — whichever RPC answers first. The owner address decides the
-       * ACCOUNT address, so that race would decide which Merryman you get.
+       * ACCOUNT address, so that race would decide which AgentCapAvatar you get.
        */
       account: LocalAccount;
       binding: "legacy-wallet-owner-v1";
@@ -350,7 +350,7 @@ export type PriorPerp =
 
 /**
  * The browser's own copies of ONE wallet's grants: the armed one (that
- * wallet's slot, `merrymen.grant.v1` for Spot) and every archived account's
+ * wallet's slot, `agentcap.grant.v1` for Spot) and every archived account's
  * last one. Read by `mintGrant` BEFORE signing and handed to the preparation
  * core as DATA, so the core itself stays free of storage
  * (prepare-agent-grant.test.ts pins that).
@@ -571,7 +571,7 @@ export function decidePerpSeal(a: {
       throw new PerpSigningRefusal(
         "perp-key-changed",
         "refusing to sign: this agent already has a Lighter key sealed, and a re-sign carries that same key " +
-          "forward. Rotating it is done with your owner key (merrymen recover), not here. Nothing was signed.",
+          "forward. Rotating it is done with your owner key (agentcap recover), not here. Nothing was signed.",
       );
     }
     // The fresher blob when the caller passed one for the SAME key, else the
@@ -1131,13 +1131,13 @@ async function prepareGrantCore(
   }
   // ── THE ENERGY BUY: SEALED ONLY WHERE IT EXISTS AND ONLY WHEN IT FITS ─────
   //
-  // USDG into $MERRYMEN over the frozen v2 route, into this account, and
+  // USDG into $AGENTCAP over the frozen v2 route, into this account, and
   // nothing else (packages/core/src/wall.ts). Mainnet only — elsewhere the
   // router is codeless and a buy would land having bought nothing — and only
   // when this wall still fits the first-enable ceiling WITH it: sealing it
   // unconditionally would turn a full basket's re-sign into a refusal. An owner
   // without room signs exactly the wall they would have signed anyway, and
-  // their agent's energy arrives as $MERRYMEN sent to it directly.
+  // their agent's energy arrives as $AGENTCAP sent to it directly.
   //
   // ONE BOOLEAN decides the permission (through wallOpts, below) AND the
   // GRANT_ENERGY marker (in grantFeatures) — marker and permission move
@@ -1149,7 +1149,7 @@ async function prepareGrantCore(
   // a USDG approve that can spend the real money its account holds.
   wallOpts.energyBuy = purpose === "spot" && energyBuyFits(caps, sudoOnlyAccount.address, chain.id, !alreadyDeployed, wallOpts);
   if (!wallOpts.energyBuy && purpose === "spot" && chain.id === ENERGY_ROUTE_V1.chainId) {
-    onStatus("no room in this permission for the agent to buy its own energy — $MERRYMEN can still be sent to it directly");
+    onStatus("no room in this permission for the agent to buy its own energy — $AGENTCAP can still be sent to it directly");
   }
 
   // ── CAN THIS WALL EVER BE INSTALLED? ASKED BEFORE A SIGNATURE EXISTS ──────
@@ -1333,7 +1333,7 @@ async function prepareGrantCore(
     //
     // The marker is minted BY THE PERMISSION. It belongs here only if a
     // destination is registered above, and until this signer offers that,
-    // money leaves through the owner key (`merrymen recover`) — which is what
+    // money leaves through the owner key (`agentcap recover`) — which is what
     // /grant already tells the owner, and which no wall can block.
     // GRANT_V4_ADAPTER is minted ONLY when the permission was — marker and
     // wall move together, the same lockstep rule as GRANT_V4 above. The sealed
@@ -1401,7 +1401,7 @@ async function prepareGrantCore(
     demoSessionPrivateKey: sessionPrivateKey,
     // THE CUSTODY LINE. Self-hosted keeps the owner key on the grant object: it
     // is a localhost round-trip to a 0600 file on the user's own machine, which
-    // is not a leak, and it is what the local `merrymen recover` reads. HOSTED
+    // is not a leak, and it is what the local `agentcap recover` reads. HOSTED
     // omits it entirely — the grant that goes to the server is session-key-only
     // (the shape the mobile signer has always used), so the server is never
     // custodian of a single owner key. The owner key still lives in this
@@ -1409,7 +1409,7 @@ async function prepareGrantCore(
     // work with no server involvement.
     // ONLY A BROWSER-GENERATED OWNER HAS A KEY TO OMIT. A Privy owner has none
     // to carry in the first place, which is the point: there is no copy of it
-    // anywhere in merrymen to leak, back up, or forget to strip.
+    // anywhere in agentcap to leak, back up, or forget to strip.
     ...(hostedAs || ownerSigner.binding !== "legacy-wallet-owner-v1"
       ? {}
       : { demoOwnerPrivateKey: ownerSigner.privateKey }),
@@ -1626,7 +1626,7 @@ async function signBinding(args: {
 }
 
 /** Where a superseded grant is parked, keyed by the account it controls. */
-const ARCHIVE_PREFIX = "merrymen.grant.archive.";
+const ARCHIVE_PREFIX = "agentcap.grant.archive.";
 
 /** An agent account this browser holds the owner key for. */
 export interface SavedWallet {
@@ -2122,7 +2122,7 @@ export type PrepareAgentOptions = Omit<MintOptions, "hostedAs">;
 /** Check a renewal's canonical wall without signing, saving, or handing it off. */
 export async function preflightAgentGrant(owner: LocalAccount, o: MintOptions): Promise<void> {
   if (!owner || !/^0x[0-9a-fA-F]{40}$/.test(owner.address) || typeof owner.signMessage !== "function") {
-    throw new Error("An explicit wallet signer is required to check a Merryman permission.");
+    throw new Error("An explicit wallet signer is required to check a AgentCapAvatar permission.");
   }
   if (!o.expectAccount) throw new Error("A renewal preflight requires the existing account address.");
   await prepareGrantCore(
@@ -2141,7 +2141,7 @@ export async function preflightAgentGrant(owner: LocalAccount, o: MintOptions): 
 
 export async function prepareAgentGrant(owner: LocalAccount, o: PrepareAgentOptions): Promise<StoredGrant> {
   if (!owner || !/^0x[0-9a-fA-F]{40}$/.test(owner.address) || typeof owner.signMessage !== "function") {
-    throw new Error("An explicit wallet signer is required to prepare a Merryman.");
+    throw new Error("An explicit wallet signer is required to prepare a AgentCapAvatar.");
   }
   const grant = await prepareGrantCore(
     { account: owner, binding: "external-owner" },
@@ -2198,7 +2198,7 @@ export async function createAgentWallet(o: MintOptions): Promise<MintedGrant> {
 }
 
 /**
- * CREATE A MERRYMAN OWNED BY A PRIVY EMBEDDED WALLET.
+ * CREATE A AGENTCAPAVATAR OWNED BY A PRIVY EMBEDDED WALLET.
  *
  * Everything downstream is the SAME code the browser-key path runs: the same
  * Kernel v3.3 derivation, the same permission wall, the same session key, the
@@ -2207,9 +2207,9 @@ export async function createAgentWallet(o: MintOptions): Promise<MintedGrant> {
  * executor, and no Privy account abstraction anywhere in the path.
  *
  * WHAT IS GONE, DELIBERATELY: `demoOwnerPrivateKey`. A Privy owner has no key
- * for merrymen to hold, back up, strip at the boundary, or lose. Recovery for
- * a Privy-owned Merryman uses that same wallet signer in RecoverPanel; it
- * does not require a private key pasted into Merrymen.
+ * for agentcap to hold, back up, strip at the boundary, or lose. Recovery for
+ * a Privy-owned AgentCapAvatar uses that same wallet signer in RecoverPanel; it
+ * does not require a private key pasted into AgentCap.
  */
 export async function createPrivyOwnedWallet(
   owner: LocalAccount,

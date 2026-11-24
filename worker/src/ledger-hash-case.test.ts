@@ -23,8 +23,8 @@ import { DatabaseSync } from "node:sqlite";
 
 // Before any store import can open a ledger: node's --test runs each file in
 // its own process, so the override never leaks.
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-hash-case-"));
-process.env.MERRYMEN_HOME = HOME;
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-hash-case-"));
+process.env.AGENTCAP_HOME = HOME;
 
 const {
   addFlow,

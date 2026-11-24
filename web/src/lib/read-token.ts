@@ -25,8 +25,8 @@
 import { cache } from "react";
 import { withReadDb } from "@/lib/ledger";
 import { basisUsdg } from "@/lib/basis-usdg";
-import { getIdentityStore } from "@merrymen/identity-store";
-import { getSettingsStore } from "@merrymen/settings-store";
+import { getIdentityStore } from "@agentcap/identity-store";
+import { getSettingsStore } from "@agentcap/settings-store";
 
 export interface TokenHolder {
   slug: string | null;

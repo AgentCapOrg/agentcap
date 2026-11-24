@@ -1,5 +1,5 @@
 import React from "react";
-import { grantHasV4, grantV4Adapter, type StoredGrant } from "@merrymen/core";
+import { grantHasV4, grantV4Adapter, type StoredGrant } from "@agentcap/core";
 
 type V4Grant = Pick<StoredGrant, "grantFeatures" | "v4AdapterAddress">;
 

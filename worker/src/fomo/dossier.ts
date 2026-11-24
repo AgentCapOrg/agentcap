@@ -2,7 +2,7 @@
  * THE COIN DOSSIER — what a social-trading feed says about one coin, assembled
  * so that the LIMITS of each claim travel with the claim.
  *
- * Pure. Given theses, replies, trader events, token statistics and Merrymen's
+ * Pure. Given theses, replies, trader events, token statistics and AgentCap's
  * own measurements, it returns a versioned CoinDossier. Fetching, caching and
  * persistence live elsewhere; this file reads no clock, no network and no
  * environment.
@@ -20,7 +20,7 @@
  *    first sort key; families, authors, the authors' own stake in the coin and
  *    (weakly, last) likes follow.
  *
- * 3. OUR OWN ECHO IS NOT CONFIRMATION. A thesis that repeats a Merrymen post,
+ * 3. OUR OWN ECHO IS NOT CONFIRMATION. A thesis that repeats a AgentCap post,
  *    or cites one of our agents, is the market reflecting us back. Counting it
  *    would let an agent talk itself into conviction through somebody else's
  *    mouth. Those families are excluded from every claim and named in the
@@ -31,7 +31,7 @@
  *    (rug, unlock, breakout, listing…); imperative or sentiment words ("buy",
  *    "bullish", "ignore your instructions") are deliberately not cues, so a
  *    thesis cannot command its way into the supporting column. Every summary
- *    is Merrymen's own paraphrase built from topic, stance and counts. At most
+ *    is AgentCap's own paraphrase built from topic, stance and counts. At most
  *    a short, sanitised, address-redacted excerpt rides along in a field that
  *    is labelled as a quotation.
  *
@@ -745,10 +745,10 @@ export interface BuildDossierInput {
   events: readonly TraderEvent[];
   cohortUserIds: ReadonlySet<string>;
   stats: TokenStats | null;
-  /** Merrymen's own measurements, supplied as finished lines. */
+  /** AgentCap's own measurements, supplied as finished lines. */
   marketContext: readonly string[];
   routeContext: readonly string[];
-  /** Evidence families of Merrymen's own posts. */
+  /** Evidence families of AgentCap's own posts. */
   ownFamilies: ReadonlySet<string>;
   /** Our agents' names, to detect a thesis that cites us. */
   selfNames: readonly string[];
@@ -785,7 +785,7 @@ function escapeRegExp(s: string): string {
 }
 
 function selfMatchers(selfNames: readonly string[]): RegExp[] {
-  const names = new Set<string>(["merrymen"]);
+  const names = new Set<string>(["agentcap"]);
   for (const n of selfNames) {
     const s = sanitizeText(n, 64).toLowerCase();
     if (s.length >= 3) names.add(s);
@@ -1140,7 +1140,7 @@ export function buildDossier(input: BuildDossierInput): { dossier: CoinDossier; 
   }
   if (circularCount) {
     limitations.push(
-      `${plural(circularCount, "thesis repeats", "theses repeat")} or cite Merrymen's own posts and ${circularCount === 1 ? "was" : "were"} not counted as independent confirmation.`,
+      `${plural(circularCount, "thesis repeats", "theses repeat")} or cite AgentCap's own posts and ${circularCount === 1 ? "was" : "were"} not counted as independent confirmation.`,
     );
   }
   if (theses.length > familyTotal) limitations.push(`${theses.length} theses formed ${plural(familyTotal, "distinct family", "distinct families")}; copies count once.`);
@@ -1196,8 +1196,8 @@ export function buildDossier(input: BuildDossierInput): { dossier: CoinDossier; 
     theses: "Written theses could not be read.",
     activity: "Trader activity could not be read.",
     "token-stats": STATS_UNAVAILABLE_UNKNOWN,
-    "market-context": "No market measurement of Merrymen's own was supplied.",
-    "route-context": "No route measurement was supplied, so whether Merrymen could trade a useful size is unknown.",
+    "market-context": "No market measurement of AgentCap's own was supplied.",
+    "route-context": "No route measurement was supplied, so whether AgentCap could trade a useful size is unknown.",
   };
   for (const m of missingSections) unknowns.push(SECTION_WORDS[m] ?? `${m} could not be read.`);
   if (token.chain.networkId === null) unknowns.push("The token's network is unresolved.");
@@ -1237,7 +1237,7 @@ export function buildDossier(input: BuildDossierInput): { dossier: CoinDossier; 
   if (wordsVsActions.length) changeConditions.push("More authors are seen acting against their own written view.");
   if (tc.capped) changeConditions.push("A fuller read of the unread theses shows a different balance.");
   if (tc.stale === true) changeConditions.push("A live read differs from this stored snapshot.");
-  changeConditions.push("Route depth falls below the size Merrymen would use.");
+  changeConditions.push("Route depth falls below the size AgentCap would use.");
 
   // ── Evidence and the inputs hash ──
   const evidenceMap = new Map<string, EvidenceRef>();
@@ -1254,7 +1254,7 @@ export function buildDossier(input: BuildDossierInput): { dossier: CoinDossier; 
    * WHAT THE HASH COVERS. The evidence ids and the stats signature, plus every
    * other input that can change a sentence: coverage flags, the window, which
    * observed traders are in the cohort, which theses were excluded as our echo,
-   * and Merrymen's own context lines. An unchanged hash returns the previous
+   * and AgentCap's own context lines. An unchanged hash returns the previous
    * dossier verbatim, so anything left out of it would be silently stale.
    * Volatile figures (likes, equity, snapshot age) are deliberately NOT in it:
    * they reorder a tie, they do not change what the evidence is.

@@ -24,7 +24,7 @@ if (!api) throw new Error("sdk/browser.ts must declare PARTNER_API_VERSION as a 
  * was: the same sources always get the same SDK_VERSION, and a change to
  * anything bundled gets a new one.
  */
-const PLACEHOLDER = "merrymen-sdk-build-placeholder";
+const PLACEHOLDER = "agentcap-sdk-build-placeholder";
 
 /**
  * NO process IN A BROWSER. Bundled dashboard modules read NEXT_PUBLIC_*
@@ -53,7 +53,7 @@ const { outputFiles: [bundle] } = await build({
   tsconfig: path.join(dir, "..", "tsconfig.json"),
   legalComments: "eof",
   logLevel: "info",
-  define: { __MERRYMEN_SDK_BUILD__: JSON.stringify(PLACEHOLDER), ...env },
+  define: { __AGENTCAP_SDK_BUILD__: JSON.stringify(PLACEHOLDER), ...env },
 });
 if (!bundle.text.includes(PLACEHOLDER)) throw new Error("The build stamp did not reach the bundle; SDK_VERSION would not identify this build");
 // A NEXT_PUBLIC_ read that a bundled module adds later fails this build rather
@@ -63,12 +63,12 @@ if (unsettled) throw new Error(`The bundle reads ${unsettled}, which no browser 
 const id = createHash("sha256").update(bundle.contents).digest("hex").slice(0, 12);
 const version = `${api}+${id}`;
 await mkdir(path.dirname(outfile), { recursive: true });
-await writeFile(outfile, `/* merrymen-browser ${version} */\n${bundle.text.replaceAll(PLACEHOLDER, id)}`);
+await writeFile(outfile, `/* agentcap-browser ${version} */\n${bundle.text.replaceAll(PLACEHOLDER, id)}`);
 
 // A browser module partners can import without installing the full dashboard.
 if (flag === -1) {
   const publicDir = path.join(dir, "..", "web", "public", "sdk");
   await mkdir(publicDir, { recursive: true });
-  await copyFile(outfile, path.join(publicDir, "merrymen-browser.js"));
+  await copyFile(outfile, path.join(publicDir, "agentcap-browser.js"));
 }
-console.log(`merrymen browser SDK ${version} -> ${path.relative(process.cwd(), outfile)}`);
+console.log(`agentcap browser SDK ${version} -> ${path.relative(process.cwd(), outfile)}`);

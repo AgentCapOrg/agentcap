@@ -85,7 +85,7 @@ const statusOf = (id: number) => (w.raw.prepare("SELECT status FROM xpost_posts 
 
 describe("who may call it", () => {
   it("is 404 for every verb on a self-hosted install", async () => {
-    process.env.MERRYMEN_HOSTED = "0";
+    process.env.AGENTCAP_HOSTED = "0";
     assert.equal((await get(OWNER_A)).status, 404);
     assert.equal((await post(OWNER_A, { action: "disable", owner: OWNER_A })).status, 404);
     assert.equal((await del(OWNER_A, { owner: OWNER_A })).status, 404);
@@ -216,7 +216,7 @@ describe("GET", () => {
 
   it("says unavailable when the X app is not configured, and still shows what is connected", async () => {
     await connect(OWNER_A);
-    delete w.env.MERRYMEN_X_CLIENT_ID;
+    delete w.env.AGENTCAP_X_CLIENT_ID;
     const body = await read<XAccountBody>(await get(OWNER_A));
     assert.equal(body.available, false);
     assert.equal(body.connected, true);
@@ -294,7 +294,7 @@ describe("enable — the warning's confirm", () => {
     await connect(OWNER_A);
     assert.equal((await post(OWNER_A, { action: "enable", xUserId: 1234567890, owner: OWNER_A })).status, 400);
     assert.equal((await post(OWNER_A, { action: "enable", xUserId: "12a", owner: OWNER_A })).status, 400);
-    delete w.env.MERRYMEN_X_CLIENT_SECRET;
+    delete w.env.AGENTCAP_X_CLIENT_SECRET;
     assert.equal((await post(OWNER_A, { action: "enable", xUserId: X_USER.id, owner: OWNER_A })).status, 503);
     assert.equal((await getAccount(w.db, OWNER_A))?.posting, false);
   });
@@ -305,7 +305,7 @@ describe("disable", () => {
     await connect(OWNER_A);
     await post(OWNER_A, { action: "enable", xUserId: X_USER.id, owner: OWNER_A });
     const waiting = await draft(OWNER_A);
-    delete w.env.MERRYMEN_X_CLIENT_ID;
+    delete w.env.AGENTCAP_X_CLIENT_ID;
     const res = await post(OWNER_A, { action: "disable", owner: OWNER_A });
     assert.deepEqual(await read(res), { ok: true, postingEnabled: false });
     assert.equal((await getAccount(w.db, OWNER_A))?.posting, false);
@@ -373,7 +373,7 @@ describe("prefs — what it posts", () => {
 
   it("works without the X app, like the off switch", async () => {
     await connect(OWNER_A);
-    delete w.env.MERRYMEN_X_CLIENT_ID;
+    delete w.env.AGENTCAP_X_CLIENT_ID;
     assert.equal((await post(OWNER_A, { action: "prefs", owner: OWNER_A, buys: false })).status, 200);
   });
 
@@ -411,7 +411,7 @@ describe("comment reply consent", () => {
     assert.equal((await read<XAccountBody>(await get(OWNER_A))).replyEnabled, false);
     assert.equal((await read(await reply(true), 503)).error, X_COPY.repliesUnavailable);
     assert.equal(await repliesEnabledFor(w.db, OWNER_A, X_USER.id), false);
-    w.env.MERRYMEN_XPOST_REPLIES_APPROVED = "1";
+    w.env.AGENTCAP_XPOST_REPLIES_APPROVED = "1";
     await post(OWNER_A, { action: "disable", owner: OWNER_A });
     assert.equal((await read(await reply(true), 409)).error, X_COPY.repliesNeedPosting);
     assert.equal((await read<XAccountBody>(await get(OWNER_A))).repliesAvailable, true);
@@ -420,7 +420,7 @@ describe("comment reply consent", () => {
   it("binds the confirmation to both the signed-in owner and immutable X account", async () => {
     await connect(OWNER_A);
     await postingOn();
-    w.env.MERRYMEN_XPOST_REPLIES_APPROVED = "1";
+    w.env.AGENTCAP_XPOST_REPLIES_APPROVED = "1";
     assert.equal((await reply(true, X_USER.id, OWNER_B)).status, 409);
     assert.equal((await reply(true, "999")).status, 409);
     assert.equal((await post(null, { action: "enable-replies", xUserId: X_USER.id, owner: OWNER_A })).status, 401);
@@ -437,29 +437,29 @@ describe("comment reply consent", () => {
   it("turns replies off without the gate or app and cancels only waiting replies", async () => {
     await connect(OWNER_A);
     await postingOn();
-    w.env.MERRYMEN_XPOST_REPLIES_APPROVED = "1";
+    w.env.AGENTCAP_XPOST_REPLIES_APPROVED = "1";
     await reply(true);
     const waiting = await replyDraft();
     const ordinary = await draft(OWNER_A);
-    delete w.env.MERRYMEN_XPOST_REPLIES_APPROVED;
-    delete w.env.MERRYMEN_X_CLIENT_ID;
+    delete w.env.AGENTCAP_XPOST_REPLIES_APPROVED;
+    delete w.env.AGENTCAP_X_CLIENT_ID;
     assert.deepEqual(await read(await reply(false)), { ok: true, replyEnabled: false });
     assert.equal(await repliesEnabledFor(w.db, OWNER_A, X_USER.id), false);
     assert.equal(statusOf(waiting), "cancelled");
     assert.equal(statusOf(ordinary), "scheduled");
   });
 
-  it("scope active: only the owners MERRYMEN_XPOST_ACTIVE_TENANTS names may turn replies on", async () => {
+  it("scope active: only the owners AGENTCAP_XPOST_ACTIVE_TENANTS names may turn replies on", async () => {
     await connect(OWNER_A);
     await postingOn();
-    w.env.MERRYMEN_XPOST_REPLIES_APPROVED = "active";
+    w.env.AGENTCAP_XPOST_REPLIES_APPROVED = "active";
     assert.equal((await read<XAccountBody>(await get(OWNER_A))).repliesAvailable, false, "not named, not available");
     assert.equal((await read(await reply(true), 503)).error, X_COPY.repliesUnavailable);
     assert.equal(await repliesEnabledFor(w.db, OWNER_A, X_USER.id), false);
-    w.env.MERRYMEN_XPOST_ACTIVE_TENANTS = OWNER_B;
+    w.env.AGENTCAP_XPOST_ACTIVE_TENANTS = OWNER_B;
     assert.equal((await read<XAccountBody>(await get(OWNER_A))).repliesAvailable, false, "another owner named is not this one");
     assert.equal((await read<XAccountBody>(await get(OWNER_B))).repliesAvailable, true);
-    w.env.MERRYMEN_XPOST_ACTIVE_TENANTS = `${OWNER_B},${OWNER_A}`;
+    w.env.AGENTCAP_XPOST_ACTIVE_TENANTS = `${OWNER_B},${OWNER_A}`;
     const body = await read<XAccountBody>(await get(OWNER_A));
     assert.equal(body.repliesAvailable, true);
     assert.equal(body.repliesActive, true, "and its warning says it answers tags");
@@ -469,11 +469,11 @@ describe("comment reply consent", () => {
   it("any other value of the gate is off for everyone, and turning replies off still works", async () => {
     await connect(OWNER_A);
     await postingOn();
-    w.env.MERRYMEN_XPOST_REPLIES_APPROVED = "1";
+    w.env.AGENTCAP_XPOST_REPLIES_APPROVED = "1";
     await reply(true);
-    w.env.MERRYMEN_XPOST_ACTIVE_TENANTS = OWNER_A;
+    w.env.AGENTCAP_XPOST_ACTIVE_TENANTS = OWNER_A;
     for (const value of ["yes", "Active", " 1 "]) {
-      w.env.MERRYMEN_XPOST_REPLIES_APPROVED = value;
+      w.env.AGENTCAP_XPOST_REPLIES_APPROVED = value;
       assert.equal((await read<XAccountBody>(await get(OWNER_A))).repliesAvailable, false, value);
       assert.equal((await read(await reply(true), 503)).error, X_COPY.repliesUnavailable, value);
     }
@@ -483,19 +483,19 @@ describe("comment reply consent", () => {
   it("says when the operator made this owner's agent active, read by address the way the orchestrator reads it", async () => {
     await connect(OWNER_A);
     await postingOn();
-    w.env.MERRYMEN_XPOST_REPLIES_APPROVED = "1";
+    w.env.AGENTCAP_XPOST_REPLIES_APPROVED = "1";
     assert.equal((await read<XAccountBody>(await get(OWNER_A))).repliesActive, false, "unset is nobody");
-    w.env.MERRYMEN_XPOST_ACTIVE_TENANTS = ` alan , ${OWNER_A.toUpperCase().replace("0X", "0x")} `;
+    w.env.AGENTCAP_XPOST_ACTIVE_TENANTS = ` alan , ${OWNER_A.toUpperCase().replace("0X", "0x")} `;
     assert.equal((await read<XAccountBody>(await get(OWNER_A))).repliesActive, true);
     assert.equal((await read<XAccountBody>(await get(OWNER_B))).repliesActive, false, "only the owners it names");
-    w.env.MERRYMEN_XPOST_ACTIVE_TENANTS = "alan";
+    w.env.AGENTCAP_XPOST_ACTIVE_TENANTS = "alan";
     assert.equal((await read<XAccountBody>(await get(OWNER_A))).repliesActive, false, "a name is not an identity");
   });
 
   it("returns validated comment context for upcoming and posted replies", async () => {
     await connect(OWNER_A);
     await postingOn();
-    w.env.MERRYMEN_XPOST_REPLIES_APPROVED = "1";
+    w.env.AGENTCAP_XPOST_REPLIES_APPROVED = "1";
     await reply(true);
     const id = await replyDraft();
     let body = await read<XAccountBody>(await get(OWNER_A));
@@ -572,7 +572,7 @@ describe("DELETE — disconnect", () => {
 
   it("still forgets the connection when the X app is gone, without trying to revoke", async () => {
     await connect(OWNER_A);
-    delete w.env.MERRYMEN_X_CLIENT_ID;
+    delete w.env.AGENTCAP_X_CLIENT_ID;
     assert.deepEqual(await read(await del(OWNER_A, { owner: OWNER_A })), { ok: true });
     assert.equal(await getAccount(w.db, OWNER_A), null);
     assert.equal(w.x.calls.length, 0);
@@ -583,7 +583,7 @@ describe("DELETE — disconnect", () => {
     await connect(OWNER_A);
     await post(OWNER_A, { action: "enable", xUserId: X_USER.id, owner: OWNER_A });
     const waiting = await draft(OWNER_A);
-    delete process.env.MERRYMEN_STORE_DEK;
+    delete process.env.AGENTCAP_STORE_DEK;
     assert.deepEqual(await read(await del(OWNER_A, { owner: OWNER_A })), { ok: true });
     assert.equal(await getAccount(w.db, OWNER_A), null);
     assert.equal(statusOf(waiting), "cancelled");

@@ -52,13 +52,13 @@
  * owner's entire balance sheet — is not in the SELECT at all: absent, rather
  * than filtered.
  */
-import { DERIVED_ID, basisJoin, basisScope, fillFigures, markFigures, publicationNarrowing } from "@merrymen/thesis";
+import { DERIVED_ID, basisJoin, basisScope, fillFigures, markFigures, publicationNarrowing } from "@agentcap/thesis";
 import { withReadDb } from "@/lib/ledger";
 import { postIdOf } from "@/lib/post-id";
 import { PUBLISHABLE_SOURCES, publishableThesis, type PublicThesis, type ThesisRow } from "@/lib/thesis";
 import { readPerpsWallets } from "../../../worker/src/perps-wallets";
-import { getIdentityStore } from "@merrymen/identity-store";
-import { getSettingsStore } from "@merrymen/settings-store";
+import { getIdentityStore } from "@agentcap/identity-store";
+import { getSettingsStore } from "@agentcap/settings-store";
 
 /** How far back a post can be and still be news. */
 export const WINDOW_SEC = 24 * 3600;
@@ -140,7 +140,7 @@ const SOURCES: readonly string[] = PUBLISHABLE_SOURCES;
  * count and a prompt would be a rule somebody had to keep obeying.
  *
  * Instead it is attached HERE, after the gate, by a module the worker cannot
- * import (`imports.test.ts` forbids `@merrymen/*` under `worker/src`, and
+ * import (`imports.test.ts` forbids `@agentcap/*` under `worker/src`, and
  * `web/src` is not aliased inward at all). The peer path produces no post id at
  * all, so an object that reaches a prompt physically cannot carry a like.
  */

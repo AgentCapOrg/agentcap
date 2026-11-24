@@ -57,7 +57,7 @@ export interface ProPacing {
  * the previous behaviour for it.
  */
 export function proPacingSet(env: Readonly<Record<string, string | undefined>> = process.env): boolean {
-  return [env.MERRYMEN_COINGECKO_PRO_SPACING_MS, env.MERRYMEN_COINGECKO_MONTHLY_CREDITS].some((v) => typeof v === "string" && v.trim() !== "");
+  return [env.AGENTCAP_COINGECKO_PRO_SPACING_MS, env.AGENTCAP_COINGECKO_MONTHLY_CREDITS].some((v) => typeof v === "string" && v.trim() !== "");
 }
 
 /** A positive whole number, allowing `_` and `,` as digit separators. Null otherwise. */
@@ -87,20 +87,20 @@ export function proPacing(
   lane: ProLane = "fleet",
 ): ProPacing {
   const notes: string[] = [];
-  const asked = wholeNumber(env.MERRYMEN_COINGECKO_PRO_SPACING_MS);
-  const credits = wholeNumber(env.MERRYMEN_COINGECKO_MONTHLY_CREDITS);
+  const asked = wholeNumber(env.AGENTCAP_COINGECKO_PRO_SPACING_MS);
+  const credits = wholeNumber(env.AGENTCAP_COINGECKO_MONTHLY_CREDITS);
   let spacingMs = PRO_DEFAULT_SPACING_MS;
   if (asked === null) {
-    notes.push(`MERRYMEN_COINGECKO_PRO_SPACING_MS is unreadable (want a whole number of milliseconds); keeping ${PRO_DEFAULT_SPACING_MS} ms`);
+    notes.push(`AGENTCAP_COINGECKO_PRO_SPACING_MS is unreadable (want a whole number of milliseconds); keeping ${PRO_DEFAULT_SPACING_MS} ms`);
   } else if (asked !== undefined) {
     spacingMs = asked;
   }
   if (spacingMs < PRO_MIN_SPACING_MS) {
-    notes.push(`MERRYMEN_COINGECKO_PRO_SPACING_MS ${spacingMs} ms is faster than the plan's 1,000/min; using ${PRO_MIN_SPACING_MS} ms`);
+    notes.push(`AGENTCAP_COINGECKO_PRO_SPACING_MS ${spacingMs} ms is faster than the plan's 1,000/min; using ${PRO_MIN_SPACING_MS} ms`);
     spacingMs = PRO_MIN_SPACING_MS;
   }
   if (credits === null) {
-    notes.push("MERRYMEN_COINGECKO_MONTHLY_CREDITS is unreadable (want a whole number of credits); no monthly ceiling applied");
+    notes.push("AGENTCAP_COINGECKO_MONTHLY_CREDITS is unreadable (want a whole number of credits); no monthly ceiling applied");
   }
   const share = PRO_LANE_SHARE[lane];
   const floor = typeof credits === "number" ? Math.max(PRO_MIN_SPACING_MS, creditFloorMs(credits, share)) : null;
@@ -109,7 +109,7 @@ export function proPacing(
     spacingMs = floor;
   }
   if (floor === null && spacingMs < PRO_DEFAULT_SPACING_MS) {
-    notes.push(`coingecko-pro ${lane} lane: ${spacingMs} ms with no MERRYMEN_COINGECKO_MONTHLY_CREDITS set — nothing bounds the month's spend`);
+    notes.push(`coingecko-pro ${lane} lane: ${spacingMs} ms with no AGENTCAP_COINGECKO_MONTHLY_CREDITS set — nothing bounds the month's spend`);
   }
   if (typeof asked === "number" || typeof credits === "number") {
     const perMonth = Math.floor(CREDIT_MONTH_MS / spacingMs);

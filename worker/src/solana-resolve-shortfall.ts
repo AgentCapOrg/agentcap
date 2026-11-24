@@ -4,7 +4,7 @@
  * A vault that holds less USDG or WSOL than its book holds the account's trades
  * and automated exits (SOLANA_STATUS_BELOW_BOOK), and the worker pages
  * operators ([alert] vault-below-book, which names the account by
- * solanaAccountRef alone). A withdrawal the owner made outside Merrymen (the
+ * solanaAccountRef alone). A withdrawal the owner made outside AgentCap (the
  * recovery tool, another wallet) is not for this tool: it is capital out, and the
  * owner records it under Owner controls from its own transaction. This is the
  * operator's way through for anything else, once they have found what moved the
@@ -14,7 +14,7 @@
  * - show names the account by tenant or by the alert's account reference, reads
  *   the vault's finalized USDG and WSOL balances at or after the book's slot from
  *   each configured provider (and the operator's own with --third-rpc, whose URL
- *   comes from MERRYMEN_SOLANA_RESOLVE_THIRD_RPC), each on its own hostname, and
+ *   comes from AGENTCAP_SOLANA_RESOLVE_THIRD_RPC), each on its own hostname, and
  *   shows them beside the book with exactly what a write-off would book
  *   (solanaShortfallWriteOff). It writes nothing.
  * - book writes off only when two providers on their own hostnames report the
@@ -133,8 +133,8 @@ async function accountOf(db: Db, named: string | undefined): Promise<SolanaAccou
 }
 /** The account's vault under the configured program, checked against the vault its permission and trades name. */
 async function vaultOf(db: Db, env: Readonly<Record<string, string | undefined>>, scope: SolanaAccountScope): Promise<string> {
-  const program = env.MERRYMEN_SOLANA_VAULT_PROGRAM;
-  try { address(program ?? ""); } catch { refuse("Set MERRYMEN_SOLANA_VAULT_PROGRAM to the configured vault program, then run this again."); }
+  const program = env.AGENTCAP_SOLANA_VAULT_PROGRAM;
+  try { address(program ?? ""); } catch { refuse("Set AGENTCAP_SOLANA_VAULT_PROGRAM to the configured vault program, then run this again."); }
   const vault = await deriveSolanaVaultAddress(program!, scope.owner);
   const session = await db.prepare("SELECT record_json FROM solana_runtime_sessions WHERE tenant=? AND owner=?").get(scope.tenant, scope.owner) as { record_json: string } | undefined;
   const traded = await db.prepare("SELECT vault FROM solana_runtime_submissions WHERE tenant=? AND owner=? ORDER BY created_at_ms DESC LIMIT 1").get(scope.tenant, scope.owner) as { vault: string } | undefined;
@@ -149,7 +149,7 @@ export interface SolanaShortfallInput {
   /** A tenant (0x address) or the vault-below-book alert's account reference. */
   account: string;
   providers: readonly SolanaResolveProvider[];
-  /** For MERRYMEN_SOLANA_VAULT_PROGRAM, which derives the vault. */
+  /** For AGENTCAP_SOLANA_VAULT_PROGRAM, which derives the vault. */
   env: Readonly<Record<string, string | undefined>>;
   now?: () => number;
   /** Write it off, recording who decided and why. Without it nothing is written. */
@@ -215,7 +215,7 @@ export async function resolveSolanaShortfall(input: SolanaShortfallInput): Promi
   if (inflow.usdgRaw > 0n) lines.push(`Above the book: ${usdg(inflow.usdgRaw)} is booked as a deposit, as status books one.`);
   if (inflow.quarantinedWsolRaw > 0n) lines.push(`Above the book: ${sol(inflow.quarantinedWsolRaw)} is quarantined at zero basis, as status books it.`);
   lines.push(`A write-off is a loss, never capital out: the high-water mark stays at ${usdg(recorded.hwmRaw)}${effect.book.buyPaused && !recorded.buyPaused ? ", and buying pauses until the owner resumes it" : ""}.`,
-    "Ask the owner first whether they withdrew outside Merrymen (the recovery tool or their own wallet): that is capital out, which they record under Owner controls, "
+    "Ask the owner first whether they withdrew outside AgentCap (the recovery tool or their own wallet): that is capital out, which they record under Owner controls, "
     + "and nothing is written off here.");
   if (!book) { lines.push("Nothing was written. To write it off, run shortfall book with --operator and --reason."); return { tenant, owner, views, decision, booked: false, lines }; }
   // The record comes first: nothing is ever written off without who decided it, why and on what reading.

@@ -56,13 +56,13 @@
  */
 import {
   ENERGY,
-  MERRYMEN_TOKEN,
+  AGENTCAP_TOKEN,
   PROPOSAL_PARAM,
   buildProposal,
   encodeProposalLink,
   riskProfile,
   understandSettingsText,
-} from "@merrymen/core";
+} from "@agentcap/core";
 import { isCircleStrategyId } from "@/terminal/strategy";
 import { count, usd } from "@/lib/format";
 
@@ -201,7 +201,7 @@ const REGISTRY: ChatCommand[] = [
      *
      * IT NAMES THE COMBINED BALANCE AND NO LONGER SAYS MONEY CANNOT HELP. It
      * used to end "however well funded I am", which stopped being true the day
-     * an agent could turn USDG into its own $MERRYMEN (get-energy, below):
+     * an agent could turn USDG into its own $AGENTCAP (get-energy, below):
      * what counts is the owner's wallet and this account together, and USDG
      * converted and arrived there does count. Android Commands.kt carries the
      * same words.
@@ -209,7 +209,7 @@ const REGISTRY: ChatCommand[] = [
     say: (a) =>
       `Switch me to the ${String(a.strategy)} strategy. It changes what I trade and when.` +
       (isCircleStrategyId(String(a.strategy))
-        ? ` Note: that one only runs while your wallet and my account hold ${count(ENERGY.fullTokens)} $MERRYMEN between them — below that I leave it idle.`
+        ? ` Note: that one only runs while your wallet and my account hold ${count(ENERGY.fullTokens)} $AGENTCAP between them — below that I leave it idle.`
         : ""),
   },
   {
@@ -403,7 +403,7 @@ const REGISTRY: ChatCommand[] = [
       `less or it is a coin on a bonding curve; I'll tell you which.`,
   },
   /**
-   * GET-ENERGY — "get your $MERRYMEN": the agent buys the $MERRYMEN it is short
+   * GET-ENERGY — "get your $AGENTCAP": the agent buys the $AGENTCAP it is short
    * of full energy with its own USDG, and keeps it as energy.
    *
    * AN ORDER, NOT A NEW RAIL. It rides `via: "order"` and POST /api/orders like
@@ -425,7 +425,7 @@ const REGISTRY: ChatCommand[] = [
    * only when it is exactly that string and hashes it into the order id; the
    * worker sends an order to the energy buy only when it carries it
    * (worker/src/order-gate.ts orderRoute). A `buy` card, a snipe or an MCP
-   * proposal naming MERRYMEN carries no marker, so it is an ordinary order the
+   * proposal naming AGENTCAP carries no marker, so it is an ordinary order the
    * worker resolves by address — never a purchase of the reserve made from a
    * card that did not show this one's disclosure.
    *
@@ -447,15 +447,15 @@ const REGISTRY: ChatCommand[] = [
     id: "get-energy",
     via: "order",
     writes: ["side", "symbol", "usdgAmount", "purpose"],
-    fixed: { side: "buy", symbol: MERRYMEN_TOKEN.symbol, purpose: "energy" },
+    fixed: { side: "buy", symbol: AGENTCAP_TOKEN.symbol, purpose: "energy" },
     weighty: true,
     say: (a) =>
-      `Spend up to ${money(a.usdgAmount)} of my real USDG on the $MERRYMEN I'm short of ${count(ENERGY.fullTokens)} — ` +
-      `through Uniswap on Robinhood Chain (USDG → VIRTUAL → $MERRYMEN). I size it to cover what's missing, with a ` +
+      `Spend up to ${money(a.usdgAmount)} of my real USDG on the $AGENTCAP I'm short of ${count(ENERGY.fullTokens)} — ` +
+      `through Uniswap on Robinhood Chain (USDG → VIRTUAL → $AGENTCAP). I size it to cover what's missing, with a ` +
       `small margin for price movement (at least $1.00); the pool fees and the token's own tax are paid out of the USDG. ` +
       `It stays in my account as energy; my key can't sell or send it. I'll place it — my key's limits still decide ` +
       `whether it goes through.`,
-    placed: (a) => `a buy of up to ${money(a.usdgAmount)} of $MERRYMEN, kept as energy.`,
+    placed: (a) => `a buy of up to ${money(a.usdgAmount)} of $AGENTCAP, kept as energy.`,
   },
   // ── the ones that only take you somewhere ────────────────────────────────
   {

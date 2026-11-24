@@ -1,4 +1,4 @@
-import { explorerFor, robinhoodChain, robinhoodTestnet, type Autonomy } from "@merrymen/core";
+import { explorerFor, robinhoodChain, robinhoodTestnet, type Autonomy } from "@agentcap/core";
 import type { FleetRecoveryView } from "../../../worker/src/fleet-recovery";
 import type { TelegramStatus } from "@/app/api/telegram/route";
 import { usd } from "@/lib/format";

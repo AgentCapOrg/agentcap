@@ -1855,7 +1855,7 @@ html[lang|="ko"] .terminal-host {
   color: #111;
 }
 
-/* A capability the worker will only run for a $MERRYMEN holder. Marked at the
+/* A capability the worker will only run for a $AGENTCAP holder. Marked at the
    point of choosing, because an unmarked one is chosen, funded, and then never
    runs — which reads as a broken agent rather than as a locked feature. */
 :where(.terminal-host) .tag.holders {
@@ -7982,7 +7982,7 @@ html[lang|="ko"] .terminal-host {
   font-size: 12px;
 }
 
-/* ── linking a wallet that holds $MERRYMEN ────────────────────────────────
+/* ── linking a wallet that holds $AGENTCAP ────────────────────────────────
    The tier reads a balance, and by default that is the wallet you sign in
    with — the only address the server can verify without being told. Holding
    the token elsewhere is a real case, and it needs a signature rather than a
@@ -8041,7 +8041,7 @@ html[lang|="ko"] .terminal-host {
 
 /* ── ENERGY: what the agent may start on its own today ─────────────────────
    Modelled on the Circle banner above, at two volumes. Low energy that is not
-   yet spent is a quiet line — most agents without $MERRYMEN sit there for
+   yet spent is a quiet line — most agents without $AGENTCAP sit there for
    good, and it must never shout over anything that matters more. Spent is the
    full panel with every remedy, in the Circle banner's own amber: nothing is
    broken, the owner simply has a choice to make, including "change nothing". */

@@ -202,20 +202,20 @@ test("CADENCE: a clock jump cannot strand the agent or spin it", () => {
 });
 
 // ── identity resolution ─────────────────────────────────────────────────
-test("identity: prefers MERRYMEN_TENANT, falls back to the home basename", () => {
+test("identity: prefers AGENTCAP_TENANT, falls back to the home basename", () => {
   const t = TENANTS[0];
-  assert.deepEqual(tenantIdentity({ MERRYMEN_TENANT: t }, "/whatever"), { id: t, source: "MERRYMEN_TENANT" });
-  assert.deepEqual(tenantIdentity({}, `/app/.merrymen/children/${t}`), { id: t, source: "MERRYMEN_HOME basename" });
+  assert.deepEqual(tenantIdentity({ AGENTCAP_TENANT: t }, "/whatever"), { id: t, source: "AGENTCAP_TENANT" });
+  assert.deepEqual(tenantIdentity({}, `/app/.agentcap/children/${t}`), { id: t, source: "AGENTCAP_HOME basename" });
   // self-hosted: not an address, still deterministic, and SAYS so
-  const solo = tenantIdentity({}, "/home/me/.merrymen");
+  const solo = tenantIdentity({}, "/home/me/.agentcap");
   assert.equal(solo.source, "home path (not a tenant address)");
-  assert.equal(tenantIdentity({}, "/home/me/.merrymen").id, solo.id);
+  assert.equal(tenantIdentity({}, "/home/me/.agentcap").id, solo.id);
 });
 
-test("identity: a checksummed MERRYMEN_TENANT still resolves and gives the same phase", () => {
+test("identity: a checksummed AGENTCAP_TENANT still resolves and gives the same phase", () => {
   const t = TENANTS[5];
   const mixed = "0x" + t.slice(2).toUpperCase();
-  const r = tenantIdentity({ MERRYMEN_TENANT: mixed }, "/x");
+  const r = tenantIdentity({ AGENTCAP_TENANT: mixed }, "/x");
   assert.equal(r.id, t);
   assert.equal(tickOffsetMs(r.id, TICK), tickOffsetMs(t, TICK));
 });

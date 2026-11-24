@@ -24,7 +24,7 @@ import { ATTENTION_TOOLS } from "./attention";
 import { PROPOSAL_TOOLS } from "./proposals";
 
 // Links are fixed pages on the configured app address.
-process.env.MERRYMEN_PUBLIC_ORIGIN = "https://app.test";
+process.env.AGENTCAP_PUBLIC_ORIGIN = "https://app.test";
 
 let restore: (() => void) | null = null;
 afterEach(() => { restore?.(); restore = null; resetMetricsForTest(); });
@@ -150,7 +150,7 @@ test("after the permission expires, the row's last blocker and the last minutes'
   assert.deepEqual((await ask()).items.map((i) => i.kind), ["permission-expired"]);
 });
 
-test("live blockers: funding and re-signing are act_now with the page that fixes them; a deliberate state is nothing; Merrymen's own fault is today with no chore", async () => {
+test("live blockers: funding and re-signing are act_now with the page that fixes them; a deliberate state is nothing; AgentCap's own fault is today with no chore", async () => {
   const { d, ask } = await setup();
   agentRow(d, ACCOUNT_A, { blocker: "no-gas" });
   let item = only(await ask(), "live-blocker");
@@ -396,7 +396,7 @@ test("seen_keys: what was reported is not new, a fixed condition resolves, a ris
 test("proposals waiting for approval appear only under a proposal scope, link to their approval page, and the read expires nothing", async () => {
   const { d, ask, pa } = await setup({ scopes: ["agents:read", "social:write", "offline_access"] });
   agentRow(d, ACCOUNT_A);
-  const made = await runTool(draftPost, { text: "gm merrymen", idempotency_key: "post-00001" }, pa, "trace-test", { now: () => NOW });
+  const made = await runTool(draftPost, { text: "gm agentcap", idempotency_key: "post-00001" }, pa, "trace-test", { now: () => NOW });
   assert.equal(made.isError, undefined, made.content[0]?.text);
   const id = (made.structuredContent as { proposal_id: string }).proposal_id;
 
@@ -554,7 +554,7 @@ test("the connector-directory listing has the tool too, and says it cannot see p
   agentRow(d, ACCOUNT_A, { blocker: "no-gas" });
   const r = await ask({}, (await directory()).principal);
   assert.equal(only(r, "live-blocker").severity, "act_now");
-  assert.deepEqual(r.not_checked, [{ part: "proposals", why: "The connector-directory listing never sees proposals; they are listed in Merrymen.", scope: null }]);
+  assert.deepEqual(r.not_checked, [{ part: "proposals", why: "The connector-directory listing never sees proposals; they are listed in AgentCap.", scope: null }]);
 });
 
 test("runStart walks back while sightings stay within the gap, and says unknown when the read could have cut the run off", () => {

@@ -1,6 +1,6 @@
 /**
  * One-click install links and copy-paste commands for the assistants that can
- * reach Merrymen's MCP server.
+ * reach AgentCap's MCP server.
  *
  * Every assistant wants the same thing, the server address, but each takes it
  * in its own wrapper: a claude.ai dialog pre-filled from query parameters, a
@@ -12,7 +12,7 @@
  *
  * WHAT A LINK CANNOT DO: grant anything. It only puts the address into the
  * assistant's own "add a server" screen. The assistant then sends the owner to
- * Merrymen's consent page, and nothing is allowed until the owner clicks Allow
+ * AgentCap's consent page, and nothing is allowed until the owner clicks Allow
  * there.
  *
  * Pure and isomorphic: it runs in the browser (the hub's buttons) and in Node
@@ -21,13 +21,13 @@
  */
 
 /** The name an assistant shows for the connection. */
-export const CONNECTOR_NAME = "Merrymen";
+export const CONNECTOR_NAME = "AgentCap";
 
-/** The key a server is stored under in an assistant's config (`claude mcp add … merrymen`). */
-export const SERVER_KEY = "merrymen";
+/** The key a server is stored under in an assistant's config (`claude mcp add … agentcap`). */
+export const SERVER_KEY = "agentcap";
 
 /** One line an assistant may show under the name (Goose asks for it). */
-const DESCRIPTION = "Your Merrymen trading agent";
+const DESCRIPTION = "Your AgentCap trading agent";
 
 export interface InstallLinks {
   /** claude.ai's "Add custom connector" dialog, pre-filled. Syncs to Claude Desktop, mobile and Claude Code on the same account. */
@@ -49,21 +49,21 @@ export interface InstallLinks {
 }
 
 /**
- * The Claude Code plugin (plugins/merrymen in this repository, listed by the
+ * The Claude Code plugin (plugins/agentcap in this repository, listed by the
  * marketplace in .claude-plugin/marketplace.json). Its .mcp.json names this
  * production address, so the plugin is offered only by a page that serves it:
  * a staging or self-hosted server would be handed a plugin pointing elsewhere.
  */
-export const PLUGIN_SERVER_URL = "https://mcp.merrymen.dev/mcp";
+export const PLUGIN_SERVER_URL = "https://mcp.agentcap.xyz/mcp";
 /**
- * The HTTPS clone URL, never the `millw14/merrymen` shorthand: Claude Code
+ * The HTTPS clone URL, never the `millw14/agentcap` shorthand: Claude Code
  * clones the shorthand over SSH, which fails on any machine without a GitHub
  * SSH setup ("SSH host key is not in your known_hosts file"). Seen with Claude
  * Code 2.1.281 on 2026-09-25; the HTTPS URL installed cleanly from the same
  * machine.
  */
-export const PLUGIN_MARKETPLACE_URL = "https://github.com/millw14/merrymen.git";
-export const PLUGIN_ID = "merrymen@merrymen";
+export const PLUGIN_MARKETPLACE_URL = "https://github.com/millw14/agentcap.git";
+export const PLUGIN_ID = "agentcap@agentcap";
 
 /**
  * Slash commands to type inside Claude Code, ONE AT A TIME (pasted together
@@ -79,7 +79,7 @@ export interface InstallCommands {
   claudeCode: string[];
   /** Codex starts the sign-in by itself after `add`. */
   codex: string[];
-  /** Then `/mcp auth merrymen` inside Gemini CLI. */
+  /** Then `/mcp auth agentcap` inside Gemini CLI. */
   gemini: string[];
   /** Devin's CLI, which Windsurf also uses. */
   devin: string[];

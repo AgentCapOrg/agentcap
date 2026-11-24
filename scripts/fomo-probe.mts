@@ -8,7 +8,7 @@
  * route actually did, so a capability is never reported as verified on the
  * strength of a mock.
  *
- *   MERRYMEN_FOMO_API_KEY=… npx tsx scripts/fomo-probe.mts [--theses] [--trader] [--stream] [--budget=<credits>]
+ *   AGENTCAP_FOMO_API_KEY=… npx tsx scripts/fomo-probe.mts [--theses] [--trader] [--stream] [--budget=<credits>]
  *
  * WHAT IT SPENDS. By default: /v2/me (0), one 24h leaderboard row (250), the
  * trending board (250), one alerts page (125), stats for one Robinhood token
@@ -24,7 +24,7 @@
  *
  * WHAT IT NEVER DOES. No trading or payment route (the adapter refuses them),
  * no write of any kind, no key printed: stream URLs are shown redacted only.
- * It records nothing in any database unless MERRYMEN_FOMO_PROBE_DB=1 is set
+ * It records nothing in any database unless AGENTCAP_FOMO_PROBE_DB=1 is set
  * with DATABASE_URL, in which case the observed capability records are merged
  * into fomo_capabilities.
  */
@@ -41,9 +41,9 @@ import {
 import { isRobinhoodToken } from "../worker/src/fomo/identity";
 import type { CapabilityRecord } from "../worker/src/fomo/types";
 
-const key = (process.env.MERRYMEN_FOMO_API_KEY ?? process.env.FOMO_API_KEY ?? "").trim();
+const key = (process.env.AGENTCAP_FOMO_API_KEY ?? process.env.FOMO_API_KEY ?? "").trim();
 if (!key) {
-  console.error("Set MERRYMEN_FOMO_API_KEY (or FOMO_API_KEY). Nothing was called.");
+  console.error("Set AGENTCAP_FOMO_API_KEY (or FOMO_API_KEY). Nothing was called.");
   process.exit(2);
 }
 // The adapter refuses a key of any other shape before sending anything, so a
@@ -169,7 +169,7 @@ console.log(
     (unknownCost ? `, plus list price for ${unknownCost} call(s) that reported no cost` : ""),
 );
 
-if (process.env.MERRYMEN_FOMO_PROBE_DB === "1" && process.env.DATABASE_URL) {
+if (process.env.AGENTCAP_FOMO_PROBE_DB === "1" && process.env.DATABASE_URL) {
   const { makePgDb } = await import("../worker/src/db");
   const { ensureFomoSchema, upsertCapability } = await import("../worker/src/fomo/store");
   const db = await makePgDb(process.env.DATABASE_URL);

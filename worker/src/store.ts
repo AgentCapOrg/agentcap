@@ -1,6 +1,6 @@
 /**
  * Trade/event/equity persistence — SQLite (node:sqlite, built into Node 22+).
- * One durable file at .data/merrymen.db shared by worker (writer) and web
+ * One durable file at .data/agentcap.db shared by worker (writer) and web
  * (reader via /api/feed). No external service, no keys. Migration path to
  * Postgres is a schema port when the platform goes multi-user.
  */
@@ -73,7 +73,7 @@ import {
   type PerpTransferInitiator,
   type PerpTransferState,
 } from "./perp-ledger-rules";
-import { ensureHome, homePaths, merrymenHome } from "./home";
+import { ensureHome, homePaths, agentcapHome } from "./home";
 import { wrapSqlite, makePgDb, type Db } from "./db";
 import { applyLedgerMigrations } from "./ledger-migrations";
 import { paperBrainCapital } from "./paper-brain-capital";
@@ -323,7 +323,7 @@ const SQLITE_SCHEMA = `
     -- it: its leading column is agent_id, so filtering on time alone has to scan.
     -- The public thesis page is the first reader that is not scoped to one agent.
     CREATE INDEX IF NOT EXISTS decisions_time ON decisions (at DESC);
-    -- Conversation turns, so the merryman doesn't lose the thread on restart.
+    -- Conversation turns, so the agentcapavatar doesn't lose the thread on restart.
     -- Lives in sqlite rather than a json file because the db is already open and
     -- single-writer; a file would need its own read-modify-write and would race
     -- the notifier. Content is already truncated and HTML-stripped by the caller.
@@ -956,7 +956,7 @@ const SQLITE_ALTERS: string[] = [
     "ALTER TABLE agents ADD COLUMN epoch INTEGER NOT NULL DEFAULT 1",
     // WHAT THE WORKER IS ACTUALLY DOING, on a channel the dashboard can read.
     //
-    // The heartbeat is a JSON file in the worker's own MERRYMEN_HOME, and the
+    // The heartbeat is a JSON file in the worker's own AGENTCAP_HOME, and the
     // web service reads homePaths.heartbeat() — its OWN home. Self-hosted those
     // are the same directory and it works. Hosted they are different
     // directories in different containers, so the dashboard never saw a
@@ -1554,7 +1554,7 @@ function initSqlite(): Db {
   }
   try { for (const ddl of LEDGER_READ_INDEXES) db.exec(ddl); }
   catch (error) { db.close(); throw error; }
-  // stderr, not stdout: `merrymen export` writes the audit journal to stdout,
+  // stderr, not stdout: `agentcap export` writes the audit journal to stdout,
   // and a diagnostic line landing in the middle of it corrupts the file. A log
   // is not data.
   console.error(`[store] sqlite at ${DB_FILE}`);
@@ -1641,10 +1641,10 @@ function getDb(): Db {
  * Test seam: CLOSE the ledger and drop the cached driver.
  *
  * This replaces a resetStoreForTest() that only forgot the driver. Forgetting is
- * enough to re-point MERRYMEN_HOME, and that is all it claimed, but it left the
+ * enough to re-point AGENTCAP_HOME, and that is all it claimed, but it left the
  * sqlite file open — and on Windows an open file is one that cannot be deleted.
- * Every test that points MERRYMEN_HOME at a mkdtemp and imports this module was
- * holding <home>/merrymen.db for the life of the process, so its cleanup hook
+ * Every test that points AGENTCAP_HOME at a mkdtemp and imports this module was
+ * holding <home>/agentcap.db for the life of the process, so its cleanup hook
  * could only swallow the failure and leak the whole tree into %TEMP% on each run.
  *
  * Sqlite only, because that is the backend a test opens: the Postgres path owns a
@@ -2319,7 +2319,7 @@ export async function journaled(
   });
 }
 
-/** Every entry for one epoch, oldest first — what `merrymen export` emits. */
+/** Every entry for one epoch, oldest first — what `agentcap export` emits. */
 export async function readJournal(agentId: string, epoch: number): Promise<JournalEntry[]> {
   try {
     return await getDb()
@@ -3557,7 +3557,7 @@ export async function setAgentPerps(agentId: string, json: string | null): Promi
  * see, and reading zeros would hand out the day's allowance again.
  */
 export async function getEnergyDay(agentId: string, day: string): Promise<EnergyCounters | null> {
-  if (energyDayUnrestored(merrymenHome(), day)) return null;
+  if (energyDayUnrestored(agentcapHome(), day)) return null;
   try {
     return await readEnergyDay(getDb(), agentId, day);
   } catch {
@@ -4451,7 +4451,7 @@ async function seededSum(q: { sql: string; params: unknown[] }): Promise<number>
  * getTransferredTodayUsdg refuses to answer.
  */
 export function budgetDayUnrestored(): boolean {
-  return budgetUnrestored(merrymenHome());
+  return budgetUnrestored(agentcapHome());
 }
 
 /**
@@ -4486,7 +4486,7 @@ export async function getOpsToday(agentId: string, rail: BudgetRail = "live"): P
   return trades + (await perpOpsSince(agentId, rail, Math.floor(Date.now() / 1000) - 86_400));
 }
 
-/** Rename the agent — the user-given merryman name (shown on the dashboard). */
+/** Rename the agent — the user-given agentcapavatar name (shown on the dashboard). */
 /**
  * The owner's X handle on the agent's roster row, so a public page can credit
  * them without decrypting a tenant's sealed settings.
@@ -4870,7 +4870,7 @@ export async function energyBuysInFlight(agentId: string, sinceSec: number): Pro
  * ledger knows it — what the buy's balance-read pin is seeded from at arm.
  *
  * The pin (index.ts lastEnergyLandedBlock) makes the next ask read both
- * $MERRYMEN halves and the cash no earlier than the last purchase's landing,
+ * $AGENTCAP halves and the cash no earlier than the last purchase's landing,
  * so a load-balanced node still behind it answers with an error rather than a
  * pre-purchase balance the planner would top up a second time. It was held in
  * memory only, so a restart after a landing forgot it — and the in-flight
@@ -4965,7 +4965,7 @@ export async function recentChatTurns(chatId: number, limit = CHAT_TURNS_KEPT): 
 }
 
 /** Unix seconds of the last turn in a chat, or null if there is none. Lets the
- * merryman know it's been three days rather than opening cold every time. */
+ * agentcapavatar know it's been three days rather than opening cold every time. */
 export async function lastChatTurnAt(chatId: number): Promise<number | null> {
   try {
     const row = await getDb()

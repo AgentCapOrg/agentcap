@@ -15,7 +15,7 @@ policy, wall — and none of them was *"did the owner ask for this"*.
 working agent."*
 
 Measured by executing the real functions, with gas sponsorship on as production
-has it (`MERRYMEN_SPONSOR_GAS=true` plus a bundler key, both set on the
+has it (`AGENTCAP_SPONSOR_GAS=true` plus a bundler key, both set on the
 orchestrator):
 
 ```
@@ -38,7 +38,7 @@ rail without any of them doing anything.
 `liveTradingEnabled` is a **required term** of `canTradeForReal`, not a fallback
 behind it. A fallback is routed around whenever the world improves; a term
 cannot be. It defaults **false**, and it deliberately has **no environment
-override** — `MERRYMEN_LIVE_TRADING=true` on the orchestrator would be the house
+override** — `AGENTCAP_LIVE_TRADING=true` on the orchestrator would be the house
 consenting to spend real money on behalf of every owner in the fleet at once.
 
 It is **not** `!paperTradingEnabled`. They answer different questions, and
@@ -84,7 +84,7 @@ the switch instead of after.
 ### 0. Stand down — ONLY on a deployment that has never run this migration
 
 ```
-MERRYMEN_LIVE_INTENT_STAND_DOWN=1
+AGENTCAP_LIVE_INTENT_STAND_DOWN=1
 ```
 
 This switches enforcement off so the fleet behaves exactly as it did before the
@@ -104,7 +104,7 @@ put real money at risk, because while it is set, funding implies consent again
 Deploy with:
 
 ```
-MERRYMEN_BACKFILL_LIVE_INTENT=report
+AGENTCAP_BACKFILL_LIVE_INTENT=report
 ```
 
 The orchestrator runs the plan on its first cohort pass, writes **nothing**, and
@@ -127,7 +127,7 @@ every agent you know to be trading real money appears under `GRANT`.
 Redeploy with:
 
 ```
-MERRYMEN_BACKFILL_LIVE_INTENT=apply
+AGENTCAP_BACKFILL_LIVE_INTENT=apply
 ```
 
 Same plan, then the writes. Confirm the log line:
@@ -138,7 +138,7 @@ Same plan, then the writes. Confirm the log line:
 
 ### 3. Remove the variables
 
-Unset `MERRYMEN_BACKFILL_LIVE_INTENT` (and `MERRYMEN_LIVE_INTENT_STAND_DOWN` if
+Unset `AGENTCAP_BACKFILL_LIVE_INTENT` (and `AGENTCAP_LIVE_INTENT_STAND_DOWN` if
 you set it) and redeploy. The backfill is idempotent — re-running it produces an
 empty plan — but leaving a migration armed is how it fires again later against a
 fleet it was not written for.

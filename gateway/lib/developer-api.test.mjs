@@ -15,16 +15,16 @@ import { ONE_TOKEN } from "./billing-plans.mjs";
 import { createPartners, hashSecret, loadRegistry, makeKey, writeRecord } from "./partners.mjs";
 import { createPartnerApi } from "./partner-api.mjs";
 import { createStore } from "./store.mjs";
-const dir = await mkdtemp(join(tmpdir(), "merrymen-developer-test-"));
-process.env.MERRYMEN_DATA_DIR = dir;
-delete process.env.MERRYMEN_PARTNER_KEYS;
+const dir = await mkdtemp(join(tmpdir(), "agentcap-developer-test-"));
+process.env.AGENTCAP_DATA_DIR = dir;
+delete process.env.AGENTCAP_PARTNER_KEYS;
 const dirs = [dir];
 after(() => Promise.all(dirs.map(d => rm(d, { recursive: true, force: true }))));
 const portalSecret = "portal-test-secret-with-at-least-32-bytes";
 const gatewaySecret = "gateway-test-secret-with-at-least-32-bytes";
 /** A billing core on its own ledger, as server.mjs builds it; off by default, as it ships. */
 async function billingFor({ mode = "off", now = Date.now, ...extra } = {}) {
-  const dataDir = await mkdtemp(join(tmpdir(), "merrymen-developer-billing-"));
+  const dataDir = await mkdtemp(join(tmpdir(), "agentcap-developer-billing-"));
   dirs.push(dataDir);
   return { dataDir, billing: await createBilling({ dataDir, dataDirPersistent: true, mode, now, log: () => {}, timers: false, ...extra }) };
 }
@@ -459,8 +459,8 @@ test("without a billing service, accounts and plans answer 503; keys are listed 
 async function startGateway() {
   const port = await new Promise(resolve => { const probe = createServer().listen(0, "127.0.0.1", () => { const { port } = probe.address(); probe.close(() => resolve(port)); }); });
   const child = spawn(process.execPath, [fileURLToPath(new URL("../server.mjs", import.meta.url))], { stdio: ["ignore", "pipe", "pipe"],
-    env: { PATH: process.env.PATH, PORT: String(port), MERRYMEN_DATA_DIR: dir, MERRYMEN_GATEWAY_UPSTREAM_KEY: "unused",
-      MERRYMEN_GATEWAY_SECRET: gatewaySecret, MERRYMEN_GATEWAY_RPC: "http://127.0.0.1:9", MERRYMEN_DEVELOPER_PORTAL_SECRET: portalSecret } });
+    env: { PATH: process.env.PATH, PORT: String(port), AGENTCAP_DATA_DIR: dir, AGENTCAP_GATEWAY_UPSTREAM_KEY: "unused",
+      AGENTCAP_GATEWAY_SECRET: gatewaySecret, AGENTCAP_GATEWAY_RPC: "http://127.0.0.1:9", AGENTCAP_DEVELOPER_PORTAL_SECRET: portalSecret } });
   let output = "";
   await new Promise((resolve, reject) => {
     child.stdout.on("data", chunk => { output += chunk; if (output.includes("listening")) resolve(); });

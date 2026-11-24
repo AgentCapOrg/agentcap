@@ -17,10 +17,10 @@ import { after, test } from "node:test";
 import type { BrainDecision } from "./brain-client";
 import type { PortfolioSnapshot } from "../../packages/core/src/index";
 
-const scratch = mkdtempSync(path.join(os.tmpdir(), "merrymen-stale-mark-"));
+const scratch = mkdtempSync(path.join(os.tmpdir(), "agentcap-stale-mark-"));
 const isolatedCwd = path.join(scratch, "cwd");
 mkdirSync(isolatedCwd);
-process.env.MERRYMEN_HOME = path.join(scratch, "home");
+process.env.AGENTCAP_HOME = path.join(scratch, "home");
 delete process.env.DATABASE_URL;
 const originalCwd = process.cwd();
 const store = await import("./store");

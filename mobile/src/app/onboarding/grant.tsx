@@ -7,8 +7,8 @@ import { isMock } from "@/net/api";
 // A VALUE import, not just a type. The tradeable set is read from the shared core
 // package so the wall lists what the key may actually touch — and because a
 // type-only import would be erased at compile time, leaving the Metro alias for
-// @merrymen/core configured but never exercised, which is the same as untested.
-import { DEFAULT_PERMISSION_DAYS, TRADEABLE_SYMBOLS, type GrantCaps } from "@merrymen/core";
+// @agentcap/core configured but never exercised, which is the same as untested.
+import { DEFAULT_PERMISSION_DAYS, TRADEABLE_SYMBOLS, type GrantCaps } from "@agentcap/core";
 import { accountFromMnemonic } from "@/crypto/mnemonic";
 import { readOwner } from "@/crypto/keystore";
 import { fundWithPhantom } from "@/net/wallets";

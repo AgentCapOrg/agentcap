@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, before, beforeEach, it } from "node:test";
 import { JSDOM } from "jsdom";
 import React, { act } from "react";
-import { autonomyOf } from "@merrymen/core";
+import { autonomyOf } from "@agentcap/core";
 import type { LiveMine, Thesis } from "./live";
 import { idleChat } from "./test-chat";
 import { goTo } from "./navigate";
@@ -46,7 +46,7 @@ beforeEach(() => {
   }) as typeof fetch;
   globals.ResizeObserver = class { observe() {} unobserve() {} disconnect() {} };
   globals.self = ui.dom.window;
-  localStorage.setItem("merrymen:trencher-fast:v2:dismissed", "yes");
+  localStorage.setItem("agentcap:trencher-fast:v2:dismissed", "yes");
   // Assert use of the native modal API, without pretending jsdom proves the
   // browser's top layer or inertness. Focus restoration is deliberately left
   // to Agent; close emits its event synchronously to exercise cleanup races.

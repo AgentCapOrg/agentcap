@@ -16,7 +16,7 @@
  * Challenge consumption is stateful: hosted instances share the atomic nonce
  * table in DATABASE_URL, and verification fails closed if that store is absent
  * or unavailable. Self-hosted records spent challenges in auth-nonces.sqlite
- * under MERRYMEN_HOME. No new signing secret is required.
+ * under AGENTCAP_HOME. No new signing secret is required.
  *
  * The pure functions here (mint/read/verify) take no Next types so they can be
  * unit-tested against real viem signatures; the request-shaped helpers wrap
@@ -33,7 +33,7 @@ import {
   sessionSecret,
   type BindingVersion,
   type GrantPurpose,
-} from "@merrymen/core";
+} from "@agentcap/core";
 
 /**
  * IS THE LEGACY TWO-PROOF PREMISE ENFORCED? YES — AFTER IT WAS MEASURED.
@@ -72,7 +72,7 @@ function secretOrThrow(): string {
   if (!s) {
     // Boot-time refusal, surfaced as a 500 rather than a silent default — a
     // predictable signing key is a forged session for every tenant.
-    throw new Error("MERRYMEN_SESSION_SECRET is not set (hosted mode requires a 32+ char secret)");
+    throw new Error("AGENTCAP_SESSION_SECRET is not set (hosted mode requires a 32+ char secret)");
   }
   return s;
 }
@@ -102,7 +102,7 @@ export function issueChallengeNonce(origin: string, now = Date.now()): string {
   const exp = now + CHALLENGE_TTL_MS;
   const rand = randomBytes(16).toString("base64url");
   // The origin is base64url-encoded before it enters the dot-delimited nonce —
-  // a real origin ("https://app.merrymen.dev") is full of dots and would
+  // a real origin ("https://app.agentcap.xyz") is full of dots and would
   // otherwise split into extra fields and read as malformed.
   const org = Buffer.from(origin).toString("base64url");
   const body = `${rand}.${exp}.${org}`;
@@ -117,7 +117,7 @@ export function issueChallengeNonce(origin: string, now = Date.now()): string {
  */
 export function challengeMessage(origin: string, nonce: string): string {
   return [
-    `${origin} wants you to sign in with your merrymen wallet.`,
+    `${origin} wants you to sign in with your agentcap wallet.`,
     "",
     "This proves you control the owner key. It moves no funds and grants no permissions.",
     "",
@@ -217,7 +217,7 @@ export async function verifySignedChallenge(args: {
  * this differently every claim would fail with nothing obviously wrong.
  */
 export function requestOrigin(req: Request): string {
-  const configured = process.env.MERRYMEN_PUBLIC_ORIGIN;
+  const configured = process.env.AGENTCAP_PUBLIC_ORIGIN;
   if (configured) return configured.replace(/\/$/, "");
   return new URL(req.url).origin;
 }

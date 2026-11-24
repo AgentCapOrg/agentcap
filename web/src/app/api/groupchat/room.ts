@@ -19,9 +19,9 @@
  * which is never the tenant (see lib/agent-for.ts). `agents` is read only for
  * the NAME, keyed on the smart account the grant store returned.
  */
-import { isHostedMode } from "@merrymen/core";
-import { getGrantStore } from "@merrymen/grant-store";
-import { getIdentityStore, SLUG_RE } from "@merrymen/identity-store";
+import { isHostedMode } from "@agentcap/core";
+import { getGrantStore } from "@agentcap/grant-store";
+import { getIdentityStore, SLUG_RE } from "@agentcap/identity-store";
 import { withReadDb } from "@/lib/ledger";
 import type { Db } from "../../../../../worker/src/db";
 import { ensureGroupchatSchema, messageById } from "../../../../../worker/src/groupchat/store";
@@ -33,13 +33,13 @@ import { roomName, settleRoomNames, type NameHolder } from "../../../../../worke
  * first and answers 404 when not — the answer that hides the entry links.
  *
  * Two ways to have none. Self-hosted is one agent with no fleet. And an
- * operator who set `MERRYMEN_GROUPCHAT=0` switched the room off: the
+ * operator who set `AGENTCAP_GROUPCHAT=0` switched the room off: the
  * orchestrator reads the same variable, with the same trim, and stops writing
  * agent lines, so a web that kept serving the room would show a frozen
  * conversation owners could still post into and nobody would ever answer.
  */
 export function roomOpen(): boolean {
-  return isHostedMode() && (process.env.MERRYMEN_GROUPCHAT ?? "").trim() !== "0";
+  return isHostedMode() && (process.env.AGENTCAP_GROUPCHAT ?? "").trim() !== "0";
 }
 
 /** A database the room's tables can be read and written in, and the dialect it speaks. */

@@ -1,7 +1,7 @@
 /*
  * LEDGER.
  *
- * The terminal's look since November 2026: quiet, so that the merryman and the
+ * The terminal's look since November 2026: quiet, so that the agentcapavatar and the
  * figures are what a reader sees. Its palette is the token block in
  * terminal.css. This sheet says what the look does with it, and loads after
  * every other terminal sheet (App.tsx), so each rule here restates one that
@@ -144,9 +144,9 @@
 
 /* ───────── 3. Hairlines, not boxes ───────── */
 
-/* The hero keeps its frame: it holds the merryman's world apart from the page. */
+/* The hero keeps its frame: it holds the agentcapavatar's world apart from the page. */
 .terminal-host .mm-hero { border-radius: 20px; }
-/* Its status chip, scoped as merryman-shell.css scopes it: .mm-chip alone is
+/* Its status chip, scoped as agentcapavatar-shell.css scopes it: .mm-chip alone is
    also the class of the example buttons in Settings. */
 .terminal-host :where(.mm-hero-stage) .mm-chip {
   font-family: var(--font-geist-mono), var(--mono);

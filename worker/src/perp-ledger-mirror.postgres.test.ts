@@ -1,6 +1,6 @@
 /**
  * THE PAPER PERP BOOK'S DURABLE PATH, ON A REAL POSTGRES — opt-in, disposable
- * and LOCAL (MERRYMEN_TEST_PG_URL / MERRYMEN_TEST_POSTGRES_URL). Never reads
+ * and LOCAL (AGENTCAP_TEST_PG_URL / AGENTCAP_TEST_POSTGRES_URL). Never reads
  * DATABASE_URL.
  *
  * What sqlite cannot show and these do:
@@ -40,7 +40,7 @@ interface Client {
   query(sql: string, params?: unknown[]): Promise<{ rows: Record<string, unknown>[]; rowCount: number | null }>;
   on(event: "error" | "end", fn: () => void): void;
 }
-const url = process.env.MERRYMEN_TEST_PG_URL ?? process.env.MERRYMEN_TEST_POSTGRES_URL;
+const url = process.env.AGENTCAP_TEST_PG_URL ?? process.env.AGENTCAP_TEST_POSTGRES_URL;
 const pg = url ? createRequire(import.meta.url)("pg") as {
   Client: new (config: { connectionString: string }) => Client;
   types: { setTypeParser(id: number, fn: (s: string) => unknown): void };
@@ -314,7 +314,7 @@ test("Postgres: the paper perp book's mirror, checkpoint and import", { skip: !u
     const homeBase = path.join(tmp, String(id)), original = path.join(homeBase, "original"), mountPath = path.join(homeBase, "volume"), homeRoot = path.join(mountPath, "fleet");
     mkdirSync(original, { recursive: true });
     mkdirSync(homeRoot, { recursive: true });
-    const raw = new DatabaseSync(path.join(original, "merrymen.db"));
+    const raw = new DatabaseSync(path.join(original, "agentcap.db"));
     raws.push(raw);
     const local = wrapSqlite(raw);
     await applyLedgerSchema(local);
@@ -352,7 +352,7 @@ test("Postgres: the paper perp book's mirror, checkpoint and import", { skip: !u
     assert.equal(await restoreLedgerImport(options), "restored");
     const verified = await verifyRestoredLedgerImport({ ...options, artifact, assertSource() {} });
     assert.equal(verified.tables, 21 + 3);
-    const imported = new DatabaseSync(path.join(home, "merrymen.db"));
+    const imported = new DatabaseSync(path.join(home, "agentcap.db"));
     raws.push(imported);
     assert.deepEqual(imported.prepare("SELECT * FROM perp_positions").all(), raw.prepare("SELECT * FROM perp_positions").all());
     const receipt = await one("SELECT tenant, state FROM tenant_ledger_import WHERE tenant = $1", [tenant]);

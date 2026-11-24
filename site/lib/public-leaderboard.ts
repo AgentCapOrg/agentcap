@@ -1,4 +1,4 @@
-export const PUBLIC_LEADERBOARD = "https://app.merrymen.dev/api/leaderboard";
+export const PUBLIC_LEADERBOARD = "https://app.agentcap.xyz/api/leaderboard";
 
 export interface PublicAgent {
   slug: string;

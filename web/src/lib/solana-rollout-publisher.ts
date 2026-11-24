@@ -1,15 +1,15 @@
 /**
  * THE WEB PUBLISHES ITS LIVE ROLLOUT SETTINGS AS IT STARTS, AND EVERY 30 SECONDS AFTER.
  *
- * The Solana worker lets its live buys through only while the web's latest digest of MERRYMEN_SOLANA_LIVE_TENANTS and
- * MERRYMEN_SOLANA_LIVE_MAX_* equals its own (SETTINGS THAT MUST MATCH, CHECKED, in worker/src/solana-app-runtime.ts). A web
+ * The Solana worker lets its live buys through only while the web's latest digest of AGENTCAP_SOLANA_LIVE_TENANTS and
+ * AGENTCAP_SOLANA_LIVE_MAX_* equals its own (SETTINGS THAT MUST MATCH, CHECKED, in worker/src/solana-app-runtime.ts). A web
  * that published only when it served a Solana request left the digest of its previous settings in place after a redeploy
  * until someone opened the Solana page: a worker redeployed meanwhile with a tenant re-added, or caps raised, matched that
  * old digest and bought under settings the running web no longer ran. So the web's server (web/src/instrumentation.ts)
  * publishes once as it starts, and again every SOLANA_LIVE_ROLLOUT_PUBLISH_MS, which also replaces, within that interval,
  * a digest an old web container still draining during a deploy wrote after the new one's.
  *
- * Only while this deployment offers Solana (MERRYMEN_SOLANA=1): otherwise nothing is loaded or written. Best effort: a
+ * Only while this deployment offers Solana (AGENTCAP_SOLANA=1): otherwise nothing is loaded or written. Best effort: a
  * publish that fails never stops the web from starting or serving. Each failure says an [alert] (solana-live-rollout
  * unpublished), at most once a minute per process, naming no value: until a publish succeeds the worker judges the last
  * digest written as the web's, which may be out of date. One publish at a time; a tick that finds one still running skips.
@@ -19,8 +19,8 @@ import { solanaEnabled } from "./solana-enabled";
 
 /** At most one [alert] a minute per process, as every other Solana [alert]. */
 const ALERT_REPEAT_MS = 60_000;
-export const SOLANA_ROLLOUT_UNPUBLISHED_ALERT = "[alert] solana-live-rollout unpublished: the web could not publish its MERRYMEN_SOLANA_LIVE_TENANTS and "
-  + "MERRYMEN_SOLANA_LIVE_MAX_* digest (solana_runtime_live_rollout_seen); until it can, the Solana worker judges the last one published as the web's, "
+export const SOLANA_ROLLOUT_UNPUBLISHED_ALERT = "[alert] solana-live-rollout unpublished: the web could not publish its AGENTCAP_SOLANA_LIVE_TENANTS and "
+  + "AGENTCAP_SOLANA_LIVE_MAX_* digest (solana_runtime_live_rollout_seen); until it can, the Solana worker judges the last one published as the web's, "
   + "which may be out of date, so it may hold its live buys or let them through under settings this web no longer runs. Retried every 30 s and "
   + "at every Solana request; check the web's DATABASE_URL (exits, revoke and withdraw continue)";
 
@@ -75,7 +75,7 @@ export function startSolanaRolloutPublisher(options: SolanaRolloutPublisherOptio
   return { started, stop: () => timer.stop() };
 }
 
-const STARTED = Symbol.for("merrymen.solana-rollout-publisher");
+const STARTED = Symbol.for("agentcap.solana-rollout-publisher");
 /** The web server's publisher once started (startSolanaWebRolloutPublisher), else undefined. */
 export function solanaWebRolloutPublisher(): SolanaRolloutPublisher | undefined {
   return (globalThis as { [STARTED]?: SolanaRolloutPublisher })[STARTED];

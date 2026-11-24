@@ -647,8 +647,8 @@ test("shutdown before work or during risk prevents admission; shutdown during co
       f.options.journal.recordSigned = async submission => { const result = await commit(submission); controller.abort(); return result; };
     }
     if (phase === "genesis") {
-      const transport = createSolanaLiveRpc({ env: { MERRYMEN_SOLANA_RPC_MAINNET: "https://rpc.example/",
-        MERRYMEN_SOLANA_RPC_MAINNET_FALLBACK: "https://fallback.example/" }, fetch: async (_url, init) => {
+      const transport = createSolanaLiveRpc({ env: { AGENTCAP_SOLANA_RPC_MAINNET: "https://rpc.example/",
+        AGENTCAP_SOLANA_RPC_MAINNET_FALLBACK: "https://fallback.example/" }, fetch: async (_url, init) => {
         const body = JSON.parse(init!.body as string); network.push(body.method);
         assert.equal(body.method, "getGenesisHash"); controller.abort();
         assert.equal(init!.signal!.aborted, true);

@@ -104,10 +104,10 @@ import {
   type ServerXact, type TxEvidence, type XactStatus,
 } from "./chain-gap-booking";
 
-export const CLOSED_EPOCH_FORMAT = "merrymen.closed-epoch-capital.v1";
-export const CLOSED_EPOCH_APPLY_FORMAT = "merrymen.closed-epoch-capital.apply.v1";
-export const CLOSED_EPOCH_REVERT_FORMAT = "merrymen.closed-epoch-capital.revert.v1";
-export const CLOSED_EPOCH_RECEIPTS_FORMAT = "merrymen.closed-epoch-capital.receipts.v1";
+export const CLOSED_EPOCH_FORMAT = "agentcap.closed-epoch-capital.v1";
+export const CLOSED_EPOCH_APPLY_FORMAT = "agentcap.closed-epoch-capital.apply.v1";
+export const CLOSED_EPOCH_REVERT_FORMAT = "agentcap.closed-epoch-capital.revert.v1";
+export const CLOSED_EPOCH_RECEIPTS_FORMAT = "agentcap.closed-epoch-capital.receipts.v1";
 /** The receipts table: one row per action, kept (as 'reverted') after a revert. */
 export const REPAIRS_TABLE = "closed_epoch_repairs";
 /**
@@ -234,7 +234,7 @@ export interface HomeAtAnchor {
   approvalId: string; state: string; chainRefusal: boolean;
   /**
    * The approval reached 'archived': admission renamed the home into the
-   * archive (ledger-resume.ts archiveTenantHome), and merrymen.db is not
+   * archive (ledger-resume.ts archiveTenantHome), and agentcap.db is not
    * among the files it carries back into the fresh home.
    */
   archived: boolean;
@@ -360,7 +360,7 @@ async function readHomeAtAnchor(db: Db, tables: ReadonlySet<string>, booking: Bo
  * basis), so the drain would put it back: the approval is then refused for
  * changed evidence, the tenant's newest decision is no longer a chain
  * refusal, and a later approval seeds the stale basis anyway. The drain is
- * skipped only for a home with no merrymen.db or one behind a source barrier
+ * skipped only for a home with no agentcap.db or one behind a source barrier
  * (`ledger-source-blocked.json`), and a book admission archived is gone from
  * the home. This tool cannot read the volume, so it proves which from what
  * Postgres recorded:
@@ -389,7 +389,7 @@ export function retainedHomeVerdict(h: HomeAtAnchor | null): { durable: boolean;
     return { durable: true, code: null, why: `admission's evidence for its newest decision (${which}) found the home's book behind a source barrier, which admission's drain never copies from` };
   }
   if (h.book === "present") {
-    return { durable: false, code: "home-book-present", why: `admission's evidence for its newest decision (${which}) found the old book in the tenant's home (merrymen.db, no source barrier), and that admission ` +
+    return { durable: false, code: "home-book-present", why: `admission's evidence for its newest decision (${which}) found the old book in the tenant's home (agentcap.db, no source barrier), and that admission ` +
       "did not archive it: the next admission drains that book into Postgres before it reads anything (orchestrator.ts drainContinuousBook), and the mirror puts its " +
       "live basis and floors back over what this repair would clear — the approval is then refused for changed evidence and a later one seeds the stale basis. " +
       "Clearing it here would not hold, and filing the flows without it would let admission seed it: a reviewed basis decision, or the tenant stays held" };
@@ -992,7 +992,7 @@ export function planClosedEpoch(snap: ClosedEpochSnapshot, chain: ClosedEpochCha
   if (chainId !== null && chain.rpcChainId !== chainId) refuse("rpc-chain", `the RPC serves chain ${chain.rpcChainId}, and the grant is on chain ${chainId}`);
   if (booking.openApproval) {
     refuse("open-approval", `an approval is open (${booking.openApproval.state}, evidence ${booking.openApproval.evidence.slice(0, 12)}…): withdraw it with ` +
-      `MERRYMEN_RESUME_REVOKE=${booking.tenant}:${booking.openApproval.evidence} and deploy first — a repair changes the evidence it was approved on`);
+      `AGENTCAP_RESUME_REVOKE=${booking.tenant}:${booking.openApproval.evidence} and deploy first — a repair changes the evidence it was approved on`);
   }
   if (booking.admitted) refuse("admitted", `already admitted (attested generation ${booking.admitted.slice(0, 8)}…): its running book owns its rows`);
   if (!snap.identityIndex) refuse("identity-index", "the flows_chain_identity unique index is not present with its required definition: a second row for one log could not be refused by the database");

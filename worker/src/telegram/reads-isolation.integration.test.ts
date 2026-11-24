@@ -9,7 +9,7 @@
  * returns Alice's rows and NEVER Bob's, and — in hosted mode — a read with no
  * agent refuses rather than falling back to the global guess.
  *
- * MERRYMEN_HOSTED is set so the no-fallback branch is exercised; MERRYMEN_HOME
+ * AGENTCAP_HOSTED is set so the no-fallback branch is exercised; AGENTCAP_HOME
  * is a throwaway temp db. node's --test runs each file in its own process, so
  * neither override leaks into another suite.
  */
@@ -20,9 +20,9 @@ import os from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-iso-"));
-process.env.MERRYMEN_HOME = HOME;
-process.env.MERRYMEN_HOSTED = "1";
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-iso-"));
+process.env.AGENTCAP_HOME = HOME;
+process.env.AGENTCAP_HOSTED = "1";
 
 const { closeStoreForTest, initStore, addTrade, addEvent, addEquity, setPositions, addDecision, newDecisionId } =
   await import("../store");

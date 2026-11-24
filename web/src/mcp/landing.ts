@@ -1,11 +1,11 @@
 /**
  * What a browser, or a client given the bare domain, gets on the MCP host.
  *
- * The server address (https://mcp.merrymen.dev/mcp) is meant for AI
+ * The server address (https://mcp.agentcap.xyz/mcp) is meant for AI
  * assistants, but owners open it in a browser too. The MCP host is the same
  * web service under a second domain, so before this a browser there got the
  * whole terminal, signed out (the sign-in cookie lives on the issuer host and
- * never reaches this one); an MCP client given https://mcp.merrymen.dev got
+ * never reaches this one); an MCP client given https://mcp.agentcap.xyz got
  * an HTML page for its POST and never started OAuth; and /mcp answered a
  * browser with raw JSON. Now a page load is sent to the issuer, where the
  * owner is signed in, and "/" points a client at the endpoint.
@@ -39,11 +39,11 @@ export function isBrowserNavigation(method: string, headers: Headers): boolean {
 
 /** A dedicated MCP domain: the resource URL's host, which is not the issuer's. */
 export interface DedicatedMcpHost {
-  /** e.g. mcp.merrymen.dev (URL-normalised: lowercase, no default port). */
+  /** e.g. mcp.agentcap.xyz (URL-normalised: lowercase, no default port). */
   host: string;
-  /** OAuth issuer origin, e.g. https://app.merrymen.dev. */
+  /** OAuth issuer origin, e.g. https://app.agentcap.xyz. */
   issuer: string;
-  /** Canonical resource URL, e.g. https://mcp.merrymen.dev/mcp. */
+  /** Canonical resource URL, e.g. https://mcp.agentcap.xyz/mcp. */
   resource: string;
 }
 
@@ -67,7 +67,7 @@ function originOf(raw: string | undefined): URL | null {
   }
 }
 
-type McpEnv = Partial<Record<"MERRYMEN_OAUTH_ISSUER" | "MERRYMEN_PUBLIC_ORIGIN" | "MERRYMEN_MCP_RESOURCE_URL", string>>;
+type McpEnv = Partial<Record<"AGENTCAP_OAUTH_ISSUER" | "AGENTCAP_PUBLIC_ORIGIN" | "AGENTCAP_MCP_RESOURCE_URL", string>>;
 
 /**
  * The dedicated MCP host, or null when there is none: not hosted (MCP is a
@@ -79,10 +79,10 @@ type McpEnv = Partial<Record<"MERRYMEN_OAUTH_ISSUER" | "MERRYMEN_PUBLIC_ORIGIN" 
  */
 export function dedicatedMcpHost(env: McpEnv, hosted: boolean): DedicatedMcpHost | null {
   if (!hosted) return null;
-  const issuerUrl = originOf(env.MERRYMEN_OAUTH_ISSUER ?? env.MERRYMEN_PUBLIC_ORIGIN);
+  const issuerUrl = originOf(env.AGENTCAP_OAUTH_ISSUER ?? env.AGENTCAP_PUBLIC_ORIGIN);
   if (!issuerUrl) return null;
   const issuer = issuerUrl.origin;
-  const resourceUrl = originOf(env.MERRYMEN_MCP_RESOURCE_URL ?? `${issuer}${MCP_ROUTE_PATH}`);
+  const resourceUrl = originOf(env.AGENTCAP_MCP_RESOURCE_URL ?? `${issuer}${MCP_ROUTE_PATH}`);
   if (!resourceUrl || resourceUrl.host === issuerUrl.host) return null;
   if (resourceUrl.pathname.replace(/\/+$/, "") !== MCP_ROUTE_PATH) return null;
   return { host: resourceUrl.host, issuer, resource: `${resourceUrl.origin}${MCP_ROUTE_PATH}` };

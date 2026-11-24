@@ -36,7 +36,7 @@ import { fetchPublicHttps } from "../packages/core/src/server/public-network";
 import { findInSources, siteOf, type ScanSource } from "../packages/core/src/site-scan";
 
 const PORT = Number(process.env.PORT ?? 8080);
-const TOKEN = process.env.MERRYMEN_BROWSER_TOKEN ?? "";
+const TOKEN = process.env.AGENTCAP_BROWSER_TOKEN ?? "";
 
 /** One page at a time. A browser is the most expensive thing in the fleet. */
 const NAV_TIMEOUT_MS = 15_000;

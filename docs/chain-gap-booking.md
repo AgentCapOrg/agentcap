@@ -369,7 +369,7 @@ read exactly as it is today:
   open live row, and holds such a tenant for an operator (`openRows`). That
   makes the lane more cautious, not less.
 - **The class P&L repair.** Its delete of a stale shared basis
-  (`MERRYMEN_REPAIR_CLASS_PNL`, `orchestrator.ts`) covers class positions
+  (`AGENTCAP_REPAIR_CLASS_PNL`, `orchestrator.ts`) covers class positions
   only, so it does not apply here.
 
 ### What a refusal says
@@ -446,7 +446,7 @@ then preview here again: `NOTHING-MISSING` is expected.
 
 ## Which tenants it books
 
-Postgres does not record which tenants a deploy's `MERRYMEN_FLEET_ROLLOUT`
+Postgres does not record which tenants a deploy's `AGENTCAP_FLEET_ROLLOUT`
 runs. So the tool proves from Postgres that the tenant is held, and refuses
 the preview (`refused:`, exit code `2`) unless all of the following are true:
 
@@ -502,10 +502,10 @@ and approve the digest that preview prints.
 
 ## Before you start
 
-- **Keep the tenant held.** Take it out of `MERRYMEN_FLEET_ROLLOUT` before
+- **Keep the tenant held.** Take it out of `AGENTCAP_FLEET_ROLLOUT` before
   you book, and leave it out until step 7. The tool also refuses a tenant
   that has run since its refusal (above). With
-  `MERRYMEN_RESUME_AUTO_PAPER=1`, the orchestrator's automatic lane does not
+  `AGENTCAP_RESUME_AUTO_PAPER=1`, the orchestrator's automatic lane does not
   approve a tenant that has a chain refusal no admission has answered, even
   when its owner re-signs and it reads as paper again. Its preview is
   recorded and left to you, so the refusal stays its newest decision
@@ -515,7 +515,7 @@ and approve the digest that preview prints.
   tenant reads the chain again, from where the refused read began, and
   admission refuses it again while Postgres lacks what the chain showed.
 - **No approval may be open.** If one is, the preview refuses and prints the
-  exact `MERRYMEN_RESUME_REVOKE=0x<tenant>:<digest>` to set. Set it, deploy,
+  exact `AGENTCAP_RESUME_REVOKE=0x<tenant>:<digest>` to set. Set it, deploy,
   and start again. A booking changes the evidence that approval was given on.
   The revoked approval is passed over, so the chain refusal before it still
   holds the tenant.
@@ -526,7 +526,7 @@ and approve the digest that preview prints.
   a report or a chat. The tool prints neither. A driver or network error is
   printed as a fixed code.
 - **The RPC.** The default is the public Robinhood Chain mainnet RPC.
-  `MERRYMEN_CHAIN_GAP_RPC` selects another. The transport admits only
+  `AGENTCAP_CHAIN_GAP_RPC` selects another. The transport admits only
   `eth_chainId`, `eth_blockNumber`, `eth_getLogs`, `eth_getTransactionReceipt`,
   `eth_getBlockByNumber`, and `eth_call` for exactly two view calls:
   `decimals()` at `latest`, and `balanceOf` of one address at a block number
@@ -780,7 +780,7 @@ prints one of:
     going through, or the server has not yet noticed that the apply's
     session is gone. Run the check again in a minute. If it stays
     `in-progress`, look in `pg_stat_activity` for an
-    `application_name` of `merrymen-chain-gap-apply`. The server ends that
+    `application_name` of `agentcap-chain-gap-apply`. The server ends that
     session when its connection is found dead. Ending it yourself
     (`pg_terminate_backend`) rolls the transaction back if it has not
     committed, and the check then says `NOT COMMITTED`.
@@ -831,7 +831,7 @@ copy of it from before.
 
 ## 5. Preview the tenant again (admission's preview)
 
-Set `MERRYMEN_RESUME_PREVIEW=0x<tenant>` and deploy, as in fleet-resume.md
+Set `AGENTCAP_RESUME_PREVIEW=0x<tenant>` and deploy, as in fleet-resume.md
 step 2. The tenant's `[resume-preview]` line should show:
 
 - `pass: true`;
@@ -845,12 +845,12 @@ step 2. The tenant's `[resume-preview]` line should show:
 
 ## 6. Approve
 
-Set `MERRYMEN_RESUME_APPROVE=0x<tenant>:<the new digest>` and deploy.
+Set `AGENTCAP_RESUME_APPROVE=0x<tenant>:<the new digest>` and deploy.
 Approve per tenant, never with a `run:` that was taken before the booking.
 
 ## 7. Rollout
 
-Add `0x<tenant>:exits-only` to `MERRYMEN_FLEET_ROLLOUT` and deploy, as in
+Add `0x<tenant>:exits-only` to `AGENTCAP_FLEET_ROLLOUT` and deploy, as in
 fleet-resume.md step 5. Watch for this line:
 `resume chain check clean — … all in Postgres`.
 
@@ -922,7 +922,7 @@ Otherwise it reverts. To only look, run
 [If the apply's outcome is unknown](#if-the-applys-outcome-is-unknown). It
 prints `COMMITTED, THEN REVERTED` once the revert has committed.
 
-After admission, there is no revert. Narrow `MERRYMEN_FLEET_ROLLOUT` and
+After admission, there is no revert. Narrow `AGENTCAP_FLEET_ROLLOUT` and
 escalate. The last resort is the backup named in the receipts.
 
 ## Restore drills
@@ -988,11 +988,11 @@ revert: `STILL UNKNOWN` and `no-receipt`. They let the `COMMIT` through
 between the check's snapshot and its question to the server
 (`committed-after-snapshot`). They also change and delete a booked row
 (`DIVERGED`). They need two things: a disposable **loopback**
-server in `MERRYMEN_TEST_PG_URL`, and the `pg` driver resolvable. `NODE_PATH`
+server in `AGENTCAP_TEST_PG_URL`, and the `pg` driver resolvable. `NODE_PATH`
 works, because the tests load the driver with `require`. Each test creates
 its own database and drops it, and never reads `DATABASE_URL`:
 
 ```sh
-MERRYMEN_TEST_PG_URL=postgres://postgres@127.0.0.1:<port>/postgres \
+AGENTCAP_TEST_PG_URL=postgres://postgres@127.0.0.1:<port>/postgres \
   node --import tsx --test worker/src/chain-gap-booking.postgres.test.ts
 ```

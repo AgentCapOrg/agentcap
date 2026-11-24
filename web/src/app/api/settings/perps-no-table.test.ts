@@ -1,7 +1,7 @@
 /**
  * A SERVER THAT HAS NEVER HAD A PERPS WALLET GROWS NO PERPS TABLE FROM A READ.
  *
- * GET /api/settings?wallet=perps is answered whatever MERRYMEN_PERPS says (D1),
+ * GET /api/settings?wallet=perps is answered whatever AGENTCAP_PERPS says (D1),
  * and where Perps are not offered a PUT may still switch things off. Both read
  * the Perps wallet's settings first (readPerpsStoredStrict →
  * PgSettingsStore.getVersioned), and that read went through the store's
@@ -30,10 +30,10 @@ import { DatabaseSync } from "node:sqlite";
 import { after, afterEach, before, beforeEach, describe, it } from "node:test";
 
 import { mintSession } from "@/lib/auth";
-import { PgSettingsStore, resetSettingsStoreForTest, useSettingsStoreForTest } from "@merrymen/settings-store";
+import { PgSettingsStore, resetSettingsStoreForTest, useSettingsStoreForTest } from "@agentcap/settings-store";
 
 const OWNER = `0x${"cd".repeat(20)}` as const;
-const KEYS = ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_SESSION_SECRET", "DATABASE_URL", "MERRYMEN_PERPS", "MERRYMEN_STORE_DEK"] as const;
+const KEYS = ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_SESSION_SECRET", "DATABASE_URL", "AGENTCAP_PERPS", "AGENTCAP_STORE_DEK"] as const;
 const saved = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
 let home: string;
 let route: typeof import("./route");
@@ -65,16 +65,16 @@ let pg: ReturnType<typeof sqliteClient>;
 
 before(async () => {
   home = mkdtempSync(path.join(tmpdir(), "mm-perps-no-table-"));
-  process.env.MERRYMEN_HOME = home;
-  process.env.MERRYMEN_SESSION_SECRET = randomBytes(32).toString("hex");
-  process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 5).toString("base64");
+  process.env.AGENTCAP_HOME = home;
+  process.env.AGENTCAP_SESSION_SECRET = randomBytes(32).toString("hex");
+  process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 5).toString("base64");
   delete process.env.DATABASE_URL;
   route = await import("./route");
 });
 beforeEach(() => {
-  process.env.MERRYMEN_HOSTED = "1";
+  process.env.AGENTCAP_HOSTED = "1";
   // Production today: no Perps wallet is offered.
-  delete process.env.MERRYMEN_PERPS;
+  delete process.env.AGENTCAP_PERPS;
   resetSettingsStoreForTest();
   pg = sqliteClient();
   useSettingsStoreForTest(new PgSettingsStore("postgres://stand-in", "perps", async () => pg.client), "perps");
@@ -128,8 +128,8 @@ describe("hosted, a fleet with no Perps table: the Perps settings reads make non
     assert.equal(pg.hasPerpsTable(), false);
   });
 
-  it("THE FIRST PERPS WRITE MAKES IT (MERRYMEN_PERPS=paper), and a read after it finds the row", async () => {
-    process.env.MERRYMEN_PERPS = "paper";
+  it("THE FIRST PERPS WRITE MAKES IT (AGENTCAP_PERPS=paper), and a read after it finds the row", async () => {
+    process.env.AGENTCAP_PERPS = "paper";
     assert.equal((await get()).status, 200);
     assert.equal(pg.hasPerpsTable(), false, "a read is still only a look");
     const r = await put({ perpsMaxLeverage: 3 });

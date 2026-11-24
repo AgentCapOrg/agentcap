@@ -35,8 +35,8 @@ import { after, describe, it } from "node:test";
 import { applyFill } from "./basis";
 import { PendingBasis, realisedForFill } from "./basis-order";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-pnl-order-"));
-process.env.MERRYMEN_HOME = HOME;
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-pnl-order-"));
+process.env.AGENTCAP_HOME = HOME;
 
 const { closeStoreForTest, initStore, getBasis, setBasis } = await import("./store");
 await initStore();

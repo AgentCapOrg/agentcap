@@ -257,7 +257,7 @@ export function signMessage(
     };
   }
   return {
-    text: `${body}\nOpen <b>${escHtml(url)}</b> on the computer that runs merrymen and press “Re-sign this key”.`,
+    text: `${body}\nOpen <b>${escHtml(url)}</b> on the computer that runs agentcap and press “Re-sign this key”.`,
   };
 }
 

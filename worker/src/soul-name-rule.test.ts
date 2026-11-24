@@ -21,13 +21,13 @@ import { DEFAULT_NAME, carryStoredName, getName, setName } from "./soul";
 let home: string;
 let prev: string | undefined;
 beforeEach(() => {
-  prev = process.env.MERRYMEN_HOME;
+  prev = process.env.AGENTCAP_HOME;
   home = mkdtempSync(path.join(os.tmpdir(), "mm-soul-name-rule-"));
-  process.env.MERRYMEN_HOME = home;
+  process.env.AGENTCAP_HOME = home;
 });
 afterEach(() => {
-  if (prev === undefined) delete process.env.MERRYMEN_HOME;
-  else process.env.MERRYMEN_HOME = prev;
+  if (prev === undefined) delete process.env.AGENTCAP_HOME;
+  else process.env.AGENTCAP_HOME = prev;
   rmSync(home, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
 });
 

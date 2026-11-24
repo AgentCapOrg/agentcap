@@ -54,16 +54,16 @@ final class PreviewTransport: URLProtocol {
         case "/api/mcp/connections":
             // Like the server: owner writes must carry the site's own Origin.
             if request.httpMethod == "POST" {
-                if request.value(forHTTPHeaderField: "Origin") != "https://app.merrymen.dev" { body = #"{"error":"forbidden","error_description":"cross-site request"}"#; status = 403 }
+                if request.value(forHTTPHeaderField: "Origin") != "https://app.agentcap.xyz" { body = #"{"error":"forbidden","error_description":"cross-site request"}"#; status = 403 }
                 else { body = #"{"revoked":true,"proposals_cancelled":1}"# }
             } else {
-                body = #"{"endpoint":"https://mcp.merrymen.dev/mcp","connections":[{"id":"mcpcon_0123456789abcdef0123456789abcdef","kind":"oauth","clientName":"Claude","clientHost":"claude.ai","clientId":"c","scopes":[{"id":"market:read","title":"Read markets","level":"read"},{"id":"orders:propose","title":"Propose trades","level":"write"}],"agentSlugs":["test-agent"],"createdAt":1790287200,"lastUsedAt":1790290000,"recent":[{"action":"propose_trade","outcome":"ok","at":1790290000}]}],"agents":[{"slug":"test-agent","account":null}],"available_scopes":[]}"#
+                body = #"{"endpoint":"https://mcp.agentcap.xyz/mcp","connections":[{"id":"mcpcon_0123456789abcdef0123456789abcdef","kind":"oauth","clientName":"Claude","clientHost":"claude.ai","clientId":"c","scopes":[{"id":"market:read","title":"Read markets","level":"read"},{"id":"orders:propose","title":"Propose trades","level":"write"}],"agentSlugs":["test-agent"],"createdAt":1790287200,"lastUsedAt":1790290000,"recent":[{"action":"propose_trade","outcome":"ok","at":1790290000}]}],"agents":[{"slug":"test-agent","account":null}],"available_scopes":[]}"#
             }
         case "/api/mcp/approvals/prp_0123456789abcdef0123456789abcdef":
             let hash = String(repeating: "a", count: 64)
             if request.httpMethod == "POST" {
                 let input = readBody()
-                if request.value(forHTTPHeaderField: "Origin") != "https://app.merrymen.dev" { body = #"{"error":"forbidden"}"#; status = 403; break }
+                if request.value(forHTTPHeaderField: "Origin") != "https://app.agentcap.xyz" { body = #"{"error":"forbidden"}"#; status = 403; break }
                 guard input["hash"] as? String == hash, input["decision"] as? String == "approve" else { body = #"{"error":"invalid_request","error_description":"This request changed. Reload it."}"#; status = 409; break }
                 UserDefaults.standard.set(true, forKey: "uiTest.approvalDecided")
             }
@@ -110,18 +110,18 @@ final class PreviewTransport: URLProtocol {
                 "username": connected ? "robin_trades" as Any : NSNull(), "xUserId": connected ? "2244994945" as Any : NSNull(),
                 "status": connected ? "ok" as Any : NSNull(), "postingEnabled": connected && d.bool(forKey: "uiTest.xPostingEnabled"),
                 "upcoming": upcoming,
-                "recent": [["id": 40, "kind": "intro", "body": "hi, i'm robin, an AI trading agent that trades for my owner on merrymen. i'll post here now and then.", "sentAt": 1790287200000, "url": "https://x.com/robin_trades/status/1790287200000000001"]]
+                "recent": [["id": 40, "kind": "intro", "body": "hi, i'm robin, an AI trading agent that trades for my owner on agentcap. i'll post here now and then.", "sentAt": 1790287200000, "url": "https://x.com/robin_trades/status/1790287200000000001"]]
             ]
             return (String(decoding: (try? JSONSerialization.data(withJSONObject: value)) ?? Data("{}".utf8), as: UTF8.self), 200)
         }
-        guard request.value(forHTTPHeaderField: "Origin") == "https://app.merrymen.dev" else { return (#"{"error":"forbidden"}"#, 403) }
+        guard request.value(forHTTPHeaderField: "Origin") == "https://app.agentcap.xyz" else { return (#"{"error":"forbidden"}"#, 403) }
         let input = readBody(), keys = Set(input.keys)
         let earlier = d.integer(forKey: "uiTest.xWrites"); d.set(earlier + 1, forKey: "uiTest.xWrites")
         guard input["owner"] as? String == owner else { return (#"{"error":"this browser is signed in with a different wallet now than the one that confirmed this, so nothing was changed. Sign back in with that wallet and ask again."}"#, 409) }
         if path == "/api/x/connect" {
             switch input["action"] as? String {
             case "start" where keys == ["action", "client", "owner"] && input["client"] as? String == "ios":
-                return ("{\"url\":\"https://x.com/i/oauth2/authorize?response_type=code&client_id=ui-test&redirect_uri=https%3A%2F%2Fapp.merrymen.dev%2Fconnect%2Fx&scope=tweet.read%20tweet.write%20users.read%20offline.access&state=\(state)&code_challenge=ui-test&code_challenge_method=S256\"}", 200)
+                return ("{\"url\":\"https://x.com/i/oauth2/authorize?response_type=code&client_id=ui-test&redirect_uri=https%3A%2F%2Fapp.agentcap.xyz%2Fconnect%2Fx&scope=tweet.read%20tweet.write%20users.read%20offline.access&state=\(state)&code_challenge=ui-test&code_challenge_method=S256\"}", 200)
             case "finish" where keys == ["action", "code", "state", "owner"] && input["state"] as? String == state:
                 // Like the server: a reconnect of the same account answers whether posting is on again.
                 d.set(false, forKey: "uiTest.xDisconnected")

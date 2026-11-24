@@ -4,7 +4,7 @@
  * Two facts that are each harmless and together are not:
  *
  *   1. `settings.ts` resolves the token as `str(file.telegramBotToken,
- *      env.MERRYMEN_TELEGRAM_BOT_TOKEN)` — the tenant's own file FIRST, the
+ *      env.AGENTCAP_TELEGRAM_BOT_TOKEN)` — the tenant's own file FIRST, the
  *      environment as a FALLBACK. That is right for a self-hosted install,
  *      where the environment is the owner's.
  *   2. Hosted, every child inherits the orchestrator's environment minus
@@ -32,7 +32,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const WORKER_SRC = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
-const TOKEN_ENV = "MERRYMEN_TELEGRAM_BOT_TOKEN";
+const TOKEN_ENV = "AGENTCAP_TELEGRAM_BOT_TOKEN";
 
 describe("the house bot token cannot reach a child", () => {
   it("IS STRIPPED FROM A CHILD'S ENVIRONMENT", () => {

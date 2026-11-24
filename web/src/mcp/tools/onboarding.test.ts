@@ -15,13 +15,13 @@ const NOW = 1_800_000_000;
 const def = ONBOARDING_TOOLS[0] as unknown as ToolDef;
 let restore: (() => void) | null = null;
 let database: TestDb | null = null;
-const originalIssuer = process.env.MERRYMEN_OAUTH_ISSUER;
+const originalIssuer = process.env.AGENTCAP_OAUTH_ISSUER;
 afterEach(() => {
   restore?.(); restore = null;
   database?.raw.close(); database = null;
   resetMetricsForTest();
-  if (originalIssuer === undefined) delete process.env.MERRYMEN_OAUTH_ISSUER;
-  else process.env.MERRYMEN_OAUTH_ISSUER = originalIssuer;
+  if (originalIssuer === undefined) delete process.env.AGENTCAP_OAUTH_ISSUER;
+  else process.env.AGENTCAP_OAUTH_ISSUER = originalIssuer;
 });
 
 type Setup = {
@@ -37,7 +37,7 @@ type Setup = {
 async function setup(o: {
   scopes?: string[]; shared?: string[]; agent?: Partial<OwnedAgent>; settings?: Record<string, unknown>; profile?: "full" | "directory";
 } = {}) {
-  process.env.MERRYMEN_OAUTH_ISSUER = "https://app.test";
+  process.env.AGENTCAP_OAUTH_ISSUER = "https://app.test";
   const d = database = await makeTestDb();
   const directory = fixtureDirectory({ [OWNER_A]: [agentFixture(SLUG_A, ACCOUNT_A, o.agent)] });
   restore = installFixtures(d, { directory, settings: { [OWNER_A]: { liveTradingEnabled: true, strategy: "steady-basket", ...o.settings } } });
@@ -70,8 +70,8 @@ test("a new unshared connection receives usable setup links without claiming no 
   assert.equal(r.connection.can_create_draft, true);
   assert.equal(r.connection.id, principal.connectionId, "a view can separate account connections even before an agent is shared");
   assert.equal(r.connection.can_propose_settings, false);
-  assert.deepEqual(r.connection.available_tools, ["get_merryman_setup", "create_merryman", "get_proposal", "list_proposals", "cancel_proposal"]);
-  assert.equal(r.next_steps.find(s => s.action === "draft_setup")?.tool, "create_merryman");
+  assert.deepEqual(r.connection.available_tools, ["get_agentcapavatar_setup", "create_agentcapavatar", "get_proposal", "list_proposals", "cancel_proposal"]);
+  assert.equal(r.next_steps.find(s => s.action === "draft_setup")?.tool, "create_agentcapavatar");
   assert.equal(r.links.funding, "https://app.test/deposit");
   assert.ok(Object.values(r.links).every(url => new URL(url).origin === "https://app.test"));
   assert.equal(r.runtime.hosted, true);
@@ -101,7 +101,7 @@ test("a drafts-only connection can prepare its first setup without private agent
   const r = result.structuredContent as unknown as Setup;
   assert.equal(r.phase, "no_shared_agent");
   assert.equal(r.connection.can_read_agents, false);
-  assert.equal(r.next_steps.find(s => s.action === "draft_setup")?.tool, "create_merryman");
+  assert.equal(r.next_steps.find(s => s.action === "draft_setup")?.tool, "create_agentcapavatar");
 });
 
 test("no shared agent never reads hidden settings despite an agents:read scope on a forged test principal", async () => {
@@ -122,8 +122,8 @@ test("a shared placeholder identity needs owner permission, not a new MCP connec
   assert.equal(r.phase, "permission_required");
   assert.equal(r.agent?.id, SLUG_A);
   assert.equal(r.agent?.account, null);
-  assert.ok(r.connection.available_tools.includes("create_merryman"));
-  assert.equal(r.next_steps.find(s => s.action === "draft_setup")?.tool, "create_merryman");
+  assert.ok(r.connection.available_tools.includes("create_agentcapavatar"));
+  assert.equal(r.next_steps.find(s => s.action === "draft_setup")?.tool, "create_agentcapavatar");
   assert.match(r.next_steps.find(s => s.action === "draft_setup")!.detail, /resume the saved wallet otherwise/);
   assert.ok(r.next_steps.some(s => s.action === "sign_permission" && s.url === "https://app.test/grant"));
   assert.ok(!r.next_steps.some(s => s.action === "share_agent"));
@@ -209,7 +209,7 @@ test("a fresh live report offers owner-reviewed management without inventing rem
   assert.equal(r.phase, "live");
   assert.equal(r.agent?.worker_fresh, true);
   assert.equal(r.connection.can_propose_settings, true);
-  assert.ok(!r.connection.available_tools.includes("create_merryman"));
+  assert.ok(!r.connection.available_tools.includes("create_agentcapavatar"));
   assert.equal(r.next_steps.find(s => s.action === "propose_settings")?.tool, "propose_settings_change");
   const pause = r.controls.find(c => c.control === "pause / resume")!;
   assert.equal(pause.available_here, false);
@@ -291,8 +291,8 @@ test("directory connections get read-only setup without proposal capabilities", 
   assert.equal(r.phase, "live");
   assert.equal(r.connection.can_create_draft, false);
   assert.equal(r.connection.can_propose_settings, false);
-  assert.ok(r.next_steps.every(s => s.tool !== "create_merryman" && s.tool !== "propose_settings_change"));
-  assert.ok(!r.connection.available_tools.includes("create_merryman"));
+  assert.ok(r.next_steps.every(s => s.tool !== "create_agentcapavatar" && s.tool !== "propose_settings_change"));
+  assert.ok(!r.connection.available_tools.includes("create_agentcapavatar"));
   assert.ok(!r.connection.available_tools.includes("propose_settings_change"));
 });
 
@@ -303,7 +303,7 @@ test("directory profile suppresses sensitive drafts while honoring its allowed n
   assert.equal(result.isError, undefined, result.content[0]?.text);
   const r = result.structuredContent as unknown as Setup;
   assert.equal(r.connection.can_create_draft, false);
-  assert.ok(!r.connection.available_tools.some(tool => ["create_merryman", "propose_settings_change", "create_agent_draft"].includes(tool)));
+  assert.ok(!r.connection.available_tools.some(tool => ["create_agentcapavatar", "propose_settings_change", "create_agent_draft"].includes(tool)));
   assert.ok(["subscribe", "unsubscribe", "list_subscriptions", "list_notification_channels"].every(tool => r.connection.available_tools.includes(tool)));
 });
 
@@ -311,7 +311,7 @@ test("home actions expose only real tools covered by the selected agent's connec
   const { seed, read } = await setup({ scopes: ["market:read", "agents:read", "portfolio:read", "decisions:read", "notifications:manage", "drafts:write"] });
   await seed();
   const r = await read();
-  assert.deepEqual(r.connection.available_tools, ["get_merryman_setup", "list_agents", "get_proposal", "list_proposals", "cancel_proposal", "get_agent_status", "get_agent_controls", "get_agent_settings",
+  assert.deepEqual(r.connection.available_tools, ["get_agentcapavatar_setup", "list_agents", "get_proposal", "list_proposals", "cancel_proposal", "get_agent_status", "get_agent_controls", "get_agent_settings",
     "get_portfolio", "get_trades", "list_decisions", "get_refusals", "list_notification_channels", "list_subscriptions",
     "subscribe", "unsubscribe", "create_agent_draft", "propose_settings_change"]);
   assert.ok(r.connection.available_tools.includes("get_agent_settings"));

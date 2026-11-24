@@ -10,7 +10,7 @@
  * restoreLedgerImport, registerLedgerSource, the continuity proof and a real
  * mirror pass — accept the attested book exactly as they would any other.
  *
- * Run with MERRYMEN_TEST_PG_URL=postgres://…@127.0.0.1:<port>/<db>.
+ * Run with AGENTCAP_TEST_PG_URL=postgres://…@127.0.0.1:<port>/<db>.
  */
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
@@ -41,7 +41,7 @@ interface Client {
   query(sql: string, params?: unknown[]): Promise<{ rows: Record<string, unknown>[]; rowCount: number | null }>;
   on(event: "error" | "end", fn: () => void): void;
 }
-const url = process.env.MERRYMEN_TEST_PG_URL ?? process.env.MERRYMEN_TEST_POSTGRES_URL;
+const url = process.env.AGENTCAP_TEST_PG_URL ?? process.env.AGENTCAP_TEST_POSTGRES_URL;
 const pg = url ? createRequire(import.meta.url)("pg") as { Client: new (config: { connectionString: string }) => Client } : null;
 const address = (n: number) => `0x${n.toString(16).padStart(40, "0")}` as `0x${string}`;
 const dek = Buffer.alloc(32, 77), key = `0x${"46".repeat(32)}` as `0x${string}`;
@@ -53,7 +53,7 @@ test("Postgres: attested-gap registration, its approvals, and the owner-control 
   const admin = new pg!.Client({ connectionString: target.toString() }); await admin.connect(); await admin.query(`CREATE SCHEMA ${schema}`);
   const scoped = new URL(target); scoped.searchParams.set("options", `-c search_path=${schema} -c statement_timeout=10000 -c lock_timeout=8000`);
   const clients: Client[] = [], tmp = realpathSync(mkdtempSync(path.join(os.tmpdir(), "mm-resume-pg-")));
-  const savedDek = process.env.MERRYMEN_STORE_DEK; process.env.MERRYMEN_STORE_DEK = dek.toString("base64");
+  const savedDek = process.env.AGENTCAP_STORE_DEK; process.env.AGENTCAP_STORE_DEK = dek.toString("base64");
   const connect = async () => { const c = new pg!.Client({ connectionString: scoped.toString() }); await c.connect(); clients.push(c); return c; };
   const main = await connect();
   const wrap = (client: Client, scopedTransaction = false): Db => ({
@@ -77,7 +77,7 @@ test("Postgres: attested-gap registration, its approvals, and the owner-control 
     for (const raw of raws) raw.close();
     await Promise.allSettled(clients.map(c => c.end()));
     try { await admin.query(`DROP SCHEMA ${schema} CASCADE`); } finally { await admin.end(); rmSync(tmp, { recursive: true, force: true }); }
-    if (savedDek === undefined) delete process.env.MERRYMEN_STORE_DEK; else process.env.MERRYMEN_STORE_DEK = savedDek;
+    if (savedDek === undefined) delete process.env.AGENTCAP_STORE_DEK; else process.env.AGENTCAP_STORE_DEK = savedDek;
   });
 
   // A pre-incident tenant: an original book mirrored into Postgres, then lost.
@@ -86,7 +86,7 @@ test("Postgres: attested-gap registration, its approvals, and the owner-control 
     serialized: Buffer.from(JSON.stringify({ privateKey: key })).toString("base64"), demoSessionPrivateKey: key, grantedAt: 1, expiresAt: NOW + 86400,
     caps: { perTradeUsdg: 10, dailyUsdg: 50, maxDrawdownPct: 20, expiryDays: 1 }, grantFeatures: ["tradeable-v2"], grantTokens: [] } as unknown as StoredGrant);
   const original = path.join(tmp, "original"); mkdirSync(original, { recursive: true });
-  const lost = new DatabaseSync(path.join(original, "merrymen.db")); raws.push(lost); await applyLedgerSchema(wrapSqlite(lost));
+  const lost = new DatabaseSync(path.join(original, "agentcap.db")); raws.push(lost); await applyLedgerSchema(wrapSqlite(lost));
   lost.prepare("INSERT INTO agents(smart_account,owner_address,session_key_address,chain_id,caps,granted_at,expires_at,mode,hwm_usdg,epoch) VALUES(?,?,?,4663,'{}',1,9999999999,'paper',100,2)").run(account, owner, privateKeyToAccount(key).address);
   lost.prepare("INSERT INTO events(id,agent_id,message,created_at) VALUES(40,?,'original evidence',?)").run(account, OLD);
   lost.prepare("INSERT INTO trades(id,agent_id,kind,target,amount_usdg,status,created_at,epoch) VALUES(37,?,'swap','fixture',5,'paper',?,2)").run(account, OLD);
@@ -175,7 +175,7 @@ test("Postgres: attested-gap registration, its approvals, and the owner-control 
     // and no agent row. The next pass's gates accept it for this registration
     // only (to_regclass and FOR SHARE in the production dialect), and refuse it
     // once its approval is withdrawn.
-    const seeded = new DatabaseSync(path.join(home, "merrymen.db"));
+    const seeded = new DatabaseSync(path.join(home, "agentcap.db"));
     try { seeded.prepare("INSERT INTO paper_book(agent_id,cash_usdg,vault_usdg,hwm_usdg,shares,updated_at) VALUES(?,90,0,100,'{}',1)").run(account); }
     finally { seeded.close(); }
     assert.equal(await restoreLedgerImport(options), "present");
@@ -184,9 +184,9 @@ test("Postgres: attested-gap registration, its approvals, and the owner-control 
     await assert.rejects(restoreLedgerImport(options), /refused/);
     await assert.rejects(registerLedgerSource(options), /refused/);
     await main.query("UPDATE ledger_resume_approvals SET state='registered' WHERE approval_id=$1", [approval.approvalId]);
-    const unseed = new DatabaseSync(path.join(home, "merrymen.db"));
+    const unseed = new DatabaseSync(path.join(home, "agentcap.db"));
     try { unseed.prepare("DELETE FROM paper_book").run(); } finally { unseed.close(); }
-    const book = new DatabaseSync(path.join(home, "merrymen.db")); raws.push(book);
+    const book = new DatabaseSync(path.join(home, "agentcap.db")); raws.push(book);
     await assertLedgerSourceContinuity(wrapSqlite(book), shared, tenant);
     // The child arms, seeded; its first mirror pass.
     book.prepare("INSERT INTO agents(smart_account,owner_address,session_key_address,chain_id,caps,granted_at,expires_at,mode,hwm_usdg,epoch) VALUES(?,?,?,4663,'{}',1,9999999999,'paper',0,1)").run(account, owner, privateKeyToAccount(key).address);
@@ -200,7 +200,7 @@ test("Postgres: attested-gap registration, its approvals, and the owner-control 
     assert.equal(Number((await main.query("SELECT count(*) AS n FROM trades WHERE lower(agent_id)=$1", [account])).rows[0]!.n), 1, "no trade copied twice");
   });
 
-  await t.test("MERRYMEN_RESUME_AUTO_PAPER in the production dialect: the source column's ALTER, the roster's write stamp, the watch, the verdict's reads", async () => {
+  await t.test("AGENTCAP_RESUME_AUTO_PAPER in the production dialect: the source column's ALTER, the roster's write stamp, the watch, the verdict's reads", async () => {
     // Production's approvals table predates `source`: the ALTER adds it, and a row from before reads as the operator's.
     await main.query("ALTER TABLE ledger_resume_approvals DROP COLUMN source");
     await ensureLedgerResumeSchema(shared);

@@ -31,7 +31,7 @@ export function pinnedHttpsOptions(url: URL, address: Address, signal: AbortSign
     agent: false, signal, rejectUnauthorized: true,
     servername: isIP(hostname) ? "" : hostname,
     checkServerIdentity: (_host, cert) => checkServerIdentity(hostname, cert),
-    headers: { host: url.host, "accept-encoding": "identity", "user-agent": "merrymen-image-proxy" },
+    headers: { host: url.host, "accept-encoding": "identity", "user-agent": "agentcap-image-proxy" },
   };
 }
 

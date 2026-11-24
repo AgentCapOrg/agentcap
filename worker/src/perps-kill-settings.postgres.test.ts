@@ -2,7 +2,7 @@
  * THE KILL'S PAPER STAND-DOWN ON THE SHARED POSTGRES (perps-kill.ts,
  * settings-store.ts PgSettingsStore.disablePerpsForKill).
  *
- * Opt-in, disposable LOCAL PostgreSQL only (MERRYMEN_TEST_PG_URL). Never reads
+ * Opt-in, disposable LOCAL PostgreSQL only (AGENTCAP_TEST_PG_URL). Never reads
  * DATABASE_URL. Pins the three things a hosted kill needs of the Perps
  * settings: read-only probes create no table; a completed public kill records
  * a fresh off revision even for an absent wallet; other settings stay sealed
@@ -12,13 +12,13 @@ import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
 import { createRequire } from "node:module";
 import { test } from "node:test";
-import type { MerrymenSettings } from "../../packages/core/src/index";
+import type { AgentCapSettings } from "../../packages/core/src/index";
 
-function withoutNonce(value: MerrymenSettings | null): MerrymenSettings {
+function withoutNonce(value: AgentCapSettings | null): AgentCapSettings {
   assert.ok(value);const {perpsControlNonce,...rest}=value;assert.match(perpsControlNonce!,/^[a-f0-9-]{36}$/);return rest;
 }
 
-const url = process.env.MERRYMEN_TEST_PG_URL ?? process.env.MERRYMEN_TEST_POSTGRES_URL;
+const url = process.env.AGENTCAP_TEST_PG_URL ?? process.env.AGENTCAP_TEST_POSTGRES_URL;
 interface Client {
   connect(): Promise<void>;
   query(sql: string, params?: unknown[]): Promise<{ rows: Record<string, unknown>[] }>;
@@ -28,7 +28,7 @@ interface Client {
 test("Postgres: a kill turns the Perps wallet's paper strategy off, and nothing else", { skip: !url, timeout: 60_000 }, async (t) => {
   const target = new URL(url!);
   assert.ok(["localhost", "127.0.0.1", "[::1]"].includes(target.hostname), "only a disposable local PostgreSQL is allowed");
-  process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
+  process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
   const pg = createRequire(import.meta.url)("pg") as { Client: new (config: { connectionString: string }) => Client };
   const schema = `mm_perps_kill_${randomBytes(8).toString("hex")}`;
   const admin = new pg.Client({ connectionString: target.toString() });
@@ -40,7 +40,7 @@ test("Postgres: a kill turns the Perps wallet's paper strategy off, and nothing 
   const scopedUrl = scoped.toString();
   const { PgSettingsStore, disablePaperPerpsForKill } = await import("./settings-store");
   const T = "0x00000000000000000000000000000000000000a1" as const;
-  const OWNER: MerrymenSettings = { perpsEnabled: true, perpsMarkets: ["BTC-PERP"], perpsMaxLeverage: 2, agentName: "Little John" };
+  const OWNER: AgentCapSettings = { perpsEnabled: true, perpsMarkets: ["BTC-PERP"], perpsMaxLeverage: 2, agentName: "Little John" };
   const tables = async () =>
     (await admin.query(`SELECT table_name FROM information_schema.tables WHERE table_schema = $1 ORDER BY table_name`, [schema])).rows.map((r) => String(r.table_name));
   try {
@@ -51,7 +51,7 @@ test("Postgres: a kill turns the Perps wallet's paper strategy off, and nothing 
     });
 
     await t.test("a Perps settings READ before any Perps write makes no table either: get, getVersioned, listTenants and remove answer empty by a catalog look", async () => {
-      // GET /api/settings?wallet=perps is answered whatever MERRYMEN_PERPS says
+      // GET /api/settings?wallet=perps is answered whatever AGENTCAP_PERPS says
       // (D1), and every Perps save reads first. These went through client(),
       // which makes every table it names, so a signed-in login's read made
       // perps_tenant_settings (and the holder tables) on a fleet that had

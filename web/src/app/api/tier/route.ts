@@ -8,7 +8,7 @@
  *
  * He had to read a JSON endpoint to find out why his funded agent did nothing.
  * The product knew the answer the whole time and had nowhere to put it: the
- * create-agent picker states the RULE ("runs only while you hold $MERRYMEN")
+ * create-agent picker states the RULE ("runs only while you hold $AGENTCAP")
  * and never the reader's STANDING against it, which is the only half that tells
  * somebody whether to press the button.
  *
@@ -25,8 +25,8 @@
  *
  * WHOSE TOKENS COUNT: THE OWNER'S WALLET AND THEIR AGENT'S ACCOUNT, TOGETHER.
  * The worker's Circle gate and its energy count the combined balance, so this
- * does too — through lib/merrymen-standing.ts, which /api/circle and /api/alpha
- * share, so that "send $MERRYMEN to my account" clears every screen at once.
+ * does too — through lib/agentcap-standing.ts, which /api/circle and /api/alpha
+ * share, so that "send $AGENTCAP to my account" clears every screen at once.
  * The agent's account counts only on Robinhood Chain and never twice; a read of
  * EITHER half that fails is `unreadable` with every count null, because half a
  * sum is exactly the smaller number that sends somebody to buy more.
@@ -42,7 +42,7 @@ import {
   isHostedMode,
   robinhoodChain,
   tierForBalance,
-} from "@merrymen/core";
+} from "@agentcap/core";
 import { webChainRead } from "@/lib/chain-read";
 import { tenantOf } from "@/lib/auth";
 import { holderWalletFor, type HolderWallet } from "@/lib/holder-wallet";
@@ -56,7 +56,7 @@ import {
   standingTokens,
   type BalanceCache,
   type Standing,
-} from "@/lib/merrymen-standing";
+} from "@/lib/agentcap-standing";
 import { walletNotSupported } from "@/lib/route-guard";
 
 export const dynamic = "force-dynamic";
@@ -109,7 +109,7 @@ export async function GET(req: Request) {
   const walletRefused = walletNotSupported(req);
   if (walletRefused) return walletRefused;
   const hosted = isHostedMode();
-  const energyGate = energyGateOn(process.env.MERRYMEN_ENERGY_GATE, hosted);
+  const energyGate = energyGateOn(process.env.AGENTCAP_ENERGY_GATE, hosted);
   const view = (v: Partial<TierView>): TierView => ({
     why: "ok",
     tokens: null,

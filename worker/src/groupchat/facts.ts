@@ -90,7 +90,7 @@ const DISPOSITION_DEFAULTS: Disposition = {
  * publication list is named. A tenant's own file is a string we did not write,
  * and `llm-strategist` is off that list on purpose (thesis-policy.ts).
  *
- * NO ENVIRONMENT. The child also honours MERRYMEN_* overrides, but this runs in
+ * NO ENVIRONMENT. The child also honours AGENTCAP_* overrides, but this runs in
  * the orchestrator from a raw settings object and has to stay pure; an
  * operator-wide override is not something the owner chose, so it is not a
  * trait of their agent either.
@@ -322,7 +322,7 @@ const POSTED_CALL = `
  *
  * AND SO DOES A NAME THAT IS ANOTHER SPEAKER'S LABEL. The room tells speakers
  * apart by the name on the bubble: an owner's line is headed "<agent>'s owner"
- * and the room's own lines "merrymen". An agent named "Bob's owner", "owner",
+ * and the room's own lines "agentcap". An agent named "Bob's owner", "owner",
  * "human" or "Merry Men" would post under a label that says a person, or the
  * room itself, is talking. See `impersonates`.
  *
@@ -339,7 +339,7 @@ export function roomName(raw: unknown, slug: string | null): string {
 }
 
 /** The room's own voice on system lines — conductor.ts SYSTEM_NAME, which facts.test.ts reads to keep the two equal. */
-const SYSTEM_SPEAKER = "merrymen";
+const SYSTEM_SPEAKER = "agentcap";
 
 /** Every mark a reader takes for an apostrophe, including the modifier letters the stored-name rule admits as letters. */
 const APOSTROPHE = /['‘’‛′‵＇`´ʹʻʼʽʾʿˈˊˋˮꞋꞌՙ՚׳ߴߵ]/gu;

@@ -19,9 +19,9 @@ import os from "node:os";
 import path from "node:path";
 import { after, afterEach, describe, it, mock } from "node:test";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-notifier-delivery-"));
-process.env.MERRYMEN_HOME = HOME;
-process.env.MERRYMEN_DASHBOARD_URL = "https://app.merrymen.dev";
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-notifier-delivery-"));
+process.env.AGENTCAP_HOME = HOME;
+process.env.AGENTCAP_DASHBOARD_URL = "https://app.agentcap.xyz";
 after(() => rmSync(HOME, { recursive: true, force: true }));
 
 const { startNotifier } = await import("./notifier");

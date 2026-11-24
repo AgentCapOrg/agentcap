@@ -7,10 +7,10 @@ import type { MessageKey } from "./en";
  * That is what makes a partial file safe to have here.
  */
 export const zh_CN: Partial<Record<MessageKey, string>> = {
-  "tour.stop01.title": "欢迎使用 merrymen。",
+  "tour.stop01.title": "欢迎使用 agentcap。",
   "tour.stop01.copy": "给智能体设定一个策略，设置它的限额，然后跟踪它做出的每个决策。你可以看完整个导览，也可以用「目录」直接跳到某个功能。随时可以退出，也随时可以重看。",
   "tour.stop02.title": "从你熟悉的市场开始。",
-  "tour.stop02.copy": "首页是你的 merryman 和你的资金。探索（Explore）里有排行榜和各个市场：打开任意一个代币，就能看到它的历史价格，以及各个智能体在它上面记录下来的交易。",
+  "tour.stop02.copy": "首页是你的 agentcapavatar 和你的资金。探索（Explore）里有排行榜和各个市场：打开任意一个代币，就能看到它的历史价格，以及各个智能体在它上面记录下来的交易。",
   "tour.stop03.title": "你的智能体，你定边界。",
   "tour.stop03.copy": "一个策略加两个限额——单笔限额和每日限额——决定了它能做什么。在你另行设置之前，模拟模式只会用虚拟资金练习。",
   "tour.stop04.title": "问它为什么。",
@@ -56,7 +56,7 @@ export const zh_CN: Partial<Record<MessageKey, string>> = {
   "tour.stop24.title": "设置与公开范围。",
   "tour.stop24.copy": "「设置」里管的是智能体的配置，以及你要公开哪些内容。公开你的账本，可能会暴露持仓和下单金额的细节；即使设为不公开，你的公开活动和符合条件的百分比收益率仍然可以显示。",
   "tour.stop25.title": "用 API 做开发。",
-  "tour.stop25.copy": "开发者可以访问 merrymen.dev/api，查看 API 密钥的配置方法、SDK 和接入教程。API 密钥属于机密信息，要保存在你自己的服务器上。接入其他应用时，请按文档里的配置步骤和对话流程操作。",
+  "tour.stop25.copy": "开发者可以访问 agentcap.xyz/api，查看 API 密钥的配置方法、SDK 和接入教程。API 密钥属于机密信息，要保存在你自己的服务器上。接入其他应用时，请按文档里的配置步骤和对话流程操作。",
   "tour.stop26.title": "准备好了就开始吧。",
   "tour.stop26.copy": "回到对话，就可以问策略、限额或者最新的一条决策。如果智能体迟迟不动，就去看看它的解释、当前模式、资金和授权。想重看这个导览，随时点「带我看看」。",
   "tour.skip": "跳过",
@@ -65,7 +65,7 @@ export const zh_CN: Partial<Record<MessageKey, string>> = {
   "tour.next": "下一步",
   "tour.finish": "完成",
   "tour.relaunch": "带我看看",
-  "tour.dialogLabel": "快速了解 merrymen",
+  "tour.dialogLabel": "快速了解 agentcap",
   "tour.stepOf": "{current} / {total}",
   "tour.savedLocally": "已保存在当前浏览器。",
   "tour.retrySync": "重试账号同步",

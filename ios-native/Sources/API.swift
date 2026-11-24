@@ -1,7 +1,7 @@
 import Foundation
 import Combine
 import Security
-import MerrymenPolicy
+import AgentCapPolicy
 
 typealias J = JSONValue
 
@@ -13,7 +13,7 @@ struct APIError: LocalizedError {
 
 final class API: NSObject, URLSessionTaskDelegate {
     struct SessionBinding { fileprivate let header: String; fileprivate let epoch: Int }
-    static let origin = URL(string: "https://app.merrymen.dev")!
+    static let origin = URL(string: "https://app.agentcap.xyz")!
     private lazy var session: URLSession = {
         let c = URLSessionConfiguration.ephemeral
         c.httpShouldSetCookies = false
@@ -33,7 +33,7 @@ final class API: NSObject, URLSessionTaskDelegate {
     override init() {
         super.init()
         let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: "dev.merrymen.session", kSecAttrAccount as String: "cookie",
+            kSecAttrService as String: "dev.agentcap.session", kSecAttrAccount as String: "cookie",
             kSecReturnData as String: true]
         var result: CFTypeRef?
         if SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess, let data = result as? Data {
@@ -56,15 +56,15 @@ final class API: NSObject, URLSessionTaskDelegate {
             if c.value.isEmpty || (c.expiresDate.map { $0 < Date() } ?? false) { parts.removeValue(forKey: c.name) }
             else { parts[c.name] = c.value }
         }
-        for c in fresh where c.name == "merrymen_recovery" && c.domain == Self.origin.host! && c.path == "/api/bundler" { recoveryCookie = c }
+        for c in fresh where c.name == "agentcap_recovery" && c.domain == Self.origin.host! && c.path == "/api/bundler" { recoveryCookie = c }
         let next = parts.keys.sorted().map { "\($0)=\(parts[$0]!)" }.joined(separator: "; ")
         try persistCookies(next)
         if next != cookieHeader { epoch += 1 }
         cookieHeader = next
     }
     private func persistCookies(_ value: String) throws {
-        if value.isEmpty { try SecureStore.remove("dev.merrymen.session", "cookie") }
-        else { try SecureStore.write("dev.merrymen.session", "cookie", Data(value.utf8)) }
+        if value.isEmpty { try SecureStore.remove("dev.agentcap.session", "cookie") }
+        else { try SecureStore.write("dev.agentcap.session", "cookie", Data(value.utf8)) }
     }
 
     func request(_ path: String, method: String = "GET", body: J? = nil, token: String? = nil, expectedSession: SessionBinding? = nil) async throws -> J {

@@ -38,7 +38,7 @@ function selectors(list: string): string[] {
 /** Every style rule of every sheet the terminal can load, one entry per selector, in and out of media queries. */
 function rules(): Rule[] {
   const out: Rule[] = [];
-  for (const dir of ["./", "../merryman/"]) {
+  for (const dir of ["./", "../agentcapavatar/"]) {
     for (const file of readdirSync(here(dir)).filter((name) => name.endsWith(".css"))) {
       const css = bare(readFileSync(here(dir + file), "utf8"));
       for (const match of css.matchAll(/(?<=^|[{}])\s*([^{}@]+?)\s*\{([^{}]*)\}/g)) {
@@ -58,8 +58,8 @@ describe("the hero's status chip", () => {
   it("is styled on the hero's stage and nowhere else: no rule reaches a .mm-chip outside it", () => {
     const chip = rules().filter((rule) => CHIP.test(rule.selector));
     assert.ok(
-      chip.some((rule) => rule.file === "merryman-shell.css" && /\.mm-chip$/.test(rule.selector) && /position:\s*absolute/.test(rule.body)),
-      "the chip's own rule, the one that places it, in merryman-shell.css",
+      chip.some((rule) => rule.file === "agentcapavatar-shell.css" && /\.mm-chip$/.test(rule.selector) && /position:\s*absolute/.test(rule.body)),
+      "the chip's own rule, the one that places it, in agentcapavatar-shell.css",
     );
     for (const rule of chip) {
       assert.match(rule.selector, ON_STAGE, `${rule.file}: "${rule.selector}" would also style the example buttons in Settings`);
@@ -68,7 +68,7 @@ describe("the hero's status chip", () => {
 
   it("has one selector in its own sheet and in Ledger, so Ledger's type wins as the tie it is", () => {
     const whole = rules().filter((rule) => /\.mm-chip$/.test(rule.selector));
-    const own = whole.filter((rule) => rule.file === "merryman-shell.css" && /position:\s*absolute/.test(rule.body));
+    const own = whole.filter((rule) => rule.file === "agentcapavatar-shell.css" && /position:\s*absolute/.test(rule.body));
     const ledger = whole.filter((rule) => rule.file === "ledger.css");
     assert.equal(own.length, 1, "the rule that places the chip");
     assert.equal(ledger.length, 1, "the rule that sets the chip's type in Ledger");

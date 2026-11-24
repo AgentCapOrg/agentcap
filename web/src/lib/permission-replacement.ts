@@ -1,6 +1,6 @@
 /** A grant selected for revocation must never be silently re-armed from storage. */
 type GrantIdentity = { smartAccount: string; chainId: number; sessionKeyAddress: string };
-const key = (grant: GrantIdentity) => `merrymen.permission-replacement.v1.${grant.chainId}.${grant.smartAccount.toLowerCase()}.${grant.sessionKeyAddress.toLowerCase()}`;
+const key = (grant: GrantIdentity) => `agentcap.permission-replacement.v1.${grant.chainId}.${grant.smartAccount.toLowerCase()}.${grant.sessionKeyAddress.toLowerCase()}`;
 
 export function needsPermissionReplacement(grant: GrantIdentity): boolean {
   try { return localStorage.getItem(key(grant)) === "1"; }

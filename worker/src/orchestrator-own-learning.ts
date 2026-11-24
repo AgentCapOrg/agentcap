@@ -15,7 +15,7 @@ export async function materializeOwnOutcomeLearning(options: {
 }): Promise<void> {
   const { db, home, readGrant, nowSec, env = process.env } = options;
   // The default fleet path spends no database reads and creates no new file.
-  if (!env.MERRYMEN_DECISION_RESEARCH_ACCOUNTS?.trim()) return;
+  if (!env.AGENTCAP_DECISION_RESEARCH_ACCOUNTS?.trim()) return;
   const grant = await readGrant();
   if (!grant || !decisionResearchEnabledFor(grant.smartAccount, env) || grant.expiresAt <= nowSec) return;
   const snapshot = await readOwnOutcomeLearning(db, grant.smartAccount, grant.chainId, nowSec);

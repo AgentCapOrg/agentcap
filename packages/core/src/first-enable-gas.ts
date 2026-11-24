@@ -1,7 +1,7 @@
 /**
  * WHAT A PERMISSION WALL COSTS TO INSTALL, DERIVED FROM THE WALL ITSELF.
  *
- * A merrymen session key installs its validator LAZILY: the enable data rides in
+ * A agentcap session key installs its validator LAZILY: the enable data rides in
  * the signature of the first operation that key signs, so that one operation
  * carries the whole wall — every policy, both ONE_OF lists, and the owner's
  * EIP-712 enable signature — and Kernel installs all of it inside validation.

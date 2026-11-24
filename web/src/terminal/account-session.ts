@@ -2,7 +2,7 @@ import type { AccountState } from "./HostedControls";
 import type { ReadState } from "./live";
 import { requestJson } from "./request-json";
 import { walletUrl } from "../lib/wallet-param";
-import type { GrantPurpose } from "@merrymen/core";
+import type { GrantPurpose } from "@agentcap/core";
 
 type Session = AccountState["session"];
 type Status = AccountState["status"];

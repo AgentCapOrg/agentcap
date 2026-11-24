@@ -1,5 +1,5 @@
 /**
- * Print merrymen.dev's llms.txt (the production setup instructions an AI
+ * Print agentcap.xyz's llms.txt (the production setup instructions an AI
  * assistant follows) to stdout:
  *
  *   node_modules/.bin/tsx scripts/llms-txt.ts > site/public/llms.txt
@@ -12,4 +12,4 @@
 import { PRODUCTION_DIRECTORY_URL, llmsTxt } from "../web/src/mcp/assistant-setup";
 import { PLUGIN_SERVER_URL } from "../web/src/mcp/install-links";
 
-process.stdout.write(llmsTxt({ server: PLUGIN_SERVER_URL, app: "https://app.merrymen.dev", directory: PRODUCTION_DIRECTORY_URL }));
+process.stdout.write(llmsTxt({ server: PLUGIN_SERVER_URL, app: "https://app.agentcap.xyz", directory: PRODUCTION_DIRECTORY_URL }));

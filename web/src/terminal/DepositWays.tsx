@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CASH } from "@merrymen/core";
+import { CASH } from "@agentcap/core";
 import type { GrantBalances } from "@/lib/grant-balances";
 import {
   DEPOSIT_SOURCES,
@@ -139,8 +139,8 @@ function SendUsdg({ agent, network }: { agent: string; network: string }) {
   return (
     <>
       <div className="fund-address-card">
-        <label>Your merryman&apos;s account</label>
-        <QrCode value={agent} label={`QR code of your merryman's account address, ${agent}`} />
+        <label>Your agentcapavatar&apos;s account</label>
+        <QrCode value={agent} label={`QR code of your agentcapavatar's account address, ${agent}`} />
         <p className="funding-address">{agent}</p>
         <button type="button" className="flow-primary" onClick={copy}>{copied ? "Address copied" : "Copy deposit address"}</button>
         {error && <p role="alert">{error}</p>}
@@ -343,7 +343,7 @@ function Convert({ sources, agent, balances, gasSponsored, defaultFrom, fetchImp
           >
             Continue on Relay
           </a>
-          <p className="deposit-quiet">You sign on relay.link with the wallet that holds your {source.asset}. Relay asks you to confirm the recipient: it should be your agent&apos;s account, ending {agent.slice(-4)}. Relay prices again when you sign, and its slippage starts on Auto: set Max Slippage to {source.slippageBps / 100}% or less. Merrymen never holds or moves these funds.</p>
+          <p className="deposit-quiet">You sign on relay.link with the wallet that holds your {source.asset}. Relay asks you to confirm the recipient: it should be your agent&apos;s account, ending {agent.slice(-4)}. Relay prices again when you sign, and its slippage starts on Auto: set Max Slippage to {source.slippageBps / 100}% or less. AgentCap never holds or moves these funds.</p>
           <button type="button" className="flow-secondary" onClick={() => setRefresh((n) => n + 1)}>Refresh price</button>
         </>
       )}
@@ -458,7 +458,7 @@ export function arrivalText(arrival: Arrival, watch: ArrivalWatch): string {
  */
 const WATCH_TTL_MS = 24 * 60 * 60_000;
 function useWatch(agent: string, now: () => number): [ArrivalWatch | null, (next: ArrivalWatch | null) => void] {
-  const key = `merrymen:deposit-watch:${agent.toLowerCase()}`;
+  const key = `agentcap:deposit-watch:${agent.toLowerCase()}`;
   const [watch, setState] = useState<ArrivalWatch | null>(() => loadWatch(key, now()));
   const keyRef = useRef(key);
   keyRef.current = key;

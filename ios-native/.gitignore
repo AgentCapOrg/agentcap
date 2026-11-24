@@ -9,7 +9,7 @@ Config/Signing.xcconfig
 TestResults.xcresult/
 iPadResults.xcresult/
 *.xcarchive.zip
-Merrymen-simulator.zip
+AgentCap-simulator.zip
 ipad-build.log
 archive.log
 iPadScreenshots/

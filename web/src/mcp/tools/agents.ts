@@ -15,7 +15,7 @@ const blocker = z.object({ rule: z.string(), text: z.string(), owner_can_fix: z.
 const listAgents = defineTool({
   name: "list_agents",
   title: "List my agents",
-  ...withToolRefs("List the Merrymen agents the owner shared with this connection: id, name, account, mode (paper/live) and status. Use the id as `agent` in other tools.", " Use the id as `agent` in other tools."),
+  ...withToolRefs("List the AgentCap agents the owner shared with this connection: id, name, account, mode (paper/live) and status. Use the id as `agent` in other tools.", " Use the id as `agent` in other tools."),
   capability: "agents.read",
   input: z.object({}).strict(),
   output: z.object({
@@ -251,20 +251,20 @@ const getAgentControls = defineTool({
  */
 const FIXED_CONTROLS = [
   { control: "pause / resume", where: "Telegram /pause and /resume (only while Settings → Advanced settings → Telegram controls → 'allow control commands' is on)", effect: "Pausing stops the whole trading cycle: new entries AND exits, including stop-loss and take-profit. Owner orders are refused while paused. It is kept on the agent's own machine, so it is not offered here: a remote pause that silently disabled protective exits would be unsafe.", available_here: false },
-  // Telegram /kill is named again. On hosted Merrymen (the only place MCP runs)
+  // Telegram /kill is named again. On hosted AgentCap (the only place MCP runs)
   // it used to delete only the agent machine's copy of the key, and the
   // orchestrator restored it from the grant store. It now leaves a kill
   // request that the orchestrator carries out against the store, as the web
   // page's DELETE does (worker/src/kill-request.ts).
-  { control: "kill switch", where: "Merrymen → You → Wallet & permissions (/grant) → 'discard & start over', or Telegram /kill, then /confirm (only while Settings → Advanced settings → Telegram controls → 'allow control commands' is on)", effect: "Removes the stored trading key so the agent can no longer sign anything. The Telegram command stops the agent on its next tick; the server deletes the stored key within seconds and confirms it in the owner's Telegram chat. Funds stay in the owner's smart account. Starting over on the web page also restarts a paper book; live positions and trades are never deleted.", available_here: false },
-  { control: "live trading on/off", where: "Merrymen → You → Settings (/settings) → 'live trading'", effect: "Off means no real orders; the agent practises on paper if paper trading is on. Only the owner can turn it on.", available_here: false },
-  { control: "limits (per trade, per day, drawdown, expiry)", where: "Merrymen → You → Trading limits → 'Edit signed limits' (re-sign on Wallet & permissions, /grant)", effect: "Changing a signed limit requires a new owner signature.", available_here: false },
+  { control: "kill switch", where: "AgentCap → You → Wallet & permissions (/grant) → 'discard & start over', or Telegram /kill, then /confirm (only while Settings → Advanced settings → Telegram controls → 'allow control commands' is on)", effect: "Removes the stored trading key so the agent can no longer sign anything. The Telegram command stops the agent on its next tick; the server deletes the stored key within seconds and confirms it in the owner's Telegram chat. Funds stay in the owner's smart account. Starting over on the web page also restarts a paper book; live positions and trades are never deleted.", available_here: false },
+  { control: "live trading on/off", where: "AgentCap → You → Settings (/settings) → 'live trading'", effect: "Off means no real orders; the agent practises on paper if paper trading is on. Only the owner can turn it on.", available_here: false },
+  { control: "limits (per trade, per day, drawdown, expiry)", where: "AgentCap → You → Trading limits → 'Edit signed limits' (re-sign on Wallet & permissions, /grant)", effect: "Changing a signed limit requires a new owner signature.", available_here: false },
 ];
 
 /** Setting changes, for a connection holding drafts.write: propose_settings_change is registered on it. */
-export const SETTINGS_CONTROL_HERE = { control: "setting changes", where: "propose_settings_change (owner approves in Merrymen)", effect: "Strategy, basket and risk settings can be proposed here and take effect only after the owner approves them.", available_here: true };
+export const SETTINGS_CONTROL_HERE = { control: "setting changes", where: "propose_settings_change (owner approves in AgentCap)", effect: "Strategy, basket and risk settings can be proposed here and take effect only after the owner approves them.", available_here: true };
 /** Setting changes, for any other connection (always on the directory profile): no tool is named, because none exists there. */
-export const SETTINGS_CONTROL_IN_APP = { control: "setting changes", where: "Merrymen → You → Settings (/settings)", effect: "Strategy, basket and risk settings are changed by the owner in Merrymen's Settings. This connection cannot propose them.", available_here: false };
+export const SETTINGS_CONTROL_IN_APP = { control: "setting changes", where: "AgentCap → You → Settings (/settings)", effect: "Strategy, basket and risk settings are changed by the owner in AgentCap's Settings. This connection cannot propose them.", available_here: false };
 
 /** Every entry any connection can be shown, for the label checks in agents.test.ts. */
 export const AGENT_CONTROLS = [...FIXED_CONTROLS, SETTINGS_CONTROL_HERE, SETTINGS_CONTROL_IN_APP];
@@ -273,7 +273,7 @@ export const AGENT_CONTROLS = [...FIXED_CONTROLS, SETTINGS_CONTROL_HERE, SETTING
  * The controls as this connection sees them: available_here follows the
  * capability the control needs (hasCapability, which is false for anything
  * outside the directory profile), and an unavailable control points at
- * Merrymen itself instead of at a tool this connection does not have.
+ * AgentCap itself instead of at a tool this connection does not have.
  */
 export function agentControls(p: Principal): Array<(typeof AGENT_CONTROLS)[number]> {
   return [...FIXED_CONTROLS, hasCapability(p, "drafts.write") ? SETTINGS_CONTROL_HERE : SETTINGS_CONTROL_IN_APP];

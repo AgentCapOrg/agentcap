@@ -20,7 +20,7 @@
  * overwrites only its own.
  *
  * REPORT-ONLY DOES NOT BEAT. An orchestrator started with
- * MERRYMEN_FLEET_RECOVERY_REPORT_ONLY=1 returns into its report before the
+ * AGENTCAP_FLEET_RECOVERY_REPORT_ONLY=1 returns into its report before the
  * main loop that beats, deliberately: that entry is kept minimal, and adding a
  * write to it is a separate decision. So while a service runs report-only, a
  * missing or old `orchestrator` row is the expected state, not a dead fleet —

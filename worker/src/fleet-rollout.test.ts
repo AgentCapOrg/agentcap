@@ -98,7 +98,7 @@ describe("the grammar", () => {
   ];
   for (const [why, value] of malformed) {
     it(`refuses rather than guesses: ${why}`, () => {
-      assert.throws(() => fleetRollout(env(value)), /MERRYMEN_FLEET_ROLLOUT .*refusing to start rather than guess/);
+      assert.throws(() => fleetRollout(env(value)), /AGENTCAP_FLEET_ROLLOUT .*refusing to start rather than guess/);
       // And every runtime reader fails closed on the same value.
       assert.equal(rolloutLevel(A, env(value)), "held");
       assert.equal(rolloutHeld(A, env(value)), true);
@@ -157,10 +157,10 @@ describe("unset", () => {
   }
 
   it("a required persistent home is the production volume, and counts as Railway", () => {
-    const e = env(undefined, { MERRYMEN_PERSISTENT_HOME_REQUIRED: "1" });
+    const e = env(undefined, { AGENTCAP_PERSISTENT_HOME_REQUIRED: "1" });
     assert.equal(railwayHosted(e), true);
     assert.throws(() => fleetRollout(e), /must name its scope/);
-    assert.equal(railwayHosted({ MERRYMEN_PERSISTENT_HOME_REQUIRED: "0" }), false);
+    assert.equal(railwayHosted({ AGENTCAP_PERSISTENT_HOME_REQUIRED: "0" }), false);
   });
 
   it("a deployer's token is not a deployment: RAILWAY_TOKEN alone does not make this Railway-hosted", () => {
@@ -192,7 +192,7 @@ describe("what the readers make of it", () => {
     assert.equal(childAdmissionLevel(A, e), "trade");
     assert.equal(childAdmissionLevel(B, e), "observe", "the grammar's most restrictive level");
     assert.equal(childAdmissionLevel(A, env("all")), "trade");
-    assert.equal(ADMISSION_LEVEL_ENV, "MERRYMEN_ADMISSION_LEVEL", "the name the worker's admission gate reads");
+    assert.equal(ADMISSION_LEVEL_ENV, "AGENTCAP_ADMISSION_LEVEL", "the name the worker's admission gate reads");
   });
 
   it("fleet-wide writers run only when the whole fleet is admitted", () => {
@@ -279,7 +279,7 @@ describe("the levels a worker in this tree obeys", () => {
       gate ? [...ADMISSION_LEVELS].sort() : ["trade"],
       gate
         ? "worker-admission.ts is in this tree: widen WORKER_ENFORCED_LEVELS to the levels it obeys, in the same change"
-        : "no worker in this tree reads MERRYMEN_ADMISSION_LEVEL, so no level but trade may be accepted",
+        : "no worker in this tree reads AGENTCAP_ADMISSION_LEVEL, so no level but trade may be accepted",
     );
   });
 
@@ -292,7 +292,7 @@ describe("the levels a worker in this tree obeys", () => {
   });
 });
 
-describe("MERRYMEN_ROLLOUT_NEW_TENANTS: genuinely new tenants, under an explicit list only", () => {
+describe("AGENTCAP_ROLLOUT_NEW_TENANTS: genuinely new tenants, under an explicit list only", () => {
   const withNew = (rollout: string | undefined, level: string | undefined, extra: Record<string, string> = {}) =>
     level === undefined ? env(rollout, extra) : env(rollout, { [ROLLOUT_NEW_TENANTS_ENV]: level, ...extra });
   const list = `${A}:trade,${B}:observe`;
@@ -312,7 +312,7 @@ describe("MERRYMEN_ROLLOUT_NEW_TENANTS: genuinely new tenants, under an explicit
     it("anything else refuses, naming the variable and never repeating the value", () => {
       for (const value of ["", " ", "none", "off", "0", "held", "all", "Trade", "TRADE", "exits_only", "paper", "trade,observe", `${A}:trade`]) {
         assert.throws(() => rolloutNewTenants(withNew(list, value)), (e: Error) => {
-          assert.match(e.message, /^MERRYMEN_ROLLOUT_NEW_TENANTS is not observe, exits-only or trade .*; refusing to start rather than guess/, JSON.stringify(value));
+          assert.match(e.message, /^AGENTCAP_ROLLOUT_NEW_TENANTS is not observe, exits-only or trade .*; refusing to start rather than guess/, JSON.stringify(value));
           assert.doesNotMatch(e.message, /0x[0-9a-f]{40}/i);
           return true;
         });
@@ -424,14 +424,14 @@ describe("MERRYMEN_ROLLOUT_NEW_TENANTS: genuinely new tenants, under an explicit
     });
 
     it("the startup line says what the value does under the scope that took", () => {
-      assert.match(newTenantsStartupLine(withNew(list, undefined)), /MERRYMEN_ROLLOUT_NEW_TENANTS unset — a tenant the rollout does not name is held, new or not, as before$/);
+      assert.match(newTenantsStartupLine(withNew(list, undefined)), /AGENTCAP_ROLLOUT_NEW_TENANTS unset — a tenant the rollout does not name is held, new or not, as before$/);
       assert.match(newTenantsStartupLine(withNew("none", "trade")), /=trade has no effect under none — the emergency stop admits nobody/);
       assert.match(newTenantsStartupLine(withNew("all", "trade")), /=trade has no effect under all/);
       assert.match(newTenantsStartupLine(withNew("halt", "trade")), /the rollout itself is refused — nobody is admitted/);
       const open = newTenantsStartupLine(withNew(list, "observe"));
       assert.match(open, /=observe — a tenant the list does not name is admitted at observe once it is proved genuinely new/);
       assert.match(open, /recorded in fleet_new_tenant_admissions before its first spawn/);
-      assert.throws(() => newTenantsStartupLine(withNew(list, "bogus")), /MERRYMEN_ROLLOUT_NEW_TENANTS is not observe/);
+      assert.throws(() => newTenantsStartupLine(withNew(list, "bogus")), /AGENTCAP_ROLLOUT_NEW_TENANTS is not observe/);
     });
   });
 });
@@ -469,7 +469,7 @@ describe("a tenant whose id is not 0x and 40 hex (fleet-id.ts)", () => {
   it("named in the list refuses boot, by position and in so many words, never echoing it", () => {
     for (const entry of [`${SOL}:trade`, `${KEY}:observe`, "rh:ABC:exits-only"]) {
       assert.throws(() => fleetRollout(env(`${A}:trade,${entry}`)), (e: Error) => {
-        assert.match(e.message, /^MERRYMEN_FLEET_ROLLOUT entry 2 names a tenant that is not a complete Robinhood Chain address .*refusing to start rather than guess/);
+        assert.match(e.message, /^AGENTCAP_FLEET_ROLLOUT entry 2 names a tenant that is not a complete Robinhood Chain address .*refusing to start rather than guess/);
         assert.ok(!e.message.includes(KEY.slice(0, 8)) && !e.message.includes("rh:"), "the entry is not echoed");
         return true;
       });

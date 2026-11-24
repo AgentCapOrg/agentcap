@@ -14,7 +14,7 @@
  * fact and both peaks (lifetime and the risk period), and the peaks move only
  * when the INSERT inserted. Each case below is one of those claims.
  *
- * MERRYMEN_HOME is set before any store import runs getDb(); node's --test runs
+ * AGENTCAP_HOME is set before any store import runs getDb(); node's --test runs
  * each file in its own process, so the override never leaks.
  */
 import assert from "node:assert/strict";
@@ -23,8 +23,8 @@ import { mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-energy-flows-"));
-process.env.MERRYMEN_HOME = HOME;
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-energy-flows-"));
+process.env.AGENTCAP_HOME = HOME;
 
 const { closeStoreForTest, initStore, ensureAgent, adjustAgentHwm, bookCapitalFlow, getAgentFinancials, listFlows } =
   await import("./store");

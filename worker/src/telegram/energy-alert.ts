@@ -5,10 +5,10 @@
  * the owner is in Telegram. So the worker says so there once per UTC day, in
  * the same words the owner's notice slot carries (energy-copy.ts), dressed for
  * Telegram: addresses in <code> so a long-press copies them whole, and the buy
- * pointed at the Merrymen app's chat — "not here".
+ * pointed at the AgentCap app's chat — "not here".
  *
  * READ-ONLY, ON PURPOSE (design D6). There is no buy button, no parked action
- * and no /getenergy: buying $MERRYMEN spends real USDG, and the place that may
+ * and no /getenergy: buying $AGENTCAP spends real USDG, and the place that may
  * do it is the app's chat, where the owner sees the amount on a card and
  * confirms it. A bearer /link code is not that. The only button is a link to
  * the desk, and only when a phone can open it (isPublicHttpsUrl).
@@ -82,7 +82,7 @@ export const ENERGY_ALERT_KEY_PREFIX = "energy:";
 export const ENERGY_ALERT_RETRY_SEC = 30 * 60;
 
 /** Where "ask me in chat" points on Telegram. */
-export const ENERGY_CHAT_PLACE = "in the Merrymen app chat (not here)";
+export const ENERGY_CHAT_PLACE = "in the AgentCap app chat (not here)";
 
 export interface EnergyAlert {
   /** `energy:<YYYY-MM-DD>` — the UTC day the report is for. */

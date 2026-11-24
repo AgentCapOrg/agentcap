@@ -489,7 +489,7 @@ export function runWallBattery(
   const energyCases: BatteryInput[] = energyRoute
     ? [
         {
-          attempt: "an honest energy buy — USDG into $MERRYMEN over the sealed route",
+          attempt: "an honest energy buy — USDG into $AGENTCAP over the sealed route",
           want: "approved",
           intent: energyBuy(1n),
           state: calm,

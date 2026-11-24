@@ -829,15 +829,15 @@ test("get_exposure: grouped by token within each book across the connection's ag
 
 // ── resource ────────────────────────────────────────────────────────────────
 
-test("resource merrymen://agents/{agent}/portfolio: lists the connection's agents and reads as get_portfolio; another owner's agent is not found", async () => {
+test("resource agentcap://agents/{agent}/portfolio: lists the connection's agents and reads as get_portfolio; another owner's agent is not found", async () => {
   const { d, a, b } = await setup();
   seedPortfolio(d);
   const def = PORTFOLIO_RESOURCES[0]!;
   assert.equal(def.capability, "portfolio.read");
   const ctxA = makeContext(a, "trace-test", new AbortController().signal, { now: () => NOW });
   const listed = await def.list!(ctxA);
-  assert.deepEqual(listed.map((l) => l.uri), [`merrymen://agents/${SLUG_A}/portfolio`]);
-  const uri = new URL(`merrymen://agents/${SLUG_A}/portfolio`);
+  assert.deepEqual(listed.map((l) => l.uri), [`agentcap://agents/${SLUG_A}/portfolio`]);
+  const uri = new URL(`agentcap://agents/${SLUG_A}/portfolio`);
   const read = await def.read(uri, { agent: SLUG_A }, ctxA);
   assert.equal(read.mimeType, "application/json");
   const body = JSON.parse(read.text);

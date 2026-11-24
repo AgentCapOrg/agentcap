@@ -43,7 +43,7 @@ before(() => {
     useEffect(() => () => { if (seen[key] === props) seen[key] = null; });
     return null;
   };
-  const keep = new Set(["react", "@merrymen/core", "./agent-status", "./account-read", "./account-session", "./recovery-view", "./worker-stale", "./chat-store", "./chat-payload", "./chat-thread", "./nav", "./perps-navigation", "./use-trading-mode-transition", "./owner-state", "./owner-reads", "./navigate", "./ticker"]);
+  const keep = new Set(["react", "@agentcap/core", "./agent-status", "./account-read", "./account-session", "./recovery-view", "./worker-stale", "./chat-store", "./chat-payload", "./chat-thread", "./nav", "./perps-navigation", "./use-trading-mode-transition", "./owner-state", "./owner-reads", "./navigate", "./ticker"]);
   const intercepted = mock.method(loader, "_load", function (this: typeof loader, id: string, parent: { filename?: string }, isMain: boolean) {
     if (parent?.filename !== appPath || keep.has(id)) return load.call(this, id, parent, isMain);
     if (id === "next/navigation") return { usePathname: () => pathname, useSearchParams: () => new URLSearchParams(), useRouter: () => ({ push: noop }) };

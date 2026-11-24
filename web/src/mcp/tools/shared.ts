@@ -28,7 +28,7 @@ const STORED_CONTROL = /(?![\t\n]|\r\n)\p{Cc}/u;
 export const CONTROL_CHARACTER_RULE = "must not contain control characters (such as NUL); tabs and line breaks are fine";
 
 /**
- * Caller text that Merrymen stores (messages, titles, bodies, labels, notes,
+ * Caller text that AgentCap stores (messages, titles, bodies, labels, notes,
  * research links) refuses NUL and every other C0/C1 control except tab and
  * line breaks, as invalid_input at the boundary. Postgres TEXT cannot hold NUL
  * at all (SQLSTATE 22021), so without this the insert fails as a retryable

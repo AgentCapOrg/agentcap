@@ -6,7 +6,7 @@
  *
  * ── WHY THIS IS NOT A SETTING ───────────────────────────────────────────────
  *
- * The obvious home was `MerrymenSettings`, and it is the wrong one for three
+ * The obvious home was `AgentCapSettings`, and it is the wrong one for three
  * reasons, the last of which is decisive.
  *
  * The settings blob is the TRADING worker's configuration. The orchestrator
@@ -48,7 +48,7 @@
  */
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { merrymenHome } from "@merrymen/home";
+import { agentcapHome } from "@agentcap/home";
 import { TOUR_VERSION } from "./tour-version";
 
 // v2 retains existing records. Later revisions have their own namespace in
@@ -75,7 +75,7 @@ export interface TourStore {
 // ── file backend ─────────────────────────────────────────────────────────────
 
 export class FileTourStore implements TourStore {
-  private dir = path.join(merrymenHome(), "tour");
+  private dir = path.join(agentcapHome(), "tour");
   constructor(private version = TOUR_VERSION) {}
   private file(tenant: string) {
     return path.join(this.dir, `${ownerKey(tenant, this.version)}.json`);

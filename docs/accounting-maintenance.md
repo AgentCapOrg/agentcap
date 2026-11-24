@@ -1,6 +1,6 @@
 # Scoped hosted accounting maintenance
 
-`MERRYMEN_ACCOUNTING_HOLD_TENANTS` accepts a comma-separated list of complete
+`AGENTCAP_ACCOUNTING_HOLD_TENANTS` accepts a comma-separated list of complete
 grant-store tenant keys (**not smart-account addresses or an assumed owner address**).
 An invalid entry rejects startup rather than silently applying a partial list.
 The named tenants retain their grants, settings and ledger, but this orchestrator
@@ -13,29 +13,29 @@ worker and bot are temporarily unavailable while held.
 ## Before starting: current limits
 
 - **Staged rollout.** The deploy guard refuses to start the orchestrator while
-  any one-shot variable is set — `MERRYMEN_ACCOUNTING_RECONSTRUCT` and every
-  `MERRYMEN_REPAIR*` included — unless `MERRYMEN_FLEET_ROLLOUT` is exactly
+  any one-shot variable is set — `AGENTCAP_ACCOUNTING_RECONSTRUCT` and every
+  `AGENTCAP_REPAIR*` included — unless `AGENTCAP_FLEET_ROLLOUT` is exactly
   `all` (`worker/src/deploy-guard-checks.ts`, `fleetStartChecks`). Receipt
   attestation ([receipt-attestation.md](receipt-attestation.md)) is the one
   protocol it admits during a staged rollout. Setting these variables while the
   rollout names tenants keeps the whole fleet's orchestrator from starting.
 - **Persistent homes.** Tenant homes live on the persistent volume
-  (`MERRYMEN_PERSISTENT_HOME_REQUIRED=1`), so a tenant that has ever run keeps
+  (`AGENTCAP_PERSISTENT_HOME_REQUIRED=1`), so a tenant that has ever run keeps
   its home through a fresh container, and step 4's commit refuses it ("local
   tenant state exists"). This procedure can commit only for a tenant with no
   home on the volume. Never move or erase a home to get past that refusal.
   One inferred deposit of a book that has traded is attested on its home by
   [receipt attestation's traded-book protocol](receipt-attestation.md#one-inferred-deposit-in-a-book-that-has-traded).
 - **Reads.** The reconstruction scan reads through the fleet's read path
-  (`chainReadRpc`): a configured `MERRYMEN_RPC_MAINNET` that refuses — a spent
+  (`chainReadRpc`): a configured `AGENTCAP_RPC_MAINNET` that refuses — a spent
   quota, a refused key, a 5xx, a timeout — fails over to the chain's public
   RPC. A window still unread after that blocks the plan, as before.
 
 ## Required deployment order
 
 1. Confirm the exact smart-account → tenant mapping. Set
-   `MERRYMEN_ACCOUNTING_HOLD_TENANTS` to the intended tenant IDs and set
-   `MERRYMEN_ACCOUNTING_RECONSTRUCT=0`. Keep repair commit disabled. Deploy a
+   `AGENTCAP_ACCOUNTING_HOLD_TENANTS` to the intended tenant IDs and set
+   `AGENTCAP_ACCOUNTING_RECONSTRUCT=0`. Keep repair commit disabled. Deploy a
    fresh container with this hold on **every orchestrator replica**.
 2. Verify Railway reports every preceding deployment **REMOVED**, and that no
    affected child or holder is running. A new deployment being healthy or
@@ -47,8 +47,8 @@ worker and bot are temporarily unavailable while held.
    contribution total. A partial scan or ambiguous classification must block
    repair. Never increase caps or reset the peak to make a repair pass.
 4. Deploy another **fresh container**, retaining the hold, with
-   `MERRYMEN_ACCOUNTING_RECONSTRUCT=1`, `MERRYMEN_REPAIR=commit`, the exact
-   `MERRYMEN_REPAIR_ACCOUNT` smart-account list and a descriptive repair run ID.
+   `AGENTCAP_ACCOUNTING_RECONSTRUCT=1`, `AGENTCAP_REPAIR=commit`, the exact
+   `AGENTCAP_REPAIR_ACCOUNT` smart-account list and a descriptive repair run ID.
    Commit refuses a missing/ambiguous account mapping, a selected tenant not
    explicitly held, local processes or retained local tenant state. These local
    checks do not replace step 2. Compare the freshly printed commit preview with
@@ -82,7 +82,7 @@ lease or block startup: held tenants are skipped while other tenants reconcile.
 
 ## Withholding a published return for review (web)
 
-`MERRYMEN_RETURN_REVIEW` is a **web** variable, separate from the orchestrator
+`AGENTCAP_RETURN_REVIEW` is a **web** variable, separate from the orchestrator
 hold above. It accepts **smart-account addresses** (`0x` followed by 40 hex
 characters), separated by commas or whitespace — **not agent names, tenant keys
 or owner addresses**. While an account is listed, every public surface (the

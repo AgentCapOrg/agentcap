@@ -25,9 +25,9 @@ async function handle(req: NextRequest, context: { params: Promise<{ action: str
   const { action } = await context.params;
   if (action === "sdk" && req.method === "GET") {
     try {
-      const response = await fetch("https://app.merrymen.dev/sdk/merrymen-browser.js", { signal: AbortSignal.timeout(15_000), cache: "no-store" });
+      const response = await fetch("https://app.agentcap.xyz/sdk/agentcap-browser.js", { signal: AbortSignal.timeout(15_000), cache: "no-store" });
       if (!response.ok) return fail("SDK download unavailable. Try again shortly.", 503);
-      return new Response(response.body, { headers: { "Content-Type": "text/javascript; charset=utf-8", "Content-Disposition": 'attachment; filename="merrymen-browser.js"', "Cache-Control": "public, max-age=300" } });
+      return new Response(response.body, { headers: { "Content-Type": "text/javascript; charset=utf-8", "Content-Disposition": 'attachment; filename="agentcap-browser.js"', "Cache-Control": "public, max-age=300" } });
     } catch { return fail("SDK download unavailable. Try again shortly.", 503); }
   }
   if (req.method === "POST" && (req.headers.get("origin") !== new URL(req.url).origin || ["cross-site", "same-site"].includes(req.headers.get("sec-fetch-site") || ""))) return fail("Open the developer page to perform this action.", 403);

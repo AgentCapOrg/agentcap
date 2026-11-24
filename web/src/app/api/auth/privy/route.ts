@@ -18,7 +18,7 @@
  * optional and neither is inferred: `binding_version` names which model applies.
  *
  * THIS ROUTE NEVER CHANGES OWNERSHIP. It mints a session and, for a DID never
- * seen before, records the mapping. It does not create a Merryman, does not
+ * seen before, records the mapping. It does not create a AgentCapAvatar, does not
  * touch a grant, and cannot move a smart account between tenants — the account
  * claim that would be required to do so lives in the identity store and is not
  * reachable from here.
@@ -26,7 +26,7 @@
 
 import { NextResponse } from "next/server";
 import { recoverMessageAddress } from "viem";
-import { getIdentityStore, type IdentityProvider } from "@merrymen/identity-store";
+import { getIdentityStore, type IdentityProvider } from "@agentcap/identity-store";
 import {
   challengeMessage,
   consumeChallengeNonce,
@@ -112,11 +112,11 @@ export async function POST(req: Request) {
   if (!isAddr(wallet)) return NextResponse.json({ error: "signature did not recover" }, { status: 401 });
   const tenantFromWallet = wallet.toLowerCase() as `0x${string}`;
 
-  // ── 3. the DID decides which Merryman this is ─────────────────────────────
+  // ── 3. the DID decides which AgentCapAvatar this is ─────────────────────────────
   //
   // A DID already mapped returns ITS tenant, whatever wallet arrived with this
   // login. That is the property that makes logging out and back in return the
-  // same Merryman instead of minting a second one — and it holds even if Privy
+  // same AgentCapAvatar instead of minting a second one — and it holds even if Privy
   // ever hands the same person a different embedded wallet.
   const subject = typeof body.subject === "string" && body.subject.trim() !== "" ? body.subject.trim() : did;
   let resolved;

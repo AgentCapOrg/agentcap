@@ -284,7 +284,7 @@ export class SqlPerpsPilotStore implements PerpsPilotStore {
         return;
       }
       if (await tx.prepare("SELECT owner FROM perps_pilot_admissions LIMIT 1").get()) throw new Error("Uninitialized paper-pilot cohort contains membership records.");
-      const owners = bootstrapOwners((this.options.bootstrapOwners ?? (() => process.env.MERRYMEN_PERPS_PAPER_TENANTS))());
+      const owners = bootstrapOwners((this.options.bootstrapOwners ?? (() => process.env.AGENTCAP_PERPS_PAPER_TENANTS))());
       const revision = await this.bump(tx), at = this.now();
       for (const owner of owners) {
         await tx.prepare("INSERT INTO perps_pilot_admissions(owner,status,source,revision,updated_at,actor) VALUES(?,'allowed','bootstrap',?,?,NULL)")

@@ -22,11 +22,11 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { after, before, beforeEach, describe, it } from "node:test";
 import { privateKeyToAccount } from "viem/accounts";
-import type { StoredGrant } from "@merrymen/core";
+import type { StoredGrant } from "@agentcap/core";
 import type { Db } from "../../../worker/src/db";
 
-const ORIGIN = "https://app.merrymen.dev";
-const ENV = ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_GRANT_FILE", "MERRYMEN_SESSION_SECRET", "MERRYMEN_STORE_DEK", "DATABASE_URL"] as const;
+const ORIGIN = "https://app.agentcap.xyz";
+const ENV = ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_GRANT_FILE", "AGENTCAP_SESSION_SECRET", "AGENTCAP_STORE_DEK", "DATABASE_URL"] as const;
 const saved = Object.fromEntries(ENV.map((k) => [k, process.env[k]]));
 let home = "";
 let agentFor: typeof import("./agent-for");
@@ -38,10 +38,10 @@ let stores: typeof import("../../../worker/src/grant-store");
 
 before(async () => {
   home = mkdtempSync(path.join(tmpdir(), "mm-wallet-helpers-"));
-  process.env.MERRYMEN_HOME = home;
-  for (const k of ["MERRYMEN_HOSTED", "MERRYMEN_GRANT_FILE", "DATABASE_URL"] as const) delete process.env[k];
-  process.env.MERRYMEN_SESSION_SECRET = "test-secret-at-least-thirty-two-characters-long";
-  process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
+  process.env.AGENTCAP_HOME = home;
+  for (const k of ["AGENTCAP_HOSTED", "AGENTCAP_GRANT_FILE", "DATABASE_URL"] as const) delete process.env[k];
+  process.env.AGENTCAP_SESSION_SECRET = "test-secret-at-least-thirty-two-characters-long";
+  process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
   agentFor = await import("./agent-for");
   ledger = await import("./ledger");
   archive = await import("./grant-archive");
@@ -79,10 +79,10 @@ describe("hostedAgentFor", () => {
     await stores.getGrantStore("perps").remove(T);
   };
   beforeEach(async () => {
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOSTED = "1";
     await reset();
   });
-  after(() => { delete process.env.MERRYMEN_HOSTED; });
+  after(() => { delete process.env.AGENTCAP_HOSTED; });
 
   it("a Spot-only owner: Spot is their account, and Perps is nobody — never the Spot account", async () => {
     await stores.getGrantStore("spot").put(T, grant(T, SPOT, key("ab")));
@@ -154,16 +154,16 @@ describe("withReadDb", () => {
   const whose = (wallet: "spot" | "perps") =>
     ledger.withReadDb(async (db) => (db ? ((await db.prepare("SELECT who FROM whose").get()) as { who: string }).who : null), wallet);
   beforeEach(() => {
-    rmSync(path.join(home, "merrymen.db"), { force: true });
+    rmSync(path.join(home, "agentcap.db"), { force: true });
     rmSync(perpsHome(), { recursive: true, force: true });
   });
 
   it("self-hosted, each wallet reads its own home's ledger, and Perps without one reads nothing", async () => {
-    seed(path.join(home, "merrymen.db"), "spot");
+    seed(path.join(home, "agentcap.db"), "spot");
     assert.equal(await whose("spot"), "spot");
     assert.equal(await whose("perps"), null, "never the Spot ledger");
-    assert.equal(existsSync(path.join(perpsHome(), "merrymen.db")), false, "and nothing is created by reading");
-    seed(path.join(perpsHome(), "merrymen.db"), "perps");
+    assert.equal(existsSync(path.join(perpsHome(), "agentcap.db")), false, "and nothing is created by reading");
+    seed(path.join(perpsHome(), "agentcap.db"), "perps");
     assert.equal(await whose("perps"), "perps");
     assert.equal(await whose("spot"), "spot");
   });
@@ -183,7 +183,7 @@ describe("withReadDb", () => {
   });
 
   it("an unnamed wallet throws before anything is opened", async () => {
-    seed(path.join(home, "merrymen.db"), "spot");
+    seed(path.join(home, "agentcap.db"), "spot");
     let ran = false;
     for (const w of NOT_A_WALLET) {
       await assert.rejects(ledger.withReadDb(async () => { ran = true; }, w as never), /wallet purpose/, String(w));

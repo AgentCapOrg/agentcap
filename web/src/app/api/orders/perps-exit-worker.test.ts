@@ -9,7 +9,7 @@
  *      the Perps home (self-hosted; hosted, the ferry writes the same file into
  *      the Perps child's home: worker/src/perps-order-ferry.test.ts);
  *   2. the real drain (command-files.ts runTickCommand) claims it, as a Perps
- *      worker at MERRYMEN_PERPS=paper does (settings.ts perpsWorkerStoodDown);
+ *      worker at AGENTCAP_PERPS=paper does (settings.ts perpsWorkerStoodDown);
  *   3. the worker's dispatch, built from the same exported gates in the same
  *      order as index.ts runOrderCommand (the wallet first, then placeOrder,
  *      then the exit re-read from its own args to the lane; lane.test.ts pins
@@ -39,7 +39,7 @@ import { mergeSettings, perpsWorkerStoodDown } from "../../../../../worker/src/s
 import { ownerRejectRuleLabel } from "../../../../../worker/src/thesis-policy";
 import { ownerPerpExitRefusal, type AdmissionLevel } from "../../../../../worker/src/worker-admission";
 
-const KEYS = ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_SETTINGS_FILE", "DATABASE_URL", "MERRYMEN_PERPS", "MERRYMEN_TICK_SECONDS"] as const;
+const KEYS = ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_SETTINGS_FILE", "DATABASE_URL", "AGENTCAP_PERPS", "AGENTCAP_TICK_SECONDS"] as const;
 const saved = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
 const SPOT = `0x${"11".repeat(20)}` as const;
 const PERPS = `0x${"22".repeat(20)}` as const;
@@ -100,12 +100,12 @@ const CFG: PerpLaneConfig = {
 };
 
 before(async () => {
-  process.env.MERRYMEN_HOME = path.join(scratch, "home");
-  process.env.MERRYMEN_PERPS = "paper";
-  process.env.MERRYMEN_SETTINGS_FILE = path.join(scratch, "no-such-settings.json");
-  for (const k of ["MERRYMEN_HOSTED", "DATABASE_URL", "MERRYMEN_TICK_SECONDS"] as const) delete process.env[k];
+  process.env.AGENTCAP_HOME = path.join(scratch, "home");
+  process.env.AGENTCAP_PERPS = "paper";
+  process.env.AGENTCAP_SETTINGS_FILE = path.join(scratch, "no-such-settings.json");
+  for (const k of ["AGENTCAP_HOSTED", "DATABASE_URL", "AGENTCAP_TICK_SECONDS"] as const) delete process.env[k];
   mkdirSync(purposeHome("perps"), { recursive: true });
-  writeFileSync(path.join(process.env.MERRYMEN_HOME, "grant.json"), JSON.stringify({ smartAccount: SPOT, demoOwnerPrivateKey: `0x${"33".repeat(32)}` }));
+  writeFileSync(path.join(process.env.AGENTCAP_HOME, "grant.json"), JSON.stringify({ smartAccount: SPOT, demoOwnerPrivateKey: `0x${"33".repeat(32)}` }));
   writeFileSync(path.join(purposeHome("perps"), "grant.json"), JSON.stringify({ smartAccount: PERPS, purpose: "perps" }));
   // The worker's store, opened as lane.test.ts opens it (from a scratch cwd).
   mkdirSync(path.join(scratch, "cwd"));
@@ -214,13 +214,13 @@ function perpsWorkerRun(
   };
 }
 /**
- * The Perps worker's drain at MERRYMEN_PERPS=paper, over the Perps home, armed
+ * The Perps worker's drain at AGENTCAP_PERPS=paper, over the Perps home, armed
  * on the Perps grant's account (index.ts runQueuedCommand's `account`), with
  * the drain's own expiry hooks as runQueuedCommand passes them, so a late exit
  * is answered here in the words the worker answers it in.
  */
 const drainPerps = (armed: string = PERPS, level: AdmissionLevel = "trade", at: { lever?: string; now?: () => number } = {}) => {
-  const cfg = mergeSettings({}, { MERRYMEN_WALLET_PURPOSE: "perps", MERRYMEN_PERPS: at.lever ?? "paper" });
+  const cfg = mergeSettings({}, { AGENTCAP_WALLET_PURPOSE: "perps", AGENTCAP_PERPS: at.lever ?? "paper" });
   return runTickCommand(purposeHome("perps"), {
     now: at.now ?? Date.now,
     mayRun: () => !perpsWorkerStoodDown(cfg),
@@ -240,7 +240,7 @@ describe("from POST /api/orders?wallet=perps to a practice position closed", () 
     const res = await post({ purpose: "close-perp", side: "sell", symbol: "BTC-PERP", usdgAmount: 0, book: "paper", expectedAccount: PERPS });
     assert.equal(res.status, 200, JSON.stringify(await res.clone().json()));
     const { id } = (await res.json()) as { id: string };
-    assert.equal(openCommands(process.env.MERRYMEN_HOME!).length, 0, "nothing for the Spot worker");
+    assert.equal(openCommands(process.env.AGENTCAP_HOME!).length, 0, "nothing for the Spot worker");
     assert.equal(openCommands(purposeHome("perps")).length, 1, "it waits in the Perps home, which only the Perps worker drains");
     await drainPerps();
     const state = readCommandState(purposeHome("perps"), id);
@@ -338,7 +338,7 @@ describe("from POST /api/orders?wallet=perps to a practice position closed", () 
     const [cmd] = openCommands(purposeHome("perps"));
     assert.equal(cmd?.id, id);
     assert.equal(typeof cmd?.expiresAt, "number", "every exit carries its window");
-    // Perps stood down (MERRYMEN_PERPS off): the worker's drain claims nothing.
+    // Perps stood down (AGENTCAP_PERPS off): the worker's drain claims nothing.
     await drainPerps(PERPS, "trade", { lever: "off" });
     assert.equal(readCommandState(purposeHome("perps"), id)?.state, "queued");
     // Back under paper a day later: answered expired, and nothing is closed.

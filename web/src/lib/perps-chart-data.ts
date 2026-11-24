@@ -4,7 +4,7 @@ import { readWalletParam } from "./wallet-param";
  * prices: a marker is placed at the fill's exact venue time and execution
  * price, never snapped to a candle or inferred from a position average.
  */
-import { perpMarketByKey, type PerpMarketSpec } from "@merrymen/core";
+import { perpMarketByKey, type PerpMarketSpec } from "@agentcap/core";
 import type { Db } from "../../../worker/src/db";
 import type { MarkCandle } from "../../../worker/src/perps/markets";
 

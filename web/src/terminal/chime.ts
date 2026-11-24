@@ -14,7 +14,7 @@
  */
 import type { Thesis } from "./live";
 
-export const SOUND_KEY = "merrymen.sound";
+export const SOUND_KEY = "agentcap.sound";
 
 type StorageSource = () => Storage | null | undefined;
 

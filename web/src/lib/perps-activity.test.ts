@@ -3,7 +3,7 @@ import { it } from "node:test";
 import { perpsActivityQuery, readPerpsActivity, type PerpsActivityResponse } from "./perps-activity";
 import { readPerpsActivityData } from "./perps-activity-data";
 import type { Db } from "../../../worker/src/db";
-import type { PerpMarketSpec } from "@merrymen/core";
+import type { PerpMarketSpec } from "@agentcap/core";
 const q = { market: "BTC-PERP", book: "paper" as const }, now = 1_790_000_000_000;
 const spec = { marketId: 1, priceDecimals: 1, sizeDecimals: 5 } as PerpMarketSpec;
 const fill = { epoch: 2, venue_trade_id: "1", side_role: "ask", side: "long", base: "100", price: "832186", position_before: "100", realized_micro: null, fee_micro: "0", attribution: "venue-stop", trade_type: "trade", venue_ts_ms: now - 1000 };

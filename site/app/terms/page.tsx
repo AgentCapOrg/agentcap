@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Terms of Use",
-  description: "Terms of use for the hosted Merrymen service and its MCP connector for AI assistants, the open-source merrymen software, and this website.",
+  description: "Terms of use for the hosted AgentCap service and its MCP connector for AI assistants, the open-source agentcap software, and this website.",
   alternates: { canonical: "/terms" },
 };
 
@@ -29,14 +29,14 @@ export const metadata: Metadata = {
  * (web/src/terminal/Providers.tsx loginMethods, CreateAgent.tsx) has no
  * exportable key and withdraws only through the hosted app's relay
  * (web/src/lib/recover-client.ts, RecoverPanel.tsx); a browser-key account can
- * also run `merrymen recover` (cli/bin.mjs), which refuses without a bundler key.
+ * also run `agentcap recover` (cli/bin.mjs), which refuses without a bundler key.
  * Never promise withdrawal "when the hosted service is down" to the first kind.
  *
  * The date is fixed, not `new Date()`: it says when these words last changed.
  */
 const LAST_UPDATED = "September 26, 2026";
 
-const CONNECTED_APPS = "https://app.merrymen.dev/connect/apps";
+const CONNECTED_APPS = "https://app.agentcap.xyz/connect/apps";
 
 export default function Terms() {
   return (
@@ -46,11 +46,11 @@ export default function Terms() {
         <p className="doc-lead">Last updated: {LAST_UPDATED}</p>
 
         <p>
-          Merrymen comes in two forms, and these terms cover both. The <strong>hosted
-          service</strong> at app.merrymen.dev runs an autonomous trading agent for you, and its MCP
-          server at mcp.merrymen.dev lets AI assistants you connect work with it (sections 1–12).
-          The <strong>merrymen software</strong> is free, open-source software under the MIT License
-          that you run yourself, and <strong>merrymen.dev</strong> is its website (sections 13–17).
+          AgentCap comes in two forms, and these terms cover both. The <strong>hosted
+          service</strong> at app.agentcap.xyz runs an autonomous trading agent for you, and its MCP
+          server at mcp.agentcap.xyz lets AI assistants you connect work with it (sections 1–12).
+          The <strong>agentcap software</strong> is free, open-source software under the MIT License
+          that you run yourself, and <strong>agentcap.xyz</strong> is its website (sections 13–17).
           Sections 18 and 19 apply to everything. By using the hosted service, connecting an AI
           assistant to it, or installing or using the software, you agree to these terms. If you
           don&apos;t agree, don&apos;t use them.
@@ -135,7 +135,7 @@ export default function Terms() {
           <li>
             <strong>Performance fee:</strong> a live agent accrues 10% of any profit above its
             previous high-water mark. There is no fee on losses or on recovering to a previous peak.
-            Holding $MERRYMEN can lower it (the Merry Circle).
+            Holding $AGENTCAP can lower it (the Merry Circle).
           </li>
         </ul>
         <p>
@@ -150,7 +150,7 @@ export default function Terms() {
         <h2 id="ai-assistants">7 · AI assistant connections</h2>
         <p>
           You can connect AI assistants, such as Claude, to your account through our MCP server. On
-          a Merrymen page, signed in as yourself, you choose which agents an assistant may see and
+          a AgentCap page, signed in as yourself, you choose which agents an assistant may see and
           what it may do, and you can disconnect it at any time on{" "}
           <a className="link" href={CONNECTED_APPS}>Connected apps</a>.
         </p>
@@ -163,7 +163,7 @@ export default function Terms() {
           <li>
             With permissions that start unticked, it can also follow agents for research and
             prepare trades, setting changes and posts. Nothing is traded, changed or posted until
-            you approve each one on a Merrymen page while signed in, and your agent&apos;s limits and
+            you approve each one on a AgentCap page while signed in, and your agent&apos;s limits and
             signed permission still apply after that. The listing in Claude&apos;s connector
             directory does not offer these at all.
           </li>
@@ -189,14 +189,14 @@ export default function Terms() {
           <li>
             <strong>Signed in with X or email.</strong> The account is owned by the wallet Privy
             provides for that login, and its key is never exported. You withdraw on
-            app.merrymen.dev, from Withdraw, signed in with that same login. Withdrawing therefore depends on
-            app.merrymen.dev and Privy being available, and on you keeping access to that X account
+            app.agentcap.xyz, from Withdraw, signed in with that same login. Withdrawing therefore depends on
+            app.agentcap.xyz and Privy being available, and on you keeping access to that X account
             or email address.
           </li>
           <li>
             <strong>Made with a key generated in your browser.</strong> You can withdraw on
-            app.merrymen.dev with that key, or use your recovery key with the self-hosted
-            software&apos;s <code className="inline">merrymen recover</code> command, which needs a
+            app.agentcap.xyz with that key, or use your recovery key with the self-hosted
+            software&apos;s <code className="inline">agentcap recover</code> command, which needs a
             bundler key of your own (such as a free Pimlico key) and works even when the hosted
             service is unavailable.
           </li>
@@ -215,7 +215,7 @@ export default function Terms() {
 
         <h2 id="robinhood">10 · Not affiliated with Robinhood</h2>
         <p>
-          Merrymen is independent. It is not affiliated with, endorsed by or sponsored by Robinhood
+          AgentCap is independent. It is not affiliated with, endorsed by or sponsored by Robinhood
           Markets, Inc. or its affiliates. “Robinhood Chain” is the public blockchain the agents
           trade on. Token and company names belong to their owners.
         </p>
@@ -232,7 +232,7 @@ export default function Terms() {
             has it;
           </li>
           <li>withdraw your funds as section 8 describes; and</li>
-          <li>email <a className="link" href="mailto:support@merrymen.dev">support@merrymen.dev</a> to have your account data deleted.</li>
+          <li>email <a className="link" href="mailto:support@agentcap.xyz">support@agentcap.xyz</a> to have your account data deleted.</li>
         </ul>
         <p>
           We may suspend or end your access to the hosted service if you break these terms, if the
@@ -252,7 +252,7 @@ export default function Terms() {
 
         <h2 id="software">13 · The software is provided “as is”</h2>
         <p>
-          The merrymen software is provided under the MIT License, without warranty of any kind,
+          The agentcap software is provided under the MIT License, without warranty of any kind,
           express or implied, including merchantability, fitness for a particular purpose, and
           non-infringement. To the maximum extent permitted by law, the authors and contributors are
           not liable for any claim, damages, loss, or other liability arising from the software or
@@ -263,31 +263,31 @@ export default function Terms() {
         <p>
           <strong>For on-chain trading</strong>, the self-hosted software is non-custodial. It runs
           on your machine, generates and stores keys locally in
-          your <code className="inline">~/.merrymen</code> directory, and interacts with public blockchains directly.
+          your <code className="inline">~/.agentcap</code> directory, and interacts with public blockchains directly.
           We never take custody of your private keys or on-chain funds, and we cannot access, freeze,
           reverse, or recover them. You are responsible for:
         </p>
         <ul>
-          <li>Securing the machine merrymen runs on and backing up your keys.</li>
+          <li>Securing the machine agentcap runs on and backing up your keys.</li>
           <li>The permission caps and capabilities you enable, including trading, transfers, and PC control.</li>
           <li>Any transactions your configured agents submit on your behalf.</li>
         </ul>
         <p>
           <strong>Connected brokerage accounts are different, and we say so plainly.</strong> If
-          merrymen adds support for a brokerage venue (such as a Robinhood Agentic account) and you
-          choose to connect one: the brokerage — not merrymen — is the custodian of that account
-          and its funds. Connecting authorizes merrymen to hold a revocable OAuth trading token for
+          agentcap adds support for a brokerage venue (such as a Robinhood Agentic account) and you
+          choose to connect one: the brokerage — not agentcap — is the custodian of that account
+          and its funds. Connecting authorizes agentcap to hold a revocable OAuth trading token for
           that account. That token can place trades within the budget you configured at the
           brokerage; the brokerage&apos;s permission model does not offer a read-only grant, so any
-          &quot;monitor only&quot; behavior is a feature of merrymen&apos;s software, not a technical
+          &quot;monitor only&quot; behavior is a feature of agentcap&apos;s software, not a technical
           restriction on the token. Your brokerage login credentials are never seen or stored by
-          merrymen — authorization happens on the brokerage&apos;s own pages — and you can revoke
+          agentcap — authorization happens on the brokerage&apos;s own pages — and you can revoke
           the connection at the brokerage at any time, independently of us.
         </p>
 
         <h2 id="third-party">15 · Third-party services</h2>
         <p>
-          merrymen can connect to third-party services you configure, such as blockchain RPC and
+          agentcap can connect to third-party services you configure, such as blockchain RPC and
           bundler providers, language-model providers, Telegram, and transcription providers. Your
           use of those services is governed by their own terms and prices. We are not responsible
           for their availability, conduct, or fees, and API keys you provide are used only to call
@@ -296,7 +296,7 @@ export default function Terms() {
 
         <h2 id="acceptable-use">16 · Acceptable use</h2>
         <p>
-          Use merrymen lawfully. Do not use it to violate any law or regulation, to infringe others&apos;
+          Use agentcap lawfully. Do not use it to violate any law or regulation, to infringe others&apos;
           rights, or to interfere with networks or services you are not authorized to use. The PC
           remote-control features are intended for the machine you own and operate; do not use them
           against systems you don&apos;t control.
@@ -304,7 +304,7 @@ export default function Terms() {
 
         <h2 id="website">17 · The website</h2>
         <p>
-          This website is provided for information about Merrymen. It may link to third-party sites
+          This website is provided for information about AgentCap. It may link to third-party sites
           (such as GitHub and npm) that we don&apos;t control. We may update or remove content at any
           time.
         </p>
@@ -319,8 +319,8 @@ export default function Terms() {
         <h2 id="contact">19 · Contact</h2>
         <p>
           Questions or issues? Email{" "}
-          <a className="link" href="mailto:support@merrymen.dev">support@merrymen.dev</a> or open an issue on{" "}
-          <a className="link" href="https://github.com/millw14/merrymen" target="_blank" rel="noreferrer">
+          <a className="link" href="mailto:support@agentcap.xyz">support@agentcap.xyz</a> or open an issue on{" "}
+          <a className="link" href="https://github.com/millw14/agentcap" target="_blank" rel="noreferrer">
             GitHub
           </a>
           . Our <a className="link" href="/privacy">privacy policy</a> explains what we store and why.

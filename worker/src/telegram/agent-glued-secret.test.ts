@@ -12,7 +12,7 @@ import { containsSecret, redactSecrets } from "./agent";
 
 const seed = new Uint8Array(32).fill(41);
 const KEY = base58Encode(new Uint8Array([...seed, ...ed25519.getPublicKey(seed)]));
-const SIG = base58Encode(ed25519.sign(new TextEncoder().encode("merrymen"), seed));
+const SIG = base58Encode(ed25519.sign(new TextEncoder().encode("agentcap"), seed));
 const keyOf = (byte: number) => {
   const s = new Uint8Array(32).fill(byte);
   return base58Encode(new Uint8Array([...s, ...ed25519.getPublicKey(s)]));

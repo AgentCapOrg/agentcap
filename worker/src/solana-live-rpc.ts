@@ -137,7 +137,7 @@ export function createSolanaLiveRpc(options: {
   /** Rebroadcast pacing, injectable for tests. */
   now?: () => number; sleep?: (ms: number, signal?: AbortSignal) => Promise<void>; rebroadcastIntervalMs?: number;
   /**
-   * Owner-run tools (merrymen solana-recover) talk only to the one endpoint the
+   * Owner-run tools (agentcap solana-recover) talk only to the one endpoint the
    * owner chose. The live runtime never sets this: it needs two providers. Such
    * a transport has no providerKey (no deployment check is reused) and, unless
    * the caller asks for a window, sends one round: the tool resolves an unknown

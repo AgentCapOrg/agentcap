@@ -242,7 +242,7 @@ describe("the address backstop knows Solana ids (Solana P0)", () => {
       assert.equal(publishableThesis(row({ name: `${id}` })), null, id);
     }
     // Prose, tickers, URLs and a short hashtag still publish.
-    const plain = `${post} $SOL $BONK #BuyTheDip https://merrymen.xyz/t/0123456789abcdef`;
+    const plain = `${post} $SOL $BONK #BuyTheDip https://agentcap.xyz/t/0123456789abcdef`;
     assert.equal(publishableThesis(row({ reason: null, post: plain }))!.post, plain);
   });
 });

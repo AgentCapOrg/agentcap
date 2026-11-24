@@ -274,7 +274,7 @@ export type PerpMarketView = {
   lastFunding: { ppmPerHour: number; atSec: number } | null;
   /** max(min_quote, min_base × mark), micro-USDG — effectiveMinNotionalMicro. */
   effMinNotionalMicro: bigint;
-  /** L_m: the leverage merrymen sets on this market (never model-chosen). */
+  /** L_m: the leverage agentcap sets on this market (never model-chosen). */
   leverage: number;
   /** IMF_m = ceil(10000 / L_m), bp. */
   imfBp: number;

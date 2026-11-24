@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash, randomBytes } from "node:crypto";
 import { test } from "node:test";
-import type { MerrymenSettings } from "../../packages/core/src/index";
+import type { AgentCapSettings } from "../../packages/core/src/index";
 import type { PgClientLike } from "./announce";
 import { sealSecret } from "./store-crypto";
 import { emptyTgGroupsState } from "./telegram/tg-groups/store";
@@ -12,7 +12,7 @@ import {
 
 const CHAT_ID = -1001234567890;
 const DEK = randomBytes(32);
-const BODY = "Hey, I’m back. Sorry I went quiet. Sign up at https://app.merrymen.dev.";
+const BODY = "Hey, I’m back. Sorry I went quiet. Sign up at https://app.agentcap.xyz.";
 const BODY_SHA256 = createHash("sha256").update(BODY).digest("hex");
 const ID = "recovery-2026-10-01";
 
@@ -31,7 +31,7 @@ function sealed(rooms: TgRoom[]): string {
 }
 
 class FakePg implements PgClientLike {
-  sealedState = sealed([room(), room(-1002222222222, "Another room"), room(-1003333333333, "Merrymen", "pending")]);
+  sealedState = sealed([room(), room(-1002222222222, "Another room"), room(-1003333333333, "AgentCap", "pending")]);
   name = "Shogun";
   botClaimHolder: string | null = SHOGUN_TENANT;
   moveClaimAtInsert = false;
@@ -74,7 +74,7 @@ function harness() {
   const calls: string[] = [];
   const settingsState = { current: {
     telegramBotToken: "123:secret", telegramEnabled: true, telegramGroupsEnabled: true,
-  } as MerrymenSettings };
+  } as AgentCapSettings };
   const settings = { get: async (tenant: `0x${string}`) => {
     assert.equal(tenant, SHOGUN_TENANT);
     return settingsState.current;
@@ -88,7 +88,7 @@ function harness() {
   return { client, calls, settingsState, deps };
 }
 
-test("dry run lists only approved Shogun rooms titled Merrymen and contacts no Telegram endpoint", async () => {
+test("dry run lists only approved Shogun rooms titled AgentCap and contacts no Telegram endpoint", async () => {
   const { calls, client, deps } = harness();
   const out = await runTgGroupRecoveryNotice(deps);
   assert.equal(out.status, "preview");
@@ -184,7 +184,7 @@ test("settings, token and operator switch are checked again after Telegram respo
         if (change === "groups") settingsState.current.telegramGroupsEnabled = false;
         if (change === "telegram") settingsState.current.telegramEnabled = false;
         if (change === "token") settingsState.current.telegramBotToken = "123:new-secret";
-        if (change === "switch") env.MERRYMEN_TG_GROUPS = "0";
+        if (change === "switch") env.AGENTCAP_TG_GROUPS = "0";
         return { chat: { id: CHAT_ID, title: RECOVERY_ROOM_TITLE, type: "supergroup", isForum: false } };
       },
     });
@@ -215,7 +215,7 @@ test("bot claim moved during lookup or at the guarded insert blocks delivery", a
 
 test("an owner switching groups off or removing approval prevents the notice", async () => {
   const { client, deps } = harness();
-  assert.equal((await runTgGroupRecoveryNotice({ ...deps, env: { MERRYMEN_TG_GROUPS: "0" } })).status, "refused");
+  assert.equal((await runTgGroupRecoveryNotice({ ...deps, env: { AGENTCAP_TG_GROUPS: "0" } })).status, "refused");
   client.sealedState = sealed([room(CHAT_ID, RECOVERY_ROOM_TITLE, "left")]);
   assert.equal((await runTgGroupRecoveryNotice({ ...deps, selectedChatId: CHAT_ID, confirmCampaignId: ID, confirmBodySha256: BODY_SHA256 })).status, "refused");
   assert.equal(client.notices.size, 0);

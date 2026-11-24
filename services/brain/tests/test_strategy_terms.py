@@ -70,7 +70,7 @@ HOLD_RULE = (
 
 #: The rules every request carried before the channel existed, copied rather
 #: than imported, so an edit to HOUSE_RULES cannot also edit its own test.
-ORIGINAL_HOUSE_RULES = """You are one voice on a trading desk called Merrymen.
+ORIGINAL_HOUSE_RULES = """You are one voice on a trading desk called AgentCap.
 
 ABSOLUTE RULES:
 - Never output a blockchain address, contract address, calldata, or any 0x hex

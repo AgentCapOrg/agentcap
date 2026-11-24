@@ -58,7 +58,7 @@ export const HELP = `Chain-gap booking — PREVIEW FIRST. docs/chain-gap-booking
   node --import tsx worker/src/chain-gap-booking-cli.ts --revert /absolute/apply-report.json --output /absolute/new-revert-report.json
   node --import tsx worker/src/chain-gap-booking-cli.ts --revert /absolute/apply-report.json --dry-run --output /absolute/new-receipts-report.json
 
-Required environment: DATABASE_URL. Optional: MERRYMEN_CHAIN_GAP_RPC (defaults to the public Robinhood Chain mainnet RPC).
+Required environment: DATABASE_URL. Optional: AGENTCAP_CHAIN_GAP_RPC (defaults to the public Robinhood Chain mainnet RPC).
 Only a held tenant is booked: its newest admission decision a chain refusal, nothing written for it since, and only what landed before it.
 The preview reads Postgres read-only and the chain; it writes only its own report, created once with mode 0600.
 --apply recomputes the preview and writes exactly its proposed rows in one SERIALIZABLE transaction, only when the digest is the one you confirm.
@@ -353,7 +353,7 @@ export async function connectBooking(url: string, readOnly: boolean, loadPg: () 
   pg.types.setTypeParser(20, (v) => (v === null ? null : Number(v)));
   const client = new pg.Client({
     connectionString: url, connectionTimeoutMillis: 10_000,
-    application_name: applicationName ?? (readOnly ? "merrymen-chain-gap-preview-readonly" : "merrymen-chain-gap-apply"),
+    application_name: applicationName ?? (readOnly ? "agentcap-chain-gap-preview-readonly" : "agentcap-chain-gap-apply"),
     options: `-c statement_timeout=30000 -c lock_timeout=5000${readOnly ? " -c default_transaction_read_only=on" : ""}`,
   });
   await client.connect();
@@ -491,7 +491,7 @@ export async function main(args: readonly string[] = process.argv.slice(2), env:
   targetDigest(env.DATABASE_URL);
   const full = {
     ...deps, connect: deps.connect ?? connectBooking, nowMs: deps.nowMs ?? (() => Date.now()),
-    rpc: deps.rpc ?? createBookingRpc(env.MERRYMEN_CHAIN_GAP_RPC || DEFAULT_RPC),
+    rpc: deps.rpc ?? createBookingRpc(env.AGENTCAP_CHAIN_GAP_RPC || DEFAULT_RPC),
   };
 
   if (options.mode === "receipts") {
@@ -602,7 +602,7 @@ export async function main(args: readonly string[] = process.argv.slice(2), env:
   try { replaceReportFile(options.output, stampCommitOutcome(report, "committed")); } catch { finalized = false; }
   try {
     out(`APPLIED booking ${report.bookingId} — ${report.rows.length} row(s) for tenant ${report.tenant} under backup ${report.backupRef}; ` +
-      `the apply report (what --revert takes) is ${options.output}. Preview the tenant again with MERRYMEN_RESUME_PREVIEW before approving it.`);
+      `the apply report (what --revert takes) is ${options.output}. Preview the tenant again with AGENTCAP_RESUME_PREVIEW before approving it.`);
   } catch { printed = false; }
   if (!finalized) {
     say(`  ${options.output} is still the report written before the COMMIT (commitOutcome "unknown"), and could not be marked "committed": ` +

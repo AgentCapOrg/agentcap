@@ -1,5 +1,5 @@
 /**
- * /api/holder — ONE $MERRYMEN WALLET POWERS ONE AGENT, through the real route.
+ * /api/holder — ONE $AGENTCAP WALLET POWERS ONE AGENT, through the real route.
  *
  * The proof bound a wallet to an account and nothing bound it back, so one
  * 100,000-token wallet linked into N accounts powered N agents. The route now
@@ -22,9 +22,9 @@ import path from "node:path";
 import { after, before, beforeEach, describe, it, mock } from "node:test";
 import { generatePrivateKey, privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
 
-const ORIGIN = "https://app.merrymen.dev";
+const ORIGIN = "https://app.agentcap.xyz";
 const saved = Object.fromEntries(
-  ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_SESSION_SECRET", "DATABASE_URL", "MERRYMEN_PUBLIC_ORIGIN", "MERRYMEN_STORE_DEK"].map(
+  ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_SESSION_SECRET", "DATABASE_URL", "AGENTCAP_PUBLIC_ORIGIN", "AGENTCAP_STORE_DEK"].map(
     (k) => [k, process.env[k]],
   ),
 );
@@ -56,13 +56,13 @@ function sqliteClient(): Client {
 
 before(async () => {
   home = mkdtempSync(path.join(tmpdir(), "mm-holder-route-"));
-  process.env.MERRYMEN_HOME = home;
-  process.env.MERRYMEN_HOSTED = "1";
-  process.env.MERRYMEN_SESSION_SECRET = "test-secret-at-least-thirty-two-characters-long";
-  process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 9).toString("base64");
+  process.env.AGENTCAP_HOME = home;
+  process.env.AGENTCAP_HOSTED = "1";
+  process.env.AGENTCAP_SESSION_SECRET = "test-secret-at-least-thirty-two-characters-long";
+  process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 9).toString("base64");
   // Hosted challenge verification requires shared storage; never connected to.
   process.env.DATABASE_URL = "postgres://127.0.0.1:1/never-connected";
-  delete process.env.MERRYMEN_PUBLIC_ORIGIN;
+  delete process.env.AGENTCAP_PUBLIC_ORIGIN;
   auth = await import("@/lib/auth");
   // THROUGH require, ON PURPOSE (grants/owner-facing.test.ts): the route
   // reaches worker modules by require, and a stub on the ESM instance of the
@@ -239,7 +239,7 @@ describe("POST /api/holder claims the wallet before it stores the proof", () => 
     for (const who of [c, d]) {
       const res = await link(who.address, w);
       assert.equal(res.status, 429, JSON.stringify(res.body));
-      assert.match(res.body.error ?? "", /Another merrymen account used this wallet recently/);
+      assert.match(res.body.error ?? "", /Another agentcap account used this wallet recently/);
       assert.match(res.body.error ?? "", /once every 24 hours/);
       assert.doesNotMatch(res.body.error ?? "", /powers another/, "nobody holds it now, and the copy does not say so");
       for (const x of [a, b]) assert.ok(!JSON.stringify(res.body).toLowerCase().includes(lc(x.address)), "no account is named");

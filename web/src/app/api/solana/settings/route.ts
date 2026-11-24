@@ -22,7 +22,7 @@ export async function POST(req: Request) {
       // Admission refuses a live trade worth under 1 USDG: a per-trade limit below it would let none through.
       requireSolanaLiveTradeMinimum(limits);
       // The live rollout, decided by the runtime from its own env as everywhere else: only a tenant
-      // MERRYMEN_SOLANA_LIVE_TENANTS names saves live mode, with limits within the platform's live caps
+      // AGENTCAP_SOLANA_LIVE_TENANTS names saves live mode, with limits within the platform's live caps
       // (an account that already went live may keep live mode to sell its exits). Paper is never asked.
       await getSolanaAppRuntime().checkLiveSettings(scope, limits);
     }

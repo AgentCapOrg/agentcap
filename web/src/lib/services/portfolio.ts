@@ -29,7 +29,7 @@
  *
  * Read-only, no network, no MCP imports: the app can serve the same views.
  */
-import { explorerFor, isEvidencedFlow } from "@merrymen/core";
+import { explorerFor, isEvidencedFlow } from "@agentcap/core";
 import type { Db } from "../../../../worker/src/db";
 import { activeClassPositions } from "../../../../worker/src/class-active";
 import { attributeBook, breakGap, type BookFlow, type BookMark } from "../../../../worker/src/period-pnl";
@@ -817,7 +817,7 @@ export function receiptExplanation(t: TradeView): string {
     case "paper_fill":
       return "Paper fill: simulated at the recorded price in the paper book. No real funds moved and there is no transaction.";
     default:
-      return "The ledger status of this operation is not one Merrymen recognises.";
+      return "The ledger status of this operation is not one AgentCap recognises.";
   }
 }
 

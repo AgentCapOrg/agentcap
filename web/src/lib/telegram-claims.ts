@@ -8,7 +8,7 @@
  * tenant); this is where an owner finds out, and where they can move the bot.
  *
  * WHAT THE OWNER IS TOLD, AND WHAT THEY ARE NOT. That the bot is connected to
- * another Merrymen agent, and that moving it stops it answering there. NOT
+ * another AgentCap agent, and that moving it stops it answering there. NOT
  * which agent or which account, and not "your other login": the account
  * holding it may be somebody else's, and holding a token for a bot is no
  * reason to learn whose agent it was.
@@ -20,7 +20,7 @@
  * saved as they are, and its owner links the bot with this agent's own code.
  */
 import { createHash } from "node:crypto";
-import type { MerrymenSettings } from "@merrymen/core";
+import type { AgentCapSettings } from "@agentcap/core";
 import { LockBusyError, makePgDb, withAdvisoryLock, type Db } from "../../../worker/src/db";
 import {
   botIdOf,
@@ -36,7 +36,7 @@ import {
 
 /** The owner-facing refusal. Says nothing about whose agent holds the bot. */
 export const BOT_CLAIMED_TEXT =
-  "This bot is already connected to another Merrymen agent. Move it here? It will stop answering there and you'll need to /link again here.";
+  "This bot is already connected to another AgentCap agent. Move it here? It will stop answering there and you'll need to /link again here.";
 
 /** A move Telegram would not vouch for. */
 export const BOT_UNCONFIRMED_TEXT =
@@ -84,7 +84,7 @@ const nothing = async () => {};
  *
  * WHY getMe COMES FIRST. A bot id is public — anyone the bot messages sees it
  * — so a 409 given for `<id>:anything` would tell any signed-in stranger which
- * bots are Merrymen agents', and a claim made for it would keep the real
+ * bots are AgentCap agents', and a claim made for it would keep the real
  * owner's agent off their own bot. A live token is proof of control of the
  * bot; the claim store refuses anything less (claimBot).
  *
@@ -114,7 +114,7 @@ export async function decideBotClaim(args: {
    * anything, and `read`, the store read afresh, which settle and undo call
    * after the write (or the failed write) to see what was stored in the end.
    */
-  settings: { before: MerrymenSettings | null; read: (tenant: `0x${string}`) => Promise<MerrymenSettings | null> };
+  settings: { before: AgentCapSettings | null; read: (tenant: `0x${string}`) => Promise<AgentCapSettings | null> };
   now?: number;
 }): Promise<BotClaimDecision> {
   const { db, tenant, token, moveBot } = args;
@@ -238,8 +238,8 @@ export async function settleWithoutToken(args: {
   db: Db;
   tenant: `0x${string}`;
   /** What this save writes: its token is the one read at the start, and kept should the store not read back. */
-  next: MerrymenSettings;
-  settings: { read: (tenant: `0x${string}`) => Promise<MerrymenSettings | null> };
+  next: AgentCapSettings;
+  settings: { read: (tenant: `0x${string}`) => Promise<AgentCapSettings | null> };
   now?: number;
 }): Promise<Extract<BotClaimDecision, { ok: true }>> {
   const { db, tenant } = args;
@@ -356,10 +356,10 @@ export async function withSettingsSaveLock<T>(
 export async function botClaimForSave(args: {
   tenant: `0x${string}` | null;
   touched: boolean;
-  next: MerrymenSettings;
+  next: AgentCapSettings;
   moveBot: boolean;
   /** The account's settings as this save read them, and the store to read them afresh from (decideBotClaim). */
-  settings: { before: MerrymenSettings | null; read: (tenant: `0x${string}`) => Promise<MerrymenSettings | null> };
+  settings: { before: AgentCapSettings | null; read: (tenant: `0x${string}`) => Promise<AgentCapSettings | null> };
   /** The claims database under this account's save lock (withSettingsSaveLock). Omitted: opened here, with no lock. */
   claims?: SaveClaims;
 }): Promise<BotClaimDecision | null> {

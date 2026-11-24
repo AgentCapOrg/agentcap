@@ -23,15 +23,15 @@ import {
 } from "../../../worker/src/xpost/client";
 import { ensureXpostSchema } from "../../../worker/src/xpost/store";
 
-export const ORIGIN = "https://app.merrymen.test";
+export const ORIGIN = "https://app.agentcap.test";
 export const OWNER_A = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as const;
 export const OWNER_B = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as const;
 
 /** The X app a test runs against. Its callback is built from the public origin. */
 export const APP_ENV: Record<string, string> = {
-  MERRYMEN_X_CLIENT_ID: "test-client-id",
-  MERRYMEN_X_CLIENT_SECRET: "test-client-secret",
-  MERRYMEN_PUBLIC_ORIGIN: ORIGIN,
+  AGENTCAP_X_CLIENT_ID: "test-client-id",
+  AGENTCAP_X_CLIENT_SECRET: "test-client-secret",
+  AGENTCAP_PUBLIC_ORIGIN: ORIGIN,
 };
 
 /** What X hands out when a script does not say otherwise. Distinctive, so a leak is findable. */
@@ -86,14 +86,14 @@ export function scriptedX() {
 }
 
 const SAVED_KEYS = [
-  "MERRYMEN_HOSTED",
-  "MERRYMEN_SESSION_SECRET",
-  "MERRYMEN_STORE_DEK",
+  "AGENTCAP_HOSTED",
+  "AGENTCAP_SESSION_SECRET",
+  "AGENTCAP_STORE_DEK",
   "DATABASE_URL",
-  "MERRYMEN_X_CLIENT_ID",
-  "MERRYMEN_X_CLIENT_SECRET",
-  "MERRYMEN_X_REDIRECT_URI",
-  "MERRYMEN_PUBLIC_ORIGIN",
+  "AGENTCAP_X_CLIENT_ID",
+  "AGENTCAP_X_CLIENT_SECRET",
+  "AGENTCAP_X_REDIRECT_URI",
+  "AGENTCAP_PUBLIC_ORIGIN",
 ] as const;
 
 /**
@@ -102,14 +102,14 @@ const SAVED_KEYS = [
  */
 export async function xWorld(opts: { start?: number } = {}) {
   const saved = Object.fromEntries(SAVED_KEYS.map((k) => [k, process.env[k]]));
-  process.env.MERRYMEN_HOSTED = "1";
-  process.env.MERRYMEN_SESSION_SECRET = "x-routes-test-secret-at-least-32-characters-long";
+  process.env.AGENTCAP_HOSTED = "1";
+  process.env.AGENTCAP_SESSION_SECRET = "x-routes-test-secret-at-least-32-characters-long";
   const dek = randomBytes(32);
-  process.env.MERRYMEN_STORE_DEK = dek.toString("base64");
+  process.env.AGENTCAP_STORE_DEK = dek.toString("base64");
   delete process.env.DATABASE_URL;
   // The app comes from the seam's env; the process has none, so a route that
   // read process.env instead would find the feature unavailable and say so.
-  for (const k of ["MERRYMEN_X_CLIENT_ID", "MERRYMEN_X_CLIENT_SECRET", "MERRYMEN_X_REDIRECT_URI", "MERRYMEN_PUBLIC_ORIGIN"]) {
+  for (const k of ["AGENTCAP_X_CLIENT_ID", "AGENTCAP_X_CLIENT_SECRET", "AGENTCAP_X_REDIRECT_URI", "AGENTCAP_PUBLIC_ORIGIN"]) {
     delete process.env[k];
   }
   const raw = new DatabaseSync(":memory:");

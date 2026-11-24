@@ -51,9 +51,9 @@ import type { Db } from "./db";
 import type { EthFeed } from "./eth-feed";
 import { findRoundAt, priceGasAtRound, type FeedRound } from "./gas-backfill";
 
-export const PREVIEW_FORMAT = "merrymen.gas-repair.preview.v1";
-export const APPLY_FORMAT = "merrymen.gas-repair.apply.v1";
-export const REVERT_FORMAT = "merrymen.gas-repair.revert.v1";
+export const PREVIEW_FORMAT = "agentcap.gas-repair.preview.v1";
+export const APPLY_FORMAT = "agentcap.gas-repair.apply.v1";
+export const REVERT_FORMAT = "agentcap.gas-repair.revert.v1";
 export const REPAIRS_TABLE = "gas_repairs";
 /** Robinhood Chain mainnet. Receipts from any other chain are not this ledger's. */
 export const CHAIN_ID = 4663;

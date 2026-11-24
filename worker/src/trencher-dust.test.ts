@@ -116,8 +116,8 @@ describe("re-entering on top of a sliver starts a fresh clock", () => {
     const os = await import("node:os");
     const path = await import("node:path");
     const fs = await import("node:fs");
-    const home = fs.mkdtempSync(path.join(os.tmpdir(), "merrymen-dust-"));
-    process.env.MERRYMEN_HOME = home;
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), "agentcap-dust-"));
+    process.env.AGENTCAP_HOME = home;
     const store = await import("./store");
     store.initStore();
     const { DatabaseSync } = await import("node:sqlite");

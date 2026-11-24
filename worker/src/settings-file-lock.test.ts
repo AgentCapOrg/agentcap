@@ -79,14 +79,14 @@ test("a failed mutation releases the lock without changing the settings", () => 
 });
 
 test("the hosted file backend's conditional save and kill share the lock", async (t) => {
-  const savedHome = process.env.MERRYMEN_HOME;
-  const savedKey = process.env.MERRYMEN_STORE_DEK;
+  const savedHome = process.env.AGENTCAP_HOME;
+  const savedKey = process.env.AGENTCAP_STORE_DEK;
   const home = path.join(root, String(serial++));
-  process.env.MERRYMEN_HOME = home;
-  process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 9).toString("base64");
+  process.env.AGENTCAP_HOME = home;
+  process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 9).toString("base64");
   t.after(() => {
-    if (savedHome === undefined) delete process.env.MERRYMEN_HOME; else process.env.MERRYMEN_HOME = savedHome;
-    if (savedKey === undefined) delete process.env.MERRYMEN_STORE_DEK; else process.env.MERRYMEN_STORE_DEK = savedKey;
+    if (savedHome === undefined) delete process.env.AGENTCAP_HOME; else process.env.AGENTCAP_HOME = savedHome;
+    if (savedKey === undefined) delete process.env.AGENTCAP_STORE_DEK; else process.env.AGENTCAP_STORE_DEK = savedKey;
   });
   const store = new FileSettingsStore("perps");
   const tenant = `0x${"ab".repeat(20)}` as const;

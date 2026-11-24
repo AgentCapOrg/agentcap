@@ -80,8 +80,8 @@ export function nextReadIn(failuresInARow: number, everyMs: number): number {
 
 /**
  * Whether a failure was one where NOTHING ANSWERED — the only case the line may
- * call "Can't reach merrymen". A RequestError carries status 0 for it, and a
- * LiveLoadError carries `answered: false`; anything else is merrymen answering
+ * call "Can't reach agentcap". A RequestError carries status 0 for it, and a
+ * LiveLoadError carries `answered: false`; anything else is agentcap answering
  * and failing, which is a different sentence.
  */
 export function nothingAnswered(error: unknown): boolean {
@@ -370,9 +370,9 @@ export interface Banner {
  *   - "since when" is the oldest successful read among the failing ones,
  *     because that is the oldest figure still on screen, and the line must
  *     never understate how old what it is apologising for is;
- *   - "Can't reach merrymen" needs EVERY clock that has reported to be failing
+ *   - "Can't reach agentcap" needs EVERY clock that has reported to be failing
  *     with nothing answering, in both halves. One read answering — even with
- *     an error — means merrymen is there.
+ *     an error — means agentcap is there.
  *
  * A CLOCK OFF THE LINE (`outageLine: false`) has no say in any of it. That is
  * the owner's book: a signed-out visitor reads it as unreadable by design, so
@@ -408,7 +408,7 @@ export function bannerOf(views: readonly ClockView[]): Banner | null {
  * we are already trying again, and whether what is on screen is old. The
  * error's own message answers none of them.
  *
- * AND ONLY WHAT IS TRUE OF THIS FAILURE. It said "Can't reach merrymen" for
+ * AND ONLY WHAT IS TRUE OF THIS FAILURE. It said "Can't reach agentcap" for
  * every one, including a 500 from a route that answered, and "Showing what we
  * last read" over the whole screen when one half had been refreshed this very
  * pass. `unreachable` is for the case where nothing answered at all; otherwise
@@ -436,7 +436,7 @@ export function failureCopy(p: {
   const onlyAccount = !!p.failed && p.failed.account && !p.failed.market;
   const onlyMarket = !!p.failed && p.failed.market && !p.failed.account;
   const what = onlyAccount ? "your account" : onlyMarket ? "market data" : "your account or market data";
-  const lead = p.unreachable === false ? `Couldn't load ${what}` : "Can't reach merrymen";
+  const lead = p.unreachable === false ? `Couldn't load ${what}` : "Can't reach agentcap";
   const when = p.inFlight || secs <= 0 ? "retrying now…" : `retrying in ${secs}s.`;
   const shown = onlyAccount ? "your account as" : onlyMarket ? "market data as" : "what";
   return {

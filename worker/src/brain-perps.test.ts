@@ -22,7 +22,7 @@ const decision = (over: Partial<BrainDecision> = {}): BrainDecision =>
     created_at: 0,
     trigger_id: null,
     action: "buy",
-    instrument_id: "merrymen:btc-perp",
+    instrument_id: "agentcap:btc-perp",
     symbol: "BTC-PERP",
     confidence: 0.7,
     suggested_delta_usdg: 10_000_000,
@@ -67,7 +67,7 @@ describe("brain-live refuses every perp symbol", () => {
   });
 
   it("the spot token of the same name is untouched: TSLA still trades", () => {
-    const v = orderFromDecision(decision({ symbol: "TSLA", instrument_id: "merrymen:tsla" }), LIMITS);
+    const v = orderFromDecision(decision({ symbol: "TSLA", instrument_id: "agentcap:tsla" }), LIMITS);
     assert.deepEqual(v, { ok: true, order: { side: "buy", symbol: "TSLA", usdgAmount: 10 } });
   });
 });

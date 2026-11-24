@@ -25,7 +25,7 @@ import { describe, it } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { JSDOM } from "jsdom";
-import { REAL_LABEL, SIMULATED_LABEL, autonomyOf } from "@merrymen/core";
+import { REAL_LABEL, SIMULATED_LABEL, autonomyOf } from "@agentcap/core";
 import type { FleetRecoveryView } from "../../../worker/src/fleet-recovery";
 import type { ChatController } from "./chat-controller";
 import type { LiveMine } from "./live";

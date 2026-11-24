@@ -11,7 +11,7 @@
  *
  * The memecoin desk asks for technical, onchain, social and liquidity, and all
  * four are MARKET data: price, holder distribution, route depth, and what other
- * Merrymen published. Not one of them can answer whether there is a person
+ * AgentCap published. Not one of them can answer whether there is a person
  * shipping code behind the ticker, which is the first question a human asks and
  * the only one on that list that is not downstream of the price.
  *

@@ -180,19 +180,19 @@ After review and all required CI checks, pin the orchestrator service to the
 reviewed commit and set these service variables together:
 
 ```text
-MERRYMEN_START=start:recovery-replies
-MERRYMEN_FLEET_RECOVERY_REPORT_ONLY=1
-MERRYMEN_FLEET_RECOVERY_REPLIES=1
-MERRYMEN_FLEET_SERVICE_ID=<this service's RAILWAY_SERVICE_ID>
-MERRYMEN_PERSISTENT_HOME_REQUIRED=1
+AGENTCAP_START=start:recovery-replies
+AGENTCAP_FLEET_RECOVERY_REPORT_ONLY=1
+AGENTCAP_FLEET_RECOVERY_REPLIES=1
+AGENTCAP_FLEET_SERVICE_ID=<this service's RAILWAY_SERVICE_ID>
+AGENTCAP_PERSISTENT_HOME_REQUIRED=1
 ```
 
 The image's deploy guard (`scripts/container-start.sh`, then
 `worker/src/deploy-guard.ts`) refuses every fleet role, this one included,
-with exit 78 before node starts unless `MERRYMEN_FLEET_SERVICE_ID` equals
+with exit 78 before node starts unless `AGENTCAP_FLEET_SERVICE_ID` equals
 the Railway-injected `RAILWAY_SERVICE_ID` of this service and
-`MERRYMEN_PERSISTENT_HOME_REQUIRED` is exactly `1` (the listener's root proof
-requires it too). `MERRYMEN_IMAGE` comes from the Dockerfile; do not set it
+`AGENTCAP_PERSISTENT_HOME_REQUIRED` is exactly `1` (the listener's root proof
+requires it too). `AGENTCAP_IMAGE` comes from the Dockerfile; do not set it
 as a service variable. The service's Start Command must be empty, so the
 image's own start path (tini, the start script, then node) runs and delivers
 SIGTERM to node. Expect these first lines, in order:
@@ -280,7 +280,7 @@ database. They create and remove isolated schemas; never supply production
 credentials. For example:
 
 ```sh
-MERRYMEN_TEST_PG_URL=postgresql://mmreply@127.0.0.1:55491/postgres \
+AGENTCAP_TEST_PG_URL=postgresql://mmreply@127.0.0.1:55491/postgres \
   node --import tsx --test worker/src/recovery-replies.test.ts
 npm run typecheck
 npm test

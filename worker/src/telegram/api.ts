@@ -1,5 +1,5 @@
 /**
- * Telegram Bot API client — the merryman's mouth and ears.
+ * Telegram Bot API client — the agentcapavatar's mouth and ears.
  *
  * Mirrors the venue-client discipline (worker/src/venues/rialto.ts): an
  * injectable `FetchLike` for tests, and every method returns `{ result, reason }`
@@ -944,7 +944,7 @@ export const BOT_COMMANDS: { command: string; description: string }[] = [
   { command: "alert", description: "ping me at a price" },
   { command: "alerts", description: "list price alerts" },
   { command: "unalert", description: "remove an alert" },
-  { command: "name", description: "give your merryman a name" },
+  { command: "name", description: "give your agentcapavatar a name" },
   { command: "remember", description: "keep a fact about you" },
   { command: "forget", description: "wipe what I know about you" },
   { command: "soul", description: "who I am and what I know" },

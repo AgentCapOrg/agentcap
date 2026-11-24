@@ -12,7 +12,7 @@ import { wrapSqlite, type Db } from "./db";
 const run = promisify(execFile);
 
 test("independent SQL store instances share one atomic claim and survive reopening", async () => {
-  const home = mkdtempSync(join(tmpdir(), "merrymen-nonce-sql-"));
+  const home = mkdtempSync(join(tmpdir(), "agentcap-nonce-sql-"));
   const file = join(home, "nonces.sqlite");
   const firstDb = new DatabaseSync(file);
   const secondDb = new DatabaseSync(file);
@@ -42,13 +42,13 @@ test("independent SQL store instances share one atomic claim and survive reopeni
 });
 
 test("local replay protection survives separate processes and process restart", async () => {
-  const home = mkdtempSync(join(tmpdir(), "merrymen-nonce-process-"));
+  const home = mkdtempSync(join(tmpdir(), "agentcap-nonce-process-"));
   const now = Date.now();
   const source = `import { LocalNonceStore } from './worker/src/auth-nonce-store';
     new LocalNonceStore(${JSON.stringify(home)}).consume('process-challenge', ${now + 60_000}, ${now})
       .then(result => console.log(JSON.stringify(result)));`;
   const child = () => run(process.execPath, [resolve("node_modules/tsx/dist/cli.mjs"), "-e", source], {
-    cwd: process.cwd(), env: { ...process.env, MERRYMEN_HOME: home, DATABASE_URL: "", MERRYMEN_HOSTED: "" },
+    cwd: process.cwd(), env: { ...process.env, AGENTCAP_HOME: home, DATABASE_URL: "", AGENTCAP_HOSTED: "" },
   });
   try {
     const results = await Promise.all([child(), child()]);
@@ -60,7 +60,7 @@ test("local replay protection survives separate processes and process restart", 
 });
 
 test("expired cleanup does not reopen an unexpired nonce", async () => {
-  const home = mkdtempSync(join(tmpdir(), "merrymen-nonce-cleanup-"));
+  const home = mkdtempSync(join(tmpdir(), "agentcap-nonce-cleanup-"));
   try {
     const store = new LocalNonceStore(home);
     const now = Date.now();

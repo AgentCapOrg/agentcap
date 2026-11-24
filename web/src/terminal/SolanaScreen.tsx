@@ -59,7 +59,7 @@ type RuntimeStatus = {
   limits: SolanaPaperLimits | null;
   automation?: { workerOnline: boolean; lastSeenAtMs: number | null };
   /**
-   * The live rollout (MERRYMEN_SOLANA_LIVE_TENANTS and the live caps): whether this account may go live, and the caps a new
+   * The live rollout (AGENTCAP_SOLANA_LIVE_TENANTS and the live caps): whether this account may go live, and the caps a new
    * permission must fit (null while a cap setting cannot be read). Never the list itself. Absent from an older server.
    */
   liveAccess?: { onList: boolean; misconfigured: boolean; caps: SolanaLiveCaps | null };
@@ -125,15 +125,15 @@ function SignInRepair({ refusal, account, login, switching, signingOut, error, o
     <button disabled={signingOut} onClick={onSignOut}>{signingOut ? "Signing out…" : "Sign in again"}</button></div>;
   const named = account && account.provider !== "wallet" ? LOGIN_NAMES[account.provider] : null, loginText = login ?? "a different login";
   return <div className="solana-card"><h2>Two different sign-ins</h2>
-    <p>You&apos;re signed in to Merrymen with {solanaAccountLoginText(account)}, but this browser&apos;s wallet sign-in is {loginText}. Solana needs both to be the same login.</p>
+    <p>You&apos;re signed in to AgentCap with {solanaAccountLoginText(account)}, but this browser&apos;s wallet sign-in is {loginText}. Solana needs both to be the same login.</p>
     {failure}
     {!switching && <div className="solana-row">
       <button disabled={signingOut} onClick={onSignOut}>{signingOut ? "Signing out…" : named ? `Sign in with ${named}` : "Sign in again"}</button>
       <button className="solana-secondary" disabled={signingOut} onClick={onSwitch}>Use this wallet sign-in instead</button>
     </div>}
     <p className="solana-fine">{refusal.loginHasAccount
-      ? `Using the wallet sign-in opens the Merrymen account of ${loginText}, everywhere on the site.`
-      : `Using the wallet sign-in starts a new, empty Merrymen account for ${loginText}. The account you're signed in to now stays as it is.`}</p>
+      ? `Using the wallet sign-in opens the AgentCap account of ${loginText}, everywhere on the site.`
+      : `Using the wallet sign-in starts a new, empty AgentCap account for ${loginText}. The account you're signed in to now stays as it is.`}</p>
     {switching && <SignIn onDone={onDone} />}
   </div>;
 }
@@ -298,10 +298,10 @@ export async function solanaRequestJson<T>(url: string, init: RequestInit = {}):
       const d: { error?: unknown; errors?: unknown; why?: unknown; ownerFacing?: unknown } = data !== null && typeof data === "object" ? data : {};
       const owned = response.status >= 500 && d.ownerFacing !== true ? null
         : typeof d.error === "string" && d.error ? d.error : Array.isArray(d.errors) && d.errors.length ? d.errors.join(" ") : typeof d.why === "string" && d.why ? d.why : null;
-      if (response.status >= 500 && owned === null && data !== undefined) console.warn(`[merrymen] ${url} answered ${response.status}:`, data);
-      throw new SolanaRequestError(owned ?? `merrymen answered with an error (${response.status}). Try again in a moment.`, response.status, data);
+      if (response.status >= 500 && owned === null && data !== undefined) console.warn(`[agentcap] ${url} answered ${response.status}:`, data);
+      throw new SolanaRequestError(owned ?? `agentcap answered with an error (${response.status}). Try again in a moment.`, response.status, data);
     }
-    if (data === undefined) throw new SolanaRequestError("merrymen sent back something that isn't data. Try again in a moment.", response.status);
+    if (data === undefined) throw new SolanaRequestError("agentcap sent back something that isn't data. Try again in a moment.", response.status);
     return data as T;
   } finally {
     caller?.removeEventListener("abort", cancel);
@@ -332,7 +332,7 @@ function ConnectedSolana({ onSignedIn }: { onSignedIn?: () => void }) {
   const [otherLogin, setOtherLogin] = useState(false);
   // The sign-in itself was refused, by code (signInRefusalOf): SignInRepair shows in place of the account.
   const [signInRefusal, setSignInRefusal] = useState<SolanaSignInRefusal | null>(null);
-  // The login of the account the Merrymen session is for, as the last mismatch named it. Kept through the wallet
+  // The login of the account the AgentCap session is for, as the last mismatch named it. Kept through the wallet
   // sign-out SignInRepair offers, so the sign-in that follows can say which login to choose.
   const [accountLogin, setAccountLogin] = useState<SolanaAccountLogin | null>(null);
   // switching: the owner chose to keep the wallet sign-in's login, and its sign-in is finishing on the card.
@@ -381,7 +381,7 @@ function ConnectedSolana({ onSignedIn }: { onSignedIn?: () => void }) {
     if (requestedIdentity !== identity.current || requestedEpoch !== accountEpoch.current) throw new Error("Your signing account changed. Refresh before continuing.");
     if (!token) throw new SolanaRequestError("Your sign-in expired. Sign in again.", 401, { signIn: { problem: "expired" } });
     const result = await solanaRequestJson<T>(`/api/solana/${path}`, { signal,
-      headers: { Authorization: `Bearer ${token}`, "X-Merrymen-Privy-Did": requestedIdentity, ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
+      headers: { Authorization: `Bearer ${token}`, "X-AgentCap-Privy-Did": requestedIdentity, ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
       ...(body === undefined ? {} : { method: "POST", body: JSON.stringify(body) }),
     });
     if (requestedIdentity !== identity.current || requestedEpoch !== accountEpoch.current) throw new Error("Your signing account changed. Refresh before continuing.");
@@ -917,16 +917,16 @@ function ConnectedSolana({ onSignedIn }: { onSignedIn?: () => void }) {
   const recoveryVault = !!binding && !!live?.vault && !!live.programId && binding.requestedMode === "live" && vaultSeen;
   // Off by default; only the bound owner of a vault the server has read.
   // OWNER DECISION: the whole card stays behind the key export flag, step 2's
-  // `merrymen solana-recover` commands included, even the read-only plan.
+  // `agentcap solana-recover` commands included, even the read-only plan.
   // Without an exported owner key there is nothing to sign with outside
-  // Merrymen, so a default build names no recovery tool (owner controls say
+  // AgentCap, so a default build names no recovery tool (owner controls say
   // so when a pending owner record cannot be settled). The alternative shows
   // step 2's read-only plan to every live owner and keeps only the Privy
   // export button (and the signing command) behind the flag. A hosted build
   // needs the flag as a Docker build argument (solana-glue-build's Dockerfile).
   const recoveryCard = ownerKeyExportEnabled() && sameWallet && recoveryVault && signer.address && live?.programId && live.vault
     ? { owner: signer.address, programId: live.programId, vault: live.vault } : null;
-  // THE OWNER CONTROLS (revoke, resume buys, withdraw, withdrawals made outside Merrymen) only where they act on something.
+  // THE OWNER CONTROLS (revoke, resume buys, withdraw, withdrawals made outside AgentCap) only where they act on something.
   // OWNER DECISION (Milla, 2026-11-09): a paper account that never went live has no session to revoke and no vault to
   // withdraw from, so it gets no card. The rule follows the server's own for reading live vault state (status's liveReads:
   // live mode, a session, a live book, a setup or a pending trade). Any of those, an owner record, live history or anything
@@ -964,7 +964,7 @@ function ConnectedSolana({ onSignedIn }: { onSignedIn?: () => void }) {
     if (onSignedIn) onSignedIn(); else void act(() => refresh());
   };
   if (!signer.authenticated) return <div className="solana-card"><p>Sign in with the same account you use for Robinhood Chain.</p>
-    {accountLogin && <p>Your Merrymen account signs in with {solanaAccountLoginText(accountLogin)}.</p>}
+    {accountLogin && <p>Your AgentCap account signs in with {solanaAccountLoginText(accountLogin)}.</p>}
     <SignIn onDone={signedIn} /></div>;
   if (signInRefusal) return <SignInRepair refusal={signInRefusal} account={signInRefusal.account ?? accountLogin} login={signer.login}
     switching={switching} signingOut={signingOut} error={error}
@@ -1033,7 +1033,7 @@ function ConnectedSolana({ onSignedIn }: { onSignedIn?: () => void }) {
         {binding.limits?.perTradeWsol && binding.limits.dailyWsol && <p>Sales are limited to {display(binding.limits.perTradeWsol, 9)} SOL per trade and {display(binding.limits.dailyWsol, 9)} SOL per 24 hours, whatever the price.</p>}
         {!!status?.runtime?.live.blockers.length && <ul aria-label="What stops live trading">{status.runtime.live.blockers.map((blocker) => <li key={blocker}>{blocker}</li>)}</ul>}
         {!!live?.warnings?.length && <ul role="status" aria-label="Warnings" className="solana-warning">{live.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>}
-        {live?.feePayer && Object.hasOwn(FEE_PAYER_LEVELS, live.feePayer.level) && <p>Shared network fee payer: {FEE_PAYER_LEVELS[live.feePayer.level]}{displaySolanaAmountOrNull(live.feePayer.lamports, 9) !== null && ` (${displaySolanaAmountOrNull(live.feePayer.lamports, 9)} SOL)`}. Merrymen pays your trades&apos; network fees from it; your owner wallet pays only for owner transactions.</p>}
+        {live?.feePayer && Object.hasOwn(FEE_PAYER_LEVELS, live.feePayer.level) && <p>Shared network fee payer: {FEE_PAYER_LEVELS[live.feePayer.level]}{displaySolanaAmountOrNull(live.feePayer.lamports, 9) !== null && ` (${displaySolanaAmountOrNull(live.feePayer.lamports, 9)} SOL)`}. AgentCap pays your trades&apos; network fees from it; your owner wallet pays only for owner transactions.</p>}
         {status?.runtime?.live.vault && <p>Vault: <span className="solana-address">{status.runtime.live.vault}</span>{status.runtime.live.programId && <> · Program: <span className="solana-address">{status.runtime.live.programId}</span></>}</p>}
         {live?.programId && !programTrusted && <p role="status">{SOLANA_UNRELEASED_PROGRAM}</p>}
         {/* The deposit address only while this account may buy: a deposit is for buying, and while buying is paused (off the live

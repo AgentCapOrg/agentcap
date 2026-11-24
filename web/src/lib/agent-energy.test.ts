@@ -14,7 +14,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { DatabaseSync } from "node:sqlite";
-import type { EnergyStatus } from "@merrymen/core";
+import type { EnergyStatus } from "@agentcap/core";
 import { wrapSqlite, type Db } from "../../../worker/src/db";
 import { readAgentEnergy, type ReadDb } from "./agent-energy";
 

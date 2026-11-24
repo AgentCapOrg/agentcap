@@ -60,7 +60,7 @@ export interface TriggerConfig {
  * interval is allowed down to one minute. Model/run budgets remain in force.
  */
 export function scheduledInterval(env: NodeJS.ProcessEnv = process.env): number {
-  const raw = Number((env.MERRYMEN_BRAIN_INTERVAL_SEC ?? "").trim());
+  const raw = Number((env.AGENTCAP_BRAIN_INTERVAL_SEC ?? "").trim());
   if (!Number.isFinite(raw) || raw < 60) return MAX_DECISION_INTERVAL_SEC;
   return Math.min(MAX_DECISION_INTERVAL_SEC, Math.floor(raw));
 }

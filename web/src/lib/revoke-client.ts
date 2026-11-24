@@ -6,7 +6,7 @@ import { formatUserOperation, formatUserOperationRequest, getUserOperationHash, 
 import { createKernelAccount, createKernelAccountClient } from "@zerodev/sdk";
 import { KERNEL_V3_3, getEntryPoint } from "@zerodev/sdk/constants";
 import { signerToEcdsaValidator } from "@zerodev/ecdsa-validator";
-import { accountIndexForPurpose, assertDerivedAccount, robinhoodChain, robinhoodTestnet } from "@merrymen/core";
+import { accountIndexForPurpose, assertDerivedAccount, robinhoodChain, robinhoodTestnet } from "@agentcap/core";
 import { userOpGasConfig } from "../../../worker/src/gas";
 import { getRecoveryTicket, relayUrl, redact, type BrowserWallet } from "./recover-client";
 import { invalidatePermissions, isRevocationFeeShortfall, KERNEL_REVOCATION_ABI, readConfirmedRevocationCutoff, revocationFeeMessage, type PendingRevocation } from "./permission-revocation";
@@ -17,7 +17,7 @@ const revocationChain = (chainId: number) =>
 
 /** The signed operation is public, contains no private key, and survives reloads. */
 function pendingStore(w: Pick<BrowserWallet, "chainId" | "smartAccount">) {
-  const key = `merrymen.permission-revocation.v1.${w.chainId}.${w.smartAccount.toLowerCase()}`;
+  const key = `agentcap.permission-revocation.v1.${w.chainId}.${w.smartAccount.toLowerCase()}`;
   return {
     pending(): PendingRevocation | null {
       const raw = localStorage.getItem(key);

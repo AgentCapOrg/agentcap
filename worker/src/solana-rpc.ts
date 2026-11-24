@@ -4,9 +4,9 @@ import { env } from "node:process";
 export const SOLANA_MAINNET_GENESIS_HASH = "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d";
 export const SOLANA_RESPONSE_LIMIT_BYTES = 262_144;
 const ERROR_MESSAGES = {
-  "missing-config": "MERRYMEN_SOLANA_RPC_MAINNET is required.",
+  "missing-config": "AGENTCAP_SOLANA_RPC_MAINNET is required.",
   "invalid-config": "Solana RPC endpoints must be HTTPS URLs without user information or fragments.",
-  "invalid-fallback": "Live Solana trading needs MERRYMEN_SOLANA_RPC_MAINNET_FALLBACK: an independent mainnet provider on a different hostname from the primary endpoint.",
+  "invalid-fallback": "Live Solana trading needs AGENTCAP_SOLANA_RPC_MAINNET_FALLBACK: an independent mainnet provider on a different hostname from the primary endpoint.",
   "invalid-timeout": "Solana RPC timeout must be between 1 and 30000 milliseconds.",
   timeout: "Solana read timed out.",
   network: "Solana read failed; check connectivity and endpoint configuration.",
@@ -44,10 +44,10 @@ function endpoint(raw: string): string {
 export function readSolanaMainnetRpcConfig(
   source: Readonly<Record<string, string | undefined>> = env,
 ): SolanaMainnetRpcConfig {
-  const raw = source.MERRYMEN_SOLANA_RPC_MAINNET?.trim();
+  const raw = source.AGENTCAP_SOLANA_RPC_MAINNET?.trim();
   if (!raw) throw new SolanaRpcError("missing-config");
   const url = endpoint(raw);
-  const fallback = source.MERRYMEN_SOLANA_RPC_MAINNET_FALLBACK?.trim();
+  const fallback = source.AGENTCAP_SOLANA_RPC_MAINNET_FALLBACK?.trim();
   if (!fallback) return { url };
   const fallbackUrl = endpoint(fallback);
   // A trailing dot names the same host ("rpc.example." is "rpc.example").
@@ -140,8 +140,8 @@ export async function withSolanaMainnetRead<T>(
   options: ReadOptions = {},
 ): Promise<T> {
   const checked = readSolanaMainnetRpcConfig({
-    MERRYMEN_SOLANA_RPC_MAINNET: config.url,
-    MERRYMEN_SOLANA_RPC_MAINNET_FALLBACK: config.fallbackUrl,
+    AGENTCAP_SOLANA_RPC_MAINNET: config.url,
+    AGENTCAP_SOLANA_RPC_MAINNET_FALLBACK: config.fallbackUrl,
   });
   const request = options.fetch ?? globalThis.fetch;
   const endpoints = checked.fallbackUrl ? [checked.url, checked.fallbackUrl] : [checked.url];

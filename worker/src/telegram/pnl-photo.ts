@@ -42,7 +42,7 @@ export async function sendPnlPhoto(
   let dir: string | null = null;
   try {
     const png = await renderPnlCard(data);
-    dir = await mkdtemp(path.join(tmpdir(), "merrymen-pnl-"));
+    dir = await mkdtemp(path.join(tmpdir(), "agentcap-pnl-"));
     // Named after the token, so a saved card is identifiable in a downloads
     // folder. Anything outside [A-Za-z0-9] is dropped: the symbol comes off a
     // chain and must never be able to steer a filesystem path.

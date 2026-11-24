@@ -47,7 +47,7 @@ const RETRY_MAX_MS = 30_000;
 /** The server's setup window (MANAGED_INTENT_TTL_MS), which also bounds a longer expiry the server might send. */
 const MAX_PENDING_MS = 30 * 60_000;
 const ID = /^[A-Za-z0-9_-]{16,64}$/;
-const storageKey = (owner: string) => `merrymen.telegram.create.v1:${owner}`;
+const storageKey = (owner: string) => `agentcap.telegram.create.v1:${owner}`;
 const initial = (owner: string): View => ({ owner, available: null, intent: null, telegramUrl: null, loading: true, busy: false, error: null, refreshed: false, confirmationAttempted: false, needsReconciliation: false });
 const pending = (intent: TelegramCreateIntent | null) => !!intent && ["waiting_telegram", "waiting_bot", "confirm"].includes(intent.status);
 

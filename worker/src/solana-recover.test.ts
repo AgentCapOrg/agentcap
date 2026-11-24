@@ -56,12 +56,12 @@ const LOADER = "BPFLoaderUpgradeab1e11111111111111111111111";
  */
 const { declaredProgramId } = await import(new URL("../../scripts/ci/solana-program-record.mjs", import.meta.url).href) as {
   declaredProgramId(libRs: string): string };
-const VAULT_PROGRAM_ID = declaredProgramId(readFileSync(new URL("../../contracts/solana/programs/merrymen-vault/src/lib.rs", import.meta.url), "utf8"));
+const VAULT_PROGRAM_ID = declaredProgramId(readFileSync(new URL("../../contracts/solana/programs/agentcap-vault/src/lib.rs", import.meta.url), "utf8"));
 /**
  * The deployed fixture binary. Like a real build it embeds its program id's 32 bytes (declare_id!): here
  * both ids the tests release, PROGRAM and the contract's own (VAULT_PROGRAM_ID).
  */
-const BINARY = Buffer.concat([Buffer.from("merrymen-vault-fixture-binary".repeat(10)), Buffer.from(base58Decode(PROGRAM)!),
+const BINARY = Buffer.concat([Buffer.from("agentcap-vault-fixture-binary".repeat(10)), Buffer.from(base58Decode(PROGRAM)!),
   Buffer.from(base58Decode(VAULT_PROGRAM_ID)!)]);
 const BINARY_SHA = createHash("sha256").update(BINARY).digest("hex");
 /** Tests run as if PROGRAM were a released program with BINARY deployed, unless they say otherwise. */
@@ -412,7 +412,7 @@ async function chain(options: Parameters<FakeChain["setup"]>[0] = {}) {
 async function run(fake: FakeChain, args: string[], extra: Partial<SolanaRecoverCommandDeps> = {}) {
   const out: string[] = [], warnings: string[] = [];
   // Waits are fake time: they advance the chain instead of the clock. An empty environment by default:
-  // these tests give the RPC by --rpc, and the developer's own MERRYMEN_SOLANA_RECOVER_RPC (the documented
+  // these tests give the RPC by --rpc, and the developer's own AGENTCAP_SOLANA_RECOVER_RPC (the documented
   // path) would otherwise make every one of them "give the RPC once" (review RHS, round 2).
   const deps: SolanaRecoverCommandDeps = { fetch: fake.fetch, log: (l) => out.push(l), warn: (l) => warnings.push(l), sleep: async (ms) => fake.tick(ms),
     pollMs: 2_000, releases: RELEASED, env: {}, ...extra };
@@ -473,17 +473,17 @@ describe("solana-recover", () => {
     noSecrets(out);
   });
 
-  it("runs the same with the owner's MERRYMEN_SOLANA_RECOVER_RPC set: the helper never reads this process's environment", async () => {
+  it("runs the same with the owner's AGENTCAP_SOLANA_RECOVER_RPC set: the helper never reads this process's environment", async () => {
     // Review RHS, round 2: with the documented variable set, 26 of these 32 tests failed on "give the RPC once".
-    const saved = process.env.MERRYMEN_SOLANA_RECOVER_RPC;
-    process.env.MERRYMEN_SOLANA_RECOVER_RPC = "https://developer-rpc.example.invalid/";
+    const saved = process.env.AGENTCAP_SOLANA_RECOVER_RPC;
+    process.env.AGENTCAP_SOLANA_RECOVER_RPC = "https://developer-rpc.example.invalid/";
     try {
       const fake = await chain();
       const { result, error } = await run(fake, [...base, "--owner", OWNER]);
       assert.equal(error, null, String(error));
       assert.equal(result!.sent, false);
     } finally {
-      if (saved === undefined) delete process.env.MERRYMEN_SOLANA_RECOVER_RPC; else process.env.MERRYMEN_SOLANA_RECOVER_RPC = saved;
+      if (saved === undefined) delete process.env.AGENTCAP_SOLANA_RECOVER_RPC; else process.env.AGENTCAP_SOLANA_RECOVER_RPC = saved;
     }
   });
 
@@ -676,7 +676,7 @@ describe("solana-recover", () => {
   it("refuses a missing vault, a foreign program account, a non-mainnet RPC and an owner with no SOL", async () => {
     const wrongProgram = await chain();
     const missing = await run(wrongProgram, ["--program", key(73), "--rpc", RPC, "--owner", OWNER]);
-    assert.match((missing.error as Error).message, /No Merrymen vault exists for owner .* under program/);
+    assert.match((missing.error as Error).message, /No AgentCap vault exists for owner .* under program/);
     const foreign = await chain();
     foreign.accounts.get(foreign.vault)!.owner = key(74);
     assert.match(((await run(foreign, [...base, "--owner", OWNER])).error as Error).message, /not an account of the given program/);
@@ -878,7 +878,7 @@ describe("solana-recover program trust", () => {
         const fake = await chain({ deployment });
         const { error, out } = await run(fake, [...send(), ...extra], { releases: [] });
         assert.ok(error instanceof SolanaRecoverError, String(error));
-        assert.match(error.message, new RegExp(`Program ${PROGRAM} is not a released Merrymen vault program \\(none is released yet\\)\\. Nothing was signed or sent`));
+        assert.match(error.message, new RegExp(`Program ${PROGRAM} is not a released AgentCap vault program \\(none is released yet\\)\\. Nothing was signed or sent`));
         assert.match(error.message, /take the SOL in this wallet and the tokens in its USDG and WSOL accounts/);
         assert.match(error.message, /add --program-sha256 with its binary hash and --unlisted-program/);
         assert.deepEqual(fake.calls, [], "refused before any RPC call");
@@ -890,12 +890,12 @@ describe("solana-recover program trust", () => {
     // a support scam would hand out signs nothing, even for a program that does not exist.
     const fake = await chain({ deployment: "none" });
     const shipped = await run(fake, send(), { releases: undefined });
-    assert.match((shipped.error as Error).message, /is not a released Merrymen vault program/);
+    assert.match((shipped.error as Error).message, /is not a released AgentCap vault program/);
     assert.deepEqual(fake.calls, []);
     assert.equal(fake.sent.length, 0);
     const listed = await chain();
     const other = await run(listed, send(), { releases: [{ programId: key(76), sha256: BINARY_SHA }] });
-    assert.match((other.error as Error).message, /is not a released Merrymen vault program\. Nothing was signed/);
+    assert.match((other.error as Error).message, /is not a released AgentCap vault program\. Nothing was signed/);
     assert.deepEqual(listed.calls, []);
   });
 
@@ -916,9 +916,9 @@ describe("solana-recover program trust", () => {
       { releases: [], sleep: async (ms) => { pauses.push({ ms, callsBefore: [...fake.calls] }); } });
     assert.equal(error, null, String(error));
     assert.equal(fake.sent.length, 4);
-    assert.match(out, /verified against the given SHA-256 \(immutable\)\. It is NOT a released Merrymen vault program/);
-    assert.match(out, new RegExp(`WARNING: ${PROGRAM} is not a released Merrymen vault program`));
-    assert.match(out, /Merrymen support never asks you to\nuse --unlisted-program/);
+    assert.match(out, /verified against the given SHA-256 \(immutable\)\. It is NOT a released AgentCap vault program/);
+    assert.match(out, new RegExp(`WARNING: ${PROGRAM} is not a released AgentCap vault program`));
+    assert.match(out, /AgentCap support never asks you to\nuse --unlisted-program/);
     assert.equal(pauses[0]!.ms, 15_000);
     assert.ok(!pauses[0]!.callsBefore.includes("getLatestBlockhash") && !pauses[0]!.callsBefore.includes("sendTransaction"), "paused before signing");
     assert.ok(out.indexOf("WARNING") < out.indexOf("Step 1 (revoke_all): sending"));
@@ -928,7 +928,7 @@ describe("solana-recover program trust", () => {
     const fake = await chain();
     const verified = await run(fake, send());
     assert.equal(verified.error, null, String(verified.error));
-    assert.match(verified.out, /Program binary verified: the released Merrymen vault program, immutable, SHA-256 matches/);
+    assert.match(verified.out, /Program binary verified: the released AgentCap vault program, immutable, SHA-256 matches/);
     assert.doesNotMatch(verified.out, /WARNING/);
     assert.ok(fake.calls.indexOf("getAccountInfo") < fake.calls.indexOf("getMultipleAccounts"), "verified before the plan");
 
@@ -947,7 +947,7 @@ describe("solana-recover program trust", () => {
 
   it("refuses a released program whose binary is not built for its own id, and checks an unlisted one by its hash alone, as before", async () => {
     // Hash-pinned and immutable, but declare_id names another program: every instruction would fail.
-    const foreign = Buffer.concat([Buffer.from("merrymen-vault-fixture-binary".repeat(10)), Buffer.from(base58Decode(key(76))!)]);
+    const foreign = Buffer.concat([Buffer.from("agentcap-vault-fixture-binary".repeat(10)), Buffer.from(base58Decode(key(76))!)]);
     const foreignSha = createHash("sha256").update(foreign).digest("hex");
     for (const mode of ["send", "plan"] as const) {
       const fake = await chain({ binary: foreign });
@@ -961,8 +961,8 @@ describe("solana-recover program trust", () => {
     const unlisted = await chain({ binary: foreign });
     const { error, out } = await run(unlisted, [...send(), "--program-sha256", foreignSha, "--unlisted-program"], { releases: [] });
     assert.equal(error, null, String(error));
-    assert.match(out, /Program binary verified against the given SHA-256 \(immutable\)\. It is NOT a released Merrymen vault program\./);
-    assert.match(out, /WARNING: .* is not a released Merrymen vault program/);
+    assert.match(out, /Program binary verified against the given SHA-256 \(immutable\)\. It is NOT a released AgentCap vault program\./);
+    assert.match(out, /WARNING: .* is not a released AgentCap vault program/);
     assert.ok(unlisted.sent.length > 0);
   });
 
@@ -1015,7 +1015,7 @@ describe("solana-recover program trust", () => {
     // during verification, so a check on the flag's getter alone would pass
     // with the copy disabled.)
     const fake = await chain();
-    const base = createSolanaLiveRpc({ env: { MERRYMEN_SOLANA_RPC_MAINNET: RPC }, fetch: fake.fetch, timeoutMs: 15_000, singleEndpoint: true,
+    const base = createSolanaLiveRpc({ env: { AGENTCAP_SOLANA_RPC_MAINNET: RPC }, fetch: fake.fetch, timeoutMs: 15_000, singleEndpoint: true,
       sleep: async (ms) => fake.tick(ms) });
     const owner = { singleEndpoint: true, laterFlag: 7, providerKey: "owner-cache-key", read: base.read, readEach: base.readEach, send: base.send } as unknown as SolanaLiveRpc;
     const received: object[] = [];
@@ -1027,7 +1027,7 @@ describe("solana-recover program trust", () => {
         { log: (line) => out.push(line), sleep: async () => {} });
     } finally { delete (Object.prototype as Record<string, unknown>).providerKey; }
     assert.equal(result.sent, false);
-    assert.match(out.join("\n"), /Program binary verified: the released Merrymen vault program/);
+    assert.match(out.join("\n"), /Program binary verified: the released AgentCap vault program/);
     assert.equal(received.length, 1, "verification read providerKey from one object without its own");
     const view = received[0] as SolanaLiveRpc & Record<string, unknown>;
     assert.notEqual(view, owner, "verification received the view, not the owner's transport");
@@ -1060,7 +1060,7 @@ describe("solana-recover program trust", () => {
     const fake = await chain({ deployment: "none" });
     const plan = await run(fake, [...base, "--owner", OWNER], { releases: [] });
     assert.equal(plan.error, null, String(plan.error));
-    assert.match(plan.out, /Program binary NOT VERIFIED: not a released Merrymen vault program and no --program-sha256 given/);
+    assert.match(plan.out, /Program binary NOT VERIFIED: not a released AgentCap vault program and no --program-sha256 given/);
     assert.equal(fake.sent.length, 0);
     const checked = await chain({ session: SOLANA_SYSTEM_PROGRAM });
     const verified = await run(checked, [...base, "--owner", OWNER, "--program-sha256", BINARY_SHA], { releases: [] });
@@ -1098,10 +1098,10 @@ async function recoveryFixture(): Promise<string> {
   assert.deepEqual([sol!, usdg!, wsol!].map((tx) => tx.instructions.length), [1, 2, 3],
     "withdraw_sol; CreateIdempotent and the USDG withdraw; CreateIdempotent, SyncNative and the WSOL withdraw");
   return [
-    "# merrymen solana-recover, as signed and sent by worker/src/solana-recover.ts for a vault with a live",
+    "# agentcap solana-recover, as signed and sent by worker/src/solana-recover.ts for a vault with a live",
     "# session, USDG, synced and unsynced WSOL, spare SOL, and no owner token accounts yet: revoke_all, then",
     "# one withdrawal transaction per asset (SOL, USDG, WSOL). Written by",
-    "# worker/src/solana-recover.test.ts (MERRYMEN_WRITE_SOLANA_RECOVERY_FIXTURE=1 rewrites it) and executed",
+    "# worker/src/solana-recover.test.ts (AGENTCAP_WRITE_SOLANA_RECOVERY_FIXTURE=1 rewrites it) and executed",
     "# by tests/recovery.rs against the compiled program. The owner seed is a public test key.",
     `program ${VAULT_PROGRAM_ID}`,
     `owner ${OWNER}`,
@@ -1124,8 +1124,8 @@ describe("solana-recover runtime fixture", () => {
   it("holds the tool's current recovery transactions for the compiled-program test", async () => {
     const expected = await recoveryFixture();
     assert.equal(await recoveryFixture(), expected, "the fixture is deterministic");
-    if (process.env.MERRYMEN_WRITE_SOLANA_RECOVERY_FIXTURE === "1") writeFileSync(RECOVERY_FIXTURE, expected);
+    if (process.env.AGENTCAP_WRITE_SOLANA_RECOVERY_FIXTURE === "1") writeFileSync(RECOVERY_FIXTURE, expected);
     assert.equal(readFileSync(RECOVERY_FIXTURE, "utf8"), expected,
-      "contracts/solana/runtime-tests/fixtures/recovery-transactions.txt is stale: rerun with MERRYMEN_WRITE_SOLANA_RECOVERY_FIXTURE=1 and run contracts/solana/test.sh");
+      "contracts/solana/runtime-tests/fixtures/recovery-transactions.txt is stale: rerun with AGENTCAP_WRITE_SOLANA_RECOVERY_FIXTURE=1 and run contracts/solana/test.sh");
   });
 });

@@ -268,7 +268,7 @@ describe("every template entry passes the gate, under every style, and holds no 
     { mode: "live", ownerName: "Zoë", coinName: "pepe classic", senderName: "Grant" },
     // The pools that read the line they answer: a question, and a hail that asks how it is.
     { mode: "live", ownerName: "Mike", trigger: line(5, "alice", "@pinebot thoughts?") },
-    { mode: "live", ownerName: "Mike", trigger: line(5, "alice", "hey merryman how are you") },
+    { mode: "live", ownerName: "Mike", trigger: line(5, "alice", "hey agentcapavatar how are you") },
   ];
   for (const intent of ALL_INTENTS) {
     it(JSON.stringify(intent), () => {
@@ -296,8 +296,8 @@ describe("every template entry passes the gate, under every style, and holds no 
   }
 
   it("the pools are large: at least twelve for the common intents, six for the rest", () => {
-    const question = line(5, "alice", "merryman what do you think?");
-    const how = line(5, "alice", "hey merryman how are you");
+    const question = line(5, "alice", "agentcapavatar what do you think?");
+    const how = line(5, "alice", "hey agentcapavatar how are you");
     for (const c of [ctx({ coinName: undefined }), ctx({ coinName: undefined, trigger: question }), ctx({ coinName: undefined, trigger: how })]) {
       for (const intent of ALL_INTENTS) {
         if (intent.kind === "ambient") continue;
@@ -401,7 +401,7 @@ describe("templateLine", () => {
       "no-pool": /pool|trade|trades/,
       stock: /stock/,
       cash: /cash|trades against|base coin/,
-      energy: /merrymen|our own|family/,
+      energy: /agentcap|our own|family/,
     };
     for (const [look, re] of Object.entries(words) as Array<[CoinKind, RegExp]>) {
       for (const e of templatePool({ kind: "coin-look", look }, ctx())) assert.match(e, re, `${look}: ${e}`);
@@ -866,9 +866,9 @@ describe("say", () => {
   });
 
   it("small talk gets small talk, with no model call: 'hey 👋' to a hello, 'np 🤝' to a thanks", async () => {
-    const hi = line(5, "alice", "hi merryman 👋");
-    const how = line(5, "alice", "hey there merryman, how are you");
-    const thanks = line(5, "alice", "thanks merryman!");
+    const hi = line(5, "alice", "hi agentcapavatar 👋");
+    const how = line(5, "alice", "hey there agentcapavatar, how are you");
+    const thanks = line(5, "alice", "thanks agentcapavatar!");
     for (let i = 0; i < 12; i++) {
       const rand = dice(i / 12, 0.9, 0.9, 0.9);
       const hail = await say({ kind: "smalltalk", what: "hail" }, c({ trigger: hi, rand }), model, gate);
@@ -888,7 +888,7 @@ describe("say", () => {
   });
 
   it("a normal answer's fallback is question-shaped only for a question", async () => {
-    // "Hey there Merryman…" used to get "good question, no idea".
+    // "Hey there AgentCapAvatar…" used to get "good question, no idea".
     reply = ok("PASS");
     const statement = line(5, "alice", "@pinebot you're cool");
     const question = line(5, "alice", "@pinebot thoughts on this one?");
@@ -896,8 +896,8 @@ describe("say", () => {
     const ackPool = templatePool({ kind: "answer", mood: "normal" }, c({ trigger: statement }));
     assert.ok(questionPool.includes("hmm good question") && questionPool.includes("good question, no idea"));
     for (const e of ackPool) assert.ok(!/question|no idea|not sure|no clue|idk|you tell me/i.test(e), e);
-    // The statement it cannot read may be "merryman is cooked": an ack never agrees with it.
-    const tease = templatePool({ kind: "answer", mood: "normal" }, c({ trigger: line(5, "alice", "merryman is cooked") }));
+    // The statement it cannot read may be "agentcapavatar is cooked": an ack never agrees with it.
+    const tease = templatePool({ kind: "answer", mood: "normal" }, c({ trigger: line(5, "alice", "agentcapavatar is cooked") }));
     for (const e of tease) assert.ok(!/\b(?:true|real|same|fair|facts|agreed|exactly|right)\b/i.test(e), e);
     assert.deepEqual(templatePool({ kind: "answer", mood: "normal" }, c()), ackPool, "no line to read: an ack");
     for (let i = 0; i < 12; i++) {
@@ -922,9 +922,9 @@ describe("the collapse permit: 'rugged' and one playful brag, only for an answer
   it("the RUGGED block appears only with a permit, and only for an answer or an ambient line", () => {
     const answer = buildPrompt({ kind: "answer", mood: "normal" }, ctx({ collapse: measured }))!;
     assert.match(answer.prompt, /RUGGED: «AUTON» is measured as collapsed/);
-    assert.match(answer.prompt, /you may say it rugged or got rugged, and you may add one playful Merrymen brag in fresh words of your own/);
+    assert.match(answer.prompt, /you may say it rugged or got rugged, and you may add one playful AgentCap brag in fresh words of your own/);
     assert.match(answer.prompt, /Still never: say any person, dev, team, insider, whale or trader rugged/);
-    assert.match(answer.prompt, /Merrymen's own coin included/);
+    assert.match(answer.prompt, /AgentCap's own coin included/);
     assert.match(answer.prompt, /Don't explain why it fell/);
     assert.match(buildPrompt({ kind: "ambient", topic: "coin" }, ctx({ collapse: measured }))!.prompt, /RUGGED:/);
     assert.match(buildPrompt({ kind: "ambient", topic: "banter" }, ctx({ collapse: said }))!.prompt, /RUGGED: people here say «AUTON» rugged; you have not measured it\./);
@@ -945,8 +945,8 @@ describe("the collapse permit: 'rugged' and one playful brag, only for an answer
 
   it("with the brag spent there is no brag sentence", () => {
     const p = buildPrompt({ kind: "answer", mood: "normal" }, ctx({ collapse: { ...measured, brag: false } }))!;
-    assert.doesNotMatch(p.prompt, /playful Merrymen brag/);
-    assert.match(p.prompt, /You made a Merrymen joke lately: none this time\./);
+    assert.doesNotMatch(p.prompt, /playful AgentCap brag/);
+    assert.match(p.prompt, /You made a AgentCap joke lately: none this time\./);
   });
 
   it("every template entry still passes with no permit (the pool proof's own context)", () => {
@@ -976,15 +976,15 @@ describe("say with a collapse permit: the gate gets it for an answer, never for 
   const permit = { coin: "AUTON", source: "measured" as const, atMs: T0, brag: true };
 
   it("an answer may say it rugged with a brag; a roast may not; no permit, no rug", async () => {
-    content = "rugged cause it wasn't merrymen 😤";
-    assert.equal(await say({ kind: "answer", mood: "normal" }, c({ collapse: permit }), model, gate), "rugged cause it wasn't merrymen 😤");
-    assert.notEqual(await say({ kind: "roast", owner: false }, c({ collapse: permit }), model, gate), "rugged cause it wasn't merrymen 😤");
-    assert.notEqual(await say({ kind: "answer", mood: "normal" }, c(), model, gate), "rugged cause it wasn't merrymen 😤");
+    content = "rugged cause it wasn't agentcap 😤";
+    assert.equal(await say({ kind: "answer", mood: "normal" }, c({ collapse: permit }), model, gate), "rugged cause it wasn't agentcap 😤");
+    assert.notEqual(await say({ kind: "roast", owner: false }, c({ collapse: permit }), model, gate), "rugged cause it wasn't agentcap 😤");
+    assert.notEqual(await say({ kind: "answer", mood: "normal" }, c(), model, gate), "rugged cause it wasn't agentcap 😤");
     content = "the dev rugged it";
     assert.notEqual(await say({ kind: "answer", mood: "normal" }, c({ collapse: permit }), model, gate), "the dev rugged it");
     content = "auton rugged lol";
     assert.equal(await say({ kind: "ambient", topic: "banter" }, c({ collapse: { ...permit, brag: false } }), model, gate), "auton rugged lol");
-    content = "should've been a merrymen coin";
+    content = "should've been a agentcap coin";
     assert.equal(await say({ kind: "ambient", topic: "banter" }, c({ collapse: { ...permit, brag: false } }), model, gate), null, "brag spent: silence for an ambient line");
   });
 

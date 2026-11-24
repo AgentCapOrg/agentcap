@@ -25,7 +25,7 @@
  * refusing the gates' reads — and an address nothing answers where it does
  * not. The stores are taken before DATABASE_URL is set, so they stay on files.
  *
- * MERRYMEN_HOME is per process (node --test forks per file), so this never
+ * AGENTCAP_HOME is per process (node --test forks per file), so this never
  * leaks into another test file.
  */
 import assert from "node:assert/strict";
@@ -40,13 +40,13 @@ import type { StoredGrant } from "../../packages/core/src/index";
 import { wrapSqlite, type Db } from "./db";
 import type { TenantLease } from "./tenant-lease";
 
-const FLEET = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-spawn-guard-")));
-process.env.MERRYMEN_HOME = FLEET;
-process.env.MERRYMEN_HOSTED = "1";
+const FLEET = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-spawn-guard-")));
+process.env.AGENTCAP_HOME = FLEET;
+process.env.AGENTCAP_HOSTED = "1";
 delete process.env.DATABASE_URL;
 const DEK = Buffer.alloc(32, 11);
-process.env.MERRYMEN_STORE_DEK = DEK.toString("base64");
-process.env.MERRYMEN_TICK_SECONDS = "60";
+process.env.AGENTCAP_STORE_DEK = DEK.toString("base64");
+process.env.AGENTCAP_TICK_SECONDS = "60";
 
 const {
   reconcile, childHome, isHeldForTest, hasLeaseForTest, setPaperRestoreForTest, setPersistentHomeVerifierForTest,
@@ -130,7 +130,7 @@ const opened: DatabaseSync[] = [];
  * can carry. Everything else reaches the stand-in, so preparation gets as far
  * as the gates.
  */
-const OUTAGE = "connect ECONNREFUSED postgres://merrymen:outage-secret@spawn-guard.invalid:5432/merrymen";
+const OUTAGE = "connect ECONNREFUSED postgres://agentcap:outage-secret@spawn-guard.invalid:5432/agentcap";
 function down(inner: Db): Db {
   const refused = (sql: string) => /recovery_reply/.test(sql);
   const fail = () => Promise.reject(Object.assign(new Error(OUTAGE), { code: "ECONNREFUSED" }));
@@ -317,7 +317,7 @@ describe("one tenant's refusal holds that tenant, not the fleet", () => {
     // pass cannot copy it up (no database), so it is kept pending under its
     // lease, and every later pass retries that copy before anything else.
     mkdirSync(home, { recursive: true, mode: 0o700 });
-    const book = new DatabaseSync(path.join(home, "merrymen.db"));
+    const book = new DatabaseSync(path.join(home, "agentcap.db"));
     await applyLedgerSchema(wrapSqlite(book));
     book.close();
     setTenantLeaseForTest(tenant, { tenant, backend: "postgres", healthy: () => true, async release() {} });
@@ -330,7 +330,7 @@ describe("one tenant's refusal holds that tenant, not the fleet", () => {
     assert.deepEqual(alerts(tenant).filter((l) => /final copy deferred/.test(l)).map((l) => /\(([^)]*)\)/.exec(l)?.[1]), ["Error ERR_MODULE_NOT_FOUND"], said.join("\n"));
     assert.ok(!alerts(tenant).some((l) => /spawn-guard\.invalid|not-a-real-connection|pg/.test(l)), "and no connection detail is logged");
     assert.equal(hasLeaseForTest(tenant), true, "the lease that protects its final copy is kept");
-    assert.ok(existsSync(path.join(home, "merrymen.db")), "and the original book stays");
+    assert.ok(existsSync(path.join(home, "agentcap.db")), "and the original book stays");
     assert.equal(spawned.length, 0);
   });
 });

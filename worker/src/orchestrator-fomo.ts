@@ -228,7 +228,7 @@ export interface FomoPassKnobs {
   /**
    * Owners' tails (store.ts fomo_tails) route research, add their coins and
    * (consider only) their buys to that owner's file, and carry the tails block
-   * the child's notices read. Off (orchestrator.ts: MERRYMEN_FOMO_TAILS=0):
+   * the child's notices read. Off (orchestrator.ts: AGENTCAP_FOMO_TAILS=0):
    * none of the three; stored tails stay stored.
    */
   tailsEnabled: boolean;
@@ -423,7 +423,7 @@ export interface FomoPassDeps {
   /**
    * Whether this AGENT (the roster's agentId, its smart account) is on the
    * operator's research allowlist (orchestrator.ts: decision-research.ts
-   * decisionResearchEnabledFor, MERRYMEN_DECISION_RESEARCH_ACCOUNTS). Absent,
+   * decisionResearchEnabledFor, AGENTCAP_DECISION_RESEARCH_ACCOUNTS). Absent,
    * false or throwing: no, and a candidate queues nothing and adds no signal.
    * Injected because the pass reads no environment.
    */
@@ -562,7 +562,7 @@ async function withDeadline<T>(timers: TimerPort, ms: number, run: (signal: Abor
 export function streamEndpointFor(apiKey: string | null): { url: string; redacted: string } | null {
   if (!apiKey) return null;
   // ROBINHOOD CHAIN ONLY, IN THE URL AND IN THE SUBSCRIPTION. The stream exists
-  // to notice what the cohort does where Merrymen can act — Robinhood Chain is
+  // to notice what the cohort does where AgentCap can act — Robinhood Chain is
   // the only network the executor reaches — and the provider's firehose of
   // every chain would fill the bounded frame queue with events nobody here can
   // follow. On-demand lookups (the broker's tools) still cover every chain.
@@ -2151,7 +2151,7 @@ export function makeFomoPass(deps: FomoPassDeps): FomoPass {
       // event key. The child keeps them out of the position dependencies an
       // entry reports (fomo-child.ts reportDependencies): a tailed trader must
       // never become a 14-day, fleet-wide dependency that outlives the hours
-      // she consented to, Stop, expiry and MERRYMEN_FOMO_TAILS=0.
+      // she consented to, Stop, expiry and AGENTCAP_FOMO_TAILS=0.
       const tailTriggerKeys = kept.filter((e) => !cohortIds.has(e.trader.userId) && !ownDeps.has(e.trader.userId)).map((e) => e.eventKey);
       const oldestTrigger = triggers.length > 0 ? Math.min(...triggers.map((e) => e.observedAt)) : null;
       const firstSeenAt = Math.min(c.firstSeenAt ?? Number.POSITIVE_INFINITY, oldestTrigger ?? Number.POSITIVE_INFINITY, tracked.get(key) ?? now);

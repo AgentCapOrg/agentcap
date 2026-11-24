@@ -1,5 +1,5 @@
 [workspace]
-members = ["programs/merrymen-vault"]
+members = ["programs/agentcap-vault"]
 resolver = "2"
 exclude = ["runtime-tests"]
 

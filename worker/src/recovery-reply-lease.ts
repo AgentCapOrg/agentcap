@@ -50,7 +50,7 @@ export class RecoveryReplyBotLeases {
     async acquire(botId: string): Promise<ReplyLease | null> {
         if (!/^[1-9][0-9]{0,15}$/.test(botId) || this.held.has(botId))
             throw recoveryReplyRefused();
-        const key = createHash("sha256").update(`merrymen-reply-bot:${botId}`).digest().readInt32BE(0);
+        const key = createHash("sha256").update(`agentcap-reply-bot:${botId}`).digest().readInt32BE(0);
         if ([...this.held.values()].some(h => h.key === key))
             return null;
         const state = { key, active: false };

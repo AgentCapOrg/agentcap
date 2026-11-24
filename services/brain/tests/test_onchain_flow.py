@@ -42,7 +42,7 @@ from brain.schemas import LENS_KEYS, BrainDecision, DecideRequest, MarketState, 
 #: Shaped like worker/src/flow-facts.ts renderFlowLens: attribution, one JSON
 #: object, and what it is not.
 FLOW = (
-    "Source: an on-chain indexer's record of DEX trades in this coin, aggregated by Merrymen. "
+    "Source: an on-chain indexer's record of DEX trades in this coin, aggregated by AgentCap. "
     "Indexer data, not a forecast.\n"
     '{"ageSec":4,"windows":{"5m":{"buyUsd":1200,"sellUsd":300,"netUsd":900,"buys":14,"sells":3,'
     '"buyers":11,"sellers":3}},"venues60m":[],"largestSellsUsd60m":[410],'
@@ -69,7 +69,7 @@ def _request(signals):
                 contributions_known=True, equity_complete=True, gas_basis="net",
                 position_history_available=True)),
         market=MarketState(
-            snapshot_id="market", as_of=1, instrument_id="merrymen:meme", symbol="MEME",
+            snapshot_id="market", as_of=1, instrument_id="agentcap:meme", symbol="MEME",
             instrument_class="memecoin", signals=signals))
 
 
@@ -106,18 +106,18 @@ def _run(signals) -> _Recorder:
 
 def test_a_request_may_carry_it_under_exactly_that_name():
     assert ONCHAIN_FLOW == "onchain-flow" and ONCHAIN_FLOW in LENS_KEYS
-    ok = MarketState(snapshot_id="s", as_of=1, instrument_id="merrymen:meme", symbol="MEME",
+    ok = MarketState(snapshot_id="s", as_of=1, instrument_id="agentcap:meme", symbol="MEME",
                      instrument_class="memecoin", signals={ONCHAIN_FLOW: FLOW})
     assert ok.signals[ONCHAIN_FLOW] == FLOW
     for near in ("onchain_flow", "flow", "Onchain-Flow", "dex-flow"):
         with pytest.raises(ValidationError, match="is not a lens"):
-            MarketState(snapshot_id="s", as_of=1, instrument_id="merrymen:meme", symbol="MEME",
+            MarketState(snapshot_id="s", as_of=1, instrument_id="agentcap:meme", symbol="MEME",
                         instrument_class="memecoin", signals={near: FLOW})
 
 
 def test_it_is_bounded_like_every_other_key():
     with pytest.raises(ValidationError, match="over 8000"):
-        MarketState(snapshot_id="s", as_of=1, instrument_id="merrymen:meme", symbol="MEME",
+        MarketState(snapshot_id="s", as_of=1, instrument_id="agentcap:meme", symbol="MEME",
                     instrument_class="memecoin", signals={ONCHAIN_FLOW: "x" * 8_001})
 
 

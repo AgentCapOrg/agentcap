@@ -31,7 +31,7 @@ from brain.schemas import LENS_KEYS, MAX_LENS_CHARS, MAX_SIGNALS_CHARS, MarketSt
 BASE = dict(
     snapshot_id="s",
     as_of=1,
-    instrument_id="merrymen:wif",
+    instrument_id="agentcap:wif",
     symbol="WIF",
     instrument_class="memecoin",
 )

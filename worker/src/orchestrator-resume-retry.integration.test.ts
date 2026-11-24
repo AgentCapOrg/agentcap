@@ -40,12 +40,12 @@ import { TG_GROUPS_TABLE_SQL } from "./tg-groups-ferry";
 import { PERSONAL_MEMORY_TABLE_SQL } from "./personal-memory-ferry";
 import type { TenantLease } from "./tenant-lease";
 
-const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-resume-retry-")));
-process.env.MERRYMEN_HOME = fleet;
-process.env.MERRYMEN_HOSTED = "1";
+const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-resume-retry-")));
+process.env.AGENTCAP_HOME = fleet;
+process.env.AGENTCAP_HOSTED = "1";
 delete process.env.DATABASE_URL;
 const dek = Buffer.alloc(32, 23);
-process.env.MERRYMEN_STORE_DEK = dek.toString("base64");
+process.env.AGENTCAP_STORE_DEK = dek.toString("base64");
 
 const orch = await import("./orchestrator");
 const { childHome, reconcile, setSpawnForTest, setRetirementMemoryStoreForTest, setPaperRestoreForTest, setPersistentHomeVerifierForTest,
@@ -78,7 +78,7 @@ let afterRestore: ((tenant: string) => void | Promise<void>) | null = null;
 const unrestorable = new Set<string>();
 setPaperRestoreForTest(async (tenant, account) => {
   if (unrestorable.has(tenant)) return { ok: false, reason: "paper fills are newer than the recoverable valuation" };
-  const book = new DatabaseSync(path.join(childHome(tenant), "merrymen.db"));
+  const book = new DatabaseSync(path.join(childHome(tenant), "agentcap.db"));
   let line: string;
   try {
     await applyLedgerSchema(wrapSqlite(book));
@@ -104,8 +104,8 @@ class FakeProc extends EventEmitter {
 }
 const forks: string[] = [], holds: string[] = [];
 setSpawnForTest((_c, args, options) => {
-  if (args.some((a) => a.endsWith("telegram-hold.ts"))) holds.push(String(options.env?.MERRYMEN_HOME));
-  else forks.push(String(options.env?.MERRYMEN_HOME));
+  if (args.some((a) => a.endsWith("telegram-hold.ts"))) holds.push(String(options.env?.AGENTCAP_HOME));
+  else forks.push(String(options.env?.AGENTCAP_HOME));
   return new FakeProc(70_000 + forks.length + holds.length) as unknown as ChildProcess;
 });
 
@@ -165,7 +165,7 @@ async function preIncident(o: { telegram?: { body: string; mode: number } } = {}
     writeFileSync(path.join(home, name), body, { mode: 0o600 });
   }
   if (o.telegram) { writeFileSync(path.join(home, "telegram.json"), o.telegram.body); chmodSync(path.join(home, "telegram.json"), o.telegram.mode); }
-  const stale = new DatabaseSync(path.join(home, "merrymen.db")); stale.exec("CREATE TABLE junk (x); INSERT INTO junk VALUES (1)"); stale.close();
+  const stale = new DatabaseSync(path.join(home, "agentcap.db")); stale.exec("CREATE TABLE junk (x); INSERT INTO junk VALUES (1)"); stale.close();
   await putGrant(tenant, grant(account, owner));
   await settingsStore.put(tenant, { telegramEnabled: true, telegramBotToken: `${bot}:resume_retry_fixture` } as never);
   return { tenant, account, owner, home, bot, n: seq };
@@ -175,9 +175,9 @@ const offsetRow = (bot: string, tenant: string, account: string, offset: number)
   raw.prepare("INSERT INTO recovery_reply_offsets VALUES(?,?,?,4663,?,200,?,100,1000) ON CONFLICT (bot_id) DO UPDATE SET tenant = excluded.tenant, smart_account = excluded.smart_account, offset_id = excluded.offset_id")
     .run(bot, tenant, account, "a".repeat(16), offset);
 async function approve(tenant: string) {
-  await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_PREVIEW: tenant });
+  await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_PREVIEW: tenant });
   const run = raw.prepare("SELECT run FROM ledger_resume_preview_runs ORDER BY created_at_ms DESC, rowid DESC LIMIT 1").get() as { run: string };
-  await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `run:${run.run}` });
+  await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `run:${run.run}` });
   assert.equal(approval(tenant)?.state, "approved");
 }
 const approval = (tenant: string) => raw.prepare("SELECT state, reason, generation FROM ledger_resume_approvals WHERE tenant = ? ORDER BY created_at_ms DESC, rowid DESC LIMIT 1").get(tenant) as
@@ -187,7 +187,7 @@ const pass = async () => { await reconcile(); await new Promise((r) => setTimeou
 const linesOf = (tenant: string) => said.filter((l) => l.includes(tenant));
 /** The book as the next pass meets it: whether a worker armed on it, and what the seeds put in it. */
 function book(home: string) {
-  const b = new DatabaseSync(path.join(home, "merrymen.db"), { readOnly: true });
+  const b = new DatabaseSync(path.join(home, "agentcap.db"), { readOnly: true });
   try {
     return {
       agents: (b.prepare("SELECT count(*) AS n FROM agents").get() as { n: number }).n,
@@ -337,7 +337,7 @@ it("every later gate that refuses after the seeds is retried, and admission comp
       assert.equal(forksOf(t.tenant), 1, t.tenant);
       assert.ok(!linesOf(t.tenant).some((l) => /persistent original book is unconfirmed/.test(l)), said.join("\n"));
     }
-    const proved = new DatabaseSync(path.join(lease.home, "merrymen.db"), { readOnly: true });
+    const proved = new DatabaseSync(path.join(lease.home, "agentcap.db"), { readOnly: true });
     try {
       assert.deepEqual(proved.prepare("SELECT mode, symbol, qty_raw, cost_usdg FROM cost_basis ORDER BY mode").all().map((r) => ({ ...r })),
         [{ mode: "live", symbol: "COIN", qty_raw: "10", cost_usdg: "20" }, { mode: "paper", symbol: "COIN", qty_raw: "10", cost_usdg: "20" }],
@@ -354,7 +354,7 @@ it("a foreign or tampered book still refuses: a row only a worker writes, anothe
   await pass();
   for (const t of [worker, swapped, tampered]) { assert.equal(approval(t.tenant)?.state, "registered"); offsetRow(t.bot, t.tenant, t.account, 1); }
   // A trade with no agent row: nothing the spawn path seeds, so not this registration's to vouch for.
-  const w = new DatabaseSync(path.join(worker.home, "merrymen.db"));
+  const w = new DatabaseSync(path.join(worker.home, "agentcap.db"));
   try { w.prepare("INSERT INTO trades (agent_id, kind, target, amount_usdg, status, created_at) VALUES (?, 'swap', 'x', 1, 'paper', 1)").run(worker.account); }
   finally { w.close(); }
   // Another book in its place, at another inode: the same rows, its own identity copied in.
@@ -362,7 +362,7 @@ it("a foreign or tampered book still refuses: a row only a worker writes, anothe
   // once and the copy's cannot be the original's: removing the original first
   // lets ext4 hand its freed inode straight back to the next file (APFS never
   // reuses one), and the book at the receipt's inode is then the same book.
-  const file = path.join(swapped.home, "merrymen.db"), copy = `${file}.copy`, original = lstatSync(file, { bigint: true }).ino;
+  const file = path.join(swapped.home, "agentcap.db"), copy = `${file}.copy`, original = lstatSync(file, { bigint: true }).ino;
   writeFileSync(copy, readFileSync(file), { mode: 0o600 }); renameSync(copy, file);
   assert.notEqual(lstatSync(file, { bigint: true }).ino, original, "another inode, on every filesystem");
   // An attestation recording another receipt.

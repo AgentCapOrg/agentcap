@@ -30,7 +30,7 @@ import { PAPER_CHECKPOINT_SCHEMA } from "./paper-checkpoint";
 import { ensureLedgerResumeSchema, LEDGER_IMPORT_SCHEMA } from "./ledger-import";
 import { CHAIN_REFUSAL, chainGapCheck, knownChainFacts, planAttestedSeed, readPgEvidence, resumePreconditions } from "./ledger-resume";
 import { flowDuplicateReport } from "./distinct-flows";
-import { CASH, ENTRYPOINT, GRANT_PONS_CLASS, GRANT_TRENCHER, MERRYMEN_TOKEN } from "../../packages/core/src/index";
+import { CASH, ENTRYPOINT, GRANT_PONS_CLASS, GRANT_TRENCHER, AGENTCAP_TOKEN } from "../../packages/core/src/index";
 import type { RpcCall } from "./chain-capital";
 import { BookingRefused, BOOKINGS_TABLE, canonical, digestOf, gapChainOf } from "./chain-gap-booking";
 import {
@@ -172,7 +172,7 @@ const PAPER_RESET_LINE = "paper book restarted — cash back to 1,000.00 USDG, p
  * stores an evidence: its canonical text, and the sha256 of exactly that text
  * as the digest. Only the tenant, the account and `home` are read by the tool;
  * the rest stands in for a real evidence. `absent`: the home holds no
- * merrymen.db (the lost book of a pre-incident tenant); `present`: an old book,
+ * agentcap.db (the lost book of a pre-incident tenant); `present`: an old book,
  * unblocked; `blocked`: behind a source barrier; `no-home`: an evidence
  * recorded before admission bound the home.
  */
@@ -1315,7 +1315,7 @@ describe("every other refusal, by name", () => {
   });
 
   it("out-of-scope-reserve: an energy purchase with no worker-written energy-buy row is not filed into a closed epoch", async () => {
-    const reserve = MERRYMEN_TOKEN.address.toLowerCase(), seller = addr(0x9001);
+    const reserve = AGENTCAP_TOKEN.address.toLowerCase(), seller = addr(0x9001);
     const top: ModelTx = { tx: h32("a second deposit"), block: 64100000n, blockHash: h32("b1"), timestamp: timeOf(64100000n), from: FUNDER, to: USDG, status: "0x1",
       logs: [[USDG, [TR, topic(FUNDER), topic(ACCOUNT)], `0x${word(1_000_000n)}`, "0x0"]] };
     const energy: ModelTx = { tx: h32("an energy buy"), block: 64100100n, blockHash: h32("b2"), timestamp: timeOf(64100100n), from: addr(0x4337), to: EP, status: "0x1",
@@ -1357,7 +1357,7 @@ describe("every other refusal, by name", () => {
     a.raw.prepare(`INSERT INTO ledger_resume_approvals (approval_id, tenant, smart_account, chain_id, owner, evidence_digest, evidence_json, preview_run, state, created_at_ms, updated_at_ms)
       VALUES ('open', ?, ?, 4663, ?, ?, '{}', 'r', 'approved', ?, ?)`).run(TENANT, ACCOUNT, TENANT, "f".repeat(64), REFUSED_AT_MS - 10, REFUSED_AT_MS - 10);
     const q = await preview(a, fakeRpc().rpc);
-    assert.ok(q.refusals.some((r) => r.code === "open-approval" && r.why.includes(`MERRYMEN_RESUME_REVOKE=${TENANT}:${"f".repeat(64)}`)));
+    assert.ok(q.refusals.some((r) => r.code === "open-approval" && r.why.includes(`AGENTCAP_RESUME_REVOKE=${TENANT}:${"f".repeat(64)}`)));
     assert.ok(codes(await preview(await books(), fakeRpc({ chainId: 46630 }).rpc)).includes("rpc-chain"));
   });
 

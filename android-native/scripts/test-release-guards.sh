@@ -3,10 +3,10 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-unset MERRYMEN_ANDROID_KEYSTORE MERRYMEN_ANDROID_STORE_PASSWORD
-unset MERRYMEN_ANDROID_KEY_ALIAS MERRYMEN_ANDROID_KEY_PASSWORD
+unset AGENTCAP_ANDROID_KEYSTORE AGENTCAP_ANDROID_STORE_PASSWORD
+unset AGENTCAP_ANDROID_KEY_ALIAS AGENTCAP_ANDROID_KEY_PASSWORD
 
-scratch=$(mktemp -d "${TMPDIR:-/tmp}/merrymen-release-guards.XXXXXX")
+scratch=$(mktemp -d "${TMPDIR:-/tmp}/agentcap-release-guards.XXXXXX")
 trap 'rm -rf "$scratch"' EXIT
 gradle=(./gradlew --no-daemon --max-workers=2 --no-configuration-cache --console=plain)
 passed=0
@@ -30,21 +30,21 @@ check_case() {
 check_case unsigned-release 1 'Release packaging requires all four' \
   "${gradle[@]}" :app:validatePlayRelease
 check_case partial-signing 1 'Android signing is incomplete' \
-  env MERRYMEN_ANDROID_KEY_ALIAS=test-only "${gradle[@]}" help
+  env AGENTCAP_ANDROID_KEY_ALIAS=test-only "${gradle[@]}" help
 check_case credential-origin 1 'without credentials' \
-  "${gradle[@]}" help -Pmerrymen.origin=https://test-user:test-password@example.com
+  "${gradle[@]}" help -Pagentcap.origin=https://test-user:test-password@example.com
 check_case path-origin 1 'without credentials' \
-  "${gradle[@]}" help -Pmerrymen.origin=https://example.com/home
+  "${gradle[@]}" help -Pagentcap.origin=https://example.com/home
 check_case external-http 1 'Plain HTTP is allowed only' \
-  "${gradle[@]}" help -Pmerrymen.origin=http://example.com
+  "${gradle[@]}" help -Pagentcap.origin=http://example.com
 check_case debug-emulator 0 'BUILD SUCCESSFUL' \
-  "${gradle[@]}" help -Pmerrymen.origin=http://10.0.2.2:3100
+  "${gradle[@]}" help -Pagentcap.origin=http://10.0.2.2:3100
 check_case local-release 1 'A release requires an HTTPS server origin' \
-  "${gradle[@]}" :app:validatePlayRelease -Pmerrymen.origin=https://localhost
+  "${gradle[@]}" :app:validatePlayRelease -Pagentcap.origin=https://localhost
 check_case missing-key-file 1 'must point to a readable upload keystore' \
-  env MERRYMEN_ANDROID_KEYSTORE="$scratch/does-not-exist.jks" \
-    MERRYMEN_ANDROID_STORE_PASSWORD=test-only MERRYMEN_ANDROID_KEY_ALIAS=test-only \
-    MERRYMEN_ANDROID_KEY_PASSWORD=test-only "${gradle[@]}" :app:validatePlayRelease
+  env AGENTCAP_ANDROID_KEYSTORE="$scratch/does-not-exist.jks" \
+    AGENTCAP_ANDROID_STORE_PASSWORD=test-only AGENTCAP_ANDROID_KEY_ALIAS=test-only \
+    AGENTCAP_ANDROID_KEY_PASSWORD=test-only "${gradle[@]}" :app:validatePlayRelease
 
 # Inspect AGP's actual generated tasks so a dependency change cannot leave the
 # check passing while an APK/AAB packaging task silently skips it.

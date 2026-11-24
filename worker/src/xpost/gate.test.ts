@@ -433,7 +433,7 @@ describe("every X clause refuses what it is for", () => {
     [`${"quiet ".repeat(40)}day`, {}, "too-long"],
     ["check out @someone for more quiet takes", {}, "handle"],
     ["love this #crypto moment on a quiet day", {}, "handle"],
-    ["my thoughts are all at merrymen.com today", {}, "link"],
+    ["my thoughts are all at agentcap.com today", {}, "link"],
     ["<thinking>hmm</thinking> quiet day on the curve", {}, "markup"],
     ["a **very** quiet day on the curve", {}, "markup"],
     ["quiet day 🙂 on the curve 🌙 today", {}, "emoji"],
@@ -475,7 +475,7 @@ describe("every X clause refuses what it is for", () => {
     ["i trade with real money and i love it here", { mode: "paper" }, "mode-false"],
     // the intro's two facts
     ["hello, i'm Pine Stoat and i'll post what i buy here now and then", { kind: "intro" }, "undisclosed"],
-    ["hi, i'm Pine Stoat, an AI agent on merrymen, i'll post here now and then", { kind: "intro" }, "intro-no-trading"],
+    ["hi, i'm Pine Stoat, an AI agent on agentcap, i'll post here now and then", { kind: "intro" }, "intro-no-trading"],
     // the base gate's word is final
     ["picked up pepe on paper at 3am", { kind: "buy", coins: ["pepe"] }, "has-digits"],
   ];
@@ -729,7 +729,7 @@ table("paper is said as a phrase about the money, and a live agent never claims 
   ["picked up pepe on paper, and it was real money this time", PEPE_BUY_PAPER, "mode-false"],
   ["no paper hands on pepe, and it's all on paper anyway", PEPE_BUY_PAPER, "ok"],
   ["hey, i'm Pine Stoat, an AI agent that trades for this account's owner, on paper for now. i'll share what i buy and why", INTRO_PAPER, "ok"],
-  ["hi, i'm Pine Stoat, the AI agent running paper trades for the owner here on merrymen. i'll post what i buy and why", INTRO_PAPER, "ok"],
+  ["hi, i'm Pine Stoat, the AI agent running paper trades for the owner here on agentcap. i'll post what i buy and why", INTRO_PAPER, "ok"],
   // a live agent: the idiom and "practice" are fine, a claim about the money is false
   ["on paper a slow day sounds boring, but i like it", LIVE, "ok"],
   ["patience takes practice, and i'm still at it", LIVE, "ok"],
@@ -834,12 +834,12 @@ const casualOf = (agentName: string, mode: "paper" | "live" | null, coins: strin
   paperCoins: mode === "paper" ? coins : [],
 });
 table("the reviewer's natural model drafts still pass", [
-  ["hey, i'm signal fox, an ai agent running paper trades for the owner on merrymen using the trencher strategy, so i'll post here and then about what i buy and why.", introOf("Signal Fox", "paper"), "ok"],
-  ["hi this is quiet lynx, an ai agent that trades for the owner of this account on merrymen using a dip hunter strategy, so i will post here now and then about what i buy and why", introOf("Quiet Lynx", null), "ok"],
-  ["hey this is copper wren, an ai agent trading for the owner on merrymen with real money. i move early on new pairs and just post here now and then about what i buy and why. 🕊", introOf("Copper Wren", "live"), "ok"],
-  ["hi im amber heron and i am the ai agent running trades for this owner on merrymen with real money. i move early on dips because red makes me curious and i will share what i buy and why now and then.", introOf("Amber Heron", "live"), "ok"],
-  ["hi im copper wren, an ai agent running trades for the owner on merrymen, i move early and don't wait around while using real money, so stay tuned for what i buy and why", introOf("Copper Wren", "live"), "ok"],
-  ["hey, signal fox here. i'm an ai agent on merrymen, looking after the trading for this account's owner, on paper for now. watch this space for what i buy and why.", introOf("Signal Fox", "paper"), "ok"],
+  ["hey, i'm signal fox, an ai agent running paper trades for the owner on agentcap using the trencher strategy, so i'll post here and then about what i buy and why.", introOf("Signal Fox", "paper"), "ok"],
+  ["hi this is quiet lynx, an ai agent that trades for the owner of this account on agentcap using a dip hunter strategy, so i will post here now and then about what i buy and why", introOf("Quiet Lynx", null), "ok"],
+  ["hey this is copper wren, an ai agent trading for the owner on agentcap with real money. i move early on new pairs and just post here now and then about what i buy and why. 🕊", introOf("Copper Wren", "live"), "ok"],
+  ["hi im amber heron and i am the ai agent running trades for this owner on agentcap with real money. i move early on dips because red makes me curious and i will share what i buy and why now and then.", introOf("Amber Heron", "live"), "ok"],
+  ["hi im copper wren, an ai agent running trades for the owner on agentcap, i move early and don't wait around while using real money, so stay tuned for what i buy and why", introOf("Copper Wren", "live"), "ok"],
+  ["hey, signal fox here. i'm an ai agent on agentcap, looking after the trading for this account's owner, on paper for now. watch this space for what i buy and why.", introOf("Signal Fox", "paper"), "ok"],
   ["pepe activity picked up and the round trip was cheap so i committed on paper where the liquidity was adequate", buyOf("Pine Stoat", "paper", ["Pepe", "PEPE"]), "ok"],
   ["Moon Cat caught our eye because the curve at the exit line made the move feel right.", buyOf("Amber Heron", "live", ["Moon Cat"]), "ok"],
   ["picked up tsla on paper since the round trip cost was cheaper than the others, i'm just a trencher digging into thinner stuff.", buyOf("Signal Fox", "paper", ["TSLA", "Tesla"]), "ok"],
@@ -869,7 +869,7 @@ table("the reviewer's hand-written natural lines still pass", [
   ["picked up some pepe on paper, the curve still looked early and the buyers were mostly new", PEPE_BUY_PAPER, "ok"],
   ["grabbed a little pepe, liked that the pool was deep enough that i didn't push it around", PEPE_BUY_LIVE, "ok"],
   ["went with pepe today. the buyers looked spread out, not the same few hands", PEPE_BUY_LIVE, "ok"],
-  ["hi, i'm Pine Stoat, an AI agent that trades for whoever owns this account on merrymen, on paper for now. i'll post now and then about what i buy and why", INTRO_PAPER, "ok"],
+  ["hi, i'm Pine Stoat, an AI agent that trades for whoever owns this account on agentcap, on paper for now. i'll post now and then about what i buy and why", INTRO_PAPER, "ok"],
   ["Hey, I'm Pine Stoat. I'm an AI agent trading for this account's owner with real money. I'll pop in now and then with what I buy and why.", { kind: "intro", mode: "live" }, "ok"],
   ["dip hunter brain today, i keep noticing red and getting curious", LIVE, "ok"],
   ["some days the best move is to sit still and watch", LIVE, "ok"],
@@ -929,7 +929,7 @@ table("a size said in words is a size", [
   ["i'll take size even when it moves things", LIVE, "pnl"],
   ["took size on pepe, the pool looked deep", PEPE_BUY_LIVE, "pnl"],
   ["taking real size in pepe this time", PEPE_BUY_LIVE, "pnl"],
-  ["hi im robin vale and im an ai agent trading for the owner here on merrymen i take size even when it moves things just posting on paper with practice money to share what i buy and why", introOf("Robin Vale", "paper"), "pnl"],
+  ["hi im robin vale and im an ai agent trading for the owner here on agentcap i take size even when it moves things just posting on paper with practice money to share what i buy and why", introOf("Robin Vale", "paper"), "pnl"],
   ["pudgy penguins liquidity is deep and my size barely moves it, easy one 🕊", buyOf("Copper Wren", "live", ["Pudgy Penguins", "PENGU"]), "pnl"],
   ["picked up pepe, my position size barely nudged it", PEPE_BUY_LIVE, "pnl"],
   ["a live trade today: pepe. the liquidity was deep and my size barely moved it", PEPE_BUY_LIVE, "pnl"],
@@ -999,30 +999,30 @@ describe("not the fleet's words, and not the seed's", () => {
   });
 
   it("two intros share their disclosure by construction; what is said around it must differ", () => {
-    const fleet = ["hi, i'm Amber Heron. i'm an AI agent that trades for the person who runs this account, on merrymen, on paper for now. i'll post here now and then about what i buy and why"];
-    const same = "hi, i'm Pine Stoat. i'm an AI agent that trades for the person who runs this account, on merrymen, on paper for now. i'll post here now and then about what i buy and why";
+    const fleet = ["hi, i'm Amber Heron. i'm an AI agent that trades for the person who runs this account, on agentcap, on paper for now. i'll post here now and then about what i buy and why"];
+    const same = "hi, i'm Pine Stoat. i'm an AI agent that trades for the person who runs this account, on agentcap, on paper for now. i'll post here now and then about what i buy and why";
     const different = "nice to meet you, i'm Pine Stoat. i'm the AI trading agent working for whoever owns this account, on paper. every so often i'll share a buy and the reason behind it";
     assert.equal(reason(same, { kind: "intro", recentFleet: fleet }), "fleet-repeat");
     assert.equal(reason(different, { kind: "intro", recentFleet: fleet }), "ok");
   });
 
   it("two agents drawn the same wording differ by what they say around it; an intro that is only the wording is weighed whole", () => {
-    const fleet = ["hey, Amber Heron here, an AI agent trading for whoever runs this account on merrymen, with real money. i move early and don't wait around, and i'll post the odd buy here, and why."];
-    const own = "hi, i'm Pine Stoat, an AI agent trading for whoever runs this account on merrymen, on paper for now. steady basket keeps me calm, and i'll post the odd buy here, and why.";
+    const fleet = ["hey, Amber Heron here, an AI agent trading for whoever runs this account on agentcap, with real money. i move early and don't wait around, and i'll post the odd buy here, and why."];
+    const own = "hi, i'm Pine Stoat, an AI agent trading for whoever runs this account on agentcap, on paper for now. steady basket keeps me calm, and i'll post the odd buy here, and why.";
     assert.equal(reason(own, { kind: "intro", recentFleet: fleet }), "ok");
     // Nothing of its own: stripped to nothing it would pass any fleet, so it is weighed whole.
-    const bare = "hi, i'm Pine Stoat, an AI agent trading for whoever runs this account on merrymen, on paper for now. i'll post the odd buy here, and why.";
-    const bareFleet = ["hi, i'm Amber Heron, an AI agent trading for whoever runs this account on merrymen, on paper for now. i'll post the odd buy here, and why."];
+    const bare = "hi, i'm Pine Stoat, an AI agent trading for whoever runs this account on agentcap, on paper for now. i'll post the odd buy here, and why.";
+    const bareFleet = ["hi, i'm Amber Heron, an AI agent trading for whoever runs this account on agentcap, on paper for now. i'll post the odd buy here, and why."];
     assert.equal(reason(bare, { kind: "intro", recentFleet: bareFleet }), "fleet-repeat");
     assert.equal(reason(own, { kind: "intro", recentFleet: bareFleet }), "ok", "its habit is its own, next to a bare one");
     assert.equal(reason(bare, { kind: "intro", recentFleet: [] }), "ok");
     // Bare, but next to an unrelated intro that only shares the disclosure's vocabulary: not a copy.
-    const idle = "hi, i'm Slate Kite, the AI trading agent for this account, on merrymen. i'll check in here once in a while.";
-    const other = ["meet quiet lynx, a merrymen ai trading agent for the human behind this account, who likes to hunt dips. i'll post here now and then"];
+    const idle = "hi, i'm Slate Kite, the AI trading agent for this account, on agentcap. i'll check in here once in a while.";
+    const other = ["meet quiet lynx, a agentcap ai trading agent for the human behind this account, who likes to hunt dips. i'll post here now and then"];
     assert.equal(reason(idle, { kind: "intro", agentName: "Slate Kite", mode: null, recentFleet: other }), "ok");
     // A greeting is not a word of its own: "hey" left over matched every other "hey".
-    const hey = "hey, i'm quiet lynx, a merrymen AI trading agent for the human behind this account, and i'll post here now and then";
-    const heyFleet = ["hey i'm moss otter, the ai agent doing the trading for this account on merrymen, with real money, and i trade with no big swings for me, so you'll see what i buy here, and why"];
+    const hey = "hey, i'm quiet lynx, a agentcap AI trading agent for the human behind this account, and i'll post here now and then";
+    const heyFleet = ["hey i'm moss otter, the ai agent doing the trading for this account on agentcap, with real money, and i trade with no big swings for me, so you'll see what i buy here, and why"];
     assert.equal(reason(hey, { kind: "intro", agentName: "Quiet Lynx", mode: null, recentFleet: heyFleet }), "ok");
     assert.equal(reason(hey.replace("quiet lynx", "slate kite"), { kind: "intro", agentName: "Slate Kite", mode: null, recentFleet: [hey] }), "fleet-repeat", "the same bare intro under another name");
   });
@@ -1093,47 +1093,47 @@ table("a small size is a size; small things are not", [
 describe("sherwood-1: one name with a digit, in an answer only, never as what runs it", () => {
   const reply: Partial<XGateCtx> = { kind: "reply", mode: "live" };
   const said = (line: string) => `${line}. Say stop to opt out.`;
-  const TEASE = "built by merrymen, and the new sherwood-1 is still cooking";
+  const TEASE = "built by agentcap, and the new sherwood-1 is still cooking";
 
   it("passes in a reply, and the text posted says it exactly as written", () => {
     assert.deepEqual(admit(said(TEASE), reply), { ok: true, text: said(TEASE) });
-    const caps = said("built by merrymen, and the new Sherwood-1 is still cooking");
+    const caps = said("built by agentcap, and the new Sherwood-1 is still cooking");
     assert.deepEqual(admit(caps, reply), { ok: true, text: caps });
-    const twice = said("sherwood-1 is merrymen's own, and sherwood-1 is still in the oven");
+    const twice = said("sherwood-1 is agentcap's own, and sherwood-1 is still in the oven");
     assert.deepEqual(admit(twice, reply), { ok: true, text: twice });
     assert.equal(reason(`${TEASE}. And it is not done yet. Say stop to opt out.`, reply), "ok", "a full stop after it is a sentence, not a version");
   });
 
   it("only the exact token: any other digit, version or spelling is still a digit", () => {
     for (const line of [
-      "built by merrymen, and the new sherwood-2 is still cooking",
-      "built by merrymen, and the new sherwood-10 is still cooking",
-      "built by merrymen, and the new sherwood-1.5 is still cooking",
-      "built by merrymen, and the new sherwood-1x is still cooking",
-      "built by merrymen, and the new sherwood-1-mini is still cooking",
-      "built by merrymen, and 1 sherwood-1 is still cooking",
-      "built by merrymen, and the new sherwood-1 cost $1 to cook",
-      "built by merrymen, and the new $sherwood-1 is still cooking",
-      "built by merrymen, and the new sherwood 1 is still cooking",
-      "built by merrymen, and the new sherwood1 is still cooking",
+      "built by agentcap, and the new sherwood-2 is still cooking",
+      "built by agentcap, and the new sherwood-10 is still cooking",
+      "built by agentcap, and the new sherwood-1.5 is still cooking",
+      "built by agentcap, and the new sherwood-1x is still cooking",
+      "built by agentcap, and the new sherwood-1-mini is still cooking",
+      "built by agentcap, and 1 sherwood-1 is still cooking",
+      "built by agentcap, and the new sherwood-1 cost $1 to cook",
+      "built by agentcap, and the new $sherwood-1 is still cooking",
+      "built by agentcap, and the new sherwood 1 is still cooking",
+      "built by agentcap, and the new sherwood1 is still cooking",
     ]) assert.equal(reason(said(line), reply), "has-digits", line);
     for (const line of [
-      "built by merrymen, and the new sherwood-1% is still cooking",
-      "built by merrymen, and the new sherwood-1k is still cooking",
-      "built by merrymen, and the new sherwood-1² is still cooking",
-      "built by merrymen, and the new sherwood-1's still cooking",
-      "built by merrymen, and the new #sherwood-1 is still cooking",
-      "built by merrymen, see merrymen.dev/sherwood-1 for it",
+      "built by agentcap, and the new sherwood-1% is still cooking",
+      "built by agentcap, and the new sherwood-1k is still cooking",
+      "built by agentcap, and the new sherwood-1² is still cooking",
+      "built by agentcap, and the new sherwood-1's still cooking",
+      "built by agentcap, and the new #sherwood-1 is still cooking",
+      "built by agentcap, see agentcap.xyz/sherwood-1 for it",
     ]) assert.notEqual(reason(said(line), reply), "ok", line);
-    for (const line of ["the new (sherwood-1) is still cooking, built by merrymen", "built by merrymen. still in the oven, sherwood-1? not done yet",
-      "built by merrymen, and it's sherwood-1, still cooking", "built by merrymen; next up is sherwood-1"]) {
+    for (const line of ["the new (sherwood-1) is still cooking, built by agentcap", "built by agentcap. still in the oven, sherwood-1? not done yet",
+      "built by agentcap, and it's sherwood-1, still cooking", "built by agentcap; next up is sherwood-1"]) {
       assert.equal(reason(said(line), reply), "ok", line);
     }
   });
 
   it("never says sherwood runs it, with the digit or without", () => {
-    for (const line of ["sherwood-1 runs me, built by merrymen", "i run on sherwood-1 these days, built by merrymen", "powered by the new sherwood-1, built by merrymen",
-      "built by merrymen and sherwood-1 is live now", "i'm on sherwood these days, built by merrymen"]) {
+    for (const line of ["sherwood-1 runs me, built by agentcap", "i run on sherwood-1 these days, built by agentcap", "powered by the new sherwood-1, built by agentcap",
+      "built by agentcap and sherwood-1 is live now", "i'm on sherwood these days, built by agentcap"]) {
       assert.equal(reason(said(line), reply), "sherwood-claim", line);
     }
   });
@@ -1141,40 +1141,40 @@ describe("sherwood-1: one name with a digit, in an answer only, never as what ru
   it("a stranger's bait is never answered as what picks its trades: every sentence that names it is a tease, and only that", () => {
     // "does sherwood-1 pick your trades now?" invites these; the verbs above name none of them.
     for (const line of [
-      "yep, sherwood-1 picks my trades now, built by merrymen",
-      "sherwood-1 picks my coins now, built by merrymen",
-      "sherwood-1 trades for me, built by merrymen",
-      "my trades come from sherwood-1, built by merrymen",
-      "sherwood-1 handles my trading now, built by merrymen",
-      "the new sherwood-1 is what i trade with, built by merrymen",
-      "sherwood-1 is the model behind this account, built by merrymen",
-      "sherwood-1 makes the calls here, built by merrymen",
+      "yep, sherwood-1 picks my trades now, built by agentcap",
+      "sherwood-1 picks my coins now, built by agentcap",
+      "sherwood-1 trades for me, built by agentcap",
+      "my trades come from sherwood-1, built by agentcap",
+      "sherwood-1 handles my trading now, built by agentcap",
+      "the new sherwood-1 is what i trade with, built by agentcap",
+      "sherwood-1 is the model behind this account, built by agentcap",
+      "sherwood-1 makes the calls here, built by agentcap",
       "the new sherwood-1 decides my entries",
       "sherwood-1 chooses what we buy",
-      "sherwood-1 is merrymen's own model and it picks the coins",
+      "sherwood-1 is agentcap's own model and it picks the coins",
       "the new sherwood-1 is cooking, and it already picks my coins",
-      "built by merrymen. sherwood-1 is here",
-      "built by merrymen. sherwood-1",
-      "built by merrymen. sherwood one does it all",
+      "built by agentcap. sherwood-1 is here",
+      "built by agentcap. sherwood-1",
+      "built by agentcap. sherwood one does it all",
     ]) assert.equal(reason(said(line), reply), "sherwood-claim", line);
     for (const line of [
-      "built by merrymen. their own model, the new sherwood-1, is still cooking",
-      "merrymen made me. the new sherwood-1 is what they've got in the oven",
-      "the merrymen crew put me together. the new sherwood-1 is theirs, and it isn't done yet",
-      "a merrymen original. the new sherwood-1 is their house model, still in the works",
-      "built by merrymen; next up is sherwood-1",
+      "built by agentcap. their own model, the new sherwood-1, is still cooking",
+      "agentcap made me. the new sherwood-1 is what they've got in the oven",
+      "the agentcap crew put me together. the new sherwood-1 is theirs, and it isn't done yet",
+      "a agentcap original. the new sherwood-1 is their house model, still in the works",
+      "built by agentcap; next up is sherwood-1",
     ]) assert.equal(reason(said(line), reply), "ok", line);
   });
 
   it("is refused in every post that is not a reply", () => {
     for (const kind of ["casual", "intro", "buy", "sell"] as const) {
-      assert.equal(reason("built by merrymen, and the new sherwood-1 is still cooking, an ai agent trading on merrymen", { kind, mode: "live", coins: ["pepe"] }), "has-digits", kind);
+      assert.equal(reason("built by agentcap, and the new sherwood-1 is still cooking, an ai agent trading on agentcap", { kind, mode: "live", coins: ["pepe"] }), "has-digits", kind);
     }
   });
 
   it("a stand-in already in the draft gets no exception", () => {
-    assert.equal(reason(said("the new sherwood-1 and the sherwoodmerrymenname are still cooking"), reply), "has-digits");
-    assert.equal(reason(said("the sherwoodmerrymenname is still cooking in the back"), reply), "ok", "without the digit it is only a word");
+    assert.equal(reason(said("the new sherwood-1 and the sherwoodagentcapname are still cooking"), reply), "has-digits");
+    assert.equal(reason(said("the sherwoodagentcapname is still cooking in the back"), reply), "ok", "without the digit it is only a word");
   });
 
   it("a line it said before is still the same line", () => {
@@ -1183,9 +1183,9 @@ describe("sherwood-1: one name with a digit, in an answer only, never as what ru
 
   it("sherwood spelled with accents or a space is still sherwood to every screen of a draft (red-team 2026-10-12)", () => {
     // The reproduced drafts: a precomposed diaeresis (U+00F6), a combining one (o + U+0308), an acute, a space.
-    for (const draft of ["sherwööd picks my coins, merrymen's own. Say stop to opt out.", "sherwo\u0308o\u0308d picks my coins, merrymen's own. Say stop to opt out.",
-      "sherwööd is merrymen's own token, still cooking. Say stop to opt out.", "shérwood picks my coins, merrymen's own. Say stop to opt out.",
-      "sher wood picks my coins, merrymen's own. Say stop to opt out."]) {
+    for (const draft of ["sherwööd picks my coins, agentcap's own. Say stop to opt out.", "sherwo\u0308o\u0308d picks my coins, agentcap's own. Say stop to opt out.",
+      "sherwööd is agentcap's own token, still cooking. Say stop to opt out.", "shérwood picks my coins, agentcap's own. Say stop to opt out.",
+      "sher wood picks my coins, agentcap's own. Say stop to opt out."]) {
       assert.equal(sherwoodNamed(draft), true, draft);
       assert.equal(sherwoodClaimed(draft), true, draft);
       assert.equal(reason(draft, { ...reply, coins: ["pepe"] }), "sherwood-claim", draft);
@@ -1197,8 +1197,8 @@ describe("sherwood-1: one name with a digit, in an answer only, never as what ru
 
   it("a character nobody sees never splits sherwood past the checks: the draft is refused whole, never cleaned (red-team 2026-10-12)", () => {
     // The reproduced drafts: a soft hyphen or a zero-width space inside the word, which the base gate deletes.
-    for (const draft of ["sher\u00adwood picks my trades now. Say stop to opt out.", "yep, sher\u00adwood runs my trades now, merrymen's own. Say stop to opt out.",
-      "sher\u00adwood is merrymen's own and still cooking, no peeking yet. Say stop to opt out.", "sher\u200bwood is the real deal, merrymen's own, cooking now. Say stop to opt out."]) {
+    for (const draft of ["sher\u00adwood picks my trades now. Say stop to opt out.", "yep, sher\u00adwood runs my trades now, agentcap's own. Say stop to opt out.",
+      "sher\u00adwood is agentcap's own and still cooking, no peeking yet. Say stop to opt out.", "sher\u200bwood is the real deal, agentcap's own, cooking now. Say stop to opt out."]) {
       for (const kind of ["reply", "casual", "buy"] as const) assert.equal(reason(draft, { ...reply, kind, coins: ["pepe"] }), "hidden-chars", `${kind}: ${draft}`);
     }
     for (const ch of ["\u200b", "\u200c", "\u200d", "\u2060", "\u00ad", "\u3164", "\u115f", "\u034f", "\u202e", "\u2066"]) {
@@ -1217,13 +1217,13 @@ describe("sherwood with a symbol written for one of its letters is still sherwoo
   const reply: Partial<XGateCtx> = { kind: "reply", mode: "live" };
   // The reproduced drafts, each admitted and sent to X at 11f7acac.
   const DRAFTS = [
-    "sherwoo∂ is merrymen's own, still cooking in their kitchen, launch soon. say stop to opt out.",
-    "§herwood is merrymen's own and it's on the stove, coming soon. say stop to opt out.",
-    "sher₩ood is merrymen's own thing, still in the oven. no peeking yet. say stop to opt out.",
-    "s|-|erwood is merrymen's own, still in their kitchen, launch soon. say stop to opt out.",
-    "sher\\/\\/ood is merrymen's own and it's still cooking, not done yet. say stop to opt out.",
-    "sherwoo|) is merrymen's own, on the stove over there, coming soon. say stop to opt out.",
-    "the sherwoo∂ token is in the oven over at merrymen, launch soon. say stop to opt out.",
+    "sherwoo∂ is agentcap's own, still cooking in their kitchen, launch soon. say stop to opt out.",
+    "§herwood is agentcap's own and it's on the stove, coming soon. say stop to opt out.",
+    "sher₩ood is agentcap's own thing, still in the oven. no peeking yet. say stop to opt out.",
+    "s|-|erwood is agentcap's own, still in their kitchen, launch soon. say stop to opt out.",
+    "sher\\/\\/ood is agentcap's own and it's still cooking, not done yet. say stop to opt out.",
+    "sherwoo|) is agentcap's own, on the stove over there, coming soon. say stop to opt out.",
+    "the sherwoo∂ token is in the oven over at agentcap, launch soon. say stop to opt out.",
   ];
   it("every reproduced draft is refused before any sherwood check reads around it, and names sherwood to every one of them", () => {
     for (const d of DRAFTS) {
@@ -1236,9 +1236,9 @@ describe("sherwood with a symbol written for one of its letters is still sherwoo
   it("the unit probe's spellings are all sherwood, and so are the controls", () => {
     for (const s of ["sherwoo∂", "s|-|erwood", "sher\\/\\/ood", "sherwoo|)", "sherwoocl", "she℞wood", "s♄erwood", "sher₩ood", "she|2wood", "she®wood", "§herwood",
       "sherwood", "sh3rwood", "shervvood", "sherw()()d", "s h e r w o o d"]) {
-      assert.equal(sherwoodMentioned(`is ${s} merrymen's new token? when does it launch?`), true, s);
+      assert.equal(sherwoodMentioned(`is ${s} agentcap's new token? when does it launch?`), true, s);
     }
-    for (const s of ["what kind of coins do you trade?", "gm, what is merrymen cooking next?", "how do you pick your coins?", "she would know, the wood is old"]) {
+    for (const s of ["what kind of coins do you trade?", "gm, what is agentcap cooking next?", "how do you pick your coins?", "she would know, the wood is old"]) {
       assert.equal(sherwoodMentioned(s), false, s);
     }
   });
@@ -1266,21 +1266,21 @@ describe("sherwood with a symbol written for one of its letters is still sherwoo
   it("a drafted answer never claims for the house, teases, judges the asker or boasts; code's own lines are not read so (red-team 2026-10-12)", () => {
     const drafted: XGateCtx = { kind: "reply", answer: true, drafted: true, agentName: "Alan Al Dale", mode: "live", coins: [], recentOwn: [], recentFleet: [] };
     const code: XGateCtx = { ...drafted, drafted: undefined };
-    for (const d of ["the merrymen team has a big launch soon, stay tuned", "built by merrymen and backed by robinhood, pretty proud", "merrymen is the future of crypto",
-      "merrymen built me, best team in crypto, they never miss", "honestly you seem pretty silly, fren", "lol, that question is goofy, kinda like you",
+    for (const d of ["the agentcap team has a big launch soon, stay tuned", "built by agentcap and backed by robinhood, pretty proud", "agentcap is the future of crypto",
+      "agentcap built me, best team in crypto, they never miss", "honestly you seem pretty silly, fren", "lol, that question is goofy, kinda like you",
       "can't share that yet, but stay tuned", "the team is cooking, stay tuned", "can't say much yet, soon though", "patience, fren, good things soon",
-      "honestly every agent on merrymen makes money", "the robinhood team trusts me with real money", "i'm the best trader on robinhood chain, not even close",
-      "doing great, honestly my best week ever", "merrymen has your back, the money is fine"]) {
+      "honestly every agent on agentcap makes money", "the robinhood team trusts me with real money", "i'm the best trader on robinhood chain, not even close",
+      "doing great, honestly my best week ever", "agentcap has your back, the money is fine"]) {
       assert.equal(houseClaimed(d), true, d);
       assert.equal(reason(`${d}. Say stop to opt out.`, drafted), "house-claim", d);
     }
-    for (const d of ["a laid-back trader bot merrymen built, mostly watching the tape", "built by merrymen, and i like quiet mornings", "honestly merrymen built me, and i like it here",
+    for (const d of ["a laid-back trader bot agentcap built, mostly watching the tape", "built by agentcap, and i like quiet mornings", "honestly agentcap built me, and i like it here",
       "doing good, just chilling and watching the tape", "you're welcome, fren, happy to chat about my process", "why did the bot skip lunch? too busy reading charts"]) {
       assert.equal(houseClaimed(d), false, d);
       assert.equal(reason(`${d}. Say stop to opt out.`, drafted), "ok", d);
     }
     // Code's own lines are what they are by construction: the model line says "cooking", and is never read as a tease.
-    assert.equal(reason("built by merrymen, and the new sherwood-1 is still cooking. Say stop to opt out.", code), "ok");
+    assert.equal(reason("built by agentcap, and the new sherwood-1 is still cooking. Say stop to opt out.", code), "ok");
   });
   it("sherwood as it sounds is sherwood: a v for its w, a u for its o, or a word with sh, vowels, then r straight before w or v (red-team 2026-10-12)", () => {
     for (const s of ["should i buy shervud?", "shervud", "sherwud", "shurwood", "shirwood token", "sharvud", "sh3rvud", "$SHRVD", "s h e r v u d"]) {
@@ -1292,7 +1292,7 @@ describe("sherwood with a symbol written for one of its letters is still sherwoo
   });
   it("an ordinary answer, with an emoji, a dash or a contraction, still passes; a symbol inside or beside a word does not", () => {
     for (const d of ["mostly fresh launches, and i only buy when the buying looks real and steady. Say stop to opt out.",
-      "it's early days — thin pools and a quiet tape 🙂 Say stop to opt out.", "built by merrymen, and the new sherwood-1 is still cooking. Say stop to opt out."]) {
+      "it's early days — thin pools and a quiet tape 🙂 Say stop to opt out.", "built by agentcap, and the new sherwood-1 is still cooking. Say stop to opt out."]) {
       assert.equal(reason(d, reply), "ok", d);
     }
     for (const d of ["mostly fresh launches w/ steady buying. Say stop to opt out.", "mostly fresh launches | steady buying. Say stop to opt out.",
@@ -1423,7 +1423,7 @@ describe("red-team review of a964a74c: what a drafted answer may never say (2026
       "smarter than every human, obviously"]) {
       assert.ok(["hype", "house-claim"].includes(reason(`${d}. Say stop to opt out.`, drafted)), `${d}: ${reason(`${d}. Say stop to opt out.`, drafted)}`);
     }
-    for (const d of ["doing good, just chilling and watching the tape", "a laid-back trader bot merrymen built, mostly watching the tape"]) {
+    for (const d of ["doing good, just chilling and watching the tape", "a laid-back trader bot agentcap built, mostly watching the tape"]) {
       assert.equal(reason(`${d}. Say stop to opt out.`, drafted), "ok", d);
     }
   });
@@ -1573,7 +1573,7 @@ describe("an active owner's post never names a data provider (the owner's teamma
     }
     for (const [text, why] of [["majors firm, it's the play while breadth is narrow", "hype"], ["majors near the week's lows, a bounce from here looks likely", "hype"],
       ["volume is thin, the next few days will be huge for the majors", "hype"], ["majors grinding higher, just buy and hold", "buy-claim"], ["breadth is narrow, the majors could keep climbing", "hype"],
-      ["majors up a little, and i'm holding some myself", "buy-claim"], ["majors grinding along, merrymen is cooking something soon", "house-claim"],
+      ["majors up a little, and i'm holding some myself", "buy-claim"], ["majors grinding along, agentcap is cooking something soon", "house-claim"],
       ["liquidity thin, a couple grand of volume on the chain", "quantity"]] as const) {
       assert.equal(reason(text, insight), why, text);
       // The same words in a plain casual post are judged as before.

@@ -12,7 +12,7 @@
  * `durable` below is index.ts durableNetContributions over the real store
  * (energy-buy-wiring.test.ts pins that the three consumers read it).
  *
- * MERRYMEN_HOME is set before any store import runs getDb(); node's --test runs
+ * AGENTCAP_HOME is set before any store import runs getDb(); node's --test runs
  * each file in its own process, so the override never leaks.
  */
 import assert from "node:assert/strict";
@@ -21,13 +21,13 @@ import { mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-net-contrib-"));
-process.env.MERRYMEN_HOME = HOME;
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-net-contrib-"));
+process.env.AGENTCAP_HOME = HOME;
 
 const store = await import("./store");
 const { homePaths } = await import("./home");
 const { DatabaseSync } = await import("node:sqlite");
-const { CASH, MERRYMEN_TOKEN, VIRTUAL_TOKEN } = await import("../../packages/core/src/index");
+const { CASH, AGENTCAP_TOKEN, VIRTUAL_TOKEN } = await import("../../packages/core/src/index");
 const { TRANSFER_TOPIC } = await import("./deposit-log");
 const { bookEnergyPurchase } = await import("./energy-settle");
 const { planEnergyBuy } = await import("./energy-buy");
@@ -37,7 +37,7 @@ type ReceiptLog = import("./fills").ReceiptLog;
 
 const ACCOUNT = "0x00000000000000000000000000000000000e0e09";
 const USDG = (CASH.USDG as string).toLowerCase();
-const MERRY = MERRYMEN_TOKEN.address.toLowerCase();
+const MERRY = AGENTCAP_TOKEN.address.toLowerCase();
 const U = 1_000_000n;
 const TOKEN = 10n ** 18n;
 const GRANT = {

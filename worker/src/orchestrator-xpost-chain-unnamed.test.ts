@@ -66,7 +66,7 @@ describe("code's own words never name the chain or a data provider (the owner, 2
   it("the screen it is held to reads every form the owner named", () => {
     for (const t of NAMED) assert.ok(sourceNamed(`quiet one on ${t} today`), t);
     // "robinhood" alone and "the chain" alone are not names.
-    for (const t of ["robinhood", "the chain's trending list", "merrymen and robinhood built me, the chain is quiet"]) assert.ok(!sourceNamed(t), t);
+    for (const t of ["robinhood", "the chain's trending list", "agentcap and robinhood built me, the chain is quiet"]) assert.ok(!sourceNamed(t), t);
   });
 
   it("no string in the pools' or the prompts' source says one", () => {

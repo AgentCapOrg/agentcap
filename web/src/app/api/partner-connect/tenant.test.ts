@@ -6,10 +6,10 @@ import { POST } from "./route";
 const A = `0x${"a".repeat(40)}` as `0x${string}`;
 const B = `0x${"b".repeat(40)}` as `0x${string}`;
 const saved = Object.fromEntries(
-  ["MERRYMEN_HOSTED", "MERRYMEN_SESSION_SECRET", "DATABASE_URL"].map(key => [key, process.env[key]]),
+  ["AGENTCAP_HOSTED", "AGENTCAP_SESSION_SECRET", "DATABASE_URL"].map(key => [key, process.env[key]]),
 );
-process.env.MERRYMEN_HOSTED = "1";
-process.env.MERRYMEN_SESSION_SECRET = "partner-connect-tenant-test-secret-32-chars";
+process.env.AGENTCAP_HOSTED = "1";
+process.env.AGENTCAP_SESSION_SECRET = "partner-connect-tenant-test-secret-32-chars";
 delete process.env.DATABASE_URL;
 
 after(() => {
@@ -20,7 +20,7 @@ after(() => {
 });
 
 function connect(session: `0x${string}` | null, expectedTenant?: unknown): Promise<Response> {
-  return POST(new Request("https://app.merrymen.dev/api/partner-connect", {
+  return POST(new Request("https://app.agentcap.xyz/api/partner-connect", {
     method: "POST",
     headers: {
       "content-type": "application/json",

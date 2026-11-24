@@ -17,7 +17,7 @@ const idPattern = /^[A-Za-z0-9_-]{16,64}$/;
 /** Serialize update state changes. Telegram network calls run after this lock is released. */
 const MANAGER_DELIVERY_LOCK = 1_297_692_148;
 function webOrigin(req: Request): string {
-  if (process.env.MERRYMEN_PUBLIC_ORIGIN) return requestOrigin(req);
+  if (process.env.AGENTCAP_PUBLIC_ORIGIN) return requestOrigin(req);
   const url = new URL(req.url);
   // Next normalizes a loopback URL to localhost; Host preserves the browser's
   // actual origin, as the API middleware does. Hosted can use its configured origin.
@@ -31,7 +31,7 @@ interface Dependencies {
   db(): Promise<Db>;
   manager(config: TelegramManagerConfig): TelegramManager;
   saveLock: typeof withSettingsSaveLock;
-  /** This deployment's manager webhook URL, or null without an https public origin. Its origin is the manager's Back to Merrymen link. */
+  /** This deployment's manager webhook URL, or null without an https public origin. Its origin is the manager's Back to AgentCap link. */
   webhookUrl(): string | null;
   /**
    * One line per change of readiness, and one per manager message or button
@@ -44,7 +44,7 @@ const defaults: Omit<Dependencies, "config"> = {
   auth: tenantOf,
   db: () => makePgDb(process.env.DATABASE_URL!),
   manager: config => new TelegramManager(config), saveLock: withSettingsSaveLock,
-  webhookUrl: () => managerWebhookUrl(process.env.MERRYMEN_PUBLIC_ORIGIN),
+  webhookUrl: () => managerWebhookUrl(process.env.AGENTCAP_PUBLIC_ORIGIN),
   log: line => console.warn(`[telegram-create] ${line}`),
 };
 
@@ -96,7 +96,7 @@ function readiness(deps: Dependencies) {
     said = line;
   };
   async function probe(config: TelegramManagerConfig, url: string | null, key: string): Promise<boolean> {
-    if (!url) { tell("MERRYMEN_PUBLIC_ORIGIN is not an https origin, so the manager has no webhook URL"); return false; }
+    if (!url) { tell("AGENTCAP_PUBLIC_ORIGIN is not an https origin, so the manager has no webhook URL"); return false; }
     try { await ensureManagedTelegramSchema(await deps.db()); }
     catch { tell("its tables could not be created or read"); return false; }
     const manager = deps.manager(config);
@@ -135,7 +135,7 @@ function failure(error: unknown): Response {
   if (error instanceof ManagedTelegramError) {
     const messages: Record<string, string> = {
       bot_already_configured: "A bot is already connected. Open it below, or disconnect it before creating a new one.",
-      bot_claimed: "This bot is already connected to another Merrymen agent. Its connection was not changed.",
+      bot_claimed: "This bot is already connected to another AgentCap agent. Its connection was not changed.",
       bot_unconfirmed: "Telegram couldn't confirm your bot. Please try again.",
       intent_expired: "This setup request expired. Start again when you're ready.",
       candidate_mismatch: "Check the bot name and confirm again.",
@@ -153,7 +153,7 @@ const NOTICE_CALL_MS = 5_000;
 /** A pressed button's answer, shown briefly above the chat. The edited message says the rest. */
 const TOAST = {
   unavailable: "This button isn't available any more.",
-  notYours: "This setup isn't available. Start again from Merrymen.",
+  notYours: "This setup isn't available. Start again from AgentCap.",
   expired: "This setup expired.",
   notReady: "Finish creating your bot first.",
   alreadyConnected: "Already connected, so nothing was cancelled.",
@@ -173,11 +173,11 @@ type Connection =
 export function createTelegramHandlers(overrides: Pick<Dependencies, "config"> & Partial<Omit<Dependencies, "config">>) {
   const deps = { ...defaults, ...overrides };
   const ready = readiness(deps);
-  /** Where Back to Merrymen goes: this deployment's public origin, which its webhook URL is built on. */
+  /** Where Back to AgentCap goes: this deployment's public origin, which its webhook URL is built on. */
   const home = () => { const url = deps.webhookUrl(); return url ? new URL(url).origin : null; };
 
   /**
-   * ONE COMPLETION, FROM MERRYMEN OR FROM TELEGRAM. The page's Connect and
+   * ONE COMPLETION, FROM AGENTCAP OR FROM TELEGRAM. The page's Connect and
    * the manager's Connect button both come here, so a bot is saved one way:
    * first the bot's live token (getManagedBotToken, and getMe for it), then
    * re-read the intent under the tenant's settings lock and complete()'s one
@@ -261,7 +261,7 @@ export function createTelegramHandlers(overrides: Pick<Dependencies, "config"> &
    *
    * Milla's call: connecting from Telegram is allowed, on the authority the
    * /start challenge already gave. The challenge came from the signed-in
-   * owner's own Merrymen page and bound exactly one private Telegram user to
+   * owner's own AgentCap page and bound exactly one private Telegram user to
    * this intent (bind); that user, and only that user, may now choose the
    * candidate the creation message proposed. So a press counts only when it
    * comes from a human (not a bot), in that user's private chat with the
@@ -367,7 +367,7 @@ export function createTelegramHandlers(overrides: Pick<Dependencies, "config"> &
         if (!req.headers.get("content-type")?.toLowerCase().startsWith("application/json")) return json({ error: "Invalid setup request." }, 415);
         const origin = req.headers.get("origin");
         const site = req.headers.get("sec-fetch-site");
-        if ((origin && origin !== webOrigin(req)) || (site && site !== "same-origin" && site !== "none")) return json({ error: "Open bot setup from Merrymen." }, 403);
+        if ((origin && origin !== webOrigin(req)) || (site && site !== "same-origin" && site !== "none")) return json({ error: "Open bot setup from AgentCap." }, 403);
         let value: unknown;
         try { value = await boundedJson(req); } catch { return json({ error: "Invalid setup request." }, 400); }
         const body = value as { owner?: unknown; action?: unknown; intentId?: unknown; botId?: unknown } | null;
@@ -460,7 +460,7 @@ export function createTelegramHandlers(overrides: Pick<Dependencies, "config"> &
             // the chat with nothing said; one made with no setup underway is
             // answered with why nothing happened. Each is said once: both
             // outcomes come only from the update's first delivery, and a send
-            // that fails is not retried, since Merrymen's page still offers it.
+            // that fails is not retried, since AgentCap's page still offers it.
             const result = await store.candidate({ kind: "managed_bot_created", managerBotId, updateId: Number(update.update_id), telegramUserId: userId, botId: bot.id, username: bot.username, messageDate: date, now });
             if (result.outcome === "candidate") return { kind: "notice" as const, notice: managerNotices.ready(bot, result.intentId), what: "Connect" };
             if (result.outcome === "unmatched") return { kind: "notice" as const, notice: managerNotices.unmatched(bot.username, home()), what: "unmatched setup" };

@@ -24,7 +24,7 @@
  * (flow-inference.ts heldBreakerObservationUsdg), and `buyVerdict` asks the
  * real checkPolicy what index.ts's executor would, against the same peak.
  *
- * MERRYMEN_HOME is set before any store import runs getDb(); node's --test runs
+ * AGENTCAP_HOME is set before any store import runs getDb(); node's --test runs
  * each file in its own process, so the override never leaks.
  */
 import assert from "node:assert/strict";
@@ -34,13 +34,13 @@ import os from "node:os";
 import path from "node:path";
 import { encodeAbiParameters, encodeEventTopics, parseAbi, type Hex } from "viem";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-flow-inference-"));
-process.env.MERRYMEN_HOME = HOME;
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-flow-inference-"));
+process.env.AGENTCAP_HOME = HOME;
 
 const store = await import("./store");
 const { homePaths } = await import("./home");
 const { DatabaseSync } = await import("node:sqlite");
-const { CASH, ENERGY_ROUTE_V1, MERRYMEN_TOKEN, VIRTUAL_TOKEN } = await import("../../packages/core/src/index");
+const { CASH, ENERGY_ROUTE_V1, AGENTCAP_TOKEN, VIRTUAL_TOKEN } = await import("../../packages/core/src/index");
 const { TRANSFER_TOPIC } = await import("./deposit-log");
 const { isEnergyRow, settleEnergyLanding, settleTransferLanding } = await import("./energy-settle");
 const { attributeSettlements, expectedCashUsdg, heldBreakerObservationUsdg, lookAtCash, opsHoldInference, settlementDelta, STRANDED_RESOLVE_WINDOW_SEC, wroteSince } = await import("./flow-inference");
@@ -58,7 +58,7 @@ type Settlement = import("./flow-inference").Settlement;
 const ACCOUNT = "0x00000000000000000000000000000000000e0e07";
 const OWNER = "0x00000000000000000000000000000000000000ff";
 const USDG = (CASH.USDG as string).toLowerCase();
-const MERRY = MERRYMEN_TOKEN.address.toLowerCase();
+const MERRY = AGENTCAP_TOKEN.address.toLowerCase();
 const STOCK = "0x000000000000000000000000000000000000aa01";
 const PAIR_A = "0x00000000000000000000000000000000000000b1";
 const PAIR_B = "0x00000000000000000000000000000000000000b2";

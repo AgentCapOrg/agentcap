@@ -5,10 +5,10 @@
  * Three owners: one with both wallets, one with only a Perps wallet, one with
  * only Spot. Driven over the file-backed stores and the no-op lease, the
  * worker process replaced by a fake (setSpawnForTest) and every lease request
- * recorded. MERRYMEN_PERPS is set per test: unset, off and live start nothing
+ * recorded. AGENTCAP_PERPS is set per test: unset, off and live start nothing
  * Perps at all; only `paper` spawns a Perps worker.
  *
- * MERRYMEN_HOME and the environment are per process (node --test runs each
+ * AGENTCAP_HOME and the environment are per process (node --test runs each
  * file in its own), so nothing here leaks into another file.
  */
 import assert from "node:assert/strict";
@@ -21,17 +21,17 @@ import type { ChildProcess, SpawnOptions } from "node:child_process";
 import { privateKeyToAccount } from "viem/accounts";
 import type { StoredGrant } from "../../packages/core/src/index";
 
-const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-perps-slot-")));
-process.env.MERRYMEN_HOME = fleet;
-process.env.MERRYMEN_HOSTED = "1";
+const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-perps-slot-")));
+process.env.AGENTCAP_HOME = fleet;
+process.env.AGENTCAP_HOSTED = "1";
 delete process.env.DATABASE_URL;
-delete process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS;
-delete process.env.MERRYMEN_FLEET_RECOVERY_REPORT_ONLY;
-delete process.env.MERRYMEN_PERSISTENT_HOME_REQUIRED;
-delete process.env.MERRYMEN_FLEET_ROLLOUT;
-delete process.env.MERRYMEN_PERPS;
+delete process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS;
+delete process.env.AGENTCAP_FLEET_RECOVERY_REPORT_ONLY;
+delete process.env.AGENTCAP_PERSISTENT_HOME_REQUIRED;
+delete process.env.AGENTCAP_FLEET_ROLLOUT;
+delete process.env.AGENTCAP_PERPS;
 for (const key of Object.keys(process.env)) if (key.startsWith("RAILWAY_")) delete process.env[key];
-process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 41).toString("base64");
+process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 41).toString("base64");
 
 const {
   childEnv, childHome, hasLeaseForTest, honourFleetHalt, honourPendingKills, mirrorLoginPausesForTest, perpsFeedMarketsForTest, reconcile,
@@ -124,7 +124,7 @@ const realLog = console.log;
 console.log = (...a: unknown[]) => { said.push(a.map(String).join(" ")); };
 const settle = async (n = 30) => { for (let i = 0; i < n; i++) await new Promise((r) => setImmediate(r)); };
 const spotStore = getGrantStore("spot"), perpsStore = getGrantStore("perps");
-const spawnedFor = (tenant: string) => spawned.filter((p) => p.env.MERRYMEN_HOME === childHome(tenant));
+const spawnedFor = (tenant: string) => spawned.filter((p) => p.env.AGENTCAP_HOME === childHome(tenant));
 const running = (tenant: string) => spawnedFor(tenant).filter((p) => !p.gone);
 const readJson = (file: string) => JSON.parse(readFileSync(file, "utf8")) as Record<string, unknown>;
 
@@ -150,10 +150,10 @@ after(() => {
   rmSync(fleet, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
 });
 beforeEach(() => {
-  delete process.env.MERRYMEN_PERPS;
+  delete process.env.AGENTCAP_PERPS;
 });
 afterEach(async () => {
-  delete process.env.MERRYMEN_FLEET_ROLLOUT;
+  delete process.env.AGENTCAP_FLEET_ROLLOUT;
   rmSync(path.join(fleet, "FLEET_HALT"), { force: true });
   for (const owner of [BOTH, PERPS_ONLY, SPOT_ONLY]) {
     await spotStore.remove(owner);
@@ -175,18 +175,18 @@ afterEach(async () => {
   said.length = 0;
 });
 
-describe("with MERRYMEN_PERPS unset, off or live, nothing Perps happens", () => {
+describe("with AGENTCAP_PERPS unset, off or live, nothing Perps happens", () => {
   for (const value of [undefined, "off", "live", "paper-ish"]) {
-    it(`MERRYMEN_PERPS=${value ?? "(unset)"}: Spot workers only — no Perps lease, spawn, home or feed`, async () => {
+    it(`AGENTCAP_PERPS=${value ?? "(unset)"}: Spot workers only — no Perps lease, spawn, home or feed`, async () => {
       await fleetOfThree();
-      if (value !== undefined) process.env.MERRYMEN_PERPS = value;
+      if (value !== undefined) process.env.AGENTCAP_PERPS = value;
       for (let pass = 0; pass < 2; pass++) {
         await reconcile();
         await refreshPerpsFeedForTest();
         await settle();
       }
-      assert.deepEqual(spawned.map((p) => p.env.MERRYMEN_HOME).sort(), [childHome(BOTH), childHome(SPOT_ONLY)].sort());
-      assert.ok(spawned.every((p) => p.env.MERRYMEN_WALLET_PURPOSE === "spot"));
+      assert.deepEqual(spawned.map((p) => p.env.AGENTCAP_HOME).sort(), [childHome(BOTH), childHome(SPOT_ONLY)].sort());
+      assert.ok(spawned.every((p) => p.env.AGENTCAP_WALLET_PURPOSE === "spot"));
       assert.ok(!leaseAsks.some((t) => t.endsWith(":perps")), `no Perps lease: ${leaseAsks.join(", ")}`);
       assert.equal(existsSync(path.join(fleet, "children-perps")), false, "no Perps home is made");
       assert.equal(perpsFeedMarketsForTest(), null, "no feed is even built");
@@ -199,7 +199,7 @@ describe("with MERRYMEN_PERPS unset, off or live, nothing Perps happens", () => 
 
   it("a Spot-only fleet at paper reads the Perps store and makes nothing of it", async () => {
     await spotStore.put(SPOT_ONLY, grant(SPOT_ONLY, accountOf(SPOT_ONLY, "spot")));
-    process.env.MERRYMEN_PERPS = "paper";
+    process.env.AGENTCAP_PERPS = "paper";
     await reconcile();
     await refreshPerpsFeedForTest();
     await settle();
@@ -208,13 +208,13 @@ describe("with MERRYMEN_PERPS unset, off or live, nothing Perps happens", () => 
   });
 });
 
-describe("at MERRYMEN_PERPS=paper, a login's Perps worker", () => {
+describe("at AGENTCAP_PERPS=paper, a login's Perps worker", () => {
   it("SPAWNS in its own home, as its wallet's, after every Spot worker, with its own grant and settings and nothing of the bot", async () => {
     await fleetOfThree();
-    process.env.MERRYMEN_PERPS = "paper";
+    process.env.AGENTCAP_PERPS = "paper";
     await reconcile();
     await settle();
-    const homes = spawned.map((p) => p.env.MERRYMEN_HOME);
+    const homes = spawned.map((p) => p.env.AGENTCAP_HOME);
     assert.equal(homes.length, 4);
     assert.deepEqual(homes.slice(2).sort(), [childHome(perpsKey(BOTH)), childHome(perpsKey(PERPS_ONLY))].sort(), "the Perps workers go last");
     for (const owner of [BOTH, PERPS_ONLY]) {
@@ -222,11 +222,11 @@ describe("at MERRYMEN_PERPS=paper, a login's Perps worker", () => {
       assert.equal(home, path.join(fleet, "children-perps", owner));
       const [proc] = spawnedFor(perpsKey(owner));
       assert.ok(proc, `${owner}'s Perps worker started`);
-      assert.equal(proc.env.MERRYMEN_WALLET_PURPOSE, "perps");
-      assert.equal(proc.env.MERRYMEN_TENANT, owner);
-      assert.equal(proc.env.MERRYMEN_TG_GROUPS, "0");
-      assert.equal(proc.env.MERRYMEN_GRANT_FILE, path.join(home, "grant.json"));
-      assert.equal(proc.env.MERRYMEN_STORE_DEK, undefined);
+      assert.equal(proc.env.AGENTCAP_WALLET_PURPOSE, "perps");
+      assert.equal(proc.env.AGENTCAP_TENANT, owner);
+      assert.equal(proc.env.AGENTCAP_TG_GROUPS, "0");
+      assert.equal(proc.env.AGENTCAP_GRANT_FILE, path.join(home, "grant.json"));
+      assert.equal(proc.env.AGENTCAP_STORE_DEK, undefined);
       assert.deepEqual(proc.stdio, ["ignore", "pipe", "pipe"], "no IPC channel");
       const g = readJson(path.join(home, "grant.json"));
       assert.equal(g.smartAccount, accountOf(owner, "perps"), "its own wallet's grant");
@@ -248,7 +248,7 @@ describe("at MERRYMEN_PERPS=paper, a login's Perps worker", () => {
 
   it("is published ONE public feed for the replica, over what its Perps workers want", async () => {
     await fleetOfThree();
-    process.env.MERRYMEN_PERPS = "paper";
+    process.env.AGENTCAP_PERPS = "paper";
     await reconcile();
     await settle();
     await refreshPerpsFeedForTest();
@@ -265,7 +265,7 @@ describe("at MERRYMEN_PERPS=paper, a login's Perps worker", () => {
 
   it("PAUSES with its owner: the Spot home's pause is mirrored in, and /resume lifts it", async () => {
     await fleetOfThree();
-    process.env.MERRYMEN_PERPS = "paper";
+    process.env.AGENTCAP_PERPS = "paper";
     await reconcile();
     await settle();
     const mine = path.join(childHome(perpsKey(BOTH)), "paused");
@@ -279,9 +279,9 @@ describe("at MERRYMEN_PERPS=paper, a login's Perps worker", () => {
     // And the operator's rollout narrows it as its owner: the level a Perps
     // worker is started at is its owner's, and one the rollout does not name
     // is held with its owner.
-    process.env.MERRYMEN_FLEET_ROLLOUT = `${BOTH}:exits-only,${SPOT_ONLY}:trade`;
-    assert.equal(childEnv(perpsKey(BOTH)).MERRYMEN_ADMISSION_LEVEL, "exits-only");
-    assert.equal(childEnv(BOTH).MERRYMEN_ADMISSION_LEVEL, "exits-only");
+    process.env.AGENTCAP_FLEET_ROLLOUT = `${BOTH}:exits-only,${SPOT_ONLY}:trade`;
+    assert.equal(childEnv(perpsKey(BOTH)).AGENTCAP_ADMISSION_LEVEL, "exits-only");
+    assert.equal(childEnv(BOTH).AGENTCAP_ADMISSION_LEVEL, "exits-only");
     await reconcile();
     await settle();
     assert.equal(running(perpsKey(PERPS_ONLY)).length, 0, "an owner the rollout does not name is held, Perps worker and all");
@@ -290,7 +290,7 @@ describe("at MERRYMEN_PERPS=paper, a login's Perps worker", () => {
 
   it("A KILL FROM THE OWNER'S SPOT BOT stops both wallets, and stands the Perps worker down before the ✅", async () => {
     await fleetOfThree();
-    process.env.MERRYMEN_PERPS = "paper";
+    process.env.AGENTCAP_PERPS = "paper";
     await reconcile();
     await settle();
     const perps = running(perpsKey(BOTH));
@@ -314,7 +314,7 @@ describe("at MERRYMEN_PERPS=paper, a login's Perps worker", () => {
 
   it("A KILL SITTING IN THE PERPS HOME is its owner's whole kill, said as the Perps wallet's", async () => {
     await fleetOfThree();
-    process.env.MERRYMEN_PERPS = "paper";
+    process.env.AGENTCAP_PERPS = "paper";
     await reconcile();
     await settle();
     writeKillRequest(childHome(perpsKey(PERPS_ONLY)), await perpsStore.get(PERPS_ONLY) as StoredGrant, nowSec());
@@ -336,7 +336,7 @@ describe("at MERRYMEN_PERPS=paper, a login's Perps worker", () => {
 
   it("a Perps grant signed after an old kill arms: the other home's request latches only what it covers", async () => {
     await fleetOfThree();
-    process.env.MERRYMEN_PERPS = "paper";
+    process.env.AGENTCAP_PERPS = "paper";
     await reconcile();
     await settle();
     writeKillRequest(childHome(BOTH), await spotStore.get(BOTH) as StoredGrant, nowSec());
@@ -361,7 +361,7 @@ describe("at MERRYMEN_PERPS=paper, a login's Perps worker", () => {
 
   it("A PERPS-ONLY STOP leaves the Spot worker exactly as it was", async () => {
     await fleetOfThree();
-    process.env.MERRYMEN_PERPS = "paper";
+    process.env.AGENTCAP_PERPS = "paper";
     await reconcile();
     await settle();
     const spot = running(BOTH);
@@ -374,13 +374,13 @@ describe("at MERRYMEN_PERPS=paper, a login's Perps worker", () => {
     assert.equal(running(BOTH).length, 1);
   });
 
-  it("STANDS DOWN when MERRYMEN_PERPS leaves paper, keeps its grant and book, and comes back when it returns", async () => {
+  it("STANDS DOWN when AGENTCAP_PERPS leaves paper, keeps its grant and book, and comes back when it returns", async () => {
     await fleetOfThree();
-    process.env.MERRYMEN_PERPS = "paper";
+    process.env.AGENTCAP_PERPS = "paper";
     await reconcile();
     await settle();
     assert.equal(running(perpsKey(PERPS_ONLY)).length, 1);
-    process.env.MERRYMEN_PERPS = "off";
+    process.env.AGENTCAP_PERPS = "off";
     await reconcile();
     await settle();
     await reconcile();
@@ -390,7 +390,7 @@ describe("at MERRYMEN_PERPS=paper, a login's Perps worker", () => {
     assert.ok(await perpsStore.get(PERPS_ONLY), "its grant is kept");
     assert.equal(existsSync(childHome(perpsKey(PERPS_ONLY))), true, "and its home");
     assert.equal(hasLeaseForTest(perpsKey(PERPS_ONLY) as `0x${string}`), false, "its lease is given back");
-    process.env.MERRYMEN_PERPS = "paper";
+    process.env.AGENTCAP_PERPS = "paper";
     await reconcile();
     await settle();
     assert.equal(running(perpsKey(PERPS_ONLY)).length, 1, "and it comes back");
@@ -398,7 +398,7 @@ describe("at MERRYMEN_PERPS=paper, a login's Perps worker", () => {
 
   it("AN UNREADABLE PERPS STORE IS NOT AN EMPTY ONE: every Perps worker is kept as it is", async () => {
     await fleetOfThree();
-    process.env.MERRYMEN_PERPS = "paper";
+    process.env.AGENTCAP_PERPS = "paper";
     await reconcile();
     await settle();
     const before = running(perpsKey(PERPS_ONLY));
@@ -419,7 +419,7 @@ describe("at MERRYMEN_PERPS=paper, a login's Perps worker", () => {
 
   it("is never a recorded tenant of its own: nothing is mkdir'd under children/ for it, and its key never reaches an owner-keyed name", async () => {
     await fleetOfThree();
-    process.env.MERRYMEN_PERPS = "paper";
+    process.env.AGENTCAP_PERPS = "paper";
     await reconcile();
     await settle();
     const names = existsSync(path.join(fleet, "children")) ? readdirSync(path.join(fleet, "children")) : [];

@@ -1,7 +1,7 @@
 /**
  * THE ENERGY RESERVE NEVER ENTERS THE WATCH SET.
  *
- * $MERRYMEN in the agent's account is energy, not a position. Everything that
+ * $AGENTCAP in the agent's account is energy, not a position. Everything that
  * reads positions is built from the watch set, so this one exclusion is what
  * keeps the reserve out of all of them:
  *
@@ -22,17 +22,17 @@ import { describe, it } from "node:test";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { MERRYMEN_TOKEN, STOCK_TOKENS, energyReserveTokens } from "../../packages/core/src/index";
+import { AGENTCAP_TOKEN, STOCK_TOKENS, energyReserveTokens } from "../../packages/core/src/index";
 import { watchTokensFor } from "./strategies/registry";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const MERRYMEN = MERRYMEN_TOKEN.address;
+const AGENTCAP = AGENTCAP_TOKEN.address;
 const shout = (a: string) => `0x${a.slice(2).toUpperCase()}` as `0x${string}`;
 const PEPE = "0x00000000000000000000000000000000000ee0e0" as `0x${string}`;
 
 describe("watchTokensFor never watches the energy reserve", () => {
   it("drops an owner-added custom token whose address is the reserve — in any case", () => {
-    for (const address of [MERRYMEN, shout(MERRYMEN)]) {
+    for (const address of [AGENTCAP, shout(AGENTCAP)]) {
       const set = watchTokensFor([], [
         { symbol: "MERRY", address, decimals: 18 },
         { symbol: "PEPE", address: PEPE, decimals: 18 },
@@ -42,15 +42,15 @@ describe("watchTokensFor never watches the energy reserve", () => {
   });
 
   it("drops an official listing whose address is the reserve — in any case", () => {
-    for (const address of [MERRYMEN, shout(MERRYMEN)]) {
-      const set = watchTokensFor([], [], [{ symbol: "MERRYMEN", name: "Merrymen", address, decimals: 18 }]);
+    for (const address of [AGENTCAP, shout(AGENTCAP)]) {
+      const set = watchTokensFor([], [], [{ symbol: "AGENTCAP", name: "AgentCap", address, decimals: 18 }]);
       assert.equal(set.length, 0, `official ${address}`);
     }
   });
 
-  it("a coin that merely CALLS itself MERRYMEN at another address is not the reserve", () => {
+  it("a coin that merely CALLS itself AGENTCAP at another address is not the reserve", () => {
     // By address, never by symbol — a symbol is whatever a list says it is.
-    const set = watchTokensFor([], [{ symbol: "MERRYMEN", address: PEPE, decimals: 18 }]);
+    const set = watchTokensFor([], [{ symbol: "AGENTCAP", address: PEPE, decimals: 18 }]);
     assert.deepEqual(set.map((t) => t.address), [PEPE]);
   });
 
@@ -61,7 +61,7 @@ describe("watchTokensFor never watches the energy reserve", () => {
   });
 
   it("the reserve this test excludes is the one core names for mainnet", () => {
-    assert.deepEqual(energyReserveTokens(4663), [MERRYMEN.toLowerCase()]);
+    assert.deepEqual(energyReserveTokens(4663), [AGENTCAP.toLowerCase()]);
   });
 
   it("the exclusion is by address, with no mode parameter — the asset-mode invariant holds", () => {

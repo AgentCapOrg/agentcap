@@ -387,9 +387,9 @@ describe("addressedHow", () => {
     ["curly apostrophe owner", "pine’s owner said hi", "Pine Heron", null],
     ["<full name>'s human", "Pine Heron's human is here", "Pine Heron", null],
     ["the owner label and the name both", "pine's owner is here. pine, you there?", "Pine Heron", "name"],
-    ["merryman", "merryman what's good", "Pine Heron", "name"],
-    ["merryman's owner", "merryman's owner is cool", "Pine Heron", null],
-    ["merrymen is the product", "merrymen are cool", "Pine Heron", null],
+    ["agentcapavatar", "agentcapavatar what's good", "Pine Heron", "name"],
+    ["agentcapavatar's owner", "agentcapavatar's owner is cool", "Pine Heron", null],
+    ["agentcap is the product", "agentcap are cool", "Pine Heron", null],
     ["another agent's name", "amber heron what's up", "Pine Heron", null],
     ["zero-width space inside is ignored", "pi​ne what's up", "Pine Heron", "name"],
     // unicode names
@@ -482,7 +482,7 @@ describe("addressedHow", () => {
   it("is not addressed by an empty line or an empty name", () => {
     assert.equal(addressedHow({ text: "" }, self), null);
     assert.equal(addressedHow({ text: "pine" }, { ...self, name: "" }), null);
-    assert.equal(addressedHow({ text: "merryman" }, { ...self, name: "" }), "name");
+    assert.equal(addressedHow({ text: "agentcapavatar" }, { ...self, name: "" }), "name");
   });
 
   it("gives the same answer on repeated calls (the pattern cache changes speed only)", () => {
@@ -517,11 +517,11 @@ describe("greetingOf", () => {
     ["gm frens", "gm"], ["good morning", "gm"], ["good morning everyone!", "gm"], ["goood morning", "gm"],
     ["gud morning", "gm"], ["morning all", "gm"], ["morning", "gm"], ["hey gm", "gm"],
     ["ｇｍ", "gm"], ["☀️ gm ☀️", "gm"], ["gm, have a good one", "gm"], ["gn, sleep well", "gn"],
-    // A gm that opens a message is the message: "gm merryman thoughts on eth?" is a question.
-    ["gm what's the play", null], ["gm guys what's the play", null], ["gm merryman thoughts on eth?", null],
-    ["gm merryman any plays today?", null], ["good morning, anyone watching pepe", null], ["gn, sold it all", null],
+    // A gm that opens a message is the message: "gm agentcapavatar thoughts on eth?" is a question.
+    ["gm what's the play", null], ["gm guys what's the play", null], ["gm agentcapavatar thoughts on eth?", null],
+    ["gm agentcapavatar any plays today?", null], ["good morning, anyone watching pepe", null], ["gn, sold it all", null],
     // A name is not filler: said to it, "gm pine" is small talk (addressedSmallTalk reads its names).
-    ["gm pine", null], ["gm merryman", null],
+    ["gm pine", null], ["gm agentcapavatar", null],
     ["gn", "gn"], ["gn frens", "gn"], ["good night", "gn"], ["goodnight all", "gn"], ["nighty night", "gn"],
     ["night all", "gn"], ["gnight", "gn"], ["gn8", "gn"], ["g’night", "gn"], ["night", "gn"],
     ["gm is a meme and nobody knows why", null], ["good", null], ["night trading is wild", null],
@@ -640,11 +640,11 @@ describe("insultLevel: insult, tease, none", () => {
 });
 
 describe("insultLevel: the bot in the third person, and by its own names", () => {
-  // Said about it rather than to it: "merryman is trash" was read as nothing,
+  // Said about it rather than to it: "agentcapavatar is trash" was read as nothing,
   // so it got a normal answer (or "fair point") instead of a roast.
   const third = [
-    "merryman is trash", "merryman sucks", "merryman is an idiot", "merryman is a clown", "merryman is the worst",
-    "bot is useless", "ai sucks", "robot is so dumb", "the agent is useless", "lol merryman stinks",
+    "agentcapavatar is trash", "agentcapavatar sucks", "agentcapavatar is an idiot", "agentcapavatar is a clown", "agentcapavatar is the worst",
+    "bot is useless", "ai sucks", "robot is so dumb", "the agent is useless", "lol agentcapavatar stinks",
   ];
   for (const t of third) it(`insult: ${t}`, () => assert.equal(insultLevel(t), "insult"));
 
@@ -652,12 +652,12 @@ describe("insultLevel: the bot in the third person, and by its own names", () =>
   const notIt = ["my bot is trash", "slot machine sucks", "that bot sucks", "a bot is only as good as its data", "his agent is useless"];
   for (const t of notIt) it(`none: ${t}`, () => assert.equal(insultLevel(t), "none"));
 
-  // Teased about rather than to: "merryman is cooked" read as nothing, so with
+  // Teased about rather than to: "agentcapavatar is cooked" read as nothing, so with
   // no model the answer pool agreed with it ("true true").
-  const teased = ["merryman is cooked", "merryman is mid", "merryman's washed", "this bot is so slow", "L merryman", "l bot lol", "the ai is kinda mid"];
+  const teased = ["agentcapavatar is cooked", "agentcapavatar is mid", "agentcapavatar's washed", "this bot is so slow", "L agentcapavatar", "l bot lol", "the ai is kinda mid"];
   for (const t of teased) it(`tease: ${t}`, () => assert.equal(insultLevel(t), "tease"));
   it("insult: this bot is ass", () => assert.equal(insultLevel("this bot is ass"), "insult"));
-  const praised = ["merryman is cooking", "merryman is based", "my bot is mid", "that bot is cooked lol"];
+  const praised = ["agentcapavatar is cooking", "agentcapavatar is based", "my bot is mid", "that bot is cooked lol"];
   for (const t of praised) it(`none: ${t}`, () => assert.equal(insultLevel(t), "none"));
 
   const self: BotSelf = { id: 777, username: "PineBot", name: "Pine Heron", aliases: ["Robinhoodie"] };
@@ -705,8 +705,8 @@ describe("insultLevel: the bot in the third person, and by its own names", () =>
 
 describe("insultAtBot: an insult whose target is a bot word", () => {
   const yes = [
-    "stupid bot lol", "this ai is trash", "clanker", "merryman sucks", "dumb ass robot", "bot moment", "ok bot", "sure bot", "shut up bot",
-    "this bot is mid", "merryman is cooked", "L bot", "this bot is ass",
+    "stupid bot lol", "this ai is trash", "clanker", "agentcapavatar sucks", "dumb ass robot", "bot moment", "ok bot", "sure bot", "shut up bot",
+    "this bot is mid", "agentcapavatar is cooked", "L bot", "this bot is ass",
   ];
   const no = ["you idiot", "ur trash", "this coin is trash", "that dev is an idiot", "lol", "", "my bot sucks"];
   for (const t of yes) it(`at a bot: ${t}`, () => assert.equal(insultAtBot(t), true));
@@ -763,27 +763,27 @@ describe("isPrivateAsk", () => {
     // how much it would put in, in any unit: a size, whatever it is priced in
     "@pine how much sol would you ape into this?", "how much would you put in", "how much eth do you have",
     // how it is doing, however it goes on
-    "merryman are you up?", "are you down bad", "are you up for the week?", "are you down to your last usdg",
+    "agentcapavatar are you up?", "are you down bad", "are you up for the week?", "are you down to your last usdg",
   ];
   const no = [
     "what are you holding?", "what do you think of this coin", "nice wallet", "my wallet is empty", "how much is eth",
     "tell your owner hi", "who's up?", "", "your trades are trash", "your performance today was great",
     // willing, not how it is doing
-    "merryman are you down to look at this chart with me", "are you up for a chat?", "r u down to roast mike",
+    "agentcapavatar are you down to look at this chart with me", "are you up for a chat?", "r u down to roast mike",
   ];
   for (const t of yes) it(`private: ${t}`, () => assert.equal(isPrivateAsk(t), true));
   for (const t of no) it(`not private: ${JSON.stringify(t)}`, () => assert.equal(isPrivateAsk(t), false));
 });
 
 describe("addressedSmallTalk", () => {
-  const self: BotSelf = { id: 777, username: "PineBot", name: "Pine Heron", aliases: ["Merryman", "Will Scarlet"] };
+  const self: BotSelf = { id: 777, username: "PineBot", name: "Pine Heron", aliases: ["AgentCapAvatar", "Will Scarlet"] };
   const names = selfNamesOf(self);
   const cases: Array<[string, ReturnType<typeof addressedSmallTalk>]> = [
     // what was answered "good question, no idea" before
-    ["Hey there Merryman…", "hail"],
-    ["hi merryman 👋", "hail"],
-    ["thanks merryman!", "thanks"],
-    ["merryman gm", "gm"],
+    ["Hey there AgentCapAvatar…", "hail"],
+    ["hi agentcapavatar 👋", "hail"],
+    ["thanks agentcapavatar!", "thanks"],
+    ["agentcapavatar gm", "gm"],
     ["@pinebot hi", "hail"],
     ["@PineBot hey", "hail"],
     ["@pinebot helloooo", "hail"],
@@ -794,26 +794,26 @@ describe("addressedSmallTalk", () => {
     ["hey heron", "hail"],
     ["thanks heron!", "thanks"],
     ["gm scarlet", "gm"],
-    ["hey there, how are you doing merryman", "hail"],
+    ["hey there, how are you doing agentcapavatar", "hail"],
     ["@pinebot", "hail"],
-    ["merryman?", "hail"],
+    ["agentcapavatar?", "hail"],
     ["ty pine", "thanks"],
     ["thank you so much pine", "thanks"],
-    ["appreciate it merryman 🙏", "thanks"],
-    ["good morning merryman", "gm"],
-    ["gn merryman, sleep well", "gn"],
-    ["gm merryman", "gm"],
+    ["appreciate it agentcapavatar 🙏", "thanks"],
+    ["good morning agentcapavatar", "gm"],
+    ["gn agentcapavatar, sleep well", "gn"],
+    ["gm agentcapavatar", "gm"],
     ["gm pine", "gm"],
-    ["gm merryman thoughts on eth?", null],
+    ["gm agentcapavatar thoughts on eth?", null],
     ["gm pine any plays today", null],
     // a message, not small talk
-    ["hey merryman what do you think of pepe", null],
+    ["hey agentcapavatar what do you think of pepe", null],
     ["@pinebot thoughts?", null],
     ["thanks, bought it", null],
-    ["merryman lol", null],
+    ["agentcapavatar lol", null],
     ["@pinebot answer me", null],
     ["hey pine are you a bot", null],
-    ["hi merryman hi merryman hi hi hi hi hi", null],
+    ["hi agentcapavatar hi agentcapavatar hi hi hi hi hi", null],
     ["", null],
     ["👋", null],
   ];
@@ -821,14 +821,14 @@ describe("addressedSmallTalk", () => {
 
   it("without its names, a name is a word that makes the line a message", () => {
     assert.equal(addressedSmallTalk("yo pine"), null);
-    assert.equal(addressedSmallTalk("hi merryman 👋"), "hail", "merryman is always a name for it");
+    assert.equal(addressedSmallTalk("hi agentcapavatar 👋"), "hail", "agentcapavatar is always a name for it");
     assert.equal(addressedSmallTalk(5 as never), null);
   });
 });
 
 describe("asksHowItIs", () => {
-  const yes = ["hey merryman how are you", "@pinebot you there?", "sup pine", "what's up merryman", "how's it going", "wyd"];
-  const no = ["hi merryman 👋", "hey there", "thanks", "gm", ""];
+  const yes = ["hey agentcapavatar how are you", "@pinebot you there?", "sup pine", "what's up agentcapavatar", "how's it going", "wyd"];
+  const no = ["hi agentcapavatar 👋", "hey there", "thanks", "gm", ""];
   for (const t of yes) it(`asks: ${t}`, () => assert.equal(asksHowItIs(t), true));
   for (const t of no) it(`does not ask: ${JSON.stringify(t)}`, () => assert.equal(asksHowItIs(t), false));
 });
@@ -836,10 +836,10 @@ describe("asksHowItIs", () => {
 describe("isQuestionShaped", () => {
   const names = ["Pine Heron", "@PineBot"];
   const yes = [
-    "@pinebot thoughts?", "merryman what do you think", "pine heron why is it dumping", "lol what", "ok so why",
+    "@pinebot thoughts?", "agentcapavatar what do you think", "pine heron why is it dumping", "lol what", "ok so why",
     "should i buy this", "is it any good", "@pinebot thoughts", "robin what do you think", "do you like frogs",
   ];
-  const no = ["i know what you did", "@pinebot you're cool", "pine is cooking today", "merryman lol", "@pinebot one", "", "hey"];
+  const no = ["i know what you did", "@pinebot you're cool", "pine is cooking today", "agentcapavatar lol", "@pinebot one", "", "hey"];
   for (const t of yes) it(`question: ${t}`, () => assert.equal(isQuestionShaped(t, names), true));
   for (const t of no) it(`not a question: ${JSON.stringify(t)}`, () => assert.equal(isQuestionShaped(t, names), false));
 });
@@ -1054,7 +1054,7 @@ describe("deskNameOk / routeWorthy (route.ts checks a model's pick with these)",
     assert.equal(deskNameOk("x"), null);
     assert.equal(deskNameOk("420"), null);
     assert.equal(deskNameOk("Shogun", ["shogun"]), null);
-    assert.equal(deskNameOk("@merrymanme_bot", ["@merrymanme_bot"]), null);
+    assert.equal(deskNameOk("@agentcapavatarme_bot", ["@agentcapavatarme_bot"]), null);
     assert.equal(deskNameOk(42), null);
   });
 
@@ -1088,9 +1088,9 @@ describe("reactionOnly", () => {
 });
 
 describe("consents and offerShaped: a yes under its own offer (live 2026-10-07)", () => {
-  const self = ["shogun", "merrymanme_bot"];
+  const self = ["shogun", "agentcapavatarme_bot"];
   it("a plain yes, however it is said, names in or out", () => {
-    for (const t of ["do it", "yes", "go", "send it", "pls", "sure", "yep", "yes pls", "ok", "bet", "go ahead", "yes do it", "pull it", "ya", "shogun do it", "@Merrymanme_bot yes please", "ok do it!", "yes.", "k", "yeah go for it"]) {
+    for (const t of ["do it", "yes", "go", "send it", "pls", "sure", "yep", "yes pls", "ok", "bet", "go ahead", "yes do it", "pull it", "ya", "shogun do it", "@AgentCapAvatarme_bot yes please", "ok do it!", "yes.", "k", "yeah go for it"]) {
       assert.equal(consents(t, self), true, t);
     }
   });
@@ -1110,9 +1110,9 @@ describe("consents and offerShaped: a yes under its own offer (live 2026-10-07)"
 });
 
 describe("a bare 'what's trending' (decision D1, 2026-10-07)", () => {
-  const self = ["shogun", "merrymanme_bot"];
+  const self = ["shogun", "agentcapavatarme_bot"];
   it("is a market ask marked trending: Fomo's board where Fomo is wired, the desk otherwise", () => {
-    for (const t of ["what's trending", "shogun what's trending", "whats trending today?", "what is trending rn", "@Merrymanme_bot what's trending?"]) {
+    for (const t of ["what's trending", "shogun what's trending", "whats trending today?", "what is trending rn", "@AgentCapAvatarme_bot what's trending?"]) {
       assert.deepEqual(deskAskOf(t, self), { kind: "market", trending: true }, t);
     }
   });
@@ -1124,7 +1124,7 @@ describe("a bare 'what's trending' (decision D1, 2026-10-07)", () => {
 });
 
 describe("metaLineOf: a line about its own silence (live 2026-10-07)", () => {
-  const self = ["shogun", "merrymanme_bot"];
+  const self = ["shogun", "agentcapavatarme_bot"];
   const rows: Array<[string, "complaint" | "poke" | "name-only"]> = [
     ["i asked a question", "complaint"], ["I asked a question", "complaint"], ["shogun i asked you a question", "complaint"],
     ["you didn't answer", "complaint"], ["you didnt answer me", "complaint"], ["u never answered", "complaint"], ["answer me", "complaint"],
@@ -1132,7 +1132,7 @@ describe("metaLineOf: a line about its own silence (live 2026-10-07)", () => {
     ["still waiting", "complaint"], ["i'm still waiting on it", "complaint"], ["where's my answer", "complaint"],
     ["hello??", "poke"], ["hello?", "poke"], ["?", "poke"], ["??", "poke"], ["？", "poke"], ["you there?", "poke"], ["shogun you there?", "poke"],
     ["done?", "poke"], ["well?", "poke"], ["and?", "poke"], ["shogun?", "poke"], ["bro??", "poke"],
-    ["shogun", "name-only"], ["@Merrymanme_bot", "name-only"],
+    ["shogun", "name-only"], ["@AgentCapAvatarme_bot", "name-only"],
   ];
   for (const [t, want] of rows) it(`${want}: ${JSON.stringify(t)}`, () => assert.equal(metaLineOf(t, self), want));
   const no = [

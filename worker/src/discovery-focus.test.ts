@@ -12,7 +12,7 @@ const pool = (n: number, createdAt: number, volume24hUsd = 200_000): GeckoPool =
 } as GeckoPool);
 
 test("discovery preference is per-agent and default ordering remains unchanged", () => {
-  assert.equal(mergeSettings({}, { MERRYMEN_DISCOVERY_FOCUS: "new-projects" }).discoveryFocus, "balanced");
+  assert.equal(mergeSettings({}, { AGENTCAP_DISCOVERY_FOCUS: "new-projects" }).discoveryFocus, "balanced");
   assert.equal(mergeSettings({ discoveryFocus: "new-projects" }, {}).discoveryFocus, "new-projects");
   assert.equal(mergeSettings({ discoveryFocus: "anything" as never }, {}).discoveryFocus, "balanced");
   const now = 1_000_000, old = pool(1, now - 300_000, 1_000_000), fresh = pool(2, now - 1000);

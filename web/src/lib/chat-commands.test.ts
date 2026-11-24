@@ -17,7 +17,7 @@ import { join } from "node:path";
 import { describe, it } from "node:test";
 
 import { CHAT_COMMANDS, COMMAND_IDS, COMMAND_SPEC, commandFor, commandPayload, isComplete, modelArgsFor, splitCommand } from "./chat-commands";
-import { RISK_PROFILES, decodeProposalLink } from "@merrymen/core";
+import { RISK_PROFILES, decodeProposalLink } from "@agentcap/core";
 
 describe("what the model actually says, and what survives it", () => {
   it("A PROPOSAL IS LIFTED OUT AND THE MARKER NEVER REACHES A PERSON", () => {
@@ -428,7 +428,7 @@ describe("the two commands that spend money", () => {
 });
 
 /**
- * GET-ENERGY — the agent buying its own $MERRYMEN with its own USDG.
+ * GET-ENERGY — the agent buying its own $AGENTCAP with its own USDG.
  *
  * A money command the model can propose, so the properties that make that
  * safe are pinned one by one: the model chooses neither the token nor the side,
@@ -442,16 +442,16 @@ describe("get-energy", () => {
   it("GET-ENERGY FIXES ITS OWN TOKEN, SIDE AND PURPOSE — a proposal cannot redirect the spend", () => {
     assert.deepEqual(
       commandPayload(cmd, { symbol: "PEPE", side: "sell", usdgAmount: 30, to: "0xattacker", purpose: "trade" }),
-      { side: "buy", symbol: "MERRYMEN", usdgAmount: 30, purpose: "energy" },
+      { side: "buy", symbol: "AGENTCAP", usdgAmount: 30, purpose: "energy" },
     );
   });
 
   it("THE ENERGY MARKER IS WRITTEN BY THIS CARD ALONE — a buy, a sell or a snipe never carries it, whatever the model sends", () => {
     // The worker routes to the energy buy on this marker and never on the
     // symbol (worker/src/order-gate.ts orderRoute), so no other card may carry
-    // it: a `buy` of MERRYMEN is an ordinary order the worker refuses by name.
+    // it: a `buy` of AGENTCAP is an ordinary order the worker refuses by name.
     for (const id of ["buy", "sell", "snipe"]) {
-      const payload = commandPayload(commandFor(id)!, { symbol: "MERRYMEN", query: "merrymen", usdgAmount: 30, purpose: "energy" });
+      const payload = commandPayload(commandFor(id)!, { symbol: "AGENTCAP", query: "agentcap", usdgAmount: 30, purpose: "energy" });
       assert.equal("purpose" in payload, false, id);
     }
     const carriers = CHAT_COMMANDS.filter((c) => (c.writes ?? []).includes("purpose")).map((c) => c.id);
@@ -465,7 +465,7 @@ describe("get-energy", () => {
 
   it("A PROPOSAL WITH NO AMOUNT IS NOT ONE — never a number the owner did not give", () => {
     assert.equal(isComplete(cmd, {}), false);
-    assert.equal(isComplete(cmd, { symbol: "MERRYMEN" }), false);
+    assert.equal(isComplete(cmd, { symbol: "AGENTCAP" }), false);
     assert.equal(isComplete(cmd, { usdgAmount: 30 }), true);
     const { command } = splitCommand("Right.\n<<CMD get-energy {}>>");
     assert.equal(command, undefined);
@@ -495,18 +495,18 @@ describe("get-energy", () => {
     // "price movement" is the size's small margin over the shortfall (the
     // quote can move before the fill), not a word about what the token is
     // worth; everything else stays banned.
-    assert.doesNotMatch(said.replace("small margin for price movement", ""), /price|returns?\b|profit|invest/i, "$MERRYMEN is energy, nothing more");
+    assert.doesNotMatch(said.replace("small margin for price movement", ""), /price|returns?\b|profit|invest/i, "$AGENTCAP is energy, nothing more");
   });
 });
 
 describe("set-strategy no longer says money cannot help", () => {
   it("A HOLDER-ONLY PICK NAMES THE COMBINED BALANCE, not 'however well funded'", () => {
     // It used to end "below that I stay idle, however well funded I am" —
-    // false once USDG can be turned into the agent's own $MERRYMEN.
+    // false once USDG can be turned into the agent's own $AGENTCAP.
     const said = commandFor("set-strategy")!.say({ strategy: "dip-hunter" });
     assert.doesNotMatch(said, /however well funded/);
-    assert.match(said, /your wallet and my account hold 100,000 \$MERRYMEN between them — below that I leave it idle\./);
-    assert.doesNotMatch(commandFor("set-strategy")!.say({ strategy: "steady-basket" }), /MERRYMEN/);
+    assert.match(said, /your wallet and my account hold 100,000 \$AGENTCAP between them — below that I leave it idle\./);
+    assert.doesNotMatch(commandFor("set-strategy")!.say({ strategy: "steady-basket" }), /AGENTCAP/);
   });
 });
 

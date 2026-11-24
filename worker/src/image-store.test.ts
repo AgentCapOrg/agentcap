@@ -22,13 +22,13 @@ let prev: string | undefined;
 
 beforeEach(async () => {
   home = await mkdtemp(path.join(tmpdir(), "mm-image-"));
-  prev = process.env.MERRYMEN_HOME;
-  process.env.MERRYMEN_HOME = home;
+  prev = process.env.AGENTCAP_HOME;
+  process.env.AGENTCAP_HOME = home;
   resetImageStoreForTest();
 });
 afterEach(async () => {
-  if (prev === undefined) delete process.env.MERRYMEN_HOME;
-  else process.env.MERRYMEN_HOME = prev;
+  if (prev === undefined) delete process.env.AGENTCAP_HOME;
+  else process.env.AGENTCAP_HOME = prev;
   await rm(home, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
 });
 

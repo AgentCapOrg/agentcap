@@ -7,9 +7,9 @@ import { BalanceFigure } from "../studio";
 import Link from "../Link";
 import { ChartNoAxesCombined, SlidersHorizontal, Wallet, Settings, ChevronRight, OctagonX, Plug, Shirt } from "lucide-react";
 import { CopyButton } from "../CopyButton";
-import { MerrymanPortrait } from "@/merryman/Merryman";
-import { wordOf } from "@/merryman/mood";
-import { useOutfit } from "@/merryman/wardrobe-store";
+import { AgentCapAvatarPortrait } from "@/agentcapavatar/AgentCapAvatar";
+import { wordOf } from "@/agentcapavatar/mood";
+import { useOutfit } from "@/agentcapavatar/wardrobe-store";
 import { CONNECT_ASSISTANT_HREF, useConnectAssistantOffered } from "../assistant-connect";
 import { RecoveryNotice } from "../RecoveryNotice";
 import { pausedRecovery } from "../recovery-view";
@@ -56,7 +56,7 @@ export function You({
   // Before the early return: a hook may not be skipped on some renders.
   const assistants = useConnectAssistantOffered();
   const { outfit } = useOutfit(mine?.slug ?? null, mine?.slug ?? mine?.name ?? "draft");
-  // A STOPPED AGENT IS NOT "YOUR MERRYMAN LIVES HERE". His name, record and
+  // A STOPPED AGENT IS NOT "YOUR AGENTCAPAVATAR LIVES HERE". His name, record and
   // profile are all still his; the page says he is stopped and how to start him.
   if (!mine && stoppedAgent)
     return (
@@ -74,14 +74,14 @@ export function You({
   // this become the invitation — and it goes to /create, not to Add money.
   if (!mine)
     return hasAgent ? (
-      <Empty kind="profile" title="Fetching your merryman…" />
+      <Empty kind="profile" title="Fetching your agentcapavatar…" />
     ) : checking ? (
       <Empty kind="profile" title="One moment…" />
     ) : (
       <Empty
         kind="profile"
-        title="Your merryman lives here."
-        action={{ label: "Create your merryman", onClick: onCreate ?? onDeposit }}
+        title="Your agentcapavatar lives here."
+        action={{ label: "Create your agentcapavatar", onClick: onCreate ?? onDeposit }}
       />
     );
   const word = wordOf(mine.autonomy?.state, { recovery: pausedRecovery(mine.recovery) !== null, expired: mine.autonomy?.rule === "expired", needsOwner: mine.autonomy?.needsOwnerAction });
@@ -136,7 +136,7 @@ export function You({
           <span>1</span>
         </div>
         <button type="button" className="account-agent" onClick={onDesk}>
-          <MerrymanPortrait outfit={outfit} size={44} title={mine.name} />
+          <AgentCapAvatarPortrait outfit={outfit} size={44} title={mine.name} />
           <span>
             <strong>{mine.name}</strong>
             <small>{strategyName(mine.glance.id)}</small>
@@ -153,7 +153,7 @@ export function You({
         </div>
         <Link className="account-control" href="/wardrobe">
           <Shirt size={24} aria-hidden="true"/>
-          <span><strong>Dress your merryman</strong><small>Hats, outfits, pets and 40+ moves</small></span>
+          <span><strong>Dress your agentcapavatar</strong><small>Hats, outfits, pets and 40+ moves</small></span>
           <ChevronRight size={18} aria-hidden="true"/>
         </Link>
         <Link className="account-control owner-trades-link" href="/agent#trades">
@@ -174,7 +174,7 @@ export function You({
         </button>
         <button type="button" className="account-control" onClick={onStop}><Wallet size={24} aria-hidden="true"/><span><strong>Wallet & permissions</strong><small>Renew, stop or revoke his permission</small></span><ChevronRight size={18} aria-hidden="true"/></button>
         {/* The stop, by its own name. It opens the same screen at the section that holds it; nothing stops here. */}
-        <a className="account-control account-stop" href="/grant#permission-security"><OctagonX size={24} aria-hidden="true"/><span><strong>Stop my merryman</strong><small>Stop him now, or revoke his permission</small></span><ChevronRight size={18} aria-hidden="true"/></a>
+        <a className="account-control account-stop" href="/grant#permission-security"><OctagonX size={24} aria-hidden="true"/><span><strong>Stop my agentcapavatar</strong><small>Stop him now, or revoke his permission</small></span><ChevronRight size={18} aria-hidden="true"/></a>
         <Link className="account-control" href="/settings"><Settings size={24} aria-hidden="true"/><span><strong>Settings</strong></span><ChevronRight size={18} aria-hidden="true"/></Link>
         {/* Hosted only: a self-hosted install has no assistant connections (assistant-connect.ts). */}
         {assistants && <Link className="account-control" href={CONNECT_ASSISTANT_HREF}><Plug size={24} aria-hidden="true"/><span><strong>Connect to Claude</strong><small>Ask Claude about your agent</small></span><ChevronRight size={18} aria-hidden="true"/></Link>}

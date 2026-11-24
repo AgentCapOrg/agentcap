@@ -10,7 +10,7 @@ import { PrivySignIn } from "@/terminal/PrivySignIn";
 import { announceSignedIn } from "@/lib/resign-anchor";
 import { privyEnabled } from "@/lib/privy-client";
 import { blockerAdvice } from "@/lib/live-blocker";
-import { ENERGY, RISK_LEVELS, RISK_PROFILES, levelOf, type EnergyStatus, type RiskLevel } from "@merrymen/core";
+import { ENERGY, RISK_LEVELS, RISK_PROFILES, levelOf, type EnergyStatus, type RiskLevel } from "@agentcap/core";
 import { count, usd } from "@/lib/format";
 import { energyRemedies, energyView } from "./energy-view";
 import type { GrantBalances } from "@/lib/grant-balances";
@@ -137,7 +137,7 @@ export function FundingPanel({mode,account,onClose}:{mode:"deposit"|"withdraw";a
   const grant=account.status.grant;
   return <section className="hosted-funding"><header className="flow-top"><span>{mode==="deposit" ? "Add money" : "Withdraw"}</span><button aria-label="Close funding" onClick={onClose}><X size={18}/></button></header>{mode==="withdraw" ? <>{grant && <GloamWithdrawal account={grant.smartAccount as `0x${string}`} chainId={grant.chainId} ownerKey={ownerKey ? ownerKey as `0x${string}` : undefined}/>}<RecoverPanel initialOwnerKey={ownerKey}/></> : grant ? <>
     {/* THE ADDRESS FIRST. This panel used to open with a paragraph about
-        stuck funds, then blocker advice, then a long $MERRYMEN energy note,
+        stuck funds, then blocker advice, then a long $AGENTCAP energy note,
         and only then the one thing a person came here to do. Now it is the
         address and its copy button, the network warning in the same breath
         right under it, anything this agent is actually short of, and the
@@ -162,7 +162,7 @@ export function FundingPanel({mode,account,onClose}:{mode:"deposit"|"withdraw";a
       const after = !held && advice?.funding ? <p className="fund-blocker" role="status">{advice.say}</p> : null;
       return <>
         {first}
-        <p className="fund-lead">Add dollars (USDG) to your merryman&apos;s account: send USDG, or convert ETH or SOL on the way in. You can withdraw any time.</p>
+        <p className="fund-lead">Add dollars (USDG) to your agentcapavatar&apos;s account: send USDG, or convert ETH or SOL on the way in. You can withdraw any time.</p>
         {/* The address, its QR code and copy button, and the network warning
             are the Send USDG way, which is what shows first. ETH and SOL
             price through Relay and are signed on relay.link (DepositWays). */}
@@ -185,7 +185,7 @@ export function FundingPanel({mode,account,onClose}:{mode:"deposit"|"withdraw";a
  * owner's voice rather than the agent's: where the account stands, what full
  * strength needs, and the two routes to it, each only where it would work.
  *
- * WHAT IT LEAVES OUT. Nothing about the token's price or returns — $MERRYMEN
+ * WHAT IT LEAVES OUT. Nothing about the token's price or returns — $AGENTCAP
  * here is capacity. No fee or tax percentage, which the token's owner can
  * change without a line of our code changing. And on another network, not
  * "send it here": tokens sent to this account there would not count.
@@ -203,24 +203,24 @@ function EnergyFunding({energy,chainId}:{energy:EnergyStatus|null|undefined;chai
   // linked, or it already powers another account) is a knowable nothing, and
   // pointing the owner at an outage that does not exist sends them the wrong way.
   const standing=view.kind==="unread"
-    ? "we couldn't read the $MERRYMEN balances — that's our read failing, not your wallet"
+    ? "we couldn't read the $AGENTCAP balances — that's our read failing, not your wallet"
     : view.total!==null
       ? view.noWallet
-        ? `this account holds ${count(view.total)} $MERRYMEN, ${count(view.short)} short — no wallet of yours counts toward it`
-        : `your wallet and this account hold ${count(view.total)} $MERRYMEN between them, ${count(view.short)} short`
+        ? `this account holds ${count(view.total)} $AGENTCAP, ${count(view.short)} short — no wallet of yours counts toward it`
+        : `your wallet and this account hold ${count(view.total)} $AGENTCAP between them, ${count(view.short)} short`
       : view.readFailed
-        ? "we couldn't read every $MERRYMEN balance just now, so we can't say how far short"
+        ? "we couldn't read every $AGENTCAP balance just now, so we can't say how far short"
         : "no wallet of yours counts toward it yet";
   const route=!remedies.sendToAgent
-    ? `This account is on another network, so $MERRYMEN sent to it would not count — keep ${full} on Robinhood Chain in your own wallet.`
+    ? `This account is on another network, so $AGENTCAP sent to it would not count — keep ${full} on Robinhood Chain in your own wallet.`
     : remedies.usdg==="ready"
-      ? "Send $MERRYMEN on Robinhood Chain to this same address, or send USDG here and ask your agent in chat to get its $MERRYMEN — you confirm the amount first."
+      ? "Send $AGENTCAP on Robinhood Chain to this same address, or send USDG here and ask your agent in chat to get its $AGENTCAP — you confirm the amount first."
       : remedies.usdg==="paper"
-        ? "Send $MERRYMEN on Robinhood Chain to this same address. Your agent is in Paper mode, so it won't spend real USDG on it — turn on Live trading first if you'd rather it got them itself."
+        ? "Send $AGENTCAP on Robinhood Chain to this same address. Your agent is in Paper mode, so it won't spend real USDG on it — turn on Live trading first if you'd rather it got them itself."
         : remedies.usdg==="resign"
-          ? "Send $MERRYMEN on Robinhood Chain to this same address, or send USDG here, renew your agent's permission (revocation requires network fees — its current key can't buy it), then ask it in chat to get its $MERRYMEN."
-          : "Send $MERRYMEN on Robinhood Chain to this same address.";
-  return <><p className="fund-energy" role="status">Energy{view.spent ? " — spent for today, back at 00:00 UTC" : ""}: {standing}. Full strength needs {full} $MERRYMEN between your wallet and this account; below that your agent gets about a tenth of a standard day's AI reviews and new trades. Stop-losses, take-profits and your own orders are never limited; its own AI reviews — including of its open positions — are paced along with the rest.</p><p>{route} Or change nothing — it carries on at this pace.</p></>;
+          ? "Send $AGENTCAP on Robinhood Chain to this same address, or send USDG here, renew your agent's permission (revocation requires network fees — its current key can't buy it), then ask it in chat to get its $AGENTCAP."
+          : "Send $AGENTCAP on Robinhood Chain to this same address.";
+  return <><p className="fund-energy" role="status">Energy{view.spent ? " — spent for today, back at 00:00 UTC" : ""}: {standing}. Full strength needs {full} $AGENTCAP between your wallet and this account; below that your agent gets about a tenth of a standard day's AI reviews and new trades. Stop-losses, take-profits and your own orders are never limited; its own AI reviews — including of its open positions — are paced along with the rest.</p><p>{route} Or change nothing — it carries on at this pace.</p></>;
 }
 
 /**

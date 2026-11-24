@@ -136,12 +136,12 @@ describe("the child takes what the hold kept, through the poll service", () => {
   };
 
   before(async () => {
-    for (const k of ["MERRYMEN_HOME", "MERRYMEN_SETTINGS_FILE", "MERRYMEN_HOSTED", "MERRYMEN_TG_GROUPS_LLM_KEY"]) saved[k] = process.env[k];
+    for (const k of ["AGENTCAP_HOME", "AGENTCAP_SETTINGS_FILE", "AGENTCAP_HOSTED", "AGENTCAP_TG_GROUPS_LLM_KEY"]) saved[k] = process.env[k];
     home = mkdtempSync(path.join(tmpdir(), "held-groups-child-"));
-    process.env.MERRYMEN_HOME = home;
-    process.env.MERRYMEN_SETTINGS_FILE = path.join(home, "settings.json");
-    delete process.env.MERRYMEN_HOSTED;
-    delete process.env.MERRYMEN_TG_GROUPS_LLM_KEY;
+    process.env.AGENTCAP_HOME = home;
+    process.env.AGENTCAP_SETTINGS_FILE = path.join(home, "settings.json");
+    delete process.env.AGENTCAP_HOSTED;
+    delete process.env.AGENTCAP_TG_GROUPS_LLM_KEY;
     globalThis.fetch = (async (url: string, init?: { body?: string }) => {
       const u = String(url);
       if (!u.startsWith("https://api.telegram.org/")) throw new Error("no network in tests");

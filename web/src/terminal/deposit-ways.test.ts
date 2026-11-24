@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, before, beforeEach, describe, it } from "node:test";
 import React, { act } from "react";
 import { JSDOM } from "jsdom";
-import { CASH } from "@merrymen/core";
+import { CASH } from "@agentcap/core";
 import type { DepositWaysProps } from "./DepositWays";
 import { QR_QUIET_ZONE, qrModules, qrPath } from "./QrCode";
 import { SOURCE_RPC } from "../lib/source-balance";
@@ -242,7 +242,7 @@ describe("From ETH", () => {
     assert.equal(link.searchParams.get("fromChainId"), "1");
     assert.equal(link.searchParams.get("amount"), "0.998");
     assert.match(text(), /Relay asks you to confirm the recipient: it should be your agent's account, ending DEF0\./);
-    assert.match(text(), /its slippage starts on Auto: set Max Slippage to 0\.5% or less\. Merrymen never holds or moves these funds\./);
+    assert.match(text(), /its slippage starts on Auto: set Max Slippage to 0\.5% or less\. AgentCap never holds or moves these funds\./);
   });
 
   it("leaves Max off, and says why, when the wallet's balance can't be read", async () => {

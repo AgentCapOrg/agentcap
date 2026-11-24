@@ -20,10 +20,10 @@ const NOTICE = {
   body: "We are finishing a recovery.",
   updatedAt: "2026-10-05T18:00:00Z",
   tradingPaused: true,
-  links: [{ label: "Your account", href: "https://app.merrymen.dev/you" }],
+  links: [{ label: "Your account", href: "https://app.agentcap.xyz/you" }],
 };
 
-const saved = process.env.MERRYMEN_SERVICE_NOTICE;
+const saved = process.env.AGENTCAP_SERVICE_NOTICE;
 let warnings: string[];
 
 beforeEach(() => {
@@ -32,14 +32,14 @@ beforeEach(() => {
 });
 afterEach(() => {
   mock.restoreAll();
-  if (saved === undefined) delete process.env.MERRYMEN_SERVICE_NOTICE;
-  else process.env.MERRYMEN_SERVICE_NOTICE = saved;
+  if (saved === undefined) delete process.env.AGENTCAP_SERVICE_NOTICE;
+  else process.env.AGENTCAP_SERVICE_NOTICE = saved;
 });
 
 async function read(value: string | undefined) {
-  if (value === undefined) delete process.env.MERRYMEN_SERVICE_NOTICE;
-  else process.env.MERRYMEN_SERVICE_NOTICE = value;
-  const response = await GET(new Request("https://app.merrymen.dev/api/service-notice"));
+  if (value === undefined) delete process.env.AGENTCAP_SERVICE_NOTICE;
+  else process.env.AGENTCAP_SERVICE_NOTICE = value;
+  const response = await GET(new Request("https://app.agentcap.xyz/api/service-notice"));
   return { response, body: await response.json() as { notice: unknown } };
 }
 
@@ -78,7 +78,7 @@ describe("GET /api/service-notice", () => {
   for (const [name, notice, why] of [
     ["a bad field", { ...NOTICE, tradingpaused: true }, /unknown field "tradingpaused"/],
     ["a foreign host", { ...NOTICE, links: [{ label: "More", href: "https://evil.example/" }] }, /must point at/],
-    ["an http link", { ...NOTICE, links: [{ label: "More", href: "http://app.merrymen.dev/you" }] }, /must use https/],
+    ["an http link", { ...NOTICE, links: [{ label: "More", href: "http://app.agentcap.xyz/you" }] }, /must use https/],
     ["a javascript: link", { ...NOTICE, links: [{ label: "More", href: "javascript:alert(1)" }] }, /must use https/],
   ] as const) {
     it(`serves no notice for ${name}, and logs why once`, async () => {
@@ -90,7 +90,7 @@ describe("GET /api/service-notice", () => {
         assert.equal(response.headers.get("cache-control"), CACHE);
       }
       assert.equal(warnings.length, 1, "a polled route logs a refused value once, not per request");
-      assert.match(warnings[0]!, /MERRYMEN_SERVICE_NOTICE ignored/);
+      assert.match(warnings[0]!, /AGENTCAP_SERVICE_NOTICE ignored/);
       assert.match(warnings[0]!, why);
     });
   }

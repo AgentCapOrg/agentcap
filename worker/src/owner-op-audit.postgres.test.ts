@@ -15,7 +15,7 @@
  * and every table's row count unchanged by an audit.
  *
  * Each run creates its own database and drops it. Run with
- * MERRYMEN_TEST_PG_URL=postgres://…@127.0.0.1:<port>/<db> and the `pg`
+ * AGENTCAP_TEST_PG_URL=postgres://…@127.0.0.1:<port>/<db> and the `pg`
  * driver resolvable (NODE_PATH works: it is loaded with require here).
  */
 import assert from "node:assert/strict";
@@ -35,7 +35,7 @@ import { connectBooking, type PgClient } from "./chain-gap-booking-cli";
 import { AUDIT_APPLICATION_NAME, main } from "./owner-op-audit-cli";
 import type { RpcCall } from "./chain-capital";
 
-const url = process.env.MERRYMEN_TEST_PG_URL ?? process.env.MERRYMEN_TEST_POSTGRES_URL;
+const url = process.env.AGENTCAP_TEST_PG_URL ?? process.env.AGENTCAP_TEST_POSTGRES_URL;
 const loadPg = async () => createRequire(import.meta.url)("pg") as unknown;
 
 type FixtureLog = [string, string[], string, string];
@@ -238,7 +238,7 @@ test("Postgres: owner_operations' DDL, its identity, the mirror and admission's 
   const code = await main(["--output", output], { DATABASE_URL: scoped.toString() }, { connect, rpc, nowMs: () => NOW * 1000, out: (l) => printed.push(l), source: { test: "pg" },
     sleep: async () => {} });
   assert.equal(code, 2, printed.join("\n"));
-  assert.deepEqual(names, ["merrymen-owner-op-audit-readonly"]);
+  assert.deepEqual(names, ["agentcap-owner-op-audit-readonly"]);
   const report = JSON.parse(readFileSync(output, "utf8")) as { rootRows: Array<{ userOpHash: string; counted: { ownerRecord: string | null; budgetSeedTrailingDay: boolean } }>;
     totals: { byValidator: Record<string, number>; capitalLegsWithoutFlow: { out: { count: number; amountRaw: string } } } };
   assert.deepEqual(report.rootRows.map((r) => r.userOpHash).sort(), [INVALIDATE, RECOVER].sort());

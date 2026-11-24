@@ -1,14 +1,14 @@
 /**
  * GET /api/auth/session says whether this deployment runs Fomo research, so
  * the Settings page shows the Fomo switches only where they do something:
- * always self-hosted, hosted only with MERRYMEN_FOMO_ENABLED=1 (fomo-switch.ts).
+ * always self-hosted, hosted only with AGENTCAP_FOMO_ENABLED=1 (fomo-switch.ts).
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { after, it } from "node:test";
 import { GET } from "./route";
 
-const KEYS = ["MERRYMEN_HOSTED", "MERRYMEN_FOMO_ENABLED"] as const;
+const KEYS = ["AGENTCAP_HOSTED", "AGENTCAP_FOMO_ENABLED"] as const;
 const saved = new Map(KEYS.map((k) => [k, process.env[k]]));
 after(() => {
   for (const k of KEYS) {
@@ -18,23 +18,23 @@ after(() => {
   }
 });
 
-const session = async () => (await GET(new Request("https://app.merrymen.dev/api/auth/session"))).json() as Promise<Record<string, unknown>>;
+const session = async () => (await GET(new Request("https://app.agentcap.xyz/api/auth/session"))).json() as Promise<Record<string, unknown>>;
 
 it("hosted: fomo only when the deployment opted in", async () => {
-  process.env.MERRYMEN_HOSTED = "1";
-  delete process.env.MERRYMEN_FOMO_ENABLED;
+  process.env.AGENTCAP_HOSTED = "1";
+  delete process.env.AGENTCAP_FOMO_ENABLED;
   assert.deepEqual(await session(), { hosted: true, address: null, fomo: false });
-  process.env.MERRYMEN_FOMO_ENABLED = "1";
+  process.env.AGENTCAP_FOMO_ENABLED = "1";
   assert.equal((await session()).fomo, true);
-  process.env.MERRYMEN_FOMO_ENABLED = "true";
+  process.env.AGENTCAP_FOMO_ENABLED = "true";
   assert.equal((await session()).fomo, false, "only exactly 1");
 });
 
 it("self-hosted: unless the install switched it off", async () => {
-  delete process.env.MERRYMEN_HOSTED;
-  delete process.env.MERRYMEN_FOMO_ENABLED;
+  delete process.env.AGENTCAP_HOSTED;
+  delete process.env.AGENTCAP_FOMO_ENABLED;
   assert.deepEqual(await session(), { hosted: false, address: null, fomo: true });
-  process.env.MERRYMEN_FOMO_ENABLED = "0";
+  process.env.AGENTCAP_FOMO_ENABLED = "0";
   assert.equal((await session()).fomo, false);
 });
 

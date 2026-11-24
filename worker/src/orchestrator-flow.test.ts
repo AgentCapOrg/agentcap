@@ -258,9 +258,9 @@ describe("flow facts reach X only as glosses the existing writer and gate admit 
 describe("answerReadingsPerDay — X answers stay out of the evidence share", () => {
   it("is the day's points evidence cannot spend, at a whole reading's price", () => {
     const reading = LANE_POINTS.tokenFlow + LANE_POINTS.creatorFlow;
-    const on = bitqueryLaneSetup({ MERRYMEN_BITQUERY_API_KEY: "ory_at_test" });
+    const on = bitqueryLaneSetup({ AGENTCAP_BITQUERY_API_KEY: "ory_at_test" });
     assert.equal(answerReadingsPerDay(on), 200, "the defaults: 25,000 x 0.2 / 25");
-    const small = bitqueryLaneSetup({ MERRYMEN_BITQUERY_API_KEY: "ory_at_test", MERRYMEN_BITQUERY_POINTS_PER_DAY: "5000" });
+    const small = bitqueryLaneSetup({ AGENTCAP_BITQUERY_API_KEY: "ory_at_test", AGENTCAP_BITQUERY_POINTS_PER_DAY: "5000" });
     assert.equal(answerReadingsPerDay(small), 40);
     // Even if every one of them were spent before any review asked, evidence keeps its whole share.
     for (const setup of [on, small]) {
@@ -268,14 +268,14 @@ describe("answerReadingsPerDay — X answers stay out of the evidence share", ()
       assert.ok(answerReadingsPerDay(setup) * reading <= day - Math.floor(day * BITQUERY_LANE_DEFAULTS.evidenceShare));
     }
     assert.equal(answerReadingsPerDay(bitqueryLaneSetup({})), 0, "no lane, no readings");
-    assert.equal(answerReadingsPerDay(bitqueryLaneSetup({ MERRYMEN_BITQUERY_API_KEY: "ory_at_test", MERRYMEN_BITQUERY_LANE: "0" })), 0);
+    assert.equal(answerReadingsPerDay(bitqueryLaneSetup({ AGENTCAP_BITQUERY_API_KEY: "ory_at_test", AGENTCAP_BITQUERY_LANE: "0" })), 0);
   });
 });
 
 describe("startFlowRuntime — off without a key, and nothing built while off", () => {
   it("no key: no service, no store, a line saying so", () => {
     const lines: string[] = [];
-    const home = mkdtempSync(path.join(os.tmpdir(), "merrymen-flow-rt-"));
+    const home = mkdtempSync(path.join(os.tmpdir(), "agentcap-flow-rt-"));
     const rt = startFlowRuntime({ env: {}, home, rpcUrl: "https://example.invalid", log: (l) => lines.push(l) });
     assert.equal(rt.service, null);
     assert.match(lines.join("\n"), /bitquery lane: off/);
@@ -283,8 +283,8 @@ describe("startFlowRuntime — off without a key, and nothing built while off", 
 
   it("with a key: a service, its store under the fleet home, and the key never logged", () => {
     const lines: string[] = [];
-    const home = mkdtempSync(path.join(os.tmpdir(), "merrymen-flow-rt-"));
-    const rt = startFlowRuntime({ env: { MERRYMEN_BITQUERY_API_KEY: "ory_at_never_logged" }, home, rpcUrl: "https://example.invalid", log: (l) => lines.push(l) });
+    const home = mkdtempSync(path.join(os.tmpdir(), "agentcap-flow-rt-"));
+    const rt = startFlowRuntime({ env: { AGENTCAP_BITQUERY_API_KEY: "ory_at_never_logged" }, home, rpcUrl: "https://example.invalid", log: (l) => lines.push(l) });
     assert.ok(rt.service);
     assert.doesNotMatch(lines.join("\n"), /ory_at_never_logged/);
     assert.ok(readFileSync(path.join(home, "bitquery-lane", "lane.sqlite")).length >= 0, "the fleet cache lives under the fleet home");
@@ -327,10 +327,10 @@ describe("attachFlowBroker — only allowlisted accounts, only as evidence", () 
     };
   };
 
-  it("an account on MERRYMEN_DECISION_RESEARCH_ACCOUNTS gets readings, spent from the evidence share", async () => {
+  it("an account on AGENTCAP_DECISION_RESEARCH_ACCOUNTS gets readings, spent from the evidence share", async () => {
     const svc = service();
     const c = fakeChild();
-    attachFlowBroker(svc, "0x00000000000000000000000000000000000000f1", c.proc, LISTED_ACCOUNT, () => {}, { MERRYMEN_DECISION_RESEARCH_ACCOUNTS: LISTED_ACCOUNT.toLowerCase() });
+    attachFlowBroker(svc, "0x00000000000000000000000000000000000000f1", c.proc, LISTED_ACCOUNT, () => {}, { AGENTCAP_DECISION_RESEARCH_ACCOUNTS: LISTED_ACCOUNT.toLowerCase() });
     const r = await createFlowClient(c.childPort).facts(TOKEN);
     assert.equal(r.ok, true);
     assert.deepEqual(svc.purposes, ["evidence"]);
@@ -341,7 +341,7 @@ describe("attachFlowBroker — only allowlisted accounts, only as evidence", () 
     const t = 5_000_000;
     const svc = makeFlowService({ lane, now: () => t, creatorOf: async () => ({ state: "known", creator: CREATOR }) });
     const c = fakeChild();
-    attachFlowBroker(svc, "0x00000000000000000000000000000000000000f1", c.proc, LISTED_ACCOUNT, () => {}, { MERRYMEN_DECISION_RESEARCH_ACCOUNTS: LISTED_ACCOUNT });
+    attachFlowBroker(svc, "0x00000000000000000000000000000000000000f1", c.proc, LISTED_ACCOUNT, () => {}, { AGENTCAP_DECISION_RESEARCH_ACCOUNTS: LISTED_ACCOUNT });
     assert.equal((await createFlowClient(c.childPort).facts(TOKEN, { timeoutMs: 5_000 })).ok, true);
     const deadline = t + 5_000 - FLOW_BROKER_LIMITS.ipcMarginMs;
     assert.deepEqual(calls.map((x) => [(x.args.at(-1) as { purpose: string }).purpose, (x.args.at(-1) as { deadline: number }).deadline]),
@@ -351,7 +351,7 @@ describe("attachFlowBroker — only allowlisted accounts, only as evidence", () 
   it("any other account is answered 'unavailable' and costs nothing", async () => {
     const svc = service();
     const c = fakeChild();
-    attachFlowBroker(svc, "0xother", c.proc, "0x00000000000000000000000000000000000000b0", () => {}, { MERRYMEN_DECISION_RESEARCH_ACCOUNTS: LISTED_ACCOUNT });
+    attachFlowBroker(svc, "0xother", c.proc, "0x00000000000000000000000000000000000000b0", () => {}, { AGENTCAP_DECISION_RESEARCH_ACCOUNTS: LISTED_ACCOUNT });
     assert.deepEqual(await createFlowClient(c.childPort).facts(TOKEN), { ok: false, failure: "unavailable" });
     assert.deepEqual(svc.purposes, []);
   });
@@ -364,7 +364,7 @@ describe("attachFlowBroker — only allowlisted accounts, only as evidence", () 
     assert.equal(attachFlowBroker(service(), "0xt", unconnected.proc, LISTED_ACCOUNT, () => {}), null);
     const svc = service();
     const live = fakeChild();
-    assert.ok(attachFlowBroker(svc, "0xt", live.proc, LISTED_ACCOUNT, () => {}, { MERRYMEN_DECISION_RESEARCH_ACCOUNTS: LISTED_ACCOUNT }));
+    assert.ok(attachFlowBroker(svc, "0xt", live.proc, LISTED_ACCOUNT, () => {}, { AGENTCAP_DECISION_RESEARCH_ACCOUNTS: LISTED_ACCOUNT }));
     assert.equal((live.proc as unknown as EventEmitter).listenerCount("message"), 1);
     live.exit();
     assert.equal((live.proc as unknown as EventEmitter).listenerCount("message"), 0, "released on exit");
@@ -402,25 +402,25 @@ describe("the orchestrator's wiring", () => {
     assert.match(fn, /const flowPerDay = answerReadingsPerDay\(rt\.setup\);/);
     assert.match(fn, /q\.chainId === 4663 \? flowFor\(q\.address, \{ timeoutMs: q\.timeoutMs \}\)/);
     const research = SRC.slice(SRC.indexOf("research: createXResearch({"), SRC.indexOf("research: createXResearch({") + 900);
-    assert.match(research, /\.\.\.xAnswerFlow\(\),/, "handed to the research, which runs only with MERRYMEN_XPOST_RESEARCH=1");
+    assert.match(research, /\.\.\.xAnswerFlow\(\),/, "handed to the research, which runs only with AGENTCAP_XPOST_RESEARCH=1");
   });
 
   it("flowFor answers 'unavailable' when the lane is off, without building anything", async () => {
     const { flowFor, resetFlowRuntimeForTest } = await import("./orchestrator-flow");
-    const saved = process.env.MERRYMEN_BITQUERY_API_KEY;
-    delete process.env.MERRYMEN_BITQUERY_API_KEY;
+    const saved = process.env.AGENTCAP_BITQUERY_API_KEY;
+    delete process.env.AGENTCAP_BITQUERY_API_KEY;
     resetFlowRuntimeForTest();
     try {
       assert.deepEqual(await flowFor(TOKEN), { ok: false, failure: "unavailable" });
     } finally {
-      if (saved !== undefined) process.env.MERRYMEN_BITQUERY_API_KEY = saved;
+      if (saved !== undefined) process.env.AGENTCAP_BITQUERY_API_KEY = saved;
       resetFlowRuntimeForTest();
     }
   });
 
-  it("MERRYMEN_BITQUERY_API_KEY is read by the orchestrator's setup alone — never by a child's code", () => {
+  it("AGENTCAP_BITQUERY_API_KEY is read by the orchestrator's setup alone — never by a child's code", () => {
     const files = ["index.ts", "settings.ts", "flow-broker.ts", "flow-facts.ts", "orchestrator-flow.ts", "venues/bitquery.ts", "venues/bitquery-lane.ts"];
-    const readers = files.filter((f) => /process\.env\.MERRYMEN_BITQUERY_API_KEY|env\.MERRYMEN_BITQUERY_API_KEY/.test(readFileSync(path.join(HERE, f), "utf8")));
+    const readers = files.filter((f) => /process\.env\.AGENTCAP_BITQUERY_API_KEY|env\.AGENTCAP_BITQUERY_API_KEY/.test(readFileSync(path.join(HERE, f), "utf8")));
     assert.deepEqual(readers, ["venues/bitquery-lane.ts"], "only bitqueryLaneSetup reads it, from the env the orchestrator hands it");
     const index = readFileSync(path.join(HERE, "index.ts"), "utf8");
     assert.doesNotMatch(index, /from "\.\/venues\/bitquery-lane"|from "\.\/orchestrator-flow"/, "a child never imports the lane");

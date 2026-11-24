@@ -52,7 +52,7 @@ import {
   robinhoodChain,
   type GrantPurpose,
   type StoredGrant,
-} from "@merrymen/core";
+} from "@agentcap/core";
 
 const ENTRY_POINT = getEntryPoint("0.7");
 const SENDER_ADDRESS_RESULT = [

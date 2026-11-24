@@ -8,21 +8,21 @@ import Link from "../Link";
 import { usd, usdParts } from "@/lib/format";
 import { pausedRecovery } from "../recovery-view";
 import { Board } from "./Board";
-import { MerrymanHero } from "@/merryman/MerrymanHero";
-import { moodOf, type MoodInput } from "@/merryman/mood";
-import { DRAFT, useOutfit } from "@/merryman/wardrobe-store";
+import { AgentCapAvatarHero } from "@/agentcapavatar/AgentCapAvatarHero";
+import { moodOf, type MoodInput } from "@/agentcapavatar/mood";
+import { DRAFT, useOutfit } from "@/agentcapavatar/wardrobe-store";
 import type { OwnBookRead, StoppedOwner } from "../owner-state";
 import { StoppedFigure, StoppedWords } from "../StoppedAgent";
 
 /**
- * HOME IS YOUR MERRYMAN.
+ * HOME IS YOUR AGENTCAPAVATAR.
  *
  * It used to stack six sections and about forty numbers: a balance hero, a
  * connections strip, a five-row leaderboard of a dozen fields a row, and a
  * market table — the whole product on the first screen a newcomer opens. Now
- * it answers one question, "how is my merryman doing?", with the character
+ * it answers one question, "how is my agentcapavatar doing?", with the character
  * himself (his pose and his bubble are READINGS of the agent, see
- * merryman/mood.ts), the balance, and the three things you can do next. The
+ * agentcapavatar/mood.ts), the balance, and the three things you can do next. The
  * market table moved to Explore → Markets; the leaderboard is a teaser of
  * three that opens Explore → Leaders.
  *
@@ -70,7 +70,7 @@ export function Home({
    * caller with no room — and every existing test — is unaffected.
    */
   onGroupChat?: () => void;
-  /** Where "Create your merryman" goes. Callbacks, for the reason above. */
+  /** Where "Create your agentcapavatar" goes. Callbacks, for the reason above. */
   onCreate?: () => void;
   onWardrobe?: () => void;
   onLeaders?: () => void;
@@ -131,12 +131,12 @@ export function Home({
   );
   // HIS LOOK: the owner's own choice for their agent, or the one being dressed
   // before an agent exists. Seeded on the slug otherwise, like every other
-  // merryman on the board.
+  // agentcapavatar on the board.
   // A stopped agent keeps his own look: the slug is still his.
   const ownSlug = mine?.slug ?? stopped?.slug ?? null;
   const outfitId = ownSlug ?? DRAFT;
   const { outfit } = useOutfit(outfitId, ownSlug ?? mine?.name ?? DRAFT);
-  const name = mine?.name ?? stopped?.name ?? "Your merryman";
+  const name = mine?.name ?? stopped?.name ?? "Your agentcapavatar";
   const renew = mine && (mine.autonomy.rule === "expired" || mine.autonomy.expiresSoon) && !recovery && onResign;
 
   return (
@@ -144,7 +144,7 @@ export function Home({
       <header className="top home-overview">
         <div className="home-heading"><h1 className="top-title">Home</h1>{room && onGroupChat && <button type="button" className="icon-btn" aria-label="Group chat" title="Group chat" onClick={onGroupChat}><MessagesSquare size={22} strokeWidth={1.8} aria-hidden="true"/></button>}</div>
 
-        <MerrymanHero outfit={outfit} mood={mood} name={name} moves={mine?.moves}>
+        <AgentCapAvatarHero outfit={outfit} mood={mood} name={name} moves={mine?.moves}>
           {mine ? (
             <>
               <button type="button" className="hero" onClick={onDesk}>
@@ -197,28 +197,28 @@ export function Home({
             // invitation to create what they already have. The account card
             // above Home says what is loading or failed, with its retry.
             <div className="hero empty">
-              <h2>{phase === "failed" ? "Can't reach your merryman's numbers right now." : "Fetching your merryman's numbers…"}</h2>
+              <h2>{phase === "failed" ? "Can't reach your agentcapavatar's numbers right now." : "Fetching your agentcapavatar's numbers…"}</h2>
               <p>{phase === "failed" ? "Nothing has changed with your agent or your money; this page will try again." : "One moment."}</p>
             </div>
           ) : (
             <>
               <div className="hero empty">
-                <h2>Meet your merryman.</h2>
+                <h2>Meet your agentcapavatar.</h2>
                 <p>He trades for you inside your limits and explains every move. Start with pretend money — no risk.</p>
               </div>
               <div className="mm-actions">
-                <button type="button" className="mm-action primary" onClick={onCreate ?? onDeposit}><Sparkles size={18} aria-hidden="true"/> Create your merryman</button>
+                <button type="button" className="mm-action primary" onClick={onCreate ?? onDeposit}><Sparkles size={18} aria-hidden="true"/> Create your agentcapavatar</button>
                 {onWardrobe && <button type="button" className="mm-action" onClick={onWardrobe}><Shirt size={18} aria-hidden="true"/> Dress him first</button>}
               </div>
               {phase === "signed-out" && signIn && (
                 <div className="mm-signin">
-                  <p>Already have a merryman? Sign in with the email or X account you made him with.</p>
+                  <p>Already have a agentcapavatar? Sign in with the email or X account you made him with.</p>
                   {signIn}
                 </div>
               )}
             </>
           )}
-        </MerrymanHero>
+        </AgentCapAvatarHero>
 
         {/* SHORTCUTS. The places an owner otherwise reaches through Me or a menu: taking money out, his limits, his
             wallet and its permission, settings, and stopping him. Five tiles that fit a phone without scrolling, so
@@ -260,7 +260,7 @@ export function Home({
         unreadable-vs-quiet distinction through ReadEmpty, and honesty.test.ts
         pins that by reading Board.tsx. The full board is Explore → Leaders.
       */}
-      <section className="home-leaders-teaser" aria-label="Top merrymen">
+      <section className="home-leaders-teaser" aria-label="Top agentcap">
         <Board
           preview
           read={read}

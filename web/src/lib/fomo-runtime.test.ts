@@ -3,7 +3,7 @@
  * come from, and that one runtime is kept per process — and forgotten when
  * building it failed, so the next question tries again. Offline: no key is
  * set, the hosted store is an in-memory SQLite behind the MCP seam, and the
- * self-hosted store is fomo.sqlite in a temporary MERRYMEN_HOME.
+ * self-hosted store is fomo.sqlite in a temporary AGENTCAP_HOME.
  */
 import assert from "node:assert/strict";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
@@ -11,7 +11,7 @@ import os from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { after, afterEach, before, describe, it } from "node:test";
-import type { StoredGrant } from "@merrymen/core";
+import type { StoredGrant } from "@agentcap/core";
 import { wrapSqlite } from "../../../worker/src/db";
 import { closeLocalFomoDbsForTest, LOCAL_FOMO_DB_FILE } from "../../../worker/src/fomo/local-db";
 import { getGrantStore, resetGrantStoreForTest } from "../../../worker/src/grant-store";
@@ -39,15 +39,15 @@ import { projectSettings, setSettingsReaderForTest } from "./services/settings-v
 const A = `0x${"a".repeat(40)}` as const;
 const B = `0x${"b".repeat(40)}` as const;
 const ENV_KEYS = [
-  "MERRYMEN_HOSTED", "MERRYMEN_HOME", "DATABASE_URL", "MERRYMEN_FOMO_API_KEY", "FOMO_API_KEY", "MERRYMEN_FOMO_ENABLED",
-  "MERRYMEN_FOMO_PLAN_CREDITS", "MERRYMEN_FOMO_DATA_ACCESS", "MERRYMEN_SETTINGS_FILE", "MERRYMEN_STORE_DEK",
+  "AGENTCAP_HOSTED", "AGENTCAP_HOME", "DATABASE_URL", "AGENTCAP_FOMO_API_KEY", "FOMO_API_KEY", "AGENTCAP_FOMO_ENABLED",
+  "AGENTCAP_FOMO_PLAN_CREDITS", "AGENTCAP_FOMO_DATA_ACCESS", "AGENTCAP_SETTINGS_FILE", "AGENTCAP_STORE_DEK",
 ] as const;
 const saved = new Map(ENV_KEYS.map((k) => [k, process.env[k]]));
-const home = mkdtempSync(path.join(os.tmpdir(), "merrymen-fomo-runtime-"));
+const home = mkdtempSync(path.join(os.tmpdir(), "agentcap-fomo-runtime-"));
 
 before(() => {
   for (const k of ENV_KEYS) delete process.env[k];
-  process.env.MERRYMEN_HOME = home;
+  process.env.AGENTCAP_HOME = home;
 });
 
 afterEach(() => {
@@ -56,8 +56,8 @@ afterEach(() => {
   setSettingsReaderForTest(null);
   setFomoOwnerReaderForTest(null);
   resetGrantStoreForTest();
-  delete process.env.MERRYMEN_FOMO_DATA_ACCESS;
-  delete process.env.MERRYMEN_FOMO_ENABLED;
+  delete process.env.AGENTCAP_FOMO_DATA_ACCESS;
+  delete process.env.AGENTCAP_FOMO_ENABLED;
 });
 
 /** Owners with an agent, for the hosted permission tests: A and B unless a test says otherwise. */
@@ -75,26 +75,26 @@ after(() => {
 
 describe("the key, the plan and the switch", () => {
   it("reads the house's key name first, then the provider docs' name; a blank value is no key", () => {
-    const on = { MERRYMEN_FOMO_ENABLED: "1" };
-    assert.equal(hostedFomoApiKey({ ...on, MERRYMEN_FOMO_API_KEY: " house-test ", FOMO_API_KEY: "docs-test" }), "house-test");
-    assert.equal(hostedFomoApiKey({ ...on, MERRYMEN_FOMO_API_KEY: "   ", FOMO_API_KEY: "docs-test" }), "docs-test");
+    const on = { AGENTCAP_FOMO_ENABLED: "1" };
+    assert.equal(hostedFomoApiKey({ ...on, AGENTCAP_FOMO_API_KEY: " house-test ", FOMO_API_KEY: "docs-test" }), "house-test");
+    assert.equal(hostedFomoApiKey({ ...on, AGENTCAP_FOMO_API_KEY: "   ", FOMO_API_KEY: "docs-test" }), "docs-test");
     assert.equal(hostedFomoApiKey({ ...on, FOMO_API_KEY: "  " }), null);
     assert.equal(hostedFomoApiKey(on), null);
   });
 
-  it("HOSTED FOMO IS OPT-IN: only MERRYMEN_FOMO_ENABLED=1 is on, the orchestrator's own switch, and off there is no key", async () => {
+  it("HOSTED FOMO IS OPT-IN: only AGENTCAP_FOMO_ENABLED=1 is on, the orchestrator's own switch, and off there is no key", async () => {
     const orchestrator = "../../../worker/src/orchestrator";
     const { fomoSetup } = (await import(orchestrator)) as { fomoSetup(env: Record<string, string | undefined>): { off: boolean } };
     for (const value of [undefined, "", "0", "1", " 1", "true", "yes", "on"]) {
-      const env = { MERRYMEN_FOMO_ENABLED: value, DATABASE_URL: "postgres://x", MERRYMEN_FOMO_API_KEY: "house-test" };
-      assert.equal(hostedFomoEnabled(env), value === "1", `MERRYMEN_FOMO_ENABLED=${String(value)}`);
+      const env = { AGENTCAP_FOMO_ENABLED: value, DATABASE_URL: "postgres://x", AGENTCAP_FOMO_API_KEY: "house-test" };
+      assert.equal(hostedFomoEnabled(env), value === "1", `AGENTCAP_FOMO_ENABLED=${String(value)}`);
       assert.equal(hostedFomoEnabled(env), !fomoSetup(env).off, "the web and the orchestrator agree");
       assert.equal(hostedFomoApiKey(env), value === "1" ? "house-test" : null);
     }
   });
 
   it("not opted in, a hosted runtime is never built: no database opened, no fomo_* schema", async () => {
-    delete process.env.MERRYMEN_FOMO_ENABLED;
+    delete process.env.AGENTCAP_FOMO_ENABLED;
     const raw = new DatabaseSync(":memory:");
     setMcpDbForTest({ db: wrapSqlite(raw), dialect: "sqlite" });
     await assert.rejects(fomoRuntime(true), (e: unknown) => e instanceof FomoNotEnabledError && e.message === FOMO_NOT_ENABLED);
@@ -107,28 +107,28 @@ describe("the key, the plan and the switch", () => {
     const orchestrator = "../../../worker/src/orchestrator";
     const { fomoSetup } = (await import(orchestrator)) as { fomoSetup(env: Record<string, string | undefined>): { planCredits: number | undefined } };
     for (const raw of [undefined, "", "lots", "-5", "0", "1000000", " 250000 ", "1e6", "NaN", "Infinity"]) {
-      const env = raw === undefined ? {} : { MERRYMEN_FOMO_PLAN_CREDITS: raw };
-      assert.equal(fomoPlanCredits(env), fomoSetup({ DATABASE_URL: "postgres://x", MERRYMEN_FOMO_ENABLED: "1", ...env }).planCredits, `plan ${JSON.stringify(raw)}`);
+      const env = raw === undefined ? {} : { AGENTCAP_FOMO_PLAN_CREDITS: raw };
+      assert.equal(fomoPlanCredits(env), fomoSetup({ DATABASE_URL: "postgres://x", AGENTCAP_FOMO_ENABLED: "1", ...env }).planCredits, `plan ${JSON.stringify(raw)}`);
     }
-    assert.equal(fomoPlanCredits({ MERRYMEN_FOMO_PLAN_CREDITS: "1000000" }), 1_000_000);
+    assert.equal(fomoPlanCredits({ AGENTCAP_FOMO_PLAN_CREDITS: "1000000" }), 1_000_000);
   });
 
   it("reads the research caps exactly as the orchestrator does; unset, the defaults", async () => {
     const orchestrator = "../../../worker/src/orchestrator";
     const { fomoSetup } = (await import(orchestrator)) as { fomoSetup(env: Record<string, string | undefined>): { budget: Record<string, number> } };
-    const names = ["MERRYMEN_FOMO_GROUP_HOURLY_CREDITS", "MERRYMEN_FOMO_TENANT_HOURLY_CREDITS", "MERRYMEN_FOMO_TENANT_DAILY_CREDITS"];
+    const names = ["AGENTCAP_FOMO_GROUP_HOURLY_CREDITS", "AGENTCAP_FOMO_TENANT_HOURLY_CREDITS", "AGENTCAP_FOMO_TENANT_DAILY_CREDITS"];
     for (const raw of [undefined, "", "6500", " 13000 ", "0", "6,500", "1e4", "-1", "lots"]) {
       for (const name of names) {
         const env = raw === undefined ? {} : { [name]: raw };
         const seen: string[] = [];
-        assert.deepEqual(fomoBudgetOverrides(env, (l) => seen.push(l)), fomoSetup({ DATABASE_URL: "postgres://x", MERRYMEN_FOMO_ENABLED: "1", ...env }).budget, `${name}=${JSON.stringify(raw)}`);
+        assert.deepEqual(fomoBudgetOverrides(env, (l) => seen.push(l)), fomoSetup({ DATABASE_URL: "postgres://x", AGENTCAP_FOMO_ENABLED: "1", ...env }).budget, `${name}=${JSON.stringify(raw)}`);
         const bad = raw !== undefined && raw.trim() !== "" && !/^\d+$/.test(raw.trim());
         assert.equal(seen.length, bad ? 1 : 0, `${name}=${JSON.stringify(raw)}`);
         if (bad) assert.ok(seen[0]!.includes(name) && !seen[0]!.includes(raw!), "a bad value is named, never echoed");
       }
     }
     assert.deepEqual(fomoBudgetOverrides({}), {});
-    assert.deepEqual(fomoBudgetOverrides({ MERRYMEN_FOMO_GROUP_HOURLY_CREDITS: "6500", MERRYMEN_FOMO_TENANT_HOURLY_CREDITS: "13000", MERRYMEN_FOMO_TENANT_DAILY_CREDITS: "26000" }), {
+    assert.deepEqual(fomoBudgetOverrides({ AGENTCAP_FOMO_GROUP_HOURLY_CREDITS: "6500", AGENTCAP_FOMO_TENANT_HOURLY_CREDITS: "13000", AGENTCAP_FOMO_TENANT_DAILY_CREDITS: "26000" }), {
       groupHourlyCredits: 6_500,
       tenantHourlyCredits: 13_000,
       tenantDailyCredits: 26_000,
@@ -194,7 +194,7 @@ describe("the permissions", () => {
   });
 
   it("hosted, against the real grant store: a grant with a smart account is an agent; none is not", async () => {
-    delete process.env.MERRYMEN_STORE_DEK;
+    delete process.env.AGENTCAP_STORE_DEK;
     resetGrantStoreForTest();
     const grant = {
       smartAccount: `0x${"5".repeat(40)}`,
@@ -218,14 +218,14 @@ describe("the permissions", () => {
 
   it("self-hosted: the install's own config, and only for the install's tenant", async () => {
     assert.equal((await selfHostedFomoAccess("self")).dataAccess, true);
-    process.env.MERRYMEN_FOMO_DATA_ACCESS = "0";
+    process.env.AGENTCAP_FOMO_DATA_ACCESS = "0";
     assert.equal((await selfHostedFomoAccess("self")).dataAccess, false);
     assert.deepEqual(await selfHostedFomoAccess(A), { dataAccess: false, monitoring: false, follow: false });
   });
 });
 
 describe("one runtime per process", () => {
-  it("self-hosted: built once on fomo.sqlite in MERRYMEN_HOME; without a key it is honestly not configured", async () => {
+  it("self-hosted: built once on fomo.sqlite in AGENTCAP_HOME; without a key it is honestly not configured", async () => {
     const first = fomoRuntime(false);
     const second = fomoRuntime(false);
     assert.equal(first, second, "the same promise, not a second build");
@@ -239,7 +239,7 @@ describe("one runtime per process", () => {
   });
 
   it("hosted: a failed build is forgotten, and the next caller builds again", async () => {
-    process.env.MERRYMEN_FOMO_ENABLED = "1";
+    process.env.AGENTCAP_FOMO_ENABLED = "1";
     const failed = fomoRuntime(true);
     await assert.rejects(failed, /DATABASE_URL/);
     // The shared database becomes reachable (here: the MCP test seam).

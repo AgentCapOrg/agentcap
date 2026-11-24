@@ -4,7 +4,7 @@
  * Telegram is read-only for energy in v1 (design D6). This alert is the one
  * thing it pushes: once per UTC day, only while the gate ENFORCES and today's
  * new-trade allowance is used up, in the notice's own words with the addresses
- * in <code> and the buy pointed at the Merrymen app chat — and never with a
+ * in <code> and the buy pointed at the AgentCap app chat — and never with a
  * button that buys anything.
  *
  * The rules are executed on the pure module; the wiring is executed through
@@ -20,9 +20,9 @@ import { after, describe, it, mock } from "node:test";
 
 import type { EnergyStatus } from "../../../packages/core/src/index";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-energy-alert-"));
-process.env.MERRYMEN_HOME = HOME; // no ledger, no grant file: the pass reads nothing else
-process.env.MERRYMEN_DASHBOARD_URL = "https://app.merrymen.dev";
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-energy-alert-"));
+process.env.AGENTCAP_HOME = HOME; // no ledger, no grant file: the pass reads nothing else
+process.env.AGENTCAP_DASHBOARD_URL = "https://app.agentcap.xyz";
 after(() => rmSync(HOME, { recursive: true, force: true }));
 
 const {
@@ -38,7 +38,7 @@ const { startNotifier } = await import("./notifier");
 const ACCOUNT = "0x8e93ba0c1b1d8f0a3c9b2e6f4d5a7c8b9e0f1a2b";
 const HOLDER = "0x1234567890abcdef1234567890abcdef12345678";
 const NOW = 1_790_000_000;
-const PUBLIC = "https://app.merrymen.dev";
+const PUBLIC = "https://app.agentcap.xyz";
 
 const REPORT: EnergyStatus = {
   v: 1,
@@ -128,8 +128,8 @@ describe("energyAlert — what it says", () => {
     assert.doesNotMatch(bare, /0x[0-9a-fA-F]{6,}/, "no address outside a code span");
   });
 
-  it("points the buy at the Merrymen app chat, not here", () => {
-    assert.match(a.text, /ask me in the Merrymen app chat \(not here\) to get my \$MERRYMEN/);
+  it("points the buy at the AgentCap app chat, not here", () => {
+    assert.match(a.text, /ask me in the AgentCap app chat \(not here\) to get my \$AGENTCAP/);
     assert.doesNotMatch(a.text, /\/getenergy|\/buy/);
   });
 
@@ -159,7 +159,7 @@ describe("energyAlert — what it says", () => {
   it("unread is our read failing, never 'hold 0'", () => {
     const t = energyAlert(inputs({ level: "unread", holderTokens: null, agentTokens: null }), PUBLIC, NOW)!.text;
     assert.match(t, /our read failing, not your wallet/);
-    assert.doesNotMatch(t, /hold 0|\b0 \$MERRYMEN/);
+    assert.doesNotMatch(t, /hold 0|\b0 \$AGENTCAP/);
   });
 
   it("nothing about the token's price or returns", () => {
@@ -240,7 +240,7 @@ describe("through the real notifier", () => {
       const sent = sends()[0]!.body;
       assert.equal(sent.chat_id, 4242, "to the /link owner only");
       assert.ok(String(sent.text).includes(`<code>${ACCOUNT}</code>`));
-      assert.match(String(sent.text), /Merrymen app chat \(not here\)/);
+      assert.match(String(sent.text), /AgentCap app chat \(not here\)/);
       const rows = (sent.reply_markup as { inline_keyboard: Array<Array<Record<string, unknown>>> }).inline_keyboard;
       assert.ok(rows.flat().every((b) => b.callback_data === undefined), "no inline button that acts");
       assert.deepEqual(rows, [[{ text: "⚡ Open my desk", url: `${PUBLIC}/agent` }]]);

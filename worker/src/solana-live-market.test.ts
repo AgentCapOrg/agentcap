@@ -35,7 +35,7 @@ test("pinned route discriminator matches the Anchor IDL name independently", () 
 });
 test("quote and CPI use exact coherent v1 response, fixed origins, hard slippage and no provider transaction", async () => {
   const f = fixture(); const seen: { url: URL; init: RequestInit }[] = [];
-  const market = createSolanaLiveMarket({ env: { MERRYMEN_SOLANA_RPC_MAINNET: "https://rpc.example/", MERRYMEN_JUPITER_API_KEY: "test-key" }, now: () => 100_000,
+  const market = createSolanaLiveMarket({ env: { AGENTCAP_SOLANA_RPC_MAINNET: "https://rpc.example/", AGENTCAP_JUPITER_API_KEY: "test-key" }, now: () => 100_000,
     rpc: { read: callback => callback(async () => 1000), send: async () => assert.fail("must not submit") },
     fetch: async (url, init) => { seen.push({ url: new URL(String(url)), init: init! });
       return Response.json(seen.length === 1 ? f.rawQuote : { ...f.rawBuild,
@@ -72,7 +72,7 @@ test("stale chain context and incoherent quote graph never produce a CPI", async
   for (const stale of [false, true]) {
     const f = fixture(); if (!stale) f.rawQuote.routePlan[0]!.swapInfo.inAmount = "1";
     let requests = 0;
-    const market = createSolanaLiveMarket({ env: { MERRYMEN_SOLANA_RPC_MAINNET: "https://rpc.example/", MERRYMEN_JUPITER_API_KEY: "test-key" }, now: () => 100_000,
+    const market = createSolanaLiveMarket({ env: { AGENTCAP_SOLANA_RPC_MAINNET: "https://rpc.example/", AGENTCAP_JUPITER_API_KEY: "test-key" }, now: () => 100_000,
       rpc: { read: callback => callback(async () => 1100), send: async () => assert.fail("must not submit") },
       fetch: async () => Response.json(++requests === 1 ? f.rawQuote : f.rawBuild) });
     await assert.rejects(market.build(f.request)); if (!stale) assert.equal(requests, 1);
@@ -84,7 +84,7 @@ test("every refusal says why: a missing or unusable key is configuration, and no
   const f = fixture();
   for (const apiKey of [undefined, "", "   ", "bad key", "x".repeat(1025), "caf\u00e9"]) {
     let requests = 0;
-    const market = createSolanaLiveMarket({ env: { MERRYMEN_SOLANA_RPC_MAINNET: "https://rpc.example/", ...(apiKey === undefined ? {} : { MERRYMEN_JUPITER_API_KEY: apiKey }) },
+    const market = createSolanaLiveMarket({ env: { AGENTCAP_SOLANA_RPC_MAINNET: "https://rpc.example/", ...(apiKey === undefined ? {} : { AGENTCAP_JUPITER_API_KEY: apiKey }) },
       now: () => 100_000, rpc: { read: callback => callback(async () => 1000), send: async () => assert.fail("must not submit") },
       fetch: async () => { requests++; return Response.json(f.rawQuote); } });
     await assert.rejects(market.build(f.request), code("configuration"), JSON.stringify(apiKey));
@@ -168,7 +168,7 @@ test("a quote outside the RPC's slot window, an incoherent quote graph or a fee 
     if (problem === "graph") f.rawQuote.routePlan[0]!.swapInfo.inAmount = "1";
     if (problem === "fee") (f.rawQuote as Record<string, unknown>).platformFee = { amount: "5", feeBps: 1 };
     if (problem === "exact-out") f.rawQuote.swapMode = "ExactOut";
-    const market = createSolanaLiveMarket({ env: { MERRYMEN_SOLANA_RPC_MAINNET: "https://rpc.example/", MERRYMEN_JUPITER_API_KEY: "test-key" }, now: () => 100_000,
+    const market = createSolanaLiveMarket({ env: { AGENTCAP_SOLANA_RPC_MAINNET: "https://rpc.example/", AGENTCAP_JUPITER_API_KEY: "test-key" }, now: () => 100_000,
       rpc: { read: callback => callback(async () => problem === "stale" ? 1100 : 1000), send: async () => assert.fail("must not submit") },
       fetch: async url => Response.json(String(url).includes("/quote?") ? f.rawQuote : f.rawBuild) });
     await assert.rejects(market.build(f.request), code("provider"), problem);
@@ -187,7 +187,7 @@ test("a quote the shared validators refuse is the provider's too, never the owne
   for (const [problem, mutate] of Object.entries(answers)) {
     const f = fixture(); mutate(f.rawQuote as Quote);
     let builds = 0;
-    const market = createSolanaLiveMarket({ env: { MERRYMEN_SOLANA_RPC_MAINNET: "https://rpc.example/", MERRYMEN_JUPITER_API_KEY: "test-key" }, now: () => 100_000,
+    const market = createSolanaLiveMarket({ env: { AGENTCAP_SOLANA_RPC_MAINNET: "https://rpc.example/", AGENTCAP_JUPITER_API_KEY: "test-key" }, now: () => 100_000,
       rpc: { read: callback => callback(async () => 1000), send: async () => assert.fail("must not submit") },
       fetch: async url => String(url).includes("/quote?") ? Response.json(f.rawQuote) : (builds++, Response.json(f.rawBuild)) });
     await assert.rejects(market.build(f.request), code("provider"), problem);
@@ -195,13 +195,13 @@ test("a quote the shared validators refuse is the provider's too, never the owne
   }
   // A provider slow enough that its quote went stale before the swap instructions came back.
   const f = fixture(); let clock = 100_000;
-  const slow = createSolanaLiveMarket({ env: { MERRYMEN_SOLANA_RPC_MAINNET: "https://rpc.example/", MERRYMEN_JUPITER_API_KEY: "test-key" }, now: () => clock,
+  const slow = createSolanaLiveMarket({ env: { AGENTCAP_SOLANA_RPC_MAINNET: "https://rpc.example/", AGENTCAP_JUPITER_API_KEY: "test-key" }, now: () => clock,
     rpc: { read: callback => callback(async () => 1000), send: async () => assert.fail("must not submit") },
     fetch: async url => { if (!String(url).includes("/quote?")) clock += 31_000; return Response.json(String(url).includes("/quote?") ? f.rawQuote : f.rawBuild); } });
   await assert.rejects(slow.build(f.request), code("provider"), "stale after a slow build");
   // The owner's own malformed request is still refused as theirs, before anything is asked.
   let asked = 0;
-  const owner = createSolanaLiveMarket({ env: { MERRYMEN_SOLANA_RPC_MAINNET: "https://rpc.example/", MERRYMEN_JUPITER_API_KEY: "test-key" }, now: () => 100_000,
+  const owner = createSolanaLiveMarket({ env: { AGENTCAP_SOLANA_RPC_MAINNET: "https://rpc.example/", AGENTCAP_JUPITER_API_KEY: "test-key" }, now: () => 100_000,
     rpc: { read: callback => callback(async () => 1000), send: async () => assert.fail("must not submit") },
     fetch: async () => { asked++; return Response.json(f.rawQuote); } });
   await assert.rejects(owner.build({ ...f.request, amountRaw: "01" }), (error: unknown) => error instanceof SolanaPaperValidationError);

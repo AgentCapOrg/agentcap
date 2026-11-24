@@ -52,9 +52,9 @@ export async function recoverIdentity(input: { message: string; signature: Hex }
 function storedGrantFor(account: Address | undefined): unknown {
   if (!account) return undefined;
   const read = (key: string): unknown => { try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : undefined; } catch { return undefined; } };
-  const current = read('merrymen.grant.v1') as { smartAccount?: unknown } | undefined;
+  const current = read('agentcap.grant.v1') as { smartAccount?: unknown } | undefined;
   if (typeof current?.smartAccount === 'string' && current.smartAccount.toLowerCase() === account.toLowerCase()) return current;
-  return read(`merrymen.grant.archive.${account.toLowerCase()}`);
+  return read(`agentcap.grant.archive.${account.toLowerCase()}`);
 }
 function projectionFor(previousGrant: unknown, account: Address | undefined): unknown {
   const g = previousGrant as { smartAccount?: unknown } | null | undefined;
@@ -126,7 +126,7 @@ export async function restore(input: Parameters<typeof create>[0]) {
   const ownerSignature = await signer(input.owner).signMessage({ message });
   const walletSignature = await nativeCall('signTenant', { message, address: input.tenant });
   grant.binding = { version: 'legacy-wallet-owner-v1', nonce: challenge.nonce, ownerSignature, walletSignature };
-  localStorage.setItem('merrymen.grant.v1', JSON.stringify(grant));
+  localStorage.setItem('agentcap.grant.v1', JSON.stringify(grant));
   let handoff: { ok: boolean; error?: string };
   try {
     const delivered = await fetch('/api/grants', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(grant) });

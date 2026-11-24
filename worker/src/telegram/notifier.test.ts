@@ -48,11 +48,11 @@ async function withNotifier(
   }) => Promise<void>,
   options: { agentId?: string | null; immediate?: boolean; narrate?: boolean; tailNotices?: NotifierDeps["tailNotices"]; notify?: boolean; ownerId?: number | null } = {},
 ): Promise<void> {
-  const home = mkdtempSync(path.join(tmpdir(), "merrymen-notifier-digest-"));
-  const priorHome = process.env.MERRYMEN_HOME;
+  const home = mkdtempSync(path.join(tmpdir(), "agentcap-notifier-digest-"));
+  const priorHome = process.env.AGENTCAP_HOME;
   const priorFetch = globalThis.fetch;
-  process.env.MERRYMEN_HOME = home;
-  const db = new DatabaseSync(path.join(home, "merrymen.db"));
+  process.env.AGENTCAP_HOME = home;
+  const db = new DatabaseSync(path.join(home, "agentcap.db"));
   db.exec(`CREATE TABLE trades (
     id INTEGER PRIMARY KEY, agent_id TEXT NOT NULL, kind TEXT NOT NULL, status TEXT NOT NULL,
     amount_usdg REAL NOT NULL, reject_rule TEXT, tx_hash TEXT, decision_id TEXT, target TEXT,
@@ -131,8 +131,8 @@ async function withNotifier(
     handle?.stop();
     mock.timers.reset();
     globalThis.fetch = priorFetch;
-    if (priorHome === undefined) delete process.env.MERRYMEN_HOME;
-    else process.env.MERRYMEN_HOME = priorHome;
+    if (priorHome === undefined) delete process.env.AGENTCAP_HOME;
+    else process.env.AGENTCAP_HOME = priorHome;
     db.close();
     rmSync(home, { recursive: true, force: true });
   }

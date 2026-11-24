@@ -1,4 +1,4 @@
-import { IN_FLIGHT_TEXT, readerHead } from "@merrymen/thesis";
+import { IN_FLIGHT_TEXT, readerHead } from "@agentcap/thesis";
 import { pctBps, usd as usdText } from "@/lib/format";
 import { postOf } from "@/lib/post-line";
 import { xHandleTag } from "@/lib/x-handle";

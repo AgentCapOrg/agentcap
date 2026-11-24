@@ -45,7 +45,7 @@
  * `Intl.NumberFormat("ar-EG")` produces. Both layers are normalised below.
  */
 
-import { MAX_USDG_UI } from "@merrymen/core";
+import { MAX_USDG_UI } from "@agentcap/core";
 
 /** The result of reading a typed amount. Never a bare number. */
 export type ParsedAmount =

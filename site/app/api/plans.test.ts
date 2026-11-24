@@ -21,15 +21,15 @@ const secret = 'test-only-portal-credential-32-bytes';
 const TREASURY = '0x3333333333333333333333333333333333333333';
 const answer = {
   billing: { mode: 'enforce', enforced: true }, period_days: 30, treasury: TREASURY,
-  currency: { symbol: 'MERRYMEN', address: TOKEN.address, chain_id: 4663, decimals: 18, explorer_url: 'https://robinhoodchain.blockscout.com' },
+  currency: { symbol: 'AGENTCAP', address: TOKEN.address, chain_id: 4663, decimals: 18, explorer_url: 'https://robinhoodchain.blockscout.com' },
   confirmations: { blocks: 64, min_age_sec: 120 },
   plans: [{ id: 'free', name: 'Free', price_tokens: '0', price_raw: '0', requests: 1000, rpm: 30 }, { id: 'crumbs', name: 'Crumbs', price_tokens: '100000', price_raw: (100_000n * UNIT).toString(), requests: 50000, rpm: 60 }],
 };
 
 /** Runs fetchPlans against a scripted gateway, recording each request. */
-async function plansWith(answer: () => Response | Promise<Response>, env: Record<string, string | undefined> = { MERRYMEN_DEVELOPER_PORTAL_SECRET: secret }) {
+async function plansWith(answer: () => Response | Promise<Response>, env: Record<string, string | undefined> = { AGENTCAP_DEVELOPER_PORTAL_SECRET: secret }) {
   const calls: { url: string; init: RequestInit & { next?: { revalidate?: number | false } } }[] = [];
-  const oldFetch = globalThis.fetch, oldError = console.error, keys = ['MERRYMEN_DEVELOPER_PORTAL_SECRET', 'MERRYMEN_DEVELOPER_GATEWAY_ORIGIN'];
+  const oldFetch = globalThis.fetch, oldError = console.error, keys = ['AGENTCAP_DEVELOPER_PORTAL_SECRET', 'AGENTCAP_DEVELOPER_GATEWAY_ORIGIN'];
   const old = Object.fromEntries(keys.map(k => [k, process.env[k]]));
   const logged: string[] = [];
   for (const k of keys) { if (env[k] === undefined) delete process.env[k]; else process.env[k] = env[k]; }
@@ -44,7 +44,7 @@ async function plansWith(answer: () => Response | Promise<Response>, env: Record
 test('plans are read with the portal secret and no session, and cached for a minute', async () => {
   const { plans, calls } = await plansWith(() => Response.json(answer));
   assert.equal(calls.length, 1);
-  assert.equal(calls[0].url, 'https://ai.merrymen.dev/developer/v1/plans');
+  assert.equal(calls[0].url, 'https://ai.agentcap.xyz/developer/v1/plans');
   const headers = new Headers(calls[0].init.headers);
   assert.equal(headers.get('authorization'), `Bearer ${secret}`);
   assert.equal(headers.get('x-developer-session'), null); assert.equal(headers.get('cookie'), null);
@@ -65,7 +65,7 @@ test('the static table stands in for a gateway that cannot answer, and it carrie
     assert.equal(logged.length, 1, why);
   }
   // Without a usable secret nothing is sent at all: the credential never goes to a bad origin.
-  for (const env of [{}, { MERRYMEN_DEVELOPER_PORTAL_SECRET: 'short' }, { MERRYMEN_DEVELOPER_PORTAL_SECRET: secret, MERRYMEN_DEVELOPER_GATEWAY_ORIGIN: 'http://gateway.example' }]) {
+  for (const env of [{}, { AGENTCAP_DEVELOPER_PORTAL_SECRET: 'short' }, { AGENTCAP_DEVELOPER_PORTAL_SECRET: secret, AGENTCAP_DEVELOPER_GATEWAY_ORIGIN: 'http://gateway.example' }]) {
     const { plans, calls } = await plansWith(() => Response.json(answer), env);
     assert.deepEqual(plans, FALLBACK_PLANS); assert.deepEqual(calls, []);
   }
@@ -73,7 +73,7 @@ test('the static table stands in for a gateway that cannot answer, and it carrie
 
 const live = (mode: 'off' | 'observe' | 'enforce' = 'enforce', over: Record<string, unknown> = {}) => normalizePlans({
   billing: { mode, enforced: mode === 'enforce' }, period_days: 30, treasury: TREASURY,
-  currency: { symbol: 'MERRYMEN', address: TOKEN.address, chain_id: 4663, decimals: 18, explorer_url: '' }, confirmations: { blocks: 64, min_age_sec: 120 },
+  currency: { symbol: 'AGENTCAP', address: TOKEN.address, chain_id: 4663, decimals: 18, explorer_url: '' }, confirmations: { blocks: 64, min_age_sec: 120 },
   plans: FALLBACK_PLANS.plans, ...over,
 })!;
 const html = <P extends object>(type: React.FunctionComponent<P>, props: P) => renderToStaticMarkup(createElement(type, props));
@@ -83,11 +83,11 @@ const BANNED = /burn|buyback|buy back|deflation|circulation|supports the token|w
 test('the Plans section shows the four plans, how requests count and how plans are paid', () => {
   const page = html(PlansSection, { plans: live() });
   assert.match(page, /id="plans"/);
-  for (const text of ['Free', 'Crumbs', 'Loaf', 'Feast', '100,000 MERRYMEN', '400,000 MERRYMEN', '1,000,000 MERRYMEN', '<strong>50,000</strong> requests per 30 days', '<strong>300</strong> requests a minute', 'PER 30 DAYS', 'Choose a plan']) {
+  for (const text of ['Free', 'Crumbs', 'Loaf', 'Feast', '100,000 AGENTCAP', '400,000 AGENTCAP', '1,000,000 AGENTCAP', '<strong>50,000</strong> requests per 30 days', '<strong>300</strong> requests a minute', 'PER 30 DAYS', 'Choose a plan']) {
     assert.ok(page.includes(text), text);
   }
   assert.match(page, /Every API request counts toward your plan; <code>\/meta<\/code> is free/);
-  assert.match(page, /paid in \$MERRYMEN on Robinhood Chain from the wallet you sign in with/);
+  assert.match(page, /paid in \$AGENTCAP on Robinhood Chain from the wallet you sign in with/);
   assert.ok(page.includes(`href="https://robinhoodchain.blockscout.com/token/${TOKEN.address}"`));
   assert.doesNotMatch(page, /coming soon/i);
   // The section is public: it never names the payment address, and never offers to pay by itself.
@@ -103,7 +103,7 @@ test('without live billing and a treasury the Plans section says coming soon and
     if (plans.source === 'live' && plans.billing.mode !== 'off') assert.match(page, /Until payments open there is nothing to send; a plan chosen in your workspace waits until it can be paid\./, why);
     else assert.match(page, /nothing is charged and there is nothing to send/, why);
     assert.doesNotMatch(page, /Choose a plan/, why); assert.ok(!page.includes(TREASURY), why);
-    assert.ok(page.includes('100,000 MERRYMEN'), `${why}: the table still shows`);
+    assert.ok(page.includes('100,000 AGENTCAP'), `${why}: the table still shows`);
   }
   assert.match(html(PlansSection, { plans: FALLBACK_PLANS }), /live details could not be loaded/);
   assert.match(html(PlansSection, { plans: live('observe') }), /counted against each plan but not yet refused/);
@@ -127,7 +127,7 @@ test('the Plans copy matches what the gateway does in each billing mode: counted
 
 test('the page renders the Plans section on the server, and the stale "no payment" line is gone', () => {
   const page = html(DeveloperConsole, { initialPlans: live() });
-  assert.match(page, /id="plans"/); assert.match(page, /href="#plans"/); assert.ok(page.includes('400,000 MERRYMEN'));
+  assert.match(page, /id="plans"/); assert.match(page, /href="#plans"/); assert.ok(page.includes('400,000 AGENTCAP'));
   const fallback = html(DeveloperConsole, {});
   assert.match(fallback, /PAID PLANS COMING SOON/);
   const source = readFileSync(new URL('./DeveloperConsole.tsx', import.meta.url), 'utf8');

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import Module, { createRequire } from "node:module";
 import { before, beforeEach, describe, it, mock } from "node:test";
 import { fileURLToPath } from "node:url";
-import { PONS_SELF_TRADE } from "@merrymen/core";
+import { PONS_SELF_TRADE } from "@agentcap/core";
 
 const SUPPORTED = PONS_SELF_TRADE[4663] as `0x${string}`;
 const ARBITRARY = "0x1111111111111111111111111111111111111111" as const;

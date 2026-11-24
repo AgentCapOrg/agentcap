@@ -62,7 +62,7 @@ describe("whose conversation this is", () => {
   });
 
   it("self-hosted gets one, because there is one operator and no second owner", () => {
-    assert.equal(chatKeyFor({ hosted: false, address: null }), "merrymen.chat.self");
+    assert.equal(chatKeyFor({ hosted: false, address: null }), "agentcap.chat.self");
   });
 
   it("and nothing is written when there is no key", () => {
@@ -94,7 +94,7 @@ describe("round trip", () => {
 
   it("an emptied conversation removes the row rather than storing an empty one", () => {
     const s = memStore();
-    const key = "merrymen.chat.self";
+    const key = "agentcap.chat.self";
     saveThread(key, thread([line(1)]), s);
     saveThread(key, thread([]), s);
     assert.equal(s.map.has(key), false);
@@ -102,7 +102,7 @@ describe("round trip", () => {
 
   it("keeps the NEWEST lines when there are too many", () => {
     const s = memStore();
-    const key = "merrymen.chat.self";
+    const key = "agentcap.chat.self";
     const many = Array.from({ length: MAX_MESSAGES + 10 }, (_, i) => line(i));
     saveThread(key, thread(many), s);
     const back = loadThread(key, s).messages;
@@ -112,7 +112,7 @@ describe("round trip", () => {
 
   it("A CARD AND A RETRY ARE NEVER STORED — a card is re-read from the tape, a retry is this session's", () => {
     const s = memStore();
-    const key = "merrymen.chat.self";
+    const key = "agentcap.chat.self";
     const withCard: ChatMessage = {
       ...line(1, "event"),
       tradeKey: "t:1:buy:TSLA:5:l",
@@ -132,7 +132,7 @@ describe("round trip", () => {
     // Without it, a reloaded thread held the order's life to this browser's
     // clock again, and a browser minutes off split one trade into two lines.
     const s = memStore();
-    const key = "merrymen.chat.self";
+    const key = "agentcap.chat.self";
     const placing: ChatMessage = { ...line(1, "agent"), order: { id: ORDER, serverPlacedAt: 1_800_000_000_000 } };
     saveThread(key, thread([placing]), s);
     assert.equal(loadThread(key, s).messages[0]!.order?.serverPlacedAt, 1_800_000_000_000);
@@ -147,7 +147,7 @@ describe("round trip", () => {
     // A failure that lost its mark on the way back in would be handed to the
     // model as something it said ("I couldn't get an answer through…").
     const s = memStore();
-    const key = "merrymen.chat.self";
+    const key = "agentcap.chat.self";
     const kinds = ["signed-out", "no-llm", "llm-error", "unreadable", "network", "timeout", "cut-off", "server"] as const;
     saveThread(key, thread(kinds.map((failed, i) => ({ ...line(i, "agent"), failed }))), s);
     assert.deepEqual(loadThread(key, s).messages.map((m) => m.failed), [...kinds]);
@@ -169,7 +169,7 @@ describe("what it refuses to trust or to crash on", () => {
     // and it is rendered as the agent's own words — and a receipt as a fact
     // about money.
     const s = memStore();
-    const key = "merrymen.chat.self";
+    const key = "agentcap.chat.self";
     s.map.set(
       key,
       JSON.stringify({

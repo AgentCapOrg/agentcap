@@ -129,7 +129,7 @@ export function AccountPanel({ address, plans, state, keys, busy, run, defaultNa
    * What must still hold at the click, read now rather than trusted from when
    * the panel was drawn: the treasury and the payments switch (GET /plans),
    * and what is due and what for (GET /account), which a payment or a plan
-   * change from another device, or Merrymen, may have changed since.
+   * change from another device, or AgentCap, may have changed since.
    */
   const confirmPayable = useCallback(async (treasury: string) => {
     if (adopt().length) throw new Error("A payment from another tab of this browser is being checked below. Wait for it before paying again: paying now sends a second payment.");
@@ -204,7 +204,7 @@ export function AccountSummary({ view, plans, keys, busy = "", onRecheck }: { vi
   const toCheck = onRecheck ? reversedToCheck(view.history) : [];
   const recheck = (hash: string, words: string) => <button type="button" className="dev-textlink" disabled={!!busy} onClick={() => onRecheck?.(hash)}>{words}</button>;
   const selected = plans.plans.find(p => p.id === plan.selected);
-  const due = view.due_raw ? `${formatTokens(view.due_raw, { decimals: 0, round: "up" })} MERRYMEN` : "";
+  const due = view.due_raw ? `${formatTokens(view.due_raw, { decimals: 0, round: "up" })} AGENTCAP` : "";
   const pct = usage && usage.limit > 0 ? Math.min(100, Math.round(usage.used / usage.limit * 100)) : 0;
   const keyName = (id: string) => keys.find(k => k.key_id === id)?.name ?? id;
   // A lapsed period whose renewal credit already covers: it reads as Free until the next metered request makes the
@@ -219,7 +219,7 @@ export function AccountSummary({ view, plans, keys, busy = "", onRecheck }: { vi
       {selected && plan.selected !== plan.id && !(starting && starting.id === plan.selected) && <small>Next: {selected.name}{view.due_raw ? `${renewBy ? ` from ${formatDate(renewBy)},` : ""} once it is paid` : plan.ends_at ? ` from ${formatDate(plan.ends_at)}` : ""}</small>}
     </div>
     <div className="dev-account-credit">
-      <span>CREDIT</span><strong>{formatTokens(credit, { decimals: 2 })} <small>MERRYMEN</small></strong>
+      <span>CREDIT</span><strong>{formatTokens(credit, { decimals: 2 })} <small>AGENTCAP</small></strong>
       {credit < 0n ? <><small className="dev-warn">A reversed payment left a shortfall. {toCheck.length > 0 ? "If that transfer still shows in your wallet's activity, check it again: once it is final in its new block, it is credited again. " : ""}Paid plans do not start or renew until the shortfall is covered.</small>
         {toCheck.map(h => <small key={h} className="dev-recheck"><code>{short(h)}</code> {recheck(h, "Check this transaction again")}</small>)}</>
         : !due ? <small>Nothing due</small>
@@ -298,8 +298,8 @@ export function WalletPay({ check, amount, busy, balance, onConnect, onSwitch, o
 }) {
   if (!check) return <p className="dev-pay-check" role="status">Checking your browser wallet…</p>;
   if (check.ok) return <div className="dev-pay-wallet">
-    <button className="dev-primary" disabled={!!busy} onClick={onPay}>{busy === "pay" ? "Confirm in your wallet…" : `Pay ${formatTokens(amount, { decimals: 0 })} MERRYMEN with wallet ↗`}</button>
-    {balance !== null && <small>This wallet holds {formatTokens(balance, { decimals: 2 })} MERRYMEN{balance >= amount ? `; after this payment it holds ${formatTokens(balance - amount, { decimals: 2 })}` : ", less than this payment"}.</small>}
+    <button className="dev-primary" disabled={!!busy} onClick={onPay}>{busy === "pay" ? "Confirm in your wallet…" : `Pay ${formatTokens(amount, { decimals: 0 })} AGENTCAP with wallet ↗`}</button>
+    {balance !== null && <small>This wallet holds {formatTokens(balance, { decimals: 2 })} AGENTCAP{balance >= amount ? `; after this payment it holds ${formatTokens(balance - amount, { decimals: 2 })}` : ", less than this payment"}.</small>}
   </div>;
   return <div className="dev-pay-wallet"><p className="dev-pay-check" role="status">{check.message}</p>
     {check.reason === "not_connected" && <button className="dev-secondary" disabled={!!busy} onClick={onConnect}>Connect wallet</button>}
@@ -374,27 +374,27 @@ function PaymentPanel({ wallet, amount, treasury, renewBy, reversed, busy, step,
     {refused}{paste}
     <div className="dev-pay-wallet"><button className="dev-textlink" disabled={!!busy} onClick={() => onUncertain("")}>My wallet shows nothing was sent: pay again</button></div>
   </section>;
-  const shortfall = reversed && <p className="dev-warn">{tokens} MERRYMEN includes a reversed payment. Check that transaction again first (under Credit above): if it is final in another block, it is credited again. Paying now sends a new payment, and payments are not returned.</p>;
+  const shortfall = reversed && <p className="dev-warn">{tokens} AGENTCAP includes a reversed payment. Check that transaction again first (under Credit above): if it is final in another block, it is credited again. Paying now sends a new payment, and payments are not returned.</p>;
   const later = <p className="dev-billing-note">Your plan runs until {renewBy && formatDate(renewBy)} either way, and nothing is owed before then. Credit you send now renews it on your first API request after this period ends.</p>;
   // A renewal is not owed until the period ends, and right after a payment starts a plan the gateway already reports the
   // next period's price: drawn as a payment, it is a second one of the same size under the first one's receipt. Paying
   // ahead stays possible, as a step of its own.
   if (renewBy && aheadFor !== renewBy) return <section className="dev-pay" aria-labelledby="dev-pay-title">
-    <h3 id="dev-pay-title" ref={heading} tabIndex={-1}>Renewal on {formatDate(renewBy)}: {tokens} MERRYMEN</h3>
+    <h3 id="dev-pay-title" ref={heading} tabIndex={-1}>Renewal on {formatDate(renewBy)}: {tokens} AGENTCAP</h3>
     {later}{shortfall}
     <div className="dev-pay-wallet"><button className="dev-secondary" disabled={!!busy} onClick={() => swap(renewBy)}>Pay ahead for the next period</button></div>
     {refused}{paste}
   </section>;
   return <section className="dev-pay" aria-labelledby="dev-pay-title">
     {renewBy
-      ? <><h3 id="dev-pay-title" ref={heading} tabIndex={-1}>Renew for the next period: {tokens} MERRYMEN</h3>
+      ? <><h3 id="dev-pay-title" ref={heading} tabIndex={-1}>Renew for the next period: {tokens} AGENTCAP</h3>
         {later}<div className="dev-pay-wallet"><button className="dev-textlink" disabled={!!busy} onClick={() => swap(null)}>Not now</button></div></>
-      : <h3 id="dev-pay-title" ref={heading} tabIndex={-1}>Pay {tokens} MERRYMEN</h3>}
+      : <h3 id="dev-pay-title" ref={heading} tabIndex={-1}>Pay {tokens} AGENTCAP</h3>}
     {shortfall}
     <dl className="dev-pay-details">
-      <div><dt>Amount</dt><dd><code>{tokens} MERRYMEN</code><button type="button" aria-label="Copy amount" onClick={() => copy("amount", (amount / 10n ** 18n).toString())}>{copied === "amount" ? "Copied ✓" : "Copy"}</button></dd></div>
-      <div><dt>To (Merrymen payments wallet)</dt><dd><code>{treasury}</code><button type="button" aria-label="Copy Merrymen payments wallet address" onClick={() => copy("treasury", treasury)}>{copied === "treasury" ? "Copied ✓" : "Copy"}</button><a href={`${EXPLORER}/address/${treasury}`} target="_blank" rel="noreferrer">Blockscout ↗</a></dd></div>
-      <div><dt>Token</dt><dd><code>{TOKEN.address}</code><a href={`${EXPLORER}/token/${TOKEN.address}`} target="_blank" rel="noreferrer">$MERRYMEN ↗</a></dd></div>
+      <div><dt>Amount</dt><dd><code>{tokens} AGENTCAP</code><button type="button" aria-label="Copy amount" onClick={() => copy("amount", (amount / 10n ** 18n).toString())}>{copied === "amount" ? "Copied ✓" : "Copy"}</button></dd></div>
+      <div><dt>To (AgentCap payments wallet)</dt><dd><code>{treasury}</code><button type="button" aria-label="Copy AgentCap payments wallet address" onClick={() => copy("treasury", treasury)}>{copied === "treasury" ? "Copied ✓" : "Copy"}</button><a href={`${EXPLORER}/address/${treasury}`} target="_blank" rel="noreferrer">Blockscout ↗</a></dd></div>
+      <div><dt>Token</dt><dd><code>{TOKEN.address}</code><a href={`${EXPLORER}/token/${TOKEN.address}`} target="_blank" rel="noreferrer">$AGENTCAP ↗</a></dd></div>
       <div><dt>Network</dt><dd>Robinhood Chain (chain ID 4663) <small>(the transfer also needs a little ETH there for the network fee)</small></dd></div>
       <div><dt>From</dt><dd><code>{wallet}</code> <small>(the wallet you signed in with)</small></dd></div>
     </dl>
@@ -418,7 +418,7 @@ function PaymentPanel({ wallet, amount, treasury, renewBy, reversed, busy, step,
         onSent(hash);
       })} />
     {refused}{paste}
-    <p className="dev-small-print">Paying moves MERRYMEN out of your wallet. Merry Circle tiers and hosted energy follow the balance you hold.</p>
+    <p className="dev-small-print">Paying moves AGENTCAP out of your wallet. Merry Circle tiers and hosted energy follow the balance you hold.</p>
   </section>;
 }
 

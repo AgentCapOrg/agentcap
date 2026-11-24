@@ -6,7 +6,7 @@
  * an owner key is refused, and a grant whose owner isn't the tenant is refused.
  * Each of those is a fund-safety property, so each gets its own assertion.
  *
- * MERRYMEN_HOME is set before the store resolves its dir; node's --test runs
+ * AGENTCAP_HOME is set before the store resolves its dir; node's --test runs
  * each file in its own process, so the override never leaks.
  */
 import assert from "node:assert/strict";
@@ -18,10 +18,10 @@ import { DatabaseSync } from "node:sqlite";
 import os from "node:os";
 import path from "node:path";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-gstore-"));
-process.env.MERRYMEN_HOME = HOME;
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-gstore-"));
+process.env.AGENTCAP_HOME = HOME;
 // A 32-byte base64 DEK so the file backend seals the session key at rest.
-process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
+process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
 
 const { FileGrantStore, GRANT_STORE_LOCK_FILE } = await import("./grant-store");
 const { sealSecret, openSecret } = await import("./store-crypto");

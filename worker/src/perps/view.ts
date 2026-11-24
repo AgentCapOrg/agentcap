@@ -278,7 +278,7 @@ export interface PerpsViewFacts {
   withdrawalsInTransitMicro: bigint;
   /** Rule 16 evidence: the durable flag, or activity this read shows that we never do. */
   incident: boolean;
-  /** The operator's MERRYMEN_HALT_PERP_ENTRIES or the owner's /flatten. */
+  /** The operator's AGENTCAP_HALT_PERP_ENTRIES or the owner's /flatten. */
   entriesHalted: boolean;
   closeInFlight: ReadonlySet<PerpKey>;
   /** When what the view says was true, ms: the account snapshot's transaction_time (live) or the feed file's time (paper). */

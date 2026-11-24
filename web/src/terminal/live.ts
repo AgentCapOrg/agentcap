@@ -16,8 +16,8 @@ import {
   fullDateTime as fmtFullDateTime,
 } from "@/lib/format";
 import { loadTokenQuotes, applyTokenQuotes, type TokenQuote } from "./quotes";
-import { STOCK_TOKENS } from "@merrymen/core";
-import { rejectRuleLabel } from "@merrymen/thesis";
+import { STOCK_TOKENS } from "@agentcap/core";
+import { rejectRuleLabel } from "@agentcap/thesis";
 import { parseStrategy, strategyLabel, type StrategyGlance } from "./strategy";
 import { whyLine } from "./why";
 import { performanceFromWire, type AgentPerformance } from "./agent-performance";
@@ -296,7 +296,7 @@ export interface LiveMine {
    * cash $964" because the label was a constant and the number was the paper
    * book. Computed once in App.tsx from /api/grants, never re-derived.
    */
-  autonomy: import("@merrymen/core").Autonomy;
+  autonomy: import("@agentcap/core").Autonomy;
   /**
    * Has any heartbeat of this agent's worker ever reached us — `workerAliveAt`
    * on the same /api/grants answer, set once in App.tsx (workerHeardFromOf).
@@ -620,8 +620,8 @@ export function readStateOf(body: { source?: string } | null | undefined): ReadS
 
 /**
  * A market load that came back with nothing to draw — and whether anything
- * answered at all. `answered` false means no merrymen route replied, which is
- * the only case the shell may call "can't reach merrymen"; true means it
+ * answered at all. `answered` false means no agentcap route replied, which is
+ * the only case the shell may call "can't reach agentcap"; true means it
  * replied and could not load the data, which is a different sentence.
  */
 export class LiveLoadError extends Error {

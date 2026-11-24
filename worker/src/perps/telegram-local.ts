@@ -9,7 +9,7 @@ import { fsyncDirSync } from "../atomic-write";
 import { openCommands, writeCommand } from "../command-files";
 import { wrapSqlite } from "../db";
 import { readFleetCommandRefusal } from "../fleet-recovery";
-import { merrymenHome } from "../home";
+import { agentcapHome } from "../home";
 import { readLocalPerpsBinding } from "../local-perps-binding";
 import { withLocalStateLock } from "../local-state-lock";
 import { holdsSlot, orderTtlMs } from "../order-window";
@@ -36,7 +36,7 @@ function readGrant(home: string): StoredGrant | null {
   return g;
 }
 function openBook(home: string): DatabaseSync {
-  const file = path.join(home, "merrymen.db");
+  const file = path.join(home, "agentcap.db");
   if (!lstatSync(file).isFile()) throw new Error("Perps ledger unreadable.");
   return new DatabaseSync(file, { readOnly: true });
 }
@@ -71,7 +71,7 @@ function claimOnce(home: string, id: string, account: string, nowMs: number): bo
 }
 
 /** `installHome` is the owner install, never the currently selected wallet's home. */
-export function createLocalPerpsPort(installHome = merrymenHome()): TelegramPerpsPort {
+export function createLocalPerpsPort(installHome = agentcapHome()): TelegramPerpsPort {
   const home = path.join(installHome, "accounts", "perps");
   return {
     read: async (): Promise<TelegramPerpsSnapshot> => {
@@ -91,7 +91,7 @@ export function createLocalPerpsPort(installHome = merrymenHome()): TelegramPerp
       } catch { return { state: "unread" }; }
     },
     exit: async input => {
-      if (perpsCeilingOf(process.env.MERRYMEN_PERPS) !== "paper") return "Paper Perps is not running. Nothing was queued; check the desk.";
+      if (perpsCeilingOf(process.env.AGENTCAP_PERPS) !== "paper") return "Paper Perps is not running. Nothing was queued; check the desk.";
       const authority = readPerpsBotAuthority(installHome), nowMs = Date.now();
       const request = parsePerpsBotRequest({ kind: input.action, expectedAccount: input.expectedAccount, requestId: input.requestId,
         askedAtSec: input.askedAtSec, ...(input.market ? { market: input.market } : {}), ...(authority ? { authority } : {}) }, nowMs);
@@ -121,7 +121,7 @@ export function createLocalPerpsPort(installHome = merrymenHome()): TelegramPerp
           const id = createHash("sha256").update(JSON.stringify(["telegram-perps-local-v1", request.requestId])).digest("hex");
           // The install lock is shared with HTTP Perps placement and grant writers.
           if (openCommands(home).filter(f => f.kind === undefined || f.kind === "trade").some(f => holdsSlot({ claimed: f.state === "running", at: f.at, expiresAt: f.expiresAt }, Date.now()))) return "Another Perps order is still pending. Check its result before asking again.";
-          if (!sameAuthority(readPerpsBotAuthority(installHome), authority) || !parsePerpsBotRequest(request) || perpsCeilingOf(process.env.MERRYMEN_PERPS) !== "paper") return "The Telegram owner request changed or expired. Nothing was queued.";
+          if (!sameAuthority(readPerpsBotAuthority(installHome), authority) || !parsePerpsBotRequest(request) || perpsCeilingOf(process.env.AGENTCAP_PERPS) !== "paper") return "The Telegram owner request changed or expired. Nothing was queued.";
           if (!claimOnce(home, id, account, nowMs)) return "This Perps request was already recorded. It was not sent again; check its result on the desk.";
           writeCommand(home, { id, kind: "trade", at: request.askedAtSec * 1000, account, expiresAt, args: read.order });
           return "Your paper Perps exit was queued. This is not a fill; check the Perps desk for its result.";

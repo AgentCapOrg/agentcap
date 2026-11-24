@@ -1,5 +1,5 @@
 /** Opt-in repair verification against the production PostgreSQL adapter.
- * MERRYMEN_TEST_PG_URL must name a disposable LOCAL database. No production
+ * AGENTCAP_TEST_PG_URL must name a disposable LOCAL database. No production
  * DATABASE_URL is used, and every case owns and drops a separate schema. */
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
@@ -9,7 +9,7 @@ import { applyLedgerSchema } from "./store";
 import { hasChainIdentityIndex, repairAccount, runRepair, type RepairOptions } from "./accounting-repair";
 import { flowFingerprintOf, type AccountPlan, type ProposedFlowRow } from "./accounting-reconstruction";
 
-const url = process.env.MERRYMEN_TEST_PG_URL;
+const url = process.env.AGENTCAP_TEST_PG_URL;
 const CHAIN = 4663;
 const ACCOUNT = "0x00000000000000000000000000000000000000a1";
 const FIRST_TX = `0x${"11".repeat(32)}`;

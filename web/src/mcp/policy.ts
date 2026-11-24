@@ -32,7 +32,7 @@ export function hasCapability(p: Principal, capability: Capability): boolean {
 export function requireCapability(p: Principal, capability: Capability): void {
   if (!capabilityAllowedIn(p.profile ?? "full", capability)) {
     // No reconnect can fix this one: the directory listing never offers it.
-    throw new McpError("insufficient_scope", `This connection was made through the Merrymen directory listing, which cannot be granted "${scopeFor(capability)}". The owner can add the full Merrymen server as a custom connector to use it.`, {
+    throw new McpError("insufficient_scope", `This connection was made through the AgentCap directory listing, which cannot be granted "${scopeFor(capability)}". The owner can add the full AgentCap server as a custom connector to use it.`, {
       details: { required_scope: scopeFor(capability) },
     });
   }
@@ -41,7 +41,7 @@ export function requireCapability(p: Principal, capability: Capability): void {
     // never re-asks by itself, so the owner disconnects it on Connected apps,
     // and its next sign-in asks for every scope (the 401 challenge's scope, see
     // bearerChallenge), where the owner ticks this one.
-    throw new McpError("insufficient_scope", `This connection was not granted "${scopeFor(capability)}". To allow it, the owner can disconnect this app on Merrymen's Connected apps page, connect it again and tick that permission on the Merrymen consent page, or use a personal access token that includes it.`, {
+    throw new McpError("insufficient_scope", `This connection was not granted "${scopeFor(capability)}". To allow it, the owner can disconnect this app on AgentCap's Connected apps page, connect it again and tick that permission on the AgentCap consent page, or use a personal access token that includes it.`, {
       details: { required_scope: scopeFor(capability) },
     });
   }

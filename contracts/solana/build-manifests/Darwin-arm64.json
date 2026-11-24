@@ -1,8 +1,8 @@
 {
-  "about": "Reviewed SBF build of merrymen_vault. Written by contracts/solana/build.sh --record; checked by packages/core/src/solana-live.test.ts.",
+  "about": "Reviewed SBF build of agentcap_vault. Written by contracts/solana/build.sh --record; checked by packages/core/src/solana-live.test.ts.",
   "source": {
     "digest": "1d02ff3e871249ce7451752d3b71b8ea4373634814c2101e50ca3f049064527b",
-    "rule": "sha256 of the sorted lines <sha256>  <path> for Cargo.toml, Cargo.lock, build.sh, programs/merrymen-vault/Cargo.toml and programs/merrymen-vault/src/**/*.rs, relative to contracts/solana"
+    "rule": "sha256 of the sorted lines <sha256>  <path> for Cargo.toml, Cargo.lock, build.sh, programs/agentcap-vault/Cargo.toml and programs/agentcap-vault/src/**/*.rs, relative to contracts/solana"
   },
   "program": {
     "declaredId": "EUzYVniKtgNNgFweMtRA9vciTWtE8MDTRfh6ai6VvXoU"
@@ -20,7 +20,7 @@
     "host": "Darwin-arm64"
   },
   "artifact": {
-    "file": "target/deploy/merrymen_vault.so",
+    "file": "target/deploy/agentcap_vault.so",
     "bytes": 410472,
     "sha256": "ce7d25446d5a4b06da0830cffe5fa5f0eb3c4f2fe346d3aa01ae87edcdb71f75",
     "reproduced": "a second build from a copy in another directory, identical bytes"

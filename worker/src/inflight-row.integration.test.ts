@@ -13,7 +13,7 @@
  * the statement. That is the same reason budget-rails.integration.test.ts
  * exists: its bug was a SQL status list too.
  *
- * MERRYMEN_HOME is set before any store import runs getDb(); node's --test runs
+ * AGENTCAP_HOME is set before any store import runs getDb(); node's --test runs
  * each file in its own process, so the override never leaks.
  */
 import assert from "node:assert/strict";
@@ -22,8 +22,8 @@ import { mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-inflight-"));
-process.env.MERRYMEN_HOME = HOME;
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-inflight-"));
+process.env.AGENTCAP_HOME = HOME;
 
 const { closeStoreForTest, initStore, addTrade, energyBuysInFlight, getOpsToday, getSpentTodayUsdg, listOpHashes, listSubmittedOps, opsSignedWithNonce } =
   await import("./store");
@@ -273,7 +273,7 @@ describe("a dropped op is terminal, and nothing counts it", () => {
       kind: "energy-buy",
       target: "0xrouter000000000000000000000000000000001",
       sell_token: "0xusdg",
-      buy_token: "0xmerrymen",
+      buy_token: "0xagentcap",
       amount_usdg: 10,
       user_op_hash: hash,
       status,

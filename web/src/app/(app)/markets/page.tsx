@@ -2,7 +2,7 @@
 // the terminal and ignores `children`, and nav.ts maps /markets to Explore's
 // market list. It has to exist, or the view 404s on refresh and on every link
 // anybody shares.
-export const metadata = { title: "Markets — merrymen" };
+export const metadata = { title: "Markets — agentcap" };
 export default function Page() {
   return null;
 }

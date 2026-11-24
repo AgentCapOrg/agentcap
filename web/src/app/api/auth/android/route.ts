@@ -10,6 +10,6 @@ export async function GET(req: Request) {
   const walletRefused = walletNotSupported(req);
   if (walletRefused) return walletRefused;
   return NextResponse.json({
-    enabled: androidOAuthEnabled(requestOrigin(req), process.env.MERRYMEN_ANDROID_OAUTH_ENABLED, privyConfigured() && privyEnabled()),
+    enabled: androidOAuthEnabled(requestOrigin(req), process.env.AGENTCAP_ANDROID_OAUTH_ENABLED, privyConfigured() && privyEnabled()),
   }, { headers: { "Cache-Control": "no-store" } });
 }

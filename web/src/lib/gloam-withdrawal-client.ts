@@ -6,7 +6,7 @@ import { formatUserOperation, formatUserOperationRequest, type RpcUserOperation,
 import { createKernelAccount, createKernelAccountClient } from "@zerodev/sdk";
 import { getEntryPoint, KERNEL_V3_3 } from "@zerodev/sdk/constants";
 import { signerToEcdsaValidator } from "@zerodev/ecdsa-validator";
-import { assertDerivedAccount, robinhoodChain } from "@merrymen/core";
+import { assertDerivedAccount, robinhoodChain } from "@agentcap/core";
 import { userOpGasConfig } from "../../../worker/src/gas";
 import { getRecoveryTicket, relayUrl, type BrowserWallet } from "./recover-client";
 import { GLOAM_WITHDRAWAL_CHAIN_ID, GLOAM_WITHDRAWAL_POOL, GLOAM_WITHDRAWAL_USDG } from "./gloam-withdrawal-contracts";
@@ -15,7 +15,7 @@ import { verifyGloamWithdrawalReceipt } from "./gloam-withdrawal-receipt";
 
 const POOL_READ_ABI = parseAbi(["function commitmentSeen(bytes32) view returns (bool)"]);
 const NONCE_ABI = parseAbi(["function getNonce(address,uint192) view returns (uint256)"]);
-const keyOf = (account: Address) => `merrymen.gloam-withdrawal.v1.${GLOAM_WITHDRAWAL_CHAIN_ID}.${account.toLowerCase()}`;
+const keyOf = (account: Address) => `agentcap.gloam-withdrawal.v1.${GLOAM_WITHDRAWAL_CHAIN_ID}.${account.toLowerCase()}`;
 
 export function loadGloamWithdrawal(account: Address): GloamWithdrawalRecord | null {
   const raw = localStorage.getItem(keyOf(account));

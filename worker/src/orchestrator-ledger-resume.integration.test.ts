@@ -32,11 +32,11 @@ import { readBudgetSeed } from "./budget-seed";
 import type { TenantLease } from "./tenant-lease";
 import type { GapChain } from "./ledger-resume";
 
-const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-ledger-resume-")));
-process.env.MERRYMEN_HOME = fleet;
-process.env.MERRYMEN_HOSTED = "1";
+const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-ledger-resume-")));
+process.env.AGENTCAP_HOME = fleet;
+process.env.AGENTCAP_HOSTED = "1";
 delete process.env.DATABASE_URL;
-process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 21).toString("base64");
+process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 21).toString("base64");
 
 const orch = await import("./orchestrator");
 const { childHome, reconcile, setSpawnForTest, setRetirementMemoryStoreForTest, setPaperRestoreForTest, setPersistentHomeVerifierForTest,
@@ -67,7 +67,7 @@ class FakeProc extends EventEmitter {
 }
 const forks: Array<{ home: string; grant: boolean; paused: boolean; generation: boolean; files: string[] }> = [];
 setSpawnForTest((_c, _a, options) => {
-  const home = String(options.env?.MERRYMEN_HOME);
+  const home = String(options.env?.AGENTCAP_HOME);
   forks.push({ home, grant: existsSync(path.join(home, "grant.json")), paused: existsSync(path.join(home, "paused")),
     generation: existsSync(path.join(home, "recovery-generation.json")), files: readdirSync(home).sort() });
   return new FakeProc(90_000 + forks.length) as unknown as ChildProcess;
@@ -132,7 +132,7 @@ async function preIncident(o: { live: boolean; owner?: `0x${string}` }) {
   const home = childHome(tenant); mkdirSync(home, { recursive: true, mode: 0o700 });
   for (const [name, body] of [["ledger-source-blocked.json", '{"version":1,"state":"missing-live-source"}'], ["paused", "paused"], ["telegram.json", '{"offset":321}'],
     ["grant.json", "OLD SESSION KEY"], ["settings.json", '{"telegramBotToken":"OLD BOT TOKEN"}']] as const) writeFileSync(path.join(home, name), body, { mode: 0o600 });
-  const stale = new DatabaseSync(path.join(home, "merrymen.db")); stale.exec("CREATE TABLE junk (x); INSERT INTO junk VALUES (1)"); stale.close();
+  const stale = new DatabaseSync(path.join(home, "agentcap.db")); stale.exec("CREATE TABLE junk (x); INSERT INTO junk VALUES (1)"); stale.close();
   await putGrant(tenant, grant(account, owner));
   return { tenant, account, owner, home };
 }
@@ -159,7 +159,7 @@ async function preview(...tenants: string[]) {
   const said: string[] = [];
   const realLog = console.log;
   console.log = (...a: unknown[]) => { said.push(a.map(String).join(" ")); realLog(...a); };
-  try { await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_PREVIEW: tenants.join(",") }); } finally { console.log = realLog; }
+  try { await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_PREVIEW: tenants.join(",") }); } finally { console.log = realLog; }
   const digest = said.map((l) => /\[resume-preview\] run ([0-9a-f]{64}):/.exec(l)?.[1]).find(Boolean);
   assert.ok(digest, "the preview names its run");
   const run = raw.prepare("SELECT run, entries_json FROM ledger_resume_preview_runs WHERE run = ?").get(digest) as { run: string; entries_json: string };
@@ -180,7 +180,7 @@ it("a pre-incident live tenant: refused without approval; previewed, batch-appro
 
   const p = await preview(t.tenant);
   assert.deepEqual(p.entries.map((e) => ({ pass: e.pass, chain: e.chain, level: e.suggestedLevel })), [{ pass: true, chain: "required", level: "exits-only" }]);
-  await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `run:${p.run}` });
+  await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `run:${p.run}` });
   assert.equal(approval(t.tenant)?.state, "approved");
 
   await reconcile(); // starts the chain read; held meanwhile
@@ -195,7 +195,7 @@ it("a pre-incident live tenant: refused without approval; previewed, batch-appro
   assert.equal(a.state, "applied");
   // The archive: the whole old home, keys scrubbed, the blocked book's marker kept as evidence.
   const archived = readdirSync(a.archive_path!).sort();
-  assert.ok(archived.includes("ledger-source-blocked.json") && archived.includes("merrymen.db") && archived.includes(".archive-manifest.json"));
+  assert.ok(archived.includes("ledger-source-blocked.json") && archived.includes("agentcap.db") && archived.includes(".archive-manifest.json"));
   for (const gone of ["grant.json", "settings.json", "telegram.json"]) assert.ok(!archived.includes(gone), `${gone} is not in the archive`);
   assert.equal(readFileSync(path.join(t.home, "telegram.json"), "utf8"), '{"offset":321}', "Telegram progress carried");
   // Postgres: no financial row changed; the cursors and snapshots archived exactly.
@@ -216,7 +216,7 @@ it("a pre-incident live tenant: refused without approval; previewed, batch-appro
   // the attested seed's proof, recorded in the home before the worker started.
   assert.ok(fork.files.includes("attested-seed.json"), "the seed was proved before the first worker");
   // THE CHILD ARMS and its first tick reads the position. Then the first mirror pass.
-  const book = new DatabaseSync(path.join(t.home, "merrymen.db"));
+  const book = new DatabaseSync(path.join(t.home, "agentcap.db"));
   try {
     const seeded = { basis: book.prepare("SELECT * FROM cost_basis").all().map((r) => ({ ...r })), floors: book.prepare("SELECT * FROM position_floors").all().map((r) => ({ ...r })) };
     assert.deepEqual(seeded.basis.map((r) => [r.agent_id, r.mode, r.symbol, r.qty_raw, r.cost_usdg]), [[t.account, "live", "COIN", "10", "20"]], "the held position's cost is in the book");
@@ -239,7 +239,7 @@ it("a pre-incident live tenant: refused without approval; previewed, batch-appro
 it("an RPC failure keeps the tenant held and retries; chain activity Postgres lacks refuses", async () => {
   const t = await preIncident({ live: true });
   const p = await preview(t.tenant);
-  await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `${t.tenant}:${p.entries[0]!.digest}` });
+  await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `${t.tenant}:${p.entries[0]!.digest}` });
   chainDown = true;
   try {
     await reconcile(); await settle();
@@ -255,7 +255,7 @@ it("an RPC failure keeps the tenant held and retries; chain activity Postgres la
   assert.equal(forksOf(t.tenant).length, 1);
   const u = await preIncident({ live: true });
   const q = await preview(u.tenant);
-  await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `${u.tenant}:${q.entries[0]!.digest}` });
+  await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `${u.tenant}:${q.entries[0]!.digest}` });
   const topic = (x: string) => `0x${x.slice(2).padStart(64, "0")}`;
   chainLogs = [{ address: String(CASH.USDG), topics: ["0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef", topic(addr(0xfeed)), topic(u.account)], tx: "0xunbooked", index: 1,
     data: `0x${(7_250_000n).toString(16).padStart(64, "0")}` }];
@@ -298,7 +298,7 @@ const cursorsOf = (tenant: string) => rows("SELECT table_name, last_id, last_sta
 it("activity landing after the chain read and before the registration refuses: the chain is read again, from that read's head to the head now", async () => {
   const t = await preIncident({ live: true });
   const p = await preview(t.tenant);
-  await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `${t.tenant}:${p.entries[0]!.digest}` });
+  await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `${t.tenant}:${p.entries[0]!.digest}` });
   await reconcile(); // Phase A starts the whole read; held meanwhile
   await resumeChecksSettledForTest(); // clean, through HEAD
   const cursors = cursorsOf(t.tenant);
@@ -327,7 +327,7 @@ it("activity landing after the chain read and before the registration refuses: t
 it("a clean chain read is not reused after a failed registration: the retry reads the whole window again first, and refuses what landed since", async () => {
   const t = await preIncident({ live: true });
   const p = await preview(t.tenant);
-  await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `${t.tenant}:${p.entries[0]!.digest}` });
+  await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `${t.tenant}:${p.entries[0]!.digest}` });
   await reconcile(); await resumeChecksSettledForTest(); // a clean whole read, through HEAD
   // The pass archives the home, re-reads clean, and its registration fails.
   const realTx = shared.tx.bind(shared);
@@ -388,7 +388,7 @@ it("a tenant refused for a deposit Postgres lacks is booked by the chain-gap too
   const { applyBooking, planBooking, readBookingSnapshot, readChainEvidence } = await import("./chain-gap-booking");
   const t = await preIncident({ live: true });
   const p = await preview(t.tenant);
-  await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `${t.tenant}:${p.entries[0]!.digest}` });
+  await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `${t.tenant}:${p.entries[0]!.digest}` });
   const depositTx = `0x${"de".repeat(32)}`;
   chainLogs = [{ address: String(CASH.USDG), topics: [TRANSFER_TOPIC, topicOf(addr(0xfeed)), topicOf(t.account)], tx: depositTx, index: 3, block: HEAD - 1_000n,
     data: `0x${(6_000_000n).toString(16).padStart(64, "0")}` }];
@@ -417,7 +417,7 @@ it("a tenant refused for a deposit Postgres lacks is booked by the chain-gap too
     const q = await preview(t.tenant);
     assert.deepEqual({ pass: q.entries[0]!.pass, refusals: q.entries[0]!.refusals }, { pass: true, refusals: [] });
     assert.notEqual(q.entries[0]!.digest, p.entries[0]!.digest, "the booked flow is in the evidence");
-    await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `${t.tenant}:${q.entries[0]!.digest}` });
+    await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `${t.tenant}:${q.entries[0]!.digest}` });
     await reconcile(); await settle();
     assert.equal(approval(t.tenant)?.state, "applied");
     assert.equal(forksOf(t.tenant).length, 1, "admitted through the ordinary path");
@@ -425,11 +425,11 @@ it("a tenant refused for a deposit Postgres lacks is booked by the chain-gap too
   await getGrantStore("spot").remove(t.tenant); await reconcile();
 });
 
-/** What the orchestrator says while `fn` runs. MERRYMEN_TEST_VERBOSE=1 prints it as well. */
+/** What the orchestrator says while `fn` runs. AGENTCAP_TEST_VERBOSE=1 prints it as well. */
 async function sayings<T>(fn: (said: string[]) => Promise<T>): Promise<T> {
   const said: string[] = [];
   const realLog = console.log;
-  console.log = (...a: unknown[]) => { said.push(a.map(String).join(" ").replace(/^\[orchestrator\] /, "")); if (process.env.MERRYMEN_TEST_VERBOSE === "1") realLog(...a); };
+  console.log = (...a: unknown[]) => { said.push(a.map(String).join(" ").replace(/^\[orchestrator\] /, "")); if (process.env.AGENTCAP_TEST_VERBOSE === "1") realLog(...a); };
   try { return await fn(said); } finally { console.log = realLog; }
 }
 const approvalsOf = (tenant: string) => rows("SELECT state, reason, updated_at_ms FROM ledger_resume_approvals WHERE tenant = ? ORDER BY created_at_ms, rowid", tenant);
@@ -452,14 +452,14 @@ it("a paper tenant held on a chain refusal no admission has answered: the lane l
       await getSettingsStore("spot").put(t.tenant, { liveTradingEnabled: true } as never);
       const p1 = await preview(t.tenant);
       assert.deepEqual([p1.entries[0]!.pass, p1.entries[0]!.chain], [true, "required"]);
-      await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `${t.tenant}:${p1.entries[0]!.digest}` });
+      await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `${t.tenant}:${p1.entries[0]!.digest}` });
       await reconcile(); await settle();
       assert.equal(approval(t.tenant)?.reason, `${CHAIN_REFUSAL}: ${named}`);
 
       // 2. A later refusal for another reason supersedes it: approved again, and its evidence changes before admission runs.
       raw.prepare("INSERT INTO equity (agent_id, eth_wei, cash_usdg, vault_usdg, positions_usdg, equity_usdg, at, epoch, mode) VALUES (?, '0', 1, 0, 0, 1, ?, 2, 'paper')").run(t.account, OLD + 7);
       const p2 = await preview(t.tenant);
-      await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `${t.tenant}:${p2.entries[0]!.digest}` });
+      await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `${t.tenant}:${p2.entries[0]!.digest}` });
       raw.prepare("INSERT INTO equity (agent_id, eth_wei, cash_usdg, vault_usdg, positions_usdg, equity_usdg, at, epoch, mode) VALUES (?, '0', 1, 0, 0, 1, ?, 2, 'paper')").run(t.account, OLD + 8);
       await reconcile();
       assert.deepEqual(approvalsOf(t.tenant).map((a) => a.state), ["refused", "refused"]);
@@ -471,7 +471,7 @@ it("a paper tenant held on a chain refusal no admission has answered: the lane l
 
       // 3. Its owner turns live trading off and signs again: it reads as paper, holding nothing. The automatic lane previews it and leaves it,
       //    never offering the approval of its digest as a way to trade, and reads no chain.
-      process.env.MERRYMEN_RESUME_AUTO_PAPER = "1";
+      process.env.AGENTCAP_RESUME_AUTO_PAPER = "1";
       try {
         await reconcile(); // the lane's first pass: the roster as it stands, nobody's re-sign
         await getSettingsStore("spot").put(t.tenant, { liveTradingEnabled: false } as never);
@@ -484,7 +484,7 @@ it("a paper tenant held on a chain refusal no admission has answered: the lane l
         assert.deepEqual(approvalsOf(t.tenant).map((a) => a.state), ["refused", "refused"], "never approved by the lane");
         assert.equal(chainOpens, opens, "the lane reads no chain");
         const lane = said.slice(from);
-        assert.ok(!lane.some((l) => l.includes(`MERRYMEN_RESUME_APPROVE=${t.tenant}:`)), lane.join("\n"));
+        assert.ok(!lane.some((l) => l.includes(`AGENTCAP_RESUME_APPROVE=${t.tenant}:`)), lane.join("\n"));
         assert.ok(lane.some((l) => l.startsWith(`resume auto-paper: ${t.tenant} re-signed and previewed`) && l.includes("Held on a chain refusal: an approval does not make it trade")));
         const [entry] = JSON.parse(String(rows("SELECT entries_json FROM ledger_resume_preview_runs WHERE run = ?", w.run)[0]!.entries_json)) as
           Array<{ pass: boolean; chain: string; chainHeld?: boolean; digest: string }>;
@@ -492,16 +492,16 @@ it("a paper tenant held on a chain refusal no admission has answered: the lane l
 
         // 4. The operator approves that digest by hand while Postgres still lacks the deposit: admission reads the chain, and refuses
         //    the tenant afresh on it, with its home untouched.
-        delete process.env.MERRYMEN_RESUME_AUTO_PAPER;
+        delete process.env.AGENTCAP_RESUME_AUTO_PAPER;
         const home = readdirSync(t.home).sort();
-        await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `${t.tenant}:${entry!.digest}` });
+        await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `${t.tenant}:${entry!.digest}` });
         assert.equal(approval(t.tenant)?.state, "approved");
         await reconcile(); await settle();
         assert.ok(chainOpens > opens, "the chain was read, though it reads as paper");
         const fresh = approvalsOf(t.tenant).at(-1)!;
         assert.deepEqual([fresh.state, fresh.reason], ["refused", `${CHAIN_REFUSAL}: ${named}`], "a fresh chain refusal, naming what is still missing");
         assert.ok(said.slice(from).some((l) => l === `[alert] ${t.tenant}: resume approval REFUSED — ${CHAIN_REFUSAL}: ${named}. The tenant stays held; ` +
-          "take it out of MERRYMEN_FLEET_ROLLOUT and book what the chain shows (docs/chain-gap-booking.md), then preview again and approve the digest that preview prints"),
+          "take it out of AGENTCAP_FLEET_ROLLOUT and book what the chain shows (docs/chain-gap-booking.md), then preview again and approve the digest that preview prints"),
           "its alert says to book it, not to approve again");
         assert.equal(forksOf(t.tenant).length, 0, "never admitted on the book the chain showed incomplete");
         assert.deepEqual(readdirSync(t.home).sort(), home, "its home untouched");
@@ -524,12 +524,12 @@ it("a paper tenant held on a chain refusal no admission has answered: the lane l
         assert.deepEqual([qe.pass, qe.chain, qe.chainHeld], [true, "required", true]);
         assert.notEqual(qe.digest, entry!.digest, "the booked flow is in the evidence");
         const summary = said.slice(at).filter((l) => l.startsWith("[resume-preview] ") && !l.startsWith("[resume-preview] {"));
-        assert.ok(summary.some((l) => l === `[resume-preview] approve every passing tenant of this run with MERRYMEN_RESUME_APPROVE=run:${q.run} — for the 1 held on ` +
+        assert.ok(summary.some((l) => l === `[resume-preview] approve every passing tenant of this run with AGENTCAP_RESUME_APPROVE=run:${q.run} — for the 1 held on ` +
           "a chain refusal (chainHeld, below) that is a chain read, not a way to trade"), summary.join("\n"));
         assert.ok(summary.some((l) => l.startsWith(`[resume-preview] 1 passing tenant(s) held on a chain refusal no admission has answered: ${t.tenant} — for each, ` +
           "an approval does not make it trade until what the chain showed is booked, because admission reads the chain again from where the refused read began. " +
-          "Take it out of MERRYMEN_FLEET_ROLLOUT and book it first (docs/chain-gap-booking.md)")), summary.join("\n"));
-        await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `${t.tenant}:${qe.digest}` });
+          "Take it out of AGENTCAP_FLEET_ROLLOUT and book it first (docs/chain-gap-booking.md)")), summary.join("\n"));
+        await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `${t.tenant}:${qe.digest}` });
         await reconcile(); await settle();
         assert.equal(approval(t.tenant)?.state, "applied");
         assert.equal(forksOf(t.tenant).length, 1, "admitted through the ordinary path");
@@ -537,7 +537,7 @@ it("a paper tenant held on a chain refusal no admission has answered: the lane l
         // That admission answers the refusal.
         const done = await preview(t.tenant);
         assert.equal((done.entries[0] as { chainHeld?: boolean }).chainHeld, false);
-      } finally { delete process.env.MERRYMEN_RESUME_AUTO_PAPER; }
+      } finally { delete process.env.AGENTCAP_RESUME_AUTO_PAPER; }
     });
   } finally { chainLogs = []; setResumeChainForTest(() => chain); }
   await getGrantStore("spot").remove(t.tenant); await reconcile();
@@ -547,7 +547,7 @@ it("a tenant held on a chain refusal is admitted only on a chain read that answe
   const t = await preIncident({ live: false });
   for (const table of ["positions", "cost_basis", "position_floors"]) raw.prepare(`DELETE FROM ${table} WHERE agent_id = ?`).run(t.account);
   // Refused on the chain at an earlier admission, as admission records it; the owner's settings ask for nothing live.
-  await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_PREVIEW: t.tenant }); // the resume tables
+  await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_PREVIEW: t.tenant }); // the resume tables
   raw.prepare(`INSERT INTO ledger_resume_approvals (approval_id, tenant, smart_account, chain_id, owner, evidence_digest, evidence_json, preview_run, state,
       created_at_ms, updated_at_ms, reason, source, chain_read_from_sec) VALUES ('held-e', ?, ?, 4663, ?, ?, '{}', ?, 'refused', ?, ?, ?, 'operator', ?)`)
     .run(t.tenant, t.account, t.owner, "f".repeat(64), "e".repeat(64), Date.now() - 60_000, Date.now() - 60_000,
@@ -555,7 +555,7 @@ it("a tenant held on a chain refusal is admitted only on a chain read that answe
       nowSec() - 41 * 3600);
   const p = await preview(t.tenant);
   assert.deepEqual([p.entries[0]!.pass, p.entries[0]!.chain, (p.entries[0] as { chainHeld?: boolean }).chainHeld], [true, "required", true]);
-  await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `${t.tenant}:${p.entries[0]!.digest}` });
+  await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `${t.tenant}:${p.entries[0]!.digest}` });
   const home = readdirSync(t.home).sort();
   const unmoved = (why: string) => {
     assert.equal(approval(t.tenant)?.state, "approved", why);
@@ -630,7 +630,7 @@ for (const recorded of ["as this build records it", "as an earlier build left it
       // 1. Its owner's settings asked for live trading: read on chain, and refused for the deposit, with where that read began.
       await getSettingsStore("spot").put(t.tenant, { liveTradingEnabled: true } as never);
       const p1 = await preview(t.tenant);
-      await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `${t.tenant}:${p1.entries[0]!.digest}` });
+      await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `${t.tenant}:${p1.entries[0]!.digest}` });
       await reconcile(); await settle();
       const r1 = refusalsOf(t.tenant).at(-1)!;
       assert.deepEqual([r1.state, r1.reason], ["refused", `${CHAIN_REFUSAL}: ${named}`]);
@@ -657,7 +657,7 @@ for (const recorded of ["as this build records it", "as an earlier build left it
         const e2 = p2.entries[0]! as (typeof p2.entries)[number] & { chainHeld?: boolean };
         assert.deepEqual([e2.pass, e2.chain, e2.chainHeld], [true, "required", true]);
         const home = readdirSync(t.home).sort();
-        await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `${t.tenant}:${e2.digest}` });
+        await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `${t.tenant}:${e2.digest}` });
         assert.equal(approval(t.tenant)?.state, "approved");
         await reconcile(); await settle();
         const r2 = refusalsOf(t.tenant).at(-1)!;
@@ -677,7 +677,7 @@ for (const recorded of ["as this build records it", "as an earlier build left it
         await applyBooking(shared, plan2, { confirm: plan2.previewDigest, backupRef: "integration-backup-3", dialect: "sqlite", nowMs: Date.now() });
         const p3 = await preview(t.tenant);
         assert.notEqual(p3.entries[0]!.digest, e2.digest);
-        await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `${t.tenant}:${p3.entries[0]!.digest}` });
+        await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `${t.tenant}:${p3.entries[0]!.digest}` });
         await reconcile(); await settle();
         assert.equal(approval(t.tenant)?.state, "applied");
         assert.equal(forksOf(t.tenant).length, 1, "admitted through the ordinary path");
@@ -693,7 +693,7 @@ for (const recorded of ["as this build records it", "as an earlier build left it
 it("an approval an earlier build recorded, on its table from before the column, is refused by this build's first pass with where its read began", async () => {
   const t = await preIncident({ live: true });
   const p = await preview(t.tenant);
-  await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `${t.tenant}:${p.entries[0]!.digest}` });
+  await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `${t.tenant}:${p.entries[0]!.digest}` });
   chainLogs = [unbookedDeposit(t.account, HEAD - 3_000n, `0x${"e1".repeat(32)}`)];
   // The table as the earlier build left it, and this build's process starting with no preview or approval of its own to run.
   raw.exec("ALTER TABLE ledger_resume_approvals DROP COLUMN chain_read_from_sec");
@@ -727,11 +727,11 @@ it("every decision of a held tenant changes its digest: refused on the chain whi
       const d0 = (await preview(t.tenant)).entries[0]!.digest;
       raw.prepare("INSERT INTO equity (agent_id, eth_wei, cash_usdg, vault_usdg, positions_usdg, equity_usdg, at, epoch, mode) VALUES (?, '0', 1, 0, 0, 1, ?, 2, 'paper')").run(t.account, OLD + 21);
       const d1 = (await preview(t.tenant)).entries[0]!.digest;
-      await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `${t.tenant}:${d1}` });
+      await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `${t.tenant}:${d1}` });
       await reconcile(); await settle();
       assert.match(String(approval(t.tenant)?.reason), new RegExp(`^${CHAIN_REFUSAL}: `));
       // R2: the stale d0 approved, and refused for evidence that changed.
-      await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `${t.tenant}:${d0}` });
+      await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `${t.tenant}:${d0}` });
       await reconcile();
       assert.deepEqual(refusalsOf(t.tenant).map((r) => r.state), ["refused", "refused"]);
       assert.match(String(approval(t.tenant)?.reason), /evidence changed/);
@@ -743,13 +743,13 @@ it("every decision of a held tenant changes its digest: refused on the chain whi
       assert.notEqual(e3.digest, d1, "the refused digest is never printed again");
       // The refused d1, approved again from an old line: nothing is recorded, and it is said.
       const from = said.length;
-      await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `${t.tenant}:${d1}` });
+      await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `${t.tenant}:${d1}` });
       assert.deepEqual(refusalsOf(t.tenant).map((r) => r.state), ["refused", "refused"]);
       assert.ok(said.slice(from).some((l) => l.startsWith(`[alert] resume approval: ${t.tenant} is held on a chain refusal no admission has answered, and an approval of this exact evidence refused`)),
         said.slice(from).join("\n"));
       // The digest the preview printed is approved, reads the chain, and records a fresh chain refusal the booking tool anchors on.
       const opens = chainOpens;
-      await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `${t.tenant}:${e3.digest}` });
+      await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `${t.tenant}:${e3.digest}` });
       assert.equal(approval(t.tenant)?.state, "approved", "recorded");
       await reconcile(); await settle();
       assert.ok(chainOpens > opens, "the chain was read, though it reads as paper");
@@ -768,7 +768,7 @@ it("a paper tenant needs no chain read; evidence that changed after the preview 
   const p = await preview(t.tenant);
   assert.equal(p.entries[0]!.chain, "not-required");
   assert.equal(p.entries[0]!.suggestedLevel, "trade");
-  await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `run:${p.run}` });
+  await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `run:${p.run}` });
   // Something lands in the books after the operator looked — and a preview taken then shows it, before admission has run.
   raw.prepare("INSERT INTO equity (agent_id, eth_wei, cash_usdg, vault_usdg, positions_usdg, equity_usdg, at, epoch, mode) VALUES (?, '0', 1, 0, 0, 1, ?, 2, 'paper')").run(t.account, OLD + 5);
   const seen = await preview(t.tenant);
@@ -785,7 +785,7 @@ it("a paper tenant needs no chain read; evidence that changed after the preview 
   const stored = JSON.parse(String(rows("SELECT entries_json FROM ledger_resume_preview_runs WHERE run = ?", again.run)[0]!.entries_json)) as
     Array<{ lastRefusal?: { reason: string } | null }>;
   assert.match(String(stored[0]!.lastRefusal?.reason), /evidence changed/);
-  await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `run:${again.run}` });
+  await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `run:${again.run}` });
   setResumeChainForTest(() => { throw new Error("a paper tenant must not read the chain"); });
   try { await reconcile(); await new Promise((r) => setTimeout(r, 20)); }
   finally { setResumeChainForTest(() => chain); }
@@ -797,14 +797,14 @@ it("a paper tenant needs no chain read; evidence that changed after the preview 
 it("a re-sign by the same owner still admits; a new account refuses; an expired grant is not admitted", async () => {
   const same = await preIncident({ live: false });
   const p = await preview(same.tenant);
-  await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `run:${p.run}` });
+  await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `run:${p.run}` });
   await putGrant(same.tenant, grant(same.account, same.owner, 2)); // a new signature, same owner and account
   await reconcile(); await new Promise((r) => setTimeout(r, 20));
   assert.equal(approval(same.tenant)?.state, "applied");
 
   const moved = await preIncident({ live: false });
   const q = await preview(moved.tenant);
-  await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `run:${q.run}` });
+  await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `run:${q.run}` });
   await putGrant(moved.tenant, grant(addr(0xbad0001), moved.owner, 2)); // the owner signed a NEW account
   await reconcile();
   assert.equal(approval(moved.tenant)?.state, "refused");
@@ -813,11 +813,11 @@ it("a re-sign by the same owner still admits; a new account refuses; an expired 
 
   const expired = await preIncident({ live: false });
   const r = await preview(expired.tenant);
-  await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `run:${r.run}` });
+  await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `run:${r.run}` });
   await putGrant(expired.tenant, { ...grant(expired.account, expired.owner, 2), expiresAt: nowSec() - 60 } as StoredGrant);
   await reconcile();
   assert.equal(approval(expired.tenant)?.state, "approved", "an expired grant is never taken into Phase A");
-  assert.equal(existsSync(path.join(expired.home, "merrymen.db")), true);
+  assert.equal(existsSync(path.join(expired.home, "agentcap.db")), true);
   assert.equal(forksOf(expired.tenant).length, 0);
   for (const x of [same, moved, expired]) await getGrantStore("spot").remove(x.tenant);
   await reconcile();
@@ -826,7 +826,7 @@ it("a re-sign by the same owner still admits; a new account refuses; an expired 
 it("a lost lease moves nothing; a crash between the archive and the registration converges on the same generation", async () => {
   const t = await preIncident({ live: false });
   const p = await preview(t.tenant);
-  await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `run:${p.run}` });
+  await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `run:${p.run}` });
   unhealthy.add(t.tenant);
   try {
     await reconcile();
@@ -867,7 +867,7 @@ it("a batch approval admits exactly the previewed tenants that passed", async ()
   const p = await preview(good.tenant, bad.tenant);
   assert.deepEqual(p.entries.map((e) => [e.tenant, e.pass]).sort(), [[good.tenant, true], [bad.tenant, false]].sort());
   const late = await preIncident({ live: false }); // not in the run
-  await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `run:${p.run}` });
+  await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `run:${p.run}` });
   assert.equal(approval(good.tenant)?.state, "approved");
   assert.equal(approval(bad.tenant), undefined);
   assert.equal(approval(late.tenant), undefined);
@@ -897,7 +897,7 @@ it("a failed seed is completed before the first worker, or the spawn is held; Po
   const t = await preIncident({ live: false });
   const preImage = snapshots(t.account);
   const p = await preview(t.tenant);
-  await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `run:${p.run}` });
+  await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `run:${p.run}` });
   // The ordinary seeds fail outright (their pool is down), and the attested
   // seed's own read fails once too.
   setBasisSeedSharedForTest(failingSeedDb);
@@ -914,7 +914,7 @@ it("a failed seed is completed before the first worker, or the spawn is held; Po
   } finally { restore(); setBasisSeedSharedForTest(shared); }
   assert.equal(forksOf(t.tenant).length, 1);
   assert.equal(approval(t.tenant)?.state, "applied");
-  const book = new DatabaseSync(path.join(t.home, "merrymen.db"));
+  const book = new DatabaseSync(path.join(t.home, "agentcap.db"));
   try {
     assert.deepEqual(book.prepare("SELECT mode, symbol, qty_raw, cost_usdg FROM cost_basis").all().map((r) => ({ ...r })),
       [{ mode: "live", symbol: "COIN", qty_raw: "10", cost_usdg: "20" }], "the cost the failed seed missed is in the book");
@@ -966,13 +966,13 @@ it("a paper book whose owner turned live trading on during the hold previews as 
 it("an admitted tenant previews as already admitted, and a run approval of that preview archives nothing", async () => {
   const t = await preIncident({ live: false });
   const p = await preview(t.tenant);
-  await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `run:${p.run}` });
+  await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `run:${p.run}` });
   await reconcile(); await new Promise((r) => setTimeout(r, 20));
   assert.equal(approval(t.tenant)?.state, "applied");
   const again = await preview(t.tenant);
   assert.equal(again.entries[0]!.pass, false);
   assert.match(again.entries[0]!.refusals.join(" "), /already admitted/);
-  await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `run:${again.run}` });
+  await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `run:${again.run}` });
   assert.equal(rows("SELECT * FROM ledger_resume_approvals WHERE tenant = ?", t.tenant).length, 1, "no second approval");
   await reconcile(); await new Promise((r) => setTimeout(r, 20));
   assert.equal(readdirSync(path.join(fleet, "archive", t.tenant)).length, 1, "its running book was not archived again");
@@ -983,7 +983,7 @@ it("an admitted tenant previews as already admitted, and a run approval of that 
 it("a registered approval whose grant moved to a new account before its first worker ends refused, and the tenant can be approved again", async () => {
   const t = await preIncident({ live: false });
   const p = await preview(t.tenant);
-  await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `run:${p.run}` });
+  await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `run:${p.run}` });
   let blip = true;
   const restore = failSeedReads({ until: () => blip });
   try {
@@ -1002,7 +1002,7 @@ it("a registered approval whose grant moved to a new account before its first wo
   assert.equal(fresh.entries[0]!.account, addr(0xbad0777));
   assert.ok(!fresh.entries[0]!.refusals.some((r) => /already admitted/.test(r)), "the registered book was the old account's");
   assert.equal(fresh.entries[0]!.pass, true, fresh.entries[0]!.refusals.join(" | "));
-  await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `${t.tenant}:${fresh.entries[0]!.digest}` });
+  await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `${t.tenant}:${fresh.entries[0]!.digest}` });
   assert.equal(approval(t.tenant)?.state, "approved");
   await getGrantStore("spot").remove(t.tenant); await reconcile();
 });
@@ -1041,7 +1041,7 @@ it("an operation the owner's own key signed is answered by its mirrored owner re
     record(u.tenant, u.account, uOp, "review");
     const p = await preview(t.tenant, u.tenant);
     assert.deepEqual(p.entries.map((e) => e.pass), [true, true]);
-    await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `run:${p.run}` });
+    await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `run:${p.run}` });
     await reconcile(); await settle();
     assert.equal(approval(t.tenant)?.state, "applied", "the owner's operation was answered: admitted");
     assert.equal(forksOf(t.tenant).length, 1);

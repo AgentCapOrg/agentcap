@@ -27,14 +27,14 @@
  *
  * THE PERPS WALLET'S LEDGER, ALWAYS. Hosted both wallets' rows sit in the one
  * shared Postgres, told apart by the account; self-hosted the Perps worker
- * writes its own home's merrymen.db (ledger.ts withReadDb), and a Perps read
+ * writes its own home's agentcap.db (ledger.ts withReadDb), and a Perps read
  * never opens the Spot one. Ported from the perps branch (112dbeb6) with its
  * live readers left out: there is no venue key, stand-down or recovery notice
  * in this build.
  *
  * Server-only: it opens the ledger.
  */
-import { parsePerpsReport, type GrantPurpose, type PerpsReport } from "@merrymen/core";
+import { parsePerpsReport, type GrantPurpose, type PerpsReport } from "@agentcap/core";
 import type { Db } from "../../../worker/src/db";
 import { withReadDb } from "./ledger";
 

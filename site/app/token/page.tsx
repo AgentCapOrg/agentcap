@@ -3,9 +3,9 @@ import Link from "next/link";
 import { TokenCA } from "@/components/TokenCA";
 
 export const metadata: Metadata = {
-  title: "$MERRYMEN — energy and the Merry Circle",
+  title: "$AGENTCAP — energy and the Merry Circle",
   description:
-    "What holding $MERRYMEN does: full daily energy for a hosted agent, a lower platform fee, a holder tier, a vote on the roadmap, and a bonus strategy pack. Utility only.",
+    "What holding $AGENTCAP does: full daily energy for a hosted agent, a lower platform fee, a holder tier, a vote on the roadmap, and a bonus strategy pack. Utility only.",
 };
 
 /**
@@ -55,37 +55,37 @@ export default function TokenPage() {
       <article className="doc-body">
         <h1>Energy and the Merry Circle</h1>
         <p className="doc-lead">
-          What <strong>$MERRYMEN</strong> does — and, just as importantly, what it doesn&apos;t.
+          What <strong>$AGENTCAP</strong> does — and, just as importantly, what it doesn&apos;t.
         </p>
 
         <div className="callout">
-          <strong>$MERRYMEN is your agent&apos;s energy.</strong> When the hosted service gates energy (an
+          <strong>$AGENTCAP is your agent&apos;s energy.</strong> When the hosted service gates energy (an
           operator switch, off until it is turned on), an agent runs at full strength while your wallet
-          and its own account hold 100,000 $MERRYMEN between them.
+          and its own account hold 100,000 $AGENTCAP between them.
           Without it, it still runs — on about a tenth of a normal day of paid AI reviews and new trades
           it opens on its own, resetting at 00:00 UTC. Stop-losses, take-profits and your own orders are
           never limited; its own AI reviews, including of its open positions, are paced with the rest.
-          merrymen stays open source and self-hostable, and a self-hosted install is
+          agentcap stays open source and self-hostable, and a self-hosted install is
           never gated. There is no price talk, no promise of returns, no buyback or burn here. Just
           utility you can verify on-chain.
         </div>
 
         <h2>Energy: how to top up</h2>
         <p>
-          Send $MERRYMEN on Robinhood Chain to your agent&apos;s account (or keep it in your own linked
-          wallet — both count). Or send the agent USDG and ask it in chat to get its $MERRYMEN: you
+          Send $AGENTCAP on Robinhood Chain to your agent&apos;s account (or keep it in your own linked
+          wallet — both count). Or send the agent USDG and ask it in chat to get its $AGENTCAP: you
           confirm the most it may spend, and it sizes the buy to cover what is missing, with a small
           margin for price movement (at least $1.00), over one pinned Uniswap route (USDG → VIRTUAL →
-          $MERRYMEN), inside the limits you signed. The pool fees and the token&apos;s own tax are paid
-          out of the USDG. Its key can buy $MERRYMEN into its
+          $AGENTCAP), inside the limits you signed. The pool fees and the token&apos;s own tax are paid
+          out of the USDG. Its key can buy $AGENTCAP into its
           own account and can never sell or send it; only your owner key moves it out.
         </p>
 
         <h2>The one that matters: a lower fee</h2>
         <p>
-          merrymen charges a performance fee — and only ever on <em>profit above your high-water
+          agentcap charges a performance fee — and only ever on <em>profit above your high-water
           mark</em> (never on your deposit, never on a loss, never on merely recovering a past peak).
-          Holding $MERRYMEN lowers that fee by your tier&apos;s discount. It&apos;s applied to the real
+          Holding $AGENTCAP lowers that fee by your tier&apos;s discount. It&apos;s applied to the real
           accrual in the worker and shown live in your dashboard&apos;s Merry Circle panel — so the perk
           is in the ledger, not just on this page.
         </p>
@@ -96,7 +96,7 @@ export default function TokenPage() {
               <div className="tier-emoji">{t.emoji}</div>
               <div className="tier-name">{t.name}</div>
               <div className="tier-min">
-                {t.min}+ <span className="tier-sym">$MERRYMEN</span>
+                {t.min}+ <span className="tier-sym">$AGENTCAP</span>
               </div>
               <div className="tier-discount">{t.discount} fees</div>
               <ul className="tier-perks">
@@ -142,20 +142,20 @@ export default function TokenPage() {
 
         <h2>How to join</h2>
         <ol>
-          <li>Hold $MERRYMEN in any wallet you control on Robinhood Chain.</li>
+          <li>Hold $AGENTCAP in any wallet you control on Robinhood Chain.</li>
           <li>
             In the dashboard, open the <strong>Merry Circle</strong> panel and paste that wallet
             address (or set <code className="inline">holderAddress</code> in settings).
           </li>
           <li>
-            That&apos;s it — merrymen reads the balance <strong>read-only</strong> to set your tier. It
+            That&apos;s it — agentcap reads the balance <strong>read-only</strong> to set your tier. It
             never asks for, and never touches, that wallet&apos;s keys.
           </li>
         </ol>
 
         <h2>The token, on-chain</h2>
         <p>
-          $MERRYMEN lives on Robinhood Chain — the same chain the agents trade — and was launched via
+          $AGENTCAP lives on Robinhood Chain — the same chain the agents trade — and was launched via
           Virtuals. Verify it yourself:
         </p>
         <div style={{ margin: "16px 0 8px" }}>
@@ -163,7 +163,7 @@ export default function TokenPage() {
         </div>
 
         <div className="callout danger" style={{ marginTop: 32 }}>
-          Nothing here is financial advice or a solicitation to buy anything. $MERRYMEN is a utility
+          Nothing here is financial advice or a solicitation to buy anything. $AGENTCAP is a utility
           token for perks and access; it is not an investment, and no return is promised or implied.
           Digital assets are volatile and can lose all value. See the{" "}
           <Link className="link" href="/terms">

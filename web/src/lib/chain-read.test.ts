@@ -34,7 +34,7 @@ const SERVER_READERS = [
   "../app/api/alpha/route.ts",
   "../app/api/circle/route.ts",
   // Reads the owner's wallet AND the agent's account in one multicall now
-  // (merrymen-standing.ts), over the transport it builds here.
+  // (agentcap-standing.ts), over the transport it builds here.
   "../app/api/tier/route.ts",
 ] as const;
 
@@ -62,7 +62,7 @@ describe("every server-side chain read is batched", () => {
       !/http\("https:\/\/rpc\.mainnet\.chain\.robinhood\.com"\)/.test(disc),
       "the endpoint must come from configuration, not from a literal",
     );
-    assert.match(disc, /webChainRead\(process\.env\.MERRYMEN_RPC_MAINNET\)/);
+    assert.match(disc, /webChainRead\(process\.env\.AGENTCAP_RPC_MAINNET\)/);
   });
 });
 

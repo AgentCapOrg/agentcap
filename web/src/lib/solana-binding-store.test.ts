@@ -158,15 +158,15 @@ test("an unreadable saved strategy is cleared by a kill rather than trusted", as
   assert.equal((raw.prepare("SELECT strategy_json FROM solana_wallet_bindings").get() as { strategy_json: string | null }).strategy_json, null);
 });
 test("the kill helpers stop the named tenant, or every local strategy self-hosted, and fail loudly", async (t) => {
-  const saved = { home: process.env.MERRYMEN_HOME, hosted: process.env.MERRYMEN_HOSTED, db: process.env.DATABASE_URL };
+  const saved = { home: process.env.AGENTCAP_HOME, hosted: process.env.AGENTCAP_HOSTED, db: process.env.DATABASE_URL };
   const home = mkdtempSync(path.join(tmpdir(), "solana-kill-"));
   t.after(() => {
-    for (const [key, value] of [["MERRYMEN_HOME", saved.home], ["MERRYMEN_HOSTED", saved.hosted], ["DATABASE_URL", saved.db]] as const) {
+    for (const [key, value] of [["AGENTCAP_HOME", saved.home], ["AGENTCAP_HOSTED", saved.hosted], ["DATABASE_URL", saved.db]] as const) {
       if (value === undefined) delete process.env[key]; else process.env[key] = value;
     }
     rmSync(home, { recursive: true, force: true });
   });
-  process.env.MERRYMEN_HOME = home; delete process.env.DATABASE_URL; delete process.env.MERRYMEN_HOSTED;
+  process.env.AGENTCAP_HOME = home; delete process.env.DATABASE_URL; delete process.env.AGENTCAP_HOSTED;
   const store = fixture(t), calls: string[] = [];
   const spy = Object.assign(Object.create(store), { disableForKill: async (tenant: `0x${string}`) => { calls.push(tenant); return store.disableForKill(tenant); } });
   // Self-hosted with no accounts file: Solana never ran, nothing to stop, and no file is created.
@@ -174,7 +174,7 @@ test("the kill helpers stop the named tenant, or every local strategy self-hoste
   assert.equal(await stopLocalSolanaForKill(spy), "none");
   assert.equal(existsSync(path.join(home, "solana-accounts.sqlite")), false); assert.deepEqual(calls, []);
   // Hosted without the shared database: Solana cannot run there either.
-  process.env.MERRYMEN_HOSTED = "1";
+  process.env.AGENTCAP_HOSTED = "1";
   assert.equal(await stopSolanaForKill(TENANT, spy), "none");
   await assert.rejects(stopLocalSolanaForKill(spy), /names its tenant/);
   // With a database every strategy is turned off, and a failure is thrown, never swallowed.
@@ -186,7 +186,7 @@ test("the kill helpers stop the named tenant, or every local strategy self-hoste
   }
   assert.equal(await stopSolanaForKill(TENANT, spy), "stopped");
   assert.equal((await store.get(OTHER))!.strategy!.enabled, true, "a hosted kill stops only its own tenant");
-  delete process.env.MERRYMEN_HOSTED;
+  delete process.env.AGENTCAP_HOSTED;
   assert.equal(await stopLocalSolanaForKill(spy), "stopped");
   assert.equal((await store.get(OTHER))!.strategy!.enabled, false);
   const broken = Object.assign(Object.create(store), { disableForKill: async () => { throw new Error("database unavailable"); } });

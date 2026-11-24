@@ -26,15 +26,15 @@ const A = "0xAaAaAaAaAaAaAaAaAaAaAaAaAaAaAaAaAaAaAaAa" as const;
 const B = "0xBbBbBbBbBbBbBbBbBbBbBbBbBbBbBbBbBbBbBbBb" as const;
 
 before(async () => {
-  dir = await mkdtemp(path.join(tmpdir(), "merrymen-tour-"));
-  saved = process.env.MERRYMEN_HOME;
-  process.env.MERRYMEN_HOME = dir;
+  dir = await mkdtemp(path.join(tmpdir(), "agentcap-tour-"));
+  saved = process.env.AGENTCAP_HOME;
+  process.env.AGENTCAP_HOME = dir;
   ({ FileTourStore } = await import("./tour-store"));
 });
 
 after(async () => {
-  if (saved === undefined) delete process.env.MERRYMEN_HOME;
-  else process.env.MERRYMEN_HOME = saved;
+  if (saved === undefined) delete process.env.AGENTCAP_HOME;
+  else process.env.AGENTCAP_HOME = saved;
   await rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
 });
 

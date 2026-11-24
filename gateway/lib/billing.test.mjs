@@ -25,7 +25,7 @@ const START = 1_800_000_000_000;
 const dirs = [];
 after(() => Promise.all(dirs.map((d) => rm(d, { recursive: true, force: true }))));
 async function tempDir() {
-  const d = await mkdtemp(path.join(tmpdir(), "merrymen-billing-"));
+  const d = await mkdtemp(path.join(tmpdir(), "agentcap-billing-"));
   dirs.push(d);
   return d;
 }
@@ -64,56 +64,56 @@ async function fixture({ mode = "observe", plans, keys = [], dir, ...rest } = {}
 
 test("billing is off unless asked for, and off without an explicit data directory", () => {
   assert.equal(parseBillingConfig({}).mode, "off");
-  const noDir = parseBillingConfig({ MERRYMEN_BILLING: "observe" });
+  const noDir = parseBillingConfig({ AGENTCAP_BILLING: "observe" });
   assert.equal(noDir.mode, "off");
-  assert.match(noDir.notes.join("\n"), /MERRYMEN_DATA_DIR set explicitly/);
-  assert.equal(parseBillingConfig({ MERRYMEN_BILLING: "observe", MERRYMEN_DATA_DIR: "/data" }).mode, "observe");
-  const typo = parseBillingConfig({ MERRYMEN_BILLING: "enforcing", MERRYMEN_DATA_DIR: "/data" });
+  assert.match(noDir.notes.join("\n"), /AGENTCAP_DATA_DIR set explicitly/);
+  assert.equal(parseBillingConfig({ AGENTCAP_BILLING: "observe", AGENTCAP_DATA_DIR: "/data" }).mode, "observe");
+  const typo = parseBillingConfig({ AGENTCAP_BILLING: "enforcing", AGENTCAP_DATA_DIR: "/data" });
   assert.equal(typo.mode, "off");
   assert.match(typo.notes[0], /not off, observe or enforce/);
-  assert.equal(parseBillingConfig({ MERRYMEN_BILLING: " Observe ", MERRYMEN_DATA_DIR: "/v" }).dataDir, "/v");
+  assert.equal(parseBillingConfig({ AGENTCAP_BILLING: " Observe ", AGENTCAP_DATA_DIR: "/v" }).dataDir, "/v");
 });
 
 test("enforce needs a treasury and a start block, or it runs observe", () => {
-  const base = { MERRYMEN_BILLING: "enforce", MERRYMEN_DATA_DIR: "/data" };
+  const base = { AGENTCAP_BILLING: "enforce", AGENTCAP_DATA_DIR: "/data" };
   const none = parseBillingConfig(base);
   assert.equal(none.mode, "observe");
   assert.equal(none.treasury, null);
-  const noStart = parseBillingConfig({ ...base, MERRYMEN_PAYMENTS_TREASURY: TREASURY });
+  const noStart = parseBillingConfig({ ...base, AGENTCAP_PAYMENTS_TREASURY: TREASURY });
   assert.equal(noStart.mode, "observe", "a treasury without a start block would credit every old transfer");
   assert.equal(noStart.treasury, null);
-  assert.match(noStart.notes.join("\n"), /needs MERRYMEN_PAYMENTS_START_BLOCK/);
-  const full = parseBillingConfig({ ...base, MERRYMEN_PAYMENTS_TREASURY: TREASURY.toUpperCase().replace("0X", "0x"), MERRYMEN_PAYMENTS_START_BLOCK: "1234" });
+  assert.match(noStart.notes.join("\n"), /needs AGENTCAP_PAYMENTS_START_BLOCK/);
+  const full = parseBillingConfig({ ...base, AGENTCAP_PAYMENTS_TREASURY: TREASURY.toUpperCase().replace("0X", "0x"), AGENTCAP_PAYMENTS_START_BLOCK: "1234" });
   assert.equal(full.mode, "enforce");
   assert.equal(full.treasury, TREASURY);
   assert.equal(full.startBlock, 1234);
 });
 
 test("a treasury that is not a usable address is treated as unset, and previous ones are cleaned", () => {
-  const base = { MERRYMEN_BILLING: "observe", MERRYMEN_DATA_DIR: "/d", MERRYMEN_PAYMENTS_START_BLOCK: "1" };
+  const base = { AGENTCAP_BILLING: "observe", AGENTCAP_DATA_DIR: "/d", AGENTCAP_PAYMENTS_START_BLOCK: "1" };
   for (const bad of ["0x1234", `0x${"0".repeat(40)}`, "0xa15cd06dd305269a0f48bebeb30aa3588fba7b32", "treasury"]) {
-    const c = parseBillingConfig({ ...base, MERRYMEN_PAYMENTS_TREASURY: bad });
+    const c = parseBillingConfig({ ...base, AGENTCAP_PAYMENTS_TREASURY: bad });
     assert.equal(c.treasury, null, bad);
     assert.match(c.notes.join("\n"), /not a usable address/);
   }
   const old = `0x${"01".repeat(20)}`;
-  const c = parseBillingConfig({ ...base, MERRYMEN_PAYMENTS_TREASURY: TREASURY,
-    MERRYMEN_PAYMENTS_PREVIOUS_TREASURIES: ` ${old}, ${old.toUpperCase().replace("0X", "0x")},nonsense,${TREASURY},` });
+  const c = parseBillingConfig({ ...base, AGENTCAP_PAYMENTS_TREASURY: TREASURY,
+    AGENTCAP_PAYMENTS_PREVIOUS_TREASURIES: ` ${old}, ${old.toUpperCase().replace("0X", "0x")},nonsense,${TREASURY},` });
   assert.deepEqual(c.previousTreasuries, [old], "deduplicated, the current one and junk dropped");
-  assert.deepEqual(parseBillingConfig({ ...base, MERRYMEN_PAYMENTS_PREVIOUS_TREASURIES: old }).previousTreasuries, [],
+  assert.deepEqual(parseBillingConfig({ ...base, AGENTCAP_PAYMENTS_PREVIOUS_TREASURIES: old }).previousTreasuries, [],
     "a previous treasury means nothing without a current one");
 });
 
 test("confirmation depth and age default to 64 blocks and 120 s; the payments RPC falls back to the gateway's", () => {
-  const c = parseBillingConfig({ MERRYMEN_GATEWAY_RPC: "https://gw.example" });
+  const c = parseBillingConfig({ AGENTCAP_GATEWAY_RPC: "https://gw.example" });
   assert.equal(c.minConfirmations, 64);
   assert.equal(c.minAgeSec, 120);
   assert.equal(c.rpc, "https://gw.example");
-  assert.equal(parseBillingConfig({ MERRYMEN_GATEWAY_RPC: "https://gw", MERRYMEN_PAYMENTS_RPC: "https://pay" }).rpc, "https://pay");
-  const set = parseBillingConfig({ MERRYMEN_PAYMENTS_MIN_CONFIRMATIONS: "128", MERRYMEN_PAYMENTS_MIN_AGE_SEC: "0" });
+  assert.equal(parseBillingConfig({ AGENTCAP_GATEWAY_RPC: "https://gw", AGENTCAP_PAYMENTS_RPC: "https://pay" }).rpc, "https://pay");
+  const set = parseBillingConfig({ AGENTCAP_PAYMENTS_MIN_CONFIRMATIONS: "128", AGENTCAP_PAYMENTS_MIN_AGE_SEC: "0" });
   assert.equal(set.minConfirmations, 128);
   assert.equal(set.minAgeSec, 0);
-  const bad = parseBillingConfig({ MERRYMEN_PAYMENTS_MIN_CONFIRMATIONS: "0", MERRYMEN_PAYMENTS_MIN_AGE_SEC: "-5" });
+  const bad = parseBillingConfig({ AGENTCAP_PAYMENTS_MIN_CONFIRMATIONS: "0", AGENTCAP_PAYMENTS_MIN_AGE_SEC: "-5" });
   assert.equal(bad.minConfirmations, 64);
   assert.equal(bad.minAgeSec, 120);
   assert.equal(bad.notes.length, 2);
@@ -135,7 +135,7 @@ test("a data directory that cannot be used turns billing off at boot", async () 
 });
 
 test("billing never creates its data directory: a missing one turns billing off and stays missing", async () => {
-  // MERRYMEN_DATA_DIR=/data with no volume attached: a directory billing made
+  // AGENTCAP_DATA_DIR=/data with no volume attached: a directory billing made
   // itself would sit on the container's disk, and the next deploy would wipe
   // the ledger and make every past transfer creditable again.
   const missing = path.join(await tempDir(), "data");
@@ -163,11 +163,11 @@ test("billing needs its data directory on a mounted volume, unless the operator 
   assert.match(await dataDirProblem("/data", { statFn: at({ "/data": { dev: 1 }, "/": { dev: 1 } }) }), /on the container's own disk/);
   assert.equal(await dataDirProblem("/data", { statFn: at({ "/data": { dev: 7 }, "/": { dev: 1 } }) }), null, "a volume mounted there");
   assert.equal(await dataDirProblem("/data/gateway", { statFn: at({ "/data/gateway": { dev: 7 }, "/": { dev: 1 } }) }), null, "a directory inside a volume");
-  assert.equal(await dataDirProblem("/data", { persistent: true, statFn: at({ "/data": { dev: 1 }, "/": { dev: 1 } }) }), null, "MERRYMEN_DATA_DIR_PERSISTENT=1");
+  assert.equal(await dataDirProblem("/data", { persistent: true, statFn: at({ "/data": { dev: 1 }, "/": { dev: 1 } }) }), null, "AGENTCAP_DATA_DIR_PERSISTENT=1");
   assert.match(await dataDirProblem("/data", { persistent: true, statFn: at({ "/": { dev: 1 } }) }), /does not exist/);
   assert.match(await dataDirProblem("/data", { statFn: at({ "/data": { dev: 7, dir: false }, "/": { dev: 1 } }) }), /is not a directory/);
-  assert.equal(parseBillingConfig({ MERRYMEN_DATA_DIR_PERSISTENT: " 1 " }).dataDirPersistent, true);
-  assert.equal(parseBillingConfig({ MERRYMEN_DATA_DIR_PERSISTENT: "yes" }).dataDirPersistent, false);
+  assert.equal(parseBillingConfig({ AGENTCAP_DATA_DIR_PERSISTENT: " 1 " }).dataDirPersistent, true);
+  assert.equal(parseBillingConfig({ AGENTCAP_DATA_DIR_PERSISTENT: "yes" }).dataDirPersistent, false);
   assert.equal(parseBillingConfig({}).dataDirPersistent, false);
   // createBilling makes the same check on the real disk, without the override.
   const dir = await tempDir();
@@ -833,7 +833,7 @@ test("an upgrade is ONE ledger line on the same period: usage carries over and a
   // the quota what the upgrade bought for the half period left.
   const plan = f.billing.planFor(OWNER);
   assert.deepEqual([plan.id, plan.requests, plan.rpm, plan.starts_at, plan.ends_at], ["loaf", 150_000, 120, START, START + P]);
-  assert.equal(f.billing.reserve({ owner: OWNER, keyId: "key1" }).headers["x-merrymen-quota-remaining"], String(150_000 - 4));
+  assert.equal(f.billing.reserve({ owner: OWNER, keyId: "key1" }).headers["x-agentcap-quota-remaining"], String(150_000 - 4));
 });
 
 test("a late upgrade raises the request quota only for the time it paid for, as it does the price", async () => {
@@ -1067,9 +1067,9 @@ test("enforce refuses a spent quota with 402 and structured fields, and does not
   assert.equal(refused.status, 402);
   const resets = START - (START % P) + P; // no account or key: epoch-aligned windows
   assert.deepEqual(refused.error, { code: "quota_exhausted", message: refused.error.message, plan: "free", limit: 3, used: 3,
-    resets_at: new Date(resets).toISOString(), upgrade_url: "https://merrymen.dev/api#plans" });
-  assert.deepEqual(refused.headers, { "x-merrymen-quota-limit": "3", "x-merrymen-quota-remaining": "0",
-    "x-merrymen-quota-reset": String(Math.ceil(resets / 1000)), "x-merrymen-quota-enforced": "true",
+    resets_at: new Date(resets).toISOString(), upgrade_url: "https://agentcap.xyz/api#plans" });
+  assert.deepEqual(refused.headers, { "x-agentcap-quota-limit": "3", "x-agentcap-quota-remaining": "0",
+    "x-agentcap-quota-reset": String(Math.ceil(resets / 1000)), "x-agentcap-quota-enforced": "true",
     "retry-after": String(Math.ceil((resets - START) / 1000)) });
   assert.equal(f.billing.meta(OWNER).billing.requests_used, 3, "a 402 is not counted");
   f.billing.release(f.billing.reserve({ owner: OTHER, keyId: "k2" }).ticket);
@@ -1083,7 +1083,7 @@ test("a spent quota on the dearest plan does not send the developer to a larger 
   assert.equal(f.billing.reserve({ owner: OWNER, keyId: "k1" }).ok, true);
   assert.equal(f.billing.reserve({ owner: OWNER, keyId: "k1" }).ok, true);
   const free = f.billing.reserve({ owner: OWNER, keyId: "k1" }).error;
-  assert.match(free.message, /^This account has used its 2 requests on Free until .*\. Choose a larger plan at https:\/\/merrymen\.dev\/api#plans\.$/);
+  assert.match(free.message, /^This account has used its 2 requests on Free until .*\. Choose a larger plan at https:\/\/agentcap\.xyz\/api#plans\.$/);
   await f.grant(1_000_000);
   assert.equal((await f.plan("feast")).json.plan.id, "feast");
   assert.equal(f.billing.reserve({ owner: OWNER, keyId: "k1" }).ok, true);
@@ -1095,7 +1095,7 @@ test("a spent quota on the dearest plan does not send the developer to a larger 
   assert.doesNotMatch(top.error.message, /Choose a larger plan/);
   // The structured fields keep their contract: partners read these, not the prose.
   assert.deepEqual({ ...top.error, message: undefined }, { code: "quota_exhausted", message: undefined, plan: "feast", limit: 2, used: 2, resets_at: ends,
-    upgrade_url: "https://merrymen.dev/api#plans" });
+    upgrade_url: "https://agentcap.xyz/api#plans" });
 });
 
 test("observe counts past the limit without refusing, and remaining never goes below zero", async () => {
@@ -1103,8 +1103,8 @@ test("observe counts past the limit without refusing, and remaining never goes b
   let last;
   for (let i = 0; i < 5; i++) last = f.billing.reserve({ owner: OWNER, keyId: "k1" });
   assert.equal(last.ok, true);
-  assert.equal(last.headers["x-merrymen-quota-remaining"], "0");
-  assert.equal(last.headers["x-merrymen-quota-enforced"], "false");
+  assert.equal(last.headers["x-agentcap-quota-remaining"], "0");
+  assert.equal(last.headers["x-agentcap-quota-enforced"], "false");
   assert.equal(f.billing.meta(OWNER).billing.requests_used, 5);
 });
 
@@ -1289,7 +1289,7 @@ test("GET /plans lists the table in raw and whole tokens, with no treasury until
   assert.equal(view.status, 200);
   assert.deepEqual(view.json, {
     billing: { mode: "observe", enforced: false }, period_days: 30,
-    currency: { symbol: "MERRYMEN", address: "0xa15cd06dd305269a0f48bebeb30aa3588fba7b32", chain_id: 4663, decimals: 18,
+    currency: { symbol: "AGENTCAP", address: "0xa15cd06dd305269a0f48bebeb30aa3588fba7b32", chain_id: 4663, decimals: 18,
       explorer_url: "https://robinhoodchain.blockscout.com/token/0xa15cd06dd305269a0f48bebeb30aa3588fba7b32" },
     treasury: null, confirmations: { blocks: 64, min_age_sec: 120 },
     plans: [

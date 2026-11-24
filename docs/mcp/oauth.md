@@ -1,26 +1,26 @@
-# Merrymen MCP: OAuth and developer integration
+# AgentCap MCP: OAuth and developer integration
 
-The Merrymen MCP server is an OAuth 2.1 **protected resource** with its own
+The AgentCap MCP server is an OAuth 2.1 **protected resource** with its own
 **authorization server**. Any MCP client that follows the MCP authorization
 spec (Claude, Claude Code, Codex, ChatGPT, the MCP Inspector, the official
 TypeScript and Python SDK clients) can connect without a pre-shared secret.
 
 | | URL (production defaults) |
 |---|---|
-| MCP endpoint (resource) | `https://mcp.merrymen.dev/mcp` |
-| Protected-resource metadata (RFC 9728) | `https://mcp.merrymen.dev/.well-known/oauth-protected-resource/mcp` (also at the root well-known path) |
-| Directory profile: a second, limited resource ([below](#the-directory-profile-mcpdirectory)) | `https://mcp.merrymen.dev/mcp/directory`, metadata at `https://mcp.merrymen.dev/.well-known/oauth-protected-resource/mcp/directory` |
-| Authorization-server metadata (RFC 8414) | `https://app.merrymen.dev/.well-known/oauth-authorization-server` |
-| Authorization endpoint | `https://app.merrymen.dev/oauth/authorize` |
-| Token endpoint | `https://app.merrymen.dev/oauth/token` |
-| Dynamic client registration (RFC 7591) | `https://app.merrymen.dev/oauth/register` |
-| Revocation (RFC 7009) | `https://app.merrymen.dev/oauth/revoke` |
-| Consent screen | `https://app.merrymen.dev/connect/app` |
-| Connected apps (owners) | `https://app.merrymen.dev/connect/apps` |
-| Readiness | `https://app.merrymen.dev/api/mcp/health` |
+| MCP endpoint (resource) | `https://mcp.agentcap.xyz/mcp` |
+| Protected-resource metadata (RFC 9728) | `https://mcp.agentcap.xyz/.well-known/oauth-protected-resource/mcp` (also at the root well-known path) |
+| Directory profile: a second, limited resource ([below](#the-directory-profile-mcpdirectory)) | `https://mcp.agentcap.xyz/mcp/directory`, metadata at `https://mcp.agentcap.xyz/.well-known/oauth-protected-resource/mcp/directory` |
+| Authorization-server metadata (RFC 8414) | `https://app.agentcap.xyz/.well-known/oauth-authorization-server` |
+| Authorization endpoint | `https://app.agentcap.xyz/oauth/authorize` |
+| Token endpoint | `https://app.agentcap.xyz/oauth/token` |
+| Dynamic client registration (RFC 7591) | `https://app.agentcap.xyz/oauth/register` |
+| Revocation (RFC 7009) | `https://app.agentcap.xyz/oauth/revoke` |
+| Consent screen | `https://app.agentcap.xyz/connect/app` |
+| Connected apps (owners) | `https://app.agentcap.xyz/connect/apps` |
+| Readiness | `https://app.agentcap.xyz/api/mcp/health` |
 
-The issuer and resource URLs come from configuration (`MERRYMEN_PUBLIC_ORIGIN`,
-optionally `MERRYMEN_OAUTH_ISSUER` / `MERRYMEN_MCP_RESOURCE_URL`), never from a
+The issuer and resource URLs come from configuration (`AGENTCAP_PUBLIC_ORIGIN`,
+optionally `AGENTCAP_OAUTH_ISSUER` / `AGENTCAP_MCP_RESOURCE_URL`), never from a
 request's `Host` header, because tokens are bound to them.
 
 ## Who is who
@@ -28,8 +28,8 @@ request's `Host` header, because tokens are bound to them.
 | Principal | What it is | What proves it |
 |---|---|---|
 | **Client application** | Claude, Codex, your app | Its `client_id`: a Client ID Metadata Document URL, or an id from dynamic registration. A client id is *not* authority over any owner. |
-| **Owner (end user)** | A Merrymen account holder | Their own Merrymen sign-in (wallet or Privy), on the consent page. |
-| **Agent** | An owner's Merryman | Owned by the signed-in tenant according to the identity store at the moment of each call. |
+| **Owner (end user)** | A AgentCap account holder | Their own AgentCap sign-in (wallet or Privy), on the consent page. |
+| **Agent** | An owner's AgentCapAvatar | Owned by the signed-in tenant according to the identity store at the moment of each call. |
 | **Connection** | One owner's consent for one client on one resource (`/mcp` or `/mcp/directory`) | A row the owner can see and revoke on **Connected apps**. Tokens belong to a connection. |
 
 There is **no application-level key that reaches every owner**. Every token is
@@ -58,10 +58,10 @@ limited to the agents and scopes that owner chose.
      `token_endpoint_auth_methods_supported`). The `client_id` is an https URL
      that must be written in canonical form with a path and **no query
      string, fragment, credentials or dot segments** (`.`, `..`, `%2e`), and
-     whose host is **not one of Merrymen's own hosts** (the issuer, the MCP
+     whose host is **not one of AgentCap's own hosts** (the issuer, the MCP
      resource, or any host the MCP endpoints answer on): the consent page says
      "Verified at *host*", and a document served through one of our own routes
-     would borrow our name. Merrymen fetches it through an SSRF-guarded
+     would borrow our name. AgentCap fetches it through an SSRF-guarded
      transport (public addresses only, pinned DNS, https, no redirects, 64 KB,
      5 s), accepts only a `200` answer with an `application/json` (or
      `application/*+json`) `Content-Type`, requires the document's
@@ -78,7 +78,7 @@ limited to the agents and scopes that owner chose.
      with** (retention may have dropped it, and without it one failed fetch at
      the next refresh would disconnect the app). They never store a row for a
      client no owner is connected to, so a caller with no code or token can
-     make Merrymen store at most one bounded row per client an owner already
+     make AgentCap store at most one bounded row per client an owner already
      connected. The cache keeps only the name (up to 100 characters) and the
      redirect URIs, each once, never the fetched body: at most about 3 KB per
      client including its URL.
@@ -100,26 +100,26 @@ limited to the agents and scopes that owner chose.
    `response_type=code`, `code_challenge` + `code_challenge_method=S256`
    (required; `plain` is refused), `redirect_uri` (must match a registered one
    exactly; loopback redirects may use any port per RFC 8252), `state`,
-   `scope`, and `resource=https://mcp.merrymen.dev/mcp` (RFC 8707). The only
+   `scope`, and `resource=https://mcp.agentcap.xyz/mcp` (RFC 8707). The only
    other resource accepted is the directory profile's
-   (`https://mcp.merrymen.dev/mcp/directory`); any other is refused with
+   (`https://mcp.agentcap.xyz/mcp/directory`); any other is refused with
    `invalid_target`, and a request with no `resource` means the canonical one.
 
-   **Errors before consent are shown on a Merrymen page, not redirected.**
+   **Errors before consent are shown on a AgentCap page, not redirected.**
    Registration is open, so a registered https redirect proves nothing, and
-   bouncing errors to it would make every Merrymen authorize link an open
+   bouncing errors to it would make every AgentCap authorize link an open
    redirector (RFC 9700 §4.11.2). The one exception: a CIMD client whose
    `redirect_uri` is loopback (a program on the owner's own computer, such as
    Claude Code or Codex CLI, waiting on that port) receives the error
    (`error`, `error_description`, `state`, `iss`) at its redirect. An unknown
    client, an unregistered `redirect_uri`, or a `state` containing a control
    character (which is never stored or echoed) is always a page.
-5. Merrymen parks the request and sends the browser to the consent page. The
+5. AgentCap parks the request and sends the browser to the consent page. The
    request handle travels in the URL **fragment**, so it never reaches a
    server log or a `Referer`.
-6. The owner signs in to Merrymen (their normal sign-in), sees who is asking
+6. The owner signs in to AgentCap (their normal sign-in), sees who is asking
    (a verified CIMD host; or, for a dynamically registered client, "not
-   verified by Merrymen" and the host of the redirect the code will actually
+   verified by AgentCap" and the host of the redirect the code will actually
    go to, which is also what **Connected apps** records for the connection),
    reads a plain summary of what it could see and do, and approves or
    declines; the full scope list (and whether to share each agent) is one
@@ -198,7 +198,7 @@ application-level key.
 See [tools.md](tools.md) for the full list and which tool needs which scope.
 No scope can move funds, sign transactions or change trading permissions.
 `trade:propose`, `drafts:write` and `social:write` only create **proposals**
-that the owner approves on a Merrymen page with their own sign-in.
+that the owner approves on a AgentCap page with their own sign-in.
 
 A tool whose scope a connection does not hold is not listed, and calling it by
 name gets JSON-RPC error `-32602` ("Tool … not found"). To add a permission
@@ -209,14 +209,14 @@ consent page; or uses a personal access token that includes it.
 ## The directory profile (`/mcp/directory`)
 
 A second address for the same server, made for Anthropic's connector
-directory: `https://mcp.merrymen.dev/mcp/directory`. The canonical `/mcp` is
+directory: `https://mcp.agentcap.xyz/mcp/directory`. The canonical `/mcp` is
 unchanged and stays what owners add as a custom connector.
 
 **What it excludes, and why.** A directory connection can never hold
 `trade:propose`, `drafts:write` or `social:write`, nor the staff scope. Those
 are the scopes that let an assistant *prepare* something with consequences (a
 trade, a setting change, an agent draft, a follow, a post), even though each
-still waits for the owner's approval in Merrymen. A listing anyone can add in
+still waits for the owner's approval in AgentCap. A listing anyone can add in
 one click is kept to research, reading, chat, the watchlist, alerts, reports
 and backtests; an owner who wants proposals adds the full server as a custom
 connector. The limit is by scope level (`read` and `write` only:
@@ -228,7 +228,7 @@ exist only on the full server: `quote_trade`, `propose_trade`,
 `cancel_proposal`, and the staff tools.
 
 **Its own resource.** `/.well-known/oauth-protected-resource/mcp/directory`
-names `resource: https://mcp.merrymen.dev/mcp/directory` and lists only the
+names `resource: https://mcp.agentcap.xyz/mcp/directory` and lists only the
 scopes above as `scopes_supported`; the 401 challenge on `/mcp/directory`
 points `resource_metadata` at that document and asks for only those scopes.
 The root and `/mcp` documents, the canonical challenge and the
@@ -270,10 +270,10 @@ screen's starting point ("what you granted before") is read from the
 connection on the same address only. **Connected apps** marks a directory
 connection "Via the Claude directory listing".
 
-**Switching it off.** `MERRYMEN_MCP_DIRECTORY=0` on web: `/mcp/directory` and
+**Switching it off.** `AGENTCAP_MCP_DIRECTORY=0` on web: `/mcp/directory` and
 its metadata answer 404, `/oauth/authorize` refuses the address
 (`invalid_target`), and directory tokens stop verifying and refreshing
-(`invalid_grant`); `/mcp` is untouched. `MERRYMEN_MCP_DIRECTORY_RESOURCE_URL`
+(`invalid_grant`); `/mcp` is untouched. `AGENTCAP_MCP_DIRECTORY_RESOURCE_URL`
 can move the address to another origin (https), never to another path: the
 route is always `/mcp/directory`, and an override naming any other path (or
 the canonical one) switches the profile off rather than advertise an address

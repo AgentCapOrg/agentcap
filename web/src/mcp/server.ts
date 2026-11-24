@@ -90,8 +90,8 @@ export function buildServer(principal: Principal | null, opts: { tools?: readonl
   const issuer = mcpConfig().issuer;
   const server = new McpServer(
     {
-      name: "merrymen", title: "Merrymen", version: SERVER_VERSION, websiteUrl: "https://merrymen.dev",
-      description: "Your Merrymen trading agent, portfolio, trade receipts and decisions.",
+      name: "agentcap", title: "AgentCap", version: SERVER_VERSION, websiteUrl: "https://agentcap.xyz",
+      description: "Your AgentCap trading agent, portfolio, trade receipts and decisions.",
       // Current connector assets; PNG also works in hosts that do not display SVG.
       ...(issuer ? { icons: [
         { src: `${issuer}/mcp-icon-512.png`, mimeType: "image/png", sizes: ["512x512"] },

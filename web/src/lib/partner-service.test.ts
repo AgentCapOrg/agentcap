@@ -31,7 +31,7 @@ after(() => {
 
 type ServiceDeps = Parameters<typeof createPartnerService>[0];
 function fixture(overrides: Partial<ServiceDeps> = {}, waits?: ConstructorParameters<typeof FilePartnerStore>[3]) {
-  const home = mkdtempSync(join(tmpdir(), "merrymen-partner-service-"));
+  const home = mkdtempSync(join(tmpdir(), "agentcap-partner-service-"));
   const store = new FilePartnerStore(home, undefined, () => secret, waits);
   fixtures.push({ home, store });
   let replies = 0;
@@ -48,7 +48,7 @@ function fixture(overrides: Partial<ServiceDeps> = {}, waits?: ConstructorParame
   const call = async (method: string, path: string, body?: unknown, selectedKey = key) => {
     const raw = body === undefined ? "" : JSON.stringify(body);
     const headers = signPartnerRequest({ secret, key: selectedKey, method, path, body: raw });
-    const response = await service.handle(new Request(`https://app.merrymen.dev/api/partner${path}`, { method, headers, ...(raw ? { body: raw } : {}) }), path);
+    const response = await service.handle(new Request(`https://app.agentcap.xyz/api/partner${path}`, { method, headers, ...(raw ? { body: raw } : {}) }), path);
     return { status: response.status, body: await response.json(), headers: response.headers };
   };
   return { store, call, service, replies: () => replies };
@@ -65,7 +65,7 @@ test("a key whose name is not well-formed text can still create connections", as
 test("gateway signatures bind exact method, body, path and principal, and reject replay", async () => {
   const path = "/agents", raw = '{"external_user_id":"user-1"}';
   const headers = signPartnerRequest({ secret, key, method: "POST", path, body: raw });
-  const req = new Request("https://app.merrymen.dev/api/partner/agents", { method: "POST", headers, body: raw });
+  const req = new Request("https://app.agentcap.xyz/api/partner/agents", { method: "POST", headers, body: raw });
   const used = new Set<string>();
   const consumeNonce = async (n: string) => { if (used.has(n)) return false; used.add(n); return true; };
   for (const [request, body, route] of [
@@ -81,7 +81,7 @@ test("gateway signatures bind exact method, body, path and principal, and reject
 
 test("direct requests cannot forge a tenant, app identity or gateway principal", async () => {
   const { service } = fixture();
-  const r = await service.handle(new Request("https://app.merrymen.dev/api/partner/agents", {
+  const r = await service.handle(new Request("https://app.agentcap.xyz/api/partner/agents", {
     method: "POST", headers: { "x-tenant": tenant, "authorization": "Bearer fake", "cookie": "mm_session=fake" },
     body: JSON.stringify({ external_user_id: "u1" }),
   }), "/agents");
@@ -95,7 +95,7 @@ test("create is repeatable and never accepts caller-supplied ownership or privat
   assert.equal(first.status, 202);
   assert.deepEqual(retry.body, first.body);
   assert.equal(first.body.status, "pending_authorization");
-  assert.match(first.body.onboarding_url, /^https:\/\/app\.merrymen\.dev\/connect#token=/);
+  assert.match(first.body.onboarding_url, /^https:\/\/app\.agentcap\.xyz\/connect#token=/);
   assert.equal(first.headers.get("cache-control"), "no-store");
   assert.ok(!JSON.stringify(first.body).includes("tokenHash"));
   assert.equal((await call("POST", "/agents", { external_user_id: "u2", tenant })).status, 400);
@@ -287,7 +287,7 @@ test("after a disconnect, requesting the connection again starts a fresh authori
   assert.equal(fresh.status, 202);
   assert.notEqual(fresh.body.id, original.body.id);
   assert.equal(fresh.body.status, "pending_authorization");
-  assert.match(fresh.body.onboarding_url, /^https:\/\/app\.merrymen\.dev\/connect#token=/);
+  assert.match(fresh.body.onboarding_url, /^https:\/\/app\.agentcap\.xyz\/connect#token=/);
   // The new connection needs the owner again and sees none of the old conversation.
   assert.equal((await call("GET", `/agents/${fresh.body.id}/messages`)).status, 409);
   await store.bindAuthorized(fresh.body.id, key.appId, tenant, ["read:agents", "chat:agents"]);
@@ -312,13 +312,13 @@ test("key chat scope cannot substitute for owner consent", async () => {
 
 test("body limits apply before parsing or signature verification", async () => {
   const { service } = fixture();
-  const r = await service.handle(new Request("https://app.merrymen.dev/api/partner/agents", { method: "POST", body: "x".repeat(32_769) }), "/agents");
+  const r = await service.handle(new Request("https://app.agentcap.xyz/api/partner/agents", { method: "POST", body: "x".repeat(32_769) }), "/agents");
   assert.equal(r.status, 413);
 });
 
 test("Perps review is a scoped owner handoff, never enrollment or partner-selected URL", async () => {
-  const previous = process.env.MERRYMEN_PERPS;
-  process.env.MERRYMEN_PERPS="paper";
+  const previous = process.env.AGENTCAP_PERPS;
+  process.env.AGENTCAP_PERPS="paper";
   try {
     const f=fixture();
     const made=await f.call("POST","/agents",{external_user_id:"perps-owner"});
@@ -334,8 +334,8 @@ test("Perps review is a scoped owner handoff, never enrollment or partner-select
     assert.equal((await f.call("POST",path,{redirect_uri:"https://evil.test"})).status,400);
     assert.equal((await f.call("POST",path,{}, {...key,scopes:["chat:agents"]})).status,403);
     assert.equal((await f.call("POST",path,{}, {...key,appId:"integration_app_b"})).status,404);
-    process.env.MERRYMEN_PERPS="off"; assert.equal((await f.call("POST",path,{})).status,409);
-    await f.store.revoke(key.appId,made.body.id); process.env.MERRYMEN_PERPS="paper";
+    process.env.AGENTCAP_PERPS="off"; assert.equal((await f.call("POST",path,{})).status,409);
+    await f.store.revoke(key.appId,made.body.id); process.env.AGENTCAP_PERPS="paper";
     assert.equal((await f.call("POST",path,{})).status,409);
-  } finally { if(previous===undefined) delete process.env.MERRYMEN_PERPS; else process.env.MERRYMEN_PERPS=previous; }
+  } finally { if(previous===undefined) delete process.env.AGENTCAP_PERPS; else process.env.AGENTCAP_PERPS=previous; }
 });

@@ -2,7 +2,7 @@
  * A ROBINHOOD KILL NEVER WRITES SOLANA SCHEMA.
  *
  * "Kill all agents" and Telegram /kill stop the tenant's Solana strategy too,
- * whatever MERRYMEN_SOLANA says. On a database that never ran Solana they must
+ * whatever AGENTCAP_SOLANA says. On a database that never ran Solana they must
  * find nothing to stop, read-only: no table created, no advisory lock taken,
  * and no failure that would report the Robinhood kill incomplete. Once the
  * table exists, the kill stops the strategy and fails closed as before.
@@ -40,15 +40,15 @@ const tables = (raw: DatabaseSync) => (raw.prepare("SELECT name FROM sqlite_mast
 const writes = (sql: string[]) => sql.filter((s) => /\b(CREATE|ALTER|INSERT|UPDATE|DELETE|DROP)\b|advisory/i.test(s));
 
 function homeFixture(t: TestContext): string {
-  const saved = { home: process.env.MERRYMEN_HOME, hosted: process.env.MERRYMEN_HOSTED, db: process.env.DATABASE_URL };
+  const saved = { home: process.env.AGENTCAP_HOME, hosted: process.env.AGENTCAP_HOSTED, db: process.env.DATABASE_URL };
   const home = mkdtempSync(path.join(tmpdir(), "solana-kill-ro-"));
   t.after(() => {
-    for (const [key, value] of [["MERRYMEN_HOME", saved.home], ["MERRYMEN_HOSTED", saved.hosted], ["DATABASE_URL", saved.db]] as const) {
+    for (const [key, value] of [["AGENTCAP_HOME", saved.home], ["AGENTCAP_HOSTED", saved.hosted], ["DATABASE_URL", saved.db]] as const) {
       if (value === undefined) delete process.env[key]; else process.env[key] = value;
     }
     rmSync(home, { recursive: true, force: true });
   });
-  process.env.MERRYMEN_HOME = home; delete process.env.DATABASE_URL; delete process.env.MERRYMEN_HOSTED;
+  process.env.AGENTCAP_HOME = home; delete process.env.DATABASE_URL; delete process.env.AGENTCAP_HOSTED;
   return home;
 }
 

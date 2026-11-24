@@ -1,7 +1,7 @@
 /**
  * THERE IS NO START BUTTON, AND THERE MUST NOT BE ONE.
  *
- * Once an owner approves and re-signs a grant, the Merryman arms itself: the
+ * Once an owner approves and re-signs a grant, the AgentCapAvatar arms itself: the
  * signed grant is POSTed to /api/grants, the worker's `syncGrant` picks it up on
  * its next pass, and it runs. Nothing waits for a human to press anything.
  *

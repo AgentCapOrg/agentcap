@@ -38,16 +38,16 @@ const codeOf = (src: string) =>
 const INDEX = codeOf(readFileSync(new URL("./index.ts", import.meta.url), "utf8"));
 
 const ENV_KEYS = [
-  "MERRYMEN_SETTINGS_FILE",
-  "MERRYMEN_HOSTED",
-  "MERRYMEN_STRATEGY",
-  "MERRYMEN_PAPER_TRADING",
-  "MERRYMEN_TELEGRAM_ALLOWLIST",
+  "AGENTCAP_SETTINGS_FILE",
+  "AGENTCAP_HOSTED",
+  "AGENTCAP_STRATEGY",
+  "AGENTCAP_PAPER_TRADING",
+  "AGENTCAP_TELEGRAM_ALLOWLIST",
 ] as const;
 const savedEnv = Object.fromEntries(ENV_KEYS.map((k) => [k, process.env[k]]));
 let root = "";
 before(() => {
-  root = mkdtempSync(path.join(os.tmpdir(), "merrymen-settings-unusable-"));
+  root = mkdtempSync(path.join(os.tmpdir(), "agentcap-settings-unusable-"));
   for (const k of ENV_KEYS) delete process.env[k];
 });
 after(() => {
@@ -178,7 +178,7 @@ describe("resolveConfig", () => {
 
   it("a broken edit after a good read keeps the OWNER'S settings — not paper, steady-basket, an empty allowlist", () => {
     const file = freshFile();
-    process.env.MERRYMEN_SETTINGS_FILE = file;
+    process.env.AGENTCAP_SETTINGS_FILE = file;
     try {
       writeFileSync(file, JSON.stringify(OWNER));
       const good = resolveConfig();
@@ -193,7 +193,7 @@ describe("resolveConfig", () => {
       assert.notDeepEqual(held, defaults(), "and not what a broken file used to mean");
       assert.equal(settingsProblem()?.holding, true);
     } finally {
-      delete process.env.MERRYMEN_SETTINGS_FILE;
+      delete process.env.AGENTCAP_SETTINGS_FILE;
     }
   });
 
@@ -203,25 +203,25 @@ describe("resolveConfig", () => {
     writeFileSync(good, JSON.stringify(OWNER));
     writeFileSync(broken, "{");
     try {
-      process.env.MERRYMEN_SETTINGS_FILE = good;
+      process.env.AGENTCAP_SETTINGS_FILE = good;
       assert.equal(resolveConfig().strategy, "dip-hunter");
-      process.env.MERRYMEN_SETTINGS_FILE = broken;
+      process.env.AGENTCAP_SETTINGS_FILE = broken;
       assert.deepEqual(resolveConfig(), defaults());
       assert.equal(settingsProblem()?.holding, false);
       assert.ok(settingsArmRefusal(settingsProblem(), false), "a worker reading this file will not arm");
     } finally {
-      delete process.env.MERRYMEN_SETTINGS_FILE;
+      delete process.env.AGENTCAP_SETTINGS_FILE;
     }
   });
 
   it("a missing file is still the defaults, with no problem", () => {
-    process.env.MERRYMEN_SETTINGS_FILE = freshFile();
+    process.env.AGENTCAP_SETTINGS_FILE = freshFile();
     try {
       assert.deepEqual(resolveConfig(), defaults());
       assert.equal(settingsProblem(), null);
       assert.equal(settingsArmRefusal(settingsProblem(), false), null);
     } finally {
-      delete process.env.MERRYMEN_SETTINGS_FILE;
+      delete process.env.AGENTCAP_SETTINGS_FILE;
     }
   });
 });
@@ -312,7 +312,7 @@ parentPort.postMessage("done");
   it("tears reads, and none of them reaches the config as the defaults", async () => {
     const file = freshFile();
     writeFileSync(file, JSON.stringify(OWNER));
-    process.env.MERRYMEN_SETTINGS_FILE = file;
+    process.env.AGENTCAP_SETTINGS_FILE = file;
     const warn = console.warn;
     console.warn = () => {};
     const ctl = new SharedArrayBuffer(2 * Int32Array.BYTES_PER_ELEMENT);
@@ -340,7 +340,7 @@ parentPort.postMessage("done");
       Atomics.store(flags, 0, 1);
       await writer.terminate();
       console.warn = warn;
-      delete process.env.MERRYMEN_SETTINGS_FILE;
+      delete process.env.AGENTCAP_SETTINGS_FILE;
     }
   });
 });

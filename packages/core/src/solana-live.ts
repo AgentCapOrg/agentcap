@@ -11,14 +11,14 @@ import { base58Decode, base58Encode } from "./ids";
 export const SOLANA_VAULT_LOCAL_TEST_PROGRAM =
   "EUzYVniKtgNNgFweMtRA9vciTWtE8MDTRfh6ai6VvXoU";
 /**
- * Released Merrymen vault programs: the program ID and the SHA-256 of its
+ * Released AgentCap vault programs: the program ID and the SHA-256 of its
  * deployed binary, i.e. the ProgramData account's bytes after its 45-byte
  * header up to the account's full size (it equals the .so file's hash only
  * when deployed without extra --max-len space). The owner recovery tool
- * (merrymen solana-recover) signs by default only for a program listed here,
+ * (agentcap solana-recover) signs by default only for a program listed here,
  * after checking that its immutable binary matches. Empty until a release: a
  * release adds one frozen entry, reviewed, and it must match the deployment's
- * MERRYMEN_SOLANA_VAULT_PROGRAM and MERRYMEN_SOLANA_VAULT_SHA256. Once any entry
+ * AGENTCAP_SOLANA_VAULT_PROGRAM and AGENTCAP_SOLANA_VAULT_SHA256. Once any entry
  * is listed, the live runtime refuses a configured program or SHA-256 that is
  * not one listed pair (solanaVaultReleaseRefusal), so the app and the recovery
  * tool trust the same program. Never the local test program.
@@ -39,7 +39,7 @@ export function solanaVaultReleaseRefusal(
   if (releases.length === 0) return null;
   const release = releases.find((r) => r.programId === programId);
   if (!release)
-    return "The configured Solana vault program is not a released Merrymen vault program.";
+    return "The configured Solana vault program is not a released AgentCap vault program.";
   if (release.sha256 !== sha256)
     return "The configured Solana vault binary hash is not the released hash of that program.";
   return null;

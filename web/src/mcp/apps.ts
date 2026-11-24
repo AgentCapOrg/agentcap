@@ -49,17 +49,17 @@ export const APPS_PROTOCOL_VERSION = "2026-01-26";
 export type AppView = "home" | "portfolio" | "decision" | "token" | "proposal";
 
 export const APP_VIEW_URI: Readonly<Record<AppView, string>> = {
-  home: "ui://merrymen/home.html",
-  portfolio: "ui://merrymen/portfolio.html",
-  decision: "ui://merrymen/decision.html",
-  token: "ui://merrymen/token.html",
-  proposal: "ui://merrymen/proposal.html",
+  home: "ui://agentcap/home.html",
+  portfolio: "ui://agentcap/portfolio.html",
+  decision: "ui://agentcap/decision.html",
+  token: "ui://agentcap/token.html",
+  proposal: "ui://agentcap/proposal.html",
 };
 
 /** Which view renders which tool's result. */
 export const APP_VIEW_OF_TOOL: Readonly<Record<string, AppView>> = {
-  get_merryman_setup: "home",
-  create_merryman: "proposal",
+  get_agentcapavatar_setup: "home",
+  create_agentcapavatar: "proposal",
   create_agent_draft: "proposal",
   propose_settings_change: "proposal",
   get_portfolio: "portfolio",
@@ -84,8 +84,8 @@ export const APP_TOOL_VISIBILITY: readonly ("model" | "app")[] = Object.freeze([
 
 /** Only these safe reads, configuration drafts and alert preferences are callable from an app. */
 export const APP_CALLABLE_TOOLS = new Set([
-  "get_merryman_setup", "list_agents", "get_portfolio", "get_trades", "list_decisions", "get_agent_controls", "get_agent_settings",
-  "create_merryman", "create_agent_draft", "propose_settings_change", "list_notification_channels", "list_subscriptions", "subscribe", "unsubscribe",
+  "get_agentcapavatar_setup", "list_agents", "get_portfolio", "get_trades", "list_decisions", "get_agent_controls", "get_agent_settings",
+  "create_agentcapavatar", "create_agent_draft", "propose_settings_change", "list_notification_channels", "list_subscriptions", "subscribe", "unsubscribe",
   "get_proposal", "list_proposals", "cancel_proposal",
 ]);
 
@@ -419,7 +419,7 @@ function showError(r) {
   // Errors carry no structuredContent: the envelope is in _meta and, as JSON, after the text's first paragraph.
   var meta = obj(r._meta);
   var sc = obj(r.structuredContent) || parseText(r.content);
-  var err = (meta ? obj(meta["dev.merrymen/error"]) : null) || (sc ? obj(sc.error) : null);
+  var err = (meta ? obj(meta["dev.agentcap/error"]) : null) || (sc ? obj(sc.error) : null);
   var firstPara = textOf(r.content);
   if (firstPara !== null && firstPara.indexOf("\n\n") >= 0) firstPara = firstPara.slice(0, firstPara.indexOf("\n\n"));
   var msg = (err && clean(err.message, 400)) || clean(firstPara, 400);
@@ -580,10 +580,10 @@ function shortAddr(v) {
 
 function boot() {
   if (!root) return;
-  if (!embedded) { notice("This page shows Merrymen tool results inside an app that supports MCP Apps. There is nothing to show here."); return; }
+  if (!embedded) { notice("This page shows AgentCap tool results inside an app that supports MCP Apps. There is nothing to show here."); return; }
   window.addEventListener("message", onMessage);
   request("ui/initialize", {
-    appInfo: { name: "merrymen-" + VIEW, version: "1.0.0" },
+    appInfo: { name: "agentcap-" + VIEW, version: "1.0.0" },
     appCapabilities: {},
     protocolVersion: "__PROTOCOL__"
   }, function (err, result) {
@@ -1124,7 +1124,7 @@ function renderSearch(d) {
     dup.forEach(function (x) {
       var line = put(s, "div", "check");
       line.appendChild(utInline(x.symbol_key, false));
-      put(line, "div", "small", count(arr(x.addresses, 50).length) + " address(es), " + count(arr(x.trusted_addresses, 50).length) + " vouched for by Merrymen or you");
+      put(line, "div", "small", count(arr(x.addresses, 50).length) + " address(es), " + count(arr(x.trusted_addresses, 50).length) + " vouched for by AgentCap or you");
     });
   }
   notes([d.next_cursor ? "More results exist: ask for the next page." : null, d.untrusted_note]);
@@ -1168,7 +1168,7 @@ function renderEligibility(d) {
 
 const PROPOSAL_JS = String.raw`
 var STATUS_TEXT = {
-  awaiting_approval: "Waiting for the owner to approve it in Merrymen.",
+  awaiting_approval: "Waiting for the owner to approve it in AgentCap.",
   approved: "Approved; being handed to the agent.",
   submitted: "Queued for the agent; it has not picked it up yet.",
   executing: "The agent picked it up and is executing (or waiting for the chain's receipt).",
@@ -1255,7 +1255,7 @@ function outcomeBook(status, res) {
 }
 
 // A reject rule as a result states it (services/proposals.ts ruleFields): the
-// label, family and remedy are Merrymen's own words; the slug came through
+// label, family and remedy are AgentCap's own words; the slug came through
 // the agent's worker, so it stays marked as third-party text.
 function ruleRows(g, r, title) {
   var slug = typeof r.rule === "string" ? utInline(r.rule, false) : null;
@@ -1389,14 +1389,14 @@ function renderProposal(d) {
   if (d.order_id) row(g, "Order", mono(str(d.order_id, 80)));
 
   if (status === "awaiting_approval" || (setupOnly && status === "applied")) {
-    var ap = section(root, setupOnly && status === "applied" ? "Finish setup in Merrymen" : "Approve in Merrymen");
+    var ap = section(root, setupOnly && status === "applied" ? "Finish setup in AgentCap" : "Approve in AgentCap");
     var exp = Date.parse(typeof d.expires_at === "string" ? d.expires_at : "");
     var continuingSetup = setupOnly && status === "applied";
     var link = approvalLink(continuingSetup ? ISSUER + "/connect/setup/" + d.proposal_id : d.approval_url, d.proposal_id, continuingSetup);
     if (isFinite(exp) && exp <= Date.now()) {
       put(ap, "p", "warn-text", "This proposal has expired. Ask for a fresh one.");
     } else if (link) {
-      put(ap, "p", null, setupOnly && status === "applied" ? "Return to your approved setup to continue wallet creation and permission signing." : (kind === "trade" ? "Nothing is traded" : "Nothing changes") + " until you open this page, sign in to Merrymen and approve.");
+      put(ap, "p", null, setupOnly && status === "applied" ? "Return to your approved setup to continue wallet creation and permission signing." : (kind === "trade" ? "Nothing is traded" : "Nothing changes") + " until you open this page, sign in to AgentCap and approve.");
       var a = put(ap, "a", "cta", setupOnly && status === "applied" ? "Continue owner setup" : "Open the approval page");
       a.setAttribute("href", link.href);
       a.setAttribute("target", "_blank");
@@ -1405,7 +1405,7 @@ function renderProposal(d) {
       a.addEventListener("click", function (ev) { if (openViaHost(link.href, note)) ev.preventDefault(); });
       put(ap, "div", "mono", link.href);
     } else if (typeof d.approval_url === "string") {
-      put(ap, "p", "warn-text", "This approval address is not this Merrymen server's approval page, so it is not linked.");
+      put(ap, "p", "warn-text", "This approval address is not this AgentCap server's approval page, so it is not linked.");
       untrustedBox(ap, "Address as received", d.approval_url, 300);
     } else {
       put(ap, "p", "small muted", "No approval link in this result.");
@@ -1442,7 +1442,7 @@ function renderProposal(d) {
   if (res && Object.keys(res).length) { var rs = section(root, "Result"); resultBlock(rs, res); }
   var q = obj(d.quote);
   if (q) renderQuote(root, q, false);
-  notes([kind === "agent_draft" || kind === "settings" ? "Return to this chat after the secure review to check your Merryman's latest status." : d.next_steps]);
+  notes([kind === "agent_draft" || kind === "settings" ? "Return to this chat after the secure review to check your AgentCapAvatar's latest status." : d.next_steps]);
 }
 
 function renderQuote(parent, q, standalone) {
@@ -1470,8 +1470,8 @@ function renderQuote(parent, q, standalone) {
   if (rt) row(g, "Route", str(rt.venue, 64), [num(rt.fee_tier_bps) !== null ? "fee tier " + bps(rt.fee_tier_bps) : null, count(arr(rt.hops, 8).length) + " hop(s)"].filter(Boolean).join(" · "));
   var gas = obj(q.gas);
   if (gas) row(g, "Gas", money(gas.expected_usdg), str(gas.note, 200));
-  var fee = obj(q.merrymen_trade_fee);
-  if (fee) row(g, "Merrymen fee", money(fee.usdg), [bps(fee.bps), str(fee.note, 200)].filter(Boolean).join(" · "));
+  var fee = obj(q.agentcap_trade_fee);
+  if (fee) row(g, "AgentCap fee", money(fee.usdg), [bps(fee.bps), str(fee.note, 200)].filter(Boolean).join(" · "));
   row(g, "Quoted", when(q.quoted_at), q.block_number ? "block " + str(q.block_number, 24) : null);
   bullets(s, q.caveats, 8, "small");
 }
@@ -1482,11 +1482,11 @@ function renderQuote(parent, q, standalone) {
 const CSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'";
 
 const VIEWS: Record<AppView, { title: string; js: string; description: string }> = {
-  home: { title: "Your Merryman", js: CONFIG_CARD_JS + PORTFOLIO_JS.replace("function render(d)", "function renderPortfolioResult(d)") + PROPOSAL_JS.replace("function render(d)", "function renderProposalResult(d)") + HOME_JS, description: "Interactive setup and management: name, strategy, risk, readiness, portfolio, activity and alerts. Tools remain scoped to the connected owner; wallet signing and approval stay in Merrymen." },
-  portfolio: { title: "Merrymen portfolio", js: PORTFOLIO_JS, description: "Renders a portfolio and its performance: paper and live books side by side, never summed." },
-  decision: { title: "Merrymen decision", js: DECISION_JS, description: "Renders why an agent has not traded, or one of its decisions: the primary cause, each check's status, evidence and what the owner can do." },
-  token: { title: "Merrymen token", js: TOKEN_JS, description: "Renders a token's market data, a token search or a trade-eligibility check: discoverable, priceable and executable, with third-party text marked." },
-  proposal: { title: "Merrymen proposal", js: CONFIG_CARD_JS + PROPOSAL_JS, description: "Renders quote_trade, propose_trade and get_proposal: the paper or live banner, the status timeline and the approval link." },
+  home: { title: "Your AgentCapAvatar", js: CONFIG_CARD_JS + PORTFOLIO_JS.replace("function render(d)", "function renderPortfolioResult(d)") + PROPOSAL_JS.replace("function render(d)", "function renderProposalResult(d)") + HOME_JS, description: "Interactive setup and management: name, strategy, risk, readiness, portfolio, activity and alerts. Tools remain scoped to the connected owner; wallet signing and approval stay in AgentCap." },
+  portfolio: { title: "AgentCap portfolio", js: PORTFOLIO_JS, description: "Renders a portfolio and its performance: paper and live books side by side, never summed." },
+  decision: { title: "AgentCap decision", js: DECISION_JS, description: "Renders why an agent has not traded, or one of its decisions: the primary cause, each check's status, evidence and what the owner can do." },
+  token: { title: "AgentCap token", js: TOKEN_JS, description: "Renders a token's market data, a token search or a trade-eligibility check: discoverable, priceable and executable, with third-party text marked." },
+  proposal: { title: "AgentCap proposal", js: CONFIG_CARD_JS + PROPOSAL_JS, description: "Renders quote_trade, propose_trade and get_proposal: the paper or live banner, the status timeline and the approval link." },
 };
 
 /** An origin as JS source, safe inside a script element; anything but a plain origin becomes "". */

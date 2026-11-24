@@ -25,18 +25,18 @@ import type { ChildProcess, SpawnOptions } from "node:child_process";
 import { privateKeyToAccount } from "viem/accounts";
 import type { StoredGrant } from "../../packages/core/src/index";
 
-const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-perps-edges-")));
-process.env.MERRYMEN_HOME = fleet;
-process.env.MERRYMEN_HOSTED = "1";
+const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-perps-edges-")));
+process.env.AGENTCAP_HOME = fleet;
+process.env.AGENTCAP_HOSTED = "1";
 delete process.env.DATABASE_URL;
-delete process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS;
-delete process.env.MERRYMEN_FLEET_RECOVERY_REPORT_ONLY;
-delete process.env.MERRYMEN_PERSISTENT_HOME_REQUIRED;
-delete process.env.MERRYMEN_FLEET_ROLLOUT;
+delete process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS;
+delete process.env.AGENTCAP_FLEET_RECOVERY_REPORT_ONLY;
+delete process.env.AGENTCAP_PERSISTENT_HOME_REQUIRED;
+delete process.env.AGENTCAP_FLEET_ROLLOUT;
 for (const key of Object.keys(process.env)) if (key.startsWith("RAILWAY_")) delete process.env[key];
 const dek = Buffer.alloc(32, 43);
-process.env.MERRYMEN_STORE_DEK = dek.toString("base64");
-process.env.MERRYMEN_PERPS = "paper";
+process.env.AGENTCAP_STORE_DEK = dek.toString("base64");
+process.env.AGENTCAP_PERPS = "paper";
 
 const orch = await import("./orchestrator");
 const { getGrantStore } = await import("./grant-store");
@@ -72,7 +72,7 @@ class FakeProc extends EventEmitter {
   gone = false;
   constructor(readonly env: NodeJS.ProcessEnv) {
     super();
-    this.pausedAtStart = existsSync(path.join(String(env.MERRYMEN_HOME), "paused"));
+    this.pausedAtStart = existsSync(path.join(String(env.AGENTCAP_HOME), "paused"));
   }
   kill(signal?: NodeJS.Signals | number): boolean {
     this.signals.push(String(signal ?? "SIGTERM"));
@@ -105,8 +105,8 @@ console.log = (...a: unknown[]) => { said.push(a.map(String).join(" ")); };
 const settle = async (n = 30) => { for (let i = 0; i < n; i++) await new Promise((r) => setImmediate(r)); };
 const spot = getGrantStore("spot"), perps = getGrantStore("perps");
 const perpsKey = (owner: string) => `${owner}:perps`;
-const live = (tenant: string) => spawned.filter((p) => p.env.MERRYMEN_HOME === orch.childHome(tenant) && !p.gone);
-const all = (tenant: string) => spawned.filter((p) => p.env.MERRYMEN_HOME === orch.childHome(tenant));
+const live = (tenant: string) => spawned.filter((p) => p.env.AGENTCAP_HOME === orch.childHome(tenant) && !p.gone);
+const all = (tenant: string) => spawned.filter((p) => p.env.AGENTCAP_HOME === orch.childHome(tenant));
 const used: `0x${string}`[] = [];
 const ownerAt = (n: number) => {
   const o = address(n);
@@ -517,7 +517,7 @@ describe("the fleet feed's held markets", () => {
     await settle();
     // Each book holds a paper position outside the markets its settings want.
     for (const [o, market] of [[a, 16], [b, 3]] as const) {
-      const raw = new DatabaseSync(path.join(orch.childHome(perpsKey(o)), "merrymen.db"));
+      const raw = new DatabaseSync(path.join(orch.childHome(perpsKey(o)), "agentcap.db"));
       await applyLedgerSchema(wrapSqlite(raw));
       raw.prepare(`INSERT INTO perp_positions (agent_id, mode, market_id, side, base, allocated_margin_micro, source) VALUES (?, 'paper', ?, 'long', '1', '1000000', 'paper')`)
         .run(o, market);
@@ -525,7 +525,7 @@ describe("the fleet feed's held markets", () => {
     }
     await orch.refreshPerpsFeedForTest();
     assert.deepEqual([...orch.perpsFeedMarketsForTest()!.markets], [1, 3, 16], "BTC wanted, SOL and TSLA held");
-    const book = path.join(orch.childHome(perpsKey(b)), "merrymen.db");
+    const book = path.join(orch.childHome(perpsKey(b)), "agentcap.db");
     chmodSync(book, 0o000);
     try {
       await orch.refreshPerpsFeedForTest();

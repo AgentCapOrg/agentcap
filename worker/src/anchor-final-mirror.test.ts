@@ -13,7 +13,7 @@
  * Run against the real schema on both sides (applyLedgerSchema) and the real
  * mirror, through the orchestrator's own writeBootstrapForChild.
  *
- * MERRYMEN_HOME is set before the orchestrator import; node's --test runs each
+ * AGENTCAP_HOME is set before the orchestrator import; node's --test runs each
  * file in its own process, so the override never leaks.
  */
 import assert from "node:assert/strict";
@@ -22,9 +22,9 @@ import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-anchor-mirror-"));
-process.env.MERRYMEN_HOME = HOME;
-process.env.MERRYMEN_HOSTED = "1";
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-anchor-mirror-"));
+process.env.AGENTCAP_HOME = HOME;
+process.env.AGENTCAP_HOSTED = "1";
 // Present so writeBootstrapForChild takes the hosted branch; never dialled —
 // the test hands it the shared database.
 process.env.DATABASE_URL = "postgres://unused-by-this-test";
@@ -66,7 +66,7 @@ const sharedFlows = () => Number((sharedRaw.prepare("SELECT COUNT(*) AS n FROM f
 before(async () => {
   const home = childHome(TENANT);
   mkdirSync(home, { recursive: true });
-  childRaw = new DatabaseSync(path.join(home, "merrymen.db"));
+  childRaw = new DatabaseSync(path.join(home, "agentcap.db"));
   await applyLedgerSchema(child());
   sharedRaw = new DatabaseSync(":memory:");
   await applyLedgerSchema(shared());

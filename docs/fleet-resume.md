@@ -15,8 +15,8 @@ every step from the Railway dashboard, followed by what each mechanism does:
 - [The runbook](#the-runbook-from-todays-production-to-trading-agents): steps 0 to 8, each with what to check and how to roll back.
 - [Owner stop requests](#owner-stop-requests-applied-before-any-worker-arms) (`worker/src/recovery-reply-arm.ts`): every recorded `/pause` and `/kill` is applied once before a worker arms.
 - [Attested-gap admission](#attested-gap-admission) (`worker/src/ledger-resume.ts`): preview, approve, archive the home, register an empty book under the approval, prove its seed, spawn through the ordinary path.
-- [Automatic admission of re-signed paper tenants](#automatic-admission-of-re-signed-paper-tenants) (`MERRYMEN_RESUME_AUTO_PAPER`): a re-sign is previewed by the orchestrator itself, and a paper tenant that could not arm live and holds nothing is approved by it, through the same path.
-- [Genuinely new tenants under an explicit list](#genuinely-new-tenants-under-an-explicit-list) (`MERRYMEN_ROLLOUT_NEW_TENANTS`, `worker/src/new-tenant-admission.ts`): an agent created since the incident, with no home and no history, starts without being named; every pre-incident tenant the list does not name stays held.
+- [Automatic admission of re-signed paper tenants](#automatic-admission-of-re-signed-paper-tenants) (`AGENTCAP_RESUME_AUTO_PAPER`): a re-sign is previewed by the orchestrator itself, and a paper tenant that could not arm live and holds nothing is approved by it, through the same path.
+- [Genuinely new tenants under an explicit list](#genuinely-new-tenants-under-an-explicit-list) (`AGENTCAP_ROLLOUT_NEW_TENANTS`, `worker/src/new-tenant-admission.ts`): an agent created since the incident, with no home and no history, starts without being named; every pre-incident tenant the list does not name stays held.
 - [The volume steps](#the-volume-steps-adopt-release-re-halt) (`worker/src/persistent-home.ts`): adopt the volume under its halt, release the halt into a rollout scope, re-halt it for a rollback.
 
 This is an application change requiring Milla's review under `AGENTS.md`.
@@ -28,9 +28,9 @@ Nothing on this page has been run against production by its author.
 
 - The orchestrator service (its Railway service ID begins `227ff49a`) runs
   `codex/recovery-casual-replies` at `a7303f47` (deployment `4b4220e3`) with
-  `MERRYMEN_START=start:recovery-replies`: the recovery listener. It answers
+  `AGENTCAP_START=start:recovery-replies`: the recovery listener. It answers
   owners' bots and trades nothing.
-- Its volume (`d6481580`, mounted at `MERRYMEN_HOME`) holds every home, the
+- Its volume (`d6481580`, mounted at `AGENTCAP_HOME`) holds every home, the
   hand-made `FLEET_HALT` (inode 15, mode 0600, 64 bytes, SHA-256
   `6fde6ce70efd0bc3e0c60538ccf57431cf76c354a617bd6c5a1f8198d4342cfa`, read by
   Codex's read-only verifier on 2026-10-04 at 23:56 UTC) and no manifest.
@@ -39,8 +39,8 @@ Nothing on this page has been run against production by its author.
   on 10-04, covered all 44 tenants that had books; no agent UserOp has landed on
   chain since 01:36 that day.
 - The service still carries the listener's variables
-  (`MERRYMEN_FLEET_RECOVERY_REPORT_ONLY`, `MERRYMEN_FLEET_RECOVERY_REPLIES`),
-  `MERRYMEN_INITIAL_HANDOVER`, `MERRYMEN_ACCOUNTING_HOLD_TENANTS`, and 25 one-shot
+  (`AGENTCAP_FLEET_RECOVERY_REPORT_ONLY`, `AGENTCAP_FLEET_RECOVERY_REPLIES`),
+  `AGENTCAP_INITIAL_HANDOVER`, `AGENTCAP_ACCOUNTING_HOLD_TENANTS`, and 25 one-shot
   variables left from earlier repairs (listed in step 1).
 
 ### Before you start
@@ -83,34 +83,34 @@ Railway → orchestrator service → **Variables**. In one staged change:
 
 | Variable | Value | Where the value comes from |
 | --- | --- | --- |
-| `MERRYMEN_START` | `start:orchestrator` | fixed |
-| `MERRYMEN_FLEET_SERVICE_ID` | the service's own ID | orchestrator service → **Settings** → Service ID (begins `227ff49a`) |
-| `MERRYMEN_PERSISTENT_HOME_REQUIRED` | `1` | keep as it is |
-| `MERRYMEN_HOME`, `MERRYMEN_HOME_VOLUME_ID` | unchanged | keep as they are |
-| `MERRYMEN_INITIAL_HANDOVER` | unchanged | keep; it is the operation token step 4 and the rollback use |
-| `MERRYMEN_FLEET_ROLLOUT` | `none` | fixed: nobody is admitted yet |
-| `MERRYMEN_ADOPT_HOME_HALT_SHA256` | `6fde6ce70efd0bc3e0c60538ccf57431cf76c354a617bd6c5a1f8198d4342cfa` | see below |
-| `MERRYMEN_RESUME_PREVIEW` | `all` | fixed (or a comma list of tenant addresses) |
-| `MERRYMEN_FLEET_RECOVERY_REPORT_ONLY` | **delete** | report-only mode starts nothing, and a tenant list beside it refuses boot |
-| `MERRYMEN_FLEET_RECOVERY_REPLIES` | keep | only the listener reads it; the rollback needs it |
-| `MERRYMEN_ACCOUNTING_HOLD_TENANTS` | keep | tenants named there stay held; the preview says so for each |
-| `DATABASE_URL`, `MERRYMEN_STORE_DEK` | keep | |
-| `MERRYMEN_RPC_MAINNET` | keep if set | the chain read at admission uses it, or the chain's public endpoint (`https://rpc.mainnet.chain.robinhood.com`) when it is unset, as every other orchestrator read does. Check in **Variables** whether it is set; a private RPC is kinder to a long read |
+| `AGENTCAP_START` | `start:orchestrator` | fixed |
+| `AGENTCAP_FLEET_SERVICE_ID` | the service's own ID | orchestrator service → **Settings** → Service ID (begins `227ff49a`) |
+| `AGENTCAP_PERSISTENT_HOME_REQUIRED` | `1` | keep as it is |
+| `AGENTCAP_HOME`, `AGENTCAP_HOME_VOLUME_ID` | unchanged | keep as they are |
+| `AGENTCAP_INITIAL_HANDOVER` | unchanged | keep; it is the operation token step 4 and the rollback use |
+| `AGENTCAP_FLEET_ROLLOUT` | `none` | fixed: nobody is admitted yet |
+| `AGENTCAP_ADOPT_HOME_HALT_SHA256` | `6fde6ce70efd0bc3e0c60538ccf57431cf76c354a617bd6c5a1f8198d4342cfa` | see below |
+| `AGENTCAP_RESUME_PREVIEW` | `all` | fixed (or a comma list of tenant addresses) |
+| `AGENTCAP_FLEET_RECOVERY_REPORT_ONLY` | **delete** | report-only mode starts nothing, and a tenant list beside it refuses boot |
+| `AGENTCAP_FLEET_RECOVERY_REPLIES` | keep | only the listener reads it; the rollback needs it |
+| `AGENTCAP_ACCOUNTING_HOLD_TENANTS` | keep | tenants named there stay held; the preview says so for each |
+| `DATABASE_URL`, `AGENTCAP_STORE_DEK` | keep | |
+| `AGENTCAP_RPC_MAINNET` | keep if set | the chain read at admission uses it, or the chain's public endpoint (`https://rpc.mainnet.chain.robinhood.com`) when it is unset, as every other orchestrator read does. Check in **Variables** whether it is set; a private RPC is kinder to a long read |
 
 **Delete every one-shot variable.** The deploy guard refuses the orchestrator
 while any is set and the rollout is not `all`. As of the 10-04 audit these are
-set: `MERRYMEN_ACCOUNTING_DIAGNOSE`, `MERRYMEN_ACCOUNTING_RECONSTRUCT`,
-`MERRYMEN_ANNOUNCE_CONFIRM`, `MERRYMEN_ANNOUNCE_ID`, `MERRYMEN_BRAIN_DATASET`,
-`MERRYMEN_COHORT_VET`, `MERRYMEN_ENABLE_CLASS_FOR`,
-`MERRYMEN_ENABLE_CLASS_PRESET`, `MERRYMEN_GAS_AUDIT`,
-`MERRYMEN_HALT_CLASS_ENTRIES_FOR`, `MERRYMEN_IDENTITY_AUDIT`,
-`MERRYMEN_INSPECT_TENANT`, `MERRYMEN_RECONCILE_SHADOW`, `MERRYMEN_REPAIR`,
-`MERRYMEN_REPAIR_ACCOUNT`, `MERRYMEN_REPAIR_CLASS_CASH_ROW`,
-`MERRYMEN_REPAIR_CLASS_CASH_ROW_ONLY`, `MERRYMEN_REPAIR_CLASS_PNL`,
-`MERRYMEN_REPAIR_CLASS_PNL_ONLY`, `MERRYMEN_REPAIR_HWM`,
-`MERRYMEN_REPAIR_HWM_ONLY`, `MERRYMEN_REPAIR_HWM_PHANTOM_PROFIT`,
-`MERRYMEN_REPAIR_RUN_ID`, `MERRYMEN_RESUME_CLASS_ENTRIES_FOR`,
-`MERRYMEN_TG_RECOVERY_ID`. Delete them, do not blank them: a blank variable
+set: `AGENTCAP_ACCOUNTING_DIAGNOSE`, `AGENTCAP_ACCOUNTING_RECONSTRUCT`,
+`AGENTCAP_ANNOUNCE_CONFIRM`, `AGENTCAP_ANNOUNCE_ID`, `AGENTCAP_BRAIN_DATASET`,
+`AGENTCAP_COHORT_VET`, `AGENTCAP_ENABLE_CLASS_FOR`,
+`AGENTCAP_ENABLE_CLASS_PRESET`, `AGENTCAP_GAS_AUDIT`,
+`AGENTCAP_HALT_CLASS_ENTRIES_FOR`, `AGENTCAP_IDENTITY_AUDIT`,
+`AGENTCAP_INSPECT_TENANT`, `AGENTCAP_RECONCILE_SHADOW`, `AGENTCAP_REPAIR`,
+`AGENTCAP_REPAIR_ACCOUNT`, `AGENTCAP_REPAIR_CLASS_CASH_ROW`,
+`AGENTCAP_REPAIR_CLASS_CASH_ROW_ONLY`, `AGENTCAP_REPAIR_CLASS_PNL`,
+`AGENTCAP_REPAIR_CLASS_PNL_ONLY`, `AGENTCAP_REPAIR_HWM`,
+`AGENTCAP_REPAIR_HWM_ONLY`, `AGENTCAP_REPAIR_HWM_PHANTOM_PROFIT`,
+`AGENTCAP_REPAIR_RUN_ID`, `AGENTCAP_RESUME_CLASS_ENTRIES_FOR`,
+`AGENTCAP_TG_RECOVERY_ID`. Delete them, do not blank them: a blank variable
 still counts. Anything else the guard counts is printed by name (never value)
 in its `census one-shot:` line in step 2. Before deleting, copy any value you
 want to keep somewhere private.
@@ -121,7 +121,7 @@ the one Codex's verifier read from the volume on 2026-10-04 at 23:56 UTC
 (`casual-reply-rollout-live-a7303f47-second.json`). If the halt has changed
 since, adoption refuses before it writes anything, the orchestrator does not
 start, and step 2's rollback applies; then the hash must be read by someone
-with shell access to the volume (`sha256sum "$MERRYMEN_HOME/FLEET_HALT"`).
+with shell access to the volume (`sha256sum "$AGENTCAP_HOME/FLEET_HALT"`).
 Never guess it.
 
 Service settings, same visit: **Settings → Deploy → Draining seconds** `75`
@@ -131,7 +131,7 @@ Service settings, same visit: **Settings → Deploy → Draining seconds** `75`
 optional; with it set, every orchestrator deploy must come from `main`, and the
 rollback to `4b4220e3` (from a `codex/*` branch) needs it cleared first.
 
-Do **not** set `MERRYMEN_RELEASE_HOME_HALT` or `MERRYMEN_RESUME_APPROVE` yet.
+Do **not** set `AGENTCAP_RELEASE_HOME_HALT` or `AGENTCAP_RESUME_APPROVE` yet.
 
 Rollback: discard the staged change.
 
@@ -147,7 +147,7 @@ Read the deploy log, in order:
 - `fleet rollout: none — no tenant is admitted; …`
 - the preview: first its summary —
   `[resume-preview] run <64 hex>: N of M tenant(s) pass every Postgres precondition`,
-  `… approve every passing tenant of this run with MERRYMEN_RESUME_APPROVE=run:<64 hex>`,
+  `… approve every passing tenant of this run with AGENTCAP_RESUME_APPROVE=run:<64 hex>`,
   `… rollout for them at the plan's starting levels: 0x…:trade,0x…:exits-only,…`
   and, when more pass than fit, `… admit them in batches of at most 40 …` —
   then one `[resume-preview] {…}` line per tenant, then the same summary again.
@@ -220,9 +220,9 @@ One staged change:
 
 | Variable | Value |
 | --- | --- |
-| `MERRYMEN_RESUME_APPROVE` | `run:<run digest from step 2>` (approves every passing tenant of that run; an approval alone admits nobody) — or `0x<canary>:<its digest>` for the canary only |
-| `MERRYMEN_RELEASE_HOME_HALT` | exactly the value of `MERRYMEN_INITIAL_HANDOVER` |
-| `MERRYMEN_FLEET_ROLLOUT` | `0x<canary>:observe` |
+| `AGENTCAP_RESUME_APPROVE` | `run:<run digest from step 2>` (approves every passing tenant of that run; an approval alone admits nobody) — or `0x<canary>:<its digest>` for the canary only |
+| `AGENTCAP_RELEASE_HOME_HALT` | exactly the value of `AGENTCAP_INITIAL_HANDOVER` |
+| `AGENTCAP_FLEET_ROLLOUT` | `0x<canary>:observe` |
 
 Deploy, then read the log:
 
@@ -236,21 +236,21 @@ Deploy, then read the log:
 - `0x<canary> spawn requested …`, then `0x<canary>: resume admission applied — its first worker has started`
 - in the canary's own lines: refusals are `rollout-hold` only; no `CURSOR REWOUND`, no `STALLED`.
 
-When it looks right, set `MERRYMEN_FLEET_ROLLOUT=0x<canary>:trade` and deploy.
+When it looks right, set `AGENTCAP_FLEET_ROLLOUT=0x<canary>:trade` and deploy.
 Watch it trade: proposals arrive, each fill is recorded once, nothing is
 refused for reasons other than its own limits.
 
 Rollback, in order of reach:
 
-- Stop trading at once: `MERRYMEN_FLEET_ROLLOUT=none`, deploy (the drain stops
+- Stop trading at once: `AGENTCAP_FLEET_ROLLOUT=none`, deploy (the drain stops
   the child cleanly).
-- Back to listener-only: `MERRYMEN_REHALT_HOME=<the operation token>`, deploy
+- Back to listener-only: `AGENTCAP_REHALT_HOME=<the operation token>`, deploy
   once with `start:orchestrator` (log: `re-halted … at generation 1`), then
   **Rollback** to `4b4220e3` as in step 2. **Admitted tenants' bots stay
   silent under the listener:** it answers only tenants whose recovery status is
   held, and admission recorded the canary's as verified. Every tenant not yet
   admitted is answered as before. Releasing again later takes
-  `MERRYMEN_RELEASE_HOME_HALT=<token>@1` (the re-halt's log line gives the
+  `AGENTCAP_RELEASE_HOME_HALT=<token>@1` (the re-halt's log line gives the
   number), after step 1 is repeated.
 - Nothing is lost either way: the old home is in `archive/<tenant>/<generation>`
   on the volume, and the lost book's cursors and snapshot rows are in
@@ -261,8 +261,8 @@ Rollback, in order of reach:
 Live tenants may hold real positions whose stops only a running worker
 manages, so they take their process slots first. Add the preview's
 `:exits-only` entries (the `chain:"required"` tenants, about 11) to
-`MERRYMEN_FLEET_ROLLOUT` beside the canary, and deploy. If step 4 approved the
-canary only, also set `MERRYMEN_RESUME_APPROVE=run:<step 2 run digest>` (it
+`AGENTCAP_FLEET_ROLLOUT` beside the canary, and deploy. If step 4 approved the
+canary only, also set `AGENTCAP_RESUME_APPROVE=run:<step 2 run digest>` (it
 leaves the canary's approval as it is).
 
 Each is first read on chain, from the oldest financial cursor of its last
@@ -309,7 +309,7 @@ Public chain data only; look each one up as printed. Then:
 2. Tell each owner (with Milla's wording) that their agent is not managing
    their positions yet and that they can manage them from their own wallet
    meanwhile.
-3. Take the tenant out of `MERRYMEN_FLEET_ROLLOUT`, and book what is missing
+3. Take the tenant out of `AGENTCAP_FLEET_ROLLOUT`, and book what is missing
    with the reviewed operator tool,
    [docs/chain-gap-booking.md](chain-gap-booking.md): preview, the owner of
    the books reviews it, backup, apply, preview the tenant again here, and
@@ -369,25 +369,25 @@ approval's time less 26 hours, or a cursor stamp its evidence recorded if
 that is earlier. A start that cannot be derived that way reads from the
 first block of all.
 
-`MERRYMEN_RESUME_AUTO_PAPER` never approves such a tenant meanwhile, even
+`AGENTCAP_RESUME_AUTO_PAPER` never approves such a tenant meanwhile, even
 when its owner turns live trading off and re-signs so that it reads as paper
 again: a chain refusal that no admission has answered since keeps it yours
 ([the safe case](#the-safe-case-all-of-it)). Its re-sign is previewed, with
 the refusal in `lastRefusal` and `chainHeld: true`, and left to you. The
 lane's line then says to take it out of the rollout and book it first, rather
-than offering `MERRYMEN_RESUME_APPROVE=0x<tenant>:<digest>`.
+than offering `AGENTCAP_RESUME_APPROVE=0x<tenant>:<digest>`.
 
 ### Step 6: paper tenants, in batches
 
-Add paper tenants (the preview's `:trade` entries) to `MERRYMEN_FLEET_ROLLOUT`,
+Add paper tenants (the preview's `:trade` entries) to `AGENTCAP_FLEET_ROLLOUT`,
 each at `:trade`, keeping every entry already there, and deploy. Keep the total
 of named tenants at or under **40** (48 processes, less room for restarts and
 holds); add the next batch once the last one is running. If step 4 approved the
-canary only, set `MERRYMEN_RESUME_APPROVE=run:<step 2 run digest>` now.
+canary only, set `AGENTCAP_RESUME_APPROVE=run:<step 2 run digest>` now.
 
 Each is archived, registered, seeded and spawned in turn, a few seconds
 apart. A tenant whose books changed since the preview is refused (`evidence
-changed since the preview`): leave `MERRYMEN_RESUME_PREVIEW` set (as `all`, or
+changed since the preview`): leave `AGENTCAP_RESUME_PREVIEW` set (as `all`, or
 just those tenants), deploy, and approve the new run's digest. Either form
 works: an already-admitted tenant never passes a preview, so `run:<new digest>`
 approves only tenants still waiting; `0x<tenant>:<digest>` per tenant is the
@@ -397,7 +397,7 @@ A tenant past the cap logs `worker deferred; local process cap 48 reached`
 and waits; its approval stays `registered` and it starts as soon as a slot
 frees. To swap which tenants run, remove some from the rollout and deploy.
 
-Rollback: remove entries from `MERRYMEN_FLEET_ROLLOUT` and deploy.
+Rollback: remove entries from `AGENTCAP_FLEET_ROLLOUT` and deploy.
 
 ### Step 7: live tenants to trade
 
@@ -407,7 +407,7 @@ to `:trade` and deploy. One at a time, or a few, never the whole list blind.
 
 ### Step 8: the whole fleet
 
-`MERRYMEN_FLEET_ROLLOUT=all` admits **every** tenant at `trade` — including a
+`AGENTCAP_FLEET_ROLLOUT=all` admits **every** tenant at `trade` — including a
 live tenant whose admission had not finished (for example a chain read still
 retrying), which would then skip `exits-only`, and up to 48 processes in roster
 order. So, first:
@@ -415,19 +415,19 @@ order. So, first:
 1. Railway → Postgres → **Data** → `ledger_resume_approvals`: no row may be in
    state `approved`, `archiving` or `archived`. For each that is, either wait
    for it to reach `applied`, or withdraw it with
-   `MERRYMEN_RESUME_REVOKE=0x<tenant>:<its evidence_digest>` (or
+   `AGENTCAP_RESUME_REVOKE=0x<tenant>:<its evidence_digest>` (or
    `run:<its preview_run>` for a whole run), deploy, and admit it later from an
    explicit list.
 2. Count the tenants that will run: more than 48 and some wait for a slot,
    indefinitely, in roster order.
 
-Then set `MERRYMEN_FLEET_ROLLOUT=all` and deploy. Every tenant with a
+Then set `AGENTCAP_FLEET_ROLLOUT=all` and deploy. Every tenant with a
 registered book trades; a tenant that was never approved is still refused by
 the continuity gate, and stays held, as it is today. Then remove
-`MERRYMEN_RESUME_PREVIEW`, `MERRYMEN_RESUME_APPROVE` and
-`MERRYMEN_RESUME_REVOKE` (left set they change nothing, and the preview costs a
-boot a few seconds). Keep `MERRYMEN_ADOPT_HOME_HALT_SHA256` and the operation
-token: re-halt needs both. `MERRYMEN_RESUME_AUTO_PAPER`, if you set it, is a
+`AGENTCAP_RESUME_PREVIEW`, `AGENTCAP_RESUME_APPROVE` and
+`AGENTCAP_RESUME_REVOKE` (left set they change nothing, and the preview costs a
+boot a few seconds). Keep `AGENTCAP_ADOPT_HOME_HALT_SHA256` and the operation
+token: re-halt needs both. `AGENTCAP_RESUME_AUTO_PAPER`, if you set it, is a
 standing control like the rollout: keep it for as long as you want re-signed
 paper tenants admitted without you. An automatic approval is applied in the
 pass it is recorded, so a tenant you want kept out must be kept out by the
@@ -439,8 +439,8 @@ An owner whose grant had expired re-signs; a tenant whose refusal was fixed
 is ready; a new owner signs up with history under an old account. Each is
 refused by the continuity gate until admitted:
 
-1. `MERRYMEN_RESUME_PREVIEW=0x<tenant>,0x<tenant>…`, deploy, read their lines.
-2. `MERRYMEN_RESUME_APPROVE=0x<tenant>:<digest>` per tenant, deploy.
+1. `AGENTCAP_RESUME_PREVIEW=0x<tenant>,0x<tenant>…`, deploy, read their lines.
+2. `AGENTCAP_RESUME_APPROVE=0x<tenant>:<digest>` per tenant, deploy.
 3. Under `all`, an approved tenant is admitted at `trade` on that deploy. For
    a live tenant that holds positions, prefer to admit it while the rollout is
    an explicit list with it at `:exits-only`, or approve it only when you can
@@ -449,23 +449,23 @@ refused by the continuity gate until admitted:
 A tenant with no history at all (a brand-new account) needs none of this: the
 ordinary empty-book path admits it. Under `all`, that is the whole story.
 Under an explicit list it is still held unless the list names it, or
-`MERRYMEN_ROLLOUT_NEW_TENANTS` is set
+`AGENTCAP_ROLLOUT_NEW_TENANTS` is set
 ([below](#genuinely-new-tenants-under-an-explicit-list)).
 
-**With `MERRYMEN_RESUME_AUTO_PAPER=1`, re-signers need less of this.** The
+**With `AGENTCAP_RESUME_AUTO_PAPER=1`, re-signers need less of this.** The
 orchestrator previews a tenant itself when its grant row changes (step 1
 happens on its own, within a reconcile pass of the re-sign, and the line is
 in the log), and approves and admits by itself the one case the preview
 proves safe: a paper tenant that could not arm live and holds nothing. Every
 other re-signer, live ones always, is previewed and left to you: its log
-line ends with the exact `MERRYMEN_RESUME_APPROVE=0x<tenant>:<digest>` to
+line ends with the exact `AGENTCAP_RESUME_APPROVE=0x<tenant>:<digest>` to
 set (step 2). A tenant with a chain refusal that no admission has answered is
 the exception: its line says to take it out of the rollout and book what the
 chain showed first
 ([Step 5](#step-5-live-tenants-exits-only-before-the-paper-batches)), since
 an approval of it only reads the chain again, from where the refused read
 began. While live-trading consent is
-stood down (`MERRYMEN_LIVE_INTENT_STAND_DOWN=1`) that is every re-signer. Tenants that
+stood down (`AGENTCAP_LIVE_INTENT_STAND_DOWN=1`) that is every re-signer. Tenants that
 are ready for another reason than a re-sign (a refusal fixed, a late tenant
 whose grant did not change) still take steps 1 and 2. See
 [the automatic lane](#automatic-admission-of-re-signed-paper-tenants).
@@ -486,10 +486,10 @@ and that `/pause` works again.
 | From | To stop trading | To return to listener-only |
 | --- | --- | --- |
 | step 2–3 (halted, nobody admitted) | nothing trades | **Rollback** to `4b4220e3` (restores its variables); repeat step 1 before going forward again |
-| step 4 onwards | `MERRYMEN_FLEET_ROLLOUT=none`, deploy | `MERRYMEN_REHALT_HOME=<token>`, deploy; then **Rollback** to `4b4220e3`. Admitted tenants' bots stay silent under the listener; the rest are answered |
-| one tenant misbehaving | remove it from `MERRYMEN_FLEET_ROLLOUT`, deploy; its owner's `/pause` also works | — |
-| one new tenant misbehaving (admitted by `MERRYMEN_ROLLOUT_NEW_TENANTS`) | add it to `MERRYMEN_ACCOUNTING_HOLD_TENANTS`, deploy; its owner's `/pause` also works | — |
-| every new tenant | remove `MERRYMEN_ROLLOUT_NEW_TENANTS`, deploy | — |
+| step 4 onwards | `AGENTCAP_FLEET_ROLLOUT=none`, deploy | `AGENTCAP_REHALT_HOME=<token>`, deploy; then **Rollback** to `4b4220e3`. Admitted tenants' bots stay silent under the listener; the rest are answered |
+| one tenant misbehaving | remove it from `AGENTCAP_FLEET_ROLLOUT`, deploy; its owner's `/pause` also works | — |
+| one new tenant misbehaving (admitted by `AGENTCAP_ROLLOUT_NEW_TENANTS`) | add it to `AGENTCAP_ACCOUNTING_HOLD_TENANTS`, deploy; its owner's `/pause` also works | — |
+| every new tenant | remove `AGENTCAP_ROLLOUT_NEW_TENANTS`, deploy | — |
 
 Railway has two actions on an old deployment. **Rollback** restores that
 deployment's Docker image and its custom variables (Railway docs, "Deployment
@@ -555,10 +555,10 @@ grant's key is never written into a home.
 
 | Variable | Grammar | Effect |
 | --- | --- | --- |
-| `MERRYMEN_RESUME_PREVIEW` | `all`, or `0x…,0x…` | at boot, halted or not: one line per tenant and a run digest; writes only its run row (`ledger_resume_preview_runs`) |
-| `MERRYMEN_RESUME_APPROVE` | `0x<tenant>:<digest>` and/or `run:<run digest>`, comma separated | records approvals. A per-tenant digest must be one a recorded run (of any age) showed passing; a run approves exactly the tenants that passed in it, less any admitted since that run was taken |
-| `MERRYMEN_RESUME_REVOKE` | `0x<tenant>:<digest>` and/or `run:<run digest>`, comma separated | withdraws approvals not yet archiving or registered: that tenant's approval of that evidence, or every approval recorded from that run |
-| `MERRYMEN_RESUME_AUTO_PAPER` | `1`, or unset | every reconcile pass: previews a tenant whose grant row changed, and approves a re-signed paper tenant in the safe case itself ([below](#automatic-admission-of-re-signed-paper-tenants)); approves nobody while `MERRYMEN_LIVE_INTENT_STAND_DOWN=1` |
+| `AGENTCAP_RESUME_PREVIEW` | `all`, or `0x…,0x…` | at boot, halted or not: one line per tenant and a run digest; writes only its run row (`ledger_resume_preview_runs`) |
+| `AGENTCAP_RESUME_APPROVE` | `0x<tenant>:<digest>` and/or `run:<run digest>`, comma separated | records approvals. A per-tenant digest must be one a recorded run (of any age) showed passing; a run approves exactly the tenants that passed in it, less any admitted since that run was taken |
+| `AGENTCAP_RESUME_REVOKE` | `0x<tenant>:<digest>` and/or `run:<run digest>`, comma separated | withdraws approvals not yet archiving or registered: that tenant's approval of that evidence, or every approval recorded from that run |
+| `AGENTCAP_RESUME_AUTO_PAPER` | `1`, or unset | every reconcile pass: previews a tenant whose grant row changed, and approves a re-signed paper tenant in the safe case itself ([below](#automatic-admission-of-re-signed-paper-tenants)); approves nobody while `AGENTCAP_LIVE_INTENT_STAND_DOWN=1` |
 
 A malformed value refuses boot. Each approval is unique per tenant and
 evidence digest, so a variable left set approves nothing twice and never
@@ -672,7 +672,7 @@ Each refuses on its own; none fails open.
    it was refused on the chain without an admission answering it since
    (`chainHeld`): that refusal showed the Postgres those readings come from
    to be incomplete. While live-trading consent
-   is stood down (`MERRYMEN_LIVE_INTENT_STAND_DOWN=1`) no tenant can be shown
+   is stood down (`AGENTCAP_LIVE_INTENT_STAND_DOWN=1`) no tenant can be shown
    unable to arm live (the worker then takes a funded account live whatever
    its settings say), so every tenant is read on chain.
 3. Nothing settled in the last 26 hours.
@@ -711,7 +711,7 @@ before the column) or `auto-paper`. Every row stays:
 
 ## Automatic admission of re-signed paper tenants
 
-`MERRYMEN_RESUME_AUTO_PAPER=1`. `worker/src/ledger-resume.ts` (the watch,
+`AGENTCAP_RESUME_AUTO_PAPER=1`. `worker/src/ledger-resume.ts` (the watch,
 the safe case, the room) and `orchestrator.ts` `autoAdmitResignedPaper` (one
 reconcile pass of it). Off by default; this is an application change
 requiring Milla's review under `AGENTS.md`.
@@ -744,7 +744,7 @@ Every reconcile pass, before the pass reads which blocked homes it admits:
 2. **Its turn.** Owed changes are taken in order: never tried first, then
    the least recently tried, then the longest owed. An owed change waits,
    untouched, while the grant is expired or the operator holds the tenant:
-   `MERRYMEN_ACCOUNTING_HOLD_TENANTS`, or a `MERRYMEN_FLEET_ROLLOUT` that
+   `AGENTCAP_ACCOUNTING_HOLD_TENANTS`, or a `AGENTCAP_FLEET_ROLLOUT` that
    does not admit it. **Under an explicit
    list the tenant must be named**, and it is previewed and admitted on the
    first pass after it is, at the level named. Under `all` it trades. A
@@ -772,7 +772,7 @@ Every reconcile pass, before the pass reads which blocked homes it admits:
    `[resume-preview] {…}` line. The verdict:
    - **the safe case**: the orchestrator records the approval itself,
      `source = 'auto-paper'`, bound to that preview's evidence digest,
-     through the same insert as `MERRYMEN_RESUME_APPROVE` (one approval per
+     through the same insert as `AGENTCAP_RESUME_APPROVE` (one approval per
      evidence, one open per tenant, never for a tenant admitted since the
      preview). Log: `resume approval: 0x… approved automatically (auto-paper
      …)` and `resume auto-paper: 0x… self-approved … its admission starts this
@@ -807,12 +807,12 @@ Every reconcile pass, before the pass reads which blocked homes it admits:
    - **held, but not the safe case**: nothing approved. Log: `resume
      auto-paper: 0x… re-signed and previewed in run …, and is not approved
      automatically — <every reason>`, ending, if it passed,
-     `approve it by hand: MERRYMEN_RESUME_APPROVE=0x<tenant>:<digest>`.
+     `approve it by hand: AGENTCAP_RESUME_APPROVE=0x<tenant>:<digest>`.
      For a tenant with an unanswered chain refusal, the line never gives that
      approval. It ends `Held on a chain refusal: an approval does not make it
      trade until what the chain showed is booked, because admission reads
      the chain again from where the refused read began. Take it out of
-     MERRYMEN_FLEET_ROLLOUT and book it first …` and gives the way out of a
+     AGENTCAP_FLEET_ROLLOUT and book it first …` and gives the way out of a
      superseded refusal
      ([Step 5](#step-5-live-tenants-exits-only-before-the-paper-batches),
      item 4).
@@ -821,7 +821,7 @@ Every reconcile pass, before the pass reads which blocked homes it admits:
      and no run recorded (so a brand-new signup adds nothing to the runs an
      approval is looked up in). For a book on the volume with history, the
      line adds what to do if the continuity gate refuses that book instead:
-     `preview it again (MERRYMEN_RESUME_PREVIEW=0x…) and approve the digest
+     `preview it again (AGENTCAP_RESUME_PREVIEW=0x…) and approve the digest
      that preview prints`. Not this preview's digest: the ordinary path's
      attempt in the same pass arms the owner's controls into the home before
      the gate answers, which changes what that digest binds.
@@ -875,7 +875,7 @@ first worker started at its rollout level.
   decided;
 - held by the gate: its book on the volume is `blocked`, or `absent` with
   history in Postgres;
-- **live-trading consent in force**: with `MERRYMEN_LIVE_INTENT_STAND_DOWN=1`
+- **live-trading consent in force**: with `AGENTCAP_LIVE_INTENT_STAND_DOWN=1`
   the worker takes a funded account live whatever its owner's settings say,
   and a deposit made during the gap is in no Postgres table the preview
   reads, so every tenant then reads as able to arm live (chain:required) and
@@ -920,17 +920,17 @@ cleanly again, is never approved twice.
 - **There is no window to revoke an automatic approval.** It is recorded
   just before the pass's spawn loop, and in the safe case that same pass
   archives, registers and starts the worker: it is normally `applied` before
-  any deploy could carry `MERRYMEN_RESUME_REVOKE`, which is read at boot and
+  any deploy could carry `AGENTCAP_RESUME_REVOKE`, which is read at boot and
   only reaches `approved` or `archived` rows. Revoke still ends one held
   before the archive (a lease it could not take, a slot it waited for), and
   an operator's revoke of an automatic approval keeps the lane from
   approving that tenant again.
 - **To keep a tenant out, decide before its owner re-signs**: leave it out
-  of an explicit `MERRYMEN_FLEET_ROLLOUT`, or name it in
-  `MERRYMEN_ACCOUNTING_HOLD_TENANTS`. Its change then stays owed, untouched,
+  of an explicit `AGENTCAP_FLEET_ROLLOUT`, or name it in
+  `AGENTCAP_ACCOUNTING_HOLD_TENANTS`. Its change then stays owed, untouched,
   and nothing is previewed or approved for it. Once its book is registered,
   only the rollout stops its worker.
-- To stop the lane: remove `MERRYMEN_RESUME_AUTO_PAPER` and deploy. Nothing
+- To stop the lane: remove `AGENTCAP_RESUME_AUTO_PAPER` and deploy. Nothing
   is previewed, approved or watched. An approval already recorded but not
   yet applied (held for a lease or a slot) proceeds as approvals do: revoke
   it, or narrow the rollout. Turned on again later, the watch's baseline
@@ -940,7 +940,7 @@ cleanly again, is never approved twice.
 
 ## Genuinely new tenants under an explicit list
 
-`MERRYMEN_ROLLOUT_NEW_TENANTS=observe|exits-only|trade`.
+`AGENTCAP_ROLLOUT_NEW_TENANTS=observe|exits-only|trade`.
 `worker/src/new-tenant-admission.ts` (the proof and the record),
 `worker/src/fleet-rollout.ts` (the level), `worker/src/orchestrator.ts`
 (`refreshNewTenantAdmissions`, `newTenantFreeCheck`, `newTenantLooksNew`,
@@ -948,7 +948,7 @@ cleanly again, is never approved twice.
 
 ### Why
 
-An explicit `MERRYMEN_FLEET_ROLLOUT` holds every tenant it does not name. That
+An explicit `AGENTCAP_FLEET_ROLLOUT` holds every tenant it does not name. That
 is what keeps the pre-incident tenants out until their accounting is
 reviewed, but it also held every agent created since: no worker, so no link
 code for its bot ("starting up" for good), and no line saying why. Milla
@@ -986,7 +986,7 @@ Postgres, before its first spawn:
    unreadable, or no `DATABASE_URL`. The tenant stays held and is asked again
    next pass, with an `[alert]`. A *fact* (a home, history) is remembered
    for the life of the process and said once:
-   `new tenants: 0x… is not new — <why>; it stays held. If it should run, name it in MERRYMEN_FLEET_ROLLOUT …`.
+   `new tenants: 0x… is not new — <why>; it stays held. If it should run, name it in AGENTCAP_FLEET_ROLLOUT …`.
 3. **The process cap, as the automatic lane leaves it.** A new tenant starts
    only while the processes running leave more than 8 of the 48 slots free
    (`AUTO_PAPER_HEADROOM`), and never while a named tenant waited for a slot
@@ -1028,12 +1028,12 @@ A tenant the list names runs at the list's level, recorded or not.
 ### What you will read
 
 - At boot:
-  `fleet rollout: MERRYMEN_ROLLOUT_NEW_TENANTS=<level> — a tenant the list does not name is admitted at <level> once it is proved genuinely new …`
+  `fleet rollout: AGENTCAP_ROLLOUT_NEW_TENANTS=<level> — a tenant the list does not name is admitted at <level> once it is proved genuinely new …`
   (or that it has no effect under `none`/`all`, or that it is unset).
 - Per admission:
-  `new tenants: 0x… admitted at <level> (MERRYMEN_ROLLOUT_NEW_TENANTS) — … recorded in fleet_new_tenant_admissions (evidence …) before its first spawn. To hold it: …`.
+  `new tenants: 0x… admitted at <level> (AGENTCAP_ROLLOUT_NEW_TENANTS) — … recorded in fleet_new_tenant_admissions (evidence …) before its first spawn. To hold it: …`.
 - Each pass, when it changes (or every five minutes):
-  `new tenants (MERRYMEN_ROLLOUT_NEW_TENANTS=<level>): N admitted this pass · W waiting for a process slot · H not new and held (V with a home or archive on the volume, P with history in Postgres) · U not answered this pass`.
+  `new tenants (AGENTCAP_ROLLOUT_NEW_TENANTS=<level>): N admitted this pass · W waiting for a process slot · H not new and held (V with a home or archive on the volume, P with history in Postgres) · U not answered this pass`.
 - The heartbeat's rollout line:
   `fleet| rollout 49 named (new at <level>) — admitted: trade … · exits-only … · observe … · new N of those; not run: held … · expired …`.
   `new N` counts the admitted tenants that came in this way, and they are
@@ -1049,7 +1049,7 @@ holding or retiring tenants. Never raise the cap to make room.
 
 ### Revoking
 
-- **One new tenant:** add it to `MERRYMEN_ACCOUNTING_HOLD_TENANTS` and deploy.
+- **One new tenant:** add it to `AGENTCAP_ACCOUNTING_HOLD_TENANTS` and deploy.
   The accounting hold is checked before the rollout, so the tenant is stood
   down whatever its record says. Removing it from the hold lets the record
   admit it again.
@@ -1057,9 +1057,9 @@ holding or retiring tenants. Never raise the cap to make room.
   `fleet_new_tenant_admissions`. The next pass stands its worker down, and
   since it has a home by then it is never proved new again. It stays held
   until the list names it.
-- **Every new tenant:** remove `MERRYMEN_ROLLOUT_NEW_TENANTS` and deploy.
+- **Every new tenant:** remove `AGENTCAP_ROLLOUT_NEW_TENANTS` and deploy.
   The records stay, so setting it again re-admits them.
-- **Give one a reviewed level instead:** name it in `MERRYMEN_FLEET_ROLLOUT`.
+- **Give one a reviewed level instead:** name it in `AGENTCAP_FLEET_ROLLOUT`.
 - Its owner's `/pause` and `/kill`, a dashboard revoke, an expired key and
   `FLEET_HALT` stop it exactly as they stop any tenant.
 
@@ -1101,24 +1101,24 @@ at startup.
 
 ### What every step requires
 
-- The persistent-home opt-in, unchanged: `MERRYMEN_PERSISTENT_HOME_REQUIRED=1`,
-  `MERRYMEN_HOME` equal to `RAILWAY_VOLUME_MOUNT_PATH`, the pinned provider
-  `MERRYMEN_HOME_VOLUME_ID`, the proven writable durable mount and the 0700
+- The persistent-home opt-in, unchanged: `AGENTCAP_PERSISTENT_HOME_REQUIRED=1`,
+  `AGENTCAP_HOME` equal to `RAILWAY_VOLUME_MOUNT_PATH`, the pinned provider
+  `AGENTCAP_HOME_VOLUME_ID`, the proven writable durable mount and the 0700
   owned root. A step asked for without the opt-in refuses.
-- `MERRYMEN_ADOPT_HOME_HALT_SHA256`: the SHA-256 of the original hand-made
+- `AGENTCAP_ADOPT_HOME_HALT_SHA256`: the SHA-256 of the original hand-made
   halt's exact bytes, recorded privately before deployment (runbook R0.1).
   Release and re-halt need it too, and need the pre-adoption record to match
   it, so neither applies to a volume this code initialized fresh.
 - Its own explicit variable. With none of them set, startup is unchanged.
   Remove a variable rather than blanking it: an empty value is malformed and
-  refuses startup, as an empty `MERRYMEN_INITIAL_HANDOVER` already does.
+  refuses startup, as an empty `AGENTCAP_INITIAL_HANDOVER` already does.
 
 Each step opens no book, grant, lease or ledger, and none of them removes a
 halt it cannot prove it created.
 
-### Adopt: `MERRYMEN_ADOPT_HOME_HALT_SHA256`
+### Adopt: `AGENTCAP_ADOPT_HOME_HALT_SHA256`
 
-Also requires `MERRYMEN_INITIAL_HANDOVER` (the operation token). Adoption
+Also requires `AGENTCAP_INITIAL_HANDOVER` (the operation token). Adoption
 refuses, before writing anything, when:
 
 - the halt's hash does not equal the pin, or the halt is larger than 4 KiB;
@@ -1157,11 +1157,11 @@ Verify: the start logs `persistent home adopted under its original halt;
 handover held`; the manifest says `held`; `.fleet-halt-preadoption.json` holds
 the recorded hash and the original inode; no children start.
 
-### Release: `MERRYMEN_RELEASE_HOME_HALT=<operation token>[@<generation>]`
+### Release: `AGENTCAP_RELEASE_HOME_HALT=<operation token>[@<generation>]`
 
 Releases only a `held` adopted manifest whose operation token matches and
 whose standing halt is the generation named, and only while
-`MERRYMEN_FLEET_ROLLOUT` admits someone. The release itself is
+`AGENTCAP_FLEET_ROLLOUT` admits someone. The release itself is
 `markPersistentHomeHandoverComplete`: the completed manifest is durable before
 the unchanged canonical halt is removed.
 
@@ -1177,7 +1177,7 @@ the unchanged canonical halt is removed.
   an unset one, since a required persistent home is the Railway fleet. With
   `none`, the halt stays and startup logs an `[alert]`.
 
-**This branch is stacked on `MERRYMEN_FLEET_ROLLOUT` scoping (work package
+**This branch is stacked on `AGENTCAP_FLEET_ROLLOUT` scoping (work package
 B1)** and cannot merge without it: the release imports B1's parser, and B1
 limits which tenants a released fleet spawns. Without B1, a released halt
 would run every tenant on the roster that `registerLedgerSource` admits.
@@ -1190,9 +1190,9 @@ completed manifest and before removing its own halt: the env release does not
 finish it (a canonical copy on a reused inode would look the same), so the
 fleet stays halted and startup logs an `[alert]`; re-halt, then release the
 next generation. To stop at once after a release, either set
-`MERRYMEN_FLEET_ROLLOUT=none` and redeploy, or create `FLEET_HALT` by hand.
+`AGENTCAP_FLEET_ROLLOUT=none` and redeploy, or create `FLEET_HALT` by hand.
 
-### Re-halt: `MERRYMEN_REHALT_HOME=<operation token>`
+### Re-halt: `AGENTCAP_REHALT_HOME=<operation token>`
 
 Returns a released adopted volume to `held`, so the deployment can go back to
 listener-only mode without a shell:
@@ -1220,13 +1220,13 @@ re-halt wins and the release variable is not read at all, whatever it says, so
 a rollback never fails because it was left behind. Once the re-halt variable
 is removed, that old release value names a consumed generation and lifts
 nothing; releasing again takes the new value the re-halt's log line gives,
-`MERRYMEN_RELEASE_HOME_HALT=<operation token>@<n>`.
+`AGENTCAP_RELEASE_HOME_HALT=<operation token>@<n>`.
 
-Rollback to listener-only: set `MERRYMEN_REHALT_HOME`, deploy the orchestrator
+Rollback to listener-only: set `AGENTCAP_REHALT_HOME`, deploy the orchestrator
 role once and confirm the manifest is `held` (the log says `re-halted … at
 generation <n>` or `already held at halt generation <n>`), then switch to
-`start:recovery-replies` with `MERRYMEN_FLEET_RECOVERY_REPORT_ONLY=1` and
-`MERRYMEN_FLEET_RECOVERY_REPLIES=1`. The report-only and listener entries
+`start:recovery-replies` with `AGENTCAP_FLEET_RECOVERY_REPORT_ONLY=1` and
+`AGENTCAP_FLEET_RECOVERY_REPLIES=1`. The report-only and listener entries
 never run these steps.
 
 ### The reply listener
@@ -1242,7 +1242,7 @@ listener beside a released fleet is the sidecar work package (B8).
 | File | Written by | Purpose |
 | --- | --- | --- |
 | `FLEET_HALT` | operator, adoption, re-halt | Present: stop every child and spawn none |
-| `.merrymen-persistent-home.json` | adoption, release, re-halt | Manifest: volume identity, `held` or `complete`, and the halt generation after a re-halt |
+| `.agentcap-persistent-home.json` | adoption, release, re-halt | Manifest: volume identity, `held` or `complete`, and the halt generation after a re-halt |
 | `.fleet-halt-preadoption.json` | adoption | The original halt's hash, inode and exact bytes |
 | `.fleet-halt-rehalt.json` | re-halt | Which canonical halt the latest re-halt created |
 

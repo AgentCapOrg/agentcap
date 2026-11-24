@@ -192,7 +192,7 @@ const hash = (value: string) => createHash("sha256").update(value).digest("hex")
  * challenge nor the owner's identity. Domain separation keeps this public
  * value distinct from the challenge hash used to authorize the bind.
  */
-const suggestedUsername = (challengeHash: string) => `merrymen_${hash(`merrymen:managed-bot-username:v1:${challengeHash}`).slice(0, 16)}_bot`;
+const suggestedUsername = (challengeHash: string) => `agentcap_${hash(`agentcap:managed-bot-username:v1:${challengeHash}`).slice(0, 16)}_bot`;
 const intentIdOk = (id: unknown): id is string => typeof id === "string" && /^[A-Za-z0-9_-]{16,64}$/.test(id);
 const active = (row: IntentRow, now: number) =>
   (row.status === "waiting_telegram" || row.status === "waiting_bot" || row.status === "confirm") && Number(row.expires_at) > now;

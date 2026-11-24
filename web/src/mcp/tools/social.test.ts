@@ -16,7 +16,7 @@
 import assert from "node:assert/strict";
 import * as z from "zod";
 import { afterEach, test } from "node:test";
-import { explorerFor } from "@merrymen/core";
+import { explorerFor } from "@agentcap/core";
 import { MAX_FOLLOWS, type FollowEdge } from "../../../../worker/src/follow-store";
 import { setPublicIdentitiesForTest, type PublicIdentityRecord } from "@/lib/services/public-feed";
 import { setSettingsReaderForTest } from "@/lib/services/settings-view";
@@ -100,9 +100,9 @@ class MemFollowStore implements FollowStoreLike {
 
 /** A store whose backend is down, with a connection string in its error the way pg's can carry one. */
 const downStore: FollowStoreLike = {
-  following: async () => { throw new Error("connect ECONNREFUSED postgres://merrymen:hunter2@db.internal:5432/prod"); },
-  follow: async () => { throw new Error("connect ECONNREFUSED postgres://merrymen:hunter2@db.internal:5432/prod"); },
-  unfollow: async () => { throw new Error("connect ECONNREFUSED postgres://merrymen:hunter2@db.internal:5432/prod"); },
+  following: async () => { throw new Error("connect ECONNREFUSED postgres://agentcap:hunter2@db.internal:5432/prod"); },
+  follow: async () => { throw new Error("connect ECONNREFUSED postgres://agentcap:hunter2@db.internal:5432/prod"); },
+  unfollow: async () => { throw new Error("connect ECONNREFUSED postgres://agentcap:hunter2@db.internal:5432/prod"); },
 };
 
 function identity(slug: string, tenant: string, accounts: string[]): PublicIdentityRecord {
@@ -612,7 +612,7 @@ test("share_trade_summary: post_line is held to the group chat's gate, and is nu
   assert.equal(errCode(refused), undefined, refused.text);
   assert.equal(refused.sc.post_line, null);
   assert.ok(refused.sc.warnings.some((w: string) => /post_line is null/.test(w)));
-  assert.match(refused.sc.text, /^Robin of scam\.com on Merrymen/, "the paste-anywhere text is the owner's own and still carries the name");
+  assert.match(refused.sc.text, /^Robin of scam\.com on AgentCap/, "the paste-anywhere text is the owner's own and still carries the name");
 });
 
 // ── review additions: the failure modes the first suite did not reach ───────

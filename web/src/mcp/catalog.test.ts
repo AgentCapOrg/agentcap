@@ -69,7 +69,7 @@ test("every tool is well-formed and annotated consistently with its capability",
 });
 
 test("directory alternatives fail closed unless explicit, read-only, allowed and a subset", () => {
-  const setup = ALL_TOOLS.find(t => t.name === "get_merryman_setup")!;
+  const setup = ALL_TOOLS.find(t => t.name === "get_agentcapavatar_setup")!;
   assert.equal(toolInProfile(setup, "directory"), true);
   assert.equal(toolInProfile({ ...setup, directoryAnyOf: undefined }, "directory"), false);
   assert.equal(toolInProfile({ ...setup, directoryAnyOf: [] }, "directory"), false);
@@ -98,12 +98,12 @@ test("no tool can transfer funds, sign, or send arbitrary calls", () => {
   for (const t of ALL_TOOLS) assert.doesNotMatch(t.name, forbidden, t.name);
 });
 
-test("resources have unique names and merrymen:// or ui:// URIs", () => {
+test("resources have unique names and agentcap:// or ui:// URIs", () => {
   const names = new Set<string>();
   for (const r of ALL_RESOURCES) {
     assert.ok(!names.has(r.name), r.name);
     names.add(r.name);
-    assert.match(r.uri, /^(merrymen|ui):\/\//, r.name);
+    assert.match(r.uri, /^(agentcap|ui):\/\//, r.name);
   }
 });
 

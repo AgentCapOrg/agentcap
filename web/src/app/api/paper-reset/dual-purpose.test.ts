@@ -5,7 +5,7 @@
  * practice book for its own worker, with the account resolved in the SAME
  * wallet (agent-for.ts, start-over.ts queuePaperReset); no `?wallet=` is the
  * Spot book, exactly as the phones send it. A Perps reset is refused where no
- * Perps worker runs (MERRYMEN_PERPS not paper): hosted its practice book is
+ * Perps worker runs (AGENTCAP_PERPS not paper): hosted its practice book is
  * frozen, and self-hosted a worker started by hand still keeps its stops, which
  * is what each refusal says.
  * And a Perps reset carries a deadline, the Perps worker's order window, so
@@ -28,17 +28,17 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { after, beforeEach, describe, it } from "node:test";
 
-import type { StoredGrant } from "@merrymen/core";
-import { purposeHome } from "@merrymen/home";
+import type { StoredGrant } from "@agentcap/core";
+import { purposeHome } from "@agentcap/home";
 import { mintSession } from "@/lib/auth";
-import { getGrantStore, resetGrantStoreForTest } from "@merrymen/grant-store";
+import { getGrantStore, resetGrantStoreForTest } from "@agentcap/grant-store";
 import { claimCommandFile, commandDir, runTickCommand, type CommandOutcome, type FileCommand } from "../../../../../worker/src/command-files";
 import { mergeSettings, perpsWorkerStoodDown } from "../../../../../worker/src/settings";
 import { orderTtlMs } from "@/lib/order-state";
 import { PERPS_RESET_NOT_REPORTED } from "@/lib/perps-book-reported";
 import { POST } from "./route";
 
-const KEYS = ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "DATABASE_URL", "MERRYMEN_SESSION_SECRET", "MERRYMEN_PERPS"] as const;
+const KEYS = ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "DATABASE_URL", "AGENTCAP_SESSION_SECRET", "AGENTCAP_PERPS"] as const;
 const saved = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
 const SPOT = `0x${"11".repeat(20)}`;
 const PERPS = `0x${"22".repeat(20)}`;
@@ -58,10 +58,10 @@ const filesIn = (h: string) => (existsSync(commandDir(h)) ? readdirSync(commandD
 beforeEach(() => {
   home = mkdtempSync(path.join(tmpdir(), "mm-dual-wallet-reset-"));
   homes.push(home);
-  process.env.MERRYMEN_HOME = home;
-  process.env.MERRYMEN_PERPS = "paper";
-  process.env.MERRYMEN_SESSION_SECRET = randomBytes(32).toString("hex");
-  delete process.env.MERRYMEN_HOSTED;
+  process.env.AGENTCAP_HOME = home;
+  process.env.AGENTCAP_PERPS = "paper";
+  process.env.AGENTCAP_SESSION_SECRET = randomBytes(32).toString("hex");
+  delete process.env.AGENTCAP_HOSTED;
   delete process.env.DATABASE_URL;
   resetGrantStoreForTest();
   writeFileSync(path.join(home, "grant.json"), JSON.stringify({ smartAccount: SPOT, demoOwnerPrivateKey: `0x${"33".repeat(32)}` }));
@@ -137,8 +137,8 @@ describe("self-hosted: each wallet's reset lands in its own home", () => {
     mkdirSync(purposeHome("perps"), { recursive: true });
     writeFileSync(path.join(purposeHome("perps"), "grant.json"), JSON.stringify({ smartAccount: PERPS, purpose: "perps" }));
     for (const lever of [undefined, "off", "live"]) {
-      if (lever === undefined) delete process.env.MERRYMEN_PERPS;
-      else process.env.MERRYMEN_PERPS = lever;
+      if (lever === undefined) delete process.env.AGENTCAP_PERPS;
+      else process.env.AGENTCAP_PERPS = lever;
       const res = await reset("?wallet=perps");
       assert.equal(res.status, 403, String(lever));
       const out = (await res.json()) as { code?: string; error?: string };
@@ -184,7 +184,7 @@ describe("self-hosted: each wallet's reset lands in its own home", () => {
     const drain = (lever: string | undefined, now: number) =>
       runTickCommand(purposeHome("perps"), {
         now: () => now,
-        mayRun: () => !perpsWorkerStoodDown(mergeSettings({}, { MERRYMEN_WALLET_PURPOSE: "perps", ...(lever ? { MERRYMEN_PERPS: lever } : {}) })),
+        mayRun: () => !perpsWorkerStoodDown(mergeSettings({}, { AGENTCAP_WALLET_PURPOSE: "perps", ...(lever ? { AGENTCAP_PERPS: lever } : {}) })),
         run: async (cmd) => (ran.push(cmd.kind), { ok: true, line: "paper book restarted" }),
         told: async (_cmd, outcome) => void told.push(outcome),
         account: () => PERPS,
@@ -232,7 +232,7 @@ describe("hosted: the account is resolved in the Perps wallet, never the Spot on
     ({ smartAccount, chainId: 4663, serialized: "not-a-permission-account", demoSessionPrivateKey: "0x" + "11".repeat(32), ...extra }) as unknown as StoredGrant;
 
   it("a hosted Perps reset refuses a missing or changed confirming owner and account before queue access", async () => {
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOSTED = "1";
     await getGrantStore("perps").put(A, grantOf(PERPS, { purpose: "perps", owner: A }));
     for (const body of [{ expectedAccount: PERPS }, { expectedAccount: PERPS, expectedTenant: B }, { expectedAccount: SPOT, expectedTenant: A }]) {
       const res = await POST(new Request("https://app.example.test/api/paper-reset?wallet=perps", {
@@ -245,7 +245,7 @@ describe("hosted: the account is resolved in the Perps wallet, never the Spot on
   });
 
   it("a login with only a Spot grant has no Perps reset to queue (401); one with a Perps grant reaches the queue", async () => {
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOSTED = "1";
     await getGrantStore("spot").put(B, grantOf(SPOT));
     await getGrantStore("perps").put(A, grantOf(PERPS, { purpose: "perps", owner: A }));
     assert.equal((await reset("?wallet=perps", B)).status, 401, "B's Spot account is not a Perps one");
@@ -256,7 +256,7 @@ describe("hosted: the account is resolved in the Perps wallet, never the Spot on
     assert.match(((await a.json()) as { error: string }).error, /the ledger is unreachable/);
     // And where no Perps worker runs, refused before the store is read, with
     // the book said to stay as it is: hosted, no Perps child runs to move it.
-    delete process.env.MERRYMEN_PERPS;
+    delete process.env.AGENTCAP_PERPS;
     const off = await reset("?wallet=perps", A);
     assert.equal(off.status, 403);
     const said = ((await off.json()) as { error?: string }).error ?? "";
@@ -276,7 +276,7 @@ describe("hosted: the account is resolved in the Perps wallet, never the Spot on
    * insert (503) — hosted.postgres.test.ts drives the write.
    */
   it("A PERPS BOOK HELD BECAUSE IT COULD NOT BE RESTORED IS NOT RESET: 409, nothing queued; an unreadable record is a 503; Spot's held book is not looked at", async () => {
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOSTED = "1";
     await getGrantStore("spot").put(A, grantOf(SPOT, { owner: A }));
     await getGrantStore("perps").put(A, grantOf(PERPS, { purpose: "perps", owner: A }));
     /**
@@ -285,7 +285,7 @@ describe("hosted: the account is resolved in the Perps wallet, never the Spot on
      */
     const ledger = (dir: string, health: Record<string, 0 | 1> | "unreadable", reported: readonly string[] = [PERPS]) => {
       mkdirSync(dir, { recursive: true });
-      const file = path.join(dir, "merrymen.db");
+      const file = path.join(dir, "agentcap.db");
       rmSync(file, { force: true });
       const raw = new DatabaseSync(file);
       try {

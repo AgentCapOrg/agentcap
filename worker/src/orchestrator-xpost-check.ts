@@ -65,9 +65,9 @@ const CACHE_MAX = 200;
 const EVM_NETWORKS: readonly FactsNetwork[] = ["robinhood", "base", "ethereum", "bsc"];
 
 export interface LarpCheckerDeps {
-  /** The research browser (MERRYMEN_BROWSER_URL / _TOKEN). Null: no site is scanned, and a check says it could not see. */
+  /** The research browser (AGENTCAP_BROWSER_URL / _TOKEN). Null: no site is scanned, and a check says it could not see. */
   browser: BrowserConfig | null;
-  /** MERRYMEN_GITHUB_TOKEN, optional. */
+  /** AGENTCAP_GITHUB_TOKEN, optional. */
   githubToken?: string;
   /** The index's coin facts, on the X account's own limiter (orchestrator-xpost-research.ts passes its own). */
   coinFacts: CoinFactsReader;

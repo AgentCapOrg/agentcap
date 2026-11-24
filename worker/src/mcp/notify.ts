@@ -23,7 +23,7 @@
  * are re-validated before use.
  *
  * AND ONLY WHILE AN APP CAN STILL MANAGE IT. Subscriptions are listed and
- * removed only through a connected app; Merrymen has no page for them. So a
+ * removed only through a connected app; AgentCap has no page for them. So a
  * subscription is evaluated only while its owner has an active connection that
  * holds notifications:manage. Disconnecting every such app stops new alerts
  * (anything already queued still goes out); reconnecting one resumes them.
@@ -986,7 +986,7 @@ async function evalEvents(shared: Db, sub: SubRow, kind: "risk_halt" | "provider
     let c: Candidate | null = null;
     if (kind === "risk_halt") {
       if (KILL.test(head)) {
-        c = { key: `risk_halt:${sub.id}:kill:${ev.id}`, book: bookOf(scope.mode), text: `${tag}\nKill switch: the trading permission was discarded and trading is halted. Nothing trades again until a new permission is signed in Merrymen.` };
+        c = { key: `risk_halt:${sub.id}:kill:${ev.id}`, book: bookOf(scope.mode), text: `${tag}\nKill switch: the trading permission was discarded and trading is halted. Nothing trades again until a new permission is signed in AgentCap.` };
       } else if (BREAKER.test(head) && gapOpen(at)) {
         gapped = at;
         c = { key: `risk_halt:${sub.id}:breaker:${Math.floor(at / ALERT_WINDOW_SEC)}`, book: bookOf(scope.mode), text: `${tag}\nDrawdown breaker tripped: the book is below the drawdown limit in the signed permission, so buys are refused until it recovers. Selling is never blocked.\n(At most one breaker alert every 6 hours.)` };
@@ -1306,7 +1306,7 @@ async function bookLine(shared: Db, scope: AgentScope, book: "live" | "paper", s
     }
     if (inflow > 0 || outflow > 0) flowsText = ` Deposits ${usd(inflow)} USDG and withdrawals ${usd(outflow)} USDG are inside that change.`;
     if (energy > 0) {
-      flowsText += ` ${flowsText ? "So is" : "Inside that change is"} ${usd(energy)} USDG set aside as energy ($MERRYMEN) — capital leaving the trading book, not a loss.`;
+      flowsText += ` ${flowsText ? "So is" : "Inside that change is"} ${usd(energy)} USDG set aside as energy ($AGENTCAP) — capital leaving the trading book, not a loss.`;
     }
   }
   return `${label}: ${valued}${change}.${flowsText} ${fillsText}`;
@@ -1657,7 +1657,7 @@ export function hostedTickSeconds(store: SettingsGetter = getSettingsStore("spot
   return async (tenant) => {
     const s = await settingsOf(store, tenant);
     if (typeof s?.tickSeconds === "number" && s.tickSeconds > 0) return s.tickSeconds;
-    const env = Number(process.env.MERRYMEN_TICK_SECONDS);
+    const env = Number(process.env.AGENTCAP_TICK_SECONDS);
     return Number.isFinite(env) && env > 0 ? env : 60;
   };
 }

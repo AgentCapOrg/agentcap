@@ -90,7 +90,7 @@ function input(over: Partial<BuildDossierInput> = {}): BuildDossierInput {
     events: [],
     cohortUserIds: new Set(),
     stats: null,
-    marketContext: ["Merrymen's own quote: market cap about 2.1M USD."],
+    marketContext: ["AgentCap's own quote: market cap about 2.1M USD."],
     routeContext: ["Route depth supports about 40 USDG at 2% impact."],
     ownFamilies: new Set(),
     selfNames: [],
@@ -340,18 +340,18 @@ describe("redactExecutables (C29): no third-party link or mention survives into 
 
 describe("buildDossier: circular evidence", () => {
   it("excludes our own families and theses that cite us, and says so", () => {
-    const ours = thesis("ours", "Breakout confirmed, still early", { familyKey: "merrymen-post-1" });
+    const ours = thesis("ours", "Breakout confirmed, still early", { familyKey: "agentcap-post-1" });
     const copyOfOurs = thesis("copy", "Breakout confirmed, still early", { familyKey: "other-provider-9" });
-    const citesUs = thesis("cites", "Merrymen bots are buying this, listing soon");
+    const citesUs = thesis("cites", "AgentCap bots are buying this, listing soon");
     const citesAgent = thesis("agent", "Robin Bot is in, undervalued");
     const real = thesis("real", "Strong community and accumulating");
     const { dossier } = buildDossier(
-      input({ theses: [ours, copyOfOurs, citesUs, citesAgent, real], ownFamilies: new Set(["merrymen-post-1"]), selfNames: ["Robin Bot"] }),
+      input({ theses: [ours, copyOfOurs, citesUs, citesAgent, real], ownFamilies: new Set(["agentcap-post-1"]), selfNames: ["Robin Bot"] }),
     );
     assert.equal(dossier.coverage.uniqueTheses, 5);
     const refs = dossier.claims.flatMap((c) => c.evidence.map((e) => e.id));
     assert.deepEqual(refs.sort(), ["fomo:thesis/real", "fomo:thesis/real"]);
-    assert.ok(dossier.coverage.limitations.some((l) => /4 theses repeat or cite Merrymen's own posts/.test(l)));
+    assert.ok(dossier.coverage.limitations.some((l) => /4 theses repeat or cite AgentCap's own posts/.test(l)));
   });
 });
 

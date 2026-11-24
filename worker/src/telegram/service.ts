@@ -1,5 +1,5 @@
 /**
- * Telegram poll service — the merryman's always-on ear.
+ * Telegram poll service — the agentcapavatar's always-on ear.
  *
  * An independent, self-scheduling long-poll loop (setTimeout + .finally, NEVER
  * setInterval, NEVER inside the trading tick) started once from the worker's
@@ -23,13 +23,13 @@
 
 import { existsSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
-// RELATIVE import only — the "@merrymen/core" alias exists solely in dev
+// RELATIVE import only — the "@agentcap/core" alias exists solely in dev
 // tsconfigs; inside the installed package tsx can't resolve it and the worker
 // dies at startup (which silently kills Telegram). Never alias-import in worker/.
 import { PC_CAPABILITIES, PROPOSAL_PARAM, isHostedMode, parseTailRequest, saysTail, tailAsksToTake } from "../../../packages/core/src/index";
 import { patchSettingsFile, type ResolvedConfig } from "../settings";
 import { rememberChatSetting } from "./state";
-import { ensureHome, homePaths, merrymenHome } from "../home";
+import { ensureHome, homePaths, agentcapHome } from "../home";
 import { perpKeySecretForms } from "../perps/keystore";
 import { loadGrantFile } from "../grant";
 import {
@@ -261,7 +261,7 @@ export interface TelegramServiceDeps {
   /**
    * WHETHER A TAIL CAN WORK HERE AT ALL (index.ts: the same switch the
    * notices read, and the hosted live feed): "on"; "switched-off"
-   * (MERRYMEN_FOMO_TAILS=0); "no-live-feed" (self-hosted: only the hosted
+   * (AGENTCAP_FOMO_TAILS=0); "no-live-feed" (self-hosted: only the hosted
    * service has Fomo's live feed). Not "on": /tail says so up front, with no
    * search spent and no card; her words asking for one go on to research as
    * before; the trader board offers no /tail. Stopping a stored tail still
@@ -509,7 +509,7 @@ export function startTelegram(deps: TelegramServiceDeps): { stop: () => void } {
    */
   const earlyTold = new Set<string>();
   const now = deps.now ?? (() => Math.floor(Date.now() / 1000));
-  ensureSoul(now()); // the merryman is born (IDENTITY/OWNER/JOURNAL.md) on first run
+  ensureSoul(now()); // the agentcapavatar is born (IDENTITY/OWNER/JOURNAL.md) on first run
   /**
    * Refusals, failed /link codes and undelivered replies, counted for the
    * fleet's log (poll-rules.ts makeChatTally). NEVER ON `deps.note`: that is
@@ -732,7 +732,7 @@ export function startTelegram(deps: TelegramServiceDeps): { stop: () => void } {
    * The in-memory map is now a CACHE over the sqlite log, not the source of
    * truth. First touch of a chat after a restart pulls the conversation back
    * from disk — before this, every restart silently wiped the thread and the
-   * merryman greeted a mid-conversation owner like a stranger.
+   * agentcapavatar greeted a mid-conversation owner like a stranger.
    */
   const historyFor = async (chatId: number): Promise<{ role: "user" | "assistant"; content: string }[]> => {
     let h = history.get(chatId);
@@ -757,7 +757,7 @@ export function startTelegram(deps: TelegramServiceDeps): { stop: () => void } {
       }).filter((t) => t.content.length > 0);
       history.set(chatId, h);
       // Restore the last turn's recalled ids too, so a pronoun sent right after
-      // a restart still lands on whatever the merryman was just talking about.
+      // a restart still lands on whatever the agentcapavatar was just talking about.
       const lastWithIds = [...(await recentChatTurns(chatId, 4))].reverse().find((t) => t.memoryIds?.length);
       if (lastWithIds?.memoryIds?.length) stickyIds.set(chatId, new Set(lastWithIds.memoryIds));
     }
@@ -1341,7 +1341,7 @@ export function startTelegram(deps: TelegramServiceDeps): { stop: () => void } {
         patchSettingsFile({ agentName: r.name });
         rememberChatSetting(stateRef, { agentName: r.name }, now());
         deps.onNameChange?.(r.name);
-        deps.note("ok", `Telegram: the merryman is now called ${r.name}`);
+        deps.note("ok", `Telegram: the agentcapavatar is now called ${r.name}`);
       }
       return r;
     };
@@ -1392,7 +1392,7 @@ export function startTelegram(deps: TelegramServiceDeps): { stop: () => void } {
         // `deps.reads.wallet ? … : WALLET_TEXT`, and with this key absent every
         // one of /wallet, /fund, /grant, /recover, /restore and /reconnect fell
         // through to the static signpost — which tells the reader to open
-        // http://localhost:3100 "on the machine running merrymen". On the
+        // http://localhost:3100 "on the machine running agentcap". On the
         // hosted fleet there is no such machine, so the instruction cannot be
         // followed at all, and "fund your agent" is the commonest thing anyone
         // is ever told to do.
@@ -1589,14 +1589,14 @@ export function startTelegram(deps: TelegramServiceDeps): { stop: () => void } {
         const rel = relationship(st.linkedAt, st.messageCount, now());
         const facts = ownerFacts();
         return [
-          `🌳 <b>${esc(getName())}</b> of the merrymen`,
+          `🌳 <b>${esc(getName())}</b> of the agentcap`,
           `• ${ageDays(now())} days old · born ${getBornDate()} · ${rel.stage}`,
           `• ${rel.daysTogether} day(s) riding with you · ${rel.messageCount} messages shared`,
           facts.length
             ? `• what I know about you:\n${facts.slice(-8).map((f) => `  ${esc(f.replace(/^- /, "· "))}`).join("\n")}`
             : `• I don't know much about you yet — tell me things, or /remember them for me`,
           ``,
-          `my soul lives in ~/.merrymen/soul/ — read it, edit it, it's yours. /name renames me · /forget wipes what I know.`,
+          `my soul lives in ~/.agentcap/soul/ — read it, edit it, it's yours. /name renames me · /forget wipes what I know.`,
         ].join("\n");
       },
       // /forget must now clear the CONVERSATION too, not just OWNER.md —
@@ -1769,7 +1769,7 @@ export function startTelegram(deps: TelegramServiceDeps): { stop: () => void } {
       if (!cfg.telegramPcControlEnabled || !cfg.telegramAgentEnabled) {
         await say(
           isHostedMode()
-            ? "I can't work on your computer — I live on the merrymen servers. Ask me anything about your trades, coins or settings and I'll look it up."
+            ? "I can't work on your computer — I live on the agentcap servers. Ask me anything about your trades, coins or settings and I'll look it up."
             : "I can only work on your computer when PC control and agent mode are switched on in Settings. Ask me anything about your trades, coins or settings and I'll look it up.",
         );
         return;
@@ -1805,11 +1805,11 @@ export function startTelegram(deps: TelegramServiceDeps): { stop: () => void } {
         grant?.demoSessionPrivateKey,
         // The Lighter API private key is not in the grant (only its public half
         // is): it lives in its own key file (docs/perps.md rule 5), which a
-        // custom MERRYMEN_HOME can put where no path guard expects. Every
+        // custom AGENTCAP_HOME can put where no path guard expects. Every
         // spelling, 0x and bare, either case; the 80-hex shape backs it up.
-        ...perpKeySecretForms(merrymenHome(), grant?.perp?.apiPublicKey),
+        ...perpKeySecretForms(agentcapHome(), grant?.perp?.apiPublicKey),
         // Solana's server secrets, from the environment and a self-hosted .env.solana.local.
-        ...solanaSecretValues(process.env, [path.join(process.cwd(), ".env.solana.local"), path.join(merrymenHome(), ".env.solana.local")]),
+        ...solanaSecretValues(process.env, [path.join(process.cwd(), ".env.solana.local"), path.join(agentcapHome(), ".env.solana.local")]),
       ].filter((s): s is string => typeof s === "string" && s.length >= 8);
       const stopFlag = { stopped: false };
       agentRuns.set(msg.chatId, stopFlag);
@@ -2067,7 +2067,7 @@ export function startTelegram(deps: TelegramServiceDeps): { stop: () => void } {
             cmd = {
               kind: "chat",
               reply: isHostedMode()
-                ? "I can't work on your computer — I live on the merrymen servers. Ask me anything about your trades, coins or settings and I'll look it up."
+                ? "I can't work on your computer — I live on the agentcap servers. Ask me anything about your trades, coins or settings and I'll look it up."
                 : "I can only work on your computer when PC control and agent mode are switched on in Settings. Ask me anything about your trades, coins or settings and I'll look it up.",
             };
           }
@@ -2439,7 +2439,7 @@ export function startTelegram(deps: TelegramServiceDeps): { stop: () => void } {
    * A LATE ONE IS DROPPED (`late`: "stale" when it waited out a silence,
    * "early" when it reached this bot before this agent was switched onto it;
    * the backlog rule in pollOnce). It is not answered, reacted to, remembered
-   * or run: a room has moved on hours after an outage, and a Merryman that
+   * or run: a room has moved on hours after an outage, and a AgentCapAvatar that
    * answers it then, or runs a /buy typed into it then, is doing something
    * nobody asked for any more. Nor does a room get any of a DM's backlog notes
    * (the late-code prompt, the refusal, "I was offline"): the room is not

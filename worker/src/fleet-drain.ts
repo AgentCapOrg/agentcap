@@ -63,7 +63,7 @@
  *     wait out — is not given up by hand at all (orchestrator.ts
  *     drainReleasableLeases): it drops with the exit that ends its writer.
  *
- * ONE BUDGET OVER ALL OF IT, MERRYMEN_DRAIN_BUDGET_MS (default 50s), set
+ * ONE BUDGET OVER ALL OF IT, AGENTCAP_DRAIN_BUDGET_MS (default 50s), set
  * inside the platform's draining time so this process, not the platform,
  * decides how the stop ends — and cut to that time when the platform's
  * variable says it (drainBudgetMs). Every step's cap is cut to what is left
@@ -84,9 +84,9 @@ import path from "node:path";
 
 import { fsyncDirSync, writeFileAtomicSync } from "./atomic-write";
 
-/** The whole drain, when MERRYMEN_DRAIN_BUDGET_MS does not say otherwise: inside a 75s platform drain. */
+/** The whole drain, when AGENTCAP_DRAIN_BUDGET_MS does not say otherwise: inside a 75s platform drain. */
 export const DRAIN_BUDGET_DEFAULT_MS = 50_000;
-/** What MERRYMEN_DRAIN_BUDGET_MS may say. Less than a second drains nothing; more than ten minutes is a typo. */
+/** What AGENTCAP_DRAIN_BUDGET_MS may say. Less than a second drains nothing; more than ten minutes is a typo. */
 const DRAIN_BUDGET_MIN_MS = 1_000;
 const DRAIN_BUDGET_MAX_MS = 10 * 60_000;
 
@@ -232,7 +232,7 @@ export const PLATFORM_DRAIN_MARGIN_MS = 5_000;
 /**
  * THE BUDGET TO DRAIN WITHIN, and each [alert] to say about it.
  *
- * What MERRYMEN_DRAIN_BUDGET_MS asks for, or the default and a reason. That
+ * What AGENTCAP_DRAIN_BUDGET_MS asks for, or the default and a reason. That
  * value itself is never echoed: an operator reads the variable's name and the
  * rule, and the default is safe to drain with.
  *
@@ -250,12 +250,12 @@ export const PLATFORM_DRAIN_MARGIN_MS = 5_000;
 export function drainBudgetMs(env: NodeJS.ProcessEnv = process.env): { ms: number; alerts: string[] } {
   const alerts: string[] = [];
   let ms = DRAIN_BUDGET_DEFAULT_MS;
-  const raw = env.MERRYMEN_DRAIN_BUDGET_MS;
+  const raw = env.AGENTCAP_DRAIN_BUDGET_MS;
   if (raw !== undefined && raw.trim() !== "") {
     const value = raw.trim();
     const asked = /^[1-9][0-9]{0,9}$/.test(value) ? Number(value) : NaN;
     if (asked >= DRAIN_BUDGET_MIN_MS && asked <= DRAIN_BUDGET_MAX_MS) ms = asked;
-    else alerts.push(`MERRYMEN_DRAIN_BUDGET_MS is not a whole number of milliseconds from ${DRAIN_BUDGET_MIN_MS} to ${DRAIN_BUDGET_MAX_MS} — draining within the default ${DRAIN_BUDGET_DEFAULT_MS}ms`);
+    else alerts.push(`AGENTCAP_DRAIN_BUDGET_MS is not a whole number of milliseconds from ${DRAIN_BUDGET_MIN_MS} to ${DRAIN_BUDGET_MAX_MS} — draining within the default ${DRAIN_BUDGET_DEFAULT_MS}ms`);
   }
   const platform = env.RAILWAY_DEPLOYMENT_DRAINING_SECONDS?.trim();
   if (!platform) return { ms, alerts };

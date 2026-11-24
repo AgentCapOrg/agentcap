@@ -1,5 +1,5 @@
 /**
- * The Solana half of `merrymen kill` (cli/bin.mjs), which cannot import the
+ * The Solana half of `agentcap kill` (cli/bin.mjs), which cannot import the
  * worker: every local Solana strategy is turned off with a revision bump, as
  * the dashboard's and Telegram's self-hosted kills do (stopLocalSolanaForKill).
  * Prints "stopped" or "none"; exits 1 with a fixed message when it could not.

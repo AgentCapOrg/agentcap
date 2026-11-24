@@ -10,7 +10,7 @@ import {
   admitFiguresLine, cleanTicker, compactMoney, FIGURES_LINE, FIGURES_MAX, figuresTickers, neverAnsweredName, rankOf, renderFiguresLine, signedPercent,
   withFigures, withoutFiguresLine, type FiguresSpec,
 } from "./figures";
-import { merrymenMentioned, sherwoodMentioned } from "./gate";
+import { agentcapMentioned, sherwoodMentioned } from "./gate";
 
 const BTC: FiguresSpec = [{ kind: "major", symbol: "btc", rank: 1, priceUsd: 97_431.2, marketCapUsd: 1.93e12, volume24hUsd: 41.2e9, change24hPct: 1.234, change7dPct: -3.44 }];
 const HOT: FiguresSpec = [
@@ -46,8 +46,8 @@ describe("tickers: A-Z, two to ten letters, nothing else", () => {
     assert.deepEqual(figuresTickers("1h buys ~$12k, sells ~$8.1k."), []);
   });
 
-  it("never a sherwood, merrymen, robinhood or agent name, however its digits spell it", () => {
-    for (const bad of ["SHERWOOD", "SHERWOOD1", "SH3RW00D", "SHRWD", "HERWOOD", "SHEROOD", "MERRY", "MERRYMEN", "HOOD", "ROBINHOOD", "ALAN", "ALANAIDALE"]) {
+  it("never a sherwood, agentcap, robinhood or agent name, however its digits spell it", () => {
+    for (const bad of ["SHERWOOD", "SHERWOOD1", "SH3RW00D", "SHRWD", "HERWOOD", "SHEROOD", "MERRY", "AGENTCAP", "HOOD", "ROBINHOOD", "ALAN", "ALANAIDALE"]) {
       assert.equal(cleanTicker(bad), null, bad);
     }
     // Whatever the gate reads as sherwood, the line never shows.
@@ -66,15 +66,15 @@ describe("tickers: A-Z, two to ten letters, nothing else", () => {
     for (const ok of ["CHUMP", "TRUCK", "STUCK", "JOHN", "MARINA", "FROGGY"]) assert.equal(cleanTicker(ok), ok, ok);
   });
 
-  it("never merrymen in any spelling the letters allow (red-team 2026-10-12)", () => {
+  it("never agentcap in any spelling the letters allow (red-team 2026-10-12)", () => {
     // Posted at 34ced01e: "trending $MERRIMEN 24h +12% vol ~$300k, $MERYMEN 24h +9% vol ~$200k".
-    for (const bad of ["MERRYMEN", "MERRYMAN", "MERRYMEM", "MERRIMEN", "MERYMEN", "MERIMEN", "MERRMEN", "MRRYMEN", "MEERYMEN", "MRYMN", "MERR", "MERRIMAN", "merrimen"]) {
+    for (const bad of ["AGENTCAP", "AGENTCAPAVATAR", "MERRYMEM", "MERRIMEN", "MERYMEN", "MERIMEN", "MERRMEN", "MRRYMEN", "MEERYMEN", "MRYMN", "MERR", "MERRIMAN", "merrimen"]) {
       assert.equal(cleanTicker(bad), null, bad);
-      assert.ok(merrymenMentioned(bad), bad);
+      assert.ok(agentcapMentioned(bad), bad);
     }
     for (const ok of ["CHUMP", "PEPE", "MERIT", "MERCURY", "MEME", "SUMMER", "HAMMER"]) {
       assert.equal(cleanTicker(ok), ok, ok);
-      assert.equal(merrymenMentioned(ok), false, ok);
+      assert.equal(agentcapMentioned(ok), false, ok);
     }
   });
 
@@ -108,17 +108,17 @@ describe("tickers: A-Z, two to ten letters, nothing else", () => {
     for (const ok of ["PEPE", "CHUMP", "FROGGY", "WOJAK", "BONK", "COINA", "ZAPX", "QRTZ", "MOLT", "GALA", "BASS", "MERIT"]) assert.equal(cleanTicker(ok), ok, ok);
   });
 
-  it("never merrymen with other vowels, the trencher on its consonants, the house's provider or a model a reader knows (red-team 2026-10-12)", () => {
+  it("never agentcap with other vowels, the trencher on its consonants, the house's provider or a model a reader knows (red-team 2026-10-12)", () => {
     // Posted at fbcf8756: "trending $MARRYMEN …, $TRNCHR …; fomo: most bought $MARRYMEN, $TRNCHR", "$MURRYMEN …, $OPUS …".
     for (const bad of ["MARRYMEN", "MURRYMEN", "MARYMEN", "MIRRYMEN", "MORRYMAN"]) {
       assert.equal(cleanTicker(bad), null, bad);
-      assert.ok(merrymenMentioned(bad), bad);
+      assert.ok(agentcapMentioned(bad), bad);
     }
     for (const bad of ["TRNCHR", "TRENCHR", "TRANCHER", "GROQ", "OPUS", "SONNET", "HAIKU", "KIMI", "CODEX", "SHOGUN", "SHGN"]) assert.equal(cleanTicker(bad), null, bad);
-    assert.ok(merrymenMentioned("TRNCHR"));
+    assert.ok(agentcapMentioned("TRNCHR"));
     for (const ok of ["CHUMP", "PEPE", "MERIT", "MERCURY", "MEME", "SUMMER", "HAMMER", "QRTZ", "ZAPX"]) {
       assert.equal(cleanTicker(ok), ok, ok);
-      assert.equal(merrymenMentioned(ok), false, ok);
+      assert.equal(agentcapMentioned(ok), false, ok);
     }
   });
 
@@ -340,7 +340,7 @@ describe("fitting it into the answer", () => {
 
 describe("the names no line of the house's answers under (2026-10-12)", () => {
   it("its own, a model's, a slur, a hate code or a political name: on letters and consonants, as a ticker is read", () => {
-    for (const name of ["MERRYMEN", "merrimen", "sherwood", "ALDALE", "GROK", "claude", "KIKE", "niglet", "kneegrow", "HEIL", "TRUMP", "maga", "elon", "HH", "KKK"]) {
+    for (const name of ["AGENTCAP", "merrimen", "sherwood", "ALDALE", "GROK", "claude", "KIKE", "niglet", "kneegrow", "HEIL", "TRUMP", "maga", "elon", "HH", "KKK"]) {
       assert.equal(neverAnsweredName(name), true, name);
     }
     // The house's own products, and a run of any length (red-team 2026-10-12).

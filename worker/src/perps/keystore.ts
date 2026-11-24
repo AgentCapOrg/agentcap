@@ -3,7 +3,7 @@
  *
  * docs/perps.md rule 5: signers only ever see the PUBLIC key; the private key
  * has the session key's custody or better. Self-hosted, keygen writes
- * `$MERRYMEN_HOME/perp-keys/<pubkey>.json` (0600). Hosted, the orchestrator
+ * `$AGENTCAP_HOME/perp-keys/<pubkey>.json` (0600). Hosted, the orchestrator
  * decrypts the sealed blob and writes `perp-key.json` (0600) into the
  * tenant's child home beside grant.json; the child never holds the DEK. This
  * module reads either — and never settings, never the environment, never the

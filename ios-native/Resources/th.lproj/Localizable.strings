@@ -43,7 +43,7 @@
 "🚀 apps & web" = "🚀 apps & web";
 "18 for most tokens — check the contract if unsure" = "18 for most tokens — check the contract if unsure";
 "A profile’s Buys & sells list shows recorded fills. Recent decisions explain what the agent chose, including holds. Completed operations can also include actions other than swaps." = "รายการ “ซื้อและขาย” บนโปรไฟล์แสดงคำสั่งที่ทำรายการสำเร็จตามที่บันทึกไว้ ส่วน “การตัดสินใจล่าสุด” อธิบายว่าเอเจนต์เลือกทำอะไร รวมถึงการเลือกถือไว้เฉย ๆ ด้วย และรายการที่ทำสำเร็จอาจรวมการกระทำอื่นที่ไม่ใช่การสวอปด้วย";
-"A quick look around merrymen" = "พาชม merrymen แบบคร่าว ๆ";
+"A quick look around agentcap" = "พาชม agentcap แบบคร่าว ๆ";
 "A strategy and two limits — per trade, and per day — decide what it may do. Paper mode practises with simulated funds until you say otherwise." = "กลยุทธ์หนึ่งข้อกับวงเงินสองแบบ คือต่อการเทรดและต่อวัน เป็นตัวกำหนดว่าเอเจนต์ทำอะไรได้บ้าง โหมดจำลองจะฝึกเทรดด้วยเงินจำลองที่ไม่ใช่เงินจริง จนกว่าคุณจะสั่งเปลี่ยนเอง";
 "A summary every 15 minutes" = "A summary every 15 minutes";
 "A summary every 30 minutes" = "A summary every 30 minutes";
@@ -73,7 +73,7 @@
 "An active book is reviewed at least every five minutes, subject to available reads and budget." = "An active book is reviewed at least every five minutes, subject to available reads and budget.";
 "and select Autonomous Trencher. It is available only after the verified vault deployment is configured. Without that permission, the existing route can trade only individually authorized tokens. Brain must be connected and the recorded portfolio must pass its accounting checks. For real trades, enable live trading and “let trencher trade for real” explicitly. Volatile coins can move beyond exit thresholds before a fill; timing and prices are not guaranteed." = "and select Autonomous Trencher. It is available only after the verified vault deployment is configured. Without that permission, the existing route can trade only individually authorized tokens. Brain must be connected and the recorded portfolio must pass its accounting checks. For real trades, enable live trading and “let trencher trade for real” explicitly. Volatile coins can move beyond exit thresholds before a fill; timing and prices are not guaranteed.";
 "another program has the bot" = "another program has the bot";
-"Another program is reading this bot's messages, for example a copy of Merrymen on your computer, or a webhook. Stop it, and your agent hears the bot again." = "Another program is reading this bot's messages, for example a copy of Merrymen on your computer, or a webhook. Stop it, and your agent hears the bot again.";
+"Another program is reading this bot's messages, for example a copy of AgentCap on your computer, or a webhook. Stop it, and your agent hears the bot again." = "Another program is reading this bot's messages, for example a copy of AgentCap on your computer, or a webhook. Stop it, and your agent hears the bot again.";
 "answer Fomo questions" = "answer Fomo questions";
 "Any OpenAI-compatible endpoint, e.g. https://your-host/v1" = "Any OpenAI-compatible endpoint, e.g. https://your-host/v1";
 "Anyone who has this code can control your agent — do not share or screenshot it." = "Anyone who has this code can control your agent — do not share or screenshot it.";
@@ -117,7 +117,7 @@
 "Choose a name and strategy, then review its wallet setup and spending limits. Creating an agent and authorizing live trading are separate steps." = "เลือกชื่อและกลยุทธ์ แล้วตรวจการตั้งค่ากระเป๋าเงินกับวงเงินใช้จ่าย การสร้างเอเจนต์กับการอนุญาตให้เทรดด้วยเงินจริง เป็นคนละขั้นตอนกัน";
 "Choose language" = "เลือกภาษา";
 "claim one" = "claim one";
-"Claim with your $MERRYMEN wallet for AI and token discovery access. A saved Bitquery key takes priority for discovery." = "Claim with your $MERRYMEN wallet for AI and token discovery access. A saved Bitquery key takes priority for discovery.";
+"Claim with your $AGENTCAP wallet for AI and token discovery access. A saved Bitquery key takes priority for discovery." = "Claim with your $AGENTCAP wallet for AI and token discovery access. A saved Bitquery key takes priority for discovery.";
 "class route · buying a coin nobody listed" = "class route · buying a coin nobody listed";
 "Class vault factory contract" = "Class vault factory contract";
 "Claude / vision model" = "Claude / vision model";
@@ -154,7 +154,7 @@
 "decimals" = "decimals";
 "default: rpc.mainnet.chain.robinhood.com" = "default: rpc.mainnet.chain.robinhood.com";
 "default: rpc.testnet.chain.robinhood.com" = "default: rpc.testnet.chain.robinhood.com";
-"Developers can visit merrymen.dev/api for API-key setup, the SDK and integration tutorials. Keep secret API keys on your server. Use the documented setup and chat flow to connect another app." = "นักพัฒนาเข้าไปที่ merrymen.dev/api เพื่อดูวิธีตั้งค่า API key, SDK และบทแนะนำการเชื่อมต่อได้ เก็บ API key ที่เป็นความลับไว้บนเซิร์ฟเวอร์ของคุณเท่านั้น และเชื่อมต่อแอปอื่นตามขั้นตอนการตั้งค่าและรูปแบบการแชทที่ระบุไว้ในเอกสาร";
+"Developers can visit agentcap.xyz/api for API-key setup, the SDK and integration tutorials. Keep secret API keys on your server. Use the documented setup and chat flow to connect another app." = "นักพัฒนาเข้าไปที่ agentcap.xyz/api เพื่อดูวิธีตั้งค่า API key, SDK และบทแนะนำการเชื่อมต่อได้ เก็บ API key ที่เป็นความลับไว้บนเซิร์ฟเวอร์ของคุณเท่านั้น และเชื่อมต่อแอปอื่นตามขั้นตอนการตั้งค่าและรูปแบบการแชทที่ระบุไว้ในเอกสาร";
 "Discover other agents." = "ดูเอเจนต์ของคนอื่น";
 "discovery · new pairs as they launch" = "discovery · new pairs as they launch";
 "Done" = "เสร็จสิ้น";
@@ -188,14 +188,14 @@
 "Get your bot token from @BotFather." = "Get your bot token from @BotFather.";
 "Give an agent a strategy, set its limits, and follow the decisions it makes. Follow the full walkthrough or use Topics to jump to a feature. You can leave and replay it at any time." = "กำหนดกลยุทธ์ให้เอเจนต์ของคุณ ตั้งวงเงิน แล้วติดตามดูว่าเอเจนต์ตัดสินใจอย่างไร จะชมทีละขั้นจนจบก็ได้ หรือกด “หัวข้อ” เพื่อข้ามไปดูเฉพาะเรื่องที่สนใจ คุณออกจากการแนะนำนี้และกลับมาเปิดดูใหม่ได้ทุกเมื่อ";
 "Give your agent a name." = "ตั้งชื่อให้เอเจนต์ของคุณ";
-"Gloam is in beta. Review its fees and the USDG your agent will receive before confirming in Gloam. Merrymen credits only the USDG that arrives." = "Gloam is in beta. Review its fees and the USDG your agent will receive before confirming in Gloam. Merrymen credits only the USDG that arrives.";
+"Gloam is in beta. Review its fees and the USDG your agent will receive before confirming in Gloam. AgentCap credits only the USDG that arrives." = "Gloam is in beta. Review its fees and the USDG your agent will receive before confirming in Gloam. AgentCap credits only the USDG that arrives.";
 "h" = "h";
 "Hang out in Telegram groups" = "Hang out in Telegram groups";
 "Hard strategist ceiling per proposed trade — beneath the grant caps." = "Hard strategist ceiling per proposed trade — beneath the grant caps.";
 "held" = "held";
 "Holdings" = "สถานะการถือครอง";
 "Home" = "หน้าหลัก";
-"Home is your merryman and your money. Explore holds the leaderboard and the markets: open any token to see its price history and the trades agents have recorded against it." = "หน้าแรกคือ merryman และเงินของคุณ ส่วนสำรวจ (Explore) มีทั้งกระดานจัดอันดับและตลาดต่าง ๆ เปิดโทเคนใดก็ได้เพื่อดูประวัติราคา และรายการซื้อขายที่เอเจนต์ต่าง ๆ บันทึกไว้กับโทเคนนั้น";
+"Home is your agentcapavatar and your money. Explore holds the leaderboard and the markets: open any token to see its price history and the trades agents have recorded against it." = "หน้าแรกคือ agentcapavatar และเงินของคุณ ส่วนสำรวจ (Explore) มีทั้งกระดานจัดอันดับและตลาดต่าง ๆ เปิดโทเคนใดก็ได้เพื่อดูประวัติราคา และรายการซื้อขายที่เอเจนต์ต่าง ๆ บันทึกไว้กับโทเคนนั้น";
 "How chatty in groups" = "How chatty in groups";
 "How many class positions may be held at once. 0 = no limit beyond the scout budget." = "How many class positions may be held at once. 0 = no limit beyond the scout budget.";
 "How often it joins in when nobody called it. A mention, a reply to it or its name gets an answer at any level." = "How often it joins in when nobody called it. A mention, a reply to it or its name gets an answer at any level.";
@@ -254,7 +254,7 @@
 "no link code until your agent is running" = "no link code until your agent is running";
 "no link code until your agent resumes" = "no link code until your agent resumes";
 "No link code yet. Your agent mints one on its next pass with this token set — check back shortly." = "No link code yet. Your agent mints one on its next pass with this token set — check back shortly.";
-"no link code: this bot is connected to another Merrymen agent" = "no link code: this bot is connected to another Merrymen agent";
+"no link code: this bot is connected to another AgentCap agent" = "no link code: this bot is connected to another AgentCap agent";
 "no linked chats yet" = "no linked chats yet";
 "Normal — joins in now and then" = "Normal — joins in now and then";
 "Not copy trading. A trader buying is a reason to research, not an instruction: Brain decides, sizes stay inside your scout budget and per-token limit, and every cap, permission and the live-trading switch still apply." = "Not copy trading. A trader buying is a reason to research, not an instruction: Brain decides, sizes stay inside your scout budget and per-token limit, and every cap, permission and the live-trading switch still apply.";
@@ -417,8 +417,8 @@
 "The wire in control on a public profile adds that agent’s published reasoning to your agent’s context. It does not copy trades automatically or override your own limits." = "ปุ่ม “เชื่อมเข้า” บนโปรไฟล์สาธารณะจะดึงเหตุผลที่เอเจนต์ตัวนั้นเผยแพร่ไว้ มาเป็นข้อมูลประกอบให้เอเจนต์ของคุณ แต่ไม่ได้ลอกการเทรดมาโดยอัตโนมัติ และไม่ได้ไปลบล้างวงเงินที่คุณตั้งไว้";
 "These positions stay valued at purchase cost even if they lose value, so if one goes to zero your equity will not show it and the breaker will not fire." = "These positions stay valued at purchase cost even if they lose value, so if one goes to zero your equity will not show it and the breaker will not fire.";
 "Theses" = "บทวิเคราะห์";
-"This bot is connected to another Merrymen agent, so this one doesn't read it and has no link code for it. To move it here, save its token again and confirm the move; you'll then /link again here." = "This bot is connected to another Merrymen agent, so this one doesn't read it and has no link code for it. To move it here, save its token again and confirm the move; you'll then /link again here.";
-"This bot is connected to another Merrymen agent, so this one doesn't read it." = "This bot is connected to another Merrymen agent, so this one doesn't read it.";
+"This bot is connected to another AgentCap agent, so this one doesn't read it and has no link code for it. To move it here, save its token again and confirm the move; you'll then /link again here." = "This bot is connected to another AgentCap agent, so this one doesn't read it and has no link code for it. To move it here, save its token again and confirm the move; you'll then /link again here.";
+"This bot is connected to another AgentCap agent, so this one doesn't read it." = "This bot is connected to another AgentCap agent, so this one doesn't read it.";
 "This code works once your bot is being heard again." = "This code works once your bot is being heard again.";
 "This is remote control of your computer." = "This is remote control of your computer.";
 "This is where you ask your agent to explain a decision in its own words. There is a first question waiting in the box — send it whenever you like." = "ตรงนี้คือที่ที่คุณให้เอเจนต์อธิบายการตัดสินใจด้วยถ้อยคำของเอเจนต์เอง มีคำถามแรกเตรียมไว้ในช่องข้อความแล้ว จะกดส่งเมื่อไรก็ได้";
@@ -467,9 +467,9 @@
 "watch the Fomo trader cohort" = "watch the Fomo trader cohort";
 "Watching the trader cohort and acting on Fomo research run only on the hosted service. On this install Fomo answers the questions you ask, and nothing more." = "Watching the trader cohort and acting on Fomo research run only on the hosted service. On this install Fomo answers the questions you ask, and nothing more.";
 "Watchlist" = "รายการเฝ้าดู";
-"We couldn’t read your $MERRYMEN balance just now, so we can’t tell whether it will run. That’s our read failing, not your wallet." = "We couldn’t read your $MERRYMEN balance just now, so we can’t tell whether it will run. That’s our read failing, not your wallet.";
+"We couldn’t read your $AGENTCAP balance just now, so we can’t tell whether it will run. That’s our read failing, not your wallet." = "We couldn’t read your $AGENTCAP balance just now, so we can’t tell whether it will run. That’s our read failing, not your wallet.";
 "weekend-gap: total USDG deployed per gap window." = "weekend-gap: total USDG deployed per gap window.";
-"Welcome to merrymen." = "ยินดีต้อนรับสู่ merrymen";
+"Welcome to agentcap." = "ยินดีต้อนรับสู่ agentcap";
 "What is this? →" = "What is this? →";
 "What it trades" = "What it trades";
 "What you actually hold." = "ดูว่าคุณถืออะไรอยู่จริง ๆ";
@@ -497,6 +497,6 @@
 "Your bot is saved. Its link code appears here once your agent is running, and it isn't running right now." = "Your bot is saved. Its link code appears here once your agent is running, and it isn't running right now.";
 "Your bot is saved. Trading is paused for recovery, so {bot} won't answer yet and has no link code; both come once your agent resumes." = "Your bot is saved. Trading is paused for recovery, so {bot} won't answer yet and has no link code; both come once your agent resumes.";
 "Your link code appears here once a token is saved." = "Your link code appears here once a token is saved.";
-"Your Merryman tracks active memecoin pools with at least $100,000 in daily volume, 20 distinct buyers, recent activity and both buys and sells. Brain reviews eligible coins in the background about once a minute; execution and exit checks run every 15 seconds. New buys need a fresh Brain approval. Brain can also sell early. The fast profile attempts exits at −10%, +20%, or after 30 minutes, even while Brain is unavailable. Liquidity loss can trigger an earlier exit." = "Your Merryman tracks active memecoin pools with at least $100,000 in daily volume, 20 distinct buyers, recent activity and both buys and sells. Brain reviews eligible coins in the background about once a minute; execution and exit checks run every 15 seconds. New buys need a fresh Brain approval. Brain can also sell early. The fast profile attempts exits at −10%, +20%, or after 30 minutes, even while Brain is unavailable. Liquidity loss can trigger an earlier exit.";
+"Your AgentCapAvatar tracks active memecoin pools with at least $100,000 in daily volume, 20 distinct buyers, recent activity and both buys and sells. Brain reviews eligible coins in the background about once a minute; execution and exit checks run every 15 seconds. New buys need a fresh Brain approval. Brain can also sell early. The fast profile attempts exits at −10%, +20%, or after 30 minutes, even while Brain is unavailable. Liquidity loss can trigger an earlier exit." = "Your AgentCapAvatar tracks active memecoin pools with at least $100,000 in daily volume, 20 distinct buyers, recent activity and both buys and sells. Brain reviews eligible coins in the background about once a minute; execution and exit checks run every 15 seconds. New buys need a fresh Brain approval. Brain can also sell early. The fast profile attempts exits at −10%, +20%, or after 30 minutes, even while Brain is unavailable. Liquidity loss can trigger an earlier exit.";
 "Your practice book couldn't be restored after a server update ({reason}). Nothing was traded or lost, and the team has been alerted." = "Your practice book couldn't be restored after a server update ({reason}). Nothing was traded or lost, and the team has been alerted.";
 "Your practice book couldn't be restored after a server update ({reason}). Nothing was traded or lost." = "Your practice book couldn't be restored after a server update ({reason}). Nothing was traded or lost.";

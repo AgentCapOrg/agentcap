@@ -23,21 +23,21 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-import { bindingMessage } from "@merrymen/core";
+import { bindingMessage } from "@agentcap/core";
 
 // Set BEFORE the auth functions are called — they read the secret at call time,
 // not at import — so a static import is safe and the CJS test target is happy.
 // Same arrangement as auth.test.ts.
-process.env.MERRYMEN_SESSION_SECRET = "test-secret-at-least-thirty-two-characters-long";
-const testHome = mkdtempSync(join(tmpdir(), "merrymen-binding-"));
-process.env.MERRYMEN_HOME = testHome;
+process.env.AGENTCAP_SESSION_SECRET = "test-secret-at-least-thirty-two-characters-long";
+const testHome = mkdtempSync(join(tmpdir(), "agentcap-binding-"));
+process.env.AGENTCAP_HOME = testHome;
 delete process.env.DATABASE_URL;
-delete process.env.MERRYMEN_HOSTED;
+delete process.env.AGENTCAP_HOSTED;
 after(() => rmSync(testHome, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 }));
 
 import { challengeMessage, issueChallengeNonce, verifyGrantBinding } from "./auth";
 
-const ORIGIN = "https://app.merrymen.dev";
+const ORIGIN = "https://app.agentcap.xyz";
 const SMART = "0x00000000000000000000000000000000000000a1" as `0x${string}`;
 const CHAIN = 4663;
 
@@ -195,7 +195,7 @@ test("the binding text is not confusable with the login challenge", async () => 
 });
 
 test("a claim on one chain does not bind on the other", async () => {
-  // merrymen runs testnet 46630 and mainnet 4663 from one origin.
+  // agentcap runs testnet 46630 and mainnet 4663 from one origin.
   const { wallet, owner } = actors();
   const nonce = issueChallengeNonce(ORIGIN);
   const onTestnet = bindingMessage({ origin: ORIGIN, nonce, owner: owner.address, smartAccount: SMART, chainId: 46630 });

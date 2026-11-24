@@ -44,7 +44,7 @@
  * Every statement here is written once, in the sqlite spelling db.ts speaks,
  * so the tests run the SQL production runs.
  */
-import { SETTINGS_DEFAULTS, type MerrymenSettings } from "../../packages/core/src/index";
+import { SETTINGS_DEFAULTS, type AgentCapSettings } from "../../packages/core/src/index";
 import { rootDb, type Db } from "./db";
 import { botIdOf, tokenTagOf } from "./telegram/state";
 
@@ -245,7 +245,7 @@ export async function releaseBotClaims(db: Db, tenant: string, keep?: string | n
 }
 
 /** The bot the token in these settings belongs to, judged as the child reads it (botTokenOf), or null. */
-export function storedBotOf(settings: MerrymenSettings | null): string | null {
+export function storedBotOf(settings: AgentCapSettings | null): string | null {
   const token = botTokenOf(settings);
   return token === null ? null : botIdOf(token);
 }
@@ -409,13 +409,13 @@ export async function undoBotClaimUnlessSaved(
  * a stored ` 111:x` is bot 111 here as it is there, and not a token with no
  * bot that the gate lets through untouched.
  */
-export function botTokenOf(settings: MerrymenSettings | null): string | null {
+export function botTokenOf(settings: AgentCapSettings | null): string | null {
   const token = settings?.telegramBotToken;
   return typeof token === "string" && token.trim() !== "" ? token.trim() : null;
 }
 
 /** The settings without the bot token: what a process that may not poll the bot is handed. Never mutates its input. */
-export function withoutBotToken(settings: MerrymenSettings): MerrymenSettings {
+export function withoutBotToken(settings: AgentCapSettings): AgentCapSettings {
   const { telegramBotToken: _taken, ...rest } = settings;
   return rest;
 }
@@ -428,7 +428,7 @@ export function withoutBotToken(settings: MerrymenSettings): MerrymenSettings {
  * the allowlist is in the sealed settings and survives a redeploy, where the
  * mirrored owner_id mostly does not.
  */
-export function ownerLinked(settings: MerrymenSettings): boolean {
+export function ownerLinked(settings: AgentCapSettings): boolean {
   const list = settings.telegramAllowlist;
   return Array.isArray(list) && list.some((c) => typeof c === "number" && c > 0);
 }
@@ -470,14 +470,14 @@ export function pollerKeyOf(token: string): string | null {
 /**
  * WILL THE PROCESS THESE SETTINGS ARE WRITTEN FOR POLL THE BOT? The child and
  * the hold process each resolve it as settings.ts does: the file's own
- * `telegramEnabled`, else MERRYMEN_TELEGRAM_ENABLED from the env they inherit
+ * `telegramEnabled`, else AGENTCAP_TELEGRAM_ENABLED from the env they inherit
  * from the orchestrator (childEnv does not strip it), else the default, which
  * is off; and neither polls without a token.
  */
-export function botWillPoll(settings: MerrymenSettings | null): boolean {
+export function botWillPoll(settings: AgentCapSettings | null): boolean {
   if (!settings || botTokenOf(settings) === null) return false;
   if (typeof settings.telegramEnabled === "boolean") return settings.telegramEnabled;
-  const env = process.env.MERRYMEN_TELEGRAM_ENABLED;
+  const env = process.env.AGENTCAP_TELEGRAM_ENABLED;
   if (env !== undefined) return env === "1" || env.toLowerCase() === "true";
   return SETTINGS_DEFAULTS.telegramEnabled;
 }
@@ -505,7 +505,7 @@ export type ClaimGateVerdict =
  * BEFORE asking claimGate, so the answer claimGate gives is judged against it.
  * Null when the claims could not be read: there is nothing to add to.
  */
-export function unclaimedBot(settings: MerrymenSettings, claims: ReadonlyMap<string, string> | null): string | null {
+export function unclaimedBot(settings: AgentCapSettings, claims: ReadonlyMap<string, string> | null): string | null {
   const token = botTokenOf(settings);
   const bot = token === null ? null : botIdOf(token);
   return claims !== null && bot !== null && botWillPoll(settings) && !claims.has(bot) ? bot : null;
@@ -553,11 +553,11 @@ export function unclaimedBot(settings: MerrymenSettings, claims: ReadonlyMap<str
  * token stays, a copy without it when it does not. Never mutates its input.
  */
 export function claimGate(
-  settings: MerrymenSettings,
+  settings: AgentCapSettings,
   tenant: string,
   claims: ReadonlyMap<string, string> | null,
   seen?: ReadonlyMap<string, string>,
-): { settings: MerrymenSettings; verdict: ClaimGateVerdict } {
+): { settings: AgentCapSettings; verdict: ClaimGateVerdict } {
   const token = botTokenOf(settings);
   const bot = token === null ? null : botIdOf(token);
   if (!botWillPoll(settings) || !token || !bot) return { settings, verdict: { kind: "idle" } };

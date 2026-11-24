@@ -22,7 +22,7 @@ node --import tsx scripts/in-kind-preview/preview.mjs \
 Run it from the repository root with Node 22.13+ and the repository
 dependencies. The external runtime `pg` driver must already be available, as
 it is for the existing Postgres backend. Supply `DATABASE_URL` through the
-existing private credential mechanism. An optional `MERRYMEN_IN_KIND_RPC`
+existing private credential mechanism. An optional `AGENTCAP_IN_KIND_RPC`
 selects the read endpoint. The default is the public Robinhood Chain mainnet
 RPC. Never paste either value into a PR, a terminal command, a preview or a
 chat.

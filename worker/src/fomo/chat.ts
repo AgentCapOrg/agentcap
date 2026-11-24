@@ -14,7 +14,7 @@
  *   4. a clarification is replied verbatim, with no tool call
  *   5. the plan's tool calls run through the broker, in order, at most four,
  *      at interactive priority; mutations are dropped for a group, and a group
- *      question about the owner's own research state or who Merrymen watches
+ *      question about the owner's own research state or who AgentCap watches
  *      is deflected to a DM before anything is spent. One row of the trader
  *      board asked about with it ("...and what did he make money on") is
  *      looked up next, by the user id the provider's own board gave
@@ -150,17 +150,17 @@ const OWNER_ONLY_INTENTS: ReadonlySet<string> = new Set(["research-status", "why
 
 /**
  * WHAT A GROUP NEVER HEARS ANSWERED: the owner's own research state, and who
- * Merrymen watches or follows. Coin-level aggregates, the public leaderboard
+ * AgentCap watches or follows. Coin-level aggregates, the public leaderboard
  * and ONE NAMED TRADER'S PUBLIC FOMO DATA are a room's, for anyone who asks,
  * the owner included (Milla, 2026-10-07: a named trader's public Fomo data
  * may be answered in a group): who they are, what they hold, what they
  * traded, what they made or lost money on (provider-reported). The renderer
- * leaves out of a room whether Merrymen watches them (render.ts). A trader's
+ * leaves out of a room whether AgentCap watches them (render.ts). A trader's
  * own theses, or a coin read narrowed to one trader, still go to a DM.
  */
 function groupMustDeflect(plan: FomoQuestionPlan): boolean {
   if (OWNER_ONLY_INTENTS.has(plan.intent)) return true;
-  // The leaderboard cut to the traders Merrymen watches ("top traders we
+  // The leaderboard cut to the traders AgentCap watches ("top traders we
   // watch") IS the watch list, and who it follows is never a room's.
   if (plan.intent === "rankings-traders" && plan.cohortScope) return true;
   // Any read cut to the watched traders ("what are watched traders buying", their opportunities) is the watch list.
@@ -251,7 +251,7 @@ function rowCall(plan: FomoQuestionPlan, envelopes: readonly FomoEnvelope[]): Fo
 /**
  * THE BOARD TO REMEMBER, so "the second one" and "#3" mean its rows next
  * (subject-memory.ts board): Fomo's public trader board as it answered, its
- * ranks, user ids and handles only. Never one cut to Merrymen's watched
+ * ranks, user ids and handles only. Never one cut to AgentCap's watched
  * traders. Only the rows the audience heard (render.ts shownTraderRows), and
  * the row it was answered about with the board: in a room "the last one" is
  * the last row it saw, and "the fifth one" one it never saw asks which.

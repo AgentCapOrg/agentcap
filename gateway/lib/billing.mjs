@@ -1,13 +1,13 @@
 /**
- * BILLING: MERRYMEN-paid plans for the partner API.
+ * BILLING: AGENTCAP-paid plans for the partner API.
  *
  * A developer signs in with a wallet, creates an account, and pays by sending
- * $MERRYMEN from that wallet to a dedicated payments address. This module
+ * $AGENTCAP from that wallet to a dedicated payments address. This module
  * verifies such a transfer on chain (READ-ONLY: the gateway never sends a
  * transaction and holds no key), keeps the account's credit and plan in an
  * append-only ledger, and meters every partner request against the plan.
  *
- * THE LEDGER IS THE TRUTH. $MERRYMEN_DATA_DIR/billing.jsonl, one JSON record a
+ * THE LEDGER IS THE TRUTH. $AGENTCAP_DATA_DIR/billing.jsonl, one JSON record a
  * line, replayed once at boot into an in-memory index and extended only by
  * appends. One append per state change; the index changes only after that
  * append resolves. Replay enforces the money invariants itself, so a record
@@ -135,7 +135,7 @@ import { ONE_TOKEN, PERIOD_DAYS, PERIOD_MS, PLANS, TOKEN, ceilTokens, formatToke
 
 export const LEDGER_FILE = "billing.jsonl";
 export const USAGE_FILE = "usage.json";
-export const UPGRADE_URL = "https://merrymen.dev/api#plans";
+export const UPGRADE_URL = "https://agentcap.xyz/api#plans";
 export const MODES = Object.freeze(["off", "observe", "enforce"]);
 
 const MAX_LINE_BYTES = 4096;
@@ -187,22 +187,22 @@ const errName = (err) => String(err?.code ?? err?.name ?? "Error").replace(/[^\w
  *
  * DURABILITY GATE. The ledger is the only record of who paid. On a disk that a
  * deploy wipes (the default /data with no volume, render.yaml's service), every
- * past transfer becomes creditable again. So billing needs MERRYMEN_DATA_DIR set
+ * past transfer becomes creditable again. So billing needs AGENTCAP_DATA_DIR set
  * explicitly, and a single process: two would each keep their own index and
  * credit one transfer twice.
  */
 export function parseBillingConfig(env = process.env) {
   const notes = [];
   const shown = (v) => JSON.stringify(String(v).slice(0, 80));
-  const requested = String(env.MERRYMEN_BILLING ?? "").trim().toLowerCase() || "off";
+  const requested = String(env.AGENTCAP_BILLING ?? "").trim().toLowerCase() || "off";
   let mode = MODES.includes(requested) ? requested : "off";
-  if (mode !== requested) notes.push(`MERRYMEN_BILLING=${shown(requested)} is not off, observe or enforce: billing is off`);
+  if (mode !== requested) notes.push(`AGENTCAP_BILLING=${shown(requested)} is not off, observe or enforce: billing is off`);
 
-  const dataDirExplicit = String(env.MERRYMEN_DATA_DIR ?? "").trim() !== "";
-  const dataDir = dataDirExplicit ? env.MERRYMEN_DATA_DIR.trim() : "/data";
+  const dataDirExplicit = String(env.AGENTCAP_DATA_DIR ?? "").trim() !== "";
+  const dataDir = dataDirExplicit ? env.AGENTCAP_DATA_DIR.trim() : "/data";
   // The data directory must be a mounted volume (createBilling checks), unless
   // the operator says the disk under it survives a redeploy on its own.
-  const dataDirPersistent = String(env.MERRYMEN_DATA_DIR_PERSISTENT ?? "").trim() === "1";
+  const dataDirPersistent = String(env.AGENTCAP_DATA_DIR_PERSISTENT ?? "").trim() === "1";
 
   const address = (raw, name) => {
     const v = String(raw ?? "").trim().toLowerCase();
@@ -215,19 +215,19 @@ export function parseBillingConfig(env = process.env) {
     }
     return v;
   };
-  let treasury = address(env.MERRYMEN_PAYMENTS_TREASURY, "MERRYMEN_PAYMENTS_TREASURY");
-  const previous = [...new Set(String(env.MERRYMEN_PAYMENTS_PREVIOUS_TREASURIES ?? "").split(",")
+  let treasury = address(env.AGENTCAP_PAYMENTS_TREASURY, "AGENTCAP_PAYMENTS_TREASURY");
+  const previous = [...new Set(String(env.AGENTCAP_PAYMENTS_PREVIOUS_TREASURIES ?? "").split(",")
     .map((s) => s.trim()).filter(Boolean)
-    .map((s) => address(s, "MERRYMEN_PAYMENTS_PREVIOUS_TREASURIES entry")).filter(Boolean))]
+    .map((s) => address(s, "AGENTCAP_PAYMENTS_PREVIOUS_TREASURIES entry")).filter(Boolean))]
     .filter((a) => a !== treasury);
 
-  const rawStart = String(env.MERRYMEN_PAYMENTS_START_BLOCK ?? "").trim();
+  const rawStart = String(env.AGENTCAP_PAYMENTS_START_BLOCK ?? "").trim();
   let startBlock = /^\d{1,15}$/.test(rawStart) ? Number(rawStart) : null;
-  if (rawStart && startBlock === null) notes.push(`MERRYMEN_PAYMENTS_START_BLOCK ${shown(rawStart)} is not a block number`);
+  if (rawStart && startBlock === null) notes.push(`AGENTCAP_PAYMENTS_START_BLOCK ${shown(rawStart)} is not a block number`);
   // Without a floor, every transfer this address ever received from a signed-in
   // wallet would be claimable, however old and whatever it was for.
   if (treasury && startBlock === null) {
-    notes.push("MERRYMEN_PAYMENTS_TREASURY needs MERRYMEN_PAYMENTS_START_BLOCK: payments are unavailable");
+    notes.push("AGENTCAP_PAYMENTS_TREASURY needs AGENTCAP_PAYMENTS_START_BLOCK: payments are unavailable");
     treasury = null;
   }
 
@@ -238,16 +238,16 @@ export function parseBillingConfig(env = process.env) {
     notes.push(`${name} ${shown(v)} must be an integer of at least ${min}: using ${fallback}`);
     return fallback;
   };
-  const minConfirmations = int(env.MERRYMEN_PAYMENTS_MIN_CONFIRMATIONS, 64, 1, "MERRYMEN_PAYMENTS_MIN_CONFIRMATIONS");
-  const minAgeSec = int(env.MERRYMEN_PAYMENTS_MIN_AGE_SEC, 120, 0, "MERRYMEN_PAYMENTS_MIN_AGE_SEC");
-  const rpc = String(env.MERRYMEN_PAYMENTS_RPC ?? "").trim() || String(env.MERRYMEN_GATEWAY_RPC ?? "").trim() || null;
+  const minConfirmations = int(env.AGENTCAP_PAYMENTS_MIN_CONFIRMATIONS, 64, 1, "AGENTCAP_PAYMENTS_MIN_CONFIRMATIONS");
+  const minAgeSec = int(env.AGENTCAP_PAYMENTS_MIN_AGE_SEC, 120, 0, "AGENTCAP_PAYMENTS_MIN_AGE_SEC");
+  const rpc = String(env.AGENTCAP_PAYMENTS_RPC ?? "").trim() || String(env.AGENTCAP_GATEWAY_RPC ?? "").trim() || null;
 
   if (mode !== "off" && !dataDirExplicit) {
-    notes.push("billing needs MERRYMEN_DATA_DIR set explicitly to a persistent volume, on a single instance: billing is off");
+    notes.push("billing needs AGENTCAP_DATA_DIR set explicitly to a persistent volume, on a single instance: billing is off");
     mode = "off";
   }
   if (mode === "enforce" && !treasury) {
-    notes.push("enforce needs MERRYMEN_PAYMENTS_TREASURY and MERRYMEN_PAYMENTS_START_BLOCK: running observe");
+    notes.push("enforce needs AGENTCAP_PAYMENTS_TREASURY and AGENTCAP_PAYMENTS_START_BLOCK: running observe");
     mode = "observe";
   }
   if (mode === "observe" && !treasury) notes.push("no payments treasury: plans, accounts and metering work; payments answer 503 payments_unavailable");
@@ -271,11 +271,11 @@ export function createPaymentsClient(url, { timeoutMs = READ_TIMEOUT_MS } = {}) 
  *
  * It must already exist: billing never creates it. A directory made at boot
  * is on whatever disk the process happens to have, which is exactly the case
- * the gate is for: MERRYMEN_DATA_DIR=/data copied from the docs onto a service
+ * the gate is for: AGENTCAP_DATA_DIR=/data copied from the docs onto a service
  * whose volume is detached, cloned without one, or a host with no disk. And it
  * must sit on another filesystem than `/` (a mounted volume, or a directory
  * inside one), unless the operator says that disk itself survives a redeploy
- * (MERRYMEN_DATA_DIR_PERSISTENT=1: a VM's own disk, local development).
+ * (AGENTCAP_DATA_DIR_PERSISTENT=1: a VM's own disk, local development).
  */
 export async function dataDirProblem(dir, { persistent = false, statFn = stat } = {}) {
   let st;
@@ -287,7 +287,7 @@ export async function dataDirProblem(dir, { persistent = false, statFn = stat } 
   let root;
   try { root = await statFn(path.parse(path.resolve(dir)).root); } catch (err) { return `cannot be compared with / (${errName(err)})`; }
   return st.dev === root.dev
-    ? "is on the container's own disk, not a mounted volume (set MERRYMEN_DATA_DIR_PERSISTENT=1 only if that disk survives a redeploy)"
+    ? "is on the container's own disk, not a mounted volume (set AGENTCAP_DATA_DIR_PERSISTENT=1 only if that disk survives a redeploy)"
     : null;
 }
 
@@ -822,10 +822,10 @@ export function matchTransfers(logs, { owner, recipients }) {
 /** Headers on every metered response and on /meta. remaining is never negative. */
 export function quotaHeaders({ limit, used, resetsAt, enforced }) {
   return {
-    "x-merrymen-quota-limit": String(limit),
-    "x-merrymen-quota-remaining": String(Math.max(0, limit - used)),
-    "x-merrymen-quota-reset": String(Math.ceil(resetsAt / 1000)),
-    "x-merrymen-quota-enforced": enforced ? "true" : "false",
+    "x-agentcap-quota-limit": String(limit),
+    "x-agentcap-quota-remaining": String(Math.max(0, limit - used)),
+    "x-agentcap-quota-reset": String(Math.ceil(resetsAt / 1000)),
+    "x-agentcap-quota-enforced": enforced ? "true" : "false",
   };
 }
 
@@ -1097,7 +1097,7 @@ export async function createBilling({
       }
       await append(chargeFor(acct, act, now), { at: now });
       n += 1;
-      log(`[billing] ${owner} ${act.reason} ${act.plan.id}: ${formatTokens(act.price)} MERRYMEN of credit used`);
+      log(`[billing] ${owner} ${act.reason} ${act.plan.id}: ${formatTokens(act.price)} AGENTCAP of credit used`);
     }
     return n;
   }
@@ -1226,16 +1226,16 @@ export async function createBilling({
     const m = matchTransfers(receipt.logs, { owner, recipients });
     if (m.reason) {
       const msg = {
-        wrong_token: `This transaction did not transfer $MERRYMEN (${TOKEN.address}).`,
-        wrong_sender: `This transfer was not sent from your signed-in wallet ${owner}. Only $MERRYMEN sent from ${owner} is credited to this account; a transfer from another wallet is credited by signing in with that wallet and submitting the hash there.`,
-        wrong_recipient: `This transfer did not go to the Merrymen payments wallet ${treasury}.`,
+        wrong_token: `This transaction did not transfer $AGENTCAP (${TOKEN.address}).`,
+        wrong_sender: `This transfer was not sent from your signed-in wallet ${owner}. Only $AGENTCAP sent from ${owner} is credited to this account; a transfer from another wallet is credited by signing in with that wallet and submitting the hash there.`,
+        wrong_recipient: `This transfer did not go to the AgentCap payments wallet ${treasury}.`,
       }[m.reason];
       return { answer: fail(422, "payment_not_found", msg, { reason: m.reason }) };
     }
     if (Number(receipt.blockNumber) < startBlock) {
       return { answer: fail(422, "payment_not_found", "This transfer was made before API payments opened and cannot be credited.", { reason: "before_start_block" }) };
     }
-    if (m.amount < ONE_TOKEN) return { answer: fail(422, "payment_too_small", "Send at least 1 MERRYMEN.") };
+    if (m.amount < ONE_TOKEN) return { answer: fail(422, "payment_too_small", "Send at least 1 AGENTCAP.") };
     if (m.logIndexes.length > MAX_LOGS) return { answer: fail(422, "payment_unsupported", "This transaction holds too many transfers. Send one transfer to the payments wallet.") };
     const confirmations = latest >= receipt.blockNumber ? Number(latest - receipt.blockNumber + 1n) : 0;
     if (confirmations < minConfirmations || ageMs < minAgeSec * 1000) return { answer: confirming(hash, confirmations, ageMs) };
@@ -1279,7 +1279,7 @@ export async function createBilling({
           return { status: 200, json: { already: true, ...accountJson(account(owner)) } };
         }
         await append({ ...rec, account_id: acct.account_id });
-        log(`[billing] ${owner} paid ${formatTokens(rec.amount_raw)} MERRYMEN in ${rec.tx_hash}`);
+        log(`[billing] ${owner} paid ${formatTokens(rec.amount_raw)} AGENTCAP in ${rec.tx_hash}`);
         await settleLocked(owner);
       } catch (err) { return unavailable(err); }
       return { status: 200, json: { already: false,
@@ -1369,7 +1369,7 @@ export async function createBilling({
         if (dryRun) continue;
         if (!suspects.has(p.id)) {
           suspects.set(p.id, why);
-          log(`[billing] ${p.tx_hash} from ${p.owner} (${formatTokens(p.amount)} MERRYMEN) looks ${why}: checking it again before reversing`);
+          log(`[billing] ${p.tx_hash} from ${p.owner} (${formatTokens(p.amount)} AGENTCAP) looks ${why}: checking it again before reversing`);
           continue;
         }
         suspects.delete(p.id);
@@ -1378,7 +1378,7 @@ export async function createBilling({
           if (!cur || cur.reversed) return false;
           try {
             await append({ type: "reversal", account_id: cur.account_id, payment_id: cur.id, amount_raw: cur.amount.toString(), why });
-            log(`[billing] PAYMENT REVERSED: ${cur.tx_hash} from ${cur.owner}, ${formatTokens(cur.amount)} MERRYMEN (${why}). If it lands again in a later block, the developer submits its hash again.`);
+            log(`[billing] PAYMENT REVERSED: ${cur.tx_hash} from ${cur.owner}, ${formatTokens(cur.amount)} AGENTCAP (${why}). If it lands again in a later block, the developer submits its hash again.`);
             return true;
           } catch (err) {
             // Not written: it is checked again from the start next run.

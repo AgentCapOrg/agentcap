@@ -24,13 +24,13 @@ const cleanup = [];
 after(() => Promise.all(cleanup.map((fn) => fn())));
 
 async function setup(env = {}) {
-  const dir = await mkdtemp(path.join(tmpdir(), "merrymen-billing-cli-"));
+  const dir = await mkdtemp(path.join(tmpdir(), "agentcap-billing-cli-"));
   cleanup.push(() => rm(dir, { recursive: true, force: true }));
   const billing = await createBilling({ dataDir: dir, dataDirPersistent: true, mode: "observe", timers: false, log: () => {}, keyRegistry: async () => new Map(), ...env.billing });
   const run = async (...args) => {
     try {
       const { stdout, stderr } = await promisify(execFile)(process.execPath, [CLI, ...args],
-        { env: { PATH: process.env.PATH, MERRYMEN_DATA_DIR: dir, MERRYMEN_BILLING: "observe", ...env.process } });
+        { env: { PATH: process.env.PATH, AGENTCAP_DATA_DIR: dir, AGENTCAP_BILLING: "observe", ...env.process } });
       return { code: 0, stdout, stderr };
     } catch (err) {
       return { code: err.code, stdout: err.stdout, stderr: err.stderr };
@@ -45,7 +45,7 @@ test("adjust and comp append through the gateway's writer, and the running gatew
   assert.equal((await s.billing.createAccount(OWNER, "Acme")).status, 201);
   const adjusted = await s.run("adjust", OWNER.toUpperCase().replace("0X", "0x"), "+250000.5", "--note", "paid the old address by hand");
   assert.equal(adjusted.code, 0, adjusted.stderr);
-  assert.match(adjusted.stdout, /\+250000\.5 MERRYMEN of API credit, now 250000\.5/);
+  assert.match(adjusted.stdout, /\+250000\.5 AGENTCAP of API credit, now 250000\.5/);
   const adj = (await s.records()).at(-1);
   assert.deepEqual([adj.type, adj.amount_raw, adj.note, adj.operator], ["adjustment", (T(250_000) + ONE_TOKEN / 2n).toString(), "paid the old address by hand", true]);
   await s.billing.tail();
@@ -159,7 +159,7 @@ test("reconcile is a dry run: it names a payment the chain no longer holds and w
   const now = { t: Date.now() };
   const s = await setup({
     billing: { treasury: TREASURY, startBlock: 1, minConfirmations: 1, minAgeSec: 0, publicClient: createPaymentsClient(rpc.url), now: () => now.t },
-    process: { MERRYMEN_PAYMENTS_RPC: rpc.url, MERRYMEN_PAYMENTS_TREASURY: TREASURY, MERRYMEN_PAYMENTS_START_BLOCK: "1" },
+    process: { AGENTCAP_PAYMENTS_RPC: rpc.url, AGENTCAP_PAYMENTS_TREASURY: TREASURY, AGENTCAP_PAYMENTS_START_BLOCK: "1" },
   });
   await s.billing.createAccount(OWNER, "Acme");
   const hash = rpc.chain.mine({ logs: [transferLog({ from: OWNER, to: TREASURY, value: T(100_000) })] });
@@ -171,10 +171,10 @@ test("reconcile is a dry run: it names a payment the chain no longer holds and w
   const before = (await s.records()).length;
   const r = await s.run("reconcile", "--all");
   assert.equal(r.code, 0, r.stderr);
-  assert.match(r.stdout, new RegExp(`WOULD REVERSE\\s+${hash}\\s+${OWNER}\\s+100000 MERRYMEN\\s+\\(receipt_missing\\)`));
+  assert.match(r.stdout, new RegExp(`WOULD REVERSE\\s+${hash}\\s+${OWNER}\\s+100000 AGENTCAP\\s+\\(receipt_missing\\)`));
   assert.match(r.stdout, /dry run: nothing written/);
   assert.equal((await s.records()).length, before);
-  const none =await promisify(execFile)(process.execPath, [CLI, "reconcile"], { env: { PATH: process.env.PATH, MERRYMEN_DATA_DIR: s.dir } }).catch((e) => e);
+  const none =await promisify(execFile)(process.execPath, [CLI, "reconcile"], { env: { PATH: process.env.PATH, AGENTCAP_DATA_DIR: s.dir } }).catch((e) => e);
   assert.equal(none.code, 1);
-  assert.match(none.stderr, /MERRYMEN_PAYMENTS_RPC/);
+  assert.match(none.stderr, /AGENTCAP_PAYMENTS_RPC/);
 });

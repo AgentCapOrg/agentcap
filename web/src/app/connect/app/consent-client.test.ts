@@ -71,7 +71,7 @@ beforeEach(() => {
     return json({
       signedIn,
       client: { name: "Grok", host: "grok.com", registration: "dynamic", redirectHost: "grok.com", local: false },
-      agents: signedIn ? [{ slug: owner, name: `${owner} Merryman`, account: null }] : [],
+      agents: signedIn ? [{ slug: owner, name: `${owner} AgentCapAvatar`, account: null }] : [],
       scopes: [
         { id: "market:read", title: "Read market data", detail: "Market data", level: "read", needsAgent: false, defaultOn: true },
         { id: "agents:read", title: "Read your agent", detail: "Agent details", level: "read", needsAgent: true, defaultOn: true },
@@ -102,16 +102,16 @@ it("switches accounts through complete logout, retaining the request but clearin
   assert.deepEqual(events, ["privy"]);
   assert.equal(button("Allow Grok").disabled, true);
   assert.equal(button("Decline").disabled, true);
-  assert.equal(sessionStorage.getItem("merrymen.mcp-consent"), handle);
+  assert.equal(sessionStorage.getItem("agentcap.mcp-consent"), handle);
   await act(async () => { logoutPrivy.resolve(); });
   assert.deepEqual(events, ["privy", "server"]);
   assert.equal(calls.length, 1, "does not reload between the two session logouts");
   await act(async () => { logoutServer.resolve(); });
   assert.ok(button("Finish test sign-in"));
-  assert.doesNotMatch(ui.container.textContent!, /first Merryman/);
+  assert.doesNotMatch(ui.container.textContent!, /first AgentCapAvatar/);
   owner = "second";
   await ui.click("Finish test sign-in");
-  assert.match(ui.container.textContent!, /second Merryman/);
+  assert.match(ui.container.textContent!, /second AgentCapAvatar/);
   assert.equal(setupCheckbox().checked, false, "explicit setup access from the previous account is not carried across");
   assert.ok(calls.every((call) => call.request === handle));
   await ui.click("Allow Grok");
@@ -126,10 +126,10 @@ it("does not retain an approval action if the account refresh after logout fails
   await ui.click("Use another account");
   failDescribe = true;
   await act(async () => { logoutPrivy.resolve(); logoutServer.resolve(); });
-  assert.doesNotMatch(ui.container.textContent!, /first Merryman/);
+  assert.doesNotMatch(ui.container.textContent!, /first AgentCapAvatar/);
   assert.equal(button("Allow Grok"), undefined);
   assert.match(ui.container.textContent!, /Could not verify the current account/);
-  assert.equal(sessionStorage.getItem("merrymen.mcp-consent"), handle);
+  assert.equal(sessionStorage.getItem("agentcap.mcp-consent"), handle);
 });
 
 for (const failure of ["Privy", "server", "both"] as const) {
@@ -146,7 +146,7 @@ for (const failure of ["Privy", "server", "both"] as const) {
     assert.equal(button("Decline").disabled, true);
     assert.match(ui.container.querySelector('[role="alert"]')?.textContent ?? "", /Sign-out did not finish/);
     assert.equal(button("Retry account switch").disabled, false);
-    assert.equal(sessionStorage.getItem("merrymen.mcp-consent"), handle);
+    assert.equal(sessionStorage.getItem("agentcap.mcp-consent"), handle);
     await ui.click("Allow Grok");
     assert.equal(calls.some((call) => call.action === "decide"), false);
     await ui.remount(React.createElement(ConsentClient));
@@ -160,11 +160,11 @@ for (const failure of ["Privy", "server", "both"] as const) {
     assert.deepEqual(events, ["privy", "server", "privy", "server"]);
     assert.equal(calls.length, 2, "only complete logout may refresh consent");
     assert.ok(button("Finish test sign-in"));
-    assert.doesNotMatch(ui.container.textContent!, /first Merryman|Sign-out did not finish/);
-    assert.equal(sessionStorage.getItem("merrymen.mcp-consent.switching"), null);
+    assert.doesNotMatch(ui.container.textContent!, /first AgentCapAvatar|Sign-out did not finish/);
+    assert.equal(sessionStorage.getItem("agentcap.mcp-consent.switching"), null);
     owner = "second";
     await ui.click("Finish test sign-in");
-    assert.match(ui.container.textContent!, /second Merryman/);
+    assert.match(ui.container.textContent!, /second AgentCapAvatar/);
     assert.equal(button("Allow Grok").disabled, false);
     assert.equal(setupCheckbox().checked, false);
   });

@@ -1,5 +1,5 @@
 /**
- * AUTOMATIC ADMISSION OF RE-SIGNED PAPER TENANTS (MERRYMEN_RESUME_AUTO_PAPER)
+ * AUTOMATIC ADMISSION OF RE-SIGNED PAPER TENANTS (AGENTCAP_RESUME_AUTO_PAPER)
  * THROUGH THE REAL SPAWN PATH.
  *
  * The situation it is for: a pre-incident tenant whose grant expired during
@@ -31,13 +31,13 @@ import { MIRROR_STATE_DDL } from "./ledger-mirror";
 import { PAPER_CHECKPOINT_SCHEMA } from "./paper-checkpoint";
 import type { TenantLease } from "./tenant-lease";
 
-const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-resume-auto-paper-")));
-process.env.MERRYMEN_HOME = fleet;
-process.env.MERRYMEN_HOSTED = "1";
+const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-resume-auto-paper-")));
+process.env.AGENTCAP_HOME = fleet;
+process.env.AGENTCAP_HOSTED = "1";
 delete process.env.DATABASE_URL;
-delete process.env.MERRYMEN_RESUME_AUTO_PAPER;
-delete process.env.MERRYMEN_FLEET_ROLLOUT;
-process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 29).toString("base64");
+delete process.env.AGENTCAP_RESUME_AUTO_PAPER;
+delete process.env.AGENTCAP_FLEET_ROLLOUT;
+process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 29).toString("base64");
 
 const orch = await import("./orchestrator");
 const { childHome, reconcile, setSpawnForTest, setRetirementMemoryStoreForTest, setPaperRestoreForTest, setPersistentHomeVerifierForTest,
@@ -92,13 +92,13 @@ const realPrepare = shared.prepare.bind(shared);
   }
   return realPrepare(sql);
 };
-// What the orchestrator says, without its prefix. MERRYMEN_TEST_VERBOSE=1 prints it as well.
+// What the orchestrator says, without its prefix. AGENTCAP_TEST_VERBOSE=1 prints it as well.
 const lines: string[] = [];
 const realLog = console.log;
 console.log = (...a: unknown[]) => {
   const line = a.map(String).join(" ");
   lines.push(line.replace(/^\[orchestrator\] /, ""));
-  if (process.env.MERRYMEN_TEST_VERBOSE === "1") realLog(line);
+  if (process.env.AGENTCAP_TEST_VERBOSE === "1") realLog(line);
 };
 
 class FakeProc extends EventEmitter {
@@ -108,15 +108,15 @@ class FakeProc extends EventEmitter {
 }
 const forks: Array<{ home: string; level: string | undefined; grant: boolean }> = [];
 setSpawnForTest((_c, _a, options) => {
-  const home = String(options.env?.MERRYMEN_HOME);
-  forks.push({ home, level: options.env?.MERRYMEN_ADMISSION_LEVEL, grant: existsSync(path.join(home, "grant.json")) });
+  const home = String(options.env?.AGENTCAP_HOME);
+  forks.push({ home, level: options.env?.AGENTCAP_ADMISSION_LEVEL, grant: existsSync(path.join(home, "grant.json")) });
   return new FakeProc(70_000 + forks.length) as unknown as ChildProcess;
 });
 
 after(() => {
   setRetirementMemoryStoreForTest(null); setPaperRestoreForTest(null); setPersistentHomeVerifierForTest(null); setLeaseAcquireForTest(null); setResumeChainForTest(null);
   setBasisSeedSharedForTest(null); setPhantomProcessesForTest(0); console.log = realLog;
-  delete process.env.MERRYMEN_RESUME_AUTO_PAPER; delete process.env.MERRYMEN_FLEET_ROLLOUT;
+  delete process.env.AGENTCAP_RESUME_AUTO_PAPER; delete process.env.AGENTCAP_FLEET_ROLLOUT;
   raw.close(); rmSync(fleet, { recursive: true, force: true });
 });
 
@@ -170,7 +170,7 @@ async function preIncident(o: { live?: boolean; expired?: boolean } = {}) {
   for (const [name, body] of [["ledger-source-blocked.json", '{"version":1,"state":"missing-live-source"}'], ["telegram.json", '{"offset":5}']] as const) {
     writeFileSync(path.join(home, name), body, { mode: 0o600 });
   }
-  const stale = new DatabaseSync(path.join(home, "merrymen.db")); stale.exec("CREATE TABLE junk (x); INSERT INTO junk VALUES (1)"); stale.close();
+  const stale = new DatabaseSync(path.join(home, "agentcap.db")); stale.exec("CREATE TABLE junk (x); INSERT INTO junk VALUES (1)"); stale.close();
   await putGrant(tenant, grant(account, owner, { expired: o.expired ?? true }));
   /** The owner signs again: a new expiry, a new server stamp, the same account. */
   const resign = () => putGrant(tenant, grant(account, owner));
@@ -209,7 +209,7 @@ it("off (unset): a re-signed pre-incident paper tenant is held exactly as before
 });
 
 it("on: the roster as it stands is nobody's re-sign; a re-signed paper tenant is previewed, self-approved and admitted in one pass", async () => {
-  process.env.MERRYMEN_RESUME_AUTO_PAPER = "1";
+  process.env.AGENTCAP_RESUME_AUTO_PAPER = "1";
   try {
     // Signed and held before the variable was on: baselined, not admitted.
     const standing = await preIncident({ expired: false });
@@ -245,11 +245,11 @@ it("on: the roster as it stands is nobody's re-sign; a re-signed paper tenant is
     assert.equal(forksOf(standing.tenant).length, 0);
     assert.equal(approvals(standing.tenant).length, 0);
     await cleanUp(t.tenant, standing.tenant);
-  } finally { delete process.env.MERRYMEN_RESUME_AUTO_PAPER; }
+  } finally { delete process.env.AGENTCAP_RESUME_AUTO_PAPER; }
 });
 
 it("on: a re-signed live tenant is previewed and left to the operator — never approved, never read on chain by this lane", async () => {
-  process.env.MERRYMEN_RESUME_AUTO_PAPER = "1";
+  process.env.AGENTCAP_RESUME_AUTO_PAPER = "1";
   try {
     const t = await preIncident({ live: true });
     await pass();
@@ -264,14 +264,14 @@ it("on: a re-signed live tenant is previewed and left to the operator — never 
     const run = rows("SELECT entries_json FROM ledger_resume_preview_runs WHERE run = ?", w.run)[0]!;
     const [entry] = JSON.parse(String(run.entries_json)) as Array<{ pass: boolean; chain: string; digest: string }>;
     assert.deepEqual([entry!.pass, entry!.chain], [true, "required"]);
-    assert.ok(lines.some((l) => l.includes(`approve it by hand: MERRYMEN_RESUME_APPROVE=${t.tenant}:${entry!.digest}`)), "the operator is told the exact approval");
+    assert.ok(lines.some((l) => l.includes(`approve it by hand: AGENTCAP_RESUME_APPROVE=${t.tenant}:${entry!.digest}`)), "the operator is told the exact approval");
     assert.ok(existsSync(path.join(t.home, "ledger-source-blocked.json")), "its home untouched");
     await cleanUp(t.tenant);
-  } finally { delete process.env.MERRYMEN_RESUME_AUTO_PAPER; }
+  } finally { delete process.env.AGENTCAP_RESUME_AUTO_PAPER; }
 });
 
 it("on: a re-signed paper tenant the chain refused at its last admission is previewed with that refusal and left to the operator — never approved past it", async () => {
-  process.env.MERRYMEN_RESUME_AUTO_PAPER = "1";
+  process.env.AGENTCAP_RESUME_AUTO_PAPER = "1";
   try {
     const t = await preIncident();
     await pass();
@@ -301,20 +301,20 @@ it("on: a re-signed paper tenant the chain refused at its last admission is prev
     // NEVER OFFERED A HAND APPROVAL AS A WAY TO TRADE: no line of the lane's gives the approval of its digest, and its own
     // line says to book what the chain showed first, and how to get a fresh chain refusal to book on.
     const said = lines.slice(before);
-    assert.ok(!said.some((l) => l.includes(`MERRYMEN_RESUME_APPROVE=${t.tenant}:`)), said.join("\n"));
+    assert.ok(!said.some((l) => l.includes(`AGENTCAP_RESUME_APPROVE=${t.tenant}:`)), said.join("\n"));
     assert.ok(!said.some((l) => l.includes(entry!.digest) && /approve it by hand/.test(l)));
     const manual = said.find((l) => l.startsWith(`resume auto-paper: ${t.tenant} re-signed and previewed in run `));
     assert.ok(manual?.includes("Held on a chain refusal: an approval does not make it trade until what the chain showed is booked, because admission reads " +
-      "the chain again from where the refused read began. Take it out of MERRYMEN_FLEET_ROLLOUT and book it first (docs/chain-gap-booking.md). If the booking " +
+      "the chain again from where the refused read began. Take it out of AGENTCAP_FLEET_ROLLOUT and book it first (docs/chain-gap-booking.md). If the booking " +
       "tool refuses because a later refusal superseded the chain refusal, preview it and approve the digest that preview prints once"), manual);
     assert.ok(manual?.endsWith("Then take it out of the rollout, book it, preview it again and approve the digest that preview prints, with it in the rollout at exits-only"), manual);
     assert.ok(existsSync(path.join(t.home, "ledger-source-blocked.json")), "its home untouched");
     await cleanUp(t.tenant);
-  } finally { delete process.env.MERRYMEN_RESUME_AUTO_PAPER; }
+  } finally { delete process.env.AGENTCAP_RESUME_AUTO_PAPER; }
 });
 
 it("on: evidence that changes between the automatic approval and the archive refuses it, and nothing re-approves it until the owner signs again", async () => {
-  process.env.MERRYMEN_RESUME_AUTO_PAPER = "1";
+  process.env.AGENTCAP_RESUME_AUTO_PAPER = "1";
   try {
     const t = await preIncident();
     await pass();
@@ -339,13 +339,13 @@ it("on: evidence that changes between the automatic approval and the archive ref
     assert.deepEqual(approvals(t.tenant).map((a) => [a.state, a.source]), [["refused", "auto-paper"], ["applied", "auto-paper"]]);
     assert.equal(forksOf(t.tenant).length, 1);
     await cleanUp(t.tenant);
-  } finally { delete process.env.MERRYMEN_RESUME_AUTO_PAPER; }
+  } finally { delete process.env.AGENTCAP_RESUME_AUTO_PAPER; }
 });
 
 it("on: under an explicit rollout a re-signed tenant waits, owed, until it is named, and is admitted at the level it is named at", async () => {
-  process.env.MERRYMEN_RESUME_AUTO_PAPER = "1";
+  process.env.AGENTCAP_RESUME_AUTO_PAPER = "1";
   const other = addr(0xfff001);
-  process.env.MERRYMEN_FLEET_ROLLOUT = `${other}:trade`;
+  process.env.AGENTCAP_FLEET_ROLLOUT = `${other}:trade`;
   try {
     const t = await preIncident();
     await pass();
@@ -354,16 +354,16 @@ it("on: under an explicit rollout a re-signed tenant waits, owed, until it is na
     assert.equal(table("ledger_resume_approvals") ? approvals(t.tenant).length : 0, 0, "not named: nothing approved");
     assert.equal(watch(t.tenant)!.owed, 1, "still owed its preview");
     assert.equal(forksOf(t.tenant).length, 0);
-    process.env.MERRYMEN_FLEET_ROLLOUT = `${other}:trade,${t.tenant}:exits-only`;
+    process.env.AGENTCAP_FLEET_ROLLOUT = `${other}:trade,${t.tenant}:exits-only`;
     await pass();
     assert.deepEqual(approvals(t.tenant).map((a) => [a.state, a.source]), [["applied", "auto-paper"]]);
     assert.deepEqual(forksOf(t.tenant).map((f) => f.level), ["exits-only"], "the level the rollout names, not trade");
     await cleanUp(t.tenant);
-  } finally { delete process.env.MERRYMEN_RESUME_AUTO_PAPER; delete process.env.MERRYMEN_FLEET_ROLLOUT; }
+  } finally { delete process.env.AGENTCAP_RESUME_AUTO_PAPER; delete process.env.AGENTCAP_FLEET_ROLLOUT; }
 });
 
 it("on: no automatic admission past the process cap less its headroom, and at most two a pass", async () => {
-  process.env.MERRYMEN_RESUME_AUTO_PAPER = "1";
+  process.env.AGENTCAP_RESUME_AUTO_PAPER = "1";
   try {
     const ts = [await preIncident(), await preIncident(), await preIncident()];
     await pass();
@@ -391,11 +391,11 @@ it("on: no automatic admission past the process cap less its headroom, and at mo
     assert.deepEqual(ts.map((t) => forksOf(t.tenant).length), [1, 1, 1], "and the third on the next");
     assert.ok(ts.every((t) => approvals(t.tenant)[0]?.source === "auto-paper"));
     await cleanUp(...ts.map((t) => t.tenant));
-  } finally { delete process.env.MERRYMEN_RESUME_AUTO_PAPER; setPhantomProcessesForTest(0); }
+  } finally { delete process.env.AGENTCAP_RESUME_AUTO_PAPER; setPhantomProcessesForTest(0); }
 });
 
 it("on: a re-sign whose preview cannot be read stays owed, and is answered once it can be", async () => {
-  process.env.MERRYMEN_RESUME_AUTO_PAPER = "1";
+  process.env.AGENTCAP_RESUME_AUTO_PAPER = "1";
   try {
     const t = await preIncident();
     await pass();
@@ -412,11 +412,11 @@ it("on: a re-sign whose preview cannot be read stays owed, and is answered once 
     assert.deepEqual(approvals(t.tenant).map((a) => [a.state, a.source]), [["applied", "auto-paper"]]);
     assert.equal(forksOf(t.tenant).length, 1);
     await cleanUp(t.tenant);
-  } finally { delete process.env.MERRYMEN_RESUME_AUTO_PAPER; }
+  } finally { delete process.env.AGENTCAP_RESUME_AUTO_PAPER; }
 });
 
 it("on: a re-sign the gate does not hold — a running worker, or a new account with no history — is settled with nothing approved", async () => {
-  process.env.MERRYMEN_RESUME_AUTO_PAPER = "1";
+  process.env.AGENTCAP_RESUME_AUTO_PAPER = "1";
   try {
     // An admitted paper tenant renews while its worker runs.
     const t = await preIncident();
@@ -440,12 +440,12 @@ it("on: a re-sign the gate does not hold — a running worker, or a new account 
     assert.equal(watch(fresh)!.run, null);
     assert.equal(rows("SELECT run FROM ledger_resume_preview_runs WHERE entries_json LIKE ?", `%${fresh}%`).length, 0);
     await cleanUp(t.tenant, fresh);
-  } finally { delete process.env.MERRYMEN_RESUME_AUTO_PAPER; }
+  } finally { delete process.env.AGENTCAP_RESUME_AUTO_PAPER; }
 });
 
 it("on, with live-trading consent stood down: a re-signed paper tenant reads as able to arm live, and is previewed and left to the operator — never approved, never read on chain", async () => {
-  process.env.MERRYMEN_RESUME_AUTO_PAPER = "1";
-  process.env.MERRYMEN_LIVE_INTENT_STAND_DOWN = "1";
+  process.env.AGENTCAP_RESUME_AUTO_PAPER = "1";
+  process.env.AGENTCAP_LIVE_INTENT_STAND_DOWN = "1";
   try {
     const t = await preIncident();
     await pass();
@@ -462,11 +462,11 @@ it("on, with live-trading consent stood down: a re-signed paper tenant reads as 
     assert.deepEqual([entry!.pass, entry!.chain, entry!.suggestedLevel], [true, "required", "exits-only"], "the preview an operator reads says so too");
     assert.ok(existsSync(path.join(t.home, "ledger-source-blocked.json")), "its home untouched");
     await cleanUp(t.tenant);
-  } finally { delete process.env.MERRYMEN_RESUME_AUTO_PAPER; delete process.env.MERRYMEN_LIVE_INTENT_STAND_DOWN; }
+  } finally { delete process.env.AGENTCAP_RESUME_AUTO_PAPER; delete process.env.AGENTCAP_LIVE_INTENT_STAND_DOWN; }
 });
 
 it("on: an owner who turns live trading on while the home is being archived ends the automatic approval at Phase B — nothing registered, nothing forked, no chain read", async () => {
-  process.env.MERRYMEN_RESUME_AUTO_PAPER = "1";
+  process.env.AGENTCAP_RESUME_AUTO_PAPER = "1";
   try {
     const t = await preIncident();
     const live = await liveSettingsFor(t.tenant);
@@ -487,11 +487,11 @@ it("on: an owner who turns live trading on while the home is being archived ends
     assert.equal(chainReads, 0);
     rmSync(settingsFile(t.tenant), { force: true });
     await cleanUp(t.tenant);
-  } finally { delete process.env.MERRYMEN_RESUME_AUTO_PAPER; onLeaseCheck.clear(); }
+  } finally { delete process.env.AGENTCAP_RESUME_AUTO_PAPER; onLeaseCheck.clear(); }
 });
 
 it("on: an automatic approval left archived by a failed registration is refused at Phase B on a later pass once the owner wants the live rail — nothing forked, no chain read", async () => {
-  process.env.MERRYMEN_RESUME_AUTO_PAPER = "1";
+  process.env.AGENTCAP_RESUME_AUTO_PAPER = "1";
   const realTx = shared.tx.bind(shared);
   try {
     const t = await preIncident();
@@ -518,11 +518,11 @@ it("on: an automatic approval left archived by a failed registration is refused 
     assert.equal(chainReads, 0, "where an operator's approval would read the chain, an automatic one ends");
     rmSync(settingsFile(t.tenant), { force: true });
     await cleanUp(t.tenant);
-  } finally { delete process.env.MERRYMEN_RESUME_AUTO_PAPER; (shared as { tx: typeof shared.tx }).tx = realTx; }
+  } finally { delete process.env.AGENTCAP_RESUME_AUTO_PAPER; (shared as { tx: typeof shared.tx }).tx = realTx; }
 });
 
 it("an auto-paper approval of a tenant that could arm live — a row the lane itself never writes — is refused at Phase A without reading the chain", async () => {
-  process.env.MERRYMEN_RESUME_AUTO_PAPER = "1";
+  process.env.AGENTCAP_RESUME_AUTO_PAPER = "1";
   try {
     const t = await preIncident({ live: true });
     await pass();
@@ -542,11 +542,11 @@ it("an auto-paper approval of a tenant that could arm live — a row the lane it
     assert.equal(forksOf(t.tenant).length, 0);
     assert.ok(existsSync(path.join(t.home, "ledger-source-blocked.json")), "refused before anything moved");
     await cleanUp(t.tenant);
-  } finally { delete process.env.MERRYMEN_RESUME_AUTO_PAPER; }
+  } finally { delete process.env.AGENTCAP_RESUME_AUTO_PAPER; }
 });
 
 it("on: re-signers whose previews never read cannot starve the ones behind them — a readable one is admitted in the same pass, and they go to the back", async () => {
-  process.env.MERRYMEN_RESUME_AUTO_PAPER = "1";
+  process.env.AGENTCAP_RESUME_AUTO_PAPER = "1";
   try {
     const stuck = [await preIncident(), await preIncident()];
     const healthy = await preIncident();
@@ -577,11 +577,11 @@ it("on: re-signers whose previews never read cannot starve the ones behind them 
     await pass();
     for (const s of stuck) assert.equal(forksOf(s.tenant).length, 1, "answered once they read");
     await cleanUp(healthy.tenant, ...stuck.map((s) => s.tenant));
-  } finally { delete process.env.MERRYMEN_RESUME_AUTO_PAPER; }
+  } finally { delete process.env.AGENTCAP_RESUME_AUTO_PAPER; }
 });
 
 it("on: a controls read that fails is an outage, not an answer — the re-sign stays owed, an approval's Phase A holds rather than refuses, and both go on once it reads", async () => {
-  process.env.MERRYMEN_RESUME_AUTO_PAPER = "1";
+  process.env.AGENTCAP_RESUME_AUTO_PAPER = "1";
   try {
     // The automatic preview: one controls read fails, and the re-sign is still owed.
     const t = await preIncident();
@@ -612,11 +612,11 @@ it("on: a controls read that fails is an outage, not an answer — the re-sign s
     assert.deepEqual(approvals(u.tenant).map((a) => a.state), ["applied"]);
     assert.equal(forksOf(u.tenant).length, 1);
     await cleanUp(t.tenant, u.tenant);
-  } finally { delete process.env.MERRYMEN_RESUME_AUTO_PAPER; controlsReadFails = false; }
+  } finally { delete process.env.AGENTCAP_RESUME_AUTO_PAPER; controlsReadFails = false; }
 });
 
 it("on: a re-signed tenant whose unblocked book the continuity gate refuses is left to the ordinary path, and the operator is told how to approve it — which works", async () => {
-  process.env.MERRYMEN_RESUME_AUTO_PAPER = "1";
+  process.env.AGENTCAP_RESUME_AUTO_PAPER = "1";
   try {
     // Its book is on the volume with no barrier, and proves nothing: the gate refuses it.
     const t = await preIncident();
@@ -633,26 +633,26 @@ it("on: a re-signed tenant whose unblocked book the continuity gate refuses is l
     // Not this preview's digest either — the ordinary path's attempt this pass armed the owner's
     // controls into the home, which that digest binds — but a preview taken after the gate answered.
     assert.ok(lines.some((l) => l.includes(`${t.tenant} re-signed; the continuity gate does not hold it`) &&
-      l.includes(`If the gate refuses its book instead`) && l.includes(`preview it again (MERRYMEN_RESUME_PREVIEW=${t.tenant})`)), "the operator is told what to do");
+      l.includes(`If the gate refuses its book instead`) && l.includes(`preview it again (AGENTCAP_RESUME_PREVIEW=${t.tenant})`)), "the operator is told what to do");
     // What the line says works: preview, approve the digest it prints, and the same phases admit it.
-    await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_PREVIEW: t.tenant });
+    await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_PREVIEW: t.tenant });
     const latest = rows("SELECT run, entries_json FROM ledger_resume_preview_runs ORDER BY created_at_ms DESC LIMIT 1")[0]!;
     const [entry] = JSON.parse(String(latest.entries_json)) as Array<{ tenant: string; pass: boolean; digest: string; book: string }>;
     assert.deepEqual([entry!.tenant, entry!.pass, entry!.book], [t.tenant, true, "present"]);
-    await runResumeAdmissionControlsForTest({ MERRYMEN_RESUME_APPROVE: `${t.tenant}:${entry!.digest}` });
+    await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `${t.tenant}:${entry!.digest}` });
     assert.deepEqual(approvals(t.tenant).map((a) => [a.state, a.source]), [["approved", "operator"]]);
     await pass();
     assert.deepEqual(approvals(t.tenant).map((a) => a.state), ["applied"]);
     assert.equal(forksOf(t.tenant).length, 1);
     await cleanUp(t.tenant);
-  } finally { delete process.env.MERRYMEN_RESUME_AUTO_PAPER; }
+  } finally { delete process.env.AGENTCAP_RESUME_AUTO_PAPER; }
 });
 
 /** The automatic previews taken of a tenant, as the log prints them (a run is content-addressed: the same evidence previewed again is the same row). */
 const runsFor = (tenant: string) => lines.filter((l) => l.startsWith("[resume-preview] run ") && l.includes(`: automatic, for ${tenant},`)).length;
 
 it("on: an approval the store gives up on is an outage, not an answer — the re-sign stays owed, is tried again with back-off, is an [alert] from the third in a row, and is admitted once the store takes it", async () => {
-  process.env.MERRYMEN_RESUME_AUTO_PAPER = "1";
+  process.env.AGENTCAP_RESUME_AUTO_PAPER = "1";
   try {
     const t = await preIncident();
     await pass();
@@ -696,11 +696,11 @@ it("on: an approval the store gives up on is an outage, not an answer — the re
     assert.equal(forksOf(t.tenant).length, 1);
     assert.equal(chainReads, 0);
     await cleanUp(t.tenant);
-  } finally { delete process.env.MERRYMEN_RESUME_AUTO_PAPER; approvalInsert = null; }
+  } finally { delete process.env.AGENTCAP_RESUME_AUTO_PAPER; approvalInsert = null; }
 });
 
 it("on: an approval the store refuses — another replica's approval of the same evidence, recorded between the checks and the insert — settles the re-sign as before, and that approval admits it", async () => {
-  process.env.MERRYMEN_RESUME_AUTO_PAPER = "1";
+  process.env.AGENTCAP_RESUME_AUTO_PAPER = "1";
   try {
     const t = await preIncident();
     await pass();
@@ -720,11 +720,11 @@ it("on: an approval the store refuses — another replica's approval of the same
     await pass(); await pass();
     assert.equal(runsFor(t.tenant), runs, "never previewed again");
     await cleanUp(t.tenant);
-  } finally { delete process.env.MERRYMEN_RESUME_AUTO_PAPER; approvalInsert = null; }
+  } finally { delete process.env.AGENTCAP_RESUME_AUTO_PAPER; approvalInsert = null; }
 });
 
 it("on: an approval whose insert committed before its connection dropped is the re-sign's answer — after Phase A refuses it, nothing approves the tenant again until its owner signs again", async () => {
-  process.env.MERRYMEN_RESUME_AUTO_PAPER = "1";
+  process.env.AGENTCAP_RESUME_AUTO_PAPER = "1";
   try {
     const t = await preIncident();
     await pass();
@@ -767,11 +767,11 @@ it("on: an approval whose insert committed before its connection dropped is the 
     assert.equal(forksOf(t.tenant).length, 1);
     assert.equal(chainReads, 0);
     await cleanUp(t.tenant);
-  } finally { delete process.env.MERRYMEN_RESUME_AUTO_PAPER; approvalInsert = null; }
+  } finally { delete process.env.AGENTCAP_RESUME_AUTO_PAPER; approvalInsert = null; }
 });
 
 it("on: an approval whose insert committed before its connection dropped, and that Phase A has not reached yet, settles the re-sign as auto-approved — and admits it", async () => {
-  process.env.MERRYMEN_RESUME_AUTO_PAPER = "1";
+  process.env.AGENTCAP_RESUME_AUTO_PAPER = "1";
   try {
     const t = await preIncident();
     await pass();
@@ -793,5 +793,5 @@ it("on: an approval whose insert committed before its connection dropped, and th
     assert.deepEqual(approvals(t.tenant).map((a) => [a.state, a.source]), [["applied", "auto-paper"]], "one approval, and it admits the tenant");
     assert.equal(forksOf(t.tenant).length, 1);
     await cleanUp(t.tenant);
-  } finally { delete process.env.MERRYMEN_RESUME_AUTO_PAPER; approvalInsert = null; }
+  } finally { delete process.env.AGENTCAP_RESUME_AUTO_PAPER; approvalInsert = null; }
 });

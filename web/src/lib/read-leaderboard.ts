@@ -28,12 +28,12 @@ import { readOperationCounts } from "./distinct-trades";
  * No session read anywhere in this file — same property as read-theses, and the
  * same reason: it is what makes the caller cacheable.
  */
-import { sameBookAsLatest } from "@merrymen/core";
+import { sameBookAsLatest } from "@agentcap/core";
 import { withReadDb } from "@/lib/ledger";
-import { getIdentityStore } from "@merrymen/identity-store";
+import { getIdentityStore } from "@agentcap/identity-store";
 import type { UnrankedWhy } from "@/lib/rank-pnl";
 import { readDirectorySelection } from "./agent-directory";
-import { getSettingsStore } from "@merrymen/settings-store";
+import { getSettingsStore } from "@agentcap/settings-store";
 
 export interface LeaderRow {
   /** The public id. Null means no identity yet, and the row renders unlinked. */

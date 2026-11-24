@@ -47,7 +47,7 @@ test("every entry point at the top of gateway/ is copied into the image", async 
 });
 
 test("the operator CLIs start from exactly the files the image has", async () => {
-  const stage = await mkdtemp(path.join(tmpdir(), "merrymen-image-"));
+  const stage = await mkdtemp(path.join(tmpdir(), "agentcap-image-"));
   dirs.push(stage);
   for (const { sources, dest } of await copies()) {
     for (const src of sources) {
@@ -58,9 +58,9 @@ test("the operator CLIs start from exactly the files the image has", async () =>
   }
   // What `RUN npm ci --omit=dev` provides.
   await symlink(path.join(here, "node_modules"), path.join(stage, "node_modules"), "dir");
-  const data = await mkdtemp(path.join(tmpdir(), "merrymen-image-data-"));
+  const data = await mkdtemp(path.join(tmpdir(), "agentcap-image-data-"));
   dirs.push(data);
-  const env = { PATH: process.env.PATH, MERRYMEN_DATA_DIR: data, NODE_OPTIONS: "--max-old-space-size=128" };
+  const env = { PATH: process.env.PATH, AGENTCAP_DATA_DIR: data, NODE_OPTIONS: "--max-old-space-size=128" };
   for (const [cli, usage] of [["billing-cli.mjs", /usage: billing-cli\.mjs list/], ["partners-cli.mjs", /usage: partners-cli\.mjs issue/]]) {
     // With no command each prints its usage and exits 0, having loaded every module it imports.
     const r = await run(process.execPath, [cli], { cwd: stage, env, timeout: 20_000, killSignal: "SIGKILL" });

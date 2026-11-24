@@ -325,8 +325,8 @@ test("fleet health: a Perps wallet's worker is current, on its own wallet's tick
   cursor.run(`${OWNER_P}:perps`, "trades", 2, NOW - 50);
   cursor.run(OWNER_P, "trades", 9, NOW - 500_000);
   useSettingsStoreForTest({ get: async (t: string) => (t === OWNER_B ? { tickSeconds: 30 } : null) } as unknown as SettingsStore, "perps");
-  const savedPerps = process.env.MERRYMEN_PERPS;
-  process.env.MERRYMEN_PERPS = "paper";
+  const savedPerps = process.env.AGENTCAP_PERPS;
+  process.env.AGENTCAP_PERPS = "paper";
   try {
     const { res, sc } = await call("staff_fleet_health");
     assert.equal(sc.agents.current, 9);
@@ -348,15 +348,15 @@ test("fleet health: a Perps wallet's worker is current, on its own wallet's tick
     // WHERE PERPS WORKERS DO NOT RUN the fleet stands them all down and keeps their grants: they are said, and
     // counted without a current grant, never as stale workers crowding a wedged Spot worker out of the list.
     for (const off of [undefined, "off", "live"]) {
-      if (off === undefined) delete process.env.MERRYMEN_PERPS; else process.env.MERRYMEN_PERPS = off;
+      if (off === undefined) delete process.env.AGENTCAP_PERPS; else process.env.AGENTCAP_PERPS = off;
       const down = (await call("staff_fleet_health")).sc;
       assert.equal(down.agents.current, 6, String(off));
       assert.equal(down.agents.without_current_grant, 4);
       assert.equal(down.heartbeat.stale, 2, "only A and G, the Spot workers");
       assert.equal(down.mirror.rows_without_current_grant, 4);
-      assert.match(down.warnings.join(" "), /Perps workers do not run on this service \(MERRYMEN_PERPS is not paper\)/);
+      assert.match(down.warnings.join(" "), /Perps workers do not run on this service \(AGENTCAP_PERPS is not paper\)/);
     }
-    process.env.MERRYMEN_PERPS = "paper";
+    process.env.AGENTCAP_PERPS = "paper";
 
     // A perps_grants that cannot be read is said, and its workers are counted as before: without a current grant.
     await d.db.exec("DROP TABLE perps_grants");
@@ -365,7 +365,7 @@ test("fleet health: a Perps wallet's worker is current, on its own wallet's tick
     assert.equal(unread.agents.without_current_grant, 4);
     assert.match(unread.warnings.join(" "), /Perps grants could not be read/);
   } finally {
-    if (savedPerps === undefined) delete process.env.MERRYMEN_PERPS; else process.env.MERRYMEN_PERPS = savedPerps;
+    if (savedPerps === undefined) delete process.env.AGENTCAP_PERPS; else process.env.AGENTCAP_PERPS = savedPerps;
     resetSettingsStoreForTest();
   }
 });
@@ -541,7 +541,7 @@ test("pattern normalisation strips numbers, addresses, URLs, hosts, ids, keys, q
     ["1,000,000 tokens at 3e5", "<n> tokens at <n>"],
     ["no-gas-2 retry", "no-gas-<n> retry"],
     ["rpc.alchemy.com:443/v2 timed out", "<host> timed out"],
-    ["mail ops@merrymen.dev now", "mail <email> now"],
+    ["mail ops@agentcap.xyz now", "mail <email> now"],
     ["broker rh:ABC123 refused", "broker <account> refused"],
     ["line\u0000one\ntwo", "line one two"],
     ["Telegram: linked chat 42 (@alice_99)", "Telegram: linked chat <n> (@<handle>)"],
@@ -624,7 +624,7 @@ test("deployment: versions, a validated 12-char commit, uptime and the MCP switc
   assert.equal(bare.process_started_at, new Date((NOW - 90) * 1000).toISOString());
   assert.deepEqual(bare.mcp, { enabled: false, disabled_why: "off", issuer: null, resource: null });
   assert.equal(bare.warnings.length, 2);
-  assert.equal(await readPackageVersion(join(tmpdir(), "merrymen-staff-test-no-such-dir")), null);
+  assert.equal(await readPackageVersion(join(tmpdir(), "agentcap-staff-test-no-such-dir")), null);
 });
 
 // ── MCP metrics ─────────────────────────────────────────────────────────────

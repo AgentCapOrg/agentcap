@@ -54,7 +54,7 @@ exclusive writer absence and the publication boundary.
 
 ## Reporting while the fleet remains halted
 
-`MERRYMEN_FLEET_RECOVERY_REPORT_ONLY=1` selects a separate supervisor entry
+`AGENTCAP_FLEET_RECOVERY_REPORT_ONLY=1` selects a separate supervisor entry
 before ordinary persistent-home preparation. It only publishes failure reports;
 it does not enter the normal supervisor loop or start workers, holders, ferries,
 financial jobs, imports or repairs. An unset flag follows ordinary startup. An

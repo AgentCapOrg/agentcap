@@ -2324,42 +2324,42 @@ describe("groupChatCreds: the room's own key or nothing", () => {
     vision: false,
   });
 
-  it("builds literal Groq creds from MERRYMEN_GROUPCHAT_LLM_KEY alone", () => {
-    assert.deepEqual(groupChatCreds({ MERRYMEN_GROUPCHAT_LLM_KEY: KEY }), expected());
-    assert.deepEqual(groupChatCreds({ MERRYMEN_GROUPCHAT_LLM_KEY: `  ${KEY}\n` }), expected());
-    assert.deepEqual(groupChatCreds({ MERRYMEN_GROUPCHAT_LLM_KEY: KEY, MERRYMEN_GROUPCHAT_MODEL: "llama-3.3-70b-versatile" }), expected("llama-3.3-70b-versatile"));
-    assert.deepEqual(groupChatCreds({ MERRYMEN_GROUPCHAT_LLM_KEY: KEY, MERRYMEN_GROUPCHAT_MODEL: "  " }), expected());
-    assert.deepEqual(groupChatCreds({ MERRYMEN_GROUPCHAT_LLM_KEY: KEY, GROQ_API_KEY: "gsk_house_key_different" }), expected());
+  it("builds literal Groq creds from AGENTCAP_GROUPCHAT_LLM_KEY alone", () => {
+    assert.deepEqual(groupChatCreds({ AGENTCAP_GROUPCHAT_LLM_KEY: KEY }), expected());
+    assert.deepEqual(groupChatCreds({ AGENTCAP_GROUPCHAT_LLM_KEY: `  ${KEY}\n` }), expected());
+    assert.deepEqual(groupChatCreds({ AGENTCAP_GROUPCHAT_LLM_KEY: KEY, AGENTCAP_GROUPCHAT_MODEL: "llama-3.3-70b-versatile" }), expected("llama-3.3-70b-versatile"));
+    assert.deepEqual(groupChatCreds({ AGENTCAP_GROUPCHAT_LLM_KEY: KEY, AGENTCAP_GROUPCHAT_MODEL: "  " }), expected());
+    assert.deepEqual(groupChatCreds({ AGENTCAP_GROUPCHAT_LLM_KEY: KEY, GROQ_API_KEY: "gsk_house_key_different" }), expected());
   });
 
   it("is null without its own key, whatever else is configured", () => {
     assert.equal(groupChatCreds({}), null);
-    assert.equal(groupChatCreds({ MERRYMEN_GROUPCHAT_LLM_KEY: "   " }), null);
-    assert.equal(groupChatCreds({ GROQ_API_KEY: KEY, ANTHROPIC_API_KEY: "sk-ant-x", MERRYMEN_LLM_API_KEY: "k" }), null);
-    assert.equal(groupChatCreds({ GROQ_API_KEY: KEY, MERRYMEN_GROUPCHAT_SHARE_HOUSE_KEY: "1" }), null, "sharing still needs the room's own variable");
+    assert.equal(groupChatCreds({ AGENTCAP_GROUPCHAT_LLM_KEY: "   " }), null);
+    assert.equal(groupChatCreds({ GROQ_API_KEY: KEY, ANTHROPIC_API_KEY: "sk-ant-x", AGENTCAP_LLM_API_KEY: "k" }), null);
+    assert.equal(groupChatCreds({ GROQ_API_KEY: KEY, AGENTCAP_GROUPCHAT_SHARE_HOUSE_KEY: "1" }), null, "sharing still needs the room's own variable");
   });
 
   it("refuses a fleet key unless sharing is switched on with exactly '1'", () => {
-    for (const fleet of ["GROQ_API_KEY", "MERRYMEN_LLM_API_KEY", "ANTHROPIC_API_KEY"]) {
-      assert.equal(groupChatCreds({ MERRYMEN_GROUPCHAT_LLM_KEY: KEY, [fleet]: KEY }), null, fleet);
-      assert.equal(groupChatCreds({ MERRYMEN_GROUPCHAT_LLM_KEY: KEY, [fleet]: ` ${KEY} ` }), null, `${fleet} padded`);
+    for (const fleet of ["GROQ_API_KEY", "AGENTCAP_LLM_API_KEY", "ANTHROPIC_API_KEY"]) {
+      assert.equal(groupChatCreds({ AGENTCAP_GROUPCHAT_LLM_KEY: KEY, [fleet]: KEY }), null, fleet);
+      assert.equal(groupChatCreds({ AGENTCAP_GROUPCHAT_LLM_KEY: KEY, [fleet]: ` ${KEY} ` }), null, `${fleet} padded`);
       for (const notOne of ["true", "yes", "01", " 1", "0", ""]) {
-        assert.equal(groupChatCreds({ MERRYMEN_GROUPCHAT_LLM_KEY: KEY, [fleet]: KEY, MERRYMEN_GROUPCHAT_SHARE_HOUSE_KEY: notOne }), null, `${fleet} share=${notOne}`);
+        assert.equal(groupChatCreds({ AGENTCAP_GROUPCHAT_LLM_KEY: KEY, [fleet]: KEY, AGENTCAP_GROUPCHAT_SHARE_HOUSE_KEY: notOne }), null, `${fleet} share=${notOne}`);
       }
-      assert.deepEqual(groupChatCreds({ MERRYMEN_GROUPCHAT_LLM_KEY: KEY, [fleet]: KEY, MERRYMEN_GROUPCHAT_SHARE_HOUSE_KEY: "1" }), expected());
+      assert.deepEqual(groupChatCreds({ AGENTCAP_GROUPCHAT_LLM_KEY: KEY, [fleet]: KEY, AGENTCAP_GROUPCHAT_SHARE_HOUSE_KEY: "1" }), expected());
     }
   });
 
   it("reads process.env when no env is passed", () => {
-    const before = process.env.MERRYMEN_GROUPCHAT_LLM_KEY;
+    const before = process.env.AGENTCAP_GROUPCHAT_LLM_KEY;
     const fleet = process.env.GROQ_API_KEY;
     try {
-      process.env.MERRYMEN_GROUPCHAT_LLM_KEY = "gsk_from_process_env_room";
+      process.env.AGENTCAP_GROUPCHAT_LLM_KEY = "gsk_from_process_env_room";
       if (fleet === "gsk_from_process_env_room") delete process.env.GROQ_API_KEY;
       assert.equal(groupChatCreds()?.apiKey, "gsk_from_process_env_room");
     } finally {
-      if (before === undefined) delete process.env.MERRYMEN_GROUPCHAT_LLM_KEY;
-      else process.env.MERRYMEN_GROUPCHAT_LLM_KEY = before;
+      if (before === undefined) delete process.env.AGENTCAP_GROUPCHAT_LLM_KEY;
+      else process.env.AGENTCAP_GROUPCHAT_LLM_KEY = before;
       if (fleet !== undefined) process.env.GROQ_API_KEY = fleet;
     }
   });
@@ -2367,10 +2367,10 @@ describe("groupChatCreds: the room's own key or nothing", () => {
   it("describeCreds says the plan in one line and never the key", () => {
     const cases: Record<string, string | undefined>[] = [
       {},
-      { MERRYMEN_GROUPCHAT_LLM_KEY: KEY },
-      { MERRYMEN_GROUPCHAT_LLM_KEY: KEY, GROQ_API_KEY: KEY },
-      { MERRYMEN_GROUPCHAT_LLM_KEY: KEY, ANTHROPIC_API_KEY: KEY, MERRYMEN_GROUPCHAT_SHARE_HOUSE_KEY: "1" },
-      { MERRYMEN_GROUPCHAT_LLM_KEY: KEY, MERRYMEN_GROUPCHAT_MODEL: KEY },
+      { AGENTCAP_GROUPCHAT_LLM_KEY: KEY },
+      { AGENTCAP_GROUPCHAT_LLM_KEY: KEY, GROQ_API_KEY: KEY },
+      { AGENTCAP_GROUPCHAT_LLM_KEY: KEY, ANTHROPIC_API_KEY: KEY, AGENTCAP_GROUPCHAT_SHARE_HOUSE_KEY: "1" },
+      { AGENTCAP_GROUPCHAT_LLM_KEY: KEY, AGENTCAP_GROUPCHAT_MODEL: KEY },
     ];
     for (const env of cases) {
       const d = describeCreds(groupChatCreds(env), env);
@@ -2378,13 +2378,13 @@ describe("groupChatCreds: the room's own key or nothing", () => {
       assert.ok(!d.includes(KEY) && !d.includes(KEY.slice(0, 12)), `key leaked: ${d}`);
     }
     assert.match(describeCreds(null, {}), /templates only/);
-    assert.match(describeCreds(null, { MERRYMEN_GROUPCHAT_LLM_KEY: KEY, GROQ_API_KEY: KEY }), /templates only.*GROQ_API_KEY/);
-    assert.match(describeCreds(groupChatCreds({ MERRYMEN_GROUPCHAT_LLM_KEY: KEY }), { MERRYMEN_GROUPCHAT_LLM_KEY: KEY }), /qwen\/qwen3\.8-27b.*own key/);
+    assert.match(describeCreds(null, { AGENTCAP_GROUPCHAT_LLM_KEY: KEY, GROQ_API_KEY: KEY }), /templates only.*GROQ_API_KEY/);
+    assert.match(describeCreds(groupChatCreds({ AGENTCAP_GROUPCHAT_LLM_KEY: KEY }), { AGENTCAP_GROUPCHAT_LLM_KEY: KEY }), /qwen\/qwen3\.8-27b.*own key/);
     assert.match(
-      describeCreds(groupChatCreds({ MERRYMEN_GROUPCHAT_LLM_KEY: KEY, GROQ_API_KEY: KEY, MERRYMEN_GROUPCHAT_SHARE_HOUSE_KEY: "1" }), {
-        MERRYMEN_GROUPCHAT_LLM_KEY: KEY,
+      describeCreds(groupChatCreds({ AGENTCAP_GROUPCHAT_LLM_KEY: KEY, GROQ_API_KEY: KEY, AGENTCAP_GROUPCHAT_SHARE_HOUSE_KEY: "1" }), {
+        AGENTCAP_GROUPCHAT_LLM_KEY: KEY,
         GROQ_API_KEY: KEY,
-        MERRYMEN_GROUPCHAT_SHARE_HOUSE_KEY: "1",
+        AGENTCAP_GROUPCHAT_SHARE_HOUSE_KEY: "1",
       }),
       /fleet's GROQ_API_KEY/,
     );
@@ -2394,7 +2394,7 @@ describe("groupChatCreds: the room's own key or nothing", () => {
 // ── the model call ──────────────────────────────────────────────────────────
 
 describe("llmLine: a line or null, never a throw", () => {
-  const creds: LlmCreds = groupChatCreds({ MERRYMEN_GROUPCHAT_LLM_KEY: "gsk_test_room_key" })!;
+  const creds: LlmCreds = groupChatCreds({ AGENTCAP_GROUPCHAT_LLM_KEY: "gsk_test_room_key" })!;
   const sp = speaker(14, { name: "Amber Heron" });
   const ctx = ctxOf(sp, 14);
   const intent: Intent = { kind: "banter", topic: "life", mood: null };

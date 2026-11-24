@@ -141,7 +141,7 @@ node --import tsx --test packages/core/src/solana-live.test.ts
 the artifact it just built: `custody.rs` (custody invariants, and the TypeScript ABI's
 own bytes), `recovery.rs` (the owner recovery tool's own signed transactions) and,
 when the third-party program copies are supplied, `jupiter_fork.rs` (below). Without
-them it prints `jupiter_fork: skipped, set MERRYMEN_JUPITER_FORK_PROGRAMS (release
+them it prints `jupiter_fork: skipped, set AGENTCAP_JUPITER_FORK_PROGRAMS (release
 gate)` and runs every other target, and CI accepts that line for this target alone.
 `build.sh` is the only supported build recipe:
 
@@ -178,12 +178,12 @@ record's second build from a copy in another directory gave identical bytes, and
 runtime tests (custody, recovery and the Jupiter fork test) passed against it. No Linux manifest is committed yet.
 
 The TypeScript suite writes `runtime-tests/fixtures/ts-instructions.json` from the
-shared ABI builders (`MERRYMEN_WRITE_SOLANA_ABI_FIXTURE=1 npx tsx --test
+shared ABI builders (`AGENTCAP_WRITE_SOLANA_ABI_FIXTURE=1 npx tsx --test
 packages/core/src/solana-live.test.ts` rewrites it) and fails while it is stale.
 `custody.rs` executes those exact bytes and account metas against the compiled
 program, so the TypeScript ABI is tested against the real program, not only Anchor's
 Rust client. Likewise `runtime-tests/fixtures/recovery-transactions.txt` holds the
-recovery tool's exact signed transactions (`MERRYMEN_WRITE_SOLANA_RECOVERY_FIXTURE=1
+recovery tool's exact signed transactions (`AGENTCAP_WRITE_SOLANA_RECOVERY_FIXTURE=1
 npx tsx --test worker/src/solana-recover.test.ts` rewrites it), which `recovery.rs`
 runs. Both fixtures take the program ID from `lib.rs`'s `declare_id!`. After
 regenerating either, rerun `test.sh`.
@@ -229,7 +229,7 @@ so a missing or different file fails the test once it runs. Either:
   ignores them) and run `test.sh`; or
 - keep a directory with all five files (the two copies plus the three SPL files from
   the fixtures directory) outside the repository and run
-  `MERRYMEN_JUPITER_FORK_PROGRAMS=<that directory> contracts/solana/test.sh`
+  `AGENTCAP_JUPITER_FORK_PROGRAMS=<that directory> contracts/solana/test.sh`
   (`test.sh` resolves it to an absolute path and fails if it is not a directory).
 
 Keep the copies in private storage keyed by `sha256OnChain`: an RPC serves only a
@@ -255,7 +255,7 @@ ImageVersion; GitHub's `ubuntu-24.04` image is updated in place and has no diges
 installs agave 2.3.13 and platform-tools v1.48, each checked against the size and
 SHA-256 in `scripts/ci/solana-toolchain.env` before it is unpacked, runs `test.sh`,
 checks that every runtime test ran, and records the artifact
-(`merrymen_vault.build.json`: program ID, the local test ID and whether the build
+(`agentcap_vault.build.json`: program ID, the local test ID and whether the build
 declares it, SHA-256, toolchain, runner image and the run that built it, with its
 provenance). `solana · rebuild` names its image too and builds the same source again
 from `git archive` on another runner with a fresh `CARGO_HOME`, and `app` requires the
@@ -301,7 +301,7 @@ comparison pass.
    rebuilt X` (the `solana · test` and `solana · rebuild` step summaries carry them too).
 4. Copy the file unchanged to `contracts/solana/build-manifests/Linux-x86_64.json` and
    commit it, ending the commit message with the `Vault-Linux-Manifest:` line from that
-   run's "Linux build manifest" step summary (also in `merrymen_vault.build.json` as
+   run's "Linux build manifest" step summary (also in `agentcap_vault.build.json` as
    `linuxManifest.commitTrailer`). It names the run, the runner image, the artifact
    and the source digest; the run's own artifact and summary expire (90 days by
    default). CI does not enforce the trailer.
@@ -314,21 +314,21 @@ re-record Darwin locally with `build.sh --record`, commit both, and the next run
 pass. A manifest of today's local-test-ID source is a reproducibility baseline only.
 
 **Release marking.** A release comes only from a CI run on `refs/heads/main` of
-`millw14/merrymen` (a push to main, or a manual run on main) whose pinned Linux build
+`millw14/agentcap` (a push to main, or a manual run on main) whose pinned Linux build
 matched the committed Linux manifest, whose `app` check passed, and whose `lib.rs` does
 not declare `SOLANA_VAULT_LOCAL_TEST_PROGRAM`. `solana · test` uploads before `app` has
 compared the rebuild's hash, and before the rest of the run has passed or a newer push
 has cancelled it, so it names such a run's bytes
-`merrymen-vault-sbf-candidate-unconfirmed-<commit>-run<id>.<attempt>`, never a release.
+`agentcap-vault-sbf-candidate-unconfirmed-<commit>-run<id>.<attempt>`, never a release.
 `solana · release` needs `app` and runs only when it passed; for a candidate it uploads
-`merrymen-vault-release-<commit>-run<id>.<attempt>`, a record
-(`merrymen_vault.release.json`) naming the candidate artifact, its program ID and the
+`agentcap-vault-release-<commit>-run<id>.<attempt>`, a record
+(`agentcap_vault.release.json`) naming the candidate artifact, its program ID and the
 SHA-256 that `solana · test` tested and `solana · rebuild` reproduced. That record is
 the release verdict: take the bytes from the artifact it names
-(`target/deploy/merrymen_vault.so`) and check that they hash to its `sha256`. A
+(`target/deploy/agentcap_vault.so`) and check that they hash to its `sha256`. A
 candidate without a release record in the same run is not a release, and
 `solana · release` refuses a build that declares the local test ID whatever its
-manifest says. Every other artifact is named `merrymen-vault-sbf-not-a-release-…`:
+manifest says. Every other artifact is named `agentcap-vault-sbf-not-a-release-…`:
 every pull request's, every one whose build differs from the committed manifest or
 whose commit deleted it, every local-test-ID build, a run on main included. The build
 record's `release` and `linuxManifest` fields say why. CI never runs on a tag push, and
@@ -347,19 +347,19 @@ suites were not run on such a commit). Steps 7 onwards need Milla's authorizatio
    (`solana-keygen pubkey <keypair>`). Nothing in this repository ever reads the
    keypair.
 2. **Set the ID.** Put the public key in `declare_id!` in
-   `programs/merrymen-vault/src/lib.rs` and in every `[programs.*]` entry of
+   `programs/agentcap-vault/src/lib.rs` and in every `[programs.*]` entry of
    `Anchor.toml`. Leave `SOLANA_VAULT_LOCAL_TEST_PROGRAM` in
    `packages/core/src/solana-live.ts` as it is: it names the test identity.
 3. **Regenerate the ID-bound fixtures**:
-   `MERRYMEN_WRITE_SOLANA_ABI_FIXTURE=1 npx tsx --test packages/core/src/solana-live.test.ts`
+   `AGENTCAP_WRITE_SOLANA_ABI_FIXTURE=1 npx tsx --test packages/core/src/solana-live.test.ts`
    and
-   `MERRYMEN_WRITE_SOLANA_RECOVERY_FIXTURE=1 npx tsx --test worker/src/solana-recover.test.ts`.
+   `AGENTCAP_WRITE_SOLANA_RECOVERY_FIXTURE=1 npx tsx --test worker/src/solana-recover.test.ts`.
    Update `worker/src/solana-release-id.test.ts`, whose first test asserts that
    `lib.rs` declares the local test ID today.
 4. **Build and test locally**: `contracts/solana/test.sh` with the Jupiter and
    Whirlpool copies supplied (the fork test must run, not skip), then
    `build.sh --record` for the Darwin manifest, then
-   `node contracts/solana/scripts/check-release-id.mjs <public key> --so target/deploy/merrymen_vault.so`.
+   `node contracts/solana/scripts/check-release-id.mjs <public key> --so target/deploy/agentcap_vault.so`.
    The script checks that `declare_id!` is exactly that key and that the `.so` holds
    its 32 bytes, prints the `.so` SHA-256, refuses anything that looks like a keypair
    and never echoes its argument. CI has no deploy keypair, so it checks only `lib.rs`
@@ -367,12 +367,12 @@ suites were not run on such a commit). Steps 7 onwards need Milla's authorizatio
 5. **Pull request, two pushes**: the first run uploads the Linux manifest of the new
    source; commit it as above with its trailer; the next run passes.
 6. **Merge and take the release record** from a CI run on main: download
-   `merrymen-vault-release-…`, then the candidate artifact it names, check the `.so`
+   `agentcap-vault-release-…`, then the candidate artifact it names, check the `.so`
    against the record's `sha256`, and run `check-release-id.mjs <public key> --so
    <that .so>` on it.
 7. **Rehearse on devnet** the `--final` deployment and the region-hash check below.
 8. **Deploy to mainnet** exactly those bytes, immutable: `solana program deploy
-   <merrymen_vault.so> --program-id <keypair> --final` (no upgrade authority; the
+   <agentcap_vault.so> --program-id <keypair> --final` (no upgrade authority; the
    deployer pays about 2.5 SOL of rent that cannot be recovered). Keep `--max-len`
    at its default (the artifact's size); if it differs, the region hash is the
    artifact followed by `max-len - bytes` zero bytes.
@@ -382,8 +382,8 @@ suites were not run on such a commit). Steps 7 onwards need Milla's authorizatio
    runtime makes the same check on both providers before any live use.
 10. **Pin the release**: add `{ programId, sha256 }` to `SOLANA_VAULT_RELEASES` in
     `packages/core/src/solana-live.ts` (keep every earlier release, so funded vaults
-    stay usable) and publish the `merrymen` CLI, so `solana-recover --send` trusts
-    it. Then set `MERRYMEN_SOLANA_VAULT_PROGRAM` and `MERRYMEN_SOLANA_VAULT_SHA256`
+    stay usable) and publish the `agentcap` CLI, so `solana-recover --send` trusts
+    it. Then set `AGENTCAP_SOLANA_VAULT_PROGRAM` and `AGENTCAP_SOLANA_VAULT_SHA256`
     (the region hash) on web and worker. Once the list is non-empty, any other pair
     is refused as configuration.
 

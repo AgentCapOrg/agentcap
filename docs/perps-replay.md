@@ -94,7 +94,7 @@ source control. The explicit opt-in applies only to capture; it enables no
 worker or trading permission:
 
 ```sh
-MERRYMEN_PERPS_CAPTURE_PUBLIC_FEED=1 node --import tsx \
+AGENTCAP_PERPS_CAPTURE_PUBLIC_FEED=1 node --import tsx \
   worker/src/perps/capture-public-feed-cli.ts \
   /existing/fleet-home/lighter-feed.json /private/perps-capture-2026-10-30 \
   120 5000

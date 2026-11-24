@@ -61,9 +61,9 @@ import { readPerpExitOrder } from "./owner-order";
 import type { PerpRouteIntent } from "./route";
 
 const HERE = import.meta.dirname;
-const scratch = mkdtempSync(path.join(os.tmpdir(), "merrymen-perp-lane-"));
+const scratch = mkdtempSync(path.join(os.tmpdir(), "agentcap-perp-lane-"));
 mkdirSync(path.join(scratch, "cwd"));
-process.env.MERRYMEN_HOME = path.join(scratch, "home");
+process.env.AGENTCAP_HOME = path.join(scratch, "home");
 delete process.env.DATABASE_URL;
 const originalCwd = process.cwd();
 const store = await import("../store");
@@ -74,7 +74,7 @@ try {
   process.chdir(originalCwd);
 }
 /** A second connection to the same file, to count what the paper engine booked. */
-const raw = new DatabaseSync(path.join(process.env.MERRYMEN_HOME, "merrymen.db"));
+const raw = new DatabaseSync(path.join(process.env.AGENTCAP_HOME, "agentcap.db"));
 after(() => {
   raw.close();
   store.closeStoreForTest();
@@ -291,17 +291,17 @@ describe("small pieces", () => {
     assert.equal(usdgText(0n), "0.00");
   });
   it("isHostedChildProcess: hosted mode, or any process an orchestrator gave a fleet home", () => {
-    const saved = process.env.MERRYMEN_HOSTED;
-    delete process.env.MERRYMEN_HOSTED;
+    const saved = process.env.AGENTCAP_HOSTED;
+    delete process.env.AGENTCAP_HOSTED;
     try {
       assert.equal(isHostedChildProcess({}), false);
-      assert.equal(isHostedChildProcess({ MERRYMEN_FLEET_HOME: "/fleet" }), true);
-      assert.equal(isHostedChildProcess({ MERRYMEN_FLEET_HOME: "   " }), false);
-      process.env.MERRYMEN_HOSTED = "1";
+      assert.equal(isHostedChildProcess({ AGENTCAP_FLEET_HOME: "/fleet" }), true);
+      assert.equal(isHostedChildProcess({ AGENTCAP_FLEET_HOME: "   " }), false);
+      process.env.AGENTCAP_HOSTED = "1";
       assert.equal(isHostedChildProcess({}), true);
     } finally {
-      if (saved === undefined) delete process.env.MERRYMEN_HOSTED;
-      else process.env.MERRYMEN_HOSTED = saved;
+      if (saved === undefined) delete process.env.AGENTCAP_HOSTED;
+      else process.env.AGENTCAP_HOSTED = saved;
     }
   });
 });
@@ -1827,10 +1827,10 @@ describe("an owner's exit, at most once (command-files.ts: the claim is the unli
   });
 
   it("A STOOD-DOWN PERPS WORKER (D19) claims nothing: the queued exit waits, unclaimed, and the drain leaves the position exactly as it was", async () => {
-    const off = mergeSettings({}, { MERRYMEN_WALLET_PURPOSE: "perps" });
-    const paper = mergeSettings({}, { MERRYMEN_WALLET_PURPOSE: "perps", MERRYMEN_PERPS: "paper" });
-    assert.equal(perpsWorkerStoodDown(off), true, "unset MERRYMEN_PERPS is off");
-    assert.equal(perpsWorkerStoodDown(mergeSettings({}, { MERRYMEN_WALLET_PURPOSE: "perps", MERRYMEN_PERPS: "live" })), true, "live is off in this build");
+    const off = mergeSettings({}, { AGENTCAP_WALLET_PURPOSE: "perps" });
+    const paper = mergeSettings({}, { AGENTCAP_WALLET_PURPOSE: "perps", AGENTCAP_PERPS: "paper" });
+    assert.equal(perpsWorkerStoodDown(off), true, "unset AGENTCAP_PERPS is off");
+    assert.equal(perpsWorkerStoodDown(mergeSettings({}, { AGENTCAP_WALLET_PURPOSE: "perps", AGENTCAP_PERPS: "live" })), true, "live is off in this build");
     assert.equal(perpsWorkerStoodDown(paper), false);
     assert.equal(perpsWorkerStoodDown(mergeSettings({}, {})), false, "a Spot worker is never stood down here");
     writeFeed();
@@ -1862,7 +1862,7 @@ describe("an owner's exit, at most once (command-files.ts: the claim is the unli
    * held position keeps the lane active whatever the switch says). So the
    * refusal says the positions are still managed by their own rules, never
    * that they stay exactly as they are: a worker started by hand under
-   * MERRYMEN_PERPS unset closed this one on its stop while the owner's Close
+   * AGENTCAP_PERPS unset closed this one on its stop while the owner's Close
    * waited, refused. Hosted no Perps child runs, which is the frozen case.
    */
   it("A STOOD-DOWN WORKER THAT RUNS ANYWAY STILL KEEPS WHAT IT HOLDS ON ITS STOPS: commands are stood down, the book's own protection is not", async () => {
@@ -1872,8 +1872,8 @@ describe("an owner's exit, at most once (command-files.ts: the claim is the unli
     assert.equal((await r.lane.execute(await openDraft(r), { equityUsdg: u(100), equityKnown: true })).status, "paper");
     const [held] = await store.getPerpPositions(r.id, "paper");
     assert.ok(held?.stopTrigger, "the practice position carries its stop");
-    // Started by hand with MERRYMEN_WALLET_PURPOSE=perps, MERRYMEN_PERPS unset.
-    const handStarted = mergeSettings({ perpsEnabled: true }, { MERRYMEN_WALLET_PURPOSE: "perps" });
+    // Started by hand with AGENTCAP_WALLET_PURPOSE=perps, AGENTCAP_PERPS unset.
+    const handStarted = mergeSettings({ perpsEnabled: true }, { AGENTCAP_WALLET_PURPOSE: "perps" });
     assert.equal(perpsWorkerStoodDown(handStarted), true);
     r.cfg = { ...r.cfg, perpsOperatorCeiling: handStarted.perpsOperatorCeiling };
     writeCommand(home, closeCommand("exit-refused"));
@@ -1898,7 +1898,7 @@ describe("an owner's exit, at most once (command-files.ts: the claim is the unli
     await r.lane.execute(await openDraft(r), { equityUsdg: u(100), equityKnown: true });
     writeCommand(home, closeCommand("exit-stale", clock - 1));
     let ran = 0;
-    const paper = mergeSettings({}, { MERRYMEN_WALLET_PURPOSE: "perps", MERRYMEN_PERPS: "paper" });
+    const paper = mergeSettings({}, { AGENTCAP_WALLET_PURPOSE: "perps", AGENTCAP_PERPS: "paper" });
     // The worker's own drain hooks (index.ts runQueuedCommand spreads them),
     // so this pins the sentence an owner is told, not the drain's Spot one.
     await runTickCommand(home, {
@@ -2039,7 +2039,7 @@ describe("the wiring in index.ts", () => {
     assert.match(head, /if \(cfg\.workerWallet === "perps"\) return;/);
   });
 
-  it("A PERPS WALLET'S WORKER NEVER RUNS THE BRAIN, whatever MERRYMEN_BRAIN_LIVE or _SHADOW say", () => {
+  it("A PERPS WALLET'S WORKER NEVER RUNS THE BRAIN, whatever AGENTCAP_BRAIN_LIVE or _SHADOW say", () => {
     // The Brain reviews tokens and its live mode submits Spot buys.
     const tick = fn("tick");
     const gate = tick.indexOf("shadowBrainEnabledFor(agentId) || brainLiveEnabledFor(agentId)");

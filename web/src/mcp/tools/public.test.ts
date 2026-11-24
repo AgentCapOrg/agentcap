@@ -14,7 +14,7 @@
 import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
 import { createMcpHandler } from "@modelcontextprotocol/server";
-import { STOCK_TOKENS } from "@merrymen/core";
+import { STOCK_TOKENS } from "@agentcap/core";
 import { projectSettings, setSettingsReaderForTest } from "@/lib/services/settings-view";
 import { setPublicIdentitiesForTest, type PublicIdentityRecord } from "@/lib/services/public-feed";
 import { handleMcpRequest } from "../http";
@@ -609,10 +609,10 @@ test("a funded, evidenced live book with an unrecorded gas cost is gas-pending o
 });
 
 test("a return under review is withheld from the list and the profile, in every shape, and does not rank", async () => {
-  const saved = process.env.MERRYMEN_RETURN_REVIEW;
+  const saved = process.env.AGENTCAP_RETURN_REVIEW;
   try {
     const { connect } = await setup();
-    process.env.MERRYMEN_RETURN_REVIEW = ACCOUNT_A.toUpperCase().replace("0X", "0x");
+    process.env.AGENTCAP_RETURN_REVIEW = ACCOUNT_A.toUpperCase().replace("0X", "0x");
     const b = await connect(OWNER_B);
     const list = await call(b, "list_public_agents", {});
     // A's 2075 bps led the board; under review it sorts with the unranked.
@@ -631,8 +631,8 @@ test("a return under review is withheld from the list and the profile, in every 
     // Nobody else's figure moves.
     assert.equal(list.sc.agents.find((x: { agent: string }) => x.agent === SLUG_C).live.return_bps, 2045);
   } finally {
-    if (saved === undefined) delete process.env.MERRYMEN_RETURN_REVIEW;
-    else process.env.MERRYMEN_RETURN_REVIEW = saved;
+    if (saved === undefined) delete process.env.AGENTCAP_RETURN_REVIEW;
+    else process.env.AGENTCAP_RETURN_REVIEW = saved;
   }
 });
 
@@ -685,10 +685,10 @@ test("a paper agent's return under review says review-pending, not 'paper' besid
   // B's paper book is up 23.45%. Under review its paper return is withheld,
   // and "paper" beside a null return would read like a paper read that did
   // not answer; the web terminal says "Return under review" for it.
-  const saved = process.env.MERRYMEN_RETURN_REVIEW;
+  const saved = process.env.AGENTCAP_RETURN_REVIEW;
   try {
     const { connect } = await setup();
-    process.env.MERRYMEN_RETURN_REVIEW = ACCOUNT_B;
+    process.env.AGENTCAP_RETURN_REVIEW = ACCOUNT_B;
     const b = await connect(OWNER_B);
     const list = await call(b, "list_public_agents", {});
     const row = list.sc.agents.find((x: { agent: string }) => x.agent === SLUG_B);
@@ -703,8 +703,8 @@ test("a paper agent's return under review says review-pending, not 'paper' besid
     // Only the listed account changes: an unlisted agent keeps its figure.
     assert.equal(list.sc.agents.find((x: { agent: string }) => x.agent === SLUG_A).live.return_bps, 2075);
   } finally {
-    if (saved === undefined) delete process.env.MERRYMEN_RETURN_REVIEW;
-    else process.env.MERRYMEN_RETURN_REVIEW = saved;
+    if (saved === undefined) delete process.env.AGENTCAP_RETURN_REVIEW;
+    else process.env.AGENTCAP_RETURN_REVIEW = saved;
   }
 });
 
@@ -824,7 +824,7 @@ test("through the real SDK: listed for market:read, structured output validates,
   assert.equal(board.result?.isError, undefined, JSON.stringify(board));
   assert.equal((board.result?.structuredContent as { agents: unknown[] }).agents.length, 3);
   assertAbsent(JSON.stringify(board), [...PRIVATE_A, ...PRIVATE_B, ...CURVE_C], "sdk leaderboard");
-  const doc = await send("resources/read", { uri: "merrymen://docs/leaderboard" });
+  const doc = await send("resources/read", { uri: "agentcap://docs/leaderboard" });
   const text = (doc.result?.contents as Array<{ text: string }>)[0].text;
   assert.match(text, /never copies trades/);
   assert.match(text, /not a promise/);

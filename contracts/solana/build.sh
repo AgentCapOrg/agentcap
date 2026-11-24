@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Pinned, reproducible SBF build of the custody program (audit GAP4-2).
 #
-#   build.sh                 check the toolchain, build target/deploy/merrymen_vault.so and
+#   build.sh                 check the toolchain, build target/deploy/agentcap_vault.so and
 #                            compare it with this host's build manifest
 #   build.sh --record        build again from a copy of the source in a clean directory,
 #                            require identical bytes, then write this host's manifest
@@ -28,7 +28,7 @@ RUST_SOURCE_COMMIT="293a1b6c60a0b8d92593843c373539e21e3ba087"
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 host="$(uname -s)-$(uname -m)"
 manifest="$script_dir/build-manifests/$host.json"
-program_manifest="$script_dir/programs/merrymen-vault/Cargo.toml"
+program_manifest="$script_dir/programs/agentcap-vault/Cargo.toml"
 
 sha256() {
   if command -v sha256sum >/dev/null 2>&1; then sha256sum "$@"; else shasum -a 256 "$@"; fi
@@ -40,8 +40,8 @@ source_files() {
   (
     cd "$script_dir"
     {
-      printf '%s\n' Cargo.toml Cargo.lock build.sh programs/merrymen-vault/Cargo.toml
-      find programs/merrymen-vault/src -type f -name '*.rs'
+      printf '%s\n' Cargo.toml Cargo.lock build.sh programs/agentcap-vault/Cargo.toml
+      find programs/agentcap-vault/src -type f -name '*.rs'
     } | LC_ALL=C sort
   )
 }
@@ -104,7 +104,7 @@ refuse_cargo_config_above() {
     dir="$(dirname -- "$dir")"
   done
 }
-refuse_cargo_config_above "$script_dir/programs/merrymen-vault"
+refuse_cargo_config_above "$script_dir/programs/agentcap-vault"
 refuse_cargo_config_above "$(pwd -P)"
 
 build_sbf="${CARGO_BUILD_SBF:-cargo-build-sbf}"
@@ -131,7 +131,7 @@ build_into() {
 extra_args=("$@")
 
 build_into "$program_manifest" "$script_dir/target" "$script_dir/target/deploy"
-artifact="$script_dir/target/deploy/merrymen_vault.so"
+artifact="$script_dir/target/deploy/agentcap_vault.so"
 
 # cargo-build-sbf links the "solana" rustup toolchain to the platform-tools it used.
 rustc_info="$(rustc +solana -vV)"
@@ -149,8 +149,8 @@ fi
 digest="$(source_digest)"
 artifact_sha="$(sha256 "$artifact" | cut -d' ' -f1)"
 artifact_bytes="$(wc -c < "$artifact" | tr -d ' ')"
-declared_id="$(sed -n 's/^declare_id!("\([1-9A-HJ-NP-Za-km-z]*\)");$/\1/p' "$script_dir/programs/merrymen-vault/src/lib.rs")"
-echo "merrymen_vault.so  sha256 $artifact_sha  bytes $artifact_bytes  program $declared_id"
+declared_id="$(sed -n 's/^declare_id!("\([1-9A-HJ-NP-Za-km-z]*\)");$/\1/p' "$script_dir/programs/agentcap-vault/src/lib.rs")"
+echo "agentcap_vault.so  sha256 $artifact_sha  bytes $artifact_bytes  program $declared_id"
 echo "source digest $digest"
 
 if [ "$mode" = "build" ]; then
@@ -172,21 +172,21 @@ trap 'rm -rf "$second"' EXIT
 mkdir "$second/src"
 (cd "$script_dir" && tar --exclude=./target --exclude=./runtime-tests/target -cf - .) |
   (cd "$second/src" && tar -xf -)
-refuse_cargo_config_above "$second/src/programs/merrymen-vault"
-build_into "$second/src/programs/merrymen-vault/Cargo.toml" "$second/target" "$second/deploy"
-if ! cmp "$artifact" "$second/deploy/merrymen_vault.so"; then
+refuse_cargo_config_above "$second/src/programs/agentcap-vault"
+build_into "$second/src/programs/agentcap-vault/Cargo.toml" "$second/target" "$second/deploy"
+if ! cmp "$artifact" "$second/deploy/agentcap_vault.so"; then
   echo "error: two clean builds of the same source differ; nothing recorded" >&2
   exit 1
 fi
-rm -f "$second/deploy/merrymen_vault-keypair.json"
+rm -f "$second/deploy/agentcap_vault-keypair.json"
 
 mkdir -p "$(dirname "$manifest")"
 {
   printf '{\n'
-  printf '  "about": "Reviewed SBF build of merrymen_vault. Written by contracts/solana/build.sh --record; checked by packages/core/src/solana-live.test.ts.",\n'
+  printf '  "about": "Reviewed SBF build of agentcap_vault. Written by contracts/solana/build.sh --record; checked by packages/core/src/solana-live.test.ts.",\n'
   printf '  "source": {\n'
   printf '    "digest": "%s",\n' "$digest"
-  printf '    "rule": "sha256 of the sorted lines <sha256>  <path> for Cargo.toml, Cargo.lock, build.sh, programs/merrymen-vault/Cargo.toml and programs/merrymen-vault/src/**/*.rs, relative to contracts/solana"\n'
+  printf '    "rule": "sha256 of the sorted lines <sha256>  <path> for Cargo.toml, Cargo.lock, build.sh, programs/agentcap-vault/Cargo.toml and programs/agentcap-vault/src/**/*.rs, relative to contracts/solana"\n'
   printf '  },\n'
   printf '  "program": {\n'
   printf '    "declaredId": "%s"\n' "$declared_id"
@@ -204,7 +204,7 @@ mkdir -p "$(dirname "$manifest")"
   printf '    "host": "%s"\n' "$host"
   printf '  },\n'
   printf '  "artifact": {\n'
-  printf '    "file": "target/deploy/merrymen_vault.so",\n'
+  printf '    "file": "target/deploy/agentcap_vault.so",\n'
   printf '    "bytes": %s,\n' "$artifact_bytes"
   printf '    "sha256": "%s",\n' "$artifact_sha"
   printf '    "reproduced": "a second build from a copy in another directory, identical bytes"\n'

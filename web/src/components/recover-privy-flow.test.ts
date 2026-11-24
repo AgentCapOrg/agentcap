@@ -37,7 +37,7 @@ const VAULT = "0x3fcdde6e011769ca05f0115f1543290862473216";
 const TOKEN = "0x15e498ff2dbca95e8648a1f025cbbd12c2525461";
 const USDG = "0x5fc5360d0400a0fd4f2af552add042d716f1d168";
 /** The grant a hosted Privy mint writes to localStorage. Key from session.ts. */
-const STORAGE_KEY = "merrymen.grant.v1";
+const STORAGE_KEY = "agentcap.grant.v1";
 
 let dom: JSDOM;
 /** What `planFn` was called with — the proof of where the account came from. */
@@ -45,7 +45,7 @@ let planCalledWith: { smartAccount?: string; ownerAccount?: unknown } | null = n
 
 before(() => {
   dom = new JSDOM("<!doctype html><html><body><div id=root></div></body></html>", {
-    url: "https://app.merrymen.dev/withdraw",
+    url: "https://app.agentcap.xyz/withdraw",
     pretendToBeVisual: true,
   });
   const g = globalThis as Record<string, unknown>;
@@ -262,7 +262,7 @@ it("Perps recovery selects its own saved wallet and URL, and the disabled-Privy 
   const { createRoot } = await import("react-dom/client");
   const { RecoverPanel, RecoverPanelView } = await import("./RecoverPanel");
   const account = `0x${"42".repeat(20)}`;
-  dom.window.localStorage.setItem("merrymen.grant.perps.v1", JSON.stringify({ purpose: "perps", smartAccount: account, chainId: 4663, owner: OWNER }));
+  dom.window.localStorage.setItem("agentcap.grant.perps.v1", JSON.stringify({ purpose: "perps", smartAccount: account, chainId: 4663, owner: OWNER }));
   const container = dom.window.document.createElement("div"); dom.window.document.body.append(container);
   const root = createRoot(container);
   const calls: string[] = [];

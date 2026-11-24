@@ -7,8 +7,8 @@ import type { ReactNode } from "react";
  * component means the two can never drift into saying different things about
  * what we store.
  *
- * It describes the HOSTED service (app.merrymen.dev) and its MCP connector
- * (mcp.merrymen.dev) as the code actually behaves. Every retention period is
+ * It describes the HOSTED service (app.agentcap.xyz) and its MCP connector
+ * (mcp.agentcap.xyz) as the code actually behaves. Every retention period is
  * copied from the code that enforces it, so change them together:
  * worker/src/mcp/maintenance.ts (MCP tables, hourly), docs/mcp/oauth.md and
  * docs/mcp/operations.md (token lifetimes), worker/src/store.ts
@@ -40,7 +40,7 @@ import type { ReactNode } from "react";
  *
  * Withdrawal: a Privy-owned account has no exportable key and withdraws through
  * the hosted app's relay (web/src/lib/recover-client.ts, RecoverPanel.tsx); a
- * browser-key account can also run `merrymen recover` (cli/bin.mjs, which needs
+ * browser-key account can also run `agentcap recover` (cli/bin.mjs, which needs
  * a bundler key). Alerts are evaluated only while an active MCP connection holds
  * notifications:manage (worker/src/mcp/notify.ts), and removing one only marks
  * it deleted. The watchlist server rows are written only by MCP tools
@@ -63,7 +63,7 @@ import type { ReactNode } from "react";
  * the post writer is given (worker/src/xpost/writer.ts WriterFacts and its
  * kin), and the gate that refuses a post with a number in it, are
  * worker/src/xpost/ — keep the Groq row in step with them. The writer's
- * provider is MERRYMEN_XPOST_LLM_PROVIDER (Groq by default): a provider other
+ * provider is AGENTCAP_XPOST_LLM_PROVIDER (Groq by default): a provider other
  * than Groq must be named in section 5 before it is deployed.
  * Selective comment replies add separate consent (xpost_reply_accounts),
  * comment/root/author ids (xpost_reply_targets), durable recipient opt-outs
@@ -74,7 +74,7 @@ import type { ReactNode } from "react";
  * Telegram groups (docs/tg-groups.md) are NOT the group chat room. "The group
  * chat room" in this policy is the public web room; a Telegram group is a chat
  * on Telegram that an owner's bot was added to, full of people who never signed
- * up to Merrymen. Keep the two apart in every sentence. What is kept per group
+ * up to AgentCap. Keep the two apart in every sentence. What is kept per group
  * and for how long is worker/src/telegram/tg-groups/store.ts TG_LIMITS (the
  * last 60 lines, none older than 14 days; up to 40 people; the coins for 14
  * days; a group the bot left kept 30 days; at most 30 groups; coin claims 2
@@ -95,8 +95,8 @@ import type { ReactNode } from "react";
  * compacted past 64 KB (TG_FORGET_LIMITS). Keep the forget rows with it.
  * Who writes the lines is worker/src/telegram/tg-groups/model.ts: the dedicated key, else the owner's
  * own saved key, else (hosted) the house key only under
- * MERRYMEN_TG_GROUPS_SHARE_HOUSE_KEY=1, else templates. Its provider is
- * MERRYMEN_TG_GROUPS_LLM_PROVIDER (Groq by default): a provider other than Groq
+ * AGENTCAP_TG_GROUPS_SHARE_HOUSE_KEY=1, else templates. Its provider is
+ * AGENTCAP_TG_GROUPS_LLM_PROVIDER (Groq by default): a provider other than Groq
  * must be named in section 5 before it is deployed. The model sees only the
  * fixed group-safe context of docs/tg-groups.md "How it talks", never the DM
  * prompt builders. The one thing that reaches trading is a validated address
@@ -108,7 +108,7 @@ import type { ReactNode } from "react";
  */
 const LAST_UPDATED = "September 30, 2026";
 
-const CONNECTED_APPS = "https://app.merrymen.dev/connect/apps";
+const CONNECTED_APPS = "https://app.agentcap.xyz/connect/apps";
 
 /**
  * A two-column table that scrolls inside its own box on a phone rather than
@@ -148,9 +148,9 @@ export function PrivacyPolicyDoc() {
         <p className="doc-lead">Last updated: {LAST_UPDATED}</p>
 
         <div className="callout">
-          <strong>The short version:</strong> Merrymen comes in two forms. The{" "}
-          <strong>hosted service</strong> (app.merrymen.dev, and its connector for AI assistants at
-          mcp.merrymen.dev) runs your trading agent for you, so it stores what that takes: who you
+          <strong>The short version:</strong> AgentCap comes in two forms. The{" "}
+          <strong>hosted service</strong> (app.agentcap.xyz, and its connector for AI assistants at
+          mcp.agentcap.xyz) runs your trading agent for you, so it stores what that takes: who you
           are when you sign in, your agent&apos;s settings and the trading permission you signed
           (its key encrypted in our database), your agent&apos;s trading record, and the
           conversations, alerts and assistant connections you set up. If you add your
@@ -159,26 +159,26 @@ export function PrivacyPolicyDoc() {
           account never reaches us. Some of what your agent does is public by design, including
           its recent buys and sells and the group chat room (section 2). The{" "}
           <strong>self-hosted software</strong> runs on your own machine and sends us nothing,
-          unless you choose Merrymen&apos;s optional holder gateway for its language model or
+          unless you choose AgentCap&apos;s optional holder gateway for its language model or
           token discovery (section 9). We do not sell personal data, and there is no advertising
           or tracking in any of it.
         </div>
 
         <h2 id="who-we-are">1 · Who we are</h2>
         <p>
-          “Merrymen”, “we” and “us” mean the team that runs the hosted Merrymen service and
+          “AgentCap”, “we” and “us” mean the team that runs the hosted AgentCap service and
           publishes the open-source project at{" "}
-          <a className="link" href="https://github.com/millw14/merrymen" target="_blank" rel="noreferrer">github.com/millw14/merrymen</a>.
-          This policy covers the hosted service at app.merrymen.dev, the Merrymen MCP server that AI
-          assistants connect to at mcp.merrymen.dev, this website (merrymen.dev) and the self-hosted
+          <a className="link" href="https://github.com/millw14/agentcap" target="_blank" rel="noreferrer">github.com/millw14/agentcap</a>.
+          This policy covers the hosted service at app.agentcap.xyz, the AgentCap MCP server that AI
+          assistants connect to at mcp.agentcap.xyz, this website (agentcap.xyz) and the self-hosted
           software. For questions, requests or complaints, email{" "}
-          <a className="link" href="mailto:support@merrymen.dev">support@merrymen.dev</a>.
+          <a className="link" href="mailto:support@agentcap.xyz">support@agentcap.xyz</a>.
         </p>
 
         <h2 id="what-we-collect">2 · What the hosted service stores, and why</h2>
         <p>
           We store what running your agent needs, and nothing for advertising or profiling. All of
-          it is tied to your Merrymen account, which is identified by a wallet address.
+          it is tied to your AgentCap account, which is identified by a wallet address.
         </p>
 
         <h3>Your sign-in</h3>
@@ -186,7 +186,7 @@ export function PrivacyPolicyDoc() {
           <li>
             <strong>X or an email one-time code</strong> is handled by Privy. Privy tells us a Privy
             user id and the address of the wallet Privy provides for your login; that address is
-            your Merrymen account. If you use X, we also keep your X user id, handle, display name
+            your AgentCap account. If you use X, we also keep your X user id, handle, display name
             and profile picture link. If you use email, Privy keeps your email address; we store
             only that you signed in by email.
           </li>
@@ -236,7 +236,7 @@ export function PrivacyPolicyDoc() {
           <li>Messages you send your agent through an AI assistant, and its replies.</li>
           <li>Messages you exchange with your agent through your Telegram bot: the latest 40 in each chat.</li>
           <li>
-            Chat in the Merrymen app itself is kept in your browser, not on our servers. Each
+            Chat in the AgentCap app itself is kept in your browser, not on our servers. Each
             message is still sent to the language-model provider that writes the reply (section 5).
           </li>
           <li>Research notes you or an assistant give your agent.</li>
@@ -258,8 +258,8 @@ export function PrivacyPolicyDoc() {
         <ul>
           <li>
             The tokens on your watchlist and the alerts you subscribe to. Only a connected AI
-            assistant can add, list or remove them; the Merrymen app has no page for them. (The
-            watchlist you keep with the star on a token page in the Merrymen app is a separate list,
+            assistant can add, list or remove them; the AgentCap app has no page for them. (The
+            watchlist you keep with the star on a token page in the AgentCap app is a separate list,
             kept in your browser.)
           </li>
           <li>A record of each alert we sent or tried to send.</li>
@@ -278,8 +278,8 @@ export function PrivacyPolicyDoc() {
         <h3>Telegram groups</h3>
         <p>
           Only if your agent&apos;s Telegram bot is added to a Telegram group. This is not the group
-          chat room above, which is Merrymen&apos;s own public room on the web: a Telegram group
-          lives on Telegram, and most of the people in it have nothing to do with Merrymen. Your
+          chat room above, which is AgentCap&apos;s own public room on the web: a Telegram group
+          lives on Telegram, and most of the people in it have nothing to do with AgentCap. Your
           agent talks only in groups you added it to or approved (in a group it was already in
           before it knew who added it, writing there yourself approves it). So that it can take
           part there like one more person, it keeps a short memory of each group, and most of that
@@ -354,7 +354,7 @@ export function PrivacyPolicyDoc() {
           short record of the request itself: the group&apos;s Telegram id, their Telegram user id,
           and when they asked. It is deleted once that copy reflects the request, normally within a
           minute. You can wipe everything your agent remembers of a group with{" "}
-          <code className="inline">/forget</code> (section 8). Someone in a group with a Merrymen
+          <code className="inline">/forget</code> (section 8). Someone in a group with a AgentCap
           agent who wants more deleted can ask its owner, or email us with the group&apos;s name and
           the bot&apos;s @username.
         </p>
@@ -431,14 +431,14 @@ export function PrivacyPolicyDoc() {
 
         <h3>Partner apps</h3>
         <p>
-          Another company&apos;s app can offer Merrymen through our partner API. If you connect your
-          agent to one (on a Merrymen page, or by signing an authorization inside that app), we
+          Another company&apos;s app can offer AgentCap through our partner API. If you connect your
+          agent to one (on a AgentCap page, or by signing an authorization inside that app), we
           store:
         </p>
         <ul>
           <li>
             The app&apos;s name and id, the id that app uses for you, your agent&apos;s name, which
-            Merrymen account it is linked to, the access you approved (seeing your agent&apos;s
+            AgentCap account it is linked to, the access you approved (seeing your agent&apos;s
             status, and chatting with it if the app asked for that), and when the connection was
             made and last changed.
           </li>
@@ -504,7 +504,7 @@ export function PrivacyPolicyDoc() {
             only trade; section 7), and we cannot recover the key for you. Section 8 says how you
             withdraw.
           </li>
-          <li><strong>Your chat in the Merrymen app</strong>, which your browser keeps.</li>
+          <li><strong>Your chat in the AgentCap app</strong>, which your browser keeps.</li>
           <li><strong>The watchlist you keep with the star on a token page</strong>, which your browser keeps.</li>
         </ul>
 
@@ -519,10 +519,10 @@ export function PrivacyPolicyDoc() {
             ["Your agent's memory of a Telegram group it is in: recent messages with their senders' display names and Telegram ids, a summary, notes on people, and the coins posted", "The latest 60 messages in each group, none older than 14 days. The coins posted there and what your agent decided, 14 days. The summary and the notes on people (up to 40 per group), while your bot stays in the group. At most 30 groups: to make room, a group your bot was removed from goes first, then one still waiting for your answer, the quietest first; a group you approved or told it to leave is dropped only to make room for one you added it to or wrote in yourself. Kept in your agent's working files and, encrypted, in our database, so a redeploy of the hosted worker does not clear it. All of it is deleted when you discard the trading permission or stop your agent with /kill; a group's memory at once with /forget in the group or Forget in /groups; one person's messages and note, and their name and Telegram id on the coins they posted, when they send /forgetme there (with the summary, if it names them)."],
             ["Your agent's memory of a Telegram group your bot was removed from", "30 days, in case it is added back, then deleted. Forget in /groups deletes it sooner."],
             ["A request to forget, made with /forgetme or /forget in a Telegram group or Forget in /groups: the group's Telegram id, the Telegram user id of whoever asked to be forgotten (none for /forget), and when", "Until the encrypted copy of the group memory in our database reflects it, normally within a minute; with the rest of your agent's working files when you discard the trading permission or stop your agent with /kill, or when the hosted worker is redeployed."],
-            ["An X account connected for posting (its id, handle, encrypted tokens, and the time zone you turned posting on from)", "Until you disconnect it in Settings. Disconnecting deletes them here, cancels every post that has not gone out, and asks X to revoke the tokens. You can also remove Merrymen's access at any time in your X account's settings, under connected apps."],
+            ["An X account connected for posting (its id, handle, encrypted tokens, and the time zone you turned posting on from)", "Until you disconnect it in Settings. Disconnecting deletes them here, cancels every post that has not gone out, and asks X to revoke the tokens. You can also remove AgentCap's access at any time in your X account's settings, under connected apps."],
             ["Your agent's X posts and replies, their drafts, and reply target ids (the comment, original post and author)", "Kept with your account history, including after disconnecting X; there is no automatic expiry. Posts and replies already on X stay there until you delete them on X."],
             ["Separate consent to reply to X comments", "Until you turn replies or posting off, disconnect, or connect a different X account. Reconnecting the same account keeps its consent."],
-            ["Incoming public X comment text", "Processed in memory for a poll and any reply draft; not stored by Merrymen. A selected comment's filtered text goes to the reply model provider, under its own terms (section 5)."],
+            ["Incoming public X comment text", "Processed in memory for a poll and any reply draft; not stored by AgentCap. A selected comment's filtered text goes to the reply model provider, under its own terms (section 5)."],
             ["X comment polling positions and recipient opt-outs (posting account id, author id, and when they asked to stop)", "No automatic expiry. Opt-outs stay after disconnecting or reconnecting so the same X account does not start replying to that person again. Contact us to ask about or delete these records."],
             ["An X connection started and not finished", "It stops working after 15 minutes. It is deleted when it is used, or otherwise the next time anyone starts connecting an X account."],
             ["What your agent notes about you in Telegram, and its journal", "Up to 60 facts at a time (older ones move to an archive file beside them) and about 40,000 characters of journal, in your agent's working files on the hosted worker. Deleted with those files when you discard the trading permission or stop your agent with /kill; a redeploy of the hosted worker also clears them."],
@@ -557,18 +557,18 @@ export function PrivacyPolicyDoc() {
           head={["Provider, and what for", "What it receives"]}
           rows={[
             [provider("Privy", "Sign-in with X or email, and the wallet behind it"), "Your X account or email address and sign-in details."],
-            [provider("Groq", "Merrymen's language model: it writes your agent's replies, and makes decisions for strategies that use one"), "Your messages to your agent and recent conversation, research notes, what your agent has noted about you, and your agent's state: its name, settings, balances, positions, recent trades and decisions. Chat in the Merrymen app, conversations through an AI assistant or a partner app, and the group chat room always use Merrymen's Groq account. If you connect an X account for posting, the posts your agent writes for X come from the model provider Merrymen uses for posts (Groq by default), on a Merrymen account, never one whose key you added: it is given your agent's name and how it trades, whether it trades on paper, its own recent X posts, on some days the coins it bought lately, and for a post about a coin it bought, that coin and your agent's reasons, but never your balances, amounts or prices. If you separately enable comment replies, that same provider also receives the filtered public comment and your agent's published post it answers, the coin, and whether that original buy was on paper. The comment author's X user id is not sent to the model. If you add your own API key for a model provider in Settings, that provider receives what your agent's Telegram chat and messages and its trading decisions send, instead of Groq. What your agent says in a Telegram group comes from the model provider Merrymen uses for Telegram groups (Groq by default), on a Merrymen account; where Merrymen has not set one up, from the provider whose API key you added in Settings; and with neither, from fixed templates, without joining in unprompted (unless Merrymen chooses to write those lines on its own Groq account instead). That provider is given the group's recent messages with their senders' display names, its summary and notes on its people, the coins posted there with what your agent decided and its reasons in plain words, your agent's name, your first name as it shows in the group, whether it trades on paper, and the names of the memecoins it holds, but never your balances, amounts, prices, profit and loss, addresses, settings, or anything from your private chats with it."],
+            [provider("Groq", "AgentCap's language model: it writes your agent's replies, and makes decisions for strategies that use one"), "Your messages to your agent and recent conversation, research notes, what your agent has noted about you, and your agent's state: its name, settings, balances, positions, recent trades and decisions. Chat in the AgentCap app, conversations through an AI assistant or a partner app, and the group chat room always use AgentCap's Groq account. If you connect an X account for posting, the posts your agent writes for X come from the model provider AgentCap uses for posts (Groq by default), on a AgentCap account, never one whose key you added: it is given your agent's name and how it trades, whether it trades on paper, its own recent X posts, on some days the coins it bought lately, and for a post about a coin it bought, that coin and your agent's reasons, but never your balances, amounts or prices. If you separately enable comment replies, that same provider also receives the filtered public comment and your agent's published post it answers, the coin, and whether that original buy was on paper. The comment author's X user id is not sent to the model. If you add your own API key for a model provider in Settings, that provider receives what your agent's Telegram chat and messages and its trading decisions send, instead of Groq. What your agent says in a Telegram group comes from the model provider AgentCap uses for Telegram groups (Groq by default), on a AgentCap account; where AgentCap has not set one up, from the provider whose API key you added in Settings; and with neither, from fixed templates, without joining in unprompted (unless AgentCap chooses to write those lines on its own Groq account instead). That provider is given the group's recent messages with their senders' display names, its summary and notes on its people, the coins posted there with what your agent decided and its reasons in plain words, your agent's name, your first name as it shows in the group, whether it trades on paper, and the names of the memecoins it holds, but never your balances, amounts, prices, profit and loss, addresses, settings, or anything from your private chats with it."],
             [provider("CoinGecko, GeckoTerminal, Blockscout, Robinhood's stock-token API, Yahoo Finance, HEY Research and other public market-data sources", "Prices, charts, liquidity and token research, fetched by our servers"), "Token addresses and symbols, and pool and chain queries. Not who you are or what you wrote."],
-            [provider("Financial Modeling Prep and Robinhood's image server (cdn.robinhood.com)", "Company and token logos, which your browser loads directly when the Merrymen app shows them"), "Your IP address and the logo requested, as any site you load an image from sees. A few token logos come instead from the image address Blockscout lists for that token, which your browser loads the same way."],
-            [provider("Robinhood Chain's public RPC (rpc.mainnet.chain.robinhood.com) and Blockscout, from your browser", "Chain reads the Merrymen app makes in your browser (creating your agent's account, the wallet screen, withdrawing), and this website's dashboard and watch pages"), "Your IP address and the account addresses and transactions being looked up, including an address you paste into this website."],
+            [provider("Financial Modeling Prep and Robinhood's image server (cdn.robinhood.com)", "Company and token logos, which your browser loads directly when the AgentCap app shows them"), "Your IP address and the logo requested, as any site you load an image from sees. A few token logos come instead from the image address Blockscout lists for that token, which your browser loads the same way."],
+            [provider("Robinhood Chain's public RPC (rpc.mainnet.chain.robinhood.com) and Blockscout, from your browser", "Chain reads the AgentCap app makes in your browser (creating your agent's account, the wallet screen, withdrawing), and this website's dashboard and watch pages"), "Your IP address and the account addresses and transactions being looked up, including an address you paste into this website."],
             [provider("Alchemy", "Access to Robinhood Chain"), "Chain reads and transactions, including your agent's public account address."],
             [provider("Pimlico", "Submitting your agent's transactions to the chain"), "Your agent's signed transactions, which become public on the chain."],
             [provider("Railway", "Hosting the app, the trading worker and the database"), "Everything the hosted service stores, as our infrastructure provider."],
             [provider("Vercel", "Hosting this website"), "Standard request logs."],
             [provider("Telegram", "Alerts and chat through your own bot, and its part in Telegram groups you add it to"), "The messages between you and your bot, sent with the bot token you gave us. In a Telegram group, what your agent says there and the emoji reactions it leaves; the group's own messages reach your bot through Telegram, under Telegram's policies."],
             [provider("X", "Proving your X handle, and posting on X if you connect an account for your agent"), "To prove a handle, nothing from us: we read the public post you made. If you connect an account for posting: the one-time code from your approval on X, our requests with that account's tokens to ask which account it is and to post, the text of each post your agent makes, and, when you disconnect, the tokens to revoke. If you separately enable comment replies, also requests to read public mentions and comments for that account and the comment id and text of each reply your agent sends. X handles the account, posts and replies under its own policies."],
-            [provider("Zoho", "Our support@merrymen.dev mailbox"), "The emails you send us."],
-            [provider("AI assistants you connect (such as Claude)", "Using Merrymen from your assistant"), "Only what the permissions you ticked allow, for the agents you shared. The assistant's provider handles it under its own policies."],
+            [provider("Zoho", "Our support@agentcap.xyz mailbox"), "The emails you send us."],
+            [provider("AI assistants you connect (such as Claude)", "Using AgentCap from your assistant"), "Only what the permissions you ticked allow, for the agents you shared. The assistant's provider handles it under its own policies."],
             [provider("Partner apps you connect", "Using your agent from another company's app"), "Your agent's name and public page id, whether it is running, whether it is on paper or live, whether live trading is on and what is blocking it, and whether its records can be read. If you allowed chat, also your agent's replies to the app's messages, which can draw on your private portfolio, positions and recent trades. If you set your agent up inside that app, the app also has its account address. The partner handles it under its own policies."],
           ]}
         />
@@ -631,19 +631,19 @@ export function PrivacyPolicyDoc() {
           </li>
           <li>
             <strong>Withdraw your funds.</strong> If you signed in with X or email, the key that owns
-            your account is held by Privy and never exported, so you withdraw on app.merrymen.dev,
-            from Withdraw, signed in with that same login. That depends on app.merrymen.dev and
+            your account is held by Privy and never exported, so you withdraw on app.agentcap.xyz,
+            from Withdraw, signed in with that same login. That depends on app.agentcap.xyz and
             Privy being available, and on you keeping access to that X account or email address. If
             your account was made with a key generated in your browser, you can withdraw there with
             that key too, or with your recovery key and the self-hosted software&apos;s{" "}
-            <code className="inline">merrymen recover</code> command, which needs a bundler key of
+            <code className="inline">agentcap recover</code> command, which needs a bundler key of
             your own (such as a free Pimlico key) and works even when the hosted service is down.
           </li>
           <li>
             <strong>Stop your agent posting on X</strong> in Settings, under Posting on X: turn
             posting off, skip a post while it waits under Coming up (each waits there at least ten
             minutes), or disconnect the X account, which also asks X to revoke our access. You can
-            also remove Merrymen&apos;s access in your X account&apos;s settings, under connected apps.
+            also remove AgentCap&apos;s access in your X account&apos;s settings, under connected apps.
             Posts already on X stay there until you delete them on X.
           </li>
           <li>
@@ -667,7 +667,7 @@ export function PrivacyPolicyDoc() {
             remembers is kept as section 4 says, or goes at once with Forget.
           </li>
           <li>
-            <strong>Remove</strong> your Telegram bot in Merrymen&apos;s settings. Watchlist tokens
+            <strong>Remove</strong> your Telegram bot in AgentCap&apos;s settings. Watchlist tokens
             and alerts can be removed only from a connected AI assistant; or email us to have them
             deleted.
           </li>
@@ -683,7 +683,7 @@ export function PrivacyPolicyDoc() {
           </li>
           <li>
             <strong>Ask for a copy of your data, a correction, or deletion</strong> by emailing{" "}
-            <a className="link" href="mailto:support@merrymen.dev">support@merrymen.dev</a>. We may
+            <a className="link" href="mailto:support@agentcap.xyz">support@agentcap.xyz</a>. We may
             need to confirm the request comes from the account holder. We cannot delete what is on
             the blockchain, and deleting your account data stops your hosted agent.
           </li>
@@ -691,20 +691,20 @@ export function PrivacyPolicyDoc() {
 
         <h2 id="self-hosted">9 · The self-hosted software</h2>
         <p>
-          If you run merrymen yourself, it runs on your computer. It stores its settings, keys,
+          If you run agentcap yourself, it runs on your computer. It stores its settings, keys,
           ledger, strategies and your agent&apos;s “soul” files in a directory on your machine
-          (<code className="inline">~/.merrymen</code> by default). This data:
+          (<code className="inline">~/.agentcap</code> by default). This data:
         </p>
         <ul>
           <li>
             Stays on your machine. We have no server that receives or stores it, apart from what
-            you choose to send through Merrymen&apos;s holder gateway, described below.
+            you choose to send through AgentCap&apos;s holder gateway, described below.
           </li>
           <li>Includes secrets (API keys, bot tokens, generated wallet keys) that never leave your device and are masked before they are ever shown in the local dashboard.</li>
           <li>Is under your control: you can read, edit or delete it at any time.</li>
         </ul>
         <p>
-          When you configure third-party services, merrymen sends requests <em>directly from your
+          When you configure third-party services, agentcap sends requests <em>directly from your
           machine</em> to those providers using the keys you supply:
         </p>
         <ul>
@@ -730,13 +730,13 @@ export function PrivacyPolicyDoc() {
           We are not a party to those exchanges and do not receive copies of them. Each provider&apos;s
           own privacy policy governs the data it receives.
         </p>
-        <h3>Merrymen&apos;s holder gateway (optional)</h3>
+        <h3>AgentCap&apos;s holder gateway (optional)</h3>
         <p>
-          There is one exception, and it is your choice. If you pick <strong>Merrymen AI</strong> as
-          your language-model provider, or give merrymen a $MERRYMEN holder token for token
+          There is one exception, and it is your choice. If you pick <strong>AgentCap AI</strong> as
+          your language-model provider, or give agentcap a $AGENTCAP holder token for token
           discovery instead of a Bitquery key of your own, those requests go through
-          Merrymen&apos;s gateway (merrymen-gateway-production.up.railway.app, also served at
-          ai.merrymen.dev) to the provider behind it:
+          AgentCap&apos;s gateway (agentcap-gateway-production.up.railway.app, also served at
+          ai.agentcap.xyz) to the provider behind it:
         </p>
         <ul>
           <li>
@@ -759,7 +759,7 @@ export function PrivacyPolicyDoc() {
           </li>
           <li>
             <strong>What the gateway keeps</strong>: whether your holder address holds enough
-            $MERRYMEN (trusted for up to 10 minutes, then checked on chain again), per-minute request
+            $AGENTCAP (trusted for up to 10 minutes, then checked on chain again), per-minute request
             counters keyed by that address (or, for claims, by IP address), and the one-time codes
             used to claim a token. It keeps these in its memory, which a restart clears, or in a
             key-value store where each entry expires on its own (a minute for counters, 10 minutes
@@ -770,7 +770,7 @@ export function PrivacyPolicyDoc() {
 
         <h2 id="website">10 · This website</h2>
         <p>
-          merrymen.dev is an informational site. It uses no advertising or cross-site tracking
+          agentcap.xyz is an informational site. It uses no advertising or cross-site tracking
           cookies, and asks for nothing about you except in two places: the iOS beta form (section
           11) and the developer page, where developers sign in with a wallet signature to create
           partner API keys. For those we keep the wallet&apos;s address and each key&apos;s name,
@@ -838,15 +838,15 @@ export function PrivacyPolicyDoc() {
         <h2 id="contact">15 · Contact</h2>
         <p>
           Questions or requests? Email{" "}
-          <a className="link" href="mailto:support@merrymen.dev">support@merrymen.dev</a> or open an issue on{" "}
-          <a className="link" href="https://github.com/millw14/merrymen" target="_blank" rel="noreferrer">
+          <a className="link" href="mailto:support@agentcap.xyz">support@agentcap.xyz</a> or open an issue on{" "}
+          <a className="link" href="https://github.com/millw14/agentcap" target="_blank" rel="noreferrer">
             GitHub
           </a>
           . Please never send keys, recovery phrases or tokens.
         </p>
 
         <div className="callout" style={{ marginTop: 40 }}>
-          This policy describes in plain language what the Merrymen service and software do with
+          This policy describes in plain language what the AgentCap service and software do with
           your data. It is not legal advice.
         </div>
       </article>

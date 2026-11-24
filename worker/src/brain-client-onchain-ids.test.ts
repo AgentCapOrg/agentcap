@@ -58,7 +58,7 @@ const server = createServer(async (req, res) => {
   bodies.push(JSON.parse(raw) as Record<string, unknown>);
   const decision: BrainDecision = {
     schema_version: "1.0.0", decision_id: `dec_ids_${bodies.length}`, agent_id: "fixture", created_at: now, trigger_id: null,
-    action: "hold", instrument_id: "merrymen:meme", symbol: "MEME", confidence: 0.5, suggested_delta_usdg: 0,
+    action: "hold", instrument_id: "agentcap:meme", symbol: "MEME", confidence: 0.5, suggested_delta_usdg: 0,
     target_position_usdg: null, thesis: "Buys are thinning into strength.", evidence: [], bull_case: "", bear_case: "",
     risks: [], invalidation: [], time_horizon: "up to 30 minutes", tier: "pulse", depth_used: "analysts",
     escalation_reasons: [], candidate_action: null, models: [], cost: { model_calls: 4, tokens_in: 1, tokens_out: 1, usd: 0 },
@@ -82,13 +82,13 @@ function args(extra: Partial<DecideArgs> = {}): DecideArgs {
     agentId: "fixture", now, epoch: 1, cashUsdg: 10e6, vaultUsdg: 0, quarantinedUsdg: 0, positions: [],
     netContributionsUsdg: 10e6, grossContributionsUsdg: 10e6, grossWithdrawalsUsdg: 0, gasUsdg: 0,
     quality: { auditPassed: true, epoch: 1, currentAccountingHistoryAuditable: true, contributionsKnown: true, equityComplete: true, gasBasis: "net", positionHistoryAvailable: true, quarantinedAssetsPresent: false, assessedAt: now },
-    market: { instrumentId: "merrymen:meme", symbol: "MEME", instrumentClass: "memecoin", priceUsd: "0.0001", priceStale: false, signals: {} },
+    market: { instrumentId: "agentcap:meme", symbol: "MEME", instrumentClass: "memecoin", priceUsd: "0.0001", priceStale: false, signals: {} },
     expectedTradeGasUsdg: 0,
   };
   const snapshot = buildShadowSnapshot(inputs);
   return {
     runId: "fixture", agentId: "fixture", triggerId: "fixture", snapshot, tier: "pulse",
-    market: { snapshot_id: snapshot.snapshotId, as_of: now, instrument_id: "merrymen:meme", symbol: "MEME", instrument_class: "memecoin", price_usd: "0.0001", signals: {}, expected_trade_gas_usdg: 0 },
+    market: { snapshot_id: snapshot.snapshotId, as_of: now, instrument_id: "agentcap:meme", symbol: "MEME", instrument_class: "memecoin", price_usd: "0.0001", signals: {}, expected_trade_gas_usdg: 0 },
     ...extra,
   };
 }

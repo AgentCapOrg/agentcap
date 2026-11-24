@@ -50,7 +50,7 @@ const lc = (a: string | null | undefined) => (a ?? "").toLowerCase();
 /**
  * THE ONE DEFINITION of "this intent buys the energy reserve": the dedicated
  * kind, or a swap whose buy leg is a reserve token (which nothing should build
- * — MERRYMEN is kept out of the watch set and refused in chat — but which would
+ * — AGENTCAP is kept out of the watch set and refused in chat — but which would
  * still have to be booked as capital out, never as a fill, if anything did).
  */
 export function isEnergyIntent(intent: TradeIntent): boolean {

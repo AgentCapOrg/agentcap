@@ -23,7 +23,7 @@ function feed(at = AT): LighterFeedFile {
     fundings1h: Array.from({ length: 12 }, (_, i) => ({ t: endHour - (11 - i) * 3600, rate: "0.0010", direction: "long" })), fundingsObservedAt: at,
   } } };
 }
-beforeEach(() => { home = mkdtempSync(path.join(tmpdir(), "merrymen-public-capture-")); homes.push(home); source = path.join(home, "lighter-feed.json"); writeFileSync(source, JSON.stringify(feed())); });
+beforeEach(() => { home = mkdtempSync(path.join(tmpdir(), "agentcap-public-capture-")); homes.push(home); source = path.join(home, "lighter-feed.json"); writeFileSync(source, JSON.stringify(feed())); });
 after(() => { for (const home of homes) rmSync(home, { recursive: true, force: true }); });
 const options = () => ({ source, output: path.join(home, "capture"), samples: 3, intervalMs: 1000, optIn: "1" });
 
@@ -90,7 +90,7 @@ test("the opt-in CLI produces replay input accepted by the offline CLI without a
   writeFileSync(source, JSON.stringify(feed(Date.now())));
   const output = path.join(home, "cli");
   const cli = fileURLToPath(new URL("./capture-public-feed-cli.ts", import.meta.url));
-  const env = { ...process.env, MERRYMEN_PERPS_CAPTURE_PUBLIC_FEED: "1" };
+  const env = { ...process.env, AGENTCAP_PERPS_CAPTURE_PUBLIC_FEED: "1" };
   const result = JSON.parse(execFileSync(process.execPath, ["--import", "tsx", cli, source, output, "1"], { env, encoding: "utf8" }));
   assert.equal(result.complete, true); assert.equal(result.unreadFrames, 0);
   const replay = fileURLToPath(new URL("./backtest-cli.ts", import.meta.url));

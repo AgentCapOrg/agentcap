@@ -14,9 +14,9 @@ import { withFleetRecoveryLock } from "./fleet-recovery";
 import { preparePersistentHomeForHandover, PERSISTENT_HOME_MANIFEST } from "./persistent-home";
 import { PgTenantLeaseManager, type TenantLease } from "./tenant-lease";
 
-const pgUrl = process.env.MERRYMEN_TEST_PG_URL;
+const pgUrl = process.env.AGENTCAP_TEST_PG_URL;
 const savedEnv = { ...process.env };
-process.env.MERRYMEN_HOSTED = "1";
+process.env.AGENTCAP_HOSTED = "1";
 const {
   runOrchestrator, setRecoveryReportOnlyForTest, setSpawnForTest, setTenantLeaseForTest,
 } = await import("./orchestrator");
@@ -34,22 +34,22 @@ function files(home: string): unknown {
   });
 }
 function fixture(t: TestContext) {
-  const parent = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-report-only-"))), home = path.join(parent, "volume");
+  const parent = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-report-only-"))), home = path.join(parent, "volume");
   mkdirSync(home, { mode: 0o700 });
   const st = lstatSync(home, { bigint: true }), major = ((st.dev >> 8n) & 0xfffn) | ((st.dev >> 32n) & 0xfffff000n),
     minor = (st.dev & 0xffn) | ((st.dev >> 12n) & 0xffffff00n);
   const line = `40 20 ${major}:${minor} / ${home} rw - ext4 /dev/volume rw\n`;
-  Object.assign(process.env, { MERRYMEN_HOSTED: "1", MERRYMEN_HOME: home, RAILWAY_VOLUME_MOUNT_PATH: home,
-    MERRYMEN_HOME_VOLUME_ID: volume, MERRYMEN_PERSISTENT_HOME_REQUIRED: "1", MERRYMEN_FLEET_RECOVERY_REPORT_ONLY: "1",
+  Object.assign(process.env, { AGENTCAP_HOSTED: "1", AGENTCAP_HOME: home, RAILWAY_VOLUME_MOUNT_PATH: home,
+    AGENTCAP_HOME_VOLUME_ID: volume, AGENTCAP_PERSISTENT_HOME_REQUIRED: "1", AGENTCAP_FLEET_RECOVERY_REPORT_ONLY: "1",
     // A Railway-shaped deployment must name its rollout scope (fleet-rollout.ts);
     // the reporter starts nobody, so it runs beside `none`.
-    MERRYMEN_FLEET_ROLLOUT: "none",
+    AGENTCAP_FLEET_ROLLOUT: "none",
     DATABASE_URL: "postgres://fixture.invalid/not-a-real-connection" });
-  for (const key of ["MERRYMEN_STORE_DEK", "MERRYMEN_INITIAL_HANDOVER", "MERRYMEN_ACCOUNTING_HOLD_TENANTS"]) delete process.env[key];
+  for (const key of ["AGENTCAP_STORE_DEK", "AGENTCAP_INITIAL_HANDOVER", "AGENTCAP_ACCOUNTING_HOLD_TENANTS"]) delete process.env[key];
   const halt = path.join(home, "FLEET_HALT"); writeFileSync(halt, "", { mode: 0o600 });
   const child = path.join(home, "children", tenant); mkdirSync(child, { recursive: true, mode: 0o700 });
-  writeFileSync(path.join(child, "merrymen.db"), "original-book-not-opened", { mode: 0o600 });
-  writeFileSync(path.join(child, "merrymen.db-wal"), "original-uncheckpointed-wal", { mode: 0o600 });
+  writeFileSync(path.join(child, "agentcap.db"), "original-book-not-opened", { mode: 0o600 });
+  writeFileSync(path.join(child, "agentcap.db-wal"), "original-uncheckpointed-wal", { mode: 0o600 });
   writeFileSync(path.join(child, "grant.json"), "original-private-cache", { mode: 0o600 });
   mkdirSync(path.join(child, "soul"), { mode: 0o700 }); writeFileSync(path.join(child, "soul", "OWNER.md"), "private preserved memory");
   const raw = new DatabaseSync(":memory:");
@@ -91,7 +91,7 @@ function fixture(t: TestContext) {
   return { home, child, halt, line, raw, base, shared, queries, releases, health, lease, original, holds, holdCount, use,
     hook(fn: typeof hook) { hook = fn; }, async manifest() {
       rmSync(halt); const prior = path.join(home, "children"); renameSync(prior, path.join(parent, "children"));
-      preparePersistentHomeForHandover({ ...process.env, MERRYMEN_INITIAL_HANDOVER: "report-fixture" }, { readMountInfo: () => line });
+      preparePersistentHomeForHandover({ ...process.env, AGENTCAP_INITIAL_HANDOVER: "report-fixture" }, { readMountInfo: () => line });
       renameSync(path.join(parent, "children"), prior);
     } };
 }
@@ -108,7 +108,7 @@ test("actual report entry preserves populated unmanifested root, invalid sealed 
   assert.equal(f.holdCount(), 1); assert.equal((f.holds()[0] as { cause: string }).cause, "persistent-source");
   assert.deepEqual(files(f.home), beforeFiles); assert.deepEqual(f.original(), beforeRows);
   assert.equal(existsSync(path.join(f.home, PERSISTENT_HOME_MANIFEST)), false);
-  assert.equal(f.releases.n, 1); assert.equal(process.env.MERRYMEN_STORE_DEK, undefined);
+  assert.equal(f.releases.n, 1); assert.equal(process.env.AGENTCAP_STORE_DEK, undefined);
   assert.ok(f.queries.every(sql => !/\b(?:agents|positions|cost_basis|personal_memory|tenant_ledger_import)\b/.test(sql)));
 });
 test("retained stopped and ordinarily expired grants can receive failure reports without becoming authority", async t => {
@@ -122,15 +122,15 @@ test("retained stopped and ordinarily expired grants can receive failure reports
 test("missing or malformed mode cannot enter reporter or initialize the incident root", async t => {
   for (const mode of [undefined, "0", "true", " 1", ""]) {
     const f = fixture(t), before = files(f.home);
-    if (mode === undefined) delete process.env.MERRYMEN_FLEET_RECOVERY_REPORT_ONLY; else process.env.MERRYMEN_FLEET_RECOVERY_REPORT_ONLY = mode;
+    if (mode === undefined) delete process.env.AGENTCAP_FLEET_RECOVERY_REPORT_ONLY; else process.env.AGENTCAP_FLEET_RECOVERY_REPORT_ONLY = mode;
     await assert.rejects(runOrchestrator()); assert.deepEqual(files(f.home), before);
     assert.equal(f.queries.length, 0);
   }
 });
 test("malformed operator hold, missing halt, nonprivate root, wrong mount and unsafe halt refuse before SQL", async t => {
   for (const change of [
-    (f: ReturnType<typeof fixture>) => { process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS = "bad-tenant"; },
-    (f: ReturnType<typeof fixture>) => { process.env.MERRYMEN_INITIAL_HANDOVER = "bad token"; },
+    (f: ReturnType<typeof fixture>) => { process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS = "bad-tenant"; },
+    (f: ReturnType<typeof fixture>) => { process.env.AGENTCAP_INITIAL_HANDOVER = "bad token"; },
     (f: ReturnType<typeof fixture>) => rmSync(f.halt),
     (f: ReturnType<typeof fixture>) => chmodSync(f.home, 0o755),
     (f: ReturnType<typeof fixture>) => f.use(undefined, () => f.line.replace("ext4", "overlay")),
@@ -152,7 +152,7 @@ test("valid halted volume reports pinned source marker or absent book with posit
   for (const kind of ["marker", "missing", "zero"] as const) {
     const f = fixture(t); await f.manifest();
     if (kind === "marker") writeFileSync(path.join(f.child, "ledger-source-blocked.json"), '{"version":1}', { mode: 0o600 });
-    else { rmSync(path.join(f.child, "merrymen.db")); if (kind === "zero") f.raw.exec("UPDATE mirror_state SET last_id=0"); }
+    else { rmSync(path.join(f.child, "agentcap.db")); if (kind === "zero") f.raw.exec("UPDATE mirror_state SET last_id=0"); }
     const before = files(f.home); await runOrchestrator(); assert.deepEqual(files(f.home), before);
     assert.equal(f.holdCount(), kind === "zero" ? 0 : 1);
     if (kind !== "zero") assert.equal((f.holds()[0] as { cause: string }).cause, kind === "marker" ? "source-barrier" : "source-continuity");
@@ -199,7 +199,7 @@ test("halt replacement during lease acquisition releases the new lease and publi
 test("changed grant, source cursor, halt or lease while awaiting publication roll back the health row", async t => {
   for (const kind of ["grant", "cursor", "halt", "lease"] as const) {
     const f = fixture(t);
-    if (kind === "cursor") { await f.manifest(); rmSync(path.join(f.child, "merrymen.db")); }
+    if (kind === "cursor") { await f.manifest(); rmSync(path.join(f.child, "agentcap.db")); }
     let done = false;
     f.hook(async sql => {
       if (done) return;

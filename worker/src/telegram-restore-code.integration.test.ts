@@ -31,11 +31,11 @@ import { after, beforeEach, describe, it } from "node:test";
 
 // At its real path: the handoff refuses a home reached through a link
 // (HANDOFF_HOME), and macOS's tmpdir is one.
-const FLEET = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-tg-restore-code-")));
-process.env.MERRYMEN_HOME = FLEET;
-process.env.MERRYMEN_HOSTED = "1";
+const FLEET = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-tg-restore-code-")));
+process.env.AGENTCAP_HOME = FLEET;
+process.env.AGENTCAP_HOSTED = "1";
 delete process.env.DATABASE_URL;
-process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
+process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
 after(() => rmSync(FLEET, { recursive: true, force: true }));
 
 const { childHome, restoredTelegramFile, writeTelegramForChild } = await import("./orchestrator");
@@ -154,9 +154,9 @@ describe("an ordinary tenant whose bot the recovery listener answered is admitte
   };
   /** telegram.json as the child loads it (telegram/state.ts loadTelegramState), from the tenant's home. */
   const childReads = (t: string) => {
-    const fleet = process.env.MERRYMEN_HOME;
-    process.env.MERRYMEN_HOME = childHome(t);
-    try { return loadTelegramState(); } finally { process.env.MERRYMEN_HOME = fleet; }
+    const fleet = process.env.AGENTCAP_HOME;
+    process.env.AGENTCAP_HOME = childHome(t);
+    try { return loadTelegramState(); } finally { process.env.AGENTCAP_HOME = fleet; }
   };
 
   it("a linked tenant: the restore writes offset 0, the handoff raises it to the listener's mark, and the child starts past it", async () => {

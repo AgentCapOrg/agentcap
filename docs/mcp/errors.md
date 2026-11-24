@@ -1,11 +1,11 @@
-# Merrymen MCP: errors
+# AgentCap MCP: errors
 
 ## Tool errors
 
 A failed tool call returns an MCP result with `isError: true` and **no**
 `structuredContent` (every tool's `outputSchema` describes its success shape,
 and clients validate `structuredContent` against it even on errors). The
-machine-readable envelope is in `_meta["dev.merrymen/error"]`, and also in the
+machine-readable envelope is in `_meta["dev.agentcap/error"]`, and also in the
 text: a one-line explanation, a blank line, then this JSON:
 
 ```json
@@ -37,7 +37,7 @@ answer: missing data sources return `upstream_unavailable`.
 | `quota_exceeded` | after `retry_after_s` | An hourly or daily budget is used up (chat, quotes, backtests, exports). |
 | `timeout` | yes | The work did not finish in time. |
 | `upstream_unavailable` | after `retry_after_s` | A data source or dependency (ledger, chain, market provider) is unavailable. |
-| `unsupported` | no | Merrymen does not support this (for example a token the owner-order path cannot address). |
+| `unsupported` | no | AgentCap does not support this (for example a token the owner-order path cannot address). |
 | `internal` | yes | Unexpected server error. |
 
 Input that fails the tool's JSON schema is rejected by the protocol layer

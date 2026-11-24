@@ -9,7 +9,7 @@
 import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
 import { createMcpHandler } from "@modelcontextprotocol/server";
-import { STOCK_TOKENS } from "@merrymen/core";
+import { STOCK_TOKENS } from "@agentcap/core";
 import type { MarketData } from "@/lib/market";
 import type { CandleRead } from "@/lib/read-candles";
 import type { DiscoveryRow, FreshRow, Payload } from "@/lib/read-discoveries";

@@ -157,7 +157,7 @@ describe("the shell's refresh schedule", () => {
 describe("what the shell says while it retries", () => {
   it("is plain, and counts down", () => {
     const copy = failureCopy({ nextAt: 1_012_000, lastOkAt: null, now: 1_000_000 });
-    assert.equal(copy.line, "Can't reach merrymen, retrying in 12s.");
+    assert.equal(copy.line, "Can't reach agentcap, retrying in 12s.");
     assert.equal(copy.stale, null, "nothing on screen to call stale before anything loaded");
   });
 
@@ -168,7 +168,7 @@ describe("what the shell says while it retries", () => {
   });
 
   it("says it is retrying once the countdown has run out", () => {
-    assert.equal(failureCopy({ nextAt: 1_000_000, lastOkAt: null, now: 1_000_400 }).line, "Can't reach merrymen, retrying now…");
+    assert.equal(failureCopy({ nextAt: 1_000_000, lastOkAt: null, now: 1_000_400 }).line, "Can't reach agentcap, retrying now…");
   });
 });
 
@@ -197,22 +197,22 @@ describe("a pass already running", () => {
   it("the line says it is retrying now rather than counting down to it", () => {
     assert.equal(
       failureCopy({ nextAt: 1_038_000, lastOkAt: null, now: 1_000_000, inFlight: true, unreachable: true }).line,
-      "Can't reach merrymen, retrying now…",
+      "Can't reach agentcap, retrying now…",
     );
   });
 });
 
 describe("what the line may claim about this failure", () => {
   const now = Date.now();
-  it("'Can't reach merrymen' only when nothing answered", () => {
+  it("'Can't reach agentcap' only when nothing answered", () => {
     assert.equal(
       failureCopy({ nextAt: now + 12_000, lastOkAt: null, now, unreachable: true, failed: { account: true, market: true } }).line,
-      "Can't reach merrymen, retrying in 12s.",
+      "Can't reach agentcap, retrying in 12s.",
     );
     assert.equal(
       failureCopy({ nextAt: now + 12_000, lastOkAt: null, now, unreachable: false, failed: { account: true, market: true } }).line,
       "Couldn't load your account or market data, retrying in 12s.",
-      "a 500 is merrymen answering",
+      "a 500 is agentcap answering",
     );
   });
 

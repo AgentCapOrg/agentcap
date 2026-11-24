@@ -18,7 +18,7 @@ import { before, test } from "node:test";
 import React, { act } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { JSDOM } from "jsdom";
-import { autonomyOf } from "@merrymen/core";
+import { autonomyOf } from "@agentcap/core";
 import { loadLive, type LiveAgent, type LiveMine } from "./live";
 import { STALE_VALUATION_SEC, performanceFromWire, staleSince, type AgentPerformance } from "./agent-performance";
 import type { ProfileAgent } from "./profile-view";

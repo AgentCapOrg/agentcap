@@ -1,6 +1,6 @@
 import XCTest
 import UIKit
-@testable import Merrymen
+@testable import AgentCap
 
 final class PackagingTests: XCTestCase {
     func testAllWebLanguagesShipNativeNavigationAndFinancialCopy() {
@@ -24,7 +24,7 @@ final class PackagingTests: XCTestCase {
         XCTAssertNotNil(UIFont(name: "GeistPixel-Regular", size: 24))
     }
     func testSecureUpdatesPreserveValuesAndCanBeRemoved() throws {
-        let service = "dev.merrymen.tests.\(UUID().uuidString)"
+        let service = "dev.agentcap.tests.\(UUID().uuidString)"
         defer { try? SecureStore.remove(service, "test") }
         try SecureStore.write(service, "test", Data("first".utf8))
         try SecureStore.write(service, "test", Data("replacement".utf8))

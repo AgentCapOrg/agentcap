@@ -4,7 +4,7 @@ import { getEntryPoint, KERNEL_V3_3 } from "@zerodev/sdk/constants";
 import { signerToEcdsaValidator } from "@zerodev/ecdsa-validator";
 import { createPublicClient, custom, encodeFunctionData, type Address } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { assertDerivedAccount, robinhoodChain } from "@merrymen/core";
+import { assertDerivedAccount, robinhoodChain } from "@agentcap/core";
 import { KERNEL_REVOCATION_ABI } from "./permission-revocation";
 
 export async function sdkRevocationCall(accountAddress: Address, nonce = 2) {

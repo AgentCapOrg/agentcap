@@ -78,7 +78,7 @@
     key(index) { return sync('storageKeys', {})[index] ?? null; },
     get length() { return sync('storageKeys', {}).length; },
   };
-  globalThis.window = { location: { origin: 'https://app.merrymen.dev' } };
+  globalThis.window = { location: { origin: 'https://app.agentcap.xyz' } };
   globalThis.__runWallet = async (id, operation, input) => {
     try {
       if (!['capabilities', 'recoverIdentity', 'create', 'restore', 'preview', 'plan', 'withdraw', 'reconcile'].includes(operation)) throw new Error('Unsupported wallet operation');

@@ -4,7 +4,7 @@
  * Hosted, Fomo state lives in the shared Postgres the web and the orchestrator
  * already hold. Self-hosted there is no Postgres and no orchestrator: the
  * worker and the dashboard are two processes on one machine. The ledger
- * (merrymen.db) has exactly one writer by design — the web opens it
+ * (agentcap.db) has exactly one writer by design — the web opens it
  * read-only — and Fomo must not change that. So Fomo gets its OWN file,
  * opened read-write by both: caches, the cohort, conversation subject memory
  * and watches are written by whichever process answered the question.
@@ -19,14 +19,14 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { wrapSqlite, type Db } from "../db";
-import { merrymenHome } from "../home";
+import { agentcapHome } from "../home";
 
 export const LOCAL_FOMO_DB_FILE = "fomo.sqlite";
 
 const opened = new Map<string, Db>();
 
 /** The path of the self-hosted Fomo database under a home directory. */
-export function localFomoDbPath(home: string = merrymenHome()): string {
+export function localFomoDbPath(home: string = agentcapHome()): string {
   return path.join(home, LOCAL_FOMO_DB_FILE);
 }
 
@@ -35,7 +35,7 @@ export function localFomoDbPath(home: string = merrymenHome()): string {
  * is NOT created here: callers run ensureFomoSchema(db, "sqlite"), which is
  * memoised per Db.
  */
-export function openLocalFomoDb(home: string = merrymenHome()): Db {
+export function openLocalFomoDb(home: string = agentcapHome()): Db {
   const file = localFomoDbPath(home);
   const existing = opened.get(file);
   if (existing) return existing;

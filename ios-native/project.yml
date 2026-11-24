@@ -1,4 +1,4 @@
-name: Merrymen
+name: AgentCap
 options:
   deploymentTarget:
     iOS: "17.0"
@@ -7,7 +7,7 @@ packages:
   Privy:
     url: https://github.com/privy-io/privy-ios
     exactVersion: 2.16.2
-  MerrymenPolicy:
+  AgentCapPolicy:
     path: Policy
   Reown:
     url: https://github.com/reown-com/reown-swift
@@ -23,7 +23,7 @@ settings:
     PRIVY_CLIENT_ID: client-WY6d71sbtkjt4rYm47MtP3J8PM6dmqSUD2LrCfP8BzQHv
     WALLETCONNECT_PROJECT_ID: 8042e5914f92e6de57b20821a8b9228c
 targets:
-  Merrymen:
+  AgentCap:
     type: application
     platform: iOS
     sources:
@@ -34,7 +34,7 @@ targets:
     info:
       path: Resources/Info.plist
       properties:
-        CFBundleDisplayName: merrymen
+        CFBundleDisplayName: AgentCap
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         ITSAppUsesNonExemptEncryption: false
@@ -44,10 +44,10 @@ targets:
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         CFBundleURLTypes:
-          - CFBundleURLName: dev.merrymen.app
-            CFBundleURLSchemes: [merrymen]
-        NSCameraUsageDescription: Take a photo for your Merrymen agent avatar or banner.
-        NSPhotoLibraryUsageDescription: Choose a photo for your Merrymen agent avatar or banner.
+          - CFBundleURLName: dev.agentcap.app
+            CFBundleURLSchemes: [agentcap]
+        NSCameraUsageDescription: Take a photo for your AgentCap agent avatar or banner.
+        NSPhotoLibraryUsageDescription: Choose a photo for your AgentCap agent avatar or banner.
         NSMicrophoneUsageDescription: Dictate an editable message to your agent. Recording starts only when you tap the microphone.
         NSSpeechRecognitionUsageDescription: Transcribe your voice on this device into a draft you review before sending.
         PrivyAppID: $(PRIVY_APP_ID)
@@ -58,40 +58,40 @@ targets:
         UIAppFonts: [DMSans.ttf, GeistPixel.ttf]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: dev.merrymen.app
+        PRODUCT_BUNDLE_IDENTIFIER: dev.agentcap.app
         TARGETED_DEVICE_FAMILY: "1,2"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ENABLE_USER_SCRIPT_SANDBOXING: YES
     dependencies:
-      - package: MerrymenPolicy
+      - package: AgentCapPolicy
       - package: Privy
         product: Privy
       - package: Reown
         product: ReownAppKit
-  MerrymenUITests:
+  AgentCapUITests:
     type: bundle.ui-testing
     platform: iOS
     sources: [UITests]
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
-        PRODUCT_BUNDLE_IDENTIFIER: dev.merrymen.app.uitests
+        PRODUCT_BUNDLE_IDENTIFIER: dev.agentcap.app.uitests
     dependencies:
-      - target: Merrymen
-  MerrymenAppTests:
+      - target: AgentCap
+  AgentCapAppTests:
     type: bundle.unit-test
     platform: iOS
     sources: [AppTests]
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
-        PRODUCT_BUNDLE_IDENTIFIER: dev.merrymen.app.tests
+        PRODUCT_BUNDLE_IDENTIFIER: dev.agentcap.app.tests
     dependencies:
-      - target: Merrymen
+      - target: AgentCap
 schemes:
-  Merrymen:
+  AgentCap:
     build:
       targets:
-        Merrymen: all
+        AgentCap: all
     test:
-      targets: [MerrymenAppTests, MerrymenUITests]
+      targets: [AgentCapAppTests, AgentCapUITests]

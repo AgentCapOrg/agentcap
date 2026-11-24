@@ -15,7 +15,7 @@ import { base58Decode } from "../../packages/core/src/ids";
 import { SOLANA_VAULT_LOCAL_TEST_PROGRAM } from "../../packages/core/src/solana-live";
 
 const SCRIPT = fileURLToPath(new URL("../../contracts/solana/scripts/check-release-id.mjs", import.meta.url));
-const LIB_RS = fileURLToPath(new URL("../../contracts/solana/programs/merrymen-vault/src/lib.rs", import.meta.url));
+const LIB_RS = fileURLToPath(new URL("../../contracts/solana/programs/agentcap-vault/src/lib.rs", import.meta.url));
 type ReleaseCheck = {
   checkReleaseId(input: { publicKey: string; source: string; binary: Buffer }): { programId: string; bytes: number; sha256: string };
   ReleaseIdError: new (...args: never[]) => Error & { exitCode: number };

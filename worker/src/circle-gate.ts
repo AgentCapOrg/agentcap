@@ -3,7 +3,7 @@
  * THE CLASS EXITS STILL RUN.
  *
  * even-keel and dip-hunter run only for a Merry Man holder (registry.ts
- * CIRCLE_STRATEGIES, 100,000 $MERRYMEN between the owner's wallet and the
+ * CIRCLE_STRATEGIES, 100,000 $AGENTCAP between the owner's wallet and the
  * agent's account — the same line energy calls "full"). Below it the tick used
  * to RETURN at the gate, before the strategy ticked AND before the class
  * route's exits — so a class position on a curve with a graduation deadline was
@@ -54,7 +54,7 @@ import type { Tick } from "./strategies/types";
  *
  * THE GATE MAY NOT FALL SHORT BECAUSE A READ FAILED. holderTier starts at the
  * outsider in every new process and is set only when a read answers — so after
- * a restart (every hosted redeploy) whose first $MERRYMEN read failed, routine
+ * a restart (every hosted redeploy) whose first $AGENTCAP read failed, routine
  * on a fleet whose mainnet reads are refused, a Merry Man's Circle strategy
  * stopped rebalancing, told them "we could not read", and waited for the
  * chain. So the gate also takes energy's standing (energy.ts energyLevel over
@@ -107,7 +107,7 @@ export type CircleNoted = "unread" | "short" | null;
  * ONCE PER CHANGE OF REASON, NOT ONCE PER SHORTFALL.
  *
  * The latch used to be a boolean keyed on `circleShort` alone. A child whose
- * FIRST $MERRYMEN read failed (holderTier starts at the outsider until a read
+ * FIRST $AGENTCAP read failed (holderTier starts at the outsider until a read
  * answers) sent "that is our read failing — it should clear on its own", set
  * the latch, and when the next read answered and showed the owner really was
  * short, said nothing: on iOS and Android that first sentence was the owner's
@@ -137,7 +137,7 @@ export function circleNoteStep(
  *
  * WHERE THE TOKENS COUNT. The agent's account counts toward the tier only on
  * Robinhood Chain (index.ts energyAccount); on a grant anywhere else, "between
- * your wallet and my account" names an account whose $MERRYMEN would not
+ * your wallet and my account" names an account whose $AGENTCAP would not
  * count, so that owner is told the one place that does — energy-copy.ts says
  * it the same way.
  */
@@ -148,13 +148,13 @@ export function circleNote(
   const idle = "it opens nothing new and leaves its basket as it is; positions in a class vault are still closed by their own exit rules";
   if (say === "unread") {
     return (
-      `${f.strategyName} is a Merry Circle strategy and we could not read your $MERRYMEN balance this tick, so until ` +
+      `${f.strategyName} is a Merry Circle strategy and we could not read your $AGENTCAP balance this tick, so until ` +
       `we can, ${idle}. That is our read failing, not your wallet — it should clear on its own.`
     );
   }
   const where = f.accountCounts ? "between your wallet and my account" : "in your own wallet on Robinhood Chain";
   return (
-    `${f.strategyName} is a Merry Circle strategy — hold ${count(ENERGY.fullTokens)} $MERRYMEN ${where} ` +
+    `${f.strategyName} is a Merry Circle strategy — hold ${count(ENERGY.fullTokens)} $AGENTCAP ${where} ` +
     `(Merry Man tier) to run it; idle until then: ${idle}.`
   );
 }

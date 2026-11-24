@@ -32,7 +32,7 @@ export async function authenticateSolana(req: Request, dependencies = defaults):
   if (!result.ok) throw new SolanaWebError(401, "Your sign-in expired. Sign in again.", { problem: "expired", account: null, loginHasAccount: false });
   // This client expectation only narrows a verified identity. It can never
   // substitute for the token or select another tenant during account changes.
-  const expectedDid = req.headers.get("x-merrymen-privy-did");
+  const expectedDid = req.headers.get("x-agentcap-privy-did");
   if (expectedDid && expectedDid !== result.identity.did) throw new SolanaWebError(403, "Your signing account changed. Refresh before continuing.");
   const mapped = await dependencies.tenantForDid(result.identity.did);
   if (mapped !== tenant) {
@@ -54,13 +54,13 @@ const LOOPBACK = /^(localhost|127(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}|\[::1\])$/;
  * loopback hosts in req.url to "localhost", so requestOrigin() disagrees with
  * the browser's Origin and every Solana POST was refused. Middleware handles
  * this by reading the Host header; here that is allowed ONLY for loopback, so
- * a real host never trusts Host. Applies only without MERRYMEN_PUBLIC_ORIGIN
+ * a real host never trusts Host. Applies only without AGENTCAP_PUBLIC_ORIGIN
  * (a configured origin is exact), only when req.url itself is loopback, and
  * only when Origin and Host name the same loopback host and port: another
  * local port, or a DNS-rebinding name, is still cross-origin.
  */
 function sameLoopbackOrigin(req: Request, origin: string): boolean {
-  if (process.env.MERRYMEN_PUBLIC_ORIGIN) return false;
+  if (process.env.AGENTCAP_PUBLIC_ORIGIN) return false;
   try {
     const url = new URL(req.url), host = req.headers.get("host"), claimed = new URL(origin);
     if (!host || !LOOPBACK.test(url.hostname) || claimed.origin !== origin || claimed.protocol !== url.protocol) return false;
@@ -72,8 +72,8 @@ export function solanaBindingMessage(principal: SolanaPrincipal, owner: string, 
   solanaPaperAgentId(owner);
   if (!/^0x[0-9a-f]{40}$/.test(principal.tenant) || !/^did:privy:[A-Za-z0-9_-]{1,160}$/.test(principal.did)) throw new SolanaWebError(400, "Invalid account identity.");
   return [
-    "Merrymen Solana wallet binding v1", "",
-    "Bind this Solana wallet to my Merrymen account. This grants no trading or withdrawal authority.", "",
+    "AgentCap Solana wallet binding v1", "",
+    "Bind this Solana wallet to my AgentCap account. This grants no trading or withdrawal authority.", "",
     `Tenant: ${principal.tenant}`, `Identity: ${principal.did}`, `Chain: ${CHAINS.solana}`,
     `Owner: ${owner}`, `URI: ${origin}`, `Nonce: ${nonce}`,
   ].join("\n");

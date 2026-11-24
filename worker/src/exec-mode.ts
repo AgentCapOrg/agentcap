@@ -196,7 +196,7 @@ export interface ExecInputs {
    * spending my money", which is the same implicit promotion in a new costume.
    *
    * AND DELIBERATELY NO ENVIRONMENT OVERRIDE, unlike every sibling setting:
-   * `MERRYMEN_LIVE_TRADING=true` on the orchestrator would be the house
+   * `AGENTCAP_LIVE_TRADING=true` on the orchestrator would be the house
    * consenting to real execution on behalf of every owner in the fleet at once.
    * `worker/src/settings.ts` reads this field from the tenant's own settings
    * only, and says so there.
@@ -215,7 +215,7 @@ export interface ExecInputs {
    *
    * The orchestrator spawns children BEFORE the backfill runs, so even a
    * report-only run would open that window. This closes it: while
-   * `MERRYMEN_LIVE_INTENT_STAND_DOWN=1` is set, the rail behaves exactly as it
+   * `AGENTCAP_LIVE_INTENT_STAND_DOWN=1` is set, the rail behaves exactly as it
    * did before the gate existed.
    *
    * NOT AN ESCAPE HATCH, and the difference matters. It grants nothing new — it
@@ -407,7 +407,7 @@ export function liveBlocker(a: ExecInputs): RefuseRule {
  *                   live flag) refuse in a non-matching rail rather than
  *                   simulate, and this is the third.
  *
- * THE OPERATOR ONLY RESTRICTS (rule 1): `MERRYMEN_PERPS=off|paper|live` can
+ * THE OPERATOR ONLY RESTRICTS (rule 1): `AGENTCAP_PERPS=off|paper|live` can
  * take a rail away, never grant one. `paper` lets a paper account practise and
  * refuses a live one; `off` refuses both. Nothing here can promote an account.
  *
@@ -436,7 +436,7 @@ export function liveBlocker(a: ExecInputs): RefuseRule {
  * WHY liveTradingEnabled IS AN INPUT HERE AND NOT JUST `verdict.mode`. The
  * verdict answers "may this account's SPOT trades move real money", and during
  * the consent migration (`enforceLiveIntent: false`, the
- * MERRYMEN_LIVE_INTENT_STAND_DOWN window) it answers yes for an owner who
+ * AGENTCAP_LIVE_INTENT_STAND_DOWN window) it answers yes for an owner who
  * never turned the live rail on — `consented()` restores the old behaviour for
  * spot on purpose. Leverage is not the old behaviour: no owner was ever
  * trading live perps before the gate existed, so the stand-down has nobody to
@@ -477,7 +477,7 @@ export interface PerpsModeInputs {
   granted: boolean;
   /** Deposit landed, account index read, sealed key registered at our index, venue reachable. */
   venueReady: boolean;
-  /** MERRYMEN_HALT_PERP_ENTRIES / the owner's /flatten. Deliberately not a rail — see above. */
+  /** AGENTCAP_HALT_PERP_ENTRIES / the owner's /flatten. Deliberately not a rail — see above. */
   entriesHalted: boolean;
 }
 

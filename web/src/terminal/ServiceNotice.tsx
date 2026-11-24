@@ -15,7 +15,7 @@ import {
 import { requestJson } from "./request-json";
 
 /** Where a dismissal is kept: the revision of the notice that was dismissed. */
-export const DISMISSED_KEY = "merrymen:service-notice:dismissed";
+export const DISMISSED_KEY = "agentcap:service-notice:dismissed";
 
 /**
  * How often an open tab asks again. The notice changes only on a web redeploy,

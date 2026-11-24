@@ -27,14 +27,14 @@ const FIXTURES = path.join(import.meta.dirname, "fixtures");
 const fixture = (f: string) => readFileSync(path.join(FIXTURES, f), "utf8");
 const DEC = parseOrderBookDetails(JSON.parse(fixture("orderBookDetails.perp.json")))!.decimals;
 
-const ROOT = mkdtempSync(path.join(os.tmpdir(), "merrymen-lighter-api-"));
+const ROOT = mkdtempSync(path.join(os.tmpdir(), "agentcap-lighter-api-"));
 const HOME = path.join(ROOT, "children", "tenant-a");
 const FLEET = path.join(ROOT, "fleet");
-const priorFleet = process.env.MERRYMEN_FLEET_HOME;
-process.env.MERRYMEN_FLEET_HOME = FLEET;
+const priorFleet = process.env.AGENTCAP_FLEET_HOME;
+process.env.AGENTCAP_FLEET_HOME = FLEET;
 after(() => {
-  if (priorFleet === undefined) delete process.env.MERRYMEN_FLEET_HOME;
-  else process.env.MERRYMEN_FLEET_HOME = priorFleet;
+  if (priorFleet === undefined) delete process.env.AGENTCAP_FLEET_HOME;
+  else process.env.AGENTCAP_FLEET_HOME = priorFleet;
   rmSync(ROOT, { recursive: true, force: true });
 });
 

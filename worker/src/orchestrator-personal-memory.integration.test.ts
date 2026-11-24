@@ -11,12 +11,12 @@ import type { StoredGrant } from "../../packages/core/src/index";
 import { wrapSqlite, type Db } from "./db";
 import { ensurePersonalMemorySchema, publishPersonalMemory } from "./personal-memory-ferry";
 
-const fleet = mkdtempSync(path.join(os.tmpdir(), "merrymen-personal-startup-"));
-process.env.MERRYMEN_HOME = fleet;
-process.env.MERRYMEN_HOSTED = "1";
+const fleet = mkdtempSync(path.join(os.tmpdir(), "agentcap-personal-startup-"));
+process.env.AGENTCAP_HOME = fleet;
+process.env.AGENTCAP_HOSTED = "1";
 delete process.env.DATABASE_URL;
 const dek = Buffer.alloc(32, 73);
-process.env.MERRYMEN_STORE_DEK = dek.toString("base64");
+process.env.AGENTCAP_STORE_DEK = dek.toString("base64");
 const {
   childHome, hasLeaseForTest, isHeldForTest, reconcile,
   setPaperRestoreForTest, setPersonalMemoryStoreForTest, setSpawnForTest,
@@ -56,7 +56,7 @@ async function seed(tenant: string): Promise<void> {
   mkdirSync(path.join(home, "soul"));
   writeFileSync(path.join(home, "soul", "OWNER.md"), "owner remembers the green kite");
   writeFileSync(path.join(home, "soul", "NOTES.md"), "keep the same cautious personality");
-  const raw = new DatabaseSync(path.join(home, "merrymen.db"));
+  const raw = new DatabaseSync(path.join(home, "agentcap.db"));
   raw.exec("CREATE TABLE chat_turns (id INTEGER PRIMARY KEY AUTOINCREMENT, chat_id INTEGER NOT NULL, role TEXT NOT NULL, content TEXT NOT NULL, memory_ids TEXT, at INTEGER NOT NULL)");
   raw.prepare("INSERT INTO chat_turns (chat_id,role,content,at) VALUES (?,?,?,?)").run(42, "user", "remember our last conversation", now);
   raw.close();
@@ -99,7 +99,7 @@ it("a failed read starts no worker or holder, then restores the same notes and D
   const home = childHome(tenant);
   assert.equal(readFileSync(path.join(home, "soul", "OWNER.md"), "utf8"), "owner remembers the green kite");
   assert.equal(readFileSync(path.join(home, "soul", "NOTES.md"), "utf8"), "keep the same cautious personality");
-  const raw = new DatabaseSync(path.join(home, "merrymen.db"), { readOnly: true });
+  const raw = new DatabaseSync(path.join(home, "agentcap.db"), { readOnly: true });
   try {
     assert.equal((raw.prepare("SELECT content FROM chat_turns WHERE chat_id = 42").get() as { content: string }).content, "remember our last conversation");
   } finally { raw.close(); }

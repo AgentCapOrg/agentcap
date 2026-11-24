@@ -48,7 +48,7 @@ test("get_agent_controls returns the controls list, and the kill switch is where
   const def = AGENT_TOOLS.find((t) => t.name === "get_agent_controls") as unknown as ToolDef;
   const r: CallToolResult = await runTool(def, { agent: SLUG_A }, a.principal, "trace-test", { now: () => NOW });
   assert.equal(r.isError, undefined, r.content[0]?.text);
-  // Read-only: no drafts:write, so setting changes point at Merrymen's Settings, not at propose_settings_change.
+  // Read-only: no drafts:write, so setting changes point at AgentCap's Settings, not at propose_settings_change.
   assert.deepEqual((r.structuredContent as { controls: unknown }).controls, [...AGENT_CONTROLS.filter((c) => c.control !== "setting changes"), SETTINGS_CONTROL_IN_APP]);
 
   const kill = where("kill switch");
@@ -61,7 +61,7 @@ test("get_agent_controls returns the controls list, and the kill switch is where
   }
 });
 
-test("get_agent_controls never names a tool the connection lacks: on the directory profile, setting changes point at Merrymen's Settings", async () => {
+test("get_agent_controls never names a tool the connection lacks: on the directory profile, setting changes point at AgentCap's Settings", async () => {
   const d = await makeTestDb();
   const deps = makeDeps(d);
   restore = installFixtures(d);

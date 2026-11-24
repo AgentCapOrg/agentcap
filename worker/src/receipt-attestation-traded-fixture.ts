@@ -42,7 +42,7 @@ export async function tradedFixture(sharedDb?: Db, lease?: TenantLease, opts: { 
   const root = realpathSync(mkdtempSync(path.join(os.tmpdir(), "mm-traded-attestation-")));
   const homeRoot = path.join(root, "fleet"), home = path.join(homeRoot, "children", TEST_TENANT);
   mkdirSync(home, { recursive: true, mode: 0o700 });
-  const file = path.join(home, "merrymen.db"), raw = new DatabaseSync(file), local = wrapSqlite(raw);
+  const file = path.join(home, "agentcap.db"), raw = new DatabaseSync(file), local = wrapSqlite(raw);
   chmodSync(file, 0o600);
   const memory = sharedDb ? null : new DatabaseSync(":memory:");
   const shared = sharedDb ?? wrapSqlite(memory!);

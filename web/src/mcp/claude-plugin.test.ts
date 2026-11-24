@@ -1,5 +1,5 @@
 /**
- * The Claude Code plugin (plugins/merrymen) and the marketplace that lists it
+ * The Claude Code plugin (plugins/agentcap) and the marketplace that lists it
  * (.claude-plugin/marketplace.json). Nothing in the app imports these files,
  * so without this test a renamed tool or a moved endpoint would leave every
  * installed plugin pointing at something that no longer exists.
@@ -17,31 +17,31 @@ import { PLUGIN_ID, PLUGIN_MARKETPLACE_URL, PLUGIN_SERVER_URL, claudeCodePluginC
 const root = new URL("../../../", import.meta.url);
 const read = (rel: string) => readFileSync(new URL(rel, root), "utf8");
 const json = (rel: string) => JSON.parse(read(rel)) as Record<string, unknown>;
-const PLUGIN = "plugins/merrymen/";
-const TRADER = "plugins/merrymen-trader/";
+const PLUGIN = "plugins/agentcap/";
+const TRADER = "plugins/agentcap-trader/";
 const skills = readdirSync(new URL(`${PLUGIN}skills/`, root), { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name).sort();
 
 test("the marketplace lists the plugin from its own directory, under the id the connect page tells people to install", () => {
   const market = json(".claude-plugin/marketplace.json");
   const entries = market.plugins as Array<{ name: string; source: string }>;
-  // merrymen first: it is the one the connect page installs. merrymen-trader rides on its server.
-  assert.deepEqual(entries.map((e) => e.name), ["merrymen", "merrymen-trader"]);
+  // agentcap first: it is the one the connect page installs. agentcap-trader rides on its server.
+  assert.deepEqual(entries.map((e) => e.name), ["agentcap", "agentcap-trader"]);
   assert.equal(`${entries[0].name}@${market.name}`, PLUGIN_ID);
-  assert.equal(entries[0].source, "./plugins/merrymen");
+  assert.equal(entries[0].source, "./plugins/agentcap");
   assert.equal(entries[1].source, `./${TRADER.replace(/\/$/, "")}`);
   assert.ok(existsSync(new URL(`${PLUGIN}.claude-plugin/plugin.json`, root)));
-  assert.equal(PLUGIN_MARKETPLACE_URL, "https://github.com/millw14/merrymen.git");
-  assert.deepEqual(claudeCodePluginCommands(PLUGIN_SERVER_URL), ["/plugin marketplace add https://github.com/millw14/merrymen.git", "/plugin install merrymen@merrymen"]);
+  assert.equal(PLUGIN_MARKETPLACE_URL, "https://github.com/millw14/agentcap.git");
+  assert.deepEqual(claudeCodePluginCommands(PLUGIN_SERVER_URL), ["/plugin marketplace add https://github.com/millw14/agentcap.git", "/plugin install agentcap@agentcap"]);
 });
 
 test("the plugin's server is the production endpoint, the same address the connect page falls back to", () => {
   const manifest = json(`${PLUGIN}.claude-plugin/plugin.json`);
-  assert.equal(manifest.name, "merrymen");
+  assert.equal(manifest.name, "agentcap");
   assert.ok(typeof manifest.version === "string" && typeof manifest.description === "string");
   assert.ok((manifest.author as { name?: string }).name);
   const servers = (json(`${PLUGIN}.mcp.json`).mcpServers ?? {}) as Record<string, { type: string; url: string }>;
-  assert.deepEqual(Object.keys(servers), ["merrymen"]);
-  assert.deepEqual(servers.merrymen, { type: "http", url: PLUGIN_SERVER_URL });
+  assert.deepEqual(Object.keys(servers), ["agentcap"]);
+  assert.deepEqual(servers.agentcap, { type: "http", url: PLUGIN_SERVER_URL });
   assert.match(read("web/src/app/connect/mcp/page.tsx"), new RegExp(`"${PLUGIN_SERVER_URL.replace(/[./]/g, "\\$&")}"`));
   // A staging or self-hosted page must not hand out a plugin that points at production.
   assert.equal(claudeCodePluginCommands("https://mcp.staging.example/mcp"), null);
@@ -76,10 +76,10 @@ test("every skill has a name matching its folder and a description, and names on
     const fields = new Set<string>();
     for (const name of named) { const t = tools.get(name); if (t) { schemaKeys(t.input, fields); schemaKeys(t.output, fields); } }
     for (const name of named) {
-      assert.ok(tools.has(name) || fields.has(name), `${skill} names \`${name}\`, which is neither a Merrymen tool nor a field of one it uses`);
+      assert.ok(tools.has(name) || fields.has(name), `${skill} names \`${name}\`, which is neither a AgentCap tool nor a field of one it uses`);
     }
-    for (const [, other] of text.matchAll(/\/merrymen:([a-z-]+)/g)) {
-      assert.ok(skills.includes(other), `${skill} points at /merrymen:${other}, which does not exist`);
+    for (const [, other] of text.matchAll(/\/agentcap:([a-z-]+)/g)) {
+      assert.ok(skills.includes(other), `${skill} points at /agentcap:${other}, which does not exist`);
     }
   }
   // get_summary defaults to one day; a week-in-review must ask for the week.
@@ -108,20 +108,20 @@ test("changing what the plugin runs needs a version bump, or installed copies ne
   const manifest = json(`${PLUGIN}.claude-plugin/plugin.json`);
   const now = { version: manifest.version, sha256: pluginFingerprint() };
   assert.deepEqual(now, PLUGIN_RELEASE,
-    "plugins/merrymen changed: bump `version` in plugins/merrymen/.claude-plugin/plugin.json and set PLUGIN_RELEASE here to the new version and this sha256");
+    "plugins/agentcap changed: bump `version` in plugins/agentcap/.claude-plugin/plugin.json and set PLUGIN_RELEASE here to the new version and this sha256");
   const skillFiles = readdirSync(new URL(`${PLUGIN}skills/`, root), { recursive: true }).map(String).filter((f) => !f.endsWith("SKILL.md") && /\.[a-z]+$/i.test(f));
   assert.deepEqual(skillFiles, [], "a new kind of file in skills/ must be added to the fingerprint");
 });
 
 test("the plugin's README lists every command", () => {
   const readme = read(`${PLUGIN}README.md`);
-  for (const skill of skills) assert.ok(readme.includes(`/merrymen:${skill}`), skill);
-  assert.ok(readme.includes("/plugin marketplace add https://github.com/millw14/merrymen.git") && readme.includes("/plugin install merrymen@merrymen"));
+  for (const skill of skills) assert.ok(readme.includes(`/agentcap:${skill}`), skill);
+  assert.ok(readme.includes("/plugin marketplace add https://github.com/millw14/agentcap.git") && readme.includes("/plugin install agentcap@agentcap"));
 });
 
 /**
- * plugins/merrymen-trader: the day-trader skill pack (vendored from
- * github.com/Jakeschincariol/day-trader-skill) with Merrymen as its broker.
+ * plugins/agentcap-trader: the day-trader skill pack (vendored from
+ * github.com/Jakeschincariol/day-trader-skill) with AgentCap as its broker.
  * Its Python reads the JSON that Claude saves from these tools, field by
  * field, so a renamed tool or field would silently turn a limit check into
  * "unknown". The Python's own suite runs in CI's brain job.
@@ -131,7 +131,7 @@ const TRADER_READS: Record<string, { input?: string[]; output: string[] }> = {
   discover_tokens: { input: ["list"], output: ["items", "origin", "address", "symbol", "name", "stock_kind", "paused", "price_usd", "price_updated_at"] },
   get_agent_status: { input: ["agent"], output: ["agent", "name", "mode", "status", "live_blocker", "permission", "expires_at", "observed_at"] },
   get_agent_controls: { input: ["agent"], output: ["agent", "signed_limits", "per_trade_usdg", "per_day_usdg", "expires_at", "budget_24h", "spent_usdg", "remaining_usdg", "ops_remaining", "book", "risk_settings", "chat_action_ceiling_usdg", "max_impact_bps", "slippage_bps", "observed_at"] },
-  quote_trade: { input: ["agent", "side", "token", "amount_usdg"], output: ["quoted", "why_not", "side", "token", "amount_in", "human", "implied_price_usd", "price_impact_bps", "impact_verdict", "ok", "detail", "rule", "merrymen_trade_fee", "usdg", "gas", "expected_usdg", "min_out", "quoted_at"] },
+  quote_trade: { input: ["agent", "side", "token", "amount_usdg"], output: ["quoted", "why_not", "side", "token", "amount_in", "human", "implied_price_usd", "price_impact_bps", "impact_verdict", "ok", "detail", "rule", "agentcap_trade_fee", "usdg", "gas", "expected_usdg", "min_out", "quoted_at"] },
   propose_trade: { input: ["agent", "side", "token", "amount_usdg", "idempotency_key", "note"], output: ["proposal_id", "approval_url", "expires_at", "quote"] },
   get_proposal: { input: ["proposal_id"], output: ["status", "status_explained", "terminal", "result", "approval_url"] },
   cancel_proposal: { input: ["proposal_id"], output: [] },
@@ -141,16 +141,16 @@ const TRADER_READS: Record<string, { input?: string[]; output: string[] }> = {
   subscribe: { output: [] },
 };
 
-test("the trader plugin rides on the merrymen plugin's server and names only real tools and fields", () => {
+test("the trader plugin rides on the agentcap plugin's server and names only real tools and fields", () => {
   const manifest = json(`${TRADER}.claude-plugin/plugin.json`);
-  assert.equal(manifest.name, "merrymen-trader");
+  assert.equal(manifest.name, "agentcap-trader");
   assert.ok(typeof manifest.version === "string" && typeof manifest.description === "string");
   assert.equal(manifest.mcpServers, undefined);
-  assert.ok(!existsSync(new URL(`${TRADER}.mcp.json`, root)), "one connection: the merrymen plugin's");
+  assert.ok(!existsSync(new URL(`${TRADER}.mcp.json`, root)), "one connection: the agentcap plugin's");
   const tools = new Map(ALL_TOOLS.map((t) => [t.name, t]));
   for (const [name, want] of Object.entries(TRADER_READS)) {
     const t = tools.get(name);
-    assert.ok(t, `merrymen-trader uses \`${name}\`, which is not a Merrymen tool`);
+    assert.ok(t, `agentcap-trader uses \`${name}\`, which is not a AgentCap tool`);
     const inKeys = schemaKeys(t.input);
     const outKeys = schemaKeys(t.output);
     for (const k of want.input ?? []) assert.ok(inKeys.has(k), `${name} has no input \`${k}\``);
@@ -163,13 +163,13 @@ test("the trader plugin rides on the merrymen plugin's server and names only rea
     for (const [, name] of text.matchAll(/`((?:get|list|quote|propose|cancel|discover|search|check|subscribe)(?:_[a-z]+)*)`/g)) {
       if (tools.has(name)) assert.ok(name in TRADER_READS, `${skill} names \`${name}\`: add it to TRADER_READS with the fields it reads`);
     }
-    for (const [, other] of text.matchAll(/\/merrymen:([a-z-]+)/g)) assert.ok(skills.includes(other), `${skill} points at /merrymen:${other}`);
+    for (const [, other] of text.matchAll(/\/agentcap:([a-z-]+)/g)) assert.ok(skills.includes(other), `${skill} points at /agentcap:${other}`);
   }
   // propose_trade never runs from the directory endpoint, so the README must send people to the plugin's server.
-  assert.match(read(`${TRADER}README.md`), /\/plugin install merrymen-trader@merrymen/);
+  assert.match(read(`${TRADER}README.md`), /\/plugin install agentcap-trader@agentcap/);
 });
 
-/** Same rule as the merrymen plugin: what users run is fingerprinted, and a change needs a version bump. */
+/** Same rule as the agentcap plugin: what users run is fingerprinted, and a change needs a version bump. */
 const TRADER_RELEASE = { version: "1.0.0", sha256: "c94785c2fbb1bd4c7e883f7b94df65aae098723fd651da024f29598f329a6bc6" };
 
 function traderFingerprint(): string {
@@ -183,5 +183,5 @@ function traderFingerprint(): string {
 test("changing what the trader plugin runs needs a version bump, or installed copies never update", () => {
   const manifest = json(`${TRADER}.claude-plugin/plugin.json`);
   assert.deepEqual({ version: manifest.version, sha256: traderFingerprint() }, TRADER_RELEASE,
-    "plugins/merrymen-trader changed: bump `version` in plugins/merrymen-trader/.claude-plugin/plugin.json and set TRADER_RELEASE here to the new version and this sha256");
+    "plugins/agentcap-trader changed: bump `version` in plugins/agentcap-trader/.claude-plugin/plugin.json and set TRADER_RELEASE here to the new version and this sha256");
 });

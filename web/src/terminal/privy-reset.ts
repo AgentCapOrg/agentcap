@@ -12,7 +12,7 @@
  *     `privy-id-token`, `privy-session` and their per-user forms), which Privy
  *     writes host-only on path `/`
  *
- * Merrymen's own keys are `merrymen.…`, `merrymen:…` and `merryman.…`, and its
+ * AgentCap's own keys are `agentcap.…`, `agentcap:…` and `agentcapavatar.…`, and its
  * session cookie is the server's, so none of them can match.
  *
  * With no saved refresh credential left, Privy's start-up skips the session

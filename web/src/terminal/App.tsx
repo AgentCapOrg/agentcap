@@ -21,7 +21,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import { autonomyOf } from "@merrymen/core";
+import { autonomyOf } from "@agentcap/core";
 import { pausedRecovery, recoveryAutonomy, recoveryFunds } from "./recovery-view";
 import { workerSilentSince } from "./worker-stale";
 import { chatKeyFor } from "./chat-store";
@@ -57,11 +57,11 @@ import { Board } from "./screens/Board";
 
 import { Feed } from "./screens/Feed";
 import { GroupChat } from "./screens/GroupChat";
-import { Wardrobe } from "@/merryman/Wardrobe";
-import { DRAFT, adoptDraft } from "@/merryman/wardrobe-store";
-import "@/merryman/merryman.css";
-import "@/merryman/wardrobe.css";
-import "./merryman-shell.css";
+import { Wardrobe } from "@/agentcapavatar/Wardrobe";
+import { DRAFT, adoptDraft } from "@/agentcapavatar/wardrobe-store";
+import "@/agentcapavatar/agentcapavatar.css";
+import "@/agentcapavatar/wardrobe.css";
+import "./agentcapavatar-shell.css";
 import "./quick-access.css";
 import { CopyButton } from "./CopyButton";
 import { Home } from "./screens/Home";
@@ -273,7 +273,7 @@ export function App({ solana = false, perps = false }: { solana?: boolean; perps
    * whatever happened (backing off 5s, 15s, then its own cadence), the first
    * success takes its failure off the line, whatever was on screen stays there,
    * and the one outage line (bannerOf) names the half that failed, dates the
-   * oldest figure it is apologising for, and says "Can't reach merrymen" only
+   * oldest figure it is apologising for, and says "Can't reach agentcap" only
    * when nothing answered anywhere. A read that half landed is still a failure:
    * each public read's clock fails on its own unreadable answer.
    *
@@ -331,7 +331,7 @@ export function App({ solana = false, perps = false }: { solana?: boolean; perps
         } catch (error) {
           if (!alive()) return;
           // The reader gets one plain sentence (LoadFailure); the cause goes here.
-          console.warn("[merrymen] account read failed:", error);
+          console.warn("[agentcap] account read failed:", error);
           setAccountFailed(true);
           throw error;
         }
@@ -367,7 +367,7 @@ export function App({ solana = false, perps = false }: { solana?: boolean; perps
    * A REAL-MONEY TRADE LANDING, SAID — see live-news.ts.
    *
    * A short tone if the reader turned sound on (off by default), and "(3)
-   * merrymen" in the tab title while the tab is hidden, both from the feed
+   * agentcap" in the tab title while the tab is hidden, both from the feed
    * reads above and nothing else: no request of their own, never on the first
    * read, and never for a hold, a paper fill or a refusal.
    */
@@ -604,7 +604,7 @@ export function App({ solana = false, perps = false }: { solana?: boolean; perps
   // than a placeholder every surface then has to special-case.
   const emptyMine = {name:"Your agent",slug:null,handle:null,owner:null,equity:null,chg24:null,mode:null,thesis:null,moves:[],glance:{id:"custom" as const,label:"",cashUsd:undefined},autonomy:autonomyOf({mode:null,liveBlocker:null})};
   const displayMine = mine ?? emptyMine;
-  // The merryman dressed during creation becomes this agent's look the first
+  // The agentcapavatar dressed during creation becomes this agent's look the first
   // time its slug is known — unless the owner already dressed this agent.
   const mineSlug = mine?.slug ?? null;
   useEffect(() => { if (mineSlug) adoptDraft(mineSlug); }, [mineSlug]);
@@ -635,7 +635,7 @@ export function App({ solana = false, perps = false }: { solana?: boolean; perps
    * THE MARKET RAIL IS FOR TRADING SCREENS. On a token, a public profile, a
    * search or the market list it is the fastest way between coins; on Home,
    * the wardrobe, create and settings it was 300px of tickers beside a screen
-   * about something else, and it squeezed the merryman into a sliver. Those
+   * about something else, and it squeezed the agentcapavatar into a sliver. Those
    * screens get the width instead. Perps keeps its own rail as it was.
    */
   const railShown = isolatedWallet || ["token", "profile", "search", "markets"].includes(screen.kind);
@@ -974,8 +974,8 @@ export function App({ solana = false, perps = false }: { solana?: boolean; perps
         {/* An owner whose agent has not loaded yet must not dress the pre-create
             DRAFT and be told it saved: that look would never reach their agent. */}
         {screen.kind === "wardrobe" && (account?.status.exists && !mine
-          ? <section className="create-agent"><SkeletonRows rows={3} label="Loading your merryman"/></section>
-          : <Wardrobe id={mine?.slug ?? DRAFT} seed={mine?.slug ?? DRAFT} name={mine?.name ?? "your merryman"} />)}
+          ? <section className="create-agent"><SkeletonRows rows={3} label="Loading your agentcapavatar"/></section>
+          : <Wardrobe id={mine?.slug ?? DRAFT} seed={mine?.slug ?? DRAFT} name={mine?.name ?? "your agentcapavatar"} />)}
         {screen.kind === "groupchat" && <GroupChat mySlug={mine?.slug ?? null} onProfile={(slug) => openScreen({ kind: "profile", slug })} onToken={(id) => openScreen({ kind: "token", id })} />}
       </div>
       {desktop && perpsDesk ? null : desktop && isolatedWallet ? <aside className="desktop-portfolio"><section className="hosted-entry"><h2>Your Perps wallet</h2><p>Balances and permissions belong to this separate account. Your public profile stays with Spot.</p><a href="/withdraw?wallet=perps">Withdraw &amp; recover</a></section></aside> : desktop && screen.kind === "solana" ? <aside className="desktop-portfolio"><section className="hosted-entry"><h2>Solana account</h2><p>Solana balances, permissions and trading limits are shown in this workspace.</p><p>Use the network selector to return to Robinhood Chain.</p></section></aside> : desktop && money ? (

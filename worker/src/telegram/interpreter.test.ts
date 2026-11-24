@@ -28,7 +28,7 @@ describe("narrateChat — warm free-text voice, triggers nothing", () => {
       creds,
     );
     assert.equal(out, "Aye — we're green on QQQ, friend. 🏹");
-    assert.match(sentSystem, /merryman/i);
+    assert.match(sentSystem, /agentcapavatar/i);
     assert.match(sentSystem, /never say you are an ai/i); // stays in character
     assert.match(sentUser, /42 days old/); // the soul/state context reached the model
     assert.match(sentUser, /how are we doing\?/);
@@ -54,13 +54,13 @@ describe("parseSlash — pure slash parser", () => {
     // t.me/<bot>?start=<code> arrives as "/start <code>". The service links an
     // unlisted chat with it and shows a linked one help (service.ts handle).
     assert.deepEqual(parseSlash("/start NTE49D"), { kind: "start", payload: "NTE49D" });
-    assert.deepEqual(parseSlash("/start@merryman_bot NTE49D"), { kind: "start", payload: "NTE49D" });
+    assert.deepEqual(parseSlash("/start@agentcapavatar_bot NTE49D"), { kind: "start", payload: "NTE49D" });
     assert.deepEqual(parseSlash("/start"), { kind: "help" });
     assert.deepEqual(parseSlash("/start   "), { kind: "help" });
   });
 
   it("strips /cmd@BotName suffixes (group chats)", () => {
-    assert.deepEqual(parseSlash("/status@merryman_bot"), { kind: "status" });
+    assert.deepEqual(parseSlash("/status@agentcapavatar_bot"), { kind: "status" });
   });
 
   it("wallet words all land on the dashboard signpost, never 'unknown command'", () => {
@@ -69,7 +69,7 @@ describe("parseSlash — pure slash parser", () => {
     for (const w of ["/grant", "/wallet", "/restore", "/recover", "/reconnect", "/fund"]) {
       assert.deepEqual(parseSlash(w), { kind: "wallet" }, `${w} should point at the dashboard`);
     }
-    assert.deepEqual(parseSlash("/grant@merryman_bot"), { kind: "wallet" });
+    assert.deepEqual(parseSlash("/grant@agentcapavatar_bot"), { kind: "wallet" });
     // …but /withdraw stays an alias for /transfer — a signpost must not eat a
     // working command.
     assert.equal(parseSlash("/withdraw 0x1111111111111111111111111111111111111111 5")?.kind, "transfer");
@@ -415,10 +415,10 @@ describe("executeCommand — code disposes", () => {
   it("SELF-HOSTED KILL WORDING IS UNCHANGED: the owner key is archived on this machine", async () => {
     const d = deps({ kill: () => ({ ok: true, archived: "0xabc" }) });
     const asked = await executeCommand({ kind: "kill" }, d);
-    assert.match(asked, /~\/\.merrymen\/grants\//);
+    assert.match(asked, /~\/\.agentcap\/grants\//);
     const done = await executeCommand({ kind: "confirm" }, d);
     assert.match(done, /grant destroyed/);
-    assert.match(done, /merrymen recover/);
+    assert.match(done, /agentcap recover/);
   });
 
   it("A KILL THAT COULD NOT ARCHIVE SAYS THE GRANT WAS KEPT — not 'nothing to kill', not 'destroyed'", async () => {
@@ -445,7 +445,7 @@ describe("executeCommand — code disposes", () => {
     const d = deps({ hosted: true, kill: () => ({ ok: true, archived: null, revocation: "queued" }) });
     const asked = await executeCommand({ kind: "kill" }, d);
     assert.match(asked, /confirm kill/i);
-    assert.doesNotMatch(asked, /merrymen recover|~\/\.merrymen\/grants/);
+    assert.doesNotMatch(asked, /agentcap recover|~\/\.agentcap\/grants/);
     assert.match(asked, /server never held your owner key/);
     const done = await executeCommand({ kind: "confirm" }, d);
     assert.match(done, /KILL SWITCH/);
@@ -611,7 +611,7 @@ describe("executeCommand — transfer confirm flow", () => {
     // advice, and it cost a session key to obtain a permission the new wall
     // would not contain either. The owner key is the real answer.
     assert.doesNotMatch(r, /re-create your wallet/i);
-    assert.match(r, /merrymen recover/i, "point at the path that actually works");
+    assert.match(r, /agentcap recover/i, "point at the path that actually works");
     assert.deepEqual(d.calls, []);
   });
 

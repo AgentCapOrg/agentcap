@@ -39,7 +39,7 @@
  * hosted or self-hosted and passes it in.
  */
 // Relative, as ledger.ts reaches the worker: `tsx --test` resolves aliases
-// against the root tsconfig, which does not carry @merrymen/command-files.
+// against the root tsconfig, which does not carry @agentcap/command-files.
 import { writeCommand } from "../../../worker/src/command-files";
 import { purposeHome } from "../../../worker/src/home";
 import { isGrantPurpose, type GrantPurpose } from "../../../packages/core/src/grant";
@@ -92,13 +92,13 @@ export type QueuedReset = { ok: true; id: string; expiresAt?: number } | { ok: f
  * so that route and Start over queue it the same way. Never throws, but for a
  * wallet that names none (below).
  *
- * Self-hosted shares one MERRYMEN_HOME with the worker, so the file goes
+ * Self-hosted shares one AGENTCAP_HOME with the worker, so the file goes
  * straight into the directory the worker drains: no table, no ferry. Hosted, it
  * is an agent_commands row bound to the smart account, which is what the ferry
  * and the orchestrator's held reset both select on.
  *
  * `wallet` names whose book, with no default. Self-hosted it picks the home the
- * command lands in (`purposeHome`: Spot's is MERRYMEN_HOME, as it always was;
+ * command lands in (`purposeHome`: Spot's is AGENTCAP_HOME, as it always was;
  * Perps's is accounts/perps, which only that wallet's worker drains). Hosted
  * the row is bound to `agent`, which the caller must resolve in the SAME wallet
  * (agent-for.ts, given the same name), or a Perps reset would land on the Spot
@@ -106,7 +106,7 @@ export type QueuedReset = { ok: true; id: string; expiresAt?: number } | { ok: f
  *
  * A PERPS RESET CARRIES A DEADLINE (`expiresAt`, required: one without throws
  * before anything is written). A Perps worker is stood down whenever the
- * operator's MERRYMEN_PERPS is not paper, and its queue waits, unclaimed, for
+ * operator's AGENTCAP_PERPS is not paper, and its queue waits, unclaimed, for
  * the next worker under paper (D19). A reset with no deadline waited out
  * every stand-down and wiped the practice book whenever perps came back —
  * days after the owner asked, positions opened since and all. With one, the

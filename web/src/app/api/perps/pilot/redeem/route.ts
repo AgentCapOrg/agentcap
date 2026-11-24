@@ -1,4 +1,4 @@
-import { getIdentityStore } from "@merrymen/identity-store";
+import { getIdentityStore } from "@agentcap/identity-store";
 import { getPerpsPilotStore } from "../../../../../../../worker/src/perps/pilot-store";
 import { privyTokenOf, verifyPrivyToken } from "@/lib/privy";
 import { readWalletParam } from "@/lib/wallet-param";

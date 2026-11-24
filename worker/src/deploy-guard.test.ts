@@ -47,7 +47,7 @@ const RAILWAY: NodeJS.ProcessEnv = {
 };
 /** …plus what the operator sets on that service, correctly. */
 const FLEET: NodeJS.ProcessEnv = {
-  ...RAILWAY, MERRYMEN_FLEET_SERVICE_ID: SERVICE, MERRYMEN_PERSISTENT_HOME_REQUIRED: "1", MERRYMEN_IMAGE: DEPLOY_GUARD_IMAGE,
+  ...RAILWAY, AGENTCAP_FLEET_SERVICE_ID: SERVICE, AGENTCAP_PERSISTENT_HOME_REQUIRED: "1", AGENTCAP_IMAGE: DEPLOY_GUARD_IMAGE,
 };
 const without = (env: NodeJS.ProcessEnv, ...keys: string[]) => Object.fromEntries(Object.entries(env).filter(([k]) => !keys.includes(k)));
 const all = (r: GuardResult) => [...r.out, ...r.err].join("\n");
@@ -56,7 +56,7 @@ describe("on Railway or not", () => {
   it("any one deployment identity variable is enough; tokens, git and volume variables are not", () => {
     for (const key of Object.keys(RAILWAY)) assert.equal(onRailway({ [key]: "x" }), true, key);
     assert.equal(onRailway({ RAILWAY_ENVIRONMENT: "production" }), true);
-    for (const key of ["RAILWAY_TOKEN", "RAILWAY_API_TOKEN", "RAILWAY_GIT_COMMIT_SHA", "RAILWAY_GIT_BRANCH", "RAILWAY_VOLUME_MOUNT_PATH", "MERRYMEN_HOSTED"]) {
+    for (const key of ["RAILWAY_TOKEN", "RAILWAY_API_TOKEN", "RAILWAY_GIT_COMMIT_SHA", "RAILWAY_GIT_BRANCH", "RAILWAY_VOLUME_MOUNT_PATH", "AGENTCAP_HOSTED"]) {
       assert.equal(onRailway({ [key]: "x" }), false, key);
     }
     assert.equal(onRailway({ RAILWAY_SERVICE_ID: "" }), false, "an empty identity is no identity");
@@ -68,42 +68,42 @@ describe("--phase=start", () => {
   const start = (role: string, env: NodeJS.ProcessEnv) => runDeployGuard(["--phase=start", `--role=${role}`], env);
   const cases: { name: string; role: string; env: NodeJS.ProcessEnv; code: number; err?: RegExp[]; out?: RegExp }[] = [
     // Off Railway: nothing to be wrong about, whatever else is set.
-    { name: "off Railway, a misconfigured orchestrator is skipped", role: "start:orchestrator", env: { MERRYMEN_REPAIR_HWM: "apply" }, code: 0, out: /^\[deploy-guard\] skipped: not running on Railway$/m },
+    { name: "off Railway, a misconfigured orchestrator is skipped", role: "start:orchestrator", env: { AGENTCAP_REPAIR_HWM: "apply" }, code: 0, out: /^\[deploy-guard\] skipped: not running on Railway$/m },
     { name: "off Railway, the listener is skipped", role: "start:recovery-replies", env: {}, code: 0, out: /skipped: not running on Railway/ },
     { name: "off Railway, web is skipped", role: "start:web", env: {}, code: 0, out: /skipped: not running on Railway/ },
     // Web on Railway: the allowlist only — none of the fleet's requirements.
-    { name: "web on Railway with none of the fleet's variables", role: "start:web", env: { ...RAILWAY, MERRYMEN_REPAIR_HWM: "apply" }, code: 0, out: /^\[deploy-guard\] ok role=start:web$/m },
+    { name: "web on Railway with none of the fleet's variables", role: "start:web", env: { ...RAILWAY, AGENTCAP_REPAIR_HWM: "apply" }, code: 0, out: /^\[deploy-guard\] ok role=start:web$/m },
     // The fleet roles, correctly configured.
     { name: "the orchestrator on its service", role: "start:orchestrator", env: FLEET, code: 0, out: /census one-shot: none\n\[deploy-guard\] ok role=start:orchestrator$/ },
     { name: "the listener on its service", role: "start:recovery-replies", env: FLEET, code: 0, out: /census one-shot: none\n\[deploy-guard\] ok role=start:recovery-replies$/ },
-    { name: "the listener with one-shots set: printed, not refused", role: "start:recovery-replies", env: { ...FLEET, MERRYMEN_REPAIR_HWM: "apply" }, code: 0, out: /census one-shot: MERRYMEN_REPAIR_HWM\n.*ok role=start:recovery-replies$/ },
-    { name: "the orchestrator with one-shots once the rollout is all", role: "start:orchestrator", env: { ...FLEET, MERRYMEN_REPAIR_HWM: "apply", MERRYMEN_FLEET_ROLLOUT: "all" }, code: 0, out: /census one-shot: MERRYMEN_REPAIR_HWM\n.*ok role=start:orchestrator$/ },
+    { name: "the listener with one-shots set: printed, not refused", role: "start:recovery-replies", env: { ...FLEET, AGENTCAP_REPAIR_HWM: "apply" }, code: 0, out: /census one-shot: AGENTCAP_REPAIR_HWM\n.*ok role=start:recovery-replies$/ },
+    { name: "the orchestrator with one-shots once the rollout is all", role: "start:orchestrator", env: { ...FLEET, AGENTCAP_REPAIR_HWM: "apply", AGENTCAP_FLEET_ROLLOUT: "all" }, code: 0, out: /census one-shot: AGENTCAP_REPAIR_HWM\n.*ok role=start:orchestrator$/ },
     // The service.
-    { name: "no MERRYMEN_FLEET_SERVICE_ID", role: "start:orchestrator", env: without(FLEET, "MERRYMEN_FLEET_SERVICE_ID"), code: EX_CONFIG, err: [/MERRYMEN_FLEET_SERVICE_ID is not set/] },
-    { name: "an empty MERRYMEN_FLEET_SERVICE_ID", role: "start:recovery-replies", env: { ...FLEET, MERRYMEN_FLEET_SERVICE_ID: "" }, code: EX_CONFIG, err: [/MERRYMEN_FLEET_SERVICE_ID is not set/] },
+    { name: "no AGENTCAP_FLEET_SERVICE_ID", role: "start:orchestrator", env: without(FLEET, "AGENTCAP_FLEET_SERVICE_ID"), code: EX_CONFIG, err: [/AGENTCAP_FLEET_SERVICE_ID is not set/] },
+    { name: "an empty AGENTCAP_FLEET_SERVICE_ID", role: "start:recovery-replies", env: { ...FLEET, AGENTCAP_FLEET_SERVICE_ID: "" }, code: EX_CONFIG, err: [/AGENTCAP_FLEET_SERVICE_ID is not set/] },
     { name: "the orchestrator on another service", role: "start:orchestrator", env: { ...FLEET, RAILWAY_SERVICE_ID: OTHER_SERVICE }, code: EX_CONFIG, err: [/this is not the fleet's service/] },
     { name: "the listener on another service", role: "start:recovery-replies", env: { ...FLEET, RAILWAY_SERVICE_ID: OTHER_SERVICE }, code: EX_CONFIG, err: [/this is not the fleet's service/] },
     { name: "no RAILWAY_SERVICE_ID at all", role: "start:orchestrator", env: without(FLEET, "RAILWAY_SERVICE_ID"), code: EX_CONFIG, err: [/this is not the fleet's service/] },
-    { name: "a service id that differs only in case", role: "start:orchestrator", env: { ...FLEET, MERRYMEN_FLEET_SERVICE_ID: SERVICE.toUpperCase() }, code: EX_CONFIG, err: [/this is not the fleet's service/] },
+    { name: "a service id that differs only in case", role: "start:orchestrator", env: { ...FLEET, AGENTCAP_FLEET_SERVICE_ID: SERVICE.toUpperCase() }, code: EX_CONFIG, err: [/this is not the fleet's service/] },
     // The persistent home: exactly "1".
     ...[undefined, "", "0", "true", " 1", "1 "].map((value) => ({
-      name: `MERRYMEN_PERSISTENT_HOME_REQUIRED=${JSON.stringify(value)}`, role: "start:recovery-replies",
-      env: value === undefined ? without(FLEET, "MERRYMEN_PERSISTENT_HOME_REQUIRED") : { ...FLEET, MERRYMEN_PERSISTENT_HOME_REQUIRED: value },
-      code: EX_CONFIG, err: [/MERRYMEN_PERSISTENT_HOME_REQUIRED is not 1/],
+      name: `AGENTCAP_PERSISTENT_HOME_REQUIRED=${JSON.stringify(value)}`, role: "start:recovery-replies",
+      env: value === undefined ? without(FLEET, "AGENTCAP_PERSISTENT_HOME_REQUIRED") : { ...FLEET, AGENTCAP_PERSISTENT_HOME_REQUIRED: value },
+      code: EX_CONFIG, err: [/AGENTCAP_PERSISTENT_HOME_REQUIRED is not 1/],
     })),
     // The image.
-    { name: "an image without the start-path marker", role: "start:orchestrator", env: without(FLEET, "MERRYMEN_IMAGE"), code: EX_CONFIG, err: [/MERRYMEN_IMAGE is not dockerfile-v1/] },
-    { name: "another image", role: "start:orchestrator", env: { ...FLEET, MERRYMEN_IMAGE: "nixpacks" }, code: EX_CONFIG, err: [/MERRYMEN_IMAGE is not dockerfile-v1/] },
+    { name: "an image without the start-path marker", role: "start:orchestrator", env: without(FLEET, "AGENTCAP_IMAGE"), code: EX_CONFIG, err: [/AGENTCAP_IMAGE is not dockerfile-v1/] },
+    { name: "another image", role: "start:orchestrator", env: { ...FLEET, AGENTCAP_IMAGE: "nixpacks" }, code: EX_CONFIG, err: [/AGENTCAP_IMAGE is not dockerfile-v1/] },
     // The rollout: exactly "all", or no one-shots.
     ...[undefined, "", "none", "ALL", " all", "all ", `0x${"ab".repeat(20)}:trade`].map((rollout) => ({
-      name: `one-shots with MERRYMEN_FLEET_ROLLOUT=${JSON.stringify(rollout)}`, role: "start:orchestrator",
-      env: { ...FLEET, MERRYMEN_GAS_AUDIT: "all", ...(rollout === undefined ? {} : { MERRYMEN_FLEET_ROLLOUT: rollout }) },
-      code: EX_CONFIG, err: [/one-shot operator variables are set .* while MERRYMEN_FLEET_ROLLOUT is not all/],
+      name: `one-shots with AGENTCAP_FLEET_ROLLOUT=${JSON.stringify(rollout)}`, role: "start:orchestrator",
+      env: { ...FLEET, AGENTCAP_GAS_AUDIT: "all", ...(rollout === undefined ? {} : { AGENTCAP_FLEET_ROLLOUT: rollout }) },
+      code: EX_CONFIG, err: [/one-shot operator variables are set .* while AGENTCAP_FLEET_ROLLOUT is not all/],
     })),
-    { name: "a blanked one-shot still counts", role: "start:orchestrator", env: { ...FLEET, MERRYMEN_REPAIR: "" }, code: EX_CONFIG, err: [/one-shot operator variables are set/] },
+    { name: "a blanked one-shot still counts", role: "start:orchestrator", env: { ...FLEET, AGENTCAP_REPAIR: "" }, code: EX_CONFIG, err: [/one-shot operator variables are set/] },
     // Everything wrong at once: every reason, so one redeploy fixes them all.
-    { name: "everything wrong at once", role: "start:orchestrator", env: { ...RAILWAY, MERRYMEN_INSPECT_TENANT: "0xabc" }, code: EX_CONFIG,
-      err: [/MERRYMEN_FLEET_SERVICE_ID is not set/, /MERRYMEN_PERSISTENT_HOME_REQUIRED is not 1/, /MERRYMEN_IMAGE is not/, /one-shot operator variables are set/] },
+    { name: "everything wrong at once", role: "start:orchestrator", env: { ...RAILWAY, AGENTCAP_INSPECT_TENANT: "0xabc" }, code: EX_CONFIG,
+      err: [/AGENTCAP_FLEET_SERVICE_ID is not set/, /AGENTCAP_PERSISTENT_HOME_REQUIRED is not 1/, /AGENTCAP_IMAGE is not/, /one-shot operator variables are set/] },
   ];
   for (const c of cases) {
     it(`${c.role}: ${c.name}`, async () => {
@@ -124,7 +124,7 @@ describe("--phase=start", () => {
     assert.ok(fleet.length > 20);
     for (const c of fleet) {
       const [atStart, before] = [await start(c.role, c.env),
-        await runDeployGuard(["--phase=predeploy"], { ...c.env, RAILWAY_GIT_BRANCH: "main", RAILWAY_GIT_COMMIT_SHA: SHA, MERRYMEN_START: c.role })];
+        await runDeployGuard(["--phase=predeploy"], { ...c.env, RAILWAY_GIT_BRANCH: "main", RAILWAY_GIT_COMMIT_SHA: SHA, AGENTCAP_START: c.role })];
       assert.equal(before.code, atStart.code, c.name);
       assert.deepEqual(before.err, atStart.err, c.name);
       assert.equal(before.out[0], atStart.out[0], `${c.name}: the same census line`);
@@ -141,9 +141,9 @@ describe("--phase=start", () => {
   });
 
   it("a refused fleet role still prints the census first, naming what to delete", async () => {
-    const r = await start("start:orchestrator", { ...FLEET, MERRYMEN_REPAIR_HWM: "apply", MERRYMEN_ANNOUNCE_ID: "x" });
+    const r = await start("start:orchestrator", { ...FLEET, AGENTCAP_REPAIR_HWM: "apply", AGENTCAP_ANNOUNCE_ID: "x" });
     assert.equal(r.code, EX_CONFIG);
-    assert.deepEqual(r.out, ["[deploy-guard] census one-shot: MERRYMEN_ANNOUNCE_ID MERRYMEN_REPAIR_HWM"]);
+    assert.deepEqual(r.out, ["[deploy-guard] census one-shot: AGENTCAP_ANNOUNCE_ID AGENTCAP_REPAIR_HWM"]);
   });
 
   it("an unknown role is a usage error on or off Railway, and is not echoed", async () => {
@@ -159,20 +159,20 @@ describe("--phase=start", () => {
 });
 
 describe("the separate Solana role", () => {
-  const solana = { ...RAILWAY, RAILWAY_SERVICE_ID: OTHER_SERVICE, MERRYMEN_SOLANA_SERVICE_ID: OTHER_SERVICE,
-    MERRYMEN_FLEET_SERVICE_ID: SERVICE, DATABASE_URL: "postgres://fixture.invalid/solana", MERRYMEN_IMAGE: DEPLOY_GUARD_IMAGE };
+  const solana = { ...RAILWAY, RAILWAY_SERVICE_ID: OTHER_SERVICE, AGENTCAP_SOLANA_SERVICE_ID: OTHER_SERVICE,
+    AGENTCAP_FLEET_SERVICE_ID: SERVICE, DATABASE_URL: "postgres://fixture.invalid/solana", AGENTCAP_IMAGE: DEPLOY_GUARD_IMAGE };
   const cases = [
     { name: "its own service and shared database", env: solana, refusals: [] },
-    { name: "missing service selection", env: without(solana, "MERRYMEN_SOLANA_SERVICE_ID"), refusals: [/MERRYMEN_SOLANA_SERVICE_ID is not set/] },
-    { name: "different service", env: { ...solana, MERRYMEN_SOLANA_SERVICE_ID: "not-this-service" }, refusals: [/not the Solana service/] },
-    { name: "the RH fleet service", env: { ...solana, MERRYMEN_FLEET_SERVICE_ID: OTHER_SERVICE }, refusals: [/cannot replace the RH fleet service/] },
+    { name: "missing service selection", env: without(solana, "AGENTCAP_SOLANA_SERVICE_ID"), refusals: [/AGENTCAP_SOLANA_SERVICE_ID is not set/] },
+    { name: "different service", env: { ...solana, AGENTCAP_SOLANA_SERVICE_ID: "not-this-service" }, refusals: [/not the Solana service/] },
+    { name: "the RH fleet service", env: { ...solana, AGENTCAP_FLEET_SERVICE_ID: OTHER_SERVICE }, refusals: [/cannot replace the RH fleet service/] },
     { name: "missing shared database", env: without(solana, "DATABASE_URL"), refusals: [/DATABASE_URL is not set/] },
     { name: "blank shared database", env: { ...solana, DATABASE_URL: " " }, refusals: [/DATABASE_URL is not set/] },
-    { name: "wrong image", env: { ...solana, MERRYMEN_IMAGE: "old-image" }, refusals: [/MERRYMEN_IMAGE is not/] },
+    { name: "wrong image", env: { ...solana, AGENTCAP_IMAGE: "old-image" }, refusals: [/AGENTCAP_IMAGE is not/] },
   ];
   for (const entry of cases) it(entry.name, async () => {
     const start = await runDeployGuard(["--phase=start", "--role=start:solana"], entry.env);
-    const pre = await runDeployGuard(["--phase=predeploy"], { ...entry.env, MERRYMEN_START: "start:solana", RAILWAY_GIT_BRANCH: "main", RAILWAY_GIT_COMMIT_SHA: SHA });
+    const pre = await runDeployGuard(["--phase=predeploy"], { ...entry.env, AGENTCAP_START: "start:solana", RAILWAY_GIT_BRANCH: "main", RAILWAY_GIT_COMMIT_SHA: SHA });
     assert.equal(start.code, entry.refusals.length ? EX_CONFIG : 0); assert.equal(pre.code, start.code);
     assert.deepEqual(start.err, pre.err);
     assert.equal(start.err.length, entry.refusals.length);
@@ -187,14 +187,14 @@ describe("the separate Solana role", () => {
   it("direct CLI refuses before creating state, while help skips hosted requirements", () => {
     const dir = mkdtempSync(join(os.tmpdir(), "solana-cli-guard-"));
     try {
-      const env = { PATH: process.env.PATH, HOME: dir, MERRYMEN_HOME: join(dir, "state"), RAILWAY_SERVICE_ID: OTHER_SERVICE };
+      const env = { PATH: process.env.PATH, HOME: dir, AGENTCAP_HOME: join(dir, "state"), RAILWAY_SERVICE_ID: OTHER_SERVICE };
       const run = (args: string[]) => spawnSync(process.execPath, ["--import", "tsx", "worker/src/solana-agent-cli.ts", ...args], { cwd: ROOT, env, encoding: "utf8", timeout: 30_000 });
       const refused = run([]); assert.equal(refused.status, EX_CONFIG, refused.stderr);
-      assert.match(refused.stderr, /MERRYMEN_SOLANA_SERVICE_ID is not set/);
+      assert.match(refused.stderr, /AGENTCAP_SOLANA_SERVICE_ID is not set/);
       assert.match(refused.stderr, /DATABASE_URL is not set/);
       assert.ok(!refused.stderr.includes(OTHER_SERVICE)); assert.deepEqual(readdirSync(dir), []);
       const help = run(["--help"]); assert.equal(help.status, 0, help.stderr);
-      assert.match(help.stdout, /merrymen solana-agent/); assert.deepEqual(readdirSync(dir), []);
+      assert.match(help.stdout, /agentcap solana-agent/); assert.deepEqual(readdirSync(dir), []);
     } finally { rmSync(dir, { recursive: true, force: true }); }
   });
 });
@@ -212,7 +212,7 @@ describe("--phase=predeploy", () => {
   it("holds every Railway environment it runs in to main, whatever that environment is named", async () => {
     // Where the command is configured is where it applies; a name is not
     // evidence of a sandbox — "prod", "live" or a renamed production included.
-    for (const name of ["production", "Production", "staging", "pr-261", "prod", "merrymen", "main", "live", "", " "]) {
+    for (const name of ["production", "Production", "staging", "pr-261", "prod", "agentcap", "main", "live", "", " "]) {
       const r = await predeploy({ ...RAILWAY, RAILWAY_ENVIRONMENT_NAME: name, RAILWAY_GIT_BRANCH: "feature", RAILWAY_GIT_COMMIT_SHA: SHA }, noFetch);
       assert.equal(r.code, EX_CONFIG, name);
       assert.doesNotMatch(all(r), /skipped/, name);
@@ -240,40 +240,40 @@ describe("--phase=predeploy", () => {
 
   describe("the role this deployment will start", () => {
     it("a fleet role's start checks run here too, so a refusal leaves the live deployment serving", async () => {
-      const ok = await predeploy({ ...PROD, ...FLEET, MERRYMEN_START: "start:orchestrator" }, noFetch);
+      const ok = await predeploy({ ...PROD, ...FLEET, AGENTCAP_START: "start:orchestrator" }, noFetch);
       assert.deepEqual(ok, { code: 0, out: ["[deploy-guard] census one-shot: none", `[deploy-guard] ok branch=main commit=${SHA} role=start:orchestrator`], err: [] });
-      const listener = await predeploy({ ...PROD, ...without(FLEET, "MERRYMEN_FLEET_SERVICE_ID"), MERRYMEN_START: "start:recovery-replies" }, noFetch);
+      const listener = await predeploy({ ...PROD, ...without(FLEET, "AGENTCAP_FLEET_SERVICE_ID"), AGENTCAP_START: "start:recovery-replies" }, noFetch);
       assert.equal(listener.code, EX_CONFIG);
       assert.deepEqual(listener.out, ["[deploy-guard] census one-shot: none"]);
-      assert.deepEqual(listener.err, ["[deploy-guard] refused: MERRYMEN_FLEET_SERVICE_ID is not set — a fleet role runs only on the one Railway service that variable names"]);
+      assert.deepEqual(listener.err, ["[deploy-guard] refused: AGENTCAP_FLEET_SERVICE_ID is not set — a fleet role runs only on the one Railway service that variable names"]);
     });
 
     it("refuses with every reason at once — the branch and the role's — and never echoes a value", async () => {
       const secret = `apply-${"7".repeat(40)}`;
-      const r = await predeploy({ ...PROD, ...FLEET, RAILWAY_GIT_BRANCH: "feature", MERRYMEN_START: "start:orchestrator", MERRYMEN_REPAIR_HWM: secret }, noFetch);
+      const r = await predeploy({ ...PROD, ...FLEET, RAILWAY_GIT_BRANCH: "feature", AGENTCAP_START: "start:orchestrator", AGENTCAP_REPAIR_HWM: secret }, noFetch);
       assert.equal(r.code, EX_CONFIG);
-      assert.deepEqual(r.out, ["[deploy-guard] census one-shot: MERRYMEN_REPAIR_HWM"]);
+      assert.deepEqual(r.out, ["[deploy-guard] census one-shot: AGENTCAP_REPAIR_HWM"]);
       assert.equal(r.err.length, 2, r.err.join("\n"));
       assert.match(r.err[0]!, /RAILWAY_GIT_BRANCH is not main/);
-      assert.match(r.err[1]!, /one-shot operator variables are set \(MERRYMEN_REPAIR_HWM\) while MERRYMEN_FLEET_ROLLOUT is not all/);
+      assert.match(r.err[1]!, /one-shot operator variables are set \(AGENTCAP_REPAIR_HWM\) while AGENTCAP_FLEET_ROLLOUT is not all/);
       assert.ok(!all(r).includes(secret));
     });
 
     it("unset is web, which has no start checks to run here; empty or unknown is refused, and not echoed", async () => {
       // Web on the fleet's own service, with none of its variables: the start
       // phase lets web through on the allowlist alone, and so does this.
-      assert.equal((await predeploy({ ...PROD, MERRYMEN_REPAIR_HWM: "apply" }, noFetch)).code, 0);
-      assert.deepEqual((await predeploy({ ...PROD, MERRYMEN_START: "start:web" }, noFetch)).out, [`[deploy-guard] ok branch=main commit=${SHA} role=start:web`]);
+      assert.equal((await predeploy({ ...PROD, AGENTCAP_REPAIR_HWM: "apply" }, noFetch)).code, 0);
+      assert.deepEqual((await predeploy({ ...PROD, AGENTCAP_START: "start:web" }, noFetch)).out, [`[deploy-guard] ok branch=main commit=${SHA} role=start:web`]);
       for (const role of ["", "start:evil", "start:web ", "$(id)"]) {
-        const r = await predeploy({ ...PROD, ...FLEET, MERRYMEN_START: role }, noFetch);
+        const r = await predeploy({ ...PROD, ...FLEET, AGENTCAP_START: role }, noFetch);
         assert.equal(r.code, EX_CONFIG, JSON.stringify(role));
         assert.deepEqual(r.out, []);
-        assert.deepEqual(r.err, ["[deploy-guard] refused: MERRYMEN_START is not one of: start:web start:orchestrator start:recovery-replies start:solana (unset means start:web) — the start script would refuse it once this deploy had replaced the live one"]);
+        assert.deepEqual(r.err, ["[deploy-guard] refused: AGENTCAP_START is not one of: start:web start:orchestrator start:recovery-replies start:solana (unset means start:web) — the start script would refuse it once this deploy had replaced the live one"]);
       }
     });
 
     it("a refused role never reaches GitHub", async () => {
-      const r = await predeploy({ ...PROD, MERRYMEN_START: "start:orchestrator", MERRYMEN_DEPLOY_ANCESTRY_REPO: "millw14/merrymen" }, noFetch);
+      const r = await predeploy({ ...PROD, AGENTCAP_START: "start:orchestrator", AGENTCAP_DEPLOY_ANCESTRY_REPO: "millw14/agentcap" }, noFetch);
       assert.equal(r.code, EX_CONFIG);
     });
   });
@@ -291,7 +291,7 @@ describe("--phase=predeploy", () => {
   });
 
   describe("the optional ancestry check through GitHub's compare API", () => {
-    const REPO = "millw14/merrymen";
+    const REPO = "millw14/agentcap";
     const asked: string[] = [];
     const answer = (status: number, body: unknown) => (async (url: string | URL | Request) => {
       asked.push(String(url));
@@ -299,21 +299,21 @@ describe("--phase=predeploy", () => {
     }) as unknown as typeof fetch;
     const proof = (status: string, extra: Record<string, unknown> = {}) => ({ status, ahead_by: 0, behind_by: 3, merge_base_commit: { sha: SHA }, ...extra });
 
-    it("is not asked for unless MERRYMEN_DEPLOY_ANCESTRY_REPO names the repository", async () => {
+    it("is not asked for unless AGENTCAP_DEPLOY_ANCESTRY_REPO names the repository", async () => {
       assert.equal((await predeploy(PROD, noFetch)).code, 0);
     });
 
     it("passes when the commit is main's head or behind it, asking about exactly that commit", async () => {
       for (const status of ["identical", "behind"]) {
         asked.length = 0;
-        const r = await predeploy({ ...PROD, MERRYMEN_DEPLOY_ANCESTRY_REPO: REPO }, answer(200, proof(status)));
+        const r = await predeploy({ ...PROD, AGENTCAP_DEPLOY_ANCESTRY_REPO: REPO }, answer(200, proof(status)));
         assert.deepEqual(r, { code: 0, out: [`[deploy-guard] ok branch=main commit=${SHA} ancestry=proven role=start:web`], err: [] }, status);
         assert.deepEqual(asked, [`https://api.github.com/repos/${REPO}/compare/main...${SHA}?per_page=1`]);
       }
     });
 
     it("fails closed on every other answer", async () => {
-      const env = { ...PROD, MERRYMEN_DEPLOY_ANCESTRY_REPO: REPO };
+      const env = { ...PROD, AGENTCAP_DEPLOY_ANCESTRY_REPO: REPO };
       const refusals: [string, typeof fetch, RegExp][] = [
         ["ahead", answer(200, proof("ahead", { ahead_by: 2 })), /not inside main's history \(compare status ahead\)/],
         ["diverged", answer(200, proof("diverged", { ahead_by: 1, merge_base_commit: { sha: "f".repeat(40) } })), /compare status diverged/],
@@ -339,15 +339,15 @@ describe("--phase=predeploy", () => {
     });
 
     it("refuses a repository that is not owner/name without asking anything", async () => {
-      for (const repo of ["", "merrymen", "millw14/merrymen/../x", "millw14/merry men", "-x/y", "millw14/merrymen?x=1", "https://github.com/millw14/merrymen"]) {
-        const r = await predeploy({ ...PROD, MERRYMEN_DEPLOY_ANCESTRY_REPO: repo }, noFetch);
+      for (const repo of ["", "agentcap", "millw14/agentcap/../x", "millw14/merry men", "-x/y", "millw14/agentcap?x=1", "https://github.com/millw14/agentcap"]) {
+        const r = await predeploy({ ...PROD, AGENTCAP_DEPLOY_ANCESTRY_REPO: repo }, noFetch);
         assert.equal(r.code, EX_CONFIG, repo);
-        assert.deepEqual(r.err, ["[deploy-guard] refused: MERRYMEN_DEPLOY_ANCESTRY_REPO must be owner/name"]);
+        assert.deepEqual(r.err, ["[deploy-guard] refused: AGENTCAP_DEPLOY_ANCESTRY_REPO must be owner/name"]);
       }
     });
 
     it("never runs before main and the commit have passed", async () => {
-      assert.equal((await predeploy({ ...PROD, RAILWAY_GIT_BRANCH: "feature", MERRYMEN_DEPLOY_ANCESTRY_REPO: REPO }, noFetch)).code, EX_CONFIG);
+      assert.equal((await predeploy({ ...PROD, RAILWAY_GIT_BRANCH: "feature", AGENTCAP_DEPLOY_ANCESTRY_REPO: REPO }, noFetch)).code, EX_CONFIG);
     });
   });
 });
@@ -369,24 +369,24 @@ describe("usage", () => {
 describe("the one-shot census", () => {
   /** The operator runbook's env audit, by name. */
   const RUNBOOK = [
-    "MERRYMEN_REPAIR", "MERRYMEN_REPAIR_ACCOUNT", "MERRYMEN_REPAIR_RUN_ID", "MERRYMEN_REPAIR_RESUME", "MERRYMEN_REPAIR_HWM",
-    "MERRYMEN_REPAIR_HWM_ONLY", "MERRYMEN_REPAIR_HWM_PHANTOM_PROFIT", "MERRYMEN_REPAIR_CLASS_PNL", "MERRYMEN_REPAIR_CLASS_PNL_ONLY",
-    "MERRYMEN_REPAIR_CLASS_CASH_ROW", "MERRYMEN_REPAIR_CLASS_CASH_ROW_ONLY", "MERRYMEN_ACCOUNTING_RECONSTRUCT", "MERRYMEN_ACCOUNTING_DIAGNOSE",
-    "MERRYMEN_GAS_AUDIT", "MERRYMEN_ANNOUNCE_ID", "MERRYMEN_ANNOUNCE_CONFIRM", "MERRYMEN_ANNOUNCE_BODY_SHA256",
-    "MERRYMEN_ENABLE_CLASS_FOR", "MERRYMEN_ENABLE_CLASS_PRESET", "MERRYMEN_HALT_CLASS_ENTRIES_FOR", "MERRYMEN_RESUME_CLASS_ENTRIES_FOR",
-    "MERRYMEN_INSPECT_TENANT", "MERRYMEN_COHORT_VET", "MERRYMEN_IDENTITY_AUDIT", "MERRYMEN_BRAIN_DATASET",
-    "MERRYMEN_TG_RECOVERY_ID", "MERRYMEN_TG_RECOVERY_CHAT_ID", "MERRYMEN_TG_RECOVERY_CONFIRM", "MERRYMEN_TG_RECOVERY_BODY_SHA256",
-    "MERRYMEN_RECONCILE_SHADOW", "MERRYMEN_BACKFILL_LIVE_INTENT",
-    "MERRYMEN_RECEIPT_ATTEST_ACCOUNT", "MERRYMEN_RECEIPT_ATTEST_TENANT", "MERRYMEN_RECEIPT_ATTEST_MODE", "MERRYMEN_RECEIPT_ATTEST_APPROVAL",
-    "MERRYMEN_RECEIPT_ATTEST_FLOW",
+    "AGENTCAP_REPAIR", "AGENTCAP_REPAIR_ACCOUNT", "AGENTCAP_REPAIR_RUN_ID", "AGENTCAP_REPAIR_RESUME", "AGENTCAP_REPAIR_HWM",
+    "AGENTCAP_REPAIR_HWM_ONLY", "AGENTCAP_REPAIR_HWM_PHANTOM_PROFIT", "AGENTCAP_REPAIR_CLASS_PNL", "AGENTCAP_REPAIR_CLASS_PNL_ONLY",
+    "AGENTCAP_REPAIR_CLASS_CASH_ROW", "AGENTCAP_REPAIR_CLASS_CASH_ROW_ONLY", "AGENTCAP_ACCOUNTING_RECONSTRUCT", "AGENTCAP_ACCOUNTING_DIAGNOSE",
+    "AGENTCAP_GAS_AUDIT", "AGENTCAP_ANNOUNCE_ID", "AGENTCAP_ANNOUNCE_CONFIRM", "AGENTCAP_ANNOUNCE_BODY_SHA256",
+    "AGENTCAP_ENABLE_CLASS_FOR", "AGENTCAP_ENABLE_CLASS_PRESET", "AGENTCAP_HALT_CLASS_ENTRIES_FOR", "AGENTCAP_RESUME_CLASS_ENTRIES_FOR",
+    "AGENTCAP_INSPECT_TENANT", "AGENTCAP_COHORT_VET", "AGENTCAP_IDENTITY_AUDIT", "AGENTCAP_BRAIN_DATASET",
+    "AGENTCAP_TG_RECOVERY_ID", "AGENTCAP_TG_RECOVERY_CHAT_ID", "AGENTCAP_TG_RECOVERY_CONFIRM", "AGENTCAP_TG_RECOVERY_BODY_SHA256",
+    "AGENTCAP_RECONCILE_SHADOW", "AGENTCAP_BACKFILL_LIVE_INTENT",
+    "AGENTCAP_RECEIPT_ATTEST_ACCOUNT", "AGENTCAP_RECEIPT_ATTEST_TENANT", "AGENTCAP_RECEIPT_ATTEST_MODE", "AGENTCAP_RECEIPT_ATTEST_APPROVAL",
+    "AGENTCAP_RECEIPT_ATTEST_FLOW",
   ];
   /** Standing configuration and the rollout's own controls: never counted. */
   const STANDING = [
-    "MERRYMEN_ACCOUNTING_HOLD_TENANTS", "MERRYMEN_CLASS_SNIPE", "MERRYMEN_CLASS_VAULT_FACTORY", "MERRYMEN_CLASS_MAX_POSITIONS",
-    "MERRYMEN_LIVE_INTENT_STAND_DOWN", "MERRYMEN_FLEET_ROLLOUT", "MERRYMEN_FLEET_RECOVERY_REPORT_ONLY", "MERRYMEN_FLEET_RECOVERY_REPLIES",
-    "MERRYMEN_RESUME_PREVIEW", "MERRYMEN_RESUME_APPROVE", "MERRYMEN_RESUME_REVOKE", "MERRYMEN_RELEASE_HOME_HALT", "MERRYMEN_REHALT_HOME",
-    "MERRYMEN_ADOPT_HOME_HALT_SHA256", "MERRYMEN_INITIAL_HANDOVER", "MERRYMEN_HOME", "MERRYMEN_TG_GROUPS", "MERRYMEN_REPAIRS",
-    "MERRYMEN_ANNOUNCE", "MERRYMEN_ENABLE_CLASS", "merrymen_repair_hwm", "MERRYMEN_REPAIR_hwm", "DATABASE_URL",
+    "AGENTCAP_ACCOUNTING_HOLD_TENANTS", "AGENTCAP_CLASS_SNIPE", "AGENTCAP_CLASS_VAULT_FACTORY", "AGENTCAP_CLASS_MAX_POSITIONS",
+    "AGENTCAP_LIVE_INTENT_STAND_DOWN", "AGENTCAP_FLEET_ROLLOUT", "AGENTCAP_FLEET_RECOVERY_REPORT_ONLY", "AGENTCAP_FLEET_RECOVERY_REPLIES",
+    "AGENTCAP_RESUME_PREVIEW", "AGENTCAP_RESUME_APPROVE", "AGENTCAP_RESUME_REVOKE", "AGENTCAP_RELEASE_HOME_HALT", "AGENTCAP_REHALT_HOME",
+    "AGENTCAP_ADOPT_HOME_HALT_SHA256", "AGENTCAP_INITIAL_HANDOVER", "AGENTCAP_HOME", "AGENTCAP_TG_GROUPS", "AGENTCAP_REPAIRS",
+    "AGENTCAP_ANNOUNCE", "AGENTCAP_ENABLE_CLASS", "agentcap_repair_hwm", "AGENTCAP_REPAIR_hwm", "DATABASE_URL",
   ];
 
   it("counts the runbook's one-shots and nothing standing", () => {
@@ -421,33 +421,33 @@ describe("one precisely scoped receipt attestation during staged rollout", () =>
   const start = (role: string, env: NodeJS.ProcessEnv) => runDeployGuard(["--phase=start", `--role=${role}`], env);
   const predeploy = (env: NodeJS.ProcessEnv) => runDeployGuard(["--phase=predeploy"], env);
   const tenant = `0x${"a".repeat(40)}`, account = `0x${"b".repeat(40)}`;
-  const scoped = { ...FLEET, MERRYMEN_FLEET_ROLLOUT: "none", MERRYMEN_ACCOUNTING_HOLD_TENANTS: tenant,
-    MERRYMEN_RECEIPT_ATTEST_ACCOUNT: account, MERRYMEN_RECEIPT_ATTEST_TENANT: tenant, MERRYMEN_RECEIPT_ATTEST_MODE: "dry-run" };
+  const scoped = { ...FLEET, AGENTCAP_FLEET_ROLLOUT: "none", AGENTCAP_ACCOUNTING_HOLD_TENANTS: tenant,
+    AGENTCAP_RECEIPT_ATTEST_ACCOUNT: account, AGENTCAP_RECEIPT_ATTEST_TENANT: tenant, AGENTCAP_RECEIPT_ATTEST_MODE: "dry-run" };
   it("accepts only the named held protocol, keeping all other fleet protection", async () => {
     for (const [mode, flow] of [["dry-run", undefined], ["commit", undefined], ["dry-run", "428"], ["commit", "428"]] as const) {
-      const env = { ...scoped, MERRYMEN_RECEIPT_ATTEST_MODE: mode,
-        ...(mode === "commit" ? { MERRYMEN_RECEIPT_ATTEST_APPROVAL: "a".repeat(64) } : {}),
+      const env = { ...scoped, AGENTCAP_RECEIPT_ATTEST_MODE: mode,
+        ...(mode === "commit" ? { AGENTCAP_RECEIPT_ATTEST_APPROVAL: "a".repeat(64) } : {}),
         // One inferred flow of a traded book (receipt-attestation-traded.ts), by its shared id.
-        ...(flow ? { MERRYMEN_RECEIPT_ATTEST_FLOW: flow } : {}) };
+        ...(flow ? { AGENTCAP_RECEIPT_ATTEST_FLOW: flow } : {}) };
       assert.equal((await start("start:orchestrator", env)).code, 0);
-      assert.equal((await start("start:orchestrator", { ...env, MERRYMEN_IMAGE: "wrong" })).code, EX_CONFIG);
-      assert.equal((await start("start:orchestrator", { ...env, MERRYMEN_PERSISTENT_HOME_REQUIRED: "0" })).code, EX_CONFIG);
+      assert.equal((await start("start:orchestrator", { ...env, AGENTCAP_IMAGE: "wrong" })).code, EX_CONFIG);
+      assert.equal((await start("start:orchestrator", { ...env, AGENTCAP_PERSISTENT_HOME_REQUIRED: "0" })).code, EX_CONFIG);
       assert.equal((await start("start:orchestrator", { ...env, RAILWAY_SERVICE_ID: "wrong" })).code, EX_CONFIG);
-      assert.equal((await predeploy({ ...env, MERRYMEN_START: "start:orchestrator", RAILWAY_GIT_BRANCH: "feature", RAILWAY_GIT_COMMIT_SHA: SHA })).code, EX_CONFIG);
+      assert.equal((await predeploy({ ...env, AGENTCAP_START: "start:orchestrator", RAILWAY_GIT_BRANCH: "feature", RAILWAY_GIT_COMMIT_SHA: SHA })).code, EX_CONFIG);
     }
   });
   it("refuses incomplete/invalid scope, wrong/malformed hold, unapproved commit and any mixed one-shot", async () => {
     const changes = [
-      { MERRYMEN_RECEIPT_ATTEST_ACCOUNT: undefined }, { MERRYMEN_RECEIPT_ATTEST_TENANT: undefined },
-      { MERRYMEN_RECEIPT_ATTEST_MODE: undefined }, { MERRYMEN_RECEIPT_ATTEST_TENANT: "" },
-      { MERRYMEN_RECEIPT_ATTEST_ACCOUNT: `${account},${account}` }, { MERRYMEN_RECEIPT_ATTEST_MODE: "apply" },
-      { MERRYMEN_ACCOUNTING_HOLD_TENANTS: undefined }, { MERRYMEN_ACCOUNTING_HOLD_TENANTS: account },
-      { MERRYMEN_ACCOUNTING_HOLD_TENANTS: `${tenant},malformed` }, { MERRYMEN_RECEIPT_ATTEST_MODE: "commit" },
-      { MERRYMEN_RECEIPT_ATTEST_MODE: "commit", MERRYMEN_RECEIPT_ATTEST_APPROVAL: "not-a-digest" },
-      { MERRYMEN_RECEIPT_ATTEST_APPROVAL: "a".repeat(64) }, { MERRYMEN_REPAIR_HWM: "apply" },
-      { MERRYMEN_ACCOUNTING_DIAGNOSE: "1" }, { MERRYMEN_RECEIPT_ATTEST_BYPASS: "1" },
-      { MERRYMEN_RECEIPT_ATTEST_FLOW: "" }, { MERRYMEN_RECEIPT_ATTEST_FLOW: "0" }, { MERRYMEN_RECEIPT_ATTEST_FLOW: "428,429" },
-      { MERRYMEN_RECEIPT_ATTEST_FLOW: "flows.id" },
+      { AGENTCAP_RECEIPT_ATTEST_ACCOUNT: undefined }, { AGENTCAP_RECEIPT_ATTEST_TENANT: undefined },
+      { AGENTCAP_RECEIPT_ATTEST_MODE: undefined }, { AGENTCAP_RECEIPT_ATTEST_TENANT: "" },
+      { AGENTCAP_RECEIPT_ATTEST_ACCOUNT: `${account},${account}` }, { AGENTCAP_RECEIPT_ATTEST_MODE: "apply" },
+      { AGENTCAP_ACCOUNTING_HOLD_TENANTS: undefined }, { AGENTCAP_ACCOUNTING_HOLD_TENANTS: account },
+      { AGENTCAP_ACCOUNTING_HOLD_TENANTS: `${tenant},malformed` }, { AGENTCAP_RECEIPT_ATTEST_MODE: "commit" },
+      { AGENTCAP_RECEIPT_ATTEST_MODE: "commit", AGENTCAP_RECEIPT_ATTEST_APPROVAL: "not-a-digest" },
+      { AGENTCAP_RECEIPT_ATTEST_APPROVAL: "a".repeat(64) }, { AGENTCAP_REPAIR_HWM: "apply" },
+      { AGENTCAP_ACCOUNTING_DIAGNOSE: "1" }, { AGENTCAP_RECEIPT_ATTEST_BYPASS: "1" },
+      { AGENTCAP_RECEIPT_ATTEST_FLOW: "" }, { AGENTCAP_RECEIPT_ATTEST_FLOW: "0" }, { AGENTCAP_RECEIPT_ATTEST_FLOW: "428,429" },
+      { AGENTCAP_RECEIPT_ATTEST_FLOW: "flows.id" },
     ];
     for (const changed of changes) {
       const r = await start("start:orchestrator", { ...scoped, ...changed });
@@ -460,23 +460,23 @@ describe("one precisely scoped receipt attestation during staged rollout", () =>
 describe("runOrchestrator's own copy of the start checks", () => {
   it("is not this check's business off Railway, whatever is set", () => {
     assert.deepEqual(hostedOrchestratorRefusals({}), []);
-    assert.deepEqual(hostedOrchestratorRefusals({ MERRYMEN_PERSISTENT_HOME_REQUIRED: "0", MERRYMEN_REPAIR_HWM: "apply", MERRYMEN_IMAGE: "nixpacks" }), []);
+    assert.deepEqual(hostedOrchestratorRefusals({ AGENTCAP_PERSISTENT_HOME_REQUIRED: "0", AGENTCAP_REPAIR_HWM: "apply", AGENTCAP_IMAGE: "nixpacks" }), []);
   });
 
   it("on Railway, needs the persistent home exactly as 1", () => {
     assert.deepEqual(hostedOrchestratorRefusals(FLEET), []);
     for (const value of [undefined, "", "0", "true", "yes", " 1"]) {
-      const env = value === undefined ? without(FLEET, "MERRYMEN_PERSISTENT_HOME_REQUIRED") : { ...FLEET, MERRYMEN_PERSISTENT_HOME_REQUIRED: value };
+      const env = value === undefined ? without(FLEET, "AGENTCAP_PERSISTENT_HOME_REQUIRED") : { ...FLEET, AGENTCAP_PERSISTENT_HOME_REQUIRED: value };
       const refusals = hostedOrchestratorRefusals(env);
       assert.equal(refusals.length, 1, JSON.stringify(value));
-      assert.match(refusals[0]!, /^MERRYMEN_PERSISTENT_HOME_REQUIRED is not 1/, JSON.stringify(value));
+      assert.match(refusals[0]!, /^AGENTCAP_PERSISTENT_HOME_REQUIRED is not 1/, JSON.stringify(value));
     }
   });
 });
 
 describe("the guard agrees with the image and the start script", () => {
-  it("DEPLOY_GUARD_IMAGE is the Dockerfile's MERRYMEN_IMAGE", () => {
-    assert.deepEqual([...read("Dockerfile").matchAll(/^ENV MERRYMEN_IMAGE=(\S+)$/gm)].map((m) => m[1]), [DEPLOY_GUARD_IMAGE]);
+  it("DEPLOY_GUARD_IMAGE is the Dockerfile's AGENTCAP_IMAGE", () => {
+    assert.deepEqual([...read("Dockerfile").matchAll(/^ENV AGENTCAP_IMAGE=(\S+)$/gm)].map((m) => m[1]), [DEPLOY_GUARD_IMAGE]);
   });
 
   it("START_ROLES are package.json's start:* scripts", () => {
@@ -511,13 +511,13 @@ describe("the real guard, as the container runs it", { skip: !posix }, () => {
     spawnSync(process.execPath, ["--import", "tsx", "worker/src/deploy-guard.ts", ...args], { cwd: ROOT, env, encoding: "utf8", timeout: 60_000 });
 
   it("exits with its verdict and prints one line per finding", () => {
-    const dir = tempDir("merrymen-deploy-guard-cli-");
+    const dir = tempDir("agentcap-deploy-guard-cli-");
     const off = cli(["--phase=start", "--role=start:orchestrator"], base(dir));
     assert.equal(off.status, 0, off.stderr);
     assert.equal(off.stdout, "[deploy-guard] skipped: not running on Railway\n");
-    const refused = cli(["--phase=start", "--role=start:orchestrator"], { ...base(dir), ...FLEET, RAILWAY_SERVICE_ID: OTHER_SERVICE, MERRYMEN_COHORT_VET: "1" });
+    const refused = cli(["--phase=start", "--role=start:orchestrator"], { ...base(dir), ...FLEET, RAILWAY_SERVICE_ID: OTHER_SERVICE, AGENTCAP_COHORT_VET: "1" });
     assert.equal(refused.status, EX_CONFIG);
-    assert.equal(refused.stdout, "[deploy-guard] census one-shot: MERRYMEN_COHORT_VET\n");
+    assert.equal(refused.stdout, "[deploy-guard] census one-shot: AGENTCAP_COHORT_VET\n");
     assert.equal(refused.stderr.trim().split("\n").length, 2, refused.stderr);
     const predeploy = cli(["--phase=predeploy"], { ...base(dir), ...RAILWAY, RAILWAY_GIT_BRANCH: "main", RAILWAY_GIT_COMMIT_SHA: SHA });
     assert.equal(predeploy.status, 0, predeploy.stderr);
@@ -530,30 +530,30 @@ describe("the real guard, as the container runs it", { skip: !posix }, () => {
     // The command line used to ask whether it was the entry module, and the
     // answer was "no" — no output, exit 0 — whenever the path it was given
     // was not the path Node resolved. Each of these must still refuse.
-    const dir = tempDir("merrymen-deploy-guard-link-");
+    const dir = tempDir("agentcap-deploy-guard-link-");
     const link = join(dir, "app");
     symlinkSync(ROOT, link);
-    const env = { ...base(dir), RAILWAY_SERVICE_ID: OTHER_SERVICE, MERRYMEN_REPAIR_HWM: "apply" };
+    const env = { ...base(dir), RAILWAY_SERVICE_ID: OTHER_SERVICE, AGENTCAP_REPAIR_HWM: "apply" };
     for (const entry of [join(link, "worker/src/deploy-guard.ts"), "worker/src/deploy-guard"]) {
       const r = spawnSync(process.execPath, ["--import", "tsx", entry, "--phase=start", "--role=start:orchestrator"], { cwd: ROOT, env, encoding: "utf8", timeout: 60_000 });
       assert.equal(r.status, EX_CONFIG, `${entry}: ${r.stdout}${r.stderr}`);
-      assert.equal(r.stdout, "[deploy-guard] census one-shot: MERRYMEN_REPAIR_HWM\n", entry);
+      assert.equal(r.stdout, "[deploy-guard] census one-shot: AGENTCAP_REPAIR_HWM\n", entry);
     }
   });
 
   it("a refused orchestrator never starts: the script stops with 78 after its [start] line, and the home stays untouched", () => {
-    const dir = tempDir("merrymen-deploy-guard-start-");
+    const dir = tempDir("agentcap-deploy-guard-start-");
     const home = join(dir, "home");
     mkdirSync(home, { mode: 0o700 });
     const secret = `apply-${"7".repeat(40)}`;
     const r = spawnSync("/bin/sh", [join(ROOT, "scripts/container-start.sh")], {
       cwd: dir,
-      env: { ...base(dir), ...FLEET, RAILWAY_SERVICE_ID: OTHER_SERVICE, MERRYMEN_START: "start:orchestrator", MERRYMEN_HOSTED: "1",
-        MERRYMEN_HOME: home, RAILWAY_GIT_COMMIT_SHA: SHA, MERRYMEN_REPAIR_HWM: secret },
+      env: { ...base(dir), ...FLEET, RAILWAY_SERVICE_ID: OTHER_SERVICE, AGENTCAP_START: "start:orchestrator", AGENTCAP_HOSTED: "1",
+        AGENTCAP_HOME: home, RAILWAY_GIT_COMMIT_SHA: SHA, AGENTCAP_REPAIR_HWM: secret },
       encoding: "utf8", timeout: 60_000,
     });
     assert.equal(r.status, EX_CONFIG, `${r.stdout}${r.stderr}`);
-    assert.equal(r.stdout, `[start] role=start:orchestrator commit=${SHA}\n[deploy-guard] census one-shot: MERRYMEN_REPAIR_HWM\n`);
+    assert.equal(r.stdout, `[start] role=start:orchestrator commit=${SHA}\n[deploy-guard] census one-shot: AGENTCAP_REPAIR_HWM\n`);
     assert.match(r.stderr, /^\[deploy-guard\] refused: this is not the fleet's service/m);
     assert.match(r.stderr, /^\[deploy-guard\] refused: one-shot operator variables are set/m);
     assert.doesNotMatch(`${r.stdout}${r.stderr}`, /\[orchestrator\]/, "the orchestrator ran after a refusal");

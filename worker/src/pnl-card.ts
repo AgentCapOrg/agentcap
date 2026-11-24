@@ -1,5 +1,5 @@
 /**
- * The card a Merryman sends when it closes a position.
+ * The card a AgentCapAvatar sends when it closes a position.
  *
  * WHAT IT IS: `pnl/PNL.jpg` is the house template — logo, wordmark, the ETH
  * mark, and three labels already set in Geist Pixel: `invested`, `position`,

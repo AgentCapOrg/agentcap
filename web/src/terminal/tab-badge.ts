@@ -1,5 +1,5 @@
 /**
- * THE TAB TITLE'S COUNT — "(3) merrymen" — of real-money fills that landed
+ * THE TAB TITLE'S COUNT — "(3) agentcap" — of real-money fills that landed
  * while the tab was hidden (see arrivals.ts for what counts).
  *
  * Prefixed onto the page's own title and removed from it again, never written

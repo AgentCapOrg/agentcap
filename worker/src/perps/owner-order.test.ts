@@ -27,7 +27,7 @@ describe("readPerpExitOrder", () => {
     for (const args of [
       { side: "buy", symbol: "TSLA", usdgAmount: 5 },
       { side: "sell", symbol: "BTC-PERP", usdgAmount: 0 },
-      { side: "buy", symbol: "MERRYMEN", usdgAmount: 30, purpose: "energy" },
+      { side: "buy", symbol: "AGENTCAP", usdgAmount: 30, purpose: "energy" },
       { ...close, purpose: "Close-Perp" },
       { ...close, purpose: "close-perps" },
       {},
@@ -116,7 +116,7 @@ describe("an exit's own sentences where it did not run", () => {
   const SPOT_WORDS = /fill|trades/i;
 
   it("are null for anything that is not an exit, so a Spot order keeps its own sentence word for word", () => {
-    for (const args of [undefined, {}, { side: "buy", symbol: "TSLA", usdgAmount: 5 }, { side: "sell", symbol: "BTC-PERP", usdgAmount: 0 }, { side: "buy", symbol: "MERRYMEN", usdgAmount: 30, purpose: "energy" }]) {
+    for (const args of [undefined, {}, { side: "buy", symbol: "TSLA", usdgAmount: 5 }, { side: "sell", symbol: "BTC-PERP", usdgAmount: 0 }, { side: "buy", symbol: "AGENTCAP", usdgAmount: 30, purpose: "energy" }]) {
       assert.equal(perpExitExpiredLine(args, "30s"), null, JSON.stringify(args));
       assert.equal(perpExitNeverRanLine(args), null, JSON.stringify(args));
       assert.equal(perpExitUnansweredLine(args), null, JSON.stringify(args));

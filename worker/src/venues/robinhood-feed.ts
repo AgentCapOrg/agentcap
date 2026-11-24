@@ -1,4 +1,4 @@
-// Relative, never the @merrymen/core alias — the alias doesn't resolve inside
+// Relative, never the @agentcap/core alias — the alias doesn't resolve inside
 // the installed package (guarded by imports.test.ts).
 import type { McpClient } from "../../../packages/core/src/mcp";
 import type { PriceQuote } from "../../../packages/core/src/index";

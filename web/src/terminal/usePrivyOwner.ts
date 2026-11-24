@@ -13,7 +13,7 @@
  * would route through `toSigner`, which resolves the address with
  * `Promise.any([eth_requestAccounts, eth_accounts])` and takes `[0]` —
  * whichever RPC answers first. The owner address decides the ACCOUNT address,
- * so that race would decide which Merryman somebody gets.
+ * so that race would decide which AgentCapAvatar somebody gets.
  *
  * `getEmbeddedConnectedWallet` and never `wallets[0]`: with the wallet login
  * enabled, `useWallets()` returns a mixed list and index zero can be the user's

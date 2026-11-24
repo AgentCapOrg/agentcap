@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ENERGY } from "@merrymen/core";
+import { ENERGY } from "@agentcap/core";
 import { count, usd } from "@/lib/format";
 import { meterBar, type EnergyRemedies, type EnergyView } from "./energy-view";
 
@@ -17,14 +17,14 @@ import { meterBar, type EnergyRemedies, type EnergyView } from "./energy-view";
  * while this says it (Agent.tsx, ENERGY_NOTICE_PREFIX).
  *
  * THREE VOLUMES, because they are three different amounts of news:
- *   - low and not yet spent: one quiet line. Most agents without $MERRYMEN
+ *   - low and not yet spent: one quiet line. Most agents without $AGENTCAP
  *     sit here permanently; it must never hide anything more important.
  *   - unread: the same quiet line, saying it is OUR read that failed — never
  *     that they hold nothing.
  *   - spent: the full panel, with every remedy and "or change nothing".
  *
  * WHAT IT MUST NEVER SAY. Nothing about the token's price, where it is going,
- * or returns: $MERRYMEN here is capacity and nothing else (token.ts STANCE).
+ * or returns: $AGENTCAP here is capacity and nothing else (token.ts STANCE).
  * No fee or tax percentage either — the token's own tax is set by its owner
  * and can change without a line of our code changing.
  *
@@ -65,7 +65,7 @@ export function EnergyNote({
       return (
         <section className="desk-energy" role="status">
           <p>
-            I couldn&apos;t read the $MERRYMEN balances yet, so I&apos;m on the reduced allowance
+            I couldn&apos;t read the $AGENTCAP balances yet, so I&apos;m on the reduced allowance
             until I can. That&apos;s our read failing, not your wallet.
           </p>
         </section>
@@ -84,7 +84,7 @@ export function EnergyNote({
     return (
       <section className="desk-energy" role="status">
         <p>
-          Low energy: without {full} $MERRYMEN between your wallet and my account I run on about a
+          Low energy: without {full} $AGENTCAP between your wallet and my account I run on about a
           tenth of a standard day{used.length > 0 ? ` — ${used.join(" and ")} used today` : ""}. It
           resets at 00:00 UTC.
         </p>
@@ -113,20 +113,20 @@ export function EnergyNote({
     <section className="desk-energy spent" role="status">
       <strong>Energy spent for today — I pick up again at 00:00 UTC.</strong>
       <p>
-        Without {full} $MERRYMEN between your wallet and my account I get about a tenth of a standard
+        Without {full} $AGENTCAP between your wallet and my account I get about a tenth of a standard
         day&apos;s AI reviews and new trades. Stop-losses, take-profits and your own orders still run; my own
         AI reviews — including of my open positions — are paced along with the rest.
       </p>
       {view.kind === "unread" ? (
-        <p>I couldn&apos;t read the $MERRYMEN balances — that&apos;s our read failing, not your wallet.</p>
+        <p>I couldn&apos;t read the $AGENTCAP balances — that&apos;s our read failing, not your wallet.</p>
       ) : view.total !== null ? (
         <p>
-          {view.noWallet ? "My account holds" : "You and I hold"} {count(view.total)} $MERRYMEN — {count(view.short)} short.
+          {view.noWallet ? "My account holds" : "You and I hold"} {count(view.total)} $AGENTCAP — {count(view.short)} short.
         </p>
       ) : null}
       {remedies.sendToAgent && account ? (
         <>
-          <p>Send $MERRYMEN on Robinhood Chain to my account:</p>
+          <p>Send $AGENTCAP on Robinhood Chain to my account:</p>
           <code className="funding-address">{account}</code>
           <button type="button" onClick={() => void copyAddress()}>
             {copy === "copied" ? "Address copied" : "Copy address"}
@@ -135,7 +135,7 @@ export function EnergyNote({
           {remedies.usdg === "ready" && (
             <>
               <p>
-                Or send USDG to that address and ask me to get my $MERRYMEN — you&apos;ll confirm the
+                Or send USDG to that address and ask me to get my $AGENTCAP — you&apos;ll confirm the
                 amount first
                 {estimateUsdg !== null ? ` (about ${usd(estimateUsdg)} of USDG at the pool's current rate)` : ""}.
               </p>
@@ -146,7 +146,7 @@ export function EnergyNote({
           )}
           {remedies.usdg === "paper" && (
             <p>
-              I&apos;m in Paper mode, so I won&apos;t spend real USDG on it — send $MERRYMEN, or turn
+              I&apos;m in Paper mode, so I won&apos;t spend real USDG on it — send $AGENTCAP, or turn
               on Live trading first.
             </p>
           )}
@@ -161,11 +161,11 @@ export function EnergyNote({
         </>
       ) : remedies.usdg === "not-mainnet" ? (
         <p>
-          My account is on another network, so $MERRYMEN sent to it would not count — keep {full} on
+          My account is on another network, so $AGENTCAP sent to it would not count — keep {full} on
           Robinhood Chain in your own wallet instead.
         </p>
       ) : (
-        <p>Keep $MERRYMEN on Robinhood Chain in your own wallet — it counts.</p>
+        <p>Keep $AGENTCAP on Robinhood Chain in your own wallet — it counts.</p>
       )}
       <p>Or change nothing — I carry on at this pace.</p>
     </section>

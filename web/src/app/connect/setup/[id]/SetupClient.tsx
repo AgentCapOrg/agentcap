@@ -57,7 +57,7 @@ export function SetupClient({ id }: { id: string }) {
           onFund={() => window.location.assign("/deposit")}
         />
       </section>
-      <p className="mcp-setup-note">Review once here, then manage your Merryman from the same chat. Nothing is signed until you choose to create it.</p>
+      <p className="mcp-setup-note">Review once here, then manage your AgentCapAvatar from the same chat. Nothing is signed until you choose to create it.</p>
     </main>
     <footer className="connect-footer">Only your wallet can authorize trading. Manage assistant access at <a href="/connect/apps">Connected apps</a>.</footer>
   </div>;

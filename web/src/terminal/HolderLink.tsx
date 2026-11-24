@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 /**
- * LINK A WALLET THAT HOLDS $MERRYMEN, BY PROVING YOU CONTROL IT.
+ * LINK A WALLET THAT HOLDS $AGENTCAP, BY PROVING YOU CONTROL IT.
  *
  * "it can happen that you don't own tokens in your privy based wallet and you
  * have them somewhere else… the app should have the possibility to define the
@@ -77,7 +77,7 @@ export function LinkedWallet({
         </p>
       ) : standing === "claimed-elsewhere" ? (
         <p>
-          <span className="mono">{address}</span> is linked but not counting here: it powers another merrymen
+          <span className="mono">{address}</span> is linked but not counting here: it powers another agentcap
           account right now, and a wallet powers one at a time. Link it again with a fresh signature from it to
           move it here — a wallet can move once every 24 hours, and can always come back to the account it last left — or
           link a different wallet.
@@ -110,7 +110,7 @@ export function unlinkedNote(reads: Reads): string {
   if (reads === "login") return "Unlinked. Your tier reads the wallet you sign in with again.";
   if (reads === "none") {
     return (
-      "Unlinked. The wallet you sign in with powers another merrymen account right now, so your tier reads no " +
+      "Unlinked. The wallet you sign in with powers another agentcap account right now, so your tier reads no " +
       "wallet here. To bring it back, link it below with a signature from it."
     );
   }
@@ -220,7 +220,7 @@ export function HolderLink() {
       // where it no longer counts. The server never says which account.
       setNote(
         j.moved
-          ? "Linked. This wallet moved here from another merrymen account, where it no longer counts. Your tier now reads its balance."
+          ? "Linked. This wallet moved here from another agentcap account, where it no longer counts. Your tier now reads its balance."
           : "Linked. Your tier now reads this wallet's balance.",
       );
       await refresh();
@@ -266,10 +266,10 @@ export function HolderLink() {
       ) : (
         <p className="mm-hint">
           {reads === "none"
-            ? "The wallet you sign in with powers another merrymen account right now, so it does not count here. To bring it back, link it below with a signature from it. "
+            ? "The wallet you sign in with powers another agentcap account right now, so it does not count here. To bring it back, link it below with a signature from it. "
             : "By default your tier reads the wallet you sign in with. "}
-          If your $MERRYMEN is somewhere else, name that wallet and prove it with a signature from it.
-          A wallet powers one merrymen account at a time: signing for it here moves it from any other
+          If your $AGENTCAP is somewhere else, name that wallet and prove it with a signature from it.
+          A wallet powers one agentcap account at a time: signing for it here moves it from any other
           account. It can move once every 24 hours, and can always come back to the account it last left or to the
           account that signs in with it. Your agent&apos;s own account counts too. The wallet stays
           read-only — it is never a spend key and never joins your agent&apos;s permission.
@@ -280,7 +280,7 @@ export function HolderLink() {
         <div className="holder-row">
           <input
             className="mm-input mono"
-            placeholder="0x… the wallet holding $MERRYMEN"
+            placeholder="0x… the wallet holding $AGENTCAP"
             value={holder}
             onChange={(e) => setHolder(e.target.value)}
           />
@@ -300,7 +300,7 @@ export function HolderLink() {
           <p className="mm-hint">
             Sign this exact message with <span className="mono">{holder.trim().toLowerCase()}</span>.
             Any wallet works — extension, hardware, or a phone. It moves no funds. If this wallet
-            powers another merrymen account, signing moves it here.
+            powers another agentcap account, signing moves it here.
           </p>
           <textarea className="mm-input mono" readOnly rows={9} value={challenge.message} />
           <div className="holder-row">

@@ -3,10 +3,10 @@
  * KILL THAT COULD NOT MAKE ONE DOES NOT DELETE.
  *
  * grant.json is a single slot, and self-hosted it holds the OWNER key — the key
- * `merrymen recover` needs to sweep funds. Three writers copy it to
- * ~/.merrymen/grants/<smartAccount>.json first: the web route (POST replaces
+ * `agentcap recover` needs to sweep funds. Three writers copy it to
+ * ~/.agentcap/grants/<smartAccount>.json first: the web route (POST replaces
  * grant.json, DELETE removes it), the worker's Telegram kill switch, and
- * `merrymen kill`. None of them synced the copy: a plain write sits in the page
+ * `agentcap kill`. None of them synced the copy: a plain write sits in the page
  * cache, grant.json changed a moment later, and on a power loss a filesystem
  * with delayed allocation can keep that change and lose the copy's data. A
  * same-account copy was also rewritten in place (O_TRUNC), so a crash mid-write
@@ -16,7 +16,7 @@
  * kill path deleted grant.json anyway.
  *
  * Pinned at the source for all three writers, run for the helper they share and
- * the CLI's copy of it, and run end to end for `merrymen kill` in a temp home.
+ * the CLI's copy of it, and run end to end for `agentcap kill` in a temp home.
  * The worker archiver itself is run by grant-archive.integration.test.ts; the
  * web route's POST and DELETE by web/src/app/api/grants/archive.test.ts.
  */
@@ -94,7 +94,7 @@ describe("the helper: durable means synced, renamed, and the directory synced", 
   ];
   for (const { name, write } of DURABLE_WRITERS) {
     it(`${name} { durable }: byte for byte, 0600 over a looser file, a new inode, no temp file`, async () => {
-      const dir = mkdtempSync(path.join(os.tmpdir(), "merrymen-durable-"));
+      const dir = mkdtempSync(path.join(os.tmpdir(), "agentcap-durable-"));
       try {
         const file = path.join(dir, "0xabc.json");
         writeFileSync(file, "old");
@@ -114,7 +114,7 @@ describe("the helper: durable means synced, renamed, and the directory synced", 
     });
 
     it(`${name} { durable }: a directory that refuses the file throws, and leaves nothing`, { skip: !canLock }, async () => {
-      const dir = mkdtempSync(path.join(os.tmpdir(), "merrymen-durable-"));
+      const dir = mkdtempSync(path.join(os.tmpdir(), "agentcap-durable-"));
       try {
         chmodSync(dir, 0o500);
         await assert.rejects(async () => write(path.join(dir, "0xabc.json"), "{}"), /EACCES/);
@@ -149,7 +149,7 @@ describe("the helper: durable means synced, renamed, and the directory synced", 
   });
 
   it("fsyncDir, all three: a real directory syncs; a missing one is an error, not a silent pass", async () => {
-    const dir = mkdtempSync(path.join(os.tmpdir(), "merrymen-durable-"));
+    const dir = mkdtempSync(path.join(os.tmpdir(), "agentcap-durable-"));
     try {
       fsyncDirSync(dir);
       await fsyncDir(dir);
@@ -229,14 +229,14 @@ describe("grant.json changes only after the archive — and a kill without one d
     before_(refusal, "const paused = pauseForKeptGrant();", "rmSync(grantFilePath()", "paused before anything else");
     before_(refusal, "return { ok: false, reason: archive.why, archiveFailed: { why: archive.why, paused } };", "rmSync(grantFilePath()", "returns before the delete");
     before_(refusal, "rmSync(grantFilePath(), { force: true });", "liftKillPause();", "a kill that went through lifts the pause a refused one left");
-    // The file loadGrantFile read and archiveCurrentGrant copied — MERRYMEN_GRANT_FILE when set.
+    // The file loadGrantFile read and archiveCurrentGrant copied — AGENTCAP_GRANT_FILE when set.
     assert.doesNotMatch(kill, /rmSync\(homePaths\.grant\(\)/);
-    assert.match(GRANT, /export function grantFilePath\(\): string \{\s*return process\.env\.MERRYMEN_GRANT_FILE \?\? homePaths\.grant\(\);/);
+    assert.match(GRANT, /export function grantFilePath\(\): string \{\s*return process\.env\.AGENTCAP_GRANT_FILE \?\? homePaths\.grant\(\);/);
     assert.match(body(GRANT, "export function loadGrantFile("), /const file = grantFilePath\(\);/);
     assert.match(body(GRANT, "export function archiveCurrentGrant("), /archiveGrantFile\(grantFilePath\(\),/);
   });
 
-  it("merrymen kill: archive, then remove; a failed archive pauses and returns first", () => {
+  it("agentcap kill: archive, then remove; a failed archive pauses and returns first", () => {
     const kill = body(CLI, "async function kill(");
     const refusal = kill.slice(kill.indexOf('if (archive.kind === "failed") {'));
     before_(kill, "const archive = archiveCurrentGrant();", "rmSync(GRANT, { force: true });", "archive first");
@@ -251,15 +251,15 @@ describe("grant.json changes only after the archive — and a kill without one d
 });
 
 describe("the pause a kill leaves in place of a delete", () => {
-  const saved = process.env.MERRYMEN_HOME;
+  const saved = process.env.AGENTCAP_HOME;
   let home = "";
   before(() => {
-    home = mkdtempSync(path.join(os.tmpdir(), "merrymen-kill-pause-"));
-    process.env.MERRYMEN_HOME = home;
+    home = mkdtempSync(path.join(os.tmpdir(), "agentcap-kill-pause-"));
+    process.env.AGENTCAP_HOME = home;
   });
   after(() => {
-    if (saved === undefined) delete process.env.MERRYMEN_HOME;
-    else process.env.MERRYMEN_HOME = saved;
+    if (saved === undefined) delete process.env.AGENTCAP_HOME;
+    else process.env.AGENTCAP_HOME = saved;
     rmSync(home, { recursive: true, force: true });
   });
 
@@ -283,15 +283,15 @@ describe("the pause a kill leaves in place of a delete", () => {
 });
 
 /**
- * `merrymen kill` itself, in a temp home: MERRYMEN_HOME is always set on the
- * child, so this can never reach the real ~/.merrymen.
+ * `agentcap kill` itself, in a temp home: AGENTCAP_HOME is always set on the
+ * child, so this can never reach the real ~/.agentcap.
  */
-describe("merrymen kill, end to end", () => {
+describe("agentcap kill, end to end", () => {
   const BIN = fileURLToPath(new URL("../../cli/bin.mjs", import.meta.url));
   const ACCOUNT = "0xbC78E8b5d209Bf1D4706faEd06e155B5774275D7";
   let home = "";
   before(() => {
-    home = mkdtempSync(path.join(os.tmpdir(), "merrymen-cli-kill-"));
+    home = mkdtempSync(path.join(os.tmpdir(), "agentcap-cli-kill-"));
     writeFileSync(path.join(home, ".welcomed"), "test"); // skip the first-run greeting
   });
   after(() => {
@@ -304,7 +304,7 @@ describe("merrymen kill, end to end", () => {
   const kill = () =>
     spawnSync(process.execPath, [BIN, "kill"], {
       input: "y\n",
-      env: { ...process.env, MERRYMEN_HOME: home, NO_COLOR: "1" },
+      env: { ...process.env, AGENTCAP_HOME: home, NO_COLOR: "1" },
       encoding: "utf8",
       timeout: 30_000,
     });

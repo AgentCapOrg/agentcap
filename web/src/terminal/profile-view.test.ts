@@ -153,7 +153,7 @@ describe("the owner's switch for the public book", () => {
     globalThis.fetch = (async () => { throw new TypeError("failed"); }) as typeof fetch;
     const r = await saveBook(false);
     assert.equal(r.ok, false);
-    assert.match(r.ok ? "" : r.message, /Can't reach merrymen/);
+    assert.match(r.ok ? "" : r.message, /Can't reach agentcap/);
   });
 });
 

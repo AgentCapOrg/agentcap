@@ -140,16 +140,16 @@ describe("a pool with genuinely no history is not an outage", () => {
  * 429 holds the whole process back rather than only the pool that earned it.
  */
 describe("chart reads on the Pro key, once a pacing knob is set on web, are paced and share one cooldown", () => {
-  const KNOBS = ["MERRYMEN_COINGECKO_PRO_API_KEY", "MERRYMEN_FLEET_HOME", "MERRYMEN_COINGECKO_PRO_SPACING_MS", "MERRYMEN_COINGECKO_MONTHLY_CREDITS"] as const;
+  const KNOBS = ["AGENTCAP_COINGECKO_PRO_API_KEY", "AGENTCAP_FLEET_HOME", "AGENTCAP_COINGECKO_PRO_SPACING_MS", "AGENTCAP_COINGECKO_MONTHLY_CREDITS"] as const;
   let saved: Record<string, string | undefined> = {};
   let now = 0;
   const pool = (n: string) => `0x${n.repeat(40)}`;
   beforeEach(() => {
     saved = Object.fromEntries(KNOBS.map((k) => [k, process.env[k]]));
     for (const k of KNOBS) delete process.env[k];
-    process.env.MERRYMEN_COINGECKO_PRO_API_KEY = "private-web-key";
+    process.env.AGENTCAP_COINGECKO_PRO_API_KEY = "private-web-key";
     // The operator's choice to pace web's reads: the default pace, written out.
-    process.env.MERRYMEN_COINGECKO_PRO_SPACING_MS = "3000";
+    process.env.AGENTCAP_COINGECKO_PRO_SPACING_MS = "3000";
     now = 1_000_000;
     resetGeckoFeedsForTest({ now: () => now, sleep: async (ms) => { now += ms; } });
   });
@@ -159,7 +159,7 @@ describe("chart reads on the Pro key, once a pacing knob is set on web, are pace
   });
 
   it("with neither knob set, charts are the unpaced Pro reads they were before: two cold pages both chart at once", async () => {
-    delete process.env.MERRYMEN_COINGECKO_PRO_SPACING_MS;
+    delete process.env.AGENTCAP_COINGECKO_PRO_SPACING_MS;
     const starts: number[] = [];
     globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
       assert.ok(String(input).startsWith("https://pro-api.coingecko.com/api/v3/onchain/networks/robinhood/pools/"));
@@ -186,7 +186,7 @@ describe("chart reads on the Pro key, once a pacing knob is set on web, are pace
 
     resetGeckoFeedsForTest({ now: () => now, sleep: async (ms) => { now += ms; } });
     __resetCandleCacheForTest();
-    process.env.MERRYMEN_COINGECKO_PRO_SPACING_MS = "1200";
+    process.env.AGENTCAP_COINGECKO_PRO_SPACING_MS = "1200";
     starts.length = 0;
     await readCandles(pool("3"), TOKEN, "1h");
     await readCandles(pool("4"), TOKEN, "1h");

@@ -45,7 +45,7 @@
  *
  * REPORT BEFORE APPLY. `planLiveIntentBackfill` reads and decides; nothing is
  * written until `applyLiveIntentBackfill` is called with that plan. The
- * orchestrator runs the first on `MERRYMEN_BACKFILL_LIVE_INTENT=report` and
+ * orchestrator runs the first on `AGENTCAP_BACKFILL_LIVE_INTENT=report` and
  * both on `=apply`, so an operator sees the exact list — with the reason per
  * tenant — before a single row changes.
  *

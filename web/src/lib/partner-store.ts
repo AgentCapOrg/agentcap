@@ -2,7 +2,7 @@
  * Durable owner consent and conversations for the partner API.
  *
  * A partner's external user id never identifies a wallet by itself. Only bind(),
- * called after Merrymen authenticates the owner, can establish that link. The
+ * called after AgentCap authenticates the owner, can establish that link. The
  * unique indexes and single-use token update are the authority across replicas.
  * Hosted deployments require shared Postgres; the local SQLite file is for
  * self-hosted use and tests, with the same transactions and constraints.
@@ -12,8 +12,8 @@ import { createHash, createHmac, randomBytes } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { isHostedMode } from "@merrymen/core";
-import { merrymenHome } from "@merrymen/home";
+import { isHostedMode } from "@agentcap/core";
+import { agentcapHome } from "@agentcap/home";
 import { LockBusyError, makePgDb, withAdvisoryLock, wrapSqlite, type Db } from "../../../worker/src/db";
 
 export type PartnerAddress = `0x${string}`;
@@ -128,8 +128,8 @@ const hash = (s: string) => createHash("sha256").update(s).digest("hex");
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
 
 function bridgeSecret(): string {
-  const value = process.env.MERRYMEN_PARTNER_BRIDGE_SECRET ?? "";
-  if (value.length < 32) throw new Error("MERRYMEN_PARTNER_BRIDGE_SECRET must contain at least 32 characters");
+  const value = process.env.AGENTCAP_PARTNER_BRIDGE_SECRET ?? "";
+  if (value.length < 32) throw new Error("AGENTCAP_PARTNER_BRIDGE_SECRET must contain at least 32 characters");
   return value;
 }
 
@@ -575,10 +575,10 @@ const stores = new Map<string, PartnerStore>();
 export function getPartnerStore(): PartnerStore {
   const url = process.env.DATABASE_URL;
   if (!url && isHostedMode()) throw new Error("hosted partner connections require DATABASE_URL");
-  const key = url ? `pg:${url}` : `file:${merrymenHome()}`;
+  const key = url ? `pg:${url}` : `file:${agentcapHome()}`;
   let store = stores.get(key);
   if (!store) {
-    store = url ? new SqlPartnerStore(() => makePgDb(url)) : new FilePartnerStore(merrymenHome());
+    store = url ? new SqlPartnerStore(() => makePgDb(url)) : new FilePartnerStore(agentcapHome());
     stores.set(key, store);
   }
   return store;

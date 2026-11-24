@@ -2,21 +2,21 @@
  * SOLANA LIVE ROLLOUT: WHICH TENANTS MAY GO LIVE, AND THE PLATFORM'S CAPS ON
  * WHAT A LIVE PERMISSION MAY ALLOW.
  *
- * Robinhood Chain is rolled out a few tenants at a time (MERRYMEN_FLEET_ROLLOUT,
+ * Robinhood Chain is rolled out a few tenants at a time (AGENTCAP_FLEET_ROLLOUT,
  * worker/src/fleet-rollout.ts) and its on-chain vault caps spending at 25 USDG
- * a day. Solana's own switch, MERRYMEN_SOLANA, is all or nothing: with it on,
+ * a day. Solana's own switch, AGENTCAP_SOLANA, is all or nothing: with it on,
  * any bound tenant could register a live permission with whatever limits it
  * signs (up to 96 operations a day and 168 hours). These settings add the same
  * kind of gate on top of it, read by the app runtime from its own env, so the
  * web and the Solana worker decide alike:
  *
- *   MERRYMEN_SOLANA_LIVE_TENANTS   0x<40 hex>[,0x<40 hex>...]: the tenants that
+ *   AGENTCAP_SOLANA_LIVE_TENANTS   0x<40 hex>[,0x<40 hex>...]: the tenants that
  *                                  may open new live permissions and buy. Unset
  *                                  or empty: nobody (paper stays open to all).
- *   MERRYMEN_SOLANA_LIVE_MAX_PER_TRADE_USDG   default 10 (USDG)
- *   MERRYMEN_SOLANA_LIVE_MAX_DAILY_USDG       default 25 (USDG, the RH vault's daily cap)
- *   MERRYMEN_SOLANA_LIVE_MAX_PER_TRADE_WSOL   default 0.1 (SOL)
- *   MERRYMEN_SOLANA_LIVE_MAX_DAILY_WSOL       default 0.25 (SOL)
+ *   AGENTCAP_SOLANA_LIVE_MAX_PER_TRADE_USDG   default 10 (USDG)
+ *   AGENTCAP_SOLANA_LIVE_MAX_DAILY_USDG       default 25 (USDG, the RH vault's daily cap)
+ *   AGENTCAP_SOLANA_LIVE_MAX_PER_TRADE_WSOL   default 0.1 (SOL)
+ *   AGENTCAP_SOLANA_LIVE_MAX_DAILY_WSOL       default 0.25 (SOL)
  *
  * THE LIST ONLY EVER STOPS NEW LIVE PERMISSIONS AND BUYS. A tenant off it, or any
  * tenant while a setting cannot be read, cannot save live mode for the first
@@ -43,7 +43,7 @@
  * session record) and before signing (the limits every provider shows) until the owner
  * registers a new permission within the caps.
  *
- * MALFORMED REFUSES, IT NEVER GUESSES, as for MERRYMEN_FLEET_ROLLOUT: an entry
+ * MALFORMED REFUSES, IT NEVER GUESSES, as for AGENTCAP_FLEET_ROLLOUT: an entry
  * that does not parse is named by its position, never repeated (the value names
  * other tenants), and the runtime turns the refusal into a configuration
  * refusal of new permissions and buys, with an [alert] for the operator.
@@ -56,12 +56,12 @@ import { SOLANA_LIVE_MIN_TRADE_USDG_RAW } from "../../packages/core/src/solana";
 export { SOLANA_LIVE_CAP_DEFAULTS, solanaLiveCapRefusal, solanaLiveCapsExceeded, solanaLiveCapsText, solanaLiveExitLimitsRefusal, solanaLiveSavedAboveCaps, solanaLiveSessionAboveCaps,
   type SolanaLiveCapField, type SolanaLiveCappedLimits, type SolanaLiveCaps } from "../../web/src/lib/solana-live-caps";
 
-export const SOLANA_LIVE_TENANTS_ENV = "MERRYMEN_SOLANA_LIVE_TENANTS";
-/** The same bound as MERRYMEN_FLEET_ROLLOUT's: far beyond any cohort, small enough to review as a diff. */
+export const SOLANA_LIVE_TENANTS_ENV = "AGENTCAP_SOLANA_LIVE_TENANTS";
+/** The same bound as AGENTCAP_FLEET_ROLLOUT's: far beyond any cohort, small enough to review as a diff. */
 export const SOLANA_LIVE_MAX_TENANTS = 512;
 export const SOLANA_LIVE_CAP_ENV: Readonly<Record<SolanaLiveCapField, string>> = {
-  perTradeUsdg: "MERRYMEN_SOLANA_LIVE_MAX_PER_TRADE_USDG", dailyUsdg: "MERRYMEN_SOLANA_LIVE_MAX_DAILY_USDG",
-  perTradeWsol: "MERRYMEN_SOLANA_LIVE_MAX_PER_TRADE_WSOL", dailyWsol: "MERRYMEN_SOLANA_LIVE_MAX_DAILY_WSOL",
+  perTradeUsdg: "AGENTCAP_SOLANA_LIVE_MAX_PER_TRADE_USDG", dailyUsdg: "AGENTCAP_SOLANA_LIVE_MAX_DAILY_USDG",
+  perTradeWsol: "AGENTCAP_SOLANA_LIVE_MAX_PER_TRADE_WSOL", dailyWsol: "AGENTCAP_SOLANA_LIVE_MAX_DAILY_WSOL",
 };
 
 /** A setting this module cannot read. Its message names the setting and never its value. Operator-facing. */
@@ -72,7 +72,7 @@ type Env = Readonly<Record<string, string | undefined>>;
 const ENTRY = /^0x[0-9a-fA-F]{40}$/;
 
 /**
- * The tenants MERRYMEN_SOLANA_LIVE_TENANTS names, lowercased. Unset, empty or
+ * The tenants AGENTCAP_SOLANA_LIVE_TENANTS names, lowercased. Unset, empty or
  * only spaces: none. Entries are separated by commas, with spaces around them
  * ignored; each must be a whole 0x tenant id (0x and 40 hex digits, either
  * case). An empty entry (a stray comma), anything else, or more than
@@ -143,5 +143,5 @@ export function solanaLiveRolloutFingerprint(env: Env): string {
     if (!(error instanceof SolanaLiveRolloutError)) throw error;
     settings = "unreadable";
   }
-  return createHash("sha256").update(`merrymen-solana-live-rollout/v1 ${settings}`).digest("hex");
+  return createHash("sha256").update(`agentcap-solana-live-rollout/v1 ${settings}`).digest("hex");
 }

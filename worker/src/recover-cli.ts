@@ -1,12 +1,12 @@
 /**
- * `merrymen recover` worker entry — invoked by cli/bin.mjs via tsx. Kept out of
+ * `agentcap recover` worker entry — invoked by cli/bin.mjs via tsx. Kept out of
  * the CLI itself because rebuilding a ZeroDev Kernel account needs viem +
  * @zerodev, which the zero-dependency CLI doesn't carry.
  *
  * Contract with bin.mjs:
  *   argv:  <plan|sweep> <destination> [chainId]
- *   env:   MERRYMEN_RECOVER_OWNER_KEY   the owner private key (never logged)
- *          MERRYMEN_RECOVER_EXPECT      optional expected smart-account address
+ *   env:   AGENTCAP_RECOVER_OWNER_KEY   the owner private key (never logged)
+ *          AGENTCAP_RECOVER_EXPECT      optional expected smart-account address
  *
  * Human progress → stderr (streamed live). One machine result line → stdout:
  *   __RESULT__{json}
@@ -25,8 +25,8 @@ async function main() {
   const to = process.argv[3] as `0x${string}` | undefined;
   const chainId = Number(process.argv[4] || robinhoodChain.id);
 
-  const ownerKey = process.env.MERRYMEN_RECOVER_OWNER_KEY as `0x${string}` | undefined;
-  const expect = (process.env.MERRYMEN_RECOVER_EXPECT || undefined) as `0x${string}` | undefined;
+  const ownerKey = process.env.AGENTCAP_RECOVER_OWNER_KEY as `0x${string}` | undefined;
+  const expect = (process.env.AGENTCAP_RECOVER_EXPECT || undefined) as `0x${string}` | undefined;
 
   if (mode !== "plan" && mode !== "sweep") {
     say("recover-cli: mode must be plan|sweep");
@@ -34,7 +34,7 @@ async function main() {
     process.exit(2);
   }
   if (!ownerKey || !/^0x[0-9a-fA-F]{64}$/.test(ownerKey)) {
-    say("recover-cli: MERRYMEN_RECOVER_OWNER_KEY missing or not a 32-byte hex key");
+    say("recover-cli: AGENTCAP_RECOVER_OWNER_KEY missing or not a 32-byte hex key");
     emit({ ok: false, error: "bad-owner-key" });
     process.exit(2);
   }
@@ -44,7 +44,7 @@ async function main() {
     process.exit(2);
   }
 
-  const purpose = process.env.MERRYMEN_RECOVER_PURPOSE ?? "spot";
+  const purpose = process.env.AGENTCAP_RECOVER_PURPOSE ?? "spot";
   if (!isGrantPurpose(purpose)) { emit({ ok: false, error: "bad-wallet-purpose" }); process.exit(2); }
   // The install owns RPC/bundler credentials. The selected wallet chooses only
   // derivation and its sweep list, never another wallet's trading configuration.

@@ -14,7 +14,7 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { GRANT_ENERGY, GRANT_PERP_LIGHTER, LIGHTER_ROUTE_V1, publicGrantView } from "@merrymen/core";
+import { GRANT_ENERGY, GRANT_PERP_LIGHTER, LIGHTER_ROUTE_V1, publicGrantView } from "@agentcap/core";
 import { renewalSkipsRevocation } from "./perps-renewal";
 
 const ACCOUNT = "0x00000000000000000000000000000000000e1e1e";

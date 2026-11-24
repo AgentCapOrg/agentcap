@@ -3,7 +3,7 @@
  *
  * 2026-11-18: a paper owner stopped his agent for a re-signature and never
  * signed. His feed still named his agent, his book was on file — and Home and
- * Me said "Create your merryman", every other page "Your agent starts here",
+ * Me said "Create your agentcapavatar", every other page "Your agent starts here",
  * and his own profile "Private". owner-state.ts names the state once; this
  * runs every arm of it, then renders the screens that read it.
  */
@@ -203,7 +203,7 @@ const noop = () => {};
 const doc = (node: React.ReactElement) => new JSDOM(renderToStaticMarkup(node)).window.document;
 const words = (d: Document) => (d.body.textContent ?? "").replace(/\s+/g, " ");
 const stopped = (stored = false): StoppedOwner => stoppedOf(state(stored ? { account: held } : {}))!;
-const NEWCOMER = /Create your merryman|Your agent starts here|Your merryman lives here|Meet your merryman/;
+const NEWCOMER = /Create your agentcapavatar|Your agent starts here|Your agentcapavatar lives here|Meet your agentcapavatar/;
 
 async function home(props: Record<string, unknown>) {
   const { Home } = await import("./screens/Home");
@@ -227,7 +227,7 @@ async function entry(props: Record<string, unknown>) {
 }
 async function header(props: Record<string, unknown>) {
   const { DesktopHeader } = await import("./Desktop");
-  const { autonomyOf } = await import("@merrymen/core");
+  const { autonomyOf } = await import("@agentcap/core");
   const mine = { name: "Your agent", slug: null, handle: null, owner: null, equity: null, chg24: null, mode: null, thesis: null, moves: [], glance: { id: "custom", label: "" }, autonomy: autonomyOf({ mode: null, liveBlocker: null }) };
   return doc(createElement(DesktopHeader, { mine, hasAgent: false, onScreen: noop, onTab: noop, ...props } as never));
 }
@@ -270,7 +270,7 @@ describe("a stopped owner's screens say stopped, with one way back", () => {
     it(`the desktop header (${stored ? "held for a renewal" : "removed"})`, async () => {
       const d = await header({ stoppedAgent: stopped(stored) });
       const text = words(d);
-      assert.doesNotMatch(text, /Create your merryman|Create an agent/);
+      assert.doesNotMatch(text, /Create your agentcapavatar|Create an agent/);
       assert.equal(d.querySelector("a.desktop-fund")?.getAttribute("href"), restart.href);
       assert.equal(d.querySelector("a.desktop-fund")?.textContent, restart.label);
       assert.match(d.querySelector(".desktop-account-menu summary")?.textContent ?? "", /hako merry/);
@@ -291,22 +291,22 @@ describe("a stopped owner's screens say stopped, with one way back", () => {
 
 describe("a newcomer, and a state not yet known, are not told they are stopped", () => {
   it("the newcomer's screens are the newcomer's", async () => {
-    assert.match(words(await home({})), /Create your merryman/);
-    assert.match(words(await you({})), /Create your merryman/);
+    assert.match(words(await home({})), /Create your agentcapavatar/);
+    assert.match(words(await you({})), /Create your agentcapavatar/);
     assert.match(words(await entry({})), /Your agent starts here/);
-    assert.match(words(await header({})), /Create your merryman/);
+    assert.match(words(await header({})), /Create your agentcapavatar/);
     for (const d of [await home({}), await you({}), await entry({}), await header({})]) assert.doesNotMatch(words(d), /is stopped/);
   });
 
   it("checking claims neither", async () => {
     for (const d of [await home({ checking: true }), await you({ checking: true }), await entry({ checking: true }), await header({ checking: true })]) {
-      assert.doesNotMatch(words(d), /is stopped|Create your merryman|Your agent starts here|Create an agent|Your merryman lives here/);
+      assert.doesNotMatch(words(d), /is stopped|Create your agentcapavatar|Your agent starts here|Create an agent|Your agentcapavatar lives here/);
     }
   });
 
   it("an owner with a live grant whose numbers are loading is not stopped either", async () => {
     const text = words(await home({ hasAgent: true, phase: "loading" }));
-    assert.match(text, /Fetching your merryman's numbers/);
+    assert.match(text, /Fetching your agentcapavatar's numbers/);
     assert.doesNotMatch(text, /is stopped/);
   });
 });

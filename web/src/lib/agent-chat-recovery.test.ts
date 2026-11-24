@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { EnergyStatus } from "@merrymen/core";
+import type { EnergyStatus } from "@agentcap/core";
 import type { FleetRecoveryView } from "../../../worker/src/fleet-recovery";
 import type { LlmCreds } from "../../../worker/src/llm";
 import { agentReplyResponse, generateAgentReply, type AgentChatOptions } from "./agent-chat";

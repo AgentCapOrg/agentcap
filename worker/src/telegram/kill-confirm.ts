@@ -64,7 +64,7 @@ Your Perps wallet's grant is revoked too: it can no longer sign anything.`;
 export function killPromptText(hosted: boolean, ttlSec = CONFIRM_TTL_SEC): string {
   if (hosted) {
     // Hosted there is no owner key on the server (the grant store refuses
-    // one) and no `merrymen recover` to run on it.
+    // one) and no `agentcap recover` to run on it.
     return (
       `⚠️ <b>confirm kill</b> — this revokes my trading permission and stands the band down.\n` +
       `Your funds stay in your smart account; the server never held your owner key.\n\n` +
@@ -73,8 +73,8 @@ export function killPromptText(hosted: boolean, ttlSec = CONFIRM_TTL_SEC): strin
   }
   return (
     `⚠️ <b>confirm kill</b> — this destroys the grant and stands the band down.\n` +
-    `Your owner key is archived to <code>~/.merrymen/grants/</code> first, so ` +
-    `<code>merrymen recover</code> can still sweep the funds.\n\n` +
+    `Your owner key is archived to <code>~/.agentcap/grants/</code> first, so ` +
+    `<code>agentcap recover</code> can still sweep the funds.\n\n` +
     `/confirm to kill (${ttlSec}s) or /cancel.`
   );
 }
@@ -90,11 +90,11 @@ function robinhoodKillText(r: KillResult): string {
     return (
       `⚠️ KILL SWITCH — the grant was NOT destroyed. I could not archive your owner key ` +
       `(${r.archiveFailed.why.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}), and deleting the grant without a copy would lose that key — ` +
-      `the one <code>merrymen recover</code> needs to sweep your funds — for good.\n` +
+      `the one <code>agentcap recover</code> needs to sweep your funds — for good.\n` +
       (r.archiveFailed.paused
         ? `Trading is PAUSED instead: nothing is proposed or traded until you /resume.\n`
         : `I could not pause trading either, so the agent may still trade inside its caps — stop the worker on its machine.\n`) +
-      `Fix <code>~/.merrymen/grants/</code> (disk space, permissions), then /kill again.`
+      `Fix <code>~/.agentcap/grants/</code> (disk space, permissions), then /kill again.`
     );
   }
   if (!r.ok) return `nothing to kill: ${r.reason ?? "no grant"}`;
@@ -121,8 +121,8 @@ function robinhoodKillText(r: KillResult): string {
   return (
     `🛑 KILL SWITCH — grant destroyed, the band stands down on the next tick.\n` +
     (r.archived
-      ? `Owner key archived to <code>~/.merrymen/grants/</code> — <code>merrymen recover</code> can still sweep the funds.`
-      : `⚠️ nothing could be archived — if this account held funds, check ~/.merrymen/grants/ before re-granting.`) +
+      ? `Owner key archived to <code>~/.agentcap/grants/</code> — <code>agentcap recover</code> can still sweep the funds.`
+      : `⚠️ nothing could be archived — if this account held funds, check ~/.agentcap/grants/ before re-granting.`) +
     `\nRe-grant in the dashboard to ride again.`
   );
 }

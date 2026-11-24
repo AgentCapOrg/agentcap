@@ -25,8 +25,8 @@ import os from "node:os";
 import path from "node:path";
 import { after, describe, it } from "node:test";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-census-"));
-process.env.MERRYMEN_HOME = HOME;
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-census-"));
+process.env.AGENTCAP_HOME = HOME;
 
 const { closeStoreForTest, initStore, classCandidateCensus, recentCandidates, recordCandidate } = await import("./store");
 const { CASH } = await import("../../packages/core/src/index");

@@ -26,7 +26,7 @@ function noAccountsFile(): boolean {
  * to run without the shared database, and a self-hosted install that never
  * used Solana has no accounts file (none is created here). With one, the
  * binding store first looks its table up read-only and answers "none" when it
- * is absent (MERRYMEN_SOLANA off, or never used): a Robinhood kill writes no
+ * is absent (AGENTCAP_SOLANA off, or never used): a Robinhood kill writes no
  * Solana schema and takes no Solana lock (SqlSolanaBindingStore killDb).
  */
 export async function stopSolanaForKill(tenant: `0x${string}`, store: SolanaBindingStore = getSolanaBindingStore()): Promise<"stopped" | "none"> {
@@ -34,7 +34,7 @@ export async function stopSolanaForKill(tenant: `0x${string}`, store: SolanaBind
   return await store.disableForKill(tenant) ? "stopped" : "none";
 }
 /**
- * A self-hosted kill's Solana half (Telegram /kill, `merrymen kill`, run before
+ * A self-hosted kill's Solana half (Telegram /kill, `agentcap kill`, run before
  * the Robinhood grant is touched): "stopped" when a strategy was on, null when
  * none was, "not-stopped" when it could not be stopped, so the kill is said to
  * be incomplete instead of done.

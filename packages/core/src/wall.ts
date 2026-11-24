@@ -87,7 +87,7 @@ export function usdgUnits(value: number): bigint {
  *
  * NOT_FOR_VALIDATE_SIG closes it: the kernel refuses to validate signatures
  * from this permission, while UserOp execution is untouched. This costs
- * merrymen nothing — the entire trading path is UserOps, and the v4 route
+ * agentcap nothing — the entire trading path is UserOps, and the v4 route
  * authorises Permit2 with a CALL (`permit2.approve`, see venues/uniswap-v4.ts)
  * rather than a signed permit. Grep confirms nothing in worker/, packages/ or
  * web/src/lib signs with the session account.
@@ -260,7 +260,7 @@ export interface WallOptions extends TrencherPermission {
    * Registering addresses is the same re-sign-to-widen model the token
    * allowlist already uses, and for the same reason: the wall cannot grow by
    * itself. Moving money out to an UNREGISTERED address remains possible any
-   * time via the owner key (`merrymen recover`), which is not bound by the
+   * time via the owner key (`agentcap recover`), which is not bound by the
    * wall — so this removes an agent's power, not the owner's.
    */
   withdrawalAddresses?: readonly Address[];
@@ -391,7 +391,7 @@ export interface WallOptions extends TrencherPermission {
    */
   ponsAdapterAddress?: Address;
   /**
-   * The ENERGY BUY — USDG into $MERRYMEN, delivered to this account, over the
+   * The ENERGY BUY — USDG into $AGENTCAP, delivered to this account, over the
    * one frozen route ENERGY_ROUTE_V1 (energy.ts). CLOSED by default, like
    * everything here.
    *
@@ -409,7 +409,7 @@ export interface WallOptions extends TrencherPermission {
    * token or two has no such room. So both signers ask `energyBuyFits` and seal
    * it only when the answer is yes; an owner whose basket fills the wall signs
    * exactly the wall they would have signed before this existed, and energy
-   * reaches that agent as $MERRYMEN sent to it directly. Sealing it
+   * reaches that agent as $AGENTCAP sent to it directly. Sealing it
    * unconditionally would have refused existing owners' re-signs.
    *
    * On any other chain the router is codeless and a CALL to it SUCCEEDS with
@@ -417,7 +417,7 @@ export interface WallOptions extends TrencherPermission {
    * vault's trap. `energyBuyFits` answers false off 4663 and `grantEnergyRoute`
    * refuses the marker there too.
    *
-   * BUY-ONLY BY CONSTRUCTION: $MERRYMEN never receives an approve in this wall
+   * BUY-ONLY BY CONSTRUCTION: $AGENTCAP never receives an approve in this wall
    * (usableExtraTokens drops it), so nothing here can spend it once bought.
    */
   energyBuy?: boolean;
@@ -527,7 +527,7 @@ export function v4AdapterAssets(opts: Pick<WallOptions, "scopedSpenders" | "extr
  * THE ENERGY RESERVE IS NEVER AN EXTRA, whoever lists it. An extra gets an
  * UNCAPPED approve to every spender and a place in `curveAssets`, where the Pons
  * adapter's unpinnable curve and unpinned minAmountOut would let a stolen key
- * hand the whole $MERRYMEN balance to a contract it controls for one wei. The
+ * hand the whole $AGENTCAP balance to a contract it controls for one wei. The
  * energy permission's safety case is that the reserve has no approve anywhere in
  * this wall — nothing here can spend it once bought — and this filter is what
  * makes that true rather than merely usual. Dropped here, so `grantTokens`
@@ -951,7 +951,7 @@ export function buildCallPermissions(
     // ── the ENERGY BUY, when the signer sealed it ────────────────────────
     //
     // Uniswap v2 Router02 `swapExactTokensForTokensSupportingFeeOnTransferTokens`
-    // over ENERGY_ROUTE_V1: USDG → VIRTUAL → $MERRYMEN, into THIS account, and
+    // over ENERGY_ROUTE_V1: USDG → VIRTUAL → $AGENTCAP, into THIS account, and
     // nothing else. One selector on one target; the route's addresses are the
     // frozen literals GRANT_ENERGY names forever (energy.ts).
     //
@@ -979,7 +979,7 @@ export function buildCallPermissions(
     //   w6 — USDG, the only asset whose approve can name this router.
     //   w7 — VIRTUAL, which pins the intermediate PAIR: an attacker-seeded
     //        middle pool would extract the input.
-    //   w8 — $MERRYMEN.
+    //   w8 — $AGENTCAP.
     //   w3 — `to`, this account. EQUAL is FULL-word equality, so dirty high
     //        bits are refused before the router's decoder could mask them.
     // Router02 is solc 0.6.6 (its CBOR tail on chain), whose v1 decoder takes
@@ -999,16 +999,16 @@ export function buildCallPermissions(
     //        increaseAllowance is not granted). A w0 pin would be redundant,
     //        would not bound a UserOp (a batch can repeat approve+swap), and
     //        would cost 192 bytes — the same reasoning every swap above uses.
-    //   w1 amountOutMin — $MERRYMEN units after the token's buy tax; the
+    //   w1 amountOutMin — $AGENTCAP units after the token's buy tax; the
     //        worker's floor, fenced off-chain. No single figure means anything
     //        across prices.
     //   w4 deadline.
     //
     // WHAT A STOLEN SESSION KEY GAINS, said plainly: it can turn up to
-    // perTradeUsdg of USDG per call into $MERRYMEN in THIS account, at a price
+    // perTradeUsdg of USDG per call into $AGENTCAP in THIS account, at a price
     // it can worsen (amountOutMin is open) — the same exposure exactInputSingle
     // already carries into attacker-seeded pools, and no wider. It cannot sell
-    // what it bought: $MERRYMEN has no approve anywhere in this wall
+    // what it bought: $AGENTCAP has no approve anywhere in this wall
     // (usableExtraTokens drops it), so the reserve is buy-only by construction.
     // The owner key recovers it.
     ...(energy
@@ -1020,14 +1020,14 @@ export function buildCallPermissions(
             functionName: "swapExactTokensForTokensSupportingFeeOnTransferTokens",
             args: [
               null, // w0 amountIn — bounded by the capped USDG approve
-              null, // w1 amountOutMin — post-tax $MERRYMEN, the worker's floor
+              null, // w1 amountOutMin — post-tax $AGENTCAP, the worker's floor
               { condition: ParamCondition.EQUAL, value: 0xa0n }, // w2 offset of path — WHERE the array is read
               self, // w3 to — this account
               null, // w4 deadline
               { condition: ParamCondition.EQUAL, value: 3n }, // w5 path.length
               { condition: ParamCondition.EQUAL, value: ENERGY_ROUTE_V1.path[0] }, // w6 USDG
               { condition: ParamCondition.EQUAL, value: ENERGY_ROUTE_V1.path[1] }, // w7 VIRTUAL
-              { condition: ParamCondition.EQUAL, value: ENERGY_ROUTE_V1.path[2] }, // w8 $MERRYMEN
+              { condition: ParamCondition.EQUAL, value: ENERGY_ROUTE_V1.path[2] }, // w8 $AGENTCAP
             ],
           } as const,
         ]
@@ -1091,7 +1091,7 @@ export function buildCallPermissions(
             //        this proxy for, pinned so the permission says so rather
             //        than leaning on that.
             //   w2 _routeType — 0, perps. Route 1 is Lighter's spot book, which
-            //        nothing in merrymen reads, books or unwinds.
+            //        nothing in agentcap reads, books or unwinds.
             //   w3 _amount — ≤ perTradeUsdg, the same cap the approve carries.
             //        Redundant under that approve today; pinned because a
             //        future change to the approve must not silently uncap the
@@ -1685,14 +1685,14 @@ export function grantV4AdapterReaches(
  *
  *   - CHAIN 4663 ONLY. The route's addresses are mainnet deployments; on any
  *     other chain the router is codeless, a CALL to it succeeds with empty
- *     returndata, and a buy would book USDG out for $MERRYMEN that never
+ *     returndata, and a buy would book USDG out for $AGENTCAP that never
  *     arrived. (grantEnergyRoute refuses the marker off 4663 as well.)
  *   - ONLY WHEN THE WALL STILL FITS. The permission costs 1,408 stub bytes —
  *     about 1.25M bounded first-enable gas — and a wall already near the
  *     product maximum (class vault + Trencher + a token or two) has no such
  *     room. Adding it there would turn an owner's re-sign into a refusal; an
  *     owner without room signs exactly the wall they signed before this
- *     existed, and energy reaches that agent as $MERRYMEN sent to it directly.
+ *     existed, and energy reaches that agent as $AGENTCAP sent to it directly.
  *
  * THE SAME POLICY, NOT A COPY OF IT: `wallSignable` over `wallShape` over the
  * real `buildCallPermissions` objects, with the caller's own options and the

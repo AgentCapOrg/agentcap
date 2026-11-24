@@ -120,7 +120,7 @@ export function createPartnerRuntime(overrides: Partial<RuntimeDependencies> = {
     } catch {
       throw new PartnerRuntimeError(503, "runtime_unavailable", "The agent service is not configured.");
     }
-    const requestFor = (resource: string) => new Request(`https://app.merrymen.dev/api/${resource}`, {
+    const requestFor = (resource: string) => new Request(`https://app.agentcap.xyz/api/${resource}`, {
       headers: { cookie },
     });
     const [grantRead, feedRead, settingsRead] = await Promise.allSettled([
@@ -156,7 +156,7 @@ export function createPartnerRuntime(overrides: Partial<RuntimeDependencies> = {
     const runtime: PartnerRuntime = {
       exists,
       smart_account: exists ? grantStatus.grant!.smartAccount : null,
-      name: typeof feed?.agent?.name === "string" ? feed.agent.name : "Your Merryman",
+      name: typeof feed?.agent?.name === "string" ? feed.agent.name : "Your AgentCapAvatar",
       slug: typeof feed?.agent?.slug === "string" ? feed.agent.slug : null,
       status: !exists ? "awaiting_grant" : beat === null || (grantedAt !== null && beat < grantedAt) ? "starting" : fresh ? "running" : "stale",
       mode: fresh ? mode : null,

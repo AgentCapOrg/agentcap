@@ -29,8 +29,8 @@ function solanaRoutes(dir: string, prefix = ""): string[] {
   });
 }
 
-const flag = process.env.MERRYMEN_SOLANA;
-const set = (value: string | undefined) => { if (value === undefined) delete process.env.MERRYMEN_SOLANA; else process.env.MERRYMEN_SOLANA = value; };
+const flag = process.env.AGENTCAP_SOLANA;
+const set = (value: string | undefined) => { if (value === undefined) delete process.env.AGENTCAP_SOLANA; else process.env.AGENTCAP_SOLANA = value; };
 
 let touched: string[] = [];
 const touch = (name: string) => async () => { touched.push(name); throw new auth.SolanaWebError(401, "Sign in first."); };
@@ -68,7 +68,7 @@ const call = (h: (typeof handlers)[number]) =>
   h.handle(new Request(`https://app.example.test/api/solana/${h.route}?owner=x`, h.method === "GET" ? {} : { method: h.method, body: "{}" }));
 
 describe("the Solana switch", () => {
-  it("is on only for MERRYMEN_SOLANA=1", () => {
+  it("is on only for AGENTCAP_SOLANA=1", () => {
     for (const value of [undefined, "", "0", "false", "true", "yes", "on", "2"]) {
       set(value);
       assert.equal(solanaEnabled(), false, String(value));

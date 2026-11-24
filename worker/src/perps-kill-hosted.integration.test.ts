@@ -11,7 +11,7 @@
  * owner's ✅ are recorded instead of done, and the Perps stop is the real one
  * unless a test makes it fail.
  *
- * MERRYMEN_HOME is per process (node --test forks per file).
+ * AGENTCAP_HOME is per process (node --test forks per file).
  */
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
@@ -21,11 +21,11 @@ import { after, beforeEach, describe, it } from "node:test";
 import { privateKeyToAccount } from "viem/accounts";
 import type { StoredGrant } from "../../packages/core/src/index";
 
-const FLEET = mkdtempSync(path.join(realpathSync(os.tmpdir()), "merrymen-perps-kill-hosted-"));
-process.env.MERRYMEN_HOME = FLEET;
-process.env.MERRYMEN_HOSTED = "1";
+const FLEET = mkdtempSync(path.join(realpathSync(os.tmpdir()), "agentcap-perps-kill-hosted-"));
+process.env.AGENTCAP_HOME = FLEET;
+process.env.AGENTCAP_HOSTED = "1";
 delete process.env.DATABASE_URL;
-process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 5).toString("base64");
+process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 5).toString("base64");
 
 const { honourPendingKills, childHome, setKillConfirmForTest, setSolanaKillForTest, setPerpsKillForTest } = await import("./orchestrator");
 const { getGrantStore } = await import("./grant-store");

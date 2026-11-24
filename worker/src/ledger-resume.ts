@@ -15,12 +15,12 @@
  * THE ANSWER, IN THREE PHASES, per tenant, only under an operator's approval
  * bound to evidence the operator was shown:
  *
- *   Preview (MERRYMEN_RESUME_PREVIEW): read-only. One JSON line per tenant
+ *   Preview (AGENTCAP_RESUME_PREVIEW): read-only. One JSON line per tenant
  *     with its evidence digest and every precondition, and a run digest over
  *     the whole set (recorded in ledger_resume_preview_runs).
- *   Approve (MERRYMEN_RESUME_APPROVE): `0x<tenant>:<digest>` for one tenant,
+ *   Approve (AGENTCAP_RESUME_APPROVE): `0x<tenant>:<digest>` for one tenant,
  *     or `run:<run digest>` for exactly the tenants that passed in that run.
- *     MERRYMEN_RESUME_REVOKE (`0x<tenant>:<digest>` or `run:<digest>`, bound
+ *     AGENTCAP_RESUME_REVOKE (`0x<tenant>:<digest>` or `run:<digest>`, bound
  *     to evidence so a value left set never withdraws a later re-approval)
  *     withdraws an approval not yet registered.
  *   Phase A (in spawnChild, under the lease): drain a continuous old book's
@@ -98,9 +98,9 @@ import { isRootSuccessOf, ownerOperationOf, type OwnerReceiptLog } from "./owner
 import { tenantGrantAccount } from "./ledger-mirror";
 import { parseFleetId, type FleetId } from "./fleet-id";
 
-export const RESUME_PREVIEW_ENV = "MERRYMEN_RESUME_PREVIEW";
-export const RESUME_APPROVE_ENV = "MERRYMEN_RESUME_APPROVE";
-export const RESUME_REVOKE_ENV = "MERRYMEN_RESUME_REVOKE";
+export const RESUME_PREVIEW_ENV = "AGENTCAP_RESUME_PREVIEW";
+export const RESUME_APPROVE_ENV = "AGENTCAP_RESUME_APPROVE";
+export const RESUME_REVOKE_ENV = "AGENTCAP_RESUME_REVOKE";
 
 /** Written into the new home for the Telegram and Fomo answers: the gap, before trading resumed. */
 export const RECOVERY_GENERATION_FILE = "recovery-generation.json";
@@ -258,7 +258,7 @@ export function homeIdentity(home: string): HomeIdentity {
   if (!st.isDirectory()) throw new Error("a tenant home is not a plain directory");
   let db: HomeIdentity["db"] = null;
   try {
-    const d = lstatSync(path.join(home, "merrymen.db"), { bigint: true });
+    const d = lstatSync(path.join(home, "agentcap.db"), { bigint: true });
     if (!d.isFile()) throw new Error("a tenant book is not a plain file");
     db = { ino: String(d.ino), size: String(d.size) };
   } catch (e) { if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e; }
@@ -769,8 +769,8 @@ export function previewLine(e: PreviewEntry): string {
 
 export type ApprovalState = "approved" | "archiving" | "archived" | "registered" | "applied" | "refused" | "revoked";
 /**
- * WHO APPROVED: the operator (MERRYMEN_RESUME_APPROVE), or the orchestrator
- * itself for a re-signed paper tenant (MERRYMEN_RESUME_AUTO_PAPER, below). A
+ * WHO APPROVED: the operator (AGENTCAP_RESUME_APPROVE), or the orchestrator
+ * itself for a re-signed paper tenant (AGENTCAP_RESUME_AUTO_PAPER, below). A
  * row from before the column reads as the operator's, which it was.
  */
 export type ApprovalSource = "operator" | "auto-paper";
@@ -884,7 +884,7 @@ export async function applyResumeApprovals(db: Db, approvals: readonly ResumeApp
   // OLDER RUNS ARE STILL RUNS. The newest 200 are read at once, and an entry
   // not among them is looked up in the whole table: by its run digest, or by
   // the evidence digest its entries carry. Once the automatic lane
-  // (MERRYMEN_RESUME_AUTO_PAPER) records a run per re-signer, the run an
+  // (AGENTCAP_RESUME_AUTO_PAPER) records a run per re-signer, the run an
   // operator approves from — or the one whose `approve it by hand` line they
   // copied — can be older than the newest 200, and refusing it then for "no
   // recorded preview run" was an outage of the operator's own control. Both
@@ -926,7 +926,7 @@ export async function applyResumeApprovals(db: Db, approvals: readonly ResumeApp
 /**
  * RECORD ONE APPROVAL OF ONE PREVIEWED ENTRY, whoever gave it: the operator's
  * variable above, or the orchestrator's own approval of a re-signed paper
- * tenant (MERRYMEN_RESUME_AUTO_PAPER, below). One insert path, so both are
+ * tenant (AGENTCAP_RESUME_AUTO_PAPER, below). One insert path, so both are
  * held to the same rules — and nothing after the row tells them apart:
  * Phase A, the archive, the registration and its attestation, the seed proof
  * and the first worker are one path for both (orchestrator.ts
@@ -1049,7 +1049,7 @@ export async function revokeResumeApprovals(db: Db, revokes: readonly ResumeRevo
       const r = await db.prepare(`UPDATE ledger_resume_approvals SET state = 'revoked', reason = 'revoked by the operator', updated_at_ms = ?
         WHERE preview_run = ? AND state IN ('approved', 'archived')`).run(nowMs, v.run);
       log(`resume revoke: run ${v.run.slice(0, 12)}… — ${r.changes} approval(s) withdrawn; those tenants stay held`);
-      for (const o of open) log(`[alert] resume revoke: ${String(o.tenant)} is ${String(o.state)} — past the point a revoke undoes; narrow MERRYMEN_FLEET_ROLLOUT instead`);
+      for (const o of open) log(`[alert] resume revoke: ${String(o.tenant)} is ${String(o.state)} — past the point a revoke undoes; narrow AGENTCAP_FLEET_ROLLOUT instead`);
       continue;
     }
     const r = await db.prepare(`UPDATE ledger_resume_approvals SET state = 'revoked', reason = 'revoked by the operator', updated_at_ms = ?
@@ -1059,7 +1059,7 @@ export async function revokeResumeApprovals(db: Db, revokes: readonly ResumeRevo
       Record<string, unknown> | undefined;
     if (!row) log(`resume revoke: ${v.tenant} has no approval for evidence ${v.digest.slice(0, 12)}…`);
     else if (row.state === "archiving" || row.state === "registered") {
-      log(`[alert] resume revoke: ${v.tenant} is ${String(row.state)} — past the point a revoke undoes; narrow MERRYMEN_FLEET_ROLLOUT instead`);
+      log(`[alert] resume revoke: ${v.tenant} is ${String(row.state)} — past the point a revoke undoes; narrow AGENTCAP_FLEET_ROLLOUT instead`);
     }
     // Already applied, refused or revoked: nothing to withdraw, and left set
     // across boots this says nothing more.
@@ -1069,7 +1069,7 @@ export async function revokeResumeApprovals(db: Db, revokes: readonly ResumeRevo
 // ── automatic admission of re-signed paper tenants ──────────────────────────
 
 /**
- * MERRYMEN_RESUME_AUTO_PAPER: THE ORCHESTRATOR APPROVES ONE CASE ITSELF.
+ * AGENTCAP_RESUME_AUTO_PAPER: THE ORCHESTRATOR APPROVES ONE CASE ITSELF.
  *
  * WHY. Sixty-four tenants' grants expired during the hold. When such an owner
  * re-signs, the continuity gate holds the tenant (it has history and no
@@ -1088,7 +1088,7 @@ export async function revokeResumeApprovals(db: Db, revokes: readonly ResumeRevo
  * and from there it is an approval like any other: Phase A re-derives the
  * evidence and refuses on any change, the home is archived, the book
  * registered and attested, the seed proved, and the first worker starts at
- * whatever level MERRYMEN_FLEET_ROLLOUT gives the tenant.
+ * whatever level AGENTCAP_FLEET_ROLLOUT gives the tenant.
  *
  * THE SAFE CASE, all of it:
  *   - every precondition passes (the preview's own `pass`, which includes an
@@ -1114,7 +1114,7 @@ export async function revokeResumeApprovals(db: Db, revokes: readonly ResumeRevo
  *
  * NEVER a live or chain-required tenant: it is previewed, its line printed,
  * and left to the operator's hand. Never anyone while live-trading consent is
- * stood down (MERRYMEN_LIVE_INTENT_STAND_DOWN=1: a funded account then arms
+ * stood down (AGENTCAP_LIVE_INTENT_STAND_DOWN=1: a funded account then arms
  * live whatever its settings say, so every tenant reads as able to arm live).
  * Never a tenant the rollout does not admit
  * (its preview stays owed until it does: under an explicit list it must be
@@ -1128,7 +1128,7 @@ export async function revokeResumeApprovals(db: Db, revokes: readonly ResumeRevo
  * held exactly as before. Malformed refuses boot, as every resume variable
  * does; read at runtime it fails closed (resumeAutoPaperOn).
  */
-export const RESUME_AUTO_PAPER_ENV = "MERRYMEN_RESUME_AUTO_PAPER";
+export const RESUME_AUTO_PAPER_ENV = "AGENTCAP_RESUME_AUTO_PAPER";
 /** `1`: on. Unset: off. Anything else — `0`, `true`, an empty value — refuses boot rather than guess. */
 export function parseResumeAutoPaper(raw: string | undefined): boolean {
   if (raw === undefined) return false;
@@ -1385,7 +1385,7 @@ async function openRows(db: Db, account: string): Promise<{ live: number; comman
  *
  * `consentEnforced` is the deployment's live-trading consent as the tenant's
  * worker reads it (settings.ts enforceLiveIntent: false only under
- * MERRYMEN_LIVE_INTENT_STAND_DOWN=1). Stood down, a funded account arms live
+ * AGENTCAP_LIVE_INTENT_STAND_DOWN=1). Stood down, a funded account arms live
  * whatever its owner's settings say (exec-mode.ts `consented`), so "could not
  * arm live" cannot be shown from Postgres and the settings at all — a deposit
  * made during the gap is in no table this reads — and nobody is approved
@@ -1408,7 +1408,7 @@ export async function autoPaperVerdict(db: Db, entry: PreviewEntry, o: { consent
   if (entry.book !== "blocked" && !evidenceHasHistory(e)) return { kind: "not-held", why: "no history on record: the ordinary path admits a new book" };
   const why: string[] = [];
   if (!o.consentEnforced) {
-    why.push("live-trading consent is stood down on this deployment (MERRYMEN_LIVE_INTENT_STAND_DOWN=1): a funded account arms live whatever its owner's settings say");
+    why.push("live-trading consent is stood down on this deployment (AGENTCAP_LIVE_INTENT_STAND_DOWN=1): a funded account arms live whatever its owner's settings say");
   }
   if (!entry.pass) why.push(`it did not pass: ${entry.refusals.join("; ")}`);
   // Asked of the line, of the evidence it binds, and of the store, so a line
@@ -1455,7 +1455,7 @@ export async function autoPaperVerdict(db: Db, entry: PreviewEntry, o: { consent
  * preview prints is always one that can still be approved.
  */
 export const CHAIN_HELD_NEXT = "an approval does not make it trade until what the chain showed is booked, because admission reads the chain again from where the " +
-  "refused read began. Take it out of MERRYMEN_FLEET_ROLLOUT and book it first (docs/chain-gap-booking.md). If the booking tool refuses because a later " +
+  "refused read began. Take it out of AGENTCAP_FLEET_ROLLOUT and book it first (docs/chain-gap-booking.md). If the booking tool refuses because a later " +
   "refusal superseded the chain refusal, preview it and approve the digest that preview prints once, with it in the rollout at exits-only: admission " +
   "reads the chain again and, while Postgres lacks what the chain showed, refuses it with a fresh chain refusal. Then take it out of the rollout, " +
   "book it, preview it again and approve the digest that preview prints, with it in the rollout at exits-only";
@@ -2036,12 +2036,12 @@ export async function knownChainFacts(db: Db, account: string, owner?: { tenant:
  * The production chain client. The RPC is the orchestrator's own variable
  * for the chain, or — as every other chain read in orchestrator.ts does —
  * the chain's public endpoint (packages/core chain.ts). Returning nothing
- * when MERRYMEN_RPC_MAINNET was unset held every live tenant forever behind
+ * when AGENTCAP_RPC_MAINNET was unset held every live tenant forever behind
  * one repeated alert, on a service that may well rely on the default today.
  * Null only for a chain with no endpoint at all.
  */
 export function resumeChainFor(chainId: number, env: NodeJS.ProcessEnv = process.env): GapChain | null {
-  const url = (chainId === 46630 ? env.MERRYMEN_RPC_TESTNET : env.MERRYMEN_RPC_MAINNET) || chainForId(chainId).rpcUrls.default.http[0];
+  const url = (chainId === 46630 ? env.AGENTCAP_RPC_TESTNET : env.AGENTCAP_RPC_MAINNET) || chainForId(chainId).rpcUrls.default.http[0];
   if (!url) return null;
   const client = createPublicClient({ chain: chainForId(chainId), transport: http(url, { timeout: 20_000 }) });
   return {

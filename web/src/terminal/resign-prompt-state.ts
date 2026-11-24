@@ -22,7 +22,7 @@
  *     dialog cannot flash open and immediately closed on a returning visitor.
  */
 
-import { wallAgeOfGrant } from "@merrymen/core";
+import { wallAgeOfGrant } from "@agentcap/core";
 
 export type ResignPromptState =
   /** Say nothing. Either there is nothing to say, or we do not know yet. */

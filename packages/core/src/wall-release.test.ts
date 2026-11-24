@@ -133,7 +133,7 @@ describe("the constant itself", () => {
   it("is a plausible past release time", () => {
     // A date in the future would mark every grant stale forever; a date before
     // the product existed would mark none.
-    assert.ok(WALL_CHANGED_AT > 1_700_000_000, "before merrymen existed");
+    assert.ok(WALL_CHANGED_AT > 1_700_000_000, "before agentcap existed");
     assert.ok(WALL_CHANGED_AT < 4_000_000_000, "not a milliseconds value");
   });
 

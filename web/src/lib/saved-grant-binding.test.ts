@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import { JSDOM } from "jsdom";
 import { privateKeyToAccount } from "viem/accounts";
-import { bindingMessage, type GrantPurpose } from "@merrymen/core";
+import { bindingMessage, type GrantPurpose } from "@agentcap/core";
 import type { Grant } from "./session";
 import { loadRecoveryGrants, saveRecoveryGrant, trustedSavedGrant } from "./saved-grant-binding";
 
@@ -59,10 +59,10 @@ it("a historical signed binding proves local recovery association for the authen
 
 it("snapshots preserve public renewal inputs without copying or replacing recovery secrets", async () => {
   const grant = await signedGrant(true);
-  localStorage.setItem("merrymen.grant.v1", "original-secret-grant");
+  localStorage.setItem("agentcap.grant.v1", "original-secret-grant");
   saveRecoveryGrant(grant);
   const [snapshot] = loadRecoveryGrants("spot");
-  assert.equal(localStorage.getItem("merrymen.grant.v1"), "original-secret-grant");
+  assert.equal(localStorage.getItem("agentcap.grant.v1"), "original-secret-grant");
   assert.doesNotMatch(JSON.stringify(snapshot), /private-owner|private-session/);
   assert.equal(snapshot.trencherFactoryAddress, grant.trencherFactoryAddress);
   assert.equal(snapshot.trencherVaultAddress, grant.trencherVaultAddress);
@@ -72,7 +72,7 @@ it("snapshots preserve public renewal inputs without copying or replacing recove
 it("missing recovery is empty, while malformed or unreadable recovery blocks a fresh mint", () => {
   assert.deepEqual(loadRecoveryGrants("spot"), []);
   for (const value of ["{", "null", "{}"]){
-    localStorage.setItem("merrymen.permission-recovery.v1.bad", value);
+    localStorage.setItem("agentcap.permission-recovery.v1.bad", value);
     assert.throws(() => loadRecoveryGrants("spot"), /could not be read/);
   }
   Object.defineProperty(globalThis, "localStorage", { configurable: true, get() { throw new Error("storage unavailable"); } });
@@ -114,7 +114,7 @@ describe("two wallets (perps slice 5b)", () => {
   });
 
   it("a saved record naming a wallet this build does not know blocks a fresh mint in either wallet", () => {
-    localStorage.setItem("merrymen.permission-recovery.v1.4663.0xbad", JSON.stringify({ purpose: "solana", smartAccount: "0x1", owner: "0x2", caps: {} }));
+    localStorage.setItem("agentcap.permission-recovery.v1.4663.0xbad", JSON.stringify({ purpose: "solana", smartAccount: "0x1", owner: "0x2", caps: {} }));
     assert.throws(() => loadRecoveryGrants("spot"), /could not be read/);
     assert.throws(() => loadRecoveryGrants("perps"), /could not be read/);
     assert.throws(() => loadRecoveryGrants("solana" as never), /Unrecognised wallet/);

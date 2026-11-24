@@ -16,7 +16,7 @@ import { SqlSolanaBindingStore, SolanaBindingError, SOLANA_OTHER_SIGN_IN } from 
  * SOLANA OWNER KEY RECOVERY (solana-binding-store.ts): a tenant whose verified
  * Privy identity changed re-binds by proving the SAME Solana owner key with a
  * fresh challenge. The store half first, on SQLite and (when
- * MERRYMEN_TEST_PG_URL is set) PostgreSQL; then the remap end to end, through
+ * AGENTCAP_TEST_PG_URL is set) PostgreSQL; then the remap end to end, through
  * the real Robinhood identity store (file backend), sign-in check, session
  * cookie, bind, status, owner and setup routes and binding store.
  *
@@ -40,7 +40,7 @@ async function storeFor(t: TestContext, dialect: "sqlite" | "postgres", now = ()
   let db: Db;
   if (dialect === "sqlite") { const raw = new DatabaseSync(":memory:"); t.after(() => raw.close()); db = wrapSqlite(raw); }
   else {
-    const url = new URL(process.env.MERRYMEN_TEST_PG_URL!), schema = `solana_rebind_${randomUUID().replaceAll("-", "")}`;
+    const url = new URL(process.env.AGENTCAP_TEST_PG_URL!), schema = `solana_rebind_${randomUUID().replaceAll("-", "")}`;
     const admin = await makePgDb(url.toString()); await admin.exec(`CREATE SCHEMA ${schema}`);
     url.searchParams.set("options", `-c search_path=${schema}`); db = await makePgDb(url.toString());
     t.after(async () => { await admin.exec(`DROP SCHEMA ${schema} CASCADE`); });
@@ -48,7 +48,7 @@ async function storeFor(t: TestContext, dialect: "sqlite" | "postgres", now = ()
   return new SqlSolanaBindingStore(async () => db, dialect, now);
 }
 for (const dialect of ["sqlite", "postgres"] as const) {
-  const options = dialect === "postgres" && !process.env.MERRYMEN_TEST_PG_URL ? { skip: "Set MERRYMEN_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
+  const options = dialect === "postgres" && !process.env.AGENTCAP_TEST_PG_URL ? { skip: "Set AGENTCAP_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
   test(`${dialect}: a re-bind replaces only the DID it names on the same tenant and owner, turns the strategy off, bumps the revision and is recorded`, options, async (t) => {
     let clock = NOW;
     const store = await storeFor(t, dialect, () => clock);
@@ -87,7 +87,7 @@ for (const dialect of ["sqlite", "postgres"] as const) {
 const WEB = fileURLToPath(new URL("../", import.meta.url));
 const API = join(WEB, "app/api/solana");
 const saved: Record<string, string | undefined> = {};
-const env = { MERRYMEN_SOLANA: "1", MERRYMEN_SESSION_SECRET: "rebind-fixture-secret-0123456789abcdef", MERRYMEN_HOSTED: undefined, MERRYMEN_PUBLIC_ORIGIN: undefined, DATABASE_URL: undefined } as Record<string, string | undefined>;
+const env = { AGENTCAP_SOLANA: "1", AGENTCAP_SESSION_SECRET: "rebind-fixture-secret-0123456789abcdef", AGENTCAP_HOSTED: undefined, AGENTCAP_PUBLIC_ORIGIN: undefined, DATABASE_URL: undefined } as Record<string, string | undefined>;
 let home = "", tokens: Record<string, string> = {}, runtimeCalls: Array<{ method: string; scope: unknown }> = [];
 let raw: DatabaseSync, store: SqlSolanaBindingStore;
 let mintSession: (address: `0x${string}`) => string;
@@ -95,8 +95,8 @@ let identities: { resolveOrClaimDid(tenant: `0x${string}`, social: { did: string
 const routes: Record<string, Record<string, (req: Request) => Promise<Response>>> = {};
 before(() => {
   for (const [key, value] of Object.entries(env)) { saved[key] = process.env[key]; if (value === undefined) delete process.env[key]; else process.env[key] = value; }
-  home = mkdtempSync(join(tmpdir(), "merrymen-solana-rebind-"));
-  saved.MERRYMEN_HOME = process.env.MERRYMEN_HOME; process.env.MERRYMEN_HOME = home;
+  home = mkdtempSync(join(tmpdir(), "agentcap-solana-rebind-"));
+  saved.AGENTCAP_HOME = process.env.AGENTCAP_HOME; process.env.AGENTCAP_HOME = home;
   const load = createRequire(import.meta.url);
   const loader = Module as unknown as { _load: (id: string, parent: { filename?: string }, isMain: boolean) => unknown };
   const original = loader._load;
@@ -208,8 +208,8 @@ test("a Privy DID remap on the tenant: the new identity re-binds by proving the 
   assert.equal((await store.get(W))!.did, "did:privy:alice"); assert.deepEqual(await store.rebinds(W), []);
   // Bob proves the SAME owner key over a fresh re-bind challenge naming both identities and what moves: the binding is re-bound.
   const proof = await bind("token-bob", W, OWNER, OWNER_SEED);
-  assert.match(proof.message, /^Merrymen Solana wallet re-bind v1\n/);
-  assert.match(proof.message, /Move this Solana account's controls to my current Merrymen sign-in\./);
+  assert.match(proof.message, /^AgentCap Solana wallet re-bind v1\n/);
+  assert.match(proof.message, /Move this Solana account's controls to my current AgentCap sign-in\./);
   assert.match(proof.message, /live mode and trading limits, the trading permission registered on Solana, the autonomous strategy \(turned off until I turn it on again\), and owner actions such as revoking and withdrawing/);
   assert.match(proof.message, /\nPrevious identity: did:privy:alice\n/); assert.match(proof.message, /\nIdentity: did:privy:bob\n/); assert.match(proof.message, new RegExp(`Tenant: ${W}`));
   assert.equal(proof.response.status, 200);

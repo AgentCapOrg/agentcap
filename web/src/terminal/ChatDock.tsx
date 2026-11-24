@@ -36,7 +36,7 @@ import { GripHorizontal, X } from "lucide-react";
  * write.
  */
 
-const POS_KEY = "merrymen.chatdock.pos.v1";
+const POS_KEY = "agentcap.chatdock.pos.v1";
 
 interface Pos {
   x: number;

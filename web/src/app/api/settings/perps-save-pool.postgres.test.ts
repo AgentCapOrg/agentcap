@@ -2,7 +2,7 @@
  * REAL POSTGRES: PERPS SAVES FOR MANY ACCOUNTS AT ONCE NEVER WEDGE THE WEB'S
  * POOL. Opt-in, like web/src/lib/start-over.postgres.test.ts (see its header):
  *
- *   MERRYMEN_TEST_PG_URL=postgres://merrymen@localhost:55432/merrymen_pgtest \
+ *   AGENTCAP_TEST_PG_URL=postgres://agentcap@localhost:55432/agentcap_pgtest \
  *     npx tsx --test web/src/app/api/settings/perps-save-pool.postgres.test.ts
  *
  * Skipped without it. A LOCAL Postgres only, each test in a schema of its own
@@ -28,9 +28,9 @@ import { after, afterEach, before, test } from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 
 import { mintSession } from "@/lib/auth";
-import { getSettingsStore, resetSettingsStoreForTest } from "@merrymen/settings-store";
+import { getSettingsStore, resetSettingsStoreForTest } from "@agentcap/settings-store";
 
-const url = process.env.MERRYMEN_TEST_PG_URL ?? process.env.MERRYMEN_TEST_POSTGRES_URL;
+const url = process.env.AGENTCAP_TEST_PG_URL ?? process.env.AGENTCAP_TEST_POSTGRES_URL;
 interface PgClient {
   connect(): Promise<void>;
   query(sql: string, params?: unknown[]): Promise<{ rows: Array<Record<string, unknown>> }>;
@@ -39,7 +39,7 @@ interface PgClient {
 // LOADED ONLY WHEN A DATABASE IS NAMED: `pg` is not a dependency, so CI and a
 // plain `npm test` skip cleanly.
 const pg = (url ? createRequire(import.meta.url)("pg") : null) as { Client: new (c: { connectionString: string }) => PgClient } | null;
-const skip = !url && "set MERRYMEN_TEST_PG_URL to run";
+const skip = !url && "set AGENTCAP_TEST_PG_URL to run";
 
 /** More saves than pg's default pool holds, every one for a different account. */
 const ACCOUNTS = 16;
@@ -52,7 +52,7 @@ const URL_OFFERED = "https://app.example.test/api/perps/offered?wallet=perps";
 /** Long enough for sixteen saves on a slow machine; a wedged pool never answers at all. */
 const WEDGED_AFTER_MS = 30_000;
 
-const KEYS = ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_SESSION_SECRET", "MERRYMEN_STORE_DEK", "DATABASE_URL", "MERRYMEN_PERPS", "MERRYMEN_PERPS_PAPER_TENANTS"] as const;
+const KEYS = ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_SESSION_SECRET", "AGENTCAP_STORE_DEK", "DATABASE_URL", "AGENTCAP_PERPS", "AGENTCAP_PERPS_PAPER_TENANTS"] as const;
 const original = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
 let admin: PgClient | null = null;
 let dir = "";
@@ -66,14 +66,14 @@ before(async () => {
   if (!url || !pg) return;
   admin = new pg.Client({ connectionString: url });
   await admin.connect();
-  dir = mkdtempSync(path.join(tmpdir(), "merrymen-settings-pool-"));
-  process.env.MERRYMEN_HOME = dir;
-  process.env.MERRYMEN_HOSTED = "1";
-  process.env.MERRYMEN_SESSION_SECRET = randomBytes(32).toString("hex");
-  process.env.MERRYMEN_STORE_DEK = randomBytes(32).toString("base64");
-  process.env.MERRYMEN_PERPS = "paper";
+  dir = mkdtempSync(path.join(tmpdir(), "agentcap-settings-pool-"));
+  process.env.AGENTCAP_HOME = dir;
+  process.env.AGENTCAP_HOSTED = "1";
+  process.env.AGENTCAP_SESSION_SECRET = randomBytes(32).toString("hex");
+  process.env.AGENTCAP_STORE_DEK = randomBytes(32).toString("base64");
+  process.env.AGENTCAP_PERPS = "paper";
   // The pilot's one-time bootstrap: every account here is admitted.
-  process.env.MERRYMEN_PERPS_PAPER_TENANTS = TENANTS.join(",");
+  process.env.AGENTCAP_PERPS_PAPER_TENANTS = TENANTS.join(",");
   ({ PUT, GET } = await import("./route"));
   ({ GET: OFFERED } = await import("../perps/offered/route"));
 });

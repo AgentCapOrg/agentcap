@@ -2,7 +2,7 @@
  * READ-ONLY probe: is ENERGY_ROUTE_V1 still a route on Robinhood Chain?
  *
  * The energy permission in packages/core/src/wall.ts pins a Uniswap v2 Router02
- * call over three frozen addresses (USDG → VIRTUAL → $MERRYMEN). Unit tests
+ * call over three frozen addresses (USDG → VIRTUAL → $AGENTCAP). Unit tests
  * prove the POLICY — offsets, pins, counterexamples — against viem's encoder.
  * They cannot prove the CHAIN still agrees: that the router is the v2 Router02
  * of the factory the registry names, that both pairs exist, that the swap
@@ -24,7 +24,7 @@ import {
   ENERGY,
   ENERGY_ROUTE_V1,
   ENERGY_SWAP_SELECTOR,
-  MERRYMEN_TOKEN,
+  AGENTCAP_TOKEN,
   UNISWAP,
   UNISWAP_V2_ROUTER_READ_ABI,
   VIRTUAL_TOKEN,
@@ -55,7 +55,7 @@ check(route.chainId === robinhoodChain.id, "the route is for this chain");
 check(router === UNISWAP.v2Router02.toLowerCase(), "router literal equals UNISWAP.v2Router02");
 check(usdg === CASH.USDG.toLowerCase(), "path[0] literal equals CASH.USDG");
 check(virtual === VIRTUAL_TOKEN, "path[1] literal equals VIRTUAL_TOKEN");
-check(merry === MERRYMEN_TOKEN.address.toLowerCase(), "path[2] literal equals MERRYMEN_TOKEN");
+check(merry === AGENTCAP_TOKEN.address.toLowerCase(), "path[2] literal equals AGENTCAP_TOKEN");
 
 // Code at every address the wall names. A CALL to a codeless address SUCCEEDS
 // with empty returndata, so a missing contract is a buy that "lands" and buys
@@ -64,7 +64,7 @@ for (const [name, address] of [
   ["router", router],
   ["USDG", usdg],
   ["VIRTUAL", virtual],
-  ["$MERRYMEN", merry],
+  ["$AGENTCAP", merry],
 ] as const) {
   try {
     const code = (await client.getCode({ address })) ?? "0x";
@@ -84,7 +84,7 @@ try {
   check(factory === UNISWAP.v2Factory.toLowerCase(), "router.factory() is UNISWAP.v2Factory", factory);
   for (const [a, b, label] of [
     [usdg, virtual, "USDG/VIRTUAL"],
-    [virtual, merry, "VIRTUAL/$MERRYMEN"],
+    [virtual, merry, "VIRTUAL/$AGENTCAP"],
   ] as const) {
     const pair = await client.readContract({ address: factory as Address, abi: FACTORY_ABI, functionName: "getPair", args: [a, b] });
     check(pair.toLowerCase() !== ZERO, `${label} pair exists`, pair);
@@ -104,7 +104,7 @@ try {
     args: [oneUsdg, [usdg, virtual, merry]],
   });
   const out = amounts[amounts.length - 1] ?? 0n;
-  check(out > 0n, "getAmountsOut(1 USDG) over the route is non-zero", `${out} raw $MERRYMEN before tax`);
+  check(out > 0n, "getAmountsOut(1 USDG) over the route is non-zero", `${out} raw $AGENTCAP before tax`);
 } catch (e) {
   check(false, "getAmountsOut over the route", e instanceof Error ? e.message : String(e));
 }
@@ -113,9 +113,9 @@ try {
 // energy buy refuses rather than computing a floor from a hiked tax.
 try {
   const bps = await client.readContract({ address: merry, abi: AGENT_TOKEN_TAX_ABI, functionName: "totalBuyTaxBasisPoints" });
-  check(bps <= BigInt(ENERGY.maxTaxBps), `$MERRYMEN buy tax is within ENERGY.maxTaxBps (${ENERGY.maxTaxBps})`, `${bps} bps`);
+  check(bps <= BigInt(ENERGY.maxTaxBps), `$AGENTCAP buy tax is within ENERGY.maxTaxBps (${ENERGY.maxTaxBps})`, `${bps} bps`);
 } catch (e) {
-  check(false, "$MERRYMEN buy tax readable", e instanceof Error ? e.message : String(e));
+  check(false, "$AGENTCAP buy tax readable", e instanceof Error ? e.message : String(e));
 }
 
 console.log(failures === 0 ? "\nthe route stands." : `\n${failures} check(s) failed — do not seal energy-buy-v1 until this is understood.`);

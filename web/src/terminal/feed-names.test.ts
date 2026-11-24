@@ -14,7 +14,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { publishableThesis } from "@merrymen/thesis";
+import { publishableThesis } from "@agentcap/thesis";
 import { beatsOf, whoOf, type FeedRow } from "./beat";
 import type { LiveAgent } from "./live";
 import { coinName } from "../lib/rail-alerts";

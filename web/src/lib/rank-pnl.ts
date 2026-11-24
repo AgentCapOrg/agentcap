@@ -71,7 +71,7 @@ export type UnrankedWhy =
   /**
    * AN OPERATOR IS CHECKING THIS RETURN BEFORE IT IS PUBLISHED.
    *
-   * Named in the web's MERRYMEN_RETURN_REVIEW (return-review.ts), and set by
+   * Named in the web's AGENTCAP_RETURN_REVIEW (return-review.ts), and set by
    * book-performance.ts whatever this function would have said: the review
    * exists because a figure that passes every gate here can still be wrong —
    * a token withdrawal nobody has booked reads as a trading loss.

@@ -14,14 +14,14 @@ import { accountingLicence, BOOTSTRAP_SCHEMA_VERSION, classifyAnchor } from "./b
 import { wrapSqlite, type Db } from "./db";
 import { reconstruct, verifyChain } from "./audit";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-initial-capital-"));
-process.env.MERRYMEN_HOME = HOME;
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-initial-capital-"));
+process.env.AGENTCAP_HOME = HOME;
 delete process.env.DATABASE_URL;
 const store = await import("./store");
 const cwd = process.cwd();
 mkdirSync(path.join(HOME, "empty"));
 try { process.chdir(path.join(HOME, "empty")); await store.initStore(); } finally { process.chdir(cwd); }
-let raw = new DatabaseSync(path.join(HOME, "merrymen.db"));
+let raw = new DatabaseSync(path.join(HOME, "agentcap.db"));
 const ACCOUNT = `0x${"a1".repeat(20)}`;
 const OWNER = `0x${"b2".repeat(20)}`;
 const HASH = `0x${"c3".repeat(32)}`;
@@ -182,7 +182,7 @@ describe("atomic initial capital and restart", () => {
     const evidence = await read(rpcFixture().rpc);
     assert.equal((await store.bookInitialCapital(ACCOUNT, evidence)).kind, "booked");
     assert.equal((await store.bookInitialCapital(ACCOUNT, evidence)).kind, "already");
-    raw.close(); store.closeStoreForTest(); await store.initStore(); raw = new DatabaseSync(path.join(HOME, "merrymen.db"));
+    raw.close(); store.closeStoreForTest(); await store.initStore(); raw = new DatabaseSync(path.join(HOME, "agentcap.db"));
     assert.equal((await store.bookInitialCapital(ACCOUNT, evidence)).kind, "already");
     assert.equal(count("flows"), 1);
     assert.equal(await peak(), 200);
@@ -225,7 +225,7 @@ describe("atomic initial capital and restart", () => {
     await store.bookInitialCapital(ACCOUNT, e);
     mark(200);
     const before = { flows: raw.prepare("SELECT * FROM flows").all(), journal: raw.prepare("SELECT * FROM journal").all(), equity: raw.prepare("SELECT * FROM equity").all() };
-    raw.close(); store.closeStoreForTest(); await store.initStore(); raw = new DatabaseSync(path.join(HOME, "merrymen.db"));
+    raw.close(); store.closeStoreForTest(); await store.initStore(); raw = new DatabaseSync(path.join(HOME, "agentcap.db"));
     assert.equal((await store.bookInitialCapital(ACCOUNT, e)).kind, "already");
     assert.deepEqual({ flows: raw.prepare("SELECT * FROM flows").all(), journal: raw.prepare("SELECT * FROM journal").all(), equity: raw.prepare("SELECT * FROM equity").all() }, before);
     assert.equal(await peak(), 200);
@@ -270,7 +270,7 @@ describe("pre-funding restart receipt eligibility", () => {
     assert.equal(paperAnchor.kind === "established" && paperAnchor.lastObservedCashUsdg, null);
     assert.equal((await store.bookInitialCapital(ACCOUNT, await read(rpcFixture().rpc))).kind, "refused", "paper rail cannot book through the live-only startup path");
     await store.setAgentMode(ACCOUNT, "live", 1_800_000_001, true);
-    raw.close(); store.closeStoreForTest(); await store.initStore(); raw = new DatabaseSync(path.join(HOME, "merrymen.db"));
+    raw.close(); store.closeStoreForTest(); await store.initStore(); raw = new DatabaseSync(path.join(HOME, "agentcap.db"));
     assert.equal(await store.getAgentEpoch(ACCOUNT), 1);
     assert.equal((await store.bookInitialCapital(ACCOUNT, await read(rpcFixture().rpc, "untouched-book"))).kind, "booked");
     assert.deepEqual(preserved(), before, "paper capital, fills, basis, peak and snapshots are retained exactly");
@@ -300,7 +300,7 @@ describe("pre-funding restart receipt eligibility", () => {
     const v = classifyAnchor(JSON.stringify({ schemaVersion: BOOTSTRAP_SCHEMA_VERSION, tenantId: ACCOUNT,
       generatedAt: 1_800_000_000, accounting: a }), { tenantId: ACCOUNT, nowSec: 1_800_000_000 });
     assert.equal(v.kind, "valid");
-    raw.close(); store.closeStoreForTest(); await store.initStore(); raw = new DatabaseSync(path.join(HOME, "merrymen.db"));
+    raw.close(); store.closeStoreForTest(); await store.initStore(); raw = new DatabaseSync(path.join(HOME, "agentcap.db"));
     assert.equal((await store.bookInitialCapital(ACCOUNT, await read(rpcFixture().rpc, "untouched-book"))).kind, "booked");
     assert.equal(await peak(), 200);
     assert.equal((await anchor()).kind, "established");

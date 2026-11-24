@@ -31,7 +31,7 @@ const data = (r: CallToolResult) => {
 const errorOf = (r: CallToolResult) => {
   assert.equal(r.isError, true, `expected an error result, got ${r.content[0]?.text}`);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (r as { _meta?: Record<string, any> })._meta?.["dev.merrymen/error"];
+  return (r as { _meta?: Record<string, any> })._meta?.["dev.agentcap/error"];
 };
 
 async function setup(): Promise<{ d: TestDb; a: Principal; b: Principal; deps: ReturnType<typeof makeDeps> }> {
@@ -220,7 +220,7 @@ test("a running job whose worker stopped is not reported as running in the worke
   await claimNextJob(d.db, NOW, 80); // attempt 1; this worker never comes back
   const live = data(await run("get_job", { job_id: q.job_id }, a, NOW + 79));
   assert.equal(live.status, "running");
-  assert.match(live.status_explained, /^Running in Merrymen's background worker/);
+  assert.match(live.status_explained, /^Running in AgentCap's background worker/);
   const lapsed = data(await run("get_job", { job_id: q.job_id }, a, NOW + 81));
   assert.equal(lapsed.status, "running");
   assert.match(lapsed.status_explained, /worker stopped.*attempt 1 of 3.*retried/);

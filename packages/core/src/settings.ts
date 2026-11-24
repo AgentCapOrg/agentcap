@@ -12,7 +12,7 @@
 import { DEFAULT_BASKET_SYMBOLS } from "./tokens";
 import { PERP_MAX_LEVERAGE } from "./perps";
 
-export interface MerrymenSettings {
+export interface AgentCapSettings {
   // ── connections ────────────────────────────────────────────────────────
   /** The easy path to live trading: a Pimlico API key (secret). The worker
    * builds the bundler URL for the grant's chain automatically, so it can
@@ -61,7 +61,7 @@ export interface MerrymenSettings {
   browserUrl?: string;
   browserToken?: string;
   /**
-   * HOW A MERRYMAN THINKS — one shared Brain service, reached over Railway
+   * HOW A AGENTCAPAVATAR THINKS — one shared Brain service, reached over Railway
    * private networking, same shape as the browser and the bundler.
    *
    * HOUSE-OWNED on both counts: the URL is an address our egress connects to,
@@ -139,7 +139,7 @@ export interface MerrymenSettings {
    *
    * UNVERIFIED, IT RENDERS DISCLAIMED AND NEVER AS A LINK — we store what the
    * owner typed and nothing checks that they own it, so linking it would make
-   * merrymen vouch for an association it never checked and would let an agent
+   * agentcap vouch for an association it never checked and would let an agent
    * impersonate anyone by typing their name.
    *
    * That rule now has one exception, and it is the exception that proves it:
@@ -352,8 +352,8 @@ export interface MerrymenSettings {
   llmIntervalMin?: number;
   llmMaxActionUsdg?: number;
 
-  // ── $MERRYMEN · the Merry Circle (holder perks) ────────────────────────
-  /** The wallet you hold $MERRYMEN in. The worker reads its balance (read-only)
+  // ── $AGENTCAP · the Merry Circle (holder perks) ────────────────────────
+  /** The wallet you hold $AGENTCAP in. The worker reads its balance (read-only)
    * to set your Circle tier — which lowers your platform fee and unlocks perks.
    * Optional; blank = no tier. Purely a discount/perk lookup, never a spend key. */
   holderAddress?: string;
@@ -363,7 +363,7 @@ export interface MerrymenSettings {
    * `holderAddress` above is self-declared: shape-validated and nothing more,
    * which is why /api/alpha refuses to use it as an authorisation input and why
    * the orchestrator overwrites it with the session-verified tenant. That made
-   * the tier earnable and shut out anyone holding $MERRYMEN somewhere other
+   * the tier earnable and shut out anyone holding $AGENTCAP somewhere other
    * than the wallet they log in with — a real case, raised by a tester.
    *
    * This is that case, answered the only way a claim can become an
@@ -381,7 +381,7 @@ export interface MerrymenSettings {
    * This is what changes the rule above the `xHandle` field. Unverified, a
    * handle still renders as plain text and never as a link, for exactly the
    * reason stated there: nothing checked they own it, and a link would make
-   * merrymen vouch for an association it never made. With a proof, we DID
+   * agentcap vouch for an association it never made. With a proof, we DID
    * check — the owner posted a nonce we issued, from that account — so it may
    * be linked, and only then.
    *
@@ -396,12 +396,12 @@ export interface MerrymenSettings {
 
   // ── Virtuals Terminal (stream your agent's activity to its Virtuals page) ─
   /** Virtuals API key (secret). Get it from your agent's page on app.virtuals.io.
-   * Enables streaming the merryman's live activity to its Virtuals Terminal. */
+   * Enables streaming the agentcapavatar's live activity to its Virtuals Terminal. */
   virtualsApiKey?: string;
   /**
    * Bitquery API key (secret). Bitquery indexes Robinhood Chain from genesis —
    * decoded events, DEX trades and, crucially, Uniswap **v4** pool activity that
-   * merrymen's own v3 reads cannot see. It is a DISCOVERY source: it can tell
+   * agentcap's own v3 reads cannot see. It is a DISCOVERY source: it can tell
    * the agent a pair exists, never authorise a trade in it.
    *
    * Read-only and off the hot path by construction. Nothing Bitquery returns
@@ -411,7 +411,7 @@ export interface MerrymenSettings {
   bitqueryApiKey?: string;
   /**
    * A Merry Circle gateway token (secret), claimed by signing at the gateway's
-   * /claim page with a wallet holding $MERRYMEN.
+   * /claim page with a wallet holding $AGENTCAP.
    *
    * STANDALONE ON PURPOSE. The same token opens both the gateway's brain and its
    * Bitquery route, but the two choices are independent: an owner may well want
@@ -422,7 +422,7 @@ export interface MerrymenSettings {
    * Your OWN bitqueryApiKey always wins over this — your quota, your limits, no
    * third party in the path.
    */
-  merrymenToken?: string;
+  agentcapToken?: string;
   /**
    * Discovery: poll Bitquery for newly launched pairs and TELL the owner.
    * Defaults ON, because it only runs when a Bitquery key or a holder token is
@@ -467,7 +467,7 @@ export interface MerrymenSettings {
    * SCOUT MODE — buying tokens too new or too thin to price.
    *
    * A freshly launched pool has no TWAP history and almost no depth, which is
-   * exactly the shape a price anyone can push takes. merrymen refuses to VALUE
+   * exactly the shape a price anyone can push takes. agentcap refuses to VALUE
    * such a token, and that refusal is load-bearing: equity, P&L and the drawdown
    * breaker all read those numbers.
    *
@@ -657,8 +657,8 @@ export interface MerrymenSettings {
   // NO ENVIRONMENT TERM FOR ANY OF THEM (worker/src/settings.ts), the
   // `liveTradingEnabled` precedent — not `trencherLiveEnabled` or
   // `classSnipeEnabled`, which do read one. The operator's only levers are
-  // restrict-only variables resolved separately (MERRYMEN_PERPS,
-  // MERRYMEN_PERPS_LIVE_TENANTS, MERRYMEN_HALT_PERP_ENTRIES), and none of them
+  // restrict-only variables resolved separately (AGENTCAP_PERPS,
+  // AGENTCAP_PERPS_LIVE_TENANTS, AGENTCAP_HALT_PERP_ENTRIES), and none of them
   // can stand in for an owner's switch or consent.
   //
   // Not secret, not house-owned, not hosted-forbidden: whether an agent trades
@@ -713,7 +713,7 @@ export interface MerrymenSettings {
    * gated by it: a position in a market later unticked still closes.
    */
   perpsMarkets?: string[];
-  /** Highest leverage merrymen sets, an integer 1–10; also capped by each market's venue max. */
+  /** Highest leverage agentcap sets, an integer 1–10; also capped by each market's venue max. */
   perpsMaxLeverage?: number;
   /** Largest opening notional, USDG. Effective cap is min(the grant's sealed per-trade, this). */
   perpsPerTradeUsdg?: number;
@@ -738,7 +738,7 @@ export interface MerrymenSettings {
   /** An IOC's worst price vs mark, bps. The stand-down uses max(this, 150). */
   perpsMaxSlippageBps?: number;
 
-  // ── telegram (chat with your merryman) ─────────────────────────────────
+  // ── telegram (chat with your agentcapavatar) ─────────────────────────────────
   /** Bot token from @BotFather (secret). Enables the Telegram bridge. */
   telegramBotToken?: string;
   /** Master switch — the poller only runs when this is true and a token is set. */
@@ -826,7 +826,7 @@ export interface MerrymenSettings {
 }
 
 /**
- * How much a Merryman joins in unprompted in its Telegram groups, quietest
+ * How much a AgentCapAvatar joins in unprompted in its Telegram groups, quietest
  * first. One list for every reader — the worker's resolver, the settings
  * route's validation and the dashboard's select — so a fourth level cannot be
  * accepted by one and silently resolved to the default by another.
@@ -933,7 +933,7 @@ export const PERPS_SETTING_KEYS = [
   "perpsDriver",
   "perpsMarkets",
   ...(Object.keys(PERPS_NUM_BOUNDS) as PerpsNumKey[]),
-] as const satisfies readonly (keyof MerrymenSettings)[];
+] as const satisfies readonly (keyof AgentCapSettings)[];
 
 /** Keys whose values must never be echoed back to a browser. */
 export const SECRET_SETTING_KEYS = [
@@ -946,7 +946,7 @@ export const SECRET_SETTING_KEYS = [
   "telegramTranscribeKey",
   "virtualsApiKey",
   "bitqueryApiKey",
-  "merrymenToken",
+  "agentcapToken",
   "fomoApiKey",
 ] as const;
 export type SecretSettingKey = (typeof SECRET_SETTING_KEYS)[number];
@@ -1001,7 +1001,7 @@ export const HOUSE_KEY_FIELDS = [
   "rialtoApiKey",
   "rialtoApiKeyHeader",
   "bitqueryApiKey",
-  "merrymenToken",
+  "agentcapToken",
   "fomoApiKey",
   "virtualsApiKey",
   "telegramTranscribeKey",
@@ -1102,7 +1102,7 @@ export const SETTINGS_DEFAULTS = {
    */
   liveTradingEnabled: false,
   // PRIVATE. The book is published only when its owner says so — see
-  // MerrymenSettings.publicBook.
+  // AgentCapSettings.publicBook.
   publicBook: false,
   rialtoApiKeyHeader: "x-api-key",
   strategy: "steady-basket" as const,
@@ -1155,7 +1155,7 @@ export const SETTINGS_DEFAULTS = {
   // THE CLASS ROUTE IS OFF, AND SIZED AT ZERO. Two closed doors rather than
   // one, because they fail differently: an owner who enables the route and
   // forgets the size gets a no-op, and one who sets a size and forgets to
-  // disable the route does not. See MerrymenSettings.classSnipeEnabled for what
+  // disable the route does not. See AgentCapSettings.classSnipeEnabled for what
   // is actually being opted into.
   classSnipeEnabled: false,
   classPerEntryUsdg: 0,
@@ -1171,7 +1171,7 @@ export const SETTINGS_DEFAULTS = {
   // protection. 85% leaves room for a tick to be missed and for the last read
   // to be stale.
   classExitAtGraduationPct: 85,
-  // ON, unlike everything above it. See MerrymenSettings.officialCoinsEnabled
+  // ON, unlike everything above it. See AgentCapSettings.officialCoinsEnabled
   // for why a curated listing defaults differently from a discovered one.
   officialCoinsEnabled: true,
   // The venue's own floor (CURVE_GUARD_DEFAULTS.minRealDepthUsdg), not

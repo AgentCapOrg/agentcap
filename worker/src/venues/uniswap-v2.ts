@@ -1,10 +1,10 @@
 /**
  * Uniswap v2 on Robinhood Chain — READ-ONLY quoting for the energy route.
  *
- * $MERRYMEN has no v3 pool and no v2 pair against USDG or WETH; its depth is a
+ * $AGENTCAP has no v3 pool and no v2 pair against USDG or WETH; its depth is a
  * v2 pair against VIRTUAL, and VIRTUAL has a v2 pair against USDG on the same
  * factory (measured 2026-09-27, see core energy.ts). So the one route that
- * prices energy is ENERGY_ROUTE_V1: USDG → VIRTUAL → $MERRYMEN through
+ * prices energy is ENERGY_ROUTE_V1: USDG → VIRTUAL → $AGENTCAP through
  * Router02. This file asks that route questions and never builds a call that
  * could move anything: it imports the router's VIEW functions only
  * (UNISWAP_V2_ROUTER_READ_ABI), which are never granted to any key.
@@ -14,7 +14,7 @@
  * the chain (stop-the-loop.test.ts counts transports per file; this file has
  * none).
  *
- * THE TAX IS READ, NOT REMEMBERED. $MERRYMEN is a Virtuals agent token with a
+ * THE TAX IS READ, NOT REMEMBERED. $AGENTCAP is a Virtuals agent token with a
  * buy tax its own owner can change; the pool's getAmountsOut is the PRE-tax
  * figure. Every helper that turns a quote into what arrives takes the tax as
  * an argument, read fresh by `readEnergyTaxBps`.
@@ -47,7 +47,7 @@ function amountsOf(v: unknown): bigint[] | null {
 }
 
 /**
- * $MERRYMEN the pool would send for `amountIn` raw USDG, BEFORE the token's
+ * $AGENTCAP the pool would send for `amountIn` raw USDG, BEFORE the token's
  * buy tax. null on a revert, a refused read, or an empty pool — "no quote" is
  * never a quote of zero.
  */
@@ -70,7 +70,7 @@ export async function quoteEnergyOut(client: ReadClient, amountIn: bigint): Prom
 }
 
 /**
- * Raw USDG needed for the pool to send `grossOut` $MERRYMEN (pre-tax), with
+ * Raw USDG needed for the pool to send `grossOut` $AGENTCAP (pre-tax), with
  * both hops' 0.3% fees included — getAmountsIn's own arithmetic. null on a
  * revert (not enough liquidity for that size) or a refused read.
  */
@@ -92,7 +92,7 @@ export async function energyAmountInFor(client: ReadClient, grossOut: bigint): P
   }
 }
 
-/** $MERRYMEN's buy tax in bps, read now. null when unreadable or not a sane bps figure. */
+/** $AGENTCAP's buy tax in bps, read now. null when unreadable or not a sane bps figure. */
 export async function readEnergyTaxBps(client: ReadClient): Promise<number | null> {
   try {
     const raw = await client.readContract({

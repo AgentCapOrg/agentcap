@@ -1,6 +1,6 @@
 import SwiftUI
 import Charts
-import MerrymenPolicy
+import AgentCapPolicy
 
 enum Brand {
     static let background = Color(red: 7/255, green: 8/255, blue: 6/255)
@@ -98,7 +98,7 @@ struct ReturnText: View {
     var body: some View {
         HStack(spacing: 3) {
             if let bps, bps != 0 { Image(systemName: bps < 0 ? "arrow.down.right" : "arrow.up.right").font(.caption.weight(.bold)).accessibilityHidden(true) }
-            Text(Merrymen.bps(bps)).monospacedDigit()
+            Text(AgentCap.bps(bps)).monospacedDigit()
         }.font(font).foregroundStyle(Brand.signed(bps))
     }
 }
@@ -244,7 +244,7 @@ struct NativeShell: View {
         .environment(\.tourFocus, tourProgress.active ? TourStop.all[tourProgress.step].anchor : nil)
         // Removed at once when it ends, so the next tap reaches the app.
         .overlay { if tourProgress.active { TourOverlay().environmentObject(tourProgress) } }
-        .alert("Merrymen", isPresented: Binding(get: { store.notice != nil }, set: { if !$0 { store.notice = nil } })) {
+        .alert("AgentCap", isPresented: Binding(get: { store.notice != nil }, set: { if !$0 { store.notice = nil } })) {
             Button("OK", role: .cancel) { store.notice = nil }
         } message: { Text(store.notice ?? "") }
     }
@@ -252,8 +252,8 @@ struct NativeShell: View {
 
 struct Wordmark: View {
     var body: some View {
-        HStack(spacing: 7) { Image("Brand").resizable().scaledToFit().frame(width: 32, height: 22); Text("merrymen").font(.custom(Brand.pixel, size: 17, relativeTo: .headline)) }
-            .fixedSize().accessibilityElement(children: .ignore).accessibilityLabel("Merrymen")
+        HStack(spacing: 7) { Image("Brand").resizable().scaledToFit().frame(width: 32, height: 22); Text("agentcap").font(.custom(Brand.pixel, size: 17, relativeTo: .headline)) }
+            .fixedSize().accessibilityElement(children: .ignore).accessibilityLabel("AgentCap")
     }
 }
 
@@ -358,7 +358,7 @@ struct Avatar: View {
         ZStack {
             AgentFace.gradient(AgentFace.seed(name: name ?? "", slug: slug))
             Text(AgentFace.initials(name ?? slug ?? "")).font(.system(size: size * 0.34, weight: .bold)).foregroundStyle(.white)
-            AsyncImage(url: slug.flatMap { URL(string: "https://app.merrymen.dev/api/agent-image/\(escaped($0))/avatar?v=\(store.imageRevision.uuidString)") }) { image in image.resizable().scaledToFill() } placeholder: { Color.clear }
+            AsyncImage(url: slug.flatMap { URL(string: "https://app.agentcap.xyz/api/agent-image/\(escaped($0))/avatar?v=\(store.imageRevision.uuidString)") }) { image in image.resizable().scaledToFill() } placeholder: { Color.clear }
         }
         .frame(width: size, height: size).clipShape(shape).accessibilityHidden(true)
     }

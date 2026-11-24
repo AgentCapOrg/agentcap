@@ -28,12 +28,12 @@ const DEK = Buffer.alloc(32, 73);
 
 let originalDek: string | undefined;
 before(() => {
-  originalDek = process.env.MERRYMEN_STORE_DEK;
-  process.env.MERRYMEN_STORE_DEK = DEK.toString("base64");
+  originalDek = process.env.AGENTCAP_STORE_DEK;
+  process.env.AGENTCAP_STORE_DEK = DEK.toString("base64");
 });
 after(() => {
-  if (originalDek === undefined) delete process.env.MERRYMEN_STORE_DEK;
-  else process.env.MERRYMEN_STORE_DEK = originalDek;
+  if (originalDek === undefined) delete process.env.AGENTCAP_STORE_DEK;
+  else process.env.AGENTCAP_STORE_DEK = originalDek;
 });
 
 async function fixture(settings?: Record<string, unknown>, o: { managed?: boolean; claims?: boolean } = {}) {
@@ -174,9 +174,9 @@ describe("managed bot intent authority", () => {
 
   it("does not continue if hosted encryption is unavailable or the saved blob is unreadable", async () => {
     const { db, store } = await fixture();
-    delete process.env.MERRYMEN_STORE_DEK;
+    delete process.env.AGENTCAP_STORE_DEK;
     try { await assert.rejects(store.begin({ tenant: A, managerBotId: MANAGER, now: NOW }), /cannot store secrets in the clear/); }
-    finally { process.env.MERRYMEN_STORE_DEK = DEK.toString("base64"); }
+    finally { process.env.AGENTCAP_STORE_DEK = DEK.toString("base64"); }
     await db.prepare("INSERT INTO tenant_settings VALUES (?, ?, 0)").run(A, "not-a-sealed-settings-value");
     await assert.rejects(store.begin({ tenant: A, managerBotId: MANAGER, now: NOW }), errorCode("settings_unreadable"));
     assert.deepEqual(await db.prepare("SELECT * FROM telegram_managed_intents").all(), []);
@@ -282,7 +282,7 @@ describe("intent-correlated iPhone/iPad creation", () => {
 
   it("keeps a domain-separated 64-bit suggestion across retries and restarts, but changes it for a replacement intent", async () => {
     const { db, store, began, start, bound } = await waiting();
-    assert.match(bound.suggestedUsername, /^merrymen_[0-9a-f]{16}_bot$/);
+    assert.match(bound.suggestedUsername, /^agentcap_[0-9a-f]{16}_bot$/);
     assert.ok(bound.suggestedUsername.length <= 32);
     const digest = createHash("sha256").update(began.challenge).digest("hex");
     assert.ok(!bound.suggestedUsername.includes(digest.slice(0, 16)), "public suggestion is not a prefix of the challenge hash");
@@ -336,7 +336,7 @@ describe("intent-correlated iPhone/iPad creation", () => {
     }
     const { store } = await fixture();
     assert.deepEqual(await store.candidate({ kind: "managed_bot_updated", managerBotId: MANAGER, updateId: 1,
-      telegramUserId: USER, botId: BOT, username: "merrymen_0123456789abcdef_bot", now: NOW }), { outcome: "ignored" });
+      telegramUserId: USER, botId: BOT, username: "agentcap_0123456789abcdef_bot", now: NOW }), { outcome: "ignored" });
   });
 
   it("does not offer another creation or replace a candidate after confirmation is pending or complete", async () => {

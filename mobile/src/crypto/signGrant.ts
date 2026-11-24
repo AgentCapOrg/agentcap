@@ -33,7 +33,7 @@ import {
   type CustomToken,
   type GrantCaps,
   type StoredGrant,
-} from "@merrymen/core";
+} from "@agentcap/core";
 import { accountFromMnemonic } from "./mnemonic";
 import { readGrant } from "./grantStore";
 import { isMock } from "@/net/api";
@@ -168,7 +168,7 @@ export async function signGrant(args: {
   // app was lying about, with one small chip as the only warning.
   //
   // The guard lives at the signing chokepoint rather than on the screen,
-  // because the screen is reachable by deep link (`merrymen://onboarding/grant`)
+  // because the screen is reachable by deep link (`agentcap://onboarding/grant`)
   // and a UI-only check would be routed around rather than enforced.
   //
   // Deliberately NOT applied to recovery: sweeping funds out is the escape
@@ -338,7 +338,7 @@ export async function signGrant(args: {
   // and mints GRANT_ENERGY below — marker and permission move together.
   wallOpts.energyBuy = energyBuyFits(args.caps, sudoOnlyAccount.address, chain.id, !alreadyDeployed, wallOpts);
   if (!wallOpts.energyBuy && chain.id === ENERGY_ROUTE_V1.chainId) {
-    say("no room in this permission for the agent to buy its own energy — $MERRYMEN can still be sent to it directly");
+    say("no room in this permission for the agent to buy its own energy — $AGENTCAP can still be sent to it directly");
   }
 
   // CAN THIS WALL EVER BE INSTALLED? The same question the other signer asks,

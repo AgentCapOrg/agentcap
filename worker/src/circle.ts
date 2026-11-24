@@ -1,7 +1,7 @@
 /**
- * The Merry Circle — read a holder's $MERRYMEN balance and resolve their tier.
+ * The Merry Circle — read a holder's $AGENTCAP balance and resolve their tier.
  *
- * $MERRYMEN lives on Robinhood Chain mainnet (4663), so the balance is read
+ * $AGENTCAP lives on Robinhood Chain mainnet (4663), so the balance is read
  * there regardless of which chain the agent trades on. Read-only: this only ever
  * calls balanceOf; neither address is ever a spend key. The balance that counts
  * is the owner's holder wallet PLUS the agent's own account (core energy.ts,
@@ -14,7 +14,7 @@ import { createPublicClient, erc20Abi, http, type PublicClient } from "viem";
 import { chainRead } from "./rpc-meter";
 import {
   CIRCLE_TIERS,
-  MERRYMEN_TOKEN,
+  AGENTCAP_TOKEN,
   robinhoodChain,
   tierForBalance,
   type CircleTier,
@@ -36,7 +36,7 @@ const OUTSIDER: HolderStatus = { tier: CIRCLE_TIERS[0]!, rawBalance: 0n };
  * things then happened on the SAME tick, on a fleet whose mainnet reads are
  * routinely refused — one egress IP, `retryCount: 0`, a shared breaker:
  *
- *   the owner was told "no $MERRYMEN at your holder wallet; standard platform
+ *   the owner was told "no $AGENTCAP at your holder wallet; standard platform
  *   fee applies", a confident statement about a wallet nobody had managed to
  *   read; and
  *
@@ -72,7 +72,7 @@ export interface HolderParts {
 
 /**
  * THE COMBINED BALANCE: the owner's holder wallet PLUS the agent's own
- * account, which is where $MERRYMEN an agent buys or is sent lands.
+ * account, which is where $AGENTCAP an agent buys or is sent lands.
  *
  * `account` is passed only when it counts — the caller passes the smart
  * account only for a Robinhood Chain (4663) grant, because an account on any
@@ -123,7 +123,7 @@ export async function readHolderStatusResult(
       : undefined;
     read = async (a) =>
       (await client.readContract({
-        address: MERRYMEN_TOKEN.address,
+        address: AGENTCAP_TOKEN.address,
         abi: erc20Abi,
         functionName: "balanceOf",
         args: [a],

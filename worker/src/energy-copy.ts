@@ -29,7 +29,7 @@
  * shorter strategist interval would read as far less than a tenth of theirs.
  *
  * WHAT IT MUST NEVER SAY. Anything about the token's price, where it is going,
- * or returns (token.ts STANCE). $MERRYMEN is energy here, nothing more. The one
+ * or returns (token.ts STANCE). $AGENTCAP is energy here, nothing more. The one
  * dollar figure allowed is what the shortfall would cost in USDG right now,
  * worker-computed, and only when it is known. An unread balance is never "you
  * hold 0": it is our read failing, not their wallet.
@@ -117,14 +117,14 @@ export function energyNotice(f: EnergyNoticeFacts, style: EnergyNoticeStyle = {}
   // ── what happened ──
   if (unread) {
     parts.push(
-      `I couldn't read the $MERRYMEN balances, so I've been on the reduced allowance — about a tenth of a standard ` +
+      `I couldn't read the $AGENTCAP balances, so I've been on the reduced allowance — about a tenth of a standard ` +
         `day's AI reviews and new trades — and today's new trades are used up. That's our read failing, not your wallet: if you ` +
         `already hold ${full} ${where}, it lifts on the next good read.`,
     );
     parts.push(`${STILL_RUNS.charAt(0).toUpperCase()}${STILL_RUNS.slice(1)}, and I pick up again at 00:00 UTC. ${PACED}`);
   } else {
     parts.push(
-      `without ${full} $MERRYMEN ${where} I get about a tenth of a standard day's AI reviews and new trades, ` +
+      `without ${full} $AGENTCAP ${where} I get about a tenth of a standard day's AI reviews and new trades, ` +
         `and today's new trades are used up.`,
     );
     parts.push(`Nothing is broken — ${STILL_RUNS}, and I pick up again at 00:00 UTC. ${PACED}`);
@@ -140,7 +140,7 @@ export function energyNotice(f: EnergyNoticeFacts, style: EnergyNoticeStyle = {}
   const opener = unread ? "If you don't, " : "For full strength, ";
   if (notMainnet) {
     parts.push(
-      `${opener}keep ${full} $MERRYMEN on Robinhood Chain in your own wallet${f.holder ? ` ${addr(f.holder)}` : ""} — ` +
+      `${opener}keep ${full} $AGENTCAP on Robinhood Chain in your own wallet${f.holder ? ` ${addr(f.holder)}` : ""} — ` +
         `my account is on another network, so tokens sent to it would not count.`,
     );
   } else {
@@ -149,16 +149,16 @@ export function energyNotice(f: EnergyNoticeFacts, style: EnergyNoticeStyle = {}
         ? ` (about ${usd(f.estimateUsdg)} of USDG at the pool's current rate)`
         : "";
     let line =
-      `${opener}send $MERRYMEN on Robinhood Chain to my account ${addr(f.account)}` +
+      `${opener}send $AGENTCAP on Robinhood Chain to my account ${addr(f.account)}` +
       (f.holder ? ` (or keep it in your own wallet ${addr(f.holder)} — both count)` : "");
     if (f.buy === "ready") {
-      line += `, or send USDG to my account and ask me ${chat} to get my $MERRYMEN — you confirm the amount first${estimate}.`;
+      line += `, or send USDG to my account and ask me ${chat} to get my $AGENTCAP — you confirm the amount first${estimate}.`;
     } else if (f.buy === "resign") {
       line +=
         `, or send USDG to my account, renew my permission (revocation requires network fees — my current key can't buy it), then ask me ` +
-        `${chat} to get my $MERRYMEN${estimate}.`;
+        `${chat} to get my $AGENTCAP${estimate}.`;
     } else if (f.buy === "paper") {
-      line += ". I'm in Paper mode, so I won't spend real USDG on it — send $MERRYMEN instead, or turn on Live trading first.";
+      line += ". I'm in Paper mode, so I won't spend real USDG on it — send $AGENTCAP instead, or turn on Live trading first.";
     } else {
       line += ".";
     }

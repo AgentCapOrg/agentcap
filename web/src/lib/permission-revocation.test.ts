@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import { encodeCallDataEpV07 } from "@zerodev/sdk";
 import { createPublicClient, custom, encodeFunctionData, RpcRequestError, type Hex } from "viem";
 import { getUserOperationError } from "viem/account-abstraction";
-import { robinhoodChain, robinhoodTestnet } from "@merrymen/core";
+import { robinhoodChain, robinhoodTestnet } from "@agentcap/core";
 import { invalidatePermissions, isRevocationFeeShortfall, KERNEL_REVOCATION_ABI, nextRevocationNonce, readConfirmedRevocationCutoff, revocationFeeMessage, type PendingRevocation, type RevocationIO, type RevocationReceipt } from "./permission-revocation";
 import { isPermissionRevocationShape, permissionRevocationNonce } from "./recovery-shape";
 import { sdkRevocationCall } from "./permission-revocation-fixture";
@@ -260,7 +260,7 @@ describe("revocation relay scope", () => {
 });
 
 describe("a revocation the account cannot pay for", () => {
-  const relayed = (message: string) => new RpcRequestError({ body: {}, error: { code: -32500, message }, url: "https://app.merrymen.dev/api/bundler/4663" });
+  const relayed = (message: string) => new RpcRequestError({ body: {}, error: { code: -32500, message }, url: "https://app.agentcap.xyz/api/bundler/4663" });
   it("recognises the bundler's AA21 however viem wraps it", () => {
     // The estimation failure an owner saw: viem's own wrapping of the relay reply.
     const estimated = getUserOperationError(relayed("AA21 didn't pay prefund"), {

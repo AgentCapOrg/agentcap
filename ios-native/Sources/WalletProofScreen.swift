@@ -1,5 +1,5 @@
 import SwiftUI
-import MerrymenPolicy
+import AgentCapPolicy
 import PrivySDK
 
 /// Mirrors the web's copy-message/paste-signature flow. No external wallet
@@ -24,7 +24,7 @@ struct WalletProofScreen: View {
             if linking && store.owner == nil { SignInCard() } else {
                 Card {
                     Text(linking ? "Count tokens held in another wallet" : "Sign in with your wallet").font(.title.bold())
-                    Text(linking ? "Prove ownership with a message signature. This wallet is read only; it does not become your agent's spending key." : "Use the wallet that already owns your Merrymen account. This message signs you in without moving funds.")
+                    Text(linking ? "Prove ownership with a message signature. This wallet is read only; it does not become your agent's spending key." : "Use the wallet that already owns your AgentCap account. This message signs you in without moving funds.")
                     if let linked { Text("Linked: \(linked)").font(.caption.monospaced()); Button("Unlink holder wallet", role: .destructive) { unlink = true }.disabled(busy) }
                     if challenge == nil {
                         if connection.configured {
@@ -141,7 +141,7 @@ struct WalletProofScreen: View {
     static func unlinkedNote(_ reads: String?) -> String {
         switch reads {
         case "login": return "Holder wallet unlinked. Your sign-in wallet is used for your tier."
-        case "none": return "Holder wallet unlinked. Your sign-in wallet powers another merrymen account right now, so your tier reads no wallet here. To bring it back, link it with a signature from it."
+        case "none": return "Holder wallet unlinked. Your sign-in wallet powers another agentcap account right now, so your tier reads no wallet here. To bring it back, link it with a signature from it."
         default: return "Holder wallet unlinked."
         }
     }

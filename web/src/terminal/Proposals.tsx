@@ -7,7 +7,7 @@ import { basketNow, withSymbol } from "./basket";
 // had been doing it wrong.
 
 /** Which proposal set the owner folded away. One key: only one set is live at a time. */
-const FOLD_KEY = "merrymen.proposals.folded.v1";
+const FOLD_KEY = "agentcap.proposals.folded.v1";
 
 /**
  * YOUR AGENT ASKING FOR SOMETHING.

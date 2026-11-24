@@ -5,7 +5,7 @@ import { wallShape } from "./first-enable-gas";
 import { CASH, STOCK_TOKENS, type CustomToken } from "./tokens";
 import type { GrantCaps } from "./grant";
 import { GRANT_ENERGY } from "./energy";
-import { MERRYMEN_TOKEN } from "./token";
+import { AGENTCAP_TOKEN } from "./token";
 import { GRANT_PERP_LIGHTER, LIGHTER_ROUTE_V1 } from "./perps";
 
 /** A real Lighter API public key (the official signer's, from the spike). */
@@ -217,11 +217,11 @@ describe("a rebuilt wall is the same wall", () => {
     assert.equal(grantWallOptions({ grantFeatures: ["energy-buy-v2"] }).energyBuy, false);
   });
 
-  it("$MERRYMEN LISTED AS AN EXTRA does not survive into grantTokens, so the rebuild still matches", () => {
+  it("$AGENTCAP LISTED AS AN EXTRA does not survive into grantTokens, so the rebuild still matches", () => {
     // usableExtraTokens drops the reserve (it must never get an approve), and
     // both signers record grantTokens post-filter — so the executor rebuilds a
-    // wall with no MERRYMEN approve, exactly as signed.
-    const merry: CustomToken = { symbol: "MERRYMEN", address: MERRYMEN_TOKEN.address, decimals: 18 };
+    // wall with no AGENTCAP approve, exactly as signed.
+    const merry: CustomToken = { symbol: "AGENTCAP", address: AGENTCAP_TOKEN.address, decimals: 18 };
     const tokens = [merry, tok(3)];
     const signed = shapeOf({ extraTokens: tokens, energyBuy: true });
     const grantTokens = usableExtraTokens(tokens).map((t) => t.address.toLowerCase());

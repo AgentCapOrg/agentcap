@@ -60,7 +60,7 @@ jobs:
       - name: Install
         run: npm ci
         env:
-          MERRYMEN_SKIP_BUILD: "1"
+          AGENTCAP_SKIP_BUILD: "1"
 
       - name: Typecheck
         run: npm run typecheck # tsc --noEmit -p worker && -p web
@@ -82,20 +82,20 @@ jobs:
       - name: Install
         run: npm ci
         env:
-          MERRYMEN_SKIP_BUILD: "1"
+          AGENTCAP_SKIP_BUILD: "1"
 
       - name: Production build
         run: npm run build
 
       - name: Pack runtime release
-        run: node cli/pack-runtime.mjs --out-dir "$RUNNER_TEMP/merrymen-release"
+        run: node cli/pack-runtime.mjs --out-dir "$RUNNER_TEMP/agentcap-release"
 
       # A consumer does not apply this repository's npm overrides. Inspect the
       # actual installed packages, without trusting a shipped shrinkwrap.
       - name: Verify isolated global install
         run: |
-          npm install --global --prefix "$RUNNER_TEMP/merrymen-global" --ignore-scripts --no-audit --no-fund "$RUNNER_TEMP"/merrymen-release/merrymen-*.tgz
-          node cli/verify-installed.mjs "$RUNNER_TEMP/merrymen-global/lib/node_modules/merrymen"
+          npm install --global --prefix "$RUNNER_TEMP/agentcap-global" --ignore-scripts --no-audit --no-fund "$RUNNER_TEMP"/agentcap-release/agentcap-*.tgz
+          node cli/verify-installed.mjs "$RUNNER_TEMP/agentcap-global/lib/node_modules/agentcap"
 
   app-test:
     name: app · tests ${{ matrix.shard }}/4
@@ -119,7 +119,7 @@ jobs:
       - name: Install
         run: npm ci
         env:
-          MERRYMEN_SKIP_BUILD: "1"
+          AGENTCAP_SKIP_BUILD: "1"
 
       - name: Test
         # The same file set as `npm test` (package.json), one shard of it;
@@ -136,7 +136,7 @@ jobs:
     timeout-minutes: 20
     # Production's stores are Postgres, and their locks, caps, list ordering,
     # migrations and crash barriers exist only on that dialect. The app-test
-    # shards have no database, so every suite that reads MERRYMEN_TEST_PG_URL
+    # shards have no database, so every suite that reads AGENTCAP_TEST_PG_URL
     # runs here. They are FOUND, not listed: a hand-kept list ran three of
     # twenty-three, and two of the others had been failing unseen since early October.
     services:
@@ -161,7 +161,7 @@ jobs:
       - name: Install
         run: npm ci && npm install --no-save --ignore-scripts pg@8
         env:
-          MERRYMEN_SKIP_BUILD: "1"
+          AGENTCAP_SKIP_BUILD: "1"
 
       - name: Test
         # Each suite gets a database of its own, so no suite sees another's
@@ -172,7 +172,7 @@ jobs:
         run: |
           set -uo pipefail
           files=()
-          while IFS= read -r f; do files+=("$f"); done < <(git grep -lE 'MERRYMEN_TEST_(PG|POSTGRES)_URL' -- '*.test.ts' '*.test.mjs')
+          while IFS= read -r f; do files+=("$f"); done < <(git grep -lE 'AGENTCAP_TEST_(PG|POSTGRES)_URL' -- '*.test.ts' '*.test.mjs')
           test "${#files[@]}" -gt 0
           failed=()
           for i in "${!files[@]}"; do
@@ -182,7 +182,7 @@ jobs:
             docker exec "$PG_CONTAINER" createdb -U postgres "suite_$i"
             url="postgres://postgres:postgres@127.0.0.1:5432/suite_$i"
             status=0
-            MERRYMEN_TEST_PG_URL="$url" MERRYMEN_TEST_POSTGRES_URL="$url" \
+            AGENTCAP_TEST_PG_URL="$url" AGENTCAP_TEST_POSTGRES_URL="$url" \
               npx tsx --test --test-force-exit --test-reporter=spec "$f" 2>&1 | tee "$out" || status=$?
             echo "::endgroup::"
             if [ "$status" -ne 0 ] || ! grep -q '^ℹ skipped 0$' "$out" || ! grep -q '^ℹ pass [1-9]' "$out"; then
@@ -341,7 +341,7 @@ jobs:
         id: record
         if: needs.solana-paths.outputs.run == 'true'
         run: |
-          sha=$(node scripts/ci/solana-program-record.mjs contracts/solana contracts/solana/target/deploy/merrymen_vault.so contracts/solana/target/deploy/merrymen_vault.build.json)
+          sha=$(node scripts/ci/solana-program-record.mjs contracts/solana contracts/solana/target/deploy/agentcap_vault.so contracts/solana/target/deploy/agentcap_vault.build.json)
           echo "sha256=$sha" >> "$GITHUB_OUTPUT"
 
       # THE RELEASE MANIFEST. build.sh --record builds the source once more
@@ -379,10 +379,10 @@ jobs:
         id: linux-manifest
         if: needs.solana-paths.outputs.run == 'true'
         run: |
-          release=$(node scripts/ci/solana-linux-manifest.mjs report contracts/solana contracts/solana/target/deploy/merrymen_vault.build.json)
+          release=$(node scripts/ci/solana-linux-manifest.mjs report contracts/solana contracts/solana/target/deploy/agentcap_vault.build.json)
           case "$release" in candidate-unconfirmed|not-a-release) ;; *) echo "::error::the comparison gave no release label"; exit 1 ;; esac
           echo "release=$release" >> "$GITHUB_OUTPUT"
-          echo "artifact=merrymen-vault-sbf-$release-$GITHUB_SHA-run$GITHUB_RUN_ID.$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
+          echo "artifact=agentcap-vault-sbf-$release-$GITHUB_SHA-run$GITHUB_RUN_ID.$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
 
       # A release takes its bytes from here, never from a laptop, and only
       # from a run on refs/heads/main (a push to main or a manual run on main)
@@ -401,8 +401,8 @@ jobs:
         with:
           name: ${{ steps.linux-manifest.outputs.artifact }}
           path: |
-            contracts/solana/target/deploy/merrymen_vault.so
-            contracts/solana/target/deploy/merrymen_vault.build.json
+            contracts/solana/target/deploy/agentcap_vault.so
+            contracts/solana/target/deploy/agentcap_vault.build.json
             contracts/solana/build-manifests/Linux-x86_64.json
           if-no-files-found: error
 
@@ -458,7 +458,7 @@ jobs:
         if: needs.solana-paths.outputs.run == 'true'
         run: |
           so=$(scripts/ci/solana-rebuild.sh "$RUNNER_TEMP/solana-rebuild")
-          sha=$(node scripts/ci/solana-program-record.mjs "$RUNNER_TEMP/solana-rebuild/src/contracts/solana" "$so" "$RUNNER_TEMP/merrymen_vault.build.json")
+          sha=$(node scripts/ci/solana-program-record.mjs "$RUNNER_TEMP/solana-rebuild/src/contracts/solana" "$so" "$RUNNER_TEMP/agentcap_vault.build.json")
           echo "sha256=$sha" >> "$GITHUB_OUTPUT"
 
       - name: Nothing unverified was fetched
@@ -517,7 +517,7 @@ jobs:
   # the run, so its name says at most candidate-unconfirmed. This job needs
   # app and so runs only when app passed. For a candidate (a run on main whose
   # pinned Linux build matched the committed manifest) it uploads
-  # merrymen-vault-release-<commit>-run<id>.<attempt>, a record naming the
+  # agentcap-vault-release-<commit>-run<id>.<attempt>, a record naming the
   # candidate artifact and the SHA-256 solana · test tested and solana ·
   # rebuild reproduced (scripts/ci/solana-release.mjs, which refuses anything
   # else). No other job uploads a name that says release. Like the vault
@@ -545,7 +545,7 @@ jobs:
       # Through env, not interpolated into the script: they are job outputs.
       - name: Release record
         if: needs.solana-test.outputs.release == 'candidate-unconfirmed'
-        run: node scripts/ci/solana-release.mjs "$RUNNER_TEMP/merrymen_vault.release.json"
+        run: node scripts/ci/solana-release.mjs "$RUNNER_TEMP/agentcap_vault.release.json"
         env:
           VAULT_RELEASE_LABEL: ${{ needs.solana-test.outputs.release }}
           VAULT_ARTIFACT: ${{ needs.solana-test.outputs.artifact }}
@@ -555,8 +555,8 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: needs.solana-test.outputs.release == 'candidate-unconfirmed'
         with:
-          name: merrymen-vault-release-${{ github.sha }}-run${{ github.run_id }}.${{ github.run_attempt }}
-          path: ${{ runner.temp }}/merrymen_vault.release.json
+          name: agentcap-vault-release-${{ github.sha }}-run${{ github.run_id }}.${{ github.run_attempt }}
+          path: ${{ runner.temp }}/agentcap_vault.release.json
           if-no-files-found: error
 
   contracts:
@@ -650,10 +650,10 @@ jobs:
         working-directory: services/brain
         run: python -m pytest -q
 
-      # The merrymen-trader Claude plugin is standard-library Python too: the
+      # The agentcap-trader Claude plugin is standard-library Python too: the
       # pre-trade checks and the proposal log behind its trade proposals. Its
       # suite is offline (fixtures only, no network), so it rides on this
       # job's Python rather than a runner of its own.
-      - name: Test the merrymen-trader plugin
-        working-directory: plugins/merrymen-trader
+      - name: Test the agentcap-trader plugin
+        working-directory: plugins/agentcap-trader
         run: python -m unittest discover -s tests

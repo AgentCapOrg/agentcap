@@ -18,11 +18,11 @@ import path from "node:path";
 import { after, afterEach, before, describe, it } from "node:test";
 
 import { mintSession } from "@/lib/auth";
-import { getSettingsStore, resetSettingsStoreForTest } from "@merrymen/settings-store";
-import { SECRET_SETTING_KEYS } from "@merrymen/core";
+import { getSettingsStore, resetSettingsStoreForTest } from "@agentcap/settings-store";
+import { SECRET_SETTING_KEYS } from "@agentcap/core";
 
 const TENANT = "0xcccccccccccccccccccccccccccccccccccccccc";
-const KEYS = ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_SESSION_SECRET", "DATABASE_URL"] as const;
+const KEYS = ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_SESSION_SECRET", "DATABASE_URL"] as const;
 const original = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
 let dir: string;
 let GET: (req: Request) => Promise<Response>;
@@ -31,16 +31,16 @@ let GET: (req: Request) => Promise<Response>;
 const SECRETS: Record<string, string> = Object.fromEntries(SECRET_SETTING_KEYS.map((k) => [k, `live-${k}-${randomBytes(8).toString("hex")}-WXYZ`]));
 
 before(async () => {
-  dir = mkdtempSync(path.join(tmpdir(), "merrymen-settings-secrets-"));
-  process.env.MERRYMEN_HOME = dir;
-  process.env.MERRYMEN_SESSION_SECRET = randomBytes(32).toString("hex");
+  dir = mkdtempSync(path.join(tmpdir(), "agentcap-settings-secrets-"));
+  process.env.AGENTCAP_HOME = dir;
+  process.env.AGENTCAP_SESSION_SECRET = randomBytes(32).toString("hex");
   delete process.env.DATABASE_URL;
   resetSettingsStoreForTest();
   // After the env: the route resolves its settings path when it loads.
   ({ GET } = await import("./route"));
 });
 afterEach(() => {
-  delete process.env.MERRYMEN_HOSTED;
+  delete process.env.AGENTCAP_HOSTED;
 });
 after(() => {
   for (const k of KEYS) {
@@ -76,7 +76,7 @@ describe("GET /api/settings never returns a secret in clear", () => {
   });
 
   it("hosted: a tenant blob holding every secret (however it got there) comes back masked", async () => {
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOSTED = "1";
     await getSettingsStore("spot").put(TENANT, { strategy: "trencher", ...SECRETS });
     const { text, body } = await get(`mm_session=${mintSession(TENANT)}`);
     assertNoSecretEchoed(text, body);

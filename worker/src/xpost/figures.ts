@@ -22,9 +22,9 @@
  * never a digit, nothing else. Anything else is dropped,
  * never echoed, never repaired: a symbol with a space, a dot, an emoji, a
  * lowercase look-alike from another alphabet or eleven characters is not
- * shown at all. A ticker that spells sherwood, merrymen, robinhood or the
+ * shown at all. A ticker that spells sherwood, agentcap, robinhood or the
  * agent's own name, a slur, a political name or a hype word is dropped too:
- * under an answer from Merrymen's own account it would read as Merrymen
+ * under an answer from AgentCap's own account it would read as AgentCap
  * speaking for that coin.
  *
  * THE GRAMMAR (FIGURES_LINE below, pinned by figures.test.ts):
@@ -74,7 +74,7 @@ export const TRADED_MAX = 3;
 const RECAP_COUNT_MAX = 999;
 
 /**
- * WORDS A TICKER MAY NOT SPELL, read on its letters. Merrymen's own names and
+ * WORDS A TICKER MAY NOT SPELL, read on its letters. AgentCap's own names and
  * its model's, the agent's, the chain's and its stock token's; slurs and
  * profanity; political names; hype; a sum of money in words ("MILLION",
  * "BUCKS"). Errs toward dropping: "SKILL" holds "kill" and is left out, which
@@ -93,7 +93,7 @@ const HOUSE_NAMES: readonly string[] = [
   // and the chain's and the agent's names however they are shortened ("RBNHD", "ALDALE": red-team 2026-10-12)
   "r+o*b+[iy]*n+h+o*d", "rbnhd", "aldale", "dale",
   // AND ROBIN HOOD'S OTHER MERRY MEN AND HIS COUNTRY (red-team review of 1ed46625, 2026-10-12): "trending $LITTLEJOHN 24h +212%, $FRIARTUCK …,
-  // $MAIDMARIAN …; fomo: most bought $LITTLEJOHN" went out from the account of Alan-a-Dale of merrymen. ("TUCK" whole only: "stuck", "truck".)
+  // $MAIDMARIAN …; fomo: most bought $LITTLEJOHN" went out from the account of Alan-a-Dale of agentcap. ("TUCK" whole only: "stuck", "truck".)
   "l+[iy]+t+l+e*j+o+h*n", "f+r+[iy]+a+r", "m+a+r+[iy]+a+n", "s+c+a+r+l+e+t", "n+o+t+[iy]*n+g+h+a+m", "l+o+x+l+e*y", "l+o+c+k+s+l+e*y", "s+h+e+r+[iy]+f",
   "gisborne", "gamwell",
   // the model and provider names a tag may never get code's lines under (orchestrator-xpost-research.ts MODEL_LETTERS)

@@ -7,7 +7,7 @@
  * the orchestrator watchdog's: a heartbeat is fresh when it is younger than
  * max(180 s, 2 × tick + 90 s).
  */
-import { liveBlockerText, type RefuseRule } from "@merrymen/core";
+import { liveBlockerText, type RefuseRule } from "@agentcap/core";
 import type { Db } from "../../../../worker/src/db";
 import { blockerAdvice } from "../live-blocker";
 import type { SettingsView } from "./settings-view";

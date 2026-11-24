@@ -16,7 +16,7 @@
  * never stored in any of them.
  *
  * THREE QUESTIONS, NEVER MERGED. Discoverable (a discovery source lists it),
- * priceable (Merrymen would trust a price for it) and executable (a given
+ * priceable (AgentCap would trust a price for it) and executable (a given
  * agent could buy it, eligibility.ts). A coin can be the first without the
  * second and the second without the third.
  *
@@ -36,7 +36,7 @@ import {
   officialCoinByAddress,
   officialCoinsFor,
   type StockToken,
-} from "@merrymen/core";
+} from "@agentcap/core";
 import type { Db } from "../../../../worker/src/db";
 import { screenPools, type GeckoPool } from "../../../../worker/src/venues/geckoterminal";
 import { FIVE_MINUTE_EVIDENCE_CAVEAT, readPoolEvidence, summarizeEvidence, type PoolEvidence } from "../../../../worker/src/venues/pool-evidence";
@@ -217,7 +217,7 @@ export interface TrustedIdentity {
 }
 
 /**
- * A name Merrymen or the owner vouches for: cash, a listed stock token, an
+ * A name AgentCap or the owner vouches for: cash, a listed stock token, an
  * official coin, or one of the owner's own tokens. Reuses tokenLabelSync with
  * no database, which answers from exactly those local sources and nothing a
  * coin can say about itself.
@@ -289,7 +289,7 @@ export type TokenFlag = "impersonates_trusted_ticker" | "duplicate_symbol";
  * What kind of thing an address is. Listed stock tokens are "stock"; cash and
  * official coins "established"; anything else a source knows is what
  * instrumentClassOf calls it — "memecoin", its cautious arm. An address no
- * source knows is "unknown", which Merrymen still treats with memecoin rules.
+ * source knows is "unknown", which AgentCap still treats with memecoin rules.
  */
 export function tokenKind(address: string, known: boolean): TokenKind {
   const a = address.toLowerCase();
@@ -401,7 +401,7 @@ export function localTokenFacts(address: string, customTokens: readonly OwnerTok
 /** Is it listed by something that finds tokens? A custom token is the owner's choice, not a discovery. */
 export function discoverability(f: Pick<TokenFacts, "identity" | "row" | "index">): Verdict {
   if (f.identity && f.identity.source !== "custom") {
-    return { state: "yes", reasons: [`Listed in Merrymen's curated registry (${f.identity.source === "stock" ? "Robinhood stock tokens" : f.identity.source === "cash" ? "cash tokens" : "official coins"}), so it is known without discovery.`] };
+    return { state: "yes", reasons: [`Listed in AgentCap's curated registry (${f.identity.source === "stock" ? "Robinhood stock tokens" : f.identity.source === "cash" ? "cash tokens" : "official coins"}), so it is known without discovery.`] };
   }
   if (f.row) {
     const s = screenRow(f.row);
@@ -423,7 +423,7 @@ export function discoverability(f: Pick<TokenFacts, "identity" | "row" | "index"
 }
 
 /**
- * Would Merrymen trust a price for it? Mirrors the worker's rules: a Chainlink
+ * Would AgentCap trust a price for it? Mirrors the worker's rules: a Chainlink
  * feed for a stock token; for anything else a pool deep enough and close
  * enough to its time-averaged price (pool-price.ts), where a bonding-curve
  * price is good enough to value a holding and never enough to authorise a buy
@@ -437,7 +437,7 @@ export function priceability(f: Pick<TokenFacts, "address" | "stock" | "row" | "
   if (f.stock) {
     return f.stock.chainlinkFeed
       ? { state: "yes", reasons: ["Priced from its Chainlink feed. The feed follows the underlying market (24/5), so weekend prices are stale by design."] }
-      : { state: "no", reasons: ["No Chainlink feed is published for this stock token yet, so Merrymen cannot price it."] };
+      : { state: "no", reasons: ["No Chainlink feed is published for this stock token yet, so AgentCap cannot price it."] };
   }
   const floor = dollars(PRICE_FLOORS.minPoolLiquidityUsdg);
   const floorNote = "(the default; an owner can change it)";
@@ -449,7 +449,7 @@ export function priceability(f: Pick<TokenFacts, "address" | "stock" | "row" | "
   if (f.row.onCurve) {
     return {
       state: "no",
-      reasons: ["It is still on a Pons bonding curve. A curve price has no oracle and no divergence check, so Merrymen uses it to value a holding but never to authorise a buy; buying it needs scout mode with a budget, or the class route."],
+      reasons: ["It is still on a Pons bonding curve. A curve price has no oracle and no divergence check, so AgentCap uses it to value a holding but never to authorise a buy; buying it needs scout mode with a budget, or the class route."],
     };
   }
   if (f.row.reserveUsd === null) {
@@ -1145,7 +1145,7 @@ function launchItem(r: FreshRow, metaRead: boolean): DiscoverItem {
     published_socials: r.twitter || r.telegram || r.website ? true : metaRead ? false : null,
     flags: [],
     caveats: [
-      "A launch from the last ~15 minutes on its bonding curve. It has no pool price Merrymen trusts; buying it needs scout mode with a budget or the class route.",
+      "A launch from the last ~15 minutes on its bonding curve. It has no pool price AgentCap trusts; buying it needs scout mode with a budget or the class route.",
       "The name, symbol and description are the launcher's own claims.",
     ],
   };

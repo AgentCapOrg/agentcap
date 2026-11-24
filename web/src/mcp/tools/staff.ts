@@ -1,7 +1,7 @@
 /**
- * Staff diagnostics: a separate catalogue for Merrymen operators.
+ * Staff diagnostics: a separate catalogue for AgentCap operators.
  *
- * Granted only to tenants on MERRYMEN_MCP_STAFF_TENANTS, never advertised,
+ * Granted only to tenants on AGENTCAP_MCP_STAFF_TENANTS, never advertised,
  * and re-checked on every call (policy.ts requires the staff flag as well as
  * the scope, so a token minted while someone was staff stops working the
  * moment they are removed from the list).
@@ -17,7 +17,7 @@
 import * as z from "zod";
 import { describeDeployment, readExecutionFailures, readFleetHealth, readMcpUsage, readPackageVersion, readProviderErrors } from "@/lib/services/staff-diagnostics";
 import { settingsReader } from "@/lib/services/settings-view";
-import { getSettingsStore } from "@merrymen/settings-store";
+import { getSettingsStore } from "@agentcap/settings-store";
 import { perpsWorkersRun } from "@/lib/perps-enabled";
 import { mcpConfig } from "../config";
 import { SERVER_VERSION } from "../instructions";

@@ -8,15 +8,15 @@ import path from "node:path";
 import { after, afterEach, beforeEach, test } from "node:test";
 import type { ChildProcess, SpawnOptions } from "node:child_process";
 import { privateKeyToAccount } from "viem/accounts";
-import type { MerrymenSettings, StoredGrant } from "../../packages/core/src/index";
+import type { AgentCapSettings, StoredGrant } from "../../packages/core/src/index";
 
 const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "perps-pilot-withdrawal-")));
-process.env.MERRYMEN_HOME = fleet;
-process.env.MERRYMEN_HOSTED = "1";
-process.env.MERRYMEN_PERPS = "paper";
-process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 42).toString("base64");
-for (const key of ["DATABASE_URL", "MERRYMEN_ACCOUNTING_HOLD_TENANTS", "MERRYMEN_FLEET_RECOVERY_REPORT_ONLY",
-  "MERRYMEN_PERSISTENT_HOME_REQUIRED", "MERRYMEN_FLEET_ROLLOUT", "MERRYMEN_ROLLOUT_NEW_TENANTS"]) delete process.env[key];
+process.env.AGENTCAP_HOME = fleet;
+process.env.AGENTCAP_HOSTED = "1";
+process.env.AGENTCAP_PERPS = "paper";
+process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 42).toString("base64");
+for (const key of ["DATABASE_URL", "AGENTCAP_ACCOUNTING_HOLD_TENANTS", "AGENTCAP_FLEET_RECOVERY_REPORT_ONLY",
+  "AGENTCAP_PERSISTENT_HOME_REQUIRED", "AGENTCAP_FLEET_ROLLOUT", "AGENTCAP_ROLLOUT_NEW_TENANTS"]) delete process.env[key];
 for (const key of Object.keys(process.env)) if (key.startsWith("RAILWAY_")) delete process.env[key];
 
 const orch = await import("./orchestrator");
@@ -28,8 +28,8 @@ const settings = { spot: getSettingsStore("spot"), perps: getSettingsStore("perp
 const owner = "0x2222222222222222222222222222222222222222";
 const account = "0x3333333333333333333333333333333333333333";
 const workerKey = `${owner}:perps`;
-const childSettings = () => JSON.parse(readFileSync(path.join(orch.childHome(workerKey), "settings.json"), "utf8")) as MerrymenSettings;
-const risk: MerrymenSettings = { perpsEnabled: true, perpsMarkets: ["SOL-PERP"], perpsMaxLeverage: 1,
+const childSettings = () => JSON.parse(readFileSync(path.join(orch.childHome(workerKey), "settings.json"), "utf8")) as AgentCapSettings;
+const risk: AgentCapSettings = { perpsEnabled: true, perpsMarkets: ["SOL-PERP"], perpsMaxLeverage: 1,
   perpsStopLossPct: 2, perpsTakeProfitPct: 9, perpsLiqBufferPct: 4, perpsMaxOpenNotionalUsdg: 30, perpsDriver: "manual" };
 const spawned: FakeProc[] = [];
 class FakeProc extends EventEmitter {
@@ -42,7 +42,7 @@ class FakeProc extends EventEmitter {
   gone = false;
   constructor(readonly env: NodeJS.ProcessEnv) {
     super();
-    this.entriesAtFork = JSON.parse(readFileSync(path.join(String(env.MERRYMEN_HOME), "settings.json"), "utf8")).perpsEnabled;
+    this.entriesAtFork = JSON.parse(readFileSync(path.join(String(env.AGENTCAP_HOME), "settings.json"), "utf8")).perpsEnabled;
   }
   kill(signal?: NodeJS.Signals | number): boolean {
     this.signals.push(String(signal ?? "SIGTERM"));
@@ -96,7 +96,7 @@ async function prepareEnabled() {
 async function startEnabled() {
   await prepareEnabled();
   await orch.reconcile(); await settle();
-  const trader = spawned.find(p => p.env.MERRYMEN_HOME === orch.childHome(workerKey) && !p.gone);
+  const trader = spawned.find(p => p.env.AGENTCAP_HOME === orch.childHome(workerKey) && !p.gone);
   assert.ok(trader, "an admitted worker starts");
   assert.equal(childSettings().perpsEnabled, true);
   return { trader, before: childSettings() };
@@ -174,7 +174,7 @@ test("withdrawal during a failed settings read still disables the existing child
 
 test("failed off delivery stops the running worker and retains its lease until final accounting succeeds", async () => {
   const { trader, before } = await startEnabled();
-  const book = path.join(orch.childHome(workerKey), "merrymen.db");
+  const book = path.join(orch.childHome(workerKey), "agentcap.db");
   writeFileSync(book, "original book retained for final copy");
   let mirrors = 0;
   orch.setRetirementMirrorForTest(async () => { mirrors++; return false; });
@@ -234,14 +234,14 @@ for (const publicationFails of [false, true]) {
 test("an admission-store outage forces entries off while keeping the worker, risk limits, and grant", async () => {
   const { trader, before } = await startEnabled();
   // An old bootstrap variable must never rescue a failed shared-store read.
-  process.env.MERRYMEN_PERPS_PAPER_TENANTS = owner;
+  process.env.AGENTCAP_PERPS_PAPER_TENANTS = owner;
   pilotFailure = true;
   try {
     assert.equal(await orch.refreshPerpsPilotAdmissionForTest(), false);
     assert.deepEqual(childSettings(), { ...before, perpsEnabled: false });
     assert.deepEqual(trader.signals, []);
     assert.ok(await grants.get(owner));
-  } finally { delete process.env.MERRYMEN_PERPS_PAPER_TENANTS; }
+  } finally { delete process.env.AGENTCAP_PERPS_PAPER_TENANTS; }
 });
 
 test("an unavailable admission store permits a cold exits-only worker from trustworthy settings", async () => {
@@ -351,7 +351,7 @@ test("revoke and re-admit between polls cannot fork from the earlier enabled fil
 });
 
 test("children receive neither pilot role configuration nor the admission database", () => {
-  const names = ["MERRYMEN_PERPS_PAPER_TENANTS", "MERRYMEN_PERPS_PILOT_ADMINS", "DATABASE_URL"] as const;
+  const names = ["AGENTCAP_PERPS_PAPER_TENANTS", "AGENTCAP_PERPS_PILOT_ADMINS", "DATABASE_URL"] as const;
   const saved = names.map(name => process.env[name]);
   try {
     for (const name of names) process.env[name] = "parent-only";
@@ -366,7 +366,7 @@ test("children receive neither pilot role configuration nor the admission databa
 
 test("shutdown final-copies a worker stopped for failed off delivery before the next reconcile", async () => {
   await startEnabled();
-  writeFileSync(path.join(orch.childHome(workerKey), "merrymen.db"), "original book awaiting final copy");
+  writeFileSync(path.join(orch.childHome(workerKey), "agentcap.db"), "original book awaiting final copy");
   const restore = refuseSettingsRename();
   try { await setAdmission(false); await orch.reconcile(); await settle(); } finally { restore(); }
   assert.equal(spawned.filter(p => !p.gone).length, 0);

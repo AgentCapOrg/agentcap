@@ -7,7 +7,7 @@ import { deferred, json, testDom } from "./test-dom";
 const OWNER = `0x${"1".repeat(40)}`;
 const OTHER = `0x${"2".repeat(40)}`;
 const ID = "setup-1234567890";
-const storageKey = (owner: string) => `merrymen.telegram.create.v1:${owner}`;
+const storageKey = (owner: string) => `agentcap.telegram.create.v1:${owner}`;
 const originalFetch = globalThis.fetch;
 type Call = { url: string; init?: RequestInit };
 let ui: ReturnType<typeof testDom>;
@@ -24,7 +24,7 @@ let popup: Window | null;
 let closed: number;
 let navigations: string[];
 let availabilities: (boolean | null)[];
-const intent = (status = "waiting_telegram", extra: Record<string, unknown> = {}) => ({ id: ID, status, expiresAt: Date.now() + 60_000, botUsername: status === "confirm" || status === "connected" ? "merrymen_testbot" : null, botId: status === "confirm" || status === "connected" ? "1234567" : null, ...extra });
+const intent = (status = "waiting_telegram", extra: Record<string, unknown> = {}) => ({ id: ID, status, expiresAt: Date.now() + 60_000, botUsername: status === "confirm" || status === "connected" ? "agentcap_testbot" : null, botId: status === "confirm" || status === "connected" ? "1234567" : null, ...extra });
 const post = (call: Call) => JSON.parse(String(call.init?.body)) as Record<string, unknown>;
 const posts = () => calls.filter(call => call.init?.method === "POST");
 const drain = () => act(async () => { for (let i = 0; i < 30; i++) await Promise.resolve(); });
@@ -49,7 +49,7 @@ beforeEach(() => {
   reconcile = async () => {};
   respond = async call => {
     if (call.init?.method === "POST") {
-      if (post(call).action === "begin") return json({ intent: intent(), telegramUrl: "https://t.me/MerrymenManagerBot?start=server_nonce" });
+      if (post(call).action === "begin") return json({ intent: intent(), telegramUrl: "https://t.me/AgentCapManagerBot?start=server_nonce" });
       if (post(call).action === "confirm") return json({ intent: intent("connected") });
       return json({ intent: intent("cancelled") });
     }
@@ -66,7 +66,7 @@ describe("Telegram bot creation through the actual client component", () => {
     await ui.click("Create Telegram bot");
     assert.deepEqual(post(posts()[0]), { action: "begin", owner: OWNER });
     const link = ui.container.querySelector<HTMLAnchorElement>('a[href^="https://t.me/"]');
-    assert.equal(link?.href, "https://t.me/MerrymenManagerBot?start=server_nonce");
+    assert.equal(link?.href, "https://t.me/AgentCapManagerBot?start=server_nonce");
     assert.equal(link?.target, "_blank");
     assert.equal(link?.rel, "noopener noreferrer");
     assert.equal(localStorage.getItem(storageKey(OWNER)), ID, "only the intent ID is persisted, never the start link or credential");
@@ -85,9 +85,9 @@ describe("Telegram bot creation through the actual client component", () => {
     assert.equal(opened, 1);
     assert.equal(popup.opener, null);
     assert.equal(navigations.length, 0);
-    response.resolve(json({ intent: intent(), telegramUrl: "https://t.me/MerrymenManagerBot?start=server_nonce" }));
+    response.resolve(json({ intent: intent(), telegramUrl: "https://t.me/AgentCapManagerBot?start=server_nonce" }));
     await drain();
-    assert.deepEqual(navigations, ["https://t.me/MerrymenManagerBot?start=server_nonce"]);
+    assert.deepEqual(navigations, ["https://t.me/AgentCapManagerBot?start=server_nonce"]);
     assert.equal(closed, 0);
   });
 
@@ -113,14 +113,14 @@ describe("Telegram bot creation through the actual client component", () => {
     await ui.click("Create Telegram bot");
     respond = async call => call.init?.method === "POST" ? json({ intent: intent("connected") }) : json({ available: true, intent: intent("confirm") });
     await advance(3000);
-    assert.match(ui.container.textContent ?? "", /@merrymen_testbot/);
+    assert.match(ui.container.textContent ?? "", /@agentcap_testbot/);
     assert.equal(posts().length, 1, "Telegram acceptance alone never saves the bot");
     await ui.click("Connect this bot");
     await drain();
     assert.deepEqual(post(posts()[1]), { action: "confirm", owner: OWNER, intentId: ID, botId: "1234567" });
     assert.equal(refreshed.length, 1);
     assert.equal(refreshed[0].owner, OWNER);
-    assert.match(ui.container.textContent ?? "", /Bot saved as @merrymen_testbot\. It answers once your agent is running/);
+    assert.match(ui.container.textContent ?? "", /Bot saved as @agentcap_testbot\. It answers once your agent is running/);
     assert.doesNotMatch(ui.container.textContent ?? "", /listening|private reports|connected/i, "saved is not live: the worker has to run first");
     assert.equal(localStorage.getItem(storageKey(OWNER)), null);
     assert.equal(active.at(-1), false);
@@ -133,7 +133,7 @@ describe("Telegram bot creation through the actual client component", () => {
     const params = new URL(calls[0].url, "https://app.example.test").searchParams;
     assert.equal(params.get("owner"), OWNER);
     assert.equal(params.get("intent"), ID);
-    assert.match(ui.container.textContent ?? "", /@merrymen_testbot/);
+    assert.match(ui.container.textContent ?? "", /@agentcap_testbot/);
     assert.equal(posts().length, 0);
   });
 
@@ -321,7 +321,7 @@ describe("Telegram bot creation through the actual client component", () => {
     const oldSignal = posts()[0].init?.signal;
     await render(OTHER);
     assert.equal(oldSignal?.aborted, true);
-    late.resolve(json({ intent: intent(), telegramUrl: "https://t.me/MerrymenManagerBot?start=old_owner" }));
+    late.resolve(json({ intent: intent(), telegramUrl: "https://t.me/AgentCapManagerBot?start=old_owner" }));
     await drain();
     assert.equal(localStorage.getItem(storageKey(OWNER)), null);
     assert.equal(ui.container.querySelector('a[href*="old_owner"]'), null);
@@ -357,7 +357,7 @@ describe("Telegram bot creation through the actual client component", () => {
 
   it("bounds even an excessively long server expiry to thirty minutes, the server's own window", async () => {
     const far = Date.now() + 86_400_000;
-    respond = async call => call.init?.method === "POST" ? json({ intent: intent("waiting_telegram", { expiresAt: far }), telegramUrl: "https://t.me/MerrymenManagerBot?start=server_nonce" }) : json({ available: true });
+    respond = async call => call.init?.method === "POST" ? json({ intent: intent("waiting_telegram", { expiresAt: far }), telegramUrl: "https://t.me/AgentCapManagerBot?start=server_nonce" }) : json({ available: true });
     await render();
     await ui.click("Create Telegram bot");
     respond = async () => json({ available: true, intent: intent("waiting_telegram", { expiresAt: far }) });
@@ -526,7 +526,7 @@ describe("Telegram bot creation through the actual client component", () => {
     await advance(3000);
     assert.equal(posts().length, 0, "nothing asked of the server: Telegram's Connect made the connection");
     assert.equal(refreshed.length, 1);
-    assert.match(ui.container.textContent ?? "", /Bot saved as @merrymen_testbot/);
+    assert.match(ui.container.textContent ?? "", /Bot saved as @agentcap_testbot/);
     assert.equal(localStorage.getItem(storageKey(OWNER)), null);
     assert.equal(active.at(-1), false);
   });
@@ -559,7 +559,7 @@ describe("Telegram bot creation through the actual client component", () => {
     before.resolve(json({ available: true, intent: intent("confirm") })); await drain();
     answer.resolve(json({ intent: intent("connected") })); await drain();
     assert.equal(refreshed.length, 1);
-    assert.match(ui.container.textContent ?? "", /Bot saved as @merrymen_testbot/);
+    assert.match(ui.container.textContent ?? "", /Bot saved as @agentcap_testbot/);
     assert.equal(buttons().includes("Connect this bot"), false);
   });
 
@@ -571,7 +571,7 @@ describe("Telegram bot creation through the actual client component", () => {
     await act(async () => { document.dispatchEvent(new ui.dom.window.Event("visibilitychange")); }); await drain();
     assert.equal(calls.length, count + 1);
     assert.equal(refreshed.length, 1, "connected in Telegram while this tab was away");
-    assert.match(ui.container.textContent ?? "", /Bot saved as @merrymen_testbot/);
+    assert.match(ui.container.textContent ?? "", /Bot saved as @agentcap_testbot/);
   });
 
   it("asks the server about a setup it marked expired while asleep, and finds the bot it connected meanwhile", async () => {
@@ -588,10 +588,10 @@ describe("Telegram bot creation through the actual client component", () => {
     respond = async () => json({ available: true, intent: intent("connected") });
     await act(async () => { ui.dom.window.dispatchEvent(new ui.dom.window.Event("pageshow")); }); await drain();
     assert.equal(refreshed.length, 1);
-    assert.match(ui.container.textContent ?? "", /Bot saved as @merrymen_testbot/);
+    assert.match(ui.container.textContent ?? "", /Bot saved as @agentcap_testbot/);
     assert.equal(localStorage.getItem(storageKey(OWNER)), null);
     asleep.resolve(json({ available: true, intent: intent("waiting_bot") })); await drain();
-    assert.match(ui.container.textContent ?? "", /Bot saved as @merrymen_testbot/, "the old poll's late answer is dropped");
+    assert.match(ui.container.textContent ?? "", /Bot saved as @agentcap_testbot/, "the old poll's late answer is dropped");
   });
 
   it("does not ask again about a setup the server itself said had expired", async () => {
@@ -619,7 +619,7 @@ describe("Telegram bot creation through the actual client component", () => {
       assert.equal(active.at(-1), false);
       before.resolve(staleResult === "confirm" ? json({ available: true, intent: intent("confirm") }) : json({ error: "old read failed" }, 503));
       await drain();
-      assert.match(ui.container.textContent ?? "", /Bot saved as @merrymen_testbot/);
+      assert.match(ui.container.textContent ?? "", /Bot saved as @agentcap_testbot/);
       assert.equal(buttons().includes("Connect this bot"), false);
       assert.equal(buttons().includes("Try again"), false);
       assert.equal(localStorage.getItem(storageKey(OWNER)), null);
@@ -669,7 +669,7 @@ describe("Telegram bot creation through the actual client component", () => {
     respond = async () => json({ available: true, intent: intent("connected") });
     await advance(10_000);
     assert.equal(refreshed.length, 1, "a later read finds the connection made in Telegram");
-    assert.match(ui.container.textContent ?? "", /Bot saved as @merrymen_testbot/);
+    assert.match(ui.container.textContent ?? "", /Bot saved as @agentcap_testbot/);
     assert.doesNotMatch(ui.container.textContent ?? "", /isn't available|Couldn't check/, "and the failure is cleared");
     assert.equal(localStorage.getItem(storageKey(OWNER)), null);
     assert.equal(posts().length, 0);
@@ -710,7 +710,7 @@ describe("Telegram bot creation through the actual client component", () => {
     await act(async () => { document.dispatchEvent(new ui.dom.window.Event("visibilitychange")); }); await drain();
     assert.equal(calls.length, count + 1, "read at once, not at the next retry");
     assert.equal(refreshed.length, 1);
-    assert.match(ui.container.textContent ?? "", /Bot saved as @merrymen_testbot/);
+    assert.match(ui.container.textContent ?? "", /Bot saved as @agentcap_testbot/);
     assert.doesNotMatch(ui.container.textContent ?? "", /Couldn't check/);
   });
 });

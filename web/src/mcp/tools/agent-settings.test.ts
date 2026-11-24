@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
-import { MERRYMEN_TOKEN } from "@merrymen/core";
+import { AGENTCAP_TOKEN } from "@agentcap/core";
 import { setSettingsReaderForTest } from "@/lib/services/settings-view";
 import { SETTING_SPECS } from "../../../../worker/src/telegram/setting-spec";
 import { resetMetricsForTest } from "../observe";
@@ -90,12 +90,12 @@ test("invalid stored shapes do not become usable configuration", async () => {
 
 test("basket choices include configured tokens while excluding the energy reserve", async () => {
   const { read } = await setup({ settings: {
-    customTokens: [{ symbol: "MyCoin", address: `0x${"f".repeat(40)}`, decimals: 18 }, { ...MERRYMEN_TOKEN }],
-    basketSymbols: ["MERRYMEN"],
+    customTokens: [{ symbol: "MyCoin", address: `0x${"f".repeat(40)}`, decimals: 18 }, { ...AGENTCAP_TOKEN }],
+    basketSymbols: ["AGENTCAP"],
   } });
   const r = await read();
   assert.ok(r.available_basket_symbols.includes("MyCoin"));
-  assert.ok(!r.available_basket_symbols.includes("MERRYMEN"));
+  assert.ok(!r.available_basket_symbols.includes("AGENTCAP"));
   assert.equal(r.settings.find(s => s.key === "basketSymbols")!.valid_for_proposal, false);
 });
 

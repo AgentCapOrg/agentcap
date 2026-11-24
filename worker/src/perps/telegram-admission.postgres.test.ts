@@ -10,7 +10,7 @@ import { orderTtlMs } from "../order-window";
 import { queuePerpsBotExit, readPerpsBotView } from "./telegram-admission";
 import type { PerpsBotRequest } from "./telegram-bridge";
 
-const url = process.env.MERRYMEN_TEST_PG_URL ?? process.env.MERRYMEN_TEST_POSTGRES_URL;
+const url = process.env.AGENTCAP_TEST_PG_URL ?? process.env.AGENTCAP_TEST_POSTGRES_URL;
 const ACCOUNT = `0x${"ab".repeat(20)}` as const, OWNER = `0x${"cd".repeat(20)}` as const, OTHER = `0x${"ef".repeat(20)}` as const;
 const NOW = 1_800_000_000_000;
 const grant = {

@@ -30,7 +30,7 @@ import {
   replaceReportFile, targetDigest, type PgClient,
 } from "./chain-gap-booking-cli";
 
-const dir = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-chain-gap-cli-")));
+const dir = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-chain-gap-cli-")));
 const handles: DatabaseSync[] = [];
 after(() => { for (const h of handles) h.close(); rmSync(dir, { recursive: true, force: true }); });
 
@@ -722,7 +722,7 @@ describe("through the shell: an apply's report outlives a COMMIT whose answer is
 
   it("an empty or cut-short report — an apply that died before its COMMIT — is named as one that never sent it", async () => {
     const raw = await shared();
-    for (const text of ["", '{"format":"merrymen.chain-gap-booking.apply.v1","bookingId":"0b0c']) {
+    for (const text of ["", '{"format":"agentcap.chain-gap-booking.apply.v1","bookingId":"0b0c']) {
       const cut = file("cut");
       writeFileSync(cut, text);
       await assert.rejects(runner(raw).run(["--revert", cut, "--dry-run", "--output", file("receipts")]),

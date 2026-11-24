@@ -17,7 +17,7 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, before, beforeEach, describe, it, mock } from "node:test";
-import type { StoredGrant } from "@merrymen/core";
+import type { StoredGrant } from "@agentcap/core";
 import { startOver, type StartOverDeps } from "@/lib/start-over";
 
 describe("startOver: the ordering", () => {
@@ -75,7 +75,7 @@ describe("startOver: the ordering", () => {
 describe("POST /api/grants/discard", () => {
   const ACCOUNT = "0x00000000000000000000000000000000000000c7";
   const saved = Object.fromEntries(
-    ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_SESSION_SECRET", "DATABASE_URL", "MERRYMEN_STORE_DEK"].map((k) => [k, process.env[k]]),
+    ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_SESSION_SECRET", "DATABASE_URL", "AGENTCAP_STORE_DEK"].map((k) => [k, process.env[k]]),
   );
   let home: string;
   let POST: (req: Request) => Promise<Response>;
@@ -109,11 +109,11 @@ describe("POST /api/grants/discard", () => {
 
   before(async () => {
     home = mkdtempSync(path.join(tmpdir(), "mm-start-over-"));
-    process.env.MERRYMEN_HOME = home;
-    process.env.MERRYMEN_SESSION_SECRET = "test-secret-at-least-thirty-two-characters-long";
-    process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
+    process.env.AGENTCAP_HOME = home;
+    process.env.AGENTCAP_SESSION_SECRET = "test-secret-at-least-thirty-two-characters-long";
+    process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
     delete process.env.DATABASE_URL;
-    delete process.env.MERRYMEN_HOSTED;
+    delete process.env.AGENTCAP_HOSTED;
     auth = await import("@/lib/auth");
     // THROUGH require, as owner-facing.test.ts explains: the route reaches the
     // worker's modules that way, and a second ESM instance is one it never uses.
@@ -124,7 +124,7 @@ describe("POST /api/grants/discard", () => {
     ({ DELETE } = await import("../route"));
   });
   beforeEach(() => {
-    delete process.env.MERRYMEN_HOSTED;
+    delete process.env.AGENTCAP_HOSTED;
     rmSync(commandDir(home), { recursive: true, force: true });
     rmSync(path.join(home, "grant.json"), { force: true });
   });
@@ -179,7 +179,7 @@ describe("POST /api/grants/discard", () => {
   });
 
   it("HOSTED: THE ACCOUNT IS READ FROM THE GRANT, THE GRANT REMOVED, AND A LEDGER OUT OF REACH COSTS ONLY THE RESET", async () => {
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOSTED = "1";
     grants.resetGrantStoreForTest();
     const store = grants.getGrantStore("spot");
     const wallet = "0x00000000000000000000000000000000000000e7" as const;
@@ -191,7 +191,7 @@ describe("POST /api/grants/discard", () => {
     const r = mock.method(store, "remove", async (t: `0x${string}`) => (steps.push("remove"), remove(t)));
     try {
       const res = await POST(
-        new Request("https://app.merrymen.dev/api/grants/discard", {
+        new Request("https://app.agentcap.xyz/api/grants/discard", {
           method: "POST",
           headers: { cookie: `${auth.SESSION_COOKIE}=${auth.mintSession(wallet)}`, "content-type": "application/json" },
           body: JSON.stringify({ expectedTenant: wallet }),
@@ -209,17 +209,17 @@ describe("POST /api/grants/discard", () => {
   });
 
   it("HOSTED, NOT SIGNED IN: REFUSED, AND NOBODY'S GRANT IS TOUCHED", async () => {
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOSTED = "1";
     grants.resetGrantStoreForTest();
     const wallet = "0x00000000000000000000000000000000000000e8" as const;
     await grants.getGrantStore("spot").put(wallet, grant(`0x${"e8".repeat(20)}`));
-    const res = await POST(new Request("https://app.merrymen.dev/api/grants/discard", { method: "POST" }));
+    const res = await POST(new Request("https://app.agentcap.xyz/api/grants/discard", { method: "POST" }));
     assert.equal(res.status, 401);
     assert.ok(await grants.getGrantStore("spot").get(wallet), "still stored");
   });
 
   it("HOSTED START OVER: A STALE OR MISSING EXPECTED TENANT DOES NOT READ OR REMOVE A GRANT", async () => {
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOSTED = "1";
     grants.resetGrantStoreForTest();
     const store = grants.getGrantStore("spot");
     const wallet = "0x00000000000000000000000000000000000000e9" as const;
@@ -229,7 +229,7 @@ describe("POST /api/grants/discard", () => {
     const remove = mock.method(store, "remove");
     try {
       for (const body of [undefined, { expectedTenant: other }]) {
-        const res = await POST(new Request("https://app.merrymen.dev/api/grants/discard", {
+        const res = await POST(new Request("https://app.agentcap.xyz/api/grants/discard", {
           method: "POST",
           headers: { cookie: `${auth.SESSION_COOKIE}=${auth.mintSession(wallet)}`, "content-type": "application/json" },
           ...(body ? { body: JSON.stringify(body) } : {}),

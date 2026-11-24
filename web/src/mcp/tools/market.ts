@@ -10,7 +10,7 @@
  * symbols, launcher descriptions, the display scout's reasons).
  *
  * Three different questions are kept apart in every answer: discoverable (a
- * discovery source lists it), priceable (Merrymen would trust a price for it)
+ * discovery source lists it), priceable (AgentCap would trust a price for it)
  * and executable (THIS agent could buy it). Only check_token_eligibility
  * answers the last, and it needs agents:read because it reveals what the
  * owner's signed permission covers. Nothing here places, quotes or simulates a
@@ -75,7 +75,7 @@ const CURSOR_ARG = z.string().min(1).max(512).optional().describe("next_cursor f
 /** Tools that spend the index's per-pool quota share one budget. */
 const PROVIDER_BUDGET = { bucket: "market-provider", perMinute: 10, perHour: 120 };
 
-const DEFINITIONS = "discoverable = a discovery source lists it; priceable = Merrymen would trust a price for it; executable = a particular agent could buy it (check_token_eligibility).";
+const DEFINITIONS = "discoverable = a discovery source lists it; priceable = AgentCap would trust a price for it; executable = a particular agent could buy it (check_token_eligibility).";
 
 function mainnetOnly(chainId: number): void {
   if (chainId !== 4663) {
@@ -131,7 +131,7 @@ const trustedOr = (trusted: boolean, text: string | null, max: number) => (trust
 const searchTokensTool = defineTool({
   name: "search_tokens",
   title: "Search tokens",
-  ...withToolRefs("Find tokens by address, ticker or name across Merrymen's curated registry (stock tokens, cash), the market index's pools, and — when this connection may see them — your own added tokens (agents:read) and watchlist (watchlist:manage). The address is the identity: tickers are not unique on this chain, so results are grouped by ticker and flag duplicates and impostors of trusted tickers. Each result says whether it is discoverable and priceable. " + DEFINITIONS, " (check_token_eligibility)"),
+  ...withToolRefs("Find tokens by address, ticker or name across AgentCap's curated registry (stock tokens, cash), the market index's pools, and — when this connection may see them — your own added tokens (agents:read) and watchlist (watchlist:manage). The address is the identity: tickers are not unique on this chain, so results are grouped by ticker and flag duplicates and impostors of trusted tickers. Each result says whether it is discoverable and priceable. " + DEFINITIONS, " (check_token_eligibility)"),
   capability: "market.read",
   input: z.object({
     query: refuseControls(z.string().trim().min(1).max(64)).describe("A 0x address, a ticker (with or without $) or part of a name"),
@@ -163,7 +163,7 @@ const searchTokensTool = defineTool({
     symbol_groups: z.array(z.object({
       symbol_key: z.string().describe("The ticker reduced to letters and digits (untrusted)"),
       addresses: z.array(z.string()),
-      trusted_addresses: z.array(z.string()).describe("Addresses Merrymen or you vouch for under this ticker"),
+      trusted_addresses: z.array(z.string()).describe("Addresses AgentCap or you vouch for under this ticker"),
       duplicate: z.boolean(),
     })),
     index: z.object({ reachable: z.boolean(), observed_at: z.string().nullable(), truncated: z.boolean() }),
@@ -318,7 +318,7 @@ function newestBars(v: Pick<CandleView, "bars" | "gaps" | "interval_s">, limit: 
 const getCandlesTool = defineTool({
   name: "get_candles",
   title: "Price candles",
-  description: `The newest USD price bars (15m, 1h, 4h or 1d) for a token from the market index: ${CANDLES_DEFAULT} unless limit asks for fewer or more (at most ${CANDLES_MAX}). Read from the pool the index lists for that token (the same series the Merrymen token page charts). The reader refuses bars that describe the other side of the pair. Each bar's volume is display-only (see notes). Budgeted: it can spend the index's quota.`,
+  description: `The newest USD price bars (15m, 1h, 4h or 1d) for a token from the market index: ${CANDLES_DEFAULT} unless limit asks for fewer or more (at most ${CANDLES_MAX}). Read from the pool the index lists for that token (the same series the AgentCap token page charts). The reader refuses bars that describe the other side of the pair. Each bar's volume is display-only (see notes). Budgeted: it can spend the index's quota.`,
   capability: "market.read",
   input: z.object({
     address: ADDRESS_ARG,
@@ -517,7 +517,7 @@ function discoverOut(it: DiscoverItem, rank: number) {
 const discoverTokensTool = defineTool({
   name: "discover_tokens",
   title: "Discover tokens",
-  description: "What is trading on Robinhood Chain, from the same screened discovery data the Merrymen dashboard shows. trending: pools clearing the display screen ($25k reserve, $50k 24h volume, 100 buyers) in the coins panel's order; high_volume: the same pools by 24h volume; new: launchpad coins from the last ~15 minutes that people are trading; established: the curated stock-token registry with Chainlink prices. Each item carries its screening facts and caveats. A listing is not a recommendation or a permission to trade.",
+  description: "What is trading on Robinhood Chain, from the same screened discovery data the AgentCap dashboard shows. trending: pools clearing the display screen ($25k reserve, $50k 24h volume, 100 buyers) in the coins panel's order; high_volume: the same pools by 24h volume; new: launchpad coins from the last ~15 minutes that people are trading; established: the curated stock-token registry with Chainlink prices. Each item carries its screening facts and caveats. A listing is not a recommendation or a permission to trade.",
   capability: "market.read",
   input: z.object({
     list: z.enum(["trending", "new", "high_volume", "established"]),
@@ -674,7 +674,7 @@ function watchOut(r: WatchlistRow, custom: readonly OwnerToken[]) {
 const listWatchlistTool = defineTool({
   name: "list_watchlist",
   title: "My watchlist",
-  ...withToolRefs(`The tokens on your Merrymen watchlist (at most ${WATCHLIST_MAX}), newest first, with your labels and notes. Watching a token never buys it. Use get_token for market data.`, " Use get_token for market data."),
+  ...withToolRefs(`The tokens on your AgentCap watchlist (at most ${WATCHLIST_MAX}), newest first, with your labels and notes. Watching a token never buys it. Use get_token for market data.`, " Use get_token for market data."),
   capability: "watchlist.manage",
   input: z.object({}).strict(),
   output: z.object({
@@ -770,10 +770,10 @@ export const MARKET_RESOURCES: ResourceDef[] = [
   {
     name: "watchlist",
     title: "My watchlist",
-    description: "The tokens on your Merrymen watchlist, with your labels and notes, as JSON.",
+    description: "The tokens on your AgentCap watchlist, with your labels and notes, as JSON.",
     mimeType: "application/json",
     capability: "watchlist.manage",
-    uri: "merrymen://watchlist",
+    uri: "agentcap://watchlist",
     async read(_uri, _vars, ctx) {
       const { db } = await ctx.mcp();
       const rows = await listWatchlist(db, ctx.principal.tenant);

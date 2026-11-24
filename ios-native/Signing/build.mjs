@@ -15,7 +15,7 @@ if (process.argv.includes('--check')) {
   console.log('Shared wallet bundle and recorded source hashes match.');
   process.exit(0);
 }
-const dependencyRoot = process.env.MERRYMEN_IOS_DEPENDENCY_ROOT || root;
+const dependencyRoot = process.env.AGENTCAP_IOS_DEPENDENCY_ROOT || root;
 const require = createRequire(path.join(dependencyRoot, 'package.json'));
 const { build } = require('esbuild');
 const config = JSON.parse(fs.readFileSync(path.join(root, 'ios-native/Signing/public-config.json'), 'utf8'));

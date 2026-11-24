@@ -19,7 +19,7 @@ import {
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { Db } from "./db";
-import { merrymenHome } from "./home";
+import { agentcapHome } from "./home";
 import { openSecret, sealSecret } from "./store-crypto";
 import { readReplyPrivacy, eraseLegacyReplyMemory } from "./recovery-reply-state";
 
@@ -173,7 +173,7 @@ function appendForget(home: string, op: PersonalMemoryForget): void {
 }
 
 /** Must succeed before changing any private local memory or acknowledging /forget. */
-export function recordPersonalMemoryForget(wanted: ForgetScope, home = merrymenHome()): PersonalMemoryForget {
+export function recordPersonalMemoryForget(wanted: ForgetScope, home = agentcapHome()): PersonalMemoryForget {
   if (wanted.kind === "chat" && !validChat(wanted.chatId)) throw new Error("personal memory is DM only");
   mkdirSync(home, { recursive: true });
   const ops = readForgets(home);
@@ -183,7 +183,7 @@ export function recordPersonalMemoryForget(wanted: ForgetScope, home = merrymenH
   return op;
 }
 /** Only after the actual local mutation succeeded. Failure remains conservative. */
-export function completePersonalMemoryForget(op: PersonalMemoryForget, home = merrymenHome()): void {
+export function completePersonalMemoryForget(op: PersonalMemoryForget, home = agentcapHome()): void {
   appendForget(home, { ...op, completed: true });
 }
 
@@ -255,7 +255,7 @@ function sealedSnapshot(tenant: string, snapshot: Snapshot, dek: Buffer): { seal
   return { sealed: sealSecret(`${ENVELOPE} ${tenant}\n${text}`, dek), bytes };
 }
 function dbPlain(home: string, create: boolean): DatabaseSync | null {
-  const file = path.join(home, "merrymen.db");
+  const file = path.join(home, "agentcap.db");
   if (!present(file) && !create) return null;
   if (present(file) && !lstatSync(file).isFile()) throw new Error("not a plain database");
   const db = new DatabaseSync(file, { readOnly: !create });
@@ -513,7 +513,7 @@ export function forgetPersonalMemoryHome(home: string, log: PersonalMemoryLog = 
       ? readdirSync(dir).filter((name) => /^\.?(IDENTITY|OWNER|NOTES|JOURNAL|ARCHIVE)\.md(?:\.|$)/.test(name)).map((name) => path.join(dir, name))
       : present(dir) ? [dir] : [];
     files.push(...readdirSync(home).filter((name) => /^\.personal-memory-(forget\.jsonl|restore\.pending)(?:\.|$)/.test(name)).map((name) => path.join(home, name)));
-    const file = path.join(home, "merrymen.db");
+    const file = path.join(home, "agentcap.db");
     // A stale roster must not partially erase a home refreshed since it was read.
     if ([...files, ...(present(file) ? [file] : [])].some((f) => lstatSync(f).mtimeMs >= before)) return 0;
     writeAtomic(barrier, JSON.stringify({ version: 1 }), true);

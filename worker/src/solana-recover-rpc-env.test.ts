@@ -3,7 +3,7 @@
  *
  * A keyed provider URL (Helius ?api-key=, an Alchemy or Triton path token)
  * typed after --rpc lands in shell history and in the process list. So
- * solana-recover reads it from MERRYMEN_SOLANA_RECOVER_RPC, keeps --rpc for a
+ * solana-recover reads it from AGENTCAP_SOLANA_RECOVER_RPC, keeps --rpc for a
  * keyless URL, refuses both at once, and warns (never echoing it) when an
  * --rpc value looks keyed. As for solana-resolve's third RPC (GA round-1 13).
  */
@@ -35,8 +35,8 @@ async function plan(args: string[], env: Record<string, string | undefined>) {
 }
 
 describe("solana-recover's RPC URL", () => {
-  it("is read from MERRYMEN_SOLANA_RECOVER_RPC, with no warning", async () => {
-    assert.equal(SOLANA_RECOVER_RPC_ENV, "MERRYMEN_SOLANA_RECOVER_RPC");
+  it("is read from AGENTCAP_SOLANA_RECOVER_RPC, with no warning", async () => {
+    assert.equal(SOLANA_RECOVER_RPC_ENV, "AGENTCAP_SOLANA_RECOVER_RPC");
     const { fetched, warnings, error } = await plan([], { [SOLANA_RECOVER_RPC_ENV]: `  ${KEYED}\n` });
     assert.ok(error instanceof Error, "the refused network stops the plan");
     assert.ok(fetched.length > 0 && fetched.every((url) => new URL(url).href === new URL(KEYED).href), "only the URL from the environment is asked");
@@ -46,10 +46,10 @@ describe("solana-recover's RPC URL", () => {
   it("is refused given both ways, or neither, before any request", async () => {
     const both = await plan(["--rpc", "https://api.mainnet-beta.solana.com"], { [SOLANA_RECOVER_RPC_ENV]: KEYED });
     assert.ok(both.error instanceof SolanaRecoverError);
-    assert.match(both.error.message, /Give the RPC once: MERRYMEN_SOLANA_RECOVER_RPC or --rpc, not both/);
+    assert.match(both.error.message, /Give the RPC once: AGENTCAP_SOLANA_RECOVER_RPC or --rpc, not both/);
     const neither = await plan([], { [SOLANA_RECOVER_RPC_ENV]: "  " });
     assert.ok(neither.error instanceof SolanaRecoverError);
-    assert.match(neither.error.message, /^Set MERRYMEN_SOLANA_RECOVER_RPC to a mainnet-beta HTTPS RPC endpoint you trust/);
+    assert.match(neither.error.message, /^Set AGENTCAP_SOLANA_RECOVER_RPC to a mainnet-beta HTTPS RPC endpoint you trust/);
     assert.deepEqual([...both.fetched, ...neither.fetched], []);
   });
 
@@ -71,8 +71,8 @@ describe("solana-recover's RPC URL", () => {
   });
 
   it("is documented as the environment variable, with --rpc for a URL without a key", () => {
-    assert.match(SOLANA_RECOVER_HELP, /First put your RPC URL in MERRYMEN_SOLANA_RECOVER_RPC, without typing it into a\ncommand/);
-    assert.match(SOLANA_RECOVER_HELP, /read -rs MERRYMEN_SOLANA_RECOVER_RPC; export MERRYMEN_SOLANA_RECOVER_RPC/);
+    assert.match(SOLANA_RECOVER_HELP, /First put your RPC URL in AGENTCAP_SOLANA_RECOVER_RPC, without typing it into a\ncommand/);
+    assert.match(SOLANA_RECOVER_HELP, /read -rs AGENTCAP_SOLANA_RECOVER_RPC; export AGENTCAP_SOLANA_RECOVER_RPC/);
     assert.match(SOLANA_RECOVER_HELP, /--rpc HTTPS_URL gives the RPC on the command line instead, for a URL with no\nAPI key in it/);
     assert.doesNotMatch(SOLANA_RECOVER_HELP, /solana-recover --program PROGRAM_ID --rpc/);
   });

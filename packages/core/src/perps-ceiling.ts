@@ -1,7 +1,7 @@
 /**
  * ONE PERPS GATE, READ THE SAME WAY BY EVERY PROCESS THAT HONOURS IT.
  *
- * MERRYMEN_PERPS is the operator's lever over perpetuals (docs/perps.md rule
+ * AGENTCAP_PERPS is the operator's lever over perpetuals (docs/perps.md rule
  * 1). The worker and the orchestrator read it, and from slice 5 so does the
  * web, which decides whether a Perps wallet may be offered or made at all
  * (web/src/lib/perps-enabled.ts). Moved here from worker/src/settings.ts, which
@@ -23,9 +23,9 @@ export const PERPS_CEILINGS = ["off", "paper", "live"] as const;
 export type PerpsCeiling = (typeof PERPS_CEILINGS)[number];
 
 /**
- * MERRYMEN_PERPS, read restrict-only (docs/perps.md rule 1).
+ * AGENTCAP_PERPS, read restrict-only (docs/perps.md rule 1).
  *
- * UNSET IS OFF, hosted and self-hosted, as MERRYMEN_SOLANA is: perps land on
+ * UNSET IS OFF, hosted and self-hosted, as AGENTCAP_SOLANA is: perps land on
  * main in slices, and the next deploy of anything else ships every slice
  * already merged, so nothing may depend on an operator remembering to set
  * `off`. An operator turns paper on by writing `paper`. (The perps branch
@@ -47,12 +47,12 @@ export function perpsCeilingOf(raw: string | undefined): PerpsCeiling {
 }
 
 /**
- * The startup line for an operator whose MERRYMEN_PERPS asked for more than
+ * The startup line for an operator whose AGENTCAP_PERPS asked for more than
  * this build gives (perpsCeilingOf), or null when it asked for nothing more.
  */
 export function perpsCeilingNote(raw: string | undefined): string | null {
   const v = (raw ?? "").trim().toLowerCase();
   if (v === "" || v === "off" || v === "paper") return null;
-  if (v === "live") return "MERRYMEN_PERPS=live: real-money perps are not in this build, so perps are OFF (set paper for practice perps).";
-  return `MERRYMEN_PERPS=${JSON.stringify(raw).slice(0, 40)} is not off, paper or live, so perps are OFF.`;
+  if (v === "live") return "AGENTCAP_PERPS=live: real-money perps are not in this build, so perps are OFF (set paper for practice perps).";
+  return `AGENTCAP_PERPS=${JSON.stringify(raw).slice(0, 40)} is not off, paper or live, so perps are OFF.`;
 }

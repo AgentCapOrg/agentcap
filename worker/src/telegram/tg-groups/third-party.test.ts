@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
-  ABOUT_MERRYMEN,
+  ABOUT_AGENTCAP,
   AT_THE_READER,
   CONTACT_LURE,
   CTA_PLACEHOLDER,
@@ -85,7 +85,7 @@ describe("the moved clauses read what they read before", () => {
     misses(LURE, ["the contract is verified and liquidity is locked", "worried about the team allocation", "the migration to the new chain went fine"]);
     hits(SPELLED_DOMAIN, ["the dashboard at ponsfi dot bet is live", "check ponsfi dot casino for the roadmap"]);
     misses(SPELLED_DOMAIN, ["rides the polkadot narrative", "holders connect the dots on the listing"]);
-    hits(ABOUT_MERRYMEN, ["the merrymen bot picked this, so it's safe", "merryman picked it"]);
+    hits(ABOUT_AGENTCAP, ["the agentcap bot picked this, so it's safe", "agentcapavatar picked it"]);
     assert.ok(NON_LATIN.test("这个币会涨到月球"));
     assert.ok(NON_LATIN.test("лучший проект на солане"));
     assert.ok(!NON_LATIN.test("très bon projet, l'équipe est sérieuse 🚀"));
@@ -177,7 +177,7 @@ describe("the new clauses", () => {
       "ran off with the funds",
       "exited with everything",
     ]);
-    misses(RUG_CONTEXT_ACCUSE, [...HARMLESS, "liquidity pulled", "down from 8m to 36k in a week, liquidity pulled", "auton rugged lol", "rugged cause it wasn't merrymen"]);
+    misses(RUG_CONTEXT_ACCUSE, [...HARMLESS, "liquidity pulled", "down from 8m to 36k in a week, liquidity pulled", "auton rugged lol", "rugged cause it wasn't agentcap"]);
   });
 
   it("RUG_CONTEXT_ACCUSE: a honeypot or an insider crime in other words, refused under the permit in answer, banter and quote (review r2)", () => {
@@ -196,46 +196,46 @@ describe("the new clauses", () => {
     misses(OUT_ACCUSE, ["sold half on the pump, holding a moonbag", "still not sold on it"]);
   });
 
-  it("MERRY_SHILL: Merrymen as a play, never as a joke", () => {
+  it("MERRY_SHILL: AgentCap as a play, never as a joke", () => {
     hits(MERRY_SHILL, [
-      "rugged, buy merrymen instead",
-      "rugged lol, get a merrymen coin instead",
-      "rugged, ape merrymen",
-      "rugged, stick to merrymen coins",
-      "rugged. merrymen coins only from now on",
-      "rugged, you should've bought merrymen",
-      "rugged, merrymen is the play",
-      "rugged. merrymen coins never rug",
-      "rugged, merrymen coins are safe",
+      "rugged, buy agentcap instead",
+      "rugged lol, get a agentcap coin instead",
+      "rugged, ape agentcap",
+      "rugged, stick to agentcap coins",
+      "rugged. agentcap coins only from now on",
+      "rugged, you should've bought agentcap",
+      "rugged, agentcap is the play",
+      "rugged. agentcap coins never rug",
+      "rugged, agentcap coins are safe",
       "one of ours would moon",
-      "rugged, swap to merrymen",
-      "rugged, get merrymen",
-      "rugged, pick merrymen",
-      "rugged, choose merrymen",
-      "rugged. y'all need merrymen",
-      "rugged, park it in merrymen",
-      "rugged, try merrymen",
-      "rugged, go with merrymen",
-      "rugged, put it in merrymen",
-      "rugged, swap into a merrymen coin",
+      "rugged, swap to agentcap",
+      "rugged, get agentcap",
+      "rugged, pick agentcap",
+      "rugged, choose agentcap",
+      "rugged. y'all need agentcap",
+      "rugged, park it in agentcap",
+      "rugged, try agentcap",
+      "rugged, go with agentcap",
+      "rugged, put it in agentcap",
+      "rugged, swap into a agentcap coin",
     ]);
     misses(MERRY_SHILL, [
-      "rugged cause it wasn't merrymen 😤",
-      "auton rugged lol, should've been a merrymen coin",
-      "chart says rugged. merrymen coins don't do that 😤",
-      "it got rugged, wasn't a merrymen coin so",
+      "rugged cause it wasn't agentcap 😤",
+      "auton rugged lol, should've been a agentcap coin",
+      "chart says rugged. agentcap coins don't do that 😤",
+      "it got rugged, wasn't a agentcap coin so",
       "rug city. should've been one of ours",
-      "full rug. merrymen would never 😤",
+      "full rug. agentcap would never 😤",
     ]);
   });
 
   it("MERRY_BRAG: what counts as a brag already said", () => {
-    hits(MERRY_BRAG, ["rugged cause it wasn't merrymen 😤", "should've been one of ours", "not a merryman in sight", "merry men wouldn't"]);
+    hits(MERRY_BRAG, ["rugged cause it wasn't agentcap 😤", "should've been one of ours", "not a agentcapavatar in sight", "merry men wouldn't"]);
     misses(MERRY_BRAG, ["merry christmas", "rugged lol", "ours is better"]);
   });
 
   it("SPENT_BRAG: a brag in the prompt's other words is spent too (review, 2026-10-09)", () => {
-    hits(SPENT_BRAG, ["rugged. wasn't ours 😤", "auton? should've been ours 😤", "not one of us", "rugged cause it wasn't merrymen 😤", "sherwood would never"]);
+    hits(SPENT_BRAG, ["rugged. wasn't ours 😤", "auton? should've been ours 😤", "not one of us", "rugged cause it wasn't agentcap 😤", "sherwood would never"]);
     misses(SPENT_BRAG, ["merry christmas", "rugged lol", "yours truly", "one of the best"]);
   });
 

@@ -7,10 +7,10 @@ import type { MessageKey } from "./en";
  * That is what makes a partial file safe to have here.
  */
 export const id: Partial<Record<MessageKey, string>> = {
-  "tour.stop01.title": "Selamat datang di merrymen.",
+  "tour.stop01.title": "Selamat datang di agentcap.",
   "tour.stop01.copy": "Beri agen Anda sebuah strategi, tetapkan batasnya, lalu ikuti keputusan yang dibuatnya. Ikuti panduan ini dari awal sampai akhir, atau gunakan Topik untuk langsung melompat ke satu fitur. Anda boleh keluar dan memutarnya lagi kapan saja.",
   "tour.stop02.title": "Mulai dari pasar yang Anda kenal.",
-  "tour.stop02.copy": "Home adalah merryman dan uang Anda. Jelajahi (Explore) berisi papan peringkat dan daftar pasar: buka token mana pun untuk melihat riwayat harganya dan transaksi yang dicatat para agen pada token itu.",
+  "tour.stop02.copy": "Home adalah agentcapavatar dan uang Anda. Jelajahi (Explore) berisi papan peringkat dan daftar pasar: buka token mana pun untuk melihat riwayat harganya dan transaksi yang dicatat para agen pada token itu.",
   "tour.stop03.title": "Agen Anda, batas Anda.",
   "tour.stop03.copy": "Satu strategi dan dua batas — per transaksi dan per hari — menentukan apa yang boleh dilakukannya. Dalam mode simulasi (di layar: “Paper trading”), agen berlatih memakai dana simulasi, bukan uang sungguhan, sampai Anda menentukan lain.",
   "tour.stop04.title": "Tanyakan alasannya.",
@@ -56,7 +56,7 @@ export const id: Partial<Record<MessageKey, string>> = {
   "tour.stop24.title": "Pengaturan dan keterbukaan ke publik.",
   "tour.stop24.copy": "Settings (pengaturan) mengatur konfigurasi agen Anda dan apa saja yang Anda bagikan. Memublikasikan buku posisi Anda dapat memperlihatkan detail posisi dan ukuran transaksi; menyimpannya tetap privat tidak menghalangi aktivitas publik dan imbal hasil persentase yang memenuhi syarat.",
   "tour.stop25.title": "Membangun dengan API.",
-  "tour.stop25.copy": "Pengembang bisa membuka merrymen.dev/api untuk pengaturan kunci API, SDK, dan panduan integrasi. Simpan kunci API rahasia hanya di server Anda. Gunakan alur pengaturan dan chat yang terdokumentasi untuk menghubungkan aplikasi lain.",
+  "tour.stop25.copy": "Pengembang bisa membuka agentcap.xyz/api untuk pengaturan kunci API, SDK, dan panduan integrasi. Simpan kunci API rahasia hanya di server Anda. Gunakan alur pengaturan dan chat yang terdokumentasi untuk menghubungkan aplikasi lain.",
   "tour.stop26.title": "Siap saat Anda siap.",
   "tour.stop26.copy": "Kembalilah ke chat untuk bertanya tentang strategi, batas, atau keputusan terbaru Anda. Jika agen tampak menunggu, periksa penjelasannya, modenya, dananya, dan izinnya. Putar ulang panduan ini lewat Ajak saya berkeliling kapan pun Anda perlu.",
   "tour.skip": "Lewati",
@@ -65,7 +65,7 @@ export const id: Partial<Record<MessageKey, string>> = {
   "tour.next": "Lanjut",
   "tour.finish": "Selesai",
   "tour.relaunch": "Ajak saya berkeliling",
-  "tour.dialogLabel": "Tur singkat merrymen",
+  "tour.dialogLabel": "Tur singkat agentcap",
   "tour.stepOf": "{current} / {total}",
   "tour.savedLocally": "Tersimpan di browser ini.",
   "tour.retrySync": "Coba sinkronkan akun lagi",

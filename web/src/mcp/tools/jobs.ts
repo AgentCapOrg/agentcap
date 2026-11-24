@@ -2,7 +2,7 @@
  * Backtest jobs: queue a strategy test, follow it, list and cancel it.
  *
  * These tools never run a backtest. run_backtest validates the request and
- * writes a row to the durable queue (worker/src/mcp/jobs.ts); Merrymen's
+ * writes a row to the durable queue (worker/src/mcp/jobs.ts); AgentCap's
  * orchestrator claims it on its own schedule and runs it under budgets the
  * client cannot change. So a job outlives the connection that asked for it,
  * and a slow or abandoned client costs nothing but a row.
@@ -12,7 +12,7 @@
  * and reads nothing from the owner's ledger, grant or settings.
  */
 import * as z from "zod";
-import { STOCK_TOKENS } from "@merrymen/core";
+import { STOCK_TOKENS } from "@agentcap/core";
 import {
   BACKTEST_STRATEGIES, JOB_LIMITS, JobError, VARIANT_LABEL_RE, cancelJob, enqueueJob, getJobRow, listJobRows, sweepJobs, validateBacktestParams,
   type BacktestParams, type CancelOutcome, type JobRow, type JobStatus,
@@ -25,7 +25,7 @@ import { LIMIT_ARG, decodeCursor, encodeCursor, isCursorInt, isoOrNull, untruste
 export const ORACLE_SYMBOLS: readonly string[] = STOCK_TOKENS.filter((t) => t.chainlinkFeed && t.kind !== "memecoin").map((t) => t.symbol);
 const ALL_SYMBOLS: readonly string[] = STOCK_TOKENS.filter((t) => t.kind !== "memecoin").map((t) => t.symbol);
 
-const WHERE_IT_RUNS = "Jobs run in Merrymen's background worker, not in this connection: they keep going if you disconnect, and any connection of the same owner can follow them with get_job.";
+const WHERE_IT_RUNS = "Jobs run in AgentCap's background worker, not in this connection: they keep going if you disconnect, and any connection of the same owner can follow them with get_job.";
 
 // ── schemas ─────────────────────────────────────────────────────────────────
 
@@ -163,8 +163,8 @@ const JOB_VIEW = JOB_BASE.extend({
 // ── shaping ─────────────────────────────────────────────────────────────────
 
 const EXPLAIN: Record<JobStatus, string> = {
-  queued: "Waiting for Merrymen's background worker to pick it up. It keeps its place if you disconnect.",
-  running: "Running in Merrymen's background worker.",
+  queued: "Waiting for AgentCap's background worker to pick it up. It keeps its place if you disconnect.",
+  running: "Running in AgentCap's background worker.",
   succeeded: "Finished. The result is a simulation, not a promise of live returns.",
   failed: "It did not finish; see error.",
   cancelled: "Cancelled before it finished; there is no result.",
@@ -292,7 +292,7 @@ const runBacktestTool = defineTool({
     const base = baseOf(row, now);
     return {
       data: { ...base, created, next_steps: `${WHERE_IT_RUNS} Poll get_job with this job_id (every 10-30 s is plenty); cancel_job stops it.` },
-      summary: `Backtest ${row.id} is ${base.status}${created ? "" : " (an existing job for this idempotency_key)"}. It runs in Merrymen's background worker; poll get_job.`,
+      summary: `Backtest ${row.id} is ${base.status}${created ? "" : " (an existing job for this idempotency_key)"}. It runs in AgentCap's background worker; poll get_job.`,
     };
   },
 });

@@ -19,8 +19,8 @@ function forcedExitCode(signal: unknown): number {
   return 128 + constants.signals[known];
 }
 /**
- * MERRYMEN_SOLANA IS THE ONE SWITCH (review finalise). The web serves Solana
- * only with MERRYMEN_SOLANA=1 (web/src/lib/solana-enabled.ts); the worker now
+ * AGENTCAP_SOLANA IS THE ONE SWITCH (review finalise). The web serves Solana
+ * only with AGENTCAP_SOLANA=1 (web/src/lib/solana-enabled.ts); the worker now
  * starts only with it too, on its own service, so the flag means "Solana on"
  * wherever it is read and an install that never turned Solana on never runs
  * strategies. Turning Solana off during an incident is still two steps
@@ -28,11 +28,11 @@ function forcedExitCode(signal: unknown): number {
  * all` first, which keeps owner controls, never the web flag alone.
  */
 export function solanaWorkerSwitchRefusal(env: NodeJS.ProcessEnv): string | null {
-  return env.MERRYMEN_SOLANA?.trim() === "1" ? null
-    : "MERRYMEN_SOLANA is not 1 — Solana is off for this deployment, so the Solana worker does not start. Set MERRYMEN_SOLANA=1 for this worker to run it.";
+  return env.AGENTCAP_SOLANA?.trim() === "1" ? null
+    : "AGENTCAP_SOLANA is not 1 — Solana is off for this deployment, so the Solana worker does not start. Set AGENTCAP_SOLANA=1 for this worker to run it.";
 }
-/** IPC message from `merrymen solana-agent`: one per stop request (press) the command itself received. */
-export const SOLANA_WORKER_STOP_MESSAGE = "merrymen-solana-worker-stop";
+/** IPC message from `agentcap solana-agent`: one per stop request (press) the command itself received. */
+export const SOLANA_WORKER_STOP_MESSAGE = "agentcap-solana-worker-stop";
 /** After the parent command is gone, how long the current tick may still run before the worker exits anyway. */
 export const SOLANA_WORKER_PARENT_GRACE_MS = 60_000;
 /**
@@ -42,20 +42,20 @@ export const SOLANA_WORKER_PARENT_GRACE_MS = 60_000;
  * the machine is idle but much later under heavy load: that copy must not force
  * a stop mid-tick. A deliberate second press comes later. Erring long only
  * means a forcing press must wait a moment; erring short forces a stop nobody
- * asked for. `merrymen solana-agent` (cli/bin.mjs REPEAT_MS) uses the same window.
+ * asked for. `agentcap solana-agent` (cli/bin.mjs REPEAT_MS) uses the same window.
  */
 export const SOLANA_WORKER_REPEAT_MS = 1_500;
 /**
- * Set by `merrymen solana-agent` to its own pid for the worker it spawns with
+ * Set by `agentcap solana-agent` to its own pid for the worker it spawns with
  * an IPC channel. A worker that has this, but whose parent is no longer that
  * process or whose channel is already closed when it starts, was orphaned
  * before it could listen for the close, so it never opens storage or trades.
  */
-export const SOLANA_WORKER_IPC_ENV = "MERRYMEN_SOLANA_WORKER_IPC";
+export const SOLANA_WORKER_IPC_ENV = "AGENTCAP_SOLANA_WORKER_IPC";
 
 /**
  * The command pid a worker must still be the child of (SOLANA_WORKER_IPC_ENV),
- * or undefined when it was not started by `merrymen solana-agent`. A value
+ * or undefined when it was not started by `agentcap solana-agent`. A value
  * that is not a pid matches no parent, so the worker refuses to start.
  */
 export function solanaWorkerParentPid(env: Readonly<Record<string, string | undefined>>): number | undefined {
@@ -88,7 +88,7 @@ export interface SolanaWorkerStopOptions {
   now?(): number;
   repeatMs?: number;
   /**
-   * Started by `merrymen solana-agent` with this pid (solanaWorkerParentPid): a
+   * Started by `agentcap solana-agent` with this pid (solanaWorkerParentPid): a
    * different parent or a closed channel means the command is already gone.
    */
   parentPid?: number;
@@ -102,7 +102,7 @@ export interface SolanaWorkerStopOptions {
  * - The first stop request is graceful: the current tick finishes, then the loop exits.
  * - A second signal delivered to this worker forces an exit; a signal within
  *   `repeatMs` of the press it follows is the same press delivered twice and is
- *   ignored. Under `merrymen solana-agent`, the command does not forward signals
+ *   ignored. Under `agentcap solana-agent`, the command does not forward signals
  *   as signals; it sends one IPC message per press it received, so a terminal
  *   Ctrl+C (which reaches both processes) still counts once here, and the
  *   command sends `force` on the second press.
@@ -150,7 +150,7 @@ export function installSolanaWorkerStop(host: SolanaWorkerStopHost, options: Sol
   const lostParent = () => {
     if (finished || parentLost) return;
     parentLost = true;
-    stop("the merrymen solana-agent command that started this worker is gone", ` Exiting in at most ${Math.round((options.parentGraceMs ?? SOLANA_WORKER_PARENT_GRACE_MS) / 1000)} s.`);
+    stop("the agentcap solana-agent command that started this worker is gone", ` Exiting in at most ${Math.round((options.parentGraceMs ?? SOLANA_WORKER_PARENT_GRACE_MS) / 1000)} s.`);
     // A run that finished in the meantime has nothing in flight: it ends with its own exit code.
     options.setTimer(() => finished ? exitFinished() : force(1), options.parentGraceMs ?? SOLANA_WORKER_PARENT_GRACE_MS).unref?.();
   };
@@ -160,7 +160,7 @@ export function installSolanaWorkerStop(host: SolanaWorkerStopHost, options: Sol
       if (finished) return exitFinished();
       // The command names the signal it received for this press.
       if ((message as { force?: unknown }).force === true) force(forcedExitCode((message as { signal?: unknown }).signal));
-      else stop("stop requested by merrymen solana-agent");
+      else stop("stop requested by agentcap solana-agent");
     });
     host.on("disconnect", lostParent);
   }
@@ -182,9 +182,9 @@ async function main(): Promise<void> {
   guardStdio();
   const args = process.argv.slice(2);
   if (args.length === 1 && ["--help", "-h"].includes(args[0]!)) {
-    process.stdout.write("merrymen solana-agent\nRuns explicitly enabled Solana rebalancing strategies in each account's selected paper or live mode. It starts only with MERRYMEN_SOLANA=1. Configure the authenticated app, private RPC/Jupiter settings and shared storage first. Live mode additionally requires a verified immutable vault deployment and an owner-approved session.\n"
+    process.stdout.write("agentcap solana-agent\nRuns explicitly enabled Solana rebalancing strategies in each account's selected paper or live mode. It starts only with AGENTCAP_SOLANA=1. Configure the authenticated app, private RPC/Jupiter settings and shared storage first. Live mode additionally requires a verified immutable vault deployment and an owner-approved session.\n"
       + `Stopping: Ctrl+C (or SIGTERM/SIGHUP) stops after the current tick; press it again more than ${SOLANA_WORKER_REPEAT_MS / 1000} s later to force a stop, which the trading store recovers from like a crash. `
-      + "If the merrymen command that started the worker is killed, the worker stops after its tick and exits within 60 s.\n");
+      + "If the agentcap command that started the worker is killed, the worker stops after its tick and exits within 60 s.\n");
     return;
   }
   if (args.length) { process.stderr.write("Unsupported Solana worker arguments. Use --help.\n"); process.exitCode = 2; return; }

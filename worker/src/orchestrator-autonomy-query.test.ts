@@ -198,13 +198,13 @@ describe("the heartbeat's place in orchestrator.ts", () => {
   });
 
   it("childEnv strips the ops token: it opens the heartbeat, and a child has no use for it", () => {
-    const saved = process.env.MERRYMEN_OPS_TOKEN;
-    process.env.MERRYMEN_OPS_TOKEN = "ops-token-never-to-a-child-0123456789abcdef";
+    const saved = process.env.AGENTCAP_OPS_TOKEN;
+    process.env.AGENTCAP_OPS_TOKEN = "ops-token-never-to-a-child-0123456789abcdef";
     try {
-      assert.equal(childEnv("0xABCDef0000000000000000000000000000000001").MERRYMEN_OPS_TOKEN, undefined);
+      assert.equal(childEnv("0xABCDef0000000000000000000000000000000001").AGENTCAP_OPS_TOKEN, undefined);
     } finally {
-      if (saved === undefined) delete process.env.MERRYMEN_OPS_TOKEN;
-      else process.env.MERRYMEN_OPS_TOKEN = saved;
+      if (saved === undefined) delete process.env.AGENTCAP_OPS_TOKEN;
+      else process.env.AGENTCAP_OPS_TOKEN = saved;
     }
   });
 });
@@ -215,12 +215,12 @@ describe("one orchestrator beat: what the row says about this process", () => {
 
   /** A home of its own, so FLEET_HALT here is nobody else's, and a database the beat is pointed at. */
   async function withBeat(fleet: (raw: DatabaseSync) => void, run: (raw: DatabaseSync) => Promise<void>) {
-    const saved = { home: process.env.MERRYMEN_HOME, sha: process.env.RAILWAY_GIT_COMMIT_SHA, rollout: process.env.MERRYMEN_FLEET_ROLLOUT };
+    const saved = { home: process.env.AGENTCAP_HOME, sha: process.env.RAILWAY_GIT_COMMIT_SHA, rollout: process.env.AGENTCAP_FLEET_ROLLOUT };
     const home = mkdtempSync(path.join(tmpdir(), "mm-orch-beat-"));
     const raw = new DatabaseSync(":memory:");
-    process.env.MERRYMEN_HOME = home;
+    process.env.AGENTCAP_HOME = home;
     process.env.RAILWAY_GIT_COMMIT_SHA = "0123456789abcdef0123456789abcdef01234567";
-    process.env.MERRYMEN_FLEET_ROLLOUT = "none";
+    process.env.AGENTCAP_FLEET_ROLLOUT = "none";
     try {
       fleet(raw);
       setFleetHeartbeatDbForTest(wrapSqlite(raw));
@@ -229,12 +229,12 @@ describe("one orchestrator beat: what the row says about this process", () => {
       setFleetHeartbeatDbForTest(null);
       raw.close();
       rmSync(home, { recursive: true, force: true });
-      if (saved.home === undefined) delete process.env.MERRYMEN_HOME;
-      else process.env.MERRYMEN_HOME = saved.home;
+      if (saved.home === undefined) delete process.env.AGENTCAP_HOME;
+      else process.env.AGENTCAP_HOME = saved.home;
       if (saved.sha === undefined) delete process.env.RAILWAY_GIT_COMMIT_SHA;
       else process.env.RAILWAY_GIT_COMMIT_SHA = saved.sha;
-      if (saved.rollout === undefined) delete process.env.MERRYMEN_FLEET_ROLLOUT;
-      else process.env.MERRYMEN_FLEET_ROLLOUT = saved.rollout;
+      if (saved.rollout === undefined) delete process.env.AGENTCAP_FLEET_ROLLOUT;
+      else process.env.AGENTCAP_FLEET_ROLLOUT = saved.rollout;
     }
   }
 

@@ -7,8 +7,8 @@
  * secret field someone adds; this reads named, non-secret fields only, so a new
  * field is invisible here until someone decides it is safe.
  */
-import { STOCK_TOKENS, TELEGRAM_GROUPS_CHATTINESS, isValidCustomToken, type TelegramGroupsChattiness } from "@merrymen/core";
-import { getSettingsStore } from "@merrymen/settings-store";
+import { STOCK_TOKENS, TELEGRAM_GROUPS_CHATTINESS, isValidCustomToken, type TelegramGroupsChattiness } from "@agentcap/core";
+import { getSettingsStore } from "@agentcap/settings-store";
 import { withoutEnergyReserve, withoutReserveBasket } from "../energy-reserve";
 import { CHAT_SETTING_KEYS } from "../../../../worker/src/telegram/setting-spec";
 
@@ -82,7 +82,7 @@ export function projectSettings(raw: Record<string, unknown> | null | undefined)
   const s = raw;
   // THE RESERVE IS NOT A TOKEN THIS OWNER TRADES — left out here as GET
   // /api/settings leaves it out, with the basket symbol only it supplied, so
-  // the MCP view never offers MERRYMEN to a basket proposal (energy-reserve.ts).
+  // the MCP view never offers AGENTCAP to a basket proposal (energy-reserve.ts).
   const tokens = withoutEnergyReserve(Array.isArray(s.customTokens) ? s.customTokens : []) ?? [];
   const selectable = new Set([...STOCK_TOKENS.map((t) => t.symbol), ...tokens.filter(isValidCustomToken).map((t) => t.symbol)]);
   const basket = withoutReserveBasket(Array.isArray(s.basketSymbols) ? s.basketSymbols : [], s.customTokens, selectable) ?? [];

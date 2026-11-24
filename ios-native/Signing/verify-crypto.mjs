@@ -14,7 +14,7 @@ assert.equal(crypto.address({ key }), account.address.toLowerCase());
 assert.throws(() => crypto.address({ key: '0x' + '00'.repeat(32) }));
 assert.throws(() => crypto.address({ key: '0x' + 'ff'.repeat(32) }));
 assert.throws(() => crypto.address({ key: key.slice(2) }));
-for (const message of ['Merrymen recovery', '中文 · Español · 한국어 · 🌱', '\ud800']) {
+for (const message of ['AgentCap recovery', '中文 · Español · 한국어 · 🌱', '\ud800']) {
   const hex = toHex(message);
   const signature = crypto.signMessage({ key, hex });
   assert.equal(signature, await account.signMessage({ message: { raw: hex } }));

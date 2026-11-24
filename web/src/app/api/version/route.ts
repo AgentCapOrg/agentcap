@@ -28,7 +28,7 @@ export async function GET(req: Request) {
   if (walletRefused) return walletRefused;
   let version = "unknown";
   try {
-    // web/ is nested under the package root at runtime (…/merrymen/web).
+    // web/ is nested under the package root at runtime (…/agentcap/web).
     const pkg = JSON.parse(await readFile(join(process.cwd(), "..", "package.json"), "utf8")) as { version?: string };
     version = pkg.version ?? "unknown";
   } catch {

@@ -669,14 +669,14 @@ test("with no valuation yet a trade of either book counts, and an unread mark or
 });
 
 test("a return under review is withheld on every book, and nothing but the return is", async () => {
-  const saved = process.env.MERRYMEN_RETURN_REVIEW;
+  const saved = process.env.AGENTCAP_RETURN_REVIEW;
   const { raw, db } = await ledger();
   try {
     await op(db, 5);
     await mark(db, 110, 10);
     const open = await readBookPerformance(db, ACCOUNT, 2, true);
     assert.equal(open.liveRank.pnlBps, 1000);
-    process.env.MERRYMEN_RETURN_REVIEW = `${FOREIGN},${CASED}`;
+    process.env.AGENTCAP_RETURN_REVIEW = `${FOREIGN},${CASED}`;
     const held = await readBookPerformance(db, ACCOUNT, 2, true);
     assert.deepEqual(held.liveRank, { pnlBps: null, unrankedWhy: "review-pending" });
     assert.deepEqual(held.performance, { ...open.performance, pnlUsdg: null, pnlBps: null, underReview: true },
@@ -691,12 +691,12 @@ test("a return under review is withheld on every book, and nothing but the retur
     assert.equal(paper.performance.pnlUsdg, null);
     assert.equal(paper.paperPnlBps, null);
     assert.equal(paper.performance.equityUsdg, 1100);
-    process.env.MERRYMEN_RETURN_REVIEW = FOREIGN;
+    process.env.AGENTCAP_RETURN_REVIEW = FOREIGN;
     assert.equal((await readBookPerformance(db, ACCOUNT, 2, true)).paperPnlBps, 1000, "another account's review is not this one's");
   } finally {
     raw.close();
-    if (saved === undefined) delete process.env.MERRYMEN_RETURN_REVIEW;
-    else process.env.MERRYMEN_RETURN_REVIEW = saved;
+    if (saved === undefined) delete process.env.AGENTCAP_RETURN_REVIEW;
+    else process.env.AGENTCAP_RETURN_REVIEW = saved;
   }
 });
 

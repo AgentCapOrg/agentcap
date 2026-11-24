@@ -25,11 +25,11 @@ test("runSolanaAgent publishes its live rollout settings as the worker's, under 
     rmSync(home, { recursive: true, force: true });
   });
   // A self-hosted worker on its own SQLite file; the market is built but never asked.
-  delete process.env.DATABASE_URL; delete process.env.MERRYMEN_HOSTED;
-  process.env.MERRYMEN_HOME = home;
-  process.env.MERRYMEN_SOLANA_RPC_MAINNET = "https://rpc.solana-agent-run.invalid/";
-  process.env.MERRYMEN_SOLANA_LIVE_TENANTS = `0x${"ab".repeat(20)}`;
-  process.env.MERRYMEN_SOLANA_LIVE_MAX_DAILY_USDG = "20";
+  delete process.env.DATABASE_URL; delete process.env.AGENTCAP_HOSTED;
+  process.env.AGENTCAP_HOME = home;
+  process.env.AGENTCAP_SOLANA_RPC_MAINNET = "https://rpc.solana-agent-run.invalid/";
+  process.env.AGENTCAP_SOLANA_LIVE_TENANTS = `0x${"ab".repeat(20)}`;
+  process.env.AGENTCAP_SOLANA_LIVE_MAX_DAILY_USDG = "20";
   const controller = new AbortController();
   const running = runSolanaAgent(controller.signal);
   let rows: Array<{ service: string; fingerprint: string }> = [];

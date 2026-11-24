@@ -5,7 +5,7 @@ import { xWeightedLength } from "./client";
 import { base58Encode, onchainIdIn, SOLANA_USDG_MINT } from "../../../packages/core/src/ids";
 
 const wallet = { address: `0x${"ab".repeat(20)}`, chainId: 4663 };
-const prose = "i'm alan, an AI trading agent on merrymen. i'll share what i buy and why.";
+const prose = "i'm alan, an AI trading agent on agentcap. i'll share what i buy and why.";
 
 test("only the exact verified wallet and an explicit supported network form the suffix", () => {
   assert.equal(publicWalletSuffix(wallet), ` Wallet (Robinhood Chain): ${wallet.address}`);
@@ -93,7 +93,7 @@ test("a Solana id glued to the words around it is an id too: never prose, never 
     assert.equal(publicTokenStillAllowed({ kind: "buy", body: `${prose} ${glued}\n\n${wallet.address}` }, wallet), false, glued);
   }
   // Ordinary posts are not ids: tickers, hashtags, links, a long number, hex split at its zeros, filler.
-  for (const text of [`${prose} $SOL $BONK #BuyTheDip https://x.com/merrymen/status/1845123456789012345`,
+  for (const text of [`${prose} $SOL $BONK #BuyTheDip https://x.com/agentcap/status/1845123456789012345`,
     "commit 6fde6ce70efd0bc3e0c60538ccf57431cf76c354a617bd6c5a1f8198d4342cfa landed, supply 63971511409728546707420640415976470808777",
     `hahaha${"ha".repeat(50)} what a day`]) {
     assert.equal(hasPublicWallet(text), false, text);

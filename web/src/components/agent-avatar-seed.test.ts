@@ -12,7 +12,7 @@ import { test } from "node:test";
 import * as React from "react";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { mintSlug } from "@merrymen/identity-store";
+import { mintSlug } from "@agentcap/identity-store";
 
 (globalThis as unknown as { React: typeof React }).React = React;
 

@@ -10,7 +10,7 @@
  * - It shows each provider's view, as the executor derives it from finalized
  *   on-chain evidence (observeSolanaSubmission), and can consult a third
  *   provider the operator supplies (--third-rpc, whose URL is read from
- *   MERRYMEN_SOLANA_RESOLVE_THIRD_RPC, never the command line: a URL can carry
+ *   AGENTCAP_SOLANA_RESOLVE_THIRD_RPC, never the command line: a URL can carry
  *   an API key, and arguments show in ps listings and shell history). Every
  *   provider must be on its own hostname.
  * - It books only when two of them agree on the same final outcome (a fill, an
@@ -22,7 +22,7 @@
  *   unreadable answer may be the evidence that it landed (a finalized status
  *   whose receipt cannot be used is refused as unreadable, not as unseen).
  * - A trade whose vault sequence moved for another reason (an owner withdrawal
- *   made outside Merrymen takes no expected sequence) can never run again, but
+ *   made outside AgentCap takes no expected sequence) can never run again, but
  *   the move may have been its own. Here alone, each provider is asked to prove
  *   from the vault's own debit log that it never ran (observeSolanaSubmission's
  *   proveSequenceConsumed): a landed swap always leaves a debit inside its
@@ -72,7 +72,7 @@ export class SolanaResolveError extends Error {
 function refuse(message: string): never { throw new SolanaResolveError(message); }
 
 /** The environment variable holding the third provider's HTTPS URL for --third-rpc. */
-export const SOLANA_RESOLVE_THIRD_RPC_ENV = "MERRYMEN_SOLANA_RESOLVE_THIRD_RPC";
+export const SOLANA_RESOLVE_THIRD_RPC_ENV = "AGENTCAP_SOLANA_RESOLVE_THIRD_RPC";
 /** --exclude names, and the provider label each one sets aside. */
 const EXCLUDABLE: Readonly<Record<string, string>> = { primary: "primary", fallback: "fallback", third: "operator's provider" };
 export const SOLANA_RESOLVE_USAGE = [
@@ -89,7 +89,7 @@ export const SOLANA_RESOLVE_USAGE = [
   "vault sequence and the show command for its evidence (owner show for an owner transaction), from the database alone (no RPC).",
   "npm run solana:resolve -- shortfall show <tenant|account> [--third-rpc] [--exclude primary|fallback|third] shows a vault below its book (the vault-below-book alert's",
   "account), and shortfall book <tenant|account> --operator NAME --reason \"why\" [--third-rpc] [--exclude ...] writes off what no owner withdrawal explains, as a loss;",
-  "shortfall history <tenant> lists those decisions. A withdrawal the owner made outside Merrymen is not a loss: the owner records it under Owner controls.",
+  "shortfall history <tenant> lists those decisions. A withdrawal the owner made outside AgentCap is not a loss: the owner records it under Owner controls.",
 ].join("\n");
 
 const SCHEMA = `CREATE TABLE IF NOT EXISTS solana_operator_resolutions (
@@ -406,7 +406,7 @@ export interface SolanaResolveDeps {
 }
 /**
  * The configured providers (primary, and the fallback when set) plus, with
- * `third`, the operator's from MERRYMEN_SOLANA_RESOLVE_THIRD_RPC, each a
+ * `third`, the operator's from AGENTCAP_SOLANA_RESOLVE_THIRD_RPC, each a
  * single-endpoint read session.
  */
 export function solanaResolveProviders(env: Readonly<Record<string, string | undefined>>, third: boolean,
@@ -417,10 +417,10 @@ export function solanaResolveProviders(env: Readonly<Record<string, string | und
   if (third) {
     const thirdRpc = env[SOLANA_RESOLVE_THIRD_RPC_ENV];
     if (!thirdRpc) refuse(`--third-rpc reads the third provider's HTTPS URL from ${SOLANA_RESOLVE_THIRD_RPC_ENV}. Set it in .env.solana.local or the environment, then run this again.`);
-    urls.push([EXCLUDABLE.third!, readSolanaMainnetRpcConfig({ MERRYMEN_SOLANA_RPC_MAINNET: thirdRpc }).url]);
+    urls.push([EXCLUDABLE.third!, readSolanaMainnetRpcConfig({ AGENTCAP_SOLANA_RPC_MAINNET: thirdRpc }).url]);
   }
   const providers = urls.map(([label, url]) => {
-    const transport = createSolanaLiveRpc({ env: { MERRYMEN_SOLANA_RPC_MAINNET: url }, singleEndpoint: true, fetch: options.fetch, timeoutMs: options.timeoutMs ?? 15_000 });
+    const transport = createSolanaLiveRpc({ env: { AGENTCAP_SOLANA_RPC_MAINNET: url }, singleEndpoint: true, fetch: options.fetch, timeoutMs: options.timeoutMs ?? 15_000 });
     return { label, host: normalizedHost(url), read: <T>(operation: (read: SolanaLiveRead) => Promise<T>) => transport.read(operation) };
   });
   if (new Set(providers.map(provider => provider.host)).size !== providers.length) {

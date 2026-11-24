@@ -76,7 +76,7 @@ async function fixture(t: TestContext, dialect: "sqlite" | "postgres" = "sqlite"
   const root = mkdtempSync(path.join(tmpdir(), "solana-trading-test-")); t.after(() => rmSync(root, { recursive: true, force: true }));
   const filename = path.join(root, "ledger.sqlite"); let raw: DatabaseSync | undefined;
   if (dialect === "postgres") {
-    const url = new URL(process.env.MERRYMEN_TEST_PG_URL!); const schema = `solana_test_${randomUUID().replaceAll("-", "")}`;
+    const url = new URL(process.env.AGENTCAP_TEST_PG_URL!); const schema = `solana_test_${randomUUID().replaceAll("-", "")}`;
     const admin = await makePgDb(url.toString()); await admin.exec(`CREATE SCHEMA ${schema}`);
     url.searchParams.set("options", `-c search_path=${schema}`); db = await makePgDb(url.toString());
     t.after(async () => { await admin.exec(`DROP SCHEMA ${schema} CASCADE`); });
@@ -95,7 +95,7 @@ async function fixture(t: TestContext, dialect: "sqlite" | "postgres" = "sqlite"
 }
 
 for (const dialect of ["sqlite", "postgres"] as const) {
-  const options = dialect === "postgres" && !process.env.MERRYMEN_TEST_PG_URL ? { skip: "Set MERRYMEN_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
+  const options = dialect === "postgres" && !process.env.AGENTCAP_TEST_PG_URL ? { skip: "Set AGENTCAP_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
   test(`${dialect}: concurrent admissions reserve one sequence and remain idempotent across lost response`, options, async t => {
     const f = await fixture(t, dialect), first = submission(), second = submission("other");
     const results = await Promise.all([f.store.recordSigned(first), f.store.recordSigned(second)]);
@@ -285,7 +285,7 @@ test("finalized deposits adjust cashflow/HWM once; owner withdrawals remove actu
   const rows = await f.db.prepare("SELECT * FROM solana_runtime_cashflows").all(); assert.equal(rows.length, 3);
 });
 for (const dialect of ["sqlite", "postgres"] as const) {
-  const options = dialect === "postgres" && !process.env.MERRYMEN_TEST_PG_URL ? { skip: "Set MERRYMEN_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
+  const options = dialect === "postgres" && !process.env.AGENTCAP_TEST_PG_URL ? { skip: "Set AGENTCAP_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
   test(`${dialect}: a finalized withdrawal is booked even when the book already moved past its slot, once, and the book's slot never moves back`, options, async t => {
     const f = await fixture(t, dialect), s = submission(); await f.store.recordSigned(s);
     await f.store.settle(OWNER, s.intent.requestId, s.signature, settlement(s));
@@ -321,7 +321,7 @@ for (const dialect of ["sqlite", "postgres"] as const) {
   });
 }
 for (const dialect of ["sqlite", "postgres"] as const) {
-  const options = dialect === "postgres" && !process.env.MERRYMEN_TEST_PG_URL ? { skip: "Set MERRYMEN_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
+  const options = dialect === "postgres" && !process.env.AGENTCAP_TEST_PG_URL ? { skip: "Set AGENTCAP_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
   test(`${dialect}: a finalized native SOL withdrawal raises the live book's slot (the trade snapshot floor) once the next prepare replaces its record, and never lowers it`, options, async t => {
     const f = await fixture(t, dialect), s = submission(); await f.store.recordSigned(s);
     await f.store.settle(OWNER, s.intent.requestId, s.signature, settlement(s));
@@ -509,10 +509,10 @@ test("the expired-attempt allowance setting defaults to 0 and accepts only a who
   assert.equal(solanaExpiredAttemptAllowance({}), SOLANA_DEFAULT_EXPIRED_ATTEMPT_ALLOWANCE);
   assert.equal(SOLANA_DEFAULT_EXPIRED_ATTEMPT_ALLOWANCE, 0);
   for (const [value, expected] of [["0", 0], ["1", 1], ["20", 20], ["96", 96]] as const) {
-    assert.equal(solanaExpiredAttemptAllowance({ MERRYMEN_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE: value }), expected);
+    assert.equal(solanaExpiredAttemptAllowance({ AGENTCAP_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE: value }), expected);
   }
   for (const value of ["", " 1", "01", "-1", "1.5", "97", "100", "1e1", "many"]) {
-    assert.throws(() => solanaExpiredAttemptAllowance({ MERRYMEN_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE: value }), /allowance setting is misconfigured/, JSON.stringify(value));
+    assert.throws(() => solanaExpiredAttemptAllowance({ AGENTCAP_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE: value }), /allowance setting is misconfigured/, JSON.stringify(value));
   }
 });
 
@@ -595,7 +595,7 @@ test("admission re-checks the price bound against the configured tolerance, not 
 });
 
 for (const dialect of ["sqlite", "postgres"] as const) {
-  const options = dialect === "postgres" && !process.env.MERRYMEN_TEST_PG_URL ? { skip: "Set MERRYMEN_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
+  const options = dialect === "postgres" && !process.env.AGENTCAP_TEST_PG_URL ? { skip: "Set AGENTCAP_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
   /** A live book written straight into the store, and an operator's write-off decision recorded on `snapshot` (as the resolve tool records it first). */
   const shortfallAccount = async (t: TestContext, book: Record<string, unknown>) => {
     const f = await fixture(t, dialect); await ensureSolanaShortfallSchema(f.db, dialect === "postgres");
@@ -955,7 +955,7 @@ test("each owner transaction kind is proven expired only by state it must change
 
 // REVOKE BESIDE A PENDING OWNER TRANSACTION (solana-trading-store.ts): the revoke slot, on both dialects.
 for (const dialect of ["sqlite", "postgres"] as const) {
-  const options = dialect === "postgres" && !process.env.MERRYMEN_TEST_PG_URL ? { skip: "Set MERRYMEN_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
+  const options = dialect === "postgres" && !process.env.AGENTCAP_TEST_PG_URL ? { skip: "Set AGENTCAP_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
   const prior = { priorVaultExisted: true, priorSequence: "1", priorSessionEpoch: "1" };
   const expiry = (vaultSequence: string, sessionEpoch: string) => ({ reason: "blockhash-expired" as const, blockHeight: "1201", vaultSequence, sessionEpoch, slot: 1002 });
   const revokeBeside = (beside: string) => ({ ...setup("revoke"), ...prior, beside, messageBase64: "cmV2b2tl", transactionBase64: "cmV2b2tl" });
@@ -1097,7 +1097,7 @@ for (const dialect of ["sqlite", "postgres"] as const) {
     assert.equal(await f.store.saveSetup({ ...again, priorSessionEpoch: "3", signature: "revoke-again", signedTransactionBase64: "c2lnbmVkLWFnYWlu", status: "pending", landed: [] }), true);
     assert.deepEqual((await f.store.revokeSetup())!.landed, [first]);
     await f.store.finishSetup("revoke-again", "finalized", 1005);
-    // Nothing registered since this one either: refused. A session registered after it (outside Merrymen, epoch 5): prepared, both kept.
+    // Nothing registered since this one either: refused. A session registered after it (outside AgentCap, epoch 5): prepared, both kept.
     await assert.rejects(f.store.saveSetup({ ...again, priorSessionEpoch: "4", preparedAtMs: NOW + 6 }), landedRefusal);
     assert.equal(await f.store.saveSetup({ ...again, priorSessionEpoch: "5", preparedAtMs: NOW + 6 }), true);
     assert.deepEqual((await f.store.revokeSetup())!.landed!.map(item => [item.signature, item.landed]), [["revoke-beside", undefined], ["revoke-again", undefined]]);
@@ -1180,7 +1180,7 @@ for (const dialect of ["sqlite", "postgres"] as const) {
     const f = await fixture(t, dialect);
     await saveSignedSetup(f.store, { ...setup("session"), ...prior }, "registration-moved");
     await f.store.finishSetup("registration-moved", "finalized", 1003);
-    // A revocation outside Merrymen landed first (epoch 1 -> 2), then the registration (-> 3).
+    // A revocation outside AgentCap landed first (epoch 1 -> 2), then the registration (-> 3).
     for (const sessionEpoch of ["3", "1", "0"]) {
       await assert.rejects(f.store.registerSession({ ...f.registered, registrationSignature: "registration-moved", sessionEpoch }, sessionSeed, dek),
         (error: unknown) => error instanceof Error && error.message === SOLANA_REGISTERED_AFTER_REVOKE, sessionEpoch);
@@ -1188,9 +1188,9 @@ for (const dialect of ["sqlite", "postgres"] as const) {
     await f.store.registerSession({ ...f.registered, registrationSignature: "registration-moved", sessionEpoch: "2" }, sessionSeed, dek);
     assert.equal((await f.store.session())!.registrationSignature, "registration-moved");
   });
-  // OWNER WITHDRAWALS MADE OUTSIDE MERRYMEN (solana-trading-store.ts).
+  // OWNER WITHDRAWALS MADE OUTSIDE AGENTCAP (solana-trading-store.ts).
   const outsideSignature = (n: number) => base58Encode(new Uint8Array(64).fill(n));
-  test(`${dialect}: wrapped SOL withdrawn outside Merrymen lowers the high-water mark by the lower of its value now and its cost basis`, options, async t => {
+  test(`${dialect}: wrapped SOL withdrawn outside AgentCap lowers the high-water mark by the lower of its value now and its cost basis`, options, async t => {
     for (const [label, cost, usdPerSol] of [["SOL fell since it was bought", 2_000_000n, 500n], ["SOL rose since it was bought", 500_000n, 500n], ["SOL rose after it left", 600_000n, 1_000n]] as const) {
       const f = await fixture(t, dialect);
       // 0.004 SOL held at the given cost; the book's peak 20 USDG.
@@ -1204,7 +1204,7 @@ for (const dialect of ["sqlite", "postgres"] as const) {
       assert.equal(book.wsolRaw, "0"); assert.equal(book.costBasisUsdgRaw, "0");
     }
   });
-  test(`${dialect}: a withdrawal made outside Merrymen is booked once from its own evidence, only after the book's last balances, and never one the app booked`, options, async t => {
+  test(`${dialect}: a withdrawal made outside AgentCap is booked once from its own evidence, only after the book's last balances, and never one the app booked`, options, async t => {
     const f = await fixture(t, dialect), s = submission();
     await f.store.recordSigned(s); await f.store.settle(OWNER, s.intent.requestId, s.signature, settlement(s));
     // An in-app withdrawal, booked by its signature.
@@ -1248,14 +1248,14 @@ for (const dialect of ["sqlite", "postgres"] as const) {
 }
 
 for (const dialect of ["sqlite", "postgres"] as const) {
-  const options = dialect === "postgres" && !process.env.MERRYMEN_TEST_PG_URL ? { skip: "Set MERRYMEN_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
-  test(`${dialect}: an in-app withdrawal the wallet broadcast itself and the owner recorded as made outside Merrymen first is booked once: its bytes are refused afterwards, and never booked again`, options, async t => {
+  const options = dialect === "postgres" && !process.env.AGENTCAP_TEST_PG_URL ? { skip: "Set AGENTCAP_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
+  test(`${dialect}: an in-app withdrawal the wallet broadcast itself and the owner recorded as made outside AgentCap first is booked once: its bytes are refused afterwards, and never booked again`, options, async t => {
     const f = await fixture(t, dialect), s = submission();
     await f.store.recordSigned(s); await f.store.settle(OWNER, s.intent.requestId, s.signature, settlement(s));
     const start = (await f.store.liveBook())!, signature = base58Encode(new Uint8Array(64).fill(9));
     const prepared = { ...setup("withdraw"), priorVaultExisted: true, priorSequence: "1", priorSessionEpoch: "1", mint: SOLANA_USDG_MINT, amountRaw: "1000000" };
     await f.store.saveSetup(prepared);
-    // The wallet broadcast the signed bytes itself; the owner records them under "Withdrew outside Merrymen?".
+    // The wallet broadcast the signed bytes itself; the owner records them under "Withdrew outside AgentCap?".
     await f.store.reconcileExternalWithdrawals({ withdrawals: [{ signature, slot: 1003, mint: SOLANA_USDG_MINT, amountRaw: "1000000" }] });
     // The page's resubmit of the same signed bytes, still inside the prepare window: refused before anything is saved.
     await assert.rejects(f.store.saveSetup({ ...prepared, signature, signedTransactionBase64: "c2lnbmVk", status: "pending" }),
@@ -1285,7 +1285,7 @@ for (const dialect of ["sqlite", "postgres"] as const) {
     await assert.rejects(f.store.saveSetup(withdraw(SOLANA_USDG_MINT, "90000001")), (error: unknown) => error instanceof Error && error.message === SOLANA_WITHDRAWAL_ABOVE_BOOK);
     await assert.rejects(f.store.saveSetup(withdraw(SOLANA_WRAPPED_SOL_MINT, "21", { syncedWsolRaw: "5" })), (error: unknown) => error instanceof Error && error.message === SOLANA_WITHDRAWAL_ABOVE_BOOK);
     assert.equal(await f.store.saveSetup(withdraw(SOLANA_WRAPPED_SOL_MINT, "20", { syncedWsolRaw: "5" })), true);
-    // The book drops under a prepared withdrawal: 60 USDG recorded as withdrawn outside Merrymen meanwhile.
+    // The book drops under a prepared withdrawal: 60 USDG recorded as withdrawn outside AgentCap meanwhile.
     const prepared = withdraw(SOLANA_USDG_MINT, "90000000");
     assert.equal(await f.store.saveSetup(prepared), true);
     await f.store.reconcileExternalWithdrawals({ withdrawals: [{ signature: base58Encode(new Uint8Array(64).fill(8)), slot: 1003, mint: SOLANA_USDG_MINT, amountRaw: "60000000" }] });
@@ -1302,7 +1302,7 @@ for (const dialect of ["sqlite", "postgres"] as const) {
 }
 
 for (const dialect of ["sqlite", "postgres"] as const) {
-  const options = dialect === "postgres" && !process.env.MERRYMEN_TEST_PG_URL ? { skip: "Set MERRYMEN_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
+  const options = dialect === "postgres" && !process.env.AGENTCAP_TEST_PG_URL ? { skip: "Set AGENTCAP_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
   const signatureOf = (n: number) => base58Encode(new Uint8Array(64).fill(n));
   const flows = async (f: Awaited<ReturnType<typeof fixture>>) => (await f.db.prepare("SELECT evidence_id,kind,mint,amount_raw FROM solana_runtime_cashflows WHERE evidence_id LIKE 'external%'").all() as
     Array<Record<string, string>>).sort((a, b) => byEvidence(a.evidence_id!, b.evidence_id!)).map(row => [row.evidence_id, row.kind, row.amount_raw]);
@@ -1328,7 +1328,7 @@ for (const dialect of ["sqlite", "postgres"] as const) {
     assert.deepEqual(results, [{ path: "in-app", hwmRaw: "0", cashRaw: "0" }, { path: "outside", hwmRaw: "0", cashRaw: "0" }],
       "both net the 40 lost against the 50 deposited; neither path keeps the loss in the peak");
   });
-  test(`${dialect}: a sweep outside Merrymen that also took an inflow no status read booked yet books that inflow first, then the withdrawal, and the book is free again`, options, async t => {
+  test(`${dialect}: a sweep outside AgentCap that also took an inflow no status read booked yet books that inflow first, then the withdrawal, and the book is free again`, options, async t => {
     // USDG: 1 USDG deposited after the last read, then solana-recover took the whole balance.
     {
       const f = await fixture(t, dialect), s = submission();
@@ -1371,7 +1371,7 @@ for (const dialect of ["sqlite", "postgres"] as const) {
   });
 }
 
-test("withdrawals made outside Merrymen are refused while a trade or an owner transaction is pending, and without a book", async t => {
+test("withdrawals made outside AgentCap are refused while a trade or an owner transaction is pending, and without a book", async t => {
   const outside = { signature: base58Encode(new Uint8Array(64).fill(5)), slot: 1003, mint: SOLANA_USDG_MINT, amountRaw: "1" };
   const empty = await fixture(t);
   await assert.rejects(empty.store.reconcileExternalWithdrawals({ withdrawals: [outside] }), /no live trading record/);
@@ -1406,7 +1406,7 @@ test("a first live book on a vault that already holds WSOL starts with it quaran
 
 // The new admission and accounting SQL runs on both dialects; CI runs these against PostgreSQL.
 for (const dialect of ["sqlite", "postgres"] as const) {
-  const options = dialect === "postgres" && !process.env.MERRYMEN_TEST_PG_URL ? { skip: "Set MERRYMEN_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
+  const options = dialect === "postgres" && !process.env.AGENTCAP_TEST_PG_URL ? { skip: "Set AGENTCAP_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
   test(`${dialect}: an operator hold refuses live admission, manual or automatic, while owner actions continue`, options, async t => {
     const f = await fixture(t, dialect);
     await setSolanaOperatorHold(f.db, TENANT, "incident", NOW);
@@ -1546,7 +1546,7 @@ async function holdBookLocks(db: Db) {
 }
 const bookCode = (code: SolanaPaperStoreError["code"]) => (error: unknown) => error instanceof SolanaPaperStoreError && error.code === code;
 for (const dialect of ["sqlite", "postgres"] as const) {
-  const options = dialect === "postgres" && !process.env.MERRYMEN_TEST_PG_URL ? { skip: "Set MERRYMEN_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
+  const options = dialect === "postgres" && !process.env.AGENTCAP_TEST_PG_URL ? { skip: "Set AGENTCAP_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
   test(`${dialect}: a hosted owner writes off a dust lot under the book lock, once; the book keeps the record and another tenant cannot touch it`, options, async t => {
     const f = await fixture(t, dialect), d = await dustBook(f);
     assert.equal(d.before.positions.length, 1); assert.equal(d.before.version, 1);
@@ -1624,7 +1624,7 @@ test("a hosted write-off is the owner's alone, in paper mode, and only for a who
 });
 
 for (const dialect of ["sqlite", "postgres"] as const) {
-  const options = dialect === "postgres" && !process.env.MERRYMEN_TEST_PG_URL ? { skip: "Set MERRYMEN_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
+  const options = dialect === "postgres" && !process.env.AGENTCAP_TEST_PG_URL ? { skip: "Set AGENTCAP_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
   test(`${dialect}: status reads the rolling USDG and SOL sold use as admission counts it: pending and landed trades, buys and sales, inside 24 hours, until failure or expiry releases them`, options, async t => {
     const f = await fixture(t, dialect), scope = { tenant: TENANT, owner: OWNER };
     assert.deepEqual(await solanaRollingLimitUse(f.db, scope, NOW), { notionalRaw: 0n, soldWsolRaw: 0n });
@@ -1644,10 +1644,10 @@ for (const dialect of ["sqlite", "postgres"] as const) {
   });
   test(`${dialect}: the web and the Solana worker publish their live rollout digests, and a buy preview is held while they differ`, options, async t => {
     const f = await fixture(t, dialect), scope = { tenant: TENANT, owner: OWNER };
-    const env = { MERRYMEN_SOLANA_LIVE_TENANTS: TENANT, ...(dialect === "postgres" ? { DATABASE_URL: "postgres://already-connected" } : {}) };
+    const env = { AGENTCAP_SOLANA_LIVE_TENANTS: TENANT, ...(dialect === "postgres" ? { DATABASE_URL: "postgres://already-connected" } : {}) };
     const runtime = (more: Record<string, string>, service?: "worker") => createSolanaAppRuntime({ db: f.db, env: { ...env, ...more }, now: () => f.clock.value,
       log: () => {}, ...(service ? { service } : {}) });
-    const worker = runtime({ MERRYMEN_SOLANA_LIVE_MAX_DAILY_USDG: "24" }, "worker"), web = runtime({});
+    const worker = runtime({ AGENTCAP_SOLANA_LIVE_MAX_DAILY_USDG: "24" }, "worker"), web = runtime({});
     await worker.publishLiveRollout(); f.clock.value += 1; await worker.publishLiveRollout();
     const rows = async () => (await f.db.prepare("SELECT service,fingerprint,seen_at_ms FROM solana_runtime_live_rollout_seen ORDER BY service").all() as
       Array<{ service: string; fingerprint: string; seen_at_ms: number | string }>).map(r => [r.service, r.fingerprint.length, Number(r.seen_at_ms)]);
@@ -1667,7 +1667,7 @@ for (const dialect of ["sqlite", "postgres"] as const) {
     assert.equal((await rows()).length, 2);
     // A worker heartbeat (read back as a number on either database) beside a worker digest over 90 s old: the web holds buys,
     // whatever the digest said; once the heartbeat is old too, nothing is compared.
-    const same = runtime({ MERRYMEN_SOLANA_LIVE_MAX_DAILY_USDG: "24" });
+    const same = runtime({ AGENTCAP_SOLANA_LIVE_MAX_DAILY_USDG: "24" });
     await assert.rejects(same.preview(scope, { mode: "live", intent: buy }), (error: unknown) => error instanceof Error && error.message !== SOLANA_LIVE_ROLLOUT_DIFFERS);
     f.clock.value += 91_000;
     await f.db.prepare("INSERT INTO solana_runtime_worker_heartbeat(worker,last_seen_at_ms) VALUES('solana',?) ON CONFLICT(worker) DO UPDATE SET last_seen_at_ms=excluded.last_seen_at_ms").run(f.clock.value);
@@ -1678,7 +1678,7 @@ for (const dialect of ["sqlite", "postgres"] as const) {
 }
 
 for (const dialect of ["sqlite", "postgres"] as const) {
-  const options = dialect === "postgres" && !process.env.MERRYMEN_TEST_PG_URL ? { skip: "Set MERRYMEN_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
+  const options = dialect === "postgres" && !process.env.AGENTCAP_TEST_PG_URL ? { skip: "Set AGENTCAP_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
   test(`${dialect}: a sale that lands above its quote counts its actual proceeds in the rolling window, as the program charges them, so the next buy's exit reserve sees them`, options, async t => {
     // 20 USDG per trade and 50 a day, 0.05 and 0.12 SOL; $500 a SOL, 3% tolerance.
     const f = await fixture(t, dialect), scope = { tenant: TENANT, owner: OWNER };
@@ -1720,12 +1720,12 @@ for (const dialect of ["sqlite", "postgres"] as const) {
 }
 
 for (const dialect of ["sqlite", "postgres"] as const) {
-  const options = dialect === "postgres" && !process.env.MERRYMEN_TEST_PG_URL ? { skip: "Set MERRYMEN_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
+  const options = dialect === "postgres" && !process.env.AGENTCAP_TEST_PG_URL ? { skip: "Set AGENTCAP_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
   const buy = { kind: "spl-swap", chain: CHAINS.solana, mode: "live", requestId: "web-buy", inputMint: SOLANA_USDG_MINT, outputMint: SOLANA_WRAPPED_SOL_MINT,
     amountRaw: "1000000", slippageBps: 50 };
   test(`${dialect}: the worker's digest is written with every heartbeat, so a worker on the same settings that beats late is never held as one that publishes none`, options, async t => {
     const f = await fixture(t, dialect), scope = { tenant: TENANT, owner: OWNER };
-    const env = { MERRYMEN_SOLANA_LIVE_TENANTS: TENANT, ...(dialect === "postgres" ? { DATABASE_URL: "postgres://already-connected" } : {}) };
+    const env = { AGENTCAP_SOLANA_LIVE_TENANTS: TENANT, ...(dialect === "postgres" ? { DATABASE_URL: "postgres://already-connected" } : {}) };
     const lines: string[] = [];
     // The worker as runSolanaAgent runs it, and the web, on the same settings and database.
     const worker = solanaWorkerRuntime({ db: f.db, env, now: () => f.clock.value, log: () => {} });

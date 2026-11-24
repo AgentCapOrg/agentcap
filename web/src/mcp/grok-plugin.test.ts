@@ -9,19 +9,19 @@ import { SCOPES, scopeFor } from "./scopes";
 import { ALL_TOOLS } from "./tools";
 import { SETUP_DRAFT_DEFAULTS } from "./instructions";
 
-const root = new URL("../../../plugins/merrymen-grok/", import.meta.url);
+const root = new URL("../../../plugins/agentcap-grok/", import.meta.url);
 const read = (relative: string) => readFileSync(new URL(relative, root), "utf8");
-const skills = ["merrymen-monitor", "merrymen-setup"];
+const skills = ["agentcap-monitor", "agentcap-setup"];
 
 test("the Grok package is declarative and targets the production MCP endpoint without credentials", () => {
   const manifest = JSON.parse(read(".cursor-plugin/plugin.json"));
-  assert.equal(manifest.name, "merrymen-grok");
+  assert.equal(manifest.name, "agentcap-grok");
   assert.match(manifest.version, /^\d+\.\d+\.\d+$/);
   assert.ok(manifest.description && manifest.author?.name);
   // Reject new execution/configuration surfaces unless their packaging is reviewed.
   assert.deepEqual(Object.keys(manifest).sort(), ["author", "description", "homepage", "keywords", "license", "logo", "name", "repository", "version"]);
   assert.deepEqual(JSON.parse(read("mcp.json")), {
-    mcpServers: { merrymen: { url: PLUGIN_SERVER_URL } },
+    mcpServers: { agentcap: { url: PLUGIN_SERVER_URL } },
   });
   const files = readdirSync(root, { recursive: true, withFileTypes: true })
     .filter(entry => entry.isFile()).map(entry => {
@@ -45,7 +45,7 @@ test("the plugin logo resolves within the package and matches the current public
   assert.equal(logo.readUInt32BE(20), 512, "logo height");
 });
 
-test("packaged skills resolve to current Merrymen tools", () => {
+test("packaged skills resolve to current AgentCap tools", () => {
   const tools = new Set(ALL_TOOLS.map(tool => tool.name));
   assert.deepEqual(readdirSync(new URL("skills/", root)).sort(), skills);
   for (const skill of skills) {
@@ -60,12 +60,12 @@ test("packaged skills resolve to current Merrymen tools", () => {
 });
 
 test("the setup skill and host instructions carry the same supported draft template", () => {
-  const text = read("skills/merrymen-setup/SKILL.md");
+  const text = read("skills/agentcap-setup/SKILL.md");
   const block = /```json\n([\s\S]*?)\n```/.exec(text)?.[1];
   assert.ok(block, "setup must disclose its starter configuration");
   const defaults = JSON.parse(block);
   assert.deepEqual(defaults, SETUP_DRAFT_DEFAULTS);
-  const tool = ALL_TOOLS.find(tool => tool.name === "create_merryman");
+  const tool = ALL_TOOLS.find(tool => tool.name === "create_agentcapavatar");
   assert.ok(tool);
   const input = { ...defaults, idempotency_key: "grok-setup-contract-test" };
   assert.deepEqual(tool.input.parse(input), input);
@@ -77,7 +77,7 @@ test("the setup skill and host instructions carry the same supported draft templ
 });
 
 test("the monitoring workflow only allows existing read-only tools reachable by its read scopes", () => {
-  const text = read("skills/merrymen-monitor/SKILL.md");
+  const text = read("skills/agentcap-monitor/SKILL.md");
   const block = /```json\n([\s\S]*?)\n```/.exec(text)?.[1];
   assert.ok(block, "monitoring workflow must declare its tool/scope allowlist");
   const policy = JSON.parse(block) as { scopes: string[]; tools: string[] };

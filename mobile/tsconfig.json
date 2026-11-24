@@ -9,7 +9,7 @@
       "@/assets/*": [
         "./assets/*"
       ],
-      "@merrymen/core": [
+      "@agentcap/core": [
         "../packages/core/src/index.ts"
       ],
       "viem": [
@@ -18,7 +18,7 @@
       "viem/*": [
         "./node_modules/viem/*"
       ],
-      "@merrymen/recover": [
+      "@agentcap/recover": [
         "../worker/src/recover.ts"
       ]
     }

@@ -20,9 +20,9 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const dir = await mkdtemp(path.join(tmpdir(), "merrymen-cross-"));
-process.env.MERRYMEN_DATA_DIR = dir;
-delete process.env.MERRYMEN_PARTNER_KEYS;
+const dir = await mkdtemp(path.join(tmpdir(), "agentcap-cross-"));
+process.env.AGENTCAP_DATA_DIR = dir;
+delete process.env.AGENTCAP_PARTNER_KEYS;
 
 const { createPartners, hashSecret, makeKey, parseKey, writeRecord } = await import("./lib/partners.mjs");
 const { createPartnerApi } = await import("./lib/partner-api.mjs");
@@ -63,7 +63,7 @@ function holderGateway(store) {
     upstreamUrl: "http://127.0.0.1:1/never",
     upstreamKey: "unused",
     model: "m",
-    domain: "merrymen.dev",
+    domain: "agentcap.xyz",
     minTokens: 1n,
     tokenAddress: "0xa15cd06dd305269a0f48bebeb30aa3588fba7b32",
     publicClient: { readContract: async () => 10n ** 30n },
@@ -113,7 +113,7 @@ test("a PARTNER key is refused by the holder bitquery route", async () => {
     upstreamUrl: "http://127.0.0.1:1/never",
     upstreamKey: "unused",
     model: "m",
-    domain: "merrymen.dev",
+    domain: "agentcap.xyz",
     minTokens: 1n,
     tokenAddress: "0xa15cd06dd305269a0f48bebeb30aa3588fba7b32",
     publicClient: { readContract: async () => 10n ** 30n },
@@ -174,7 +174,7 @@ test("a refusal the server answers before the partner API still carries a reques
   // arrived at all: the socket was destroyed before it was written.
   const port = await new Promise((resolve) => { const probe = createServer().listen(0, "127.0.0.1", () => { const { port } = probe.address(); probe.close(() => resolve(port)); }); });
   const child = spawn(process.execPath, [fileURLToPath(new URL("./server.mjs", import.meta.url))], { stdio: ["ignore", "pipe", "pipe"],
-    env: { PATH: process.env.PATH, PORT: String(port), MERRYMEN_DATA_DIR: dir, MERRYMEN_GATEWAY_UPSTREAM_KEY: "unused", MERRYMEN_GATEWAY_SECRET: SECRET, MERRYMEN_GATEWAY_RPC: "http://127.0.0.1:9" } });
+    env: { PATH: process.env.PATH, PORT: String(port), AGENTCAP_DATA_DIR: dir, AGENTCAP_GATEWAY_UPSTREAM_KEY: "unused", AGENTCAP_GATEWAY_SECRET: SECRET, AGENTCAP_GATEWAY_RPC: "http://127.0.0.1:9" } });
   let errors = "";
   child.stderr.on("data", (chunk) => { errors += chunk; });
   try {
@@ -197,7 +197,7 @@ test("a refusal the server answers before the partner API still carries a reques
     const grant = await fetch(`http://127.0.0.1:${port}/partner/v1/agents/pa_0123456789abcdef/activate`, { method: "POST", body: "x".repeat(40 * 1024), headers: { authorization: "Bearer mmp_x" } });
     assert.equal(grant.status, 404);
     // Started without a bridge secret, it says so at boot rather than at a partner's first 503.
-    assert.match(errors, /MERRYMEN_PARTNER_BRIDGE_SECRET is unset/);
+    assert.match(errors, /AGENTCAP_PARTNER_BRIDGE_SECRET is unset/);
   } finally { child.kill(); }
 });
 

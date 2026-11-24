@@ -2,10 +2,10 @@
  * REAL POSTGRES: EVERY STATEMENT THE TELEGRAM OUTAGE FIX ADDS, OVER THE SCHEMA
  * PRODUCTION RUNS. Opt-in, like pg-upgrade.postgres.test.ts (see its header):
  *
- *   MERRYMEN_TEST_PG_URL=postgres://merrymen@localhost:55432/merrymen_pgtest \
+ *   AGENTCAP_TEST_PG_URL=postgres://agentcap@localhost:55432/agentcap_pgtest \
  *     npx tsx --test worker/src/telegram-fix.postgres.test.ts
  *
- * Skipped without it (MERRYMEN_TEST_POSTGRES_URL works too). A LOCAL Postgres
+ * Skipped without it (AGENTCAP_TEST_POSTGRES_URL works too). A LOCAL Postgres
  * only, in a schema of its own, `mm_tgfix_test_<hex>`, dropped after; the test
  * never reads DATABASE_URL, and sets it only around the calls that read it.
  * One thing is not in the schema: an advisory lock is DATABASE-WIDE, so the
@@ -63,7 +63,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import type { ChildProcess, SpawnOptions } from "node:child_process";
-import type { MerrymenSettings, StoredGrant } from "../../packages/core/src/index";
+import type { AgentCapSettings, StoredGrant } from "../../packages/core/src/index";
 import { advisoryLockWaitersForTest, LockBusyError, makePgDb, translateSchema, withAdvisoryLock, type Db } from "./db";
 import { applyLedgerSchema } from "./store";
 import { PgSettingsStore, resetSettingsStoreForTest, useSettingsStoreForTest, type PgClientLike } from "./settings-store";
@@ -111,7 +111,7 @@ import {
   useBotClaimsDbForTest,
 } from "../../web/src/lib/telegram-claims";
 
-const url = process.env.MERRYMEN_TEST_PG_URL ?? process.env.MERRYMEN_TEST_POSTGRES_URL;
+const url = process.env.AGENTCAP_TEST_PG_URL ?? process.env.AGENTCAP_TEST_POSTGRES_URL;
 
 interface PgClient extends PgClientLike {
   connect(): Promise<void>;
@@ -156,23 +156,23 @@ test("Postgres: the Telegram outage fix over production's schema", { skip: !url,
   const scoped = (who: string) => {
     const u = new URL(target);
     u.searchParams.set("options", `-c search_path=${schema} -c statement_timeout=20000 -c lock_timeout=10000`);
-    u.searchParams.set("application_name", `merrymen-tgfix-test-${who}`);
+    u.searchParams.set("application_name", `agentcap-tgfix-test-${who}`);
     return u.toString();
   };
 
   // The process environment the stores read, pointed at this run and put back after.
   const saved = {
     db: process.env.DATABASE_URL,
-    dek: process.env.MERRYMEN_STORE_DEK,
-    home: process.env.MERRYMEN_HOME,
-    hosted: process.env.MERRYMEN_HOSTED,
-    tgEnabled: process.env.MERRYMEN_TELEGRAM_ENABLED,
+    dek: process.env.AGENTCAP_STORE_DEK,
+    home: process.env.AGENTCAP_HOME,
+    hosted: process.env.AGENTCAP_HOSTED,
+    tgEnabled: process.env.AGENTCAP_TELEGRAM_ENABLED,
   };
   const home = mkdtempSync(path.join(os.tmpdir(), "mm-tgfix-"));
-  process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 11).toString("base64");
-  process.env.MERRYMEN_HOME = home;
+  process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 11).toString("base64");
+  process.env.AGENTCAP_HOME = home;
   delete process.env.DATABASE_URL;
-  delete process.env.MERRYMEN_TELEGRAM_ENABLED;
+  delete process.env.AGENTCAP_TELEGRAM_ENABLED;
   /** Run `fn` with DATABASE_URL naming this run's schema, for the code that reads it (the lease, the web's read helper). */
   const withDatabaseUrl = async <T>(who: string, fn: () => Promise<T>): Promise<T> => {
     process.env.DATABASE_URL = scoped(who);
@@ -198,7 +198,7 @@ test("Postgres: the Telegram outage fix over production's schema", { skip: !url,
     const web = await makePgDb(scoped("web"));
     const settings = new PgSettingsStore(scoped("settings"), "spot", connect);
     /** What a save's claim step reads back after its write: the sealed settings in this Postgres. */
-    const pgSettings = (before: MerrymenSettings | null) => ({ before, read: (tn: `0x${string}`) => settings.get(tn) });
+    const pgSettings = (before: AgentCapSettings | null) => ({ before, read: (tn: `0x${string}`) => settings.get(tn) });
     /** For a claim step whose settle and undo these subtests never run. */
     const nothingStored = { before: null, read: async () => null };
     const cols = async (table: string) =>
@@ -252,7 +252,7 @@ test("Postgres: the Telegram outage fix over production's schema", { skip: !url,
       // production runs now (the child's code and owner, ferried up).
       await publishTenantTelegram(orch, T1, { linkCode: "OLDC0D", ownerId: OWNER_CHAT, linkedAt: 1_790_000_000 });
       await publishTenantTelegram(orch, T2, { linkCode: "T2C0DE", ownerId: null, linkedAt: null });
-      await settings.put(T1, { telegramEnabled: true, telegramBotToken: TOKEN_111, telegramAllowlist: [OWNER_CHAT] } as MerrymenSettings);
+      await settings.put(T1, { telegramEnabled: true, telegramBotToken: TOKEN_111, telegramAllowlist: [OWNER_CHAT] } as AgentCapSettings);
       const tt = await cols("tenant_telegram");
       for (const c of ["bot_id", "poll_ok_at", "poll_err", "poll_err_at", "child_state", "hold_notified"]) {
         assert.ok(!tt.has(c), `production has no ${c} yet`);
@@ -445,7 +445,7 @@ test("Postgres: the Telegram outage fix over production's schema", { skip: !url,
       await claimBot(web, "9003", TB, "9003", FAR_MS);
       const switched = await decideBotClaim({ db: web, tenant: TB, token: `${bot}:BBB-secret`, moveBot: false, confirmBot: async () => bot, settings: pgSettings(null) });
       assert.ok(switched.ok);
-      await settings.put(TB, { telegramBotToken: `${bot}:BBB-secret` } as MerrymenSettings);
+      await settings.put(TB, { telegramBotToken: `${bot}:BBB-secret` } as AgentCapSettings);
       await switched.settle();
       const now = await readBotClaims(orch);
       assert.deepEqual([now.get(bot), now.get("9003")], [TB, undefined], "saved a different bot: the old one is free");
@@ -563,7 +563,7 @@ test("Postgres: the Telegram outage fix over production's schema", { skip: !url,
       const stampOf = async (bot: string) =>
         Number(((await orch.prepare("SELECT claimed_at FROM telegram_bot_claims WHERE bot_id = ?").get(bot)) as { claimed_at: number }).claimed_at);
       const storedBot = async () => botIdOf((await settings.get(TW))!.telegramBotToken!);
-      const write = (token: string) => settings.put(TW, { telegramEnabled: true, telegramBotToken: token } as MerrymenSettings);
+      const write = (token: string) => settings.put(TW, { telegramEnabled: true, telegramBotToken: token } as AgentCapSettings);
       const decide = async (db: Db, token: string, over: Partial<Parameters<typeof decideBotClaim>[0]> = {}) => {
         const d = await decideBotClaim({ db, tenant: TW, token, moveBot: false, confirmBot: async (tok) => botIdOf(tok), settings: pgSettings(await settings.get(TW)), ...over });
         assert.ok(d.ok, JSON.stringify(d));
@@ -726,7 +726,7 @@ test("Postgres: the Telegram outage fix over production's schema", { skip: !url,
       // its claim; the other process's save of the allowlist waits, then reads
       // 9401 and writes it back with its own change.
       await releaseBotClaims(orch, TL);
-      await settings.put(TL, { telegramEnabled: true, telegramBotToken: "9400:LLL-prior" } as MerrymenSettings);
+      await settings.put(TL, { telegramEnabled: true, telegramBotToken: "9400:LLL-prior" } as AgentCapSettings);
       await claimBot(orch, "9400", TL, "9400", FAR_MS);
       const readBack = { read: (tn: `0x${string}`) => settings.get(tn) };
       let write!: () => void;
@@ -735,7 +735,7 @@ test("Postgres: the Telegram outage fix over production's schema", { skip: !url,
       const hasClaimed = new Promise<void>((r) => (claimed = r));
       const tokenSave = withAdvisoryLock(web, SETTINGS_SAVE_LOCK, key, async (pinned) => {
         const before = await settings.get(TL);
-        const next = { ...before, telegramBotToken: "9401:LLL-new" } as MerrymenSettings;
+        const next = { ...before, telegramBotToken: "9401:LLL-new" } as AgentCapSettings;
         const d = await decideBotClaim({ db: pinned, tenant: TL, token: next.telegramBotToken, moveBot: false, confirmBot: async (tok) => botIdOf(tok), settings: { before, ...readBack } });
         assert.ok(d.ok);
         claimed();
@@ -746,7 +746,7 @@ test("Postgres: the Telegram outage fix over production's schema", { skip: !url,
       await hasClaimed;
       const allowlistSave = withAdvisoryLock(web2, SETTINGS_SAVE_LOCK, key, async (pinned) => {
         const before = await settings.get(TL);
-        const next = { ...before, telegramAllowlist: [4242] } as MerrymenSettings;
+        const next = { ...before, telegramAllowlist: [4242] } as AgentCapSettings;
         const d = await settleWithoutToken({ db: pinned, tenant: TL, next, settings: readBack });
         await settings.put(TL, next);
         await d.settle();
@@ -783,9 +783,9 @@ test("Postgres: the Telegram outage fix over production's schema", { skip: !url,
       assert.equal(await notifyHoldOnce(noticeDeps(orch), T1, NEWER, true), "sent", "a new hold after a restore is news");
       assert.equal(sent.length, 3);
       // The chat taken off the allowlist since it linked is not told.
-      await settings.put(T1, { telegramEnabled: true, telegramBotToken: TOKEN_111, telegramAllowlist: [99] } as MerrymenSettings);
+      await settings.put(T1, { telegramEnabled: true, telegramBotToken: TOKEN_111, telegramAllowlist: [99] } as AgentCapSettings);
       assert.equal(await notifyHoldOnce(noticeDeps(orch), T1, "restore error", true), "no-owner");
-      await settings.put(T1, { telegramEnabled: true, telegramBotToken: TOKEN_111, telegramAllowlist: [OWNER_CHAT] } as MerrymenSettings);
+      await settings.put(T1, { telegramEnabled: true, telegramBotToken: TOKEN_111, telegramAllowlist: [OWNER_CHAT] } as AgentCapSettings);
       assert.equal(sent.length, 3);
     });
 
@@ -827,7 +827,7 @@ test("Postgres: the Telegram outage fix over production's schema", { skip: !url,
       // (bot-claims.integration.test.ts does the same over sqlite). The web
       // side is the settings PUT's own claim step (botClaimForSave), over its
       // own pool, with Telegram's getMe answered by a stub.
-      process.env.MERRYMEN_HOSTED = "1";
+      process.env.AGENTCAP_HOSTED = "1";
       resetGrantStoreForTest();
       useSettingsStoreForTest(settings, "spot");
       const { reconcile, childHome, setSpawnForTest, setBotClaimsDbForTest, setBotConfirmForTest } = await import("./orchestrator");
@@ -866,7 +866,7 @@ test("Postgres: the Telegram outage fix over production's schema", { skip: !url,
         }
       }
       setSpawnForTest(((_cmd: string, _args: readonly string[], opts: SpawnOptions) => {
-        const h = String(opts.env?.MERRYMEN_HOME);
+        const h = String(opts.env?.AGENTCAP_HOME);
         const file = JSON.parse(readFileSync(path.join(h, "settings.json"), "utf8")) as { telegramBotToken?: string };
         spawnedWith.set(path.basename(h), file.telegramBotToken);
         return new FakeProc() as unknown as ChildProcess;
@@ -887,10 +887,10 @@ test("Postgres: the Telegram outage fix over production's schema", { skip: !url,
           grantTokens: [],
           demoSessionPrivateKey: ("0x" + "cd".repeat(32)) as `0x${string}`,
         }) as unknown as StoredGrant;
-      const withBot = (token: string, linked = true): MerrymenSettings =>
-        ({ telegramEnabled: true, telegramBotToken: token, ...(linked ? { telegramAllowlist: [4242] } : {}) }) as MerrymenSettings;
+      const withBot = (token: string, linked = true): AgentCapSettings =>
+        ({ telegramEnabled: true, telegramBotToken: token, ...(linked ? { telegramAllowlist: [4242] } : {}) }) as AgentCapSettings;
       /** The settings PUT for a token, in its order: the claim, then the write, then letting go of any bot left behind. */
-      const webSave = async (tenant: `0x${string}`, next: MerrymenSettings, moveBot = false) => {
+      const webSave = async (tenant: `0x${string}`, next: AgentCapSettings, moveBot = false) => {
         const claim = await botClaimForSave({ tenant, touched: true, next, moveBot, settings: pgSettings(await settings.get(tenant)) });
         if (claim && !claim.ok) return claim;
         await settings.put(tenant, next);
@@ -909,10 +909,10 @@ test("Postgres: the Telegram outage fix over production's schema", { skip: !url,
       await settings.put(RB, withBot("111:BBB-reissued-secret"));
       // C's bot was saved before claims existed and nobody has claimed it; D has no bot yet.
       await settings.put(RC, withBot("222:CCC-secret"));
-      await settings.put(RD, { telegramEnabled: false } as MerrymenSettings);
+      await settings.put(RD, { telegramEnabled: false } as AgentCapSettings);
       // A stranger's `<id>:guess` for O's bot, whose own Telegram is off at first.
       await settings.put(RS, withBot("444:fake-guessed-secret"));
-      await settings.put(RO, { telegramEnabled: false, telegramBotToken: "444:the-real-secret" } as MerrymenSettings);
+      await settings.put(RO, { telegramEnabled: false, telegramBotToken: "444:the-real-secret" } as AgentCapSettings);
       for (const [i, tn] of [RA, RB, RC, RD, RS, RO].entries()) await getGrantStore("spot").put(tn, grant(i));
 
       await reconcile();
@@ -965,10 +965,10 @@ test("Postgres: the Telegram outage fix over production's schema", { skip: !url,
     rmSync(home, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
     for (const [k, v] of [
       ["DATABASE_URL", saved.db],
-      ["MERRYMEN_STORE_DEK", saved.dek],
-      ["MERRYMEN_HOME", saved.home],
-      ["MERRYMEN_HOSTED", saved.hosted],
-      ["MERRYMEN_TELEGRAM_ENABLED", saved.tgEnabled],
+      ["AGENTCAP_STORE_DEK", saved.dek],
+      ["AGENTCAP_HOME", saved.home],
+      ["AGENTCAP_HOSTED", saved.hosted],
+      ["AGENTCAP_TELEGRAM_ENABLED", saved.tgEnabled],
     ] as const) {
       if (v === undefined) delete process.env[k];
       else process.env[k] = v;

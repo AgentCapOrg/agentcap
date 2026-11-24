@@ -459,7 +459,7 @@ describe("curve quotes", () => {
 
   it("a round trip loses about two fees — the number a strategy has to beat", () => {
     // ~199 bps round trip. Stated as a test because it is the economics of the
-    // whole venue: against merrymen's ~47 bps pool floor, a curve strategy has
+    // whole venue: against agentcap's ~47 bps pool floor, a curve strategy has
     // to clear roughly 2% before gas to be worth running at all.
     const inRaw = 100_000_000_000_000n;
     const tokens = curveBuyOut(LIVE, inRaw);

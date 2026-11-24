@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { DEFAULT_PERMISSION_DAYS, PERP_TREND_MAX_HOLD_HOURS, RENEW_EVERY_TIP } from "@merrymen/core";
+import { DEFAULT_PERMISSION_DAYS, PERP_TREND_MAX_HOLD_HOURS, RENEW_EVERY_TIP } from "@agentcap/core";
 import { createPrivyOwnedWallet, loadGrant, localGrantsSnapshot, preflightAgentGrant, retryGrantHandoff, sameGrantPermission, type Grant, type GrantCaps } from "../lib/session";
 import { loadRecoveryGrants, saveRecoveryGrant, trustedSavedGrant } from "../lib/saved-grant-binding";
 import { needsPermissionReplacement, markPermissionForReplacement } from "../lib/permission-replacement";

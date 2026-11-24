@@ -17,9 +17,9 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { after, afterEach, describe, it, mock } from "node:test";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-refusal-repeats-"));
-process.env.MERRYMEN_HOME = HOME;
-process.env.MERRYMEN_DASHBOARD_URL = "https://app.merrymen.dev";
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-refusal-repeats-"));
+process.env.AGENTCAP_HOME = HOME;
+process.env.AGENTCAP_DASHBOARD_URL = "https://app.agentcap.xyz";
 after(() => rmSync(HOME, { recursive: true, force: true }));
 
 const { startNotifier, REFUSAL_FIRST_NOTE } = await import("./notifier");
@@ -31,7 +31,7 @@ const AGENT = "agent-larp";
 afterEach(() => mock.restoreAll());
 
 function ledger(): DatabaseSync {
-  const db = new DatabaseSync(path.join(HOME, "merrymen.db"));
+  const db = new DatabaseSync(path.join(HOME, "agentcap.db"));
   db.exec(
     "CREATE TABLE IF NOT EXISTS trades (id INTEGER PRIMARY KEY, agent_id TEXT, kind TEXT, amount_usdg REAL, " +
       "status TEXT, reject_rule TEXT, tx_hash TEXT, decision_id TEXT, target TEXT, fill_side TEXT, " +

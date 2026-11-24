@@ -153,7 +153,7 @@ describe("an order that passes every gate is handed on exactly as validated", ()
 /**
  * WHERE AN ORDER GOES IS DECIDED BY A MARKER, NEVER BY ITS SYMBOL.
  *
- * runOrderCommand used to send every order whose symbol read MERRYMEN to the
+ * runOrderCommand used to send every order whose symbol read AGENTCAP to the
  * energy buy — a plain buy card, a snipe that resolved to a lookalike, an
  * approved MCP proposal for a watched coin at another address — none of which
  * showed the energy disclosure, and the lookalike's owner got a different,
@@ -171,11 +171,11 @@ describe("the energy route is reached only by get-energy's marker", () => {
     return got;
   }
 
-  it("A BUY CARD, A SNIPE AND AN MCP PROPOSAL NAMING MERRYMEN ARE ORDINARY TRADES — never the energy buy", async () => {
+  it("A BUY CARD, A SNIPE AND AN MCP PROPOSAL NAMING AGENTCAP ARE ORDINARY TRADES — never the energy buy", async () => {
     // The three shapes, exactly as each placing path writes them.
-    const buyCard = { side: "buy", symbol: "MERRYMEN", usdgAmount: 50 }; // chat-commands `buy`
-    const snipe = { side: "buy", symbol: "merrymen", usdgAmount: 20 }; // Agent.tsx after /api/snipe resolved
-    const mcp = { side: "buy", symbol: "MERRYMEN", usdgAmount: 20, source: "mcp-proposal", proposal: "p_1" }; // services/proposals.ts
+    const buyCard = { side: "buy", symbol: "AGENTCAP", usdgAmount: 50 }; // chat-commands `buy`
+    const snipe = { side: "buy", symbol: "agentcap", usdgAmount: 20 }; // Agent.tsx after /api/snipe resolved
+    const mcp = { side: "buy", symbol: "AGENTCAP", usdgAmount: 20, source: "mcp-proposal", proposal: "p_1" }; // services/proposals.ts
     const mcpSell = { ...mcp, side: "sell" };
     for (const args of [buyCard, snipe, mcp, mcpSell]) {
       assert.equal(await routeOf(args), "trade", JSON.stringify(args));
@@ -183,16 +183,16 @@ describe("the energy route is reached only by get-energy's marker", () => {
   });
 
   it("the get-energy card's marker, and only that exact value, routes to the energy buy", async () => {
-    assert.equal(await routeOf({ side: "buy", symbol: "MERRYMEN", usdgAmount: 30, purpose: "energy" }), "energy");
+    assert.equal(await routeOf({ side: "buy", symbol: "AGENTCAP", usdgAmount: 30, purpose: "energy" }), "energy");
     for (const purpose of ["Energy", "ENERGY", " energy", "energy ", true, 1, null, "reserve"]) {
-      assert.equal(orderRoute({ side: "buy", symbol: "MERRYMEN", usdgAmount: 30, purpose }), "trade", String(purpose));
+      assert.equal(orderRoute({ side: "buy", symbol: "AGENTCAP", usdgAmount: 30, purpose }), "trade", String(purpose));
     }
     assert.equal(orderRoute(undefined), "trade");
     assert.equal(orderRoute({}), "trade");
   });
 
   it("a refused order is routed nowhere — the gates still run before the route matters", async () => {
-    const { reply, sent } = await place({ side: "buy", symbol: "MERRYMEN", usdgAmount: 30, purpose: "energy" }, { paused: true });
+    const { reply, sent } = await place({ side: "buy", symbol: "AGENTCAP", usdgAmount: 30, purpose: "energy" }, { paused: true });
     assert.equal(reply.ok, false);
     assert.deepEqual(sent, []);
   });
@@ -280,14 +280,14 @@ describe("what an owner order is filed under", () => {
   });
 
   it("an approved MCP proposal says so, and is not filed as a chat message or an energy ask", () => {
-    const r = orderAsked({ source: "mcp-proposal", proposal: "p_1" }, "buy", "MERRYMEN", 20).reason;
-    assert.match(r, /approved a proposal to buy 20 USDG MERRYMEN/);
+    const r = orderAsked({ source: "mcp-proposal", proposal: "p_1" }, "buy", "AGENTCAP", 20).reason;
+    assert.match(r, /approved a proposal to buy 20 USDG AGENTCAP/);
     assert.doesNotMatch(r, /in chat|energy/);
   });
 
   it("only the marked order is filed as an energy ask", () => {
-    assert.match(orderAsked({ purpose: "energy" }, "buy", "MERRYMEN", 30).reason, /top up \$MERRYMEN energy on the app's get-energy card — at most 30 USDG/);
-    assert.doesNotMatch(orderAsked({}, "buy", "MERRYMEN", 30).reason, /energy/);
+    assert.match(orderAsked({ purpose: "energy" }, "buy", "AGENTCAP", 30).reason, /top up \$AGENTCAP energy on the app's get-energy card — at most 30 USDG/);
+    assert.doesNotMatch(orderAsked({}, "buy", "AGENTCAP", 30).reason, /energy/);
     assert.equal(orderAsked({}, "sell", "TSLA", 5).reason, "owner asked to sell 5 USDG TSLA in chat");
   });
 });

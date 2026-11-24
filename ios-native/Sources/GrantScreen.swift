@@ -1,5 +1,5 @@
 import SwiftUI
-import MerrymenPolicy
+import AgentCapPolicy
 import PrivySDK
 
 struct GrantScreen: View {

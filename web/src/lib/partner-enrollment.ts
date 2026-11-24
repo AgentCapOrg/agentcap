@@ -4,8 +4,8 @@ import { recoverMessageAddress, type Address, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import {
   accountsMatch, carriesOwnerKey, GRANT_ENERGY, GRANT_PONS_CLASS, GRANT_SCOPED_SPENDERS, officialCoinTokens, PONS_CLASS_VAULT_FACTORY,
-  STOCK_TOKENS, TRADEABLE_V2, usableExtraTokens, type Derivation, type MerrymenSettings, type StoredGrant,
-} from "@merrymen/core";
+  STOCK_TOKENS, TRADEABLE_V2, usableExtraTokens, type Derivation, type AgentCapSettings, type StoredGrant,
+} from "@agentcap/core";
 import { checkCanonicalWall } from "./canonical-wall";
 import {
   canonicalJson, partnerEnrollmentMessage, partnerGrantDigest,
@@ -27,7 +27,7 @@ const CHAINS = new Set([4663, 46630]);
 const SYMBOLS = new Set(STOCK_TOKENS.map(t => t.symbol));
 const CONSENT_SCOPES = new Set(["read:agents", "chat:agents"]);
 /**
- * WHAT A PARTNER'S PAGE MAY SEAL: exactly what the SDK's prepareMerryman mints
+ * WHAT A PARTNER'S PAGE MAY SEAL: exactly what the SDK's prepareAgentCapAvatar mints
  * from owner, caps and chain alone. A partner grant is built by a third party's
  * code, and the owner approves a permission whose addresses they cannot read.
  * The canonical wall only proves the permission matches the grant's OWN declared
@@ -97,7 +97,7 @@ function safeSettings(value: unknown): PartnerEnrollmentSettings {
   return { name, strategy: body.strategy, basket_symbols: [...new Set(body.basket_symbols as string[])], live_trading_enabled: body.live_trading_enabled };
 }
 function secretDefault(): string {
-  const secret = process.env.MERRYMEN_PARTNER_BRIDGE_SECRET ?? "";
+  const secret = process.env.AGENTCAP_PARTNER_BRIDGE_SECRET ?? "";
   if (Buffer.byteLength(secret) < 32) return fail(503, "upstream_unavailable", "Partner enrollment is not configured");
   return secret;
 }
@@ -160,7 +160,7 @@ function validGrant(input: unknown, now: number): StoredGrant {
   }
   if (typeof body.serialized !== "string" || body.serialized.length < 20 || body.serialized.length > 240_000 || !/^[A-Za-z0-9+/]+={0,2}$/.test(body.serialized)) return fail(400, "invalid_grant", "Invalid serialized permission or permission too large for embedded activation");
   // Before the wall, which would accept these when the permission matches them.
-  const unsupported = "Partner enrollment seals only the platform's own routes and listed coins; prepare the grant with prepareMerryman's owner, caps and chainId";
+  const unsupported = "Partner enrollment seals only the platform's own routes and listed coins; prepare the grant with prepareAgentCapAvatar's owner, caps and chainId";
   if (PARTNER_SEALED_ROUTES.some(field => body[field] !== undefined)) return fail(422, "unsupported_permission", unsupported);
   if (body.grantFeatures !== undefined && (!Array.isArray(body.grantFeatures) || body.grantFeatures.some(f => !PARTNER_FEATURES.has(f)))) {
     return fail(422, "unsupported_permission", unsupported);
@@ -201,7 +201,7 @@ export function createPartnerEnrollmentService(overrides: Partial<PartnerEnrollm
   const identities = async () => overrides.identities ?? (await import("../../../worker/src/identity-store")).getIdentityStore();
   const derive = overrides.derive ?? (async (owner, chain) => (await import("./derive-account")).deriveKernelAccountAddress(owner, chain, "spot"));
   const classVault = overrides.classVault ?? (async (factory: Address, account: Address, chain: number) => {
-    const [{ createPublicClient }, { chainForId, resolveClassVault }, { webChainRead }] = await Promise.all([import("viem"), import("@merrymen/core"), import("./chain-read")]);
+    const [{ createPublicClient }, { chainForId, resolveClassVault }, { webChainRead }] = await Promise.all([import("viem"), import("@agentcap/core"), import("./chain-read")]);
     return resolveClassVault(createPublicClient({ chain: chainForId(chain), transport: webChainRead() }), factory, account);
   });
 
@@ -283,12 +283,12 @@ export function createPartnerEnrollmentService(overrides: Partial<PartnerEnrollm
         if (occupied && occupied.id !== current.id) return fail(409, "wallet_already_linked", "This wallet is already linked to another user of this app");
         const grantStore = await grants();
         const holder = await grantStore.tenantForAccount(grant.smartAccount);
-        if (holder && holder.toLowerCase() !== grant.owner) return fail(409, "account_already_claimed", "This account already belongs to a different Merrymen login");
+        if (holder && holder.toLowerCase() !== grant.owner) return fail(409, "account_already_claimed", "This account already belongs to a different AgentCap login");
         const ownGrant = await grantStore.get(grant.owner);
         if (ownGrant && ownGrant.owner.toLowerCase() !== grant.owner) return fail(409, "owner_model_mismatch", "This login already has an agent owned by a different wallet; use that owner's recovery and setup flow");
         const settingsStore = await settings();
         const previous = await settingsStore.get(grant.owner) ?? {};
-        const safe: MerrymenSettings = {
+        const safe: AgentCapSettings = {
           ...previous, agentName: claim.settings.name, strategy: claim.settings.strategy,
           basketSymbols: claim.settings.basket_symbols, paperTradingEnabled: true, liveTradingEnabled: false,
         };

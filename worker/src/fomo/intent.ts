@@ -79,7 +79,7 @@ export interface FomoToolCall {
 
 export interface FomoQuestionPlan {
   intent: FomoIntent;
-  /** The user wants Merrymen's evaluation, not just the facts. */
+  /** The user wants AgentCap's evaluation, not just the facts. */
   analysisRequested: boolean;
   /** The user explicitly asked for facts without an opinion. Wins over analysis. */
   infoOnly: boolean;
@@ -363,7 +363,7 @@ const FOMO_PLATFORM: readonly RegExp[] = [
 ];
 
 // The singular too ("the top trader we watch", "the best tracked trader"): who
-// Merrymen watches, never the public board's #1. Not "followed": "the most
+// AgentCap watches, never the public board's #1. Not "followed": "the most
 // followed trader" is a public question.
 // "u r", "ur" and "youre" too ("the best trader u r tracking"): never a trader called "ur".
 const COHORT = /\bour (?:\d{1,4} )?(?:traders|cohort|trader list|watched traders|tracked traders)\b|\btraders? (?:that |who )?(?:we|you|u|ya)(?: are| r|re)? (?:watch|watching|monitor|monitoring|track|tracking|follow|following)\b|\btraders? (?:that |who )?ur (?:watching|monitoring|tracking|following)\b|\b(?:watched|tracked|monitored) traders?\b|\bcohort\b/;
@@ -386,8 +386,8 @@ const HEALTH: readonly RegExp[] = [
  * never leaves the model to guess what Fomo is. Every shape names Fomo.
  */
 const CAPABILITIES: readonly RegExp[] = [
-  /\bwhat (?:can|could|do|does|will|would) (?:you|u|ya|it|the bot|merrymen)(?: \S+){0,2}? (?:do|help with|offer|show|look up|find|tell me|answer|check|pull|see|read)\b(?: \S+){0,3}? (?:with|on|about|from|using|via|in|inside|for) (?:the )?fomo\b/,
-  /\bhow (?:can|could|do|does) (?:you|u|ya|it|the bot|merrymen) (?:use|work with|help with|look up|read|check) (?:the )?fomo\b/,
+  /\bwhat (?:can|could|do|does|will|would) (?:you|u|ya|it|the bot|agentcap)(?: \S+){0,2}? (?:do|help with|offer|show|look up|find|tell me|answer|check|pull|see|read)\b(?: \S+){0,3}? (?:with|on|about|from|using|via|in|inside|for) (?:the )?fomo\b/,
+  /\bhow (?:can|could|do|does) (?:you|u|ya|it|the bot|agentcap) (?:use|work with|help with|look up|read|check) (?:the )?fomo\b/,
   /\bhow (?:do|does|can|could) (?:i|we) (?:use|ask about|look up|check) (?:the )?fomo\b/,
   /^(?:so |ok |yo |hey )?what (?:is|are) (?:the )?fomo(?: app| family| platform| thing| research| integration| feature| lookups?)?(?: all about| about)?$/,
   /\bcan (?:you|u|ya) (?:use|access|read|see|search|do stuff on|do things on|do anything (?:on|with)|look at|talk about|help with) (?:the )?fomo$/,
@@ -580,7 +580,7 @@ const ROW_PROFILE = /\b(?:tell me (?:more )?about (?:him|her|them)|who is (?:he|
  * A question about one trader's P&L or how they are doing ("what's @X's pnl",
  * "how much did @X make this week", "how is @X doing"). In a room it is
  * answered from what they made or lost on their trades (chat.ts), never from
- * a profile P&L that may come from Merrymen's watched-trader record.
+ * a profile P&L that may come from AgentCap's watched-trader record.
  */
 const TRADER_PNL = /\b(?:pnl|p&l|p\/l|profit and loss|performance|performing)\b|\bhow (?:is|has|did|was) (?:\S+ ){1,2}?(?:been )?(?:doing|done|performing|performed)\b|\bhow much (?:did|has|have|does|do|is|was) (?:\S+ ){1,2}?(?:made|make|making|earned|earn|earning|won|win|lost|lose|up|down)\b/;
 
@@ -806,7 +806,7 @@ const POSSESSED = new Set([
 const NOT_POSSESSORS = new Set([
   "it", "that", "this", "what", "who", "there", "here", "let", "he", "she", "one", "everyone", "everybody", "someone",
   "somebody", "anyone", "today", "yesterday", "week", "month", "year", "fomo", "trader", "coin", "token", "market",
-  "merrymen", "merryman", "agent", "bot", "the", "today's", "my", "your", "our", "their", "his", "her",
+  "agentcap", "agentcapavatar", "agent", "bot", "the", "today's", "my", "your", "our", "their", "his", "her",
   // People and things in the owner's own life ("my wife's bags"), never a Fomo handle on their own.
   "you", "we", "they", "them", "us", "me", "mine", "yours", "ours", "theirs", "owner", "wife", "husband", "mom", "mum",
   "dad", "mother", "father", "brother", "sister", "bro", "sis", "friend", "buddy", "boss", "partner", "girlfriend",
@@ -1323,7 +1323,7 @@ export function classifyFomoQuestion(text: string, ctx: FomoQuestionContext): Fo
   // US: read as a subject they would research (or deflect) the bot itself.
   const unaddressed = withoutSelf(words(text), self);
   let ws = unaddressed.ws;
-  // "@merrymen_bot what is @x holding": a leading @mention followed by a
+  // "@agentcap_bot what is @x holding": a leading @mention followed by a
   // question addresses US even when the caller could not say which handle is
   // ours. Treating it as the subject would research the bot.
   if (ws.length > 2 && /^@[A-Za-z0-9_]{1,30}$/.test(ws[0]!.bare) && VOCATIVE_NEXT.test(ws[1]!.canon)) ws = ws.slice(1);

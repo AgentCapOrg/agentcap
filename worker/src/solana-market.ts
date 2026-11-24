@@ -23,7 +23,7 @@ const QUOTE_TTL_MS = SOLANA_QUOTE_MAX_AGE_MS;
 const U64_MAX = (1n << 64n) - 1n;
 const ERRORS = {
   "invalid-address": "A canonical Solana mint address is required.",
-  "missing-jupiter-key": "MERRYMEN_JUPITER_API_KEY is required for Solana quotes.",
+  "missing-jupiter-key": "AGENTCAP_JUPITER_API_KEY is required for Solana quotes.",
   "invalid-jupiter-key": "The Jupiter API key setting is invalid.",
   "invalid-clock": "The Solana market clock is invalid.",
   "invalid-mint": "Solana RPC did not return a supported initialized mint.",
@@ -63,14 +63,14 @@ export class SolanaMarketError extends Error {
 }
 
 /**
- * MERRYMEN_JUPITER_API_KEY as every Jupiter request sends it, and as status
+ * AGENTCAP_JUPITER_API_KEY as every Jupiter request sends it, and as status
  * checks it: trimmed, then 1 to 1024 printable ASCII characters with no spaces.
  * Missing, or anything else, refuses (the live route builder answers either as
  * its 'configuration' code). One rule, so status never shows live trading ready
  * with a key every quote and route would refuse.
  */
 export function solanaJupiterApiKey(env: Readonly<Record<string, string | undefined>>): string {
-  const apiKey = env.MERRYMEN_JUPITER_API_KEY?.trim();
+  const apiKey = env.AGENTCAP_JUPITER_API_KEY?.trim();
   if (!apiKey) throw new SolanaMarketError("missing-jupiter-key");
   if (apiKey.length > 1024 || /[^\x21-\x7e]/.test(apiKey)) throw new SolanaMarketError("invalid-jupiter-key");
   return apiKey;

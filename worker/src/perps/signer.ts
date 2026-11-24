@@ -1,5 +1,5 @@
 /**
- * THE LIGHTER SIGNER — the only code in merrymen that can produce a venue
+ * THE LIGHTER SIGNER — the only code in agentcap that can produce a venue
  * transaction, and the narrowest door we could build around it.
  *
  * docs/perps.md is the contract ("signer.ts" under Worker). What sits behind
@@ -90,7 +90,7 @@ export const LIGHTER_SIGNER_ARTIFACT = Object.freeze({
 
 /**
  * worker/vendor/lighter as this process resolved it at load: the
- * MERRYMEN_LIGHTER_VENDOR_DIR override, else the first of the module-relative
+ * AGENTCAP_LIGHTER_VENDOR_DIR override, else the first of the module-relative
  * and cwd-relative candidates that holds the WASM (vendor-dir.ts says why —
  * the web's keygen route runs with cwd = web/ and a webpack-rewritten
  * import.meta.url). instantiateSigner re-resolves on every build, so an

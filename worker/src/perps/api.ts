@@ -205,7 +205,7 @@ export interface RequestFlags {
 }
 
 export interface LighterApiOptions {
-  /** MERRYMEN_HOME; the cooldown file lives under MERRYMEN_FLEET_HOME when set, else here. */
+  /** AGENTCAP_HOME; the cooldown file lives under AGENTCAP_FLEET_HOME when set, else here. */
   home: string;
   /** The identity the venue counts this client's requests against: the L1 address (lowercase), or "public" for unauthenticated feed reads. */
   budgetKey: string;
@@ -254,7 +254,7 @@ const PUBLIC_BUDGET_KEY = "public";
  * only it can see is no fleet breaker), else this process's home.
  */
 export function lighterCooldownFile(home: string): string {
-  const fleet = process.env.MERRYMEN_FLEET_HOME?.trim();
+  const fleet = process.env.AGENTCAP_FLEET_HOME?.trim();
   return path.join(fleet && fleet.length > 0 ? fleet : home, "lighter-cooldown.json");
 }
 

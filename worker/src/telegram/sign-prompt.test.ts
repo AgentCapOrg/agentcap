@@ -148,8 +148,8 @@ describe("the message and the button", () => {
   });
 
   it("opens the dashboard's own re-sign anchor, and pins the network only for a wrong-chain fix", () => {
-    assert.equal(signUrl("https://app.merrymen.dev/", "dead-policy"), "https://app.merrymen.dev/grant#resign");
-    assert.equal(signUrl("https://app.merrymen.dev", "wrong-chain"), "https://app.merrymen.dev/grant?chain=4663#resign");
+    assert.equal(signUrl("https://app.agentcap.xyz/", "dead-policy"), "https://app.agentcap.xyz/grant#resign");
+    assert.equal(signUrl("https://app.agentcap.xyz", "wrong-chain"), "https://app.agentcap.xyz/grant?chain=4663#resign");
     assert.deepEqual(signKeyboard("https://x/grant#resign"), [[{ text: "✍️ Sign now", url: "https://x/grant#resign" }]]);
   });
 });
@@ -188,19 +188,19 @@ describe("timing and links", () => {
   });
 
   it("only an https link a phone can open becomes a button", () => {
-    assert.equal(isPublicHttpsUrl("https://app.merrymen.dev/grant#resign"), true);
-    for (const u of ["http://localhost:3100/grant", "https://localhost/grant", "https://192.168.1.4/grant", "http://app.merrymen.dev/grant", "https://box.local/grant", "not a url"]) {
+    assert.equal(isPublicHttpsUrl("https://app.agentcap.xyz/grant#resign"), true);
+    for (const u of ["http://localhost:3100/grant", "https://localhost/grant", "https://192.168.1.4/grant", "http://app.agentcap.xyz/grant", "https://box.local/grant", "not a url"]) {
       assert.equal(isPublicHttpsUrl(u), false, u);
     }
   });
 
   it("hosted gets a button and a sign-in hint; self-hosted gets where to open it", () => {
     const inputs = { blocker: null, ...grant, now: NOW };
-    const hosted = signMessage("dead-policy", inputs, "Shogun", "https://app.merrymen.dev");
+    const hosted = signMessage("dead-policy", inputs, "Shogun", "https://app.agentcap.xyz");
     assert.ok(hosted.keyboard);
     assert.match(hosted.text, /sign in with the login/);
     const local = signMessage("dead-policy", inputs, "Shogun", "http://localhost:3100");
     assert.equal(local.keyboard, undefined, "no button Telegram would refuse");
-    assert.match(local.text, /on the computer that runs merrymen/);
+    assert.match(local.text, /on the computer that runs agentcap/);
   });
 });

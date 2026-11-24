@@ -71,7 +71,7 @@ export interface HeldResetEvidence {
   settings: { paperTradingEnabled?: boolean; liveTradingEnabled?: boolean } | null | "unreadable";
   /**
    * Whether the owner's live-trading consent is enforced on this deployment.
-   * With it stood down (MERRYMEN_LIVE_INTENT_STAND_DOWN, settings.ts), a
+   * With it stood down (AGENTCAP_LIVE_INTENT_STAND_DOWN, settings.ts), a
    * setting that does not switch live trading on proves nothing.
    */
   consentEnforced: boolean;

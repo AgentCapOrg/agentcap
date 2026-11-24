@@ -7,10 +7,10 @@ import type { MessageKey } from "./en";
  * That is what makes a partial file safe to have here.
  */
 export const ja: Partial<Record<MessageKey, string>> = {
-  "tour.stop01.title": "merrymen へようこそ。",
+  "tour.stop01.title": "agentcap へようこそ。",
   "tour.stop01.copy": "エージェントに戦略を与え、上限を設定して、エージェントが下す判断を見守ります。案内を最初から順に進めても、「目次」から特定の機能に飛んでも構いません。途中でやめても、いつでも見直せます。",
   "tour.stop02.title": "知っている市場から始めましょう。",
-  "tour.stop02.copy": "ホームには、あなたのmerrymanと資金があります。探索（Explore）にはランキングと各市場があります。トークンを開くと、その価格の推移と、エージェントがそのトークンに対して記録した取引を確認できます。",
+  "tour.stop02.copy": "ホームには、あなたのagentcapavatarと資金があります。探索（Explore）にはランキングと各市場があります。トークンを開くと、その価格の推移と、エージェントがそのトークンに対して記録した取引を確認できます。",
   "tour.stop03.title": "エージェントの行動範囲は、あなたが決めます。",
   "tour.stop03.copy": "戦略と2つの上限（1取引あたりと1日あたり）が、エージェントにできることを決めます。デモモードでは、あなたが切り替えるまで仮想資金で練習します。",
   "tour.stop04.title": "理由を聞いてみましょう。",
@@ -56,7 +56,7 @@ export const ja: Partial<Record<MessageKey, string>> = {
   "tour.stop24.title": "設定と公開範囲。",
   "tour.stop24.copy": "設定では、エージェントの構成と、どこまで公開するかを管理します。帳簿を公開すると、ポジションや取引の金額まで見えるようになります。非公開のままでも、活動内容と、対象となるリターンのパーセンテージは公開されます。",
   "tour.stop25.title": "API で開発する。",
-  "tour.stop25.copy": "開発者の方は merrymen.dev/api で、API キーの設定、SDK、連携のチュートリアルを確認できます。秘密の API キーは自分のサーバー内に保管してください。ほかのアプリと接続するときは、ドキュメントに書かれた設定とチャットの手順に従ってください。",
+  "tour.stop25.copy": "開発者の方は agentcap.xyz/api で、API キーの設定、SDK、連携のチュートリアルを確認できます。秘密の API キーは自分のサーバー内に保管してください。ほかのアプリと接続するときは、ドキュメントに書かれた設定とチャットの手順に従ってください。",
   "tour.stop26.title": "準備ができたら、どうぞ。",
   "tour.stop26.copy": "戦略、上限、最新の判断について聞きたいときは、チャットに戻ってください。エージェントが動かずに待っている場合は、その説明、モード、入金状況、権限を確認してください。この案内は「使い方を見る」からいつでも見直せます。",
   "tour.skip": "スキップ",
@@ -65,7 +65,7 @@ export const ja: Partial<Record<MessageKey, string>> = {
   "tour.next": "次へ",
   "tour.finish": "完了",
   "tour.relaunch": "使い方を見る",
-  "tour.dialogLabel": "merrymen のかんたんな案内",
+  "tour.dialogLabel": "agentcap のかんたんな案内",
   "tour.stepOf": "{current} / {total}",
   "tour.savedLocally": "このブラウザに保存しました。",
   "tour.retrySync": "アカウント同期を再試行",

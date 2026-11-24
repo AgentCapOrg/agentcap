@@ -657,7 +657,7 @@ describe("token tools", () => {
     assert.equal(top.token.address, CACHE_TOKEN);
     assert.equal(top.signals.cohortBuyers, 2);
     assert.equal(top.signals.firstSeenInWindow, true);
-    assert.equal(top.routeNote, "route not yet verified by Merrymen");
+    assert.equal(top.routeNote, "route not yet verified by AgentCap");
     // PONS has the biggest market cap and volume, and ranks below the small coin with cohort buyers.
     const pons = env.data!.rows.findIndex((r) => r.token.address === PONS);
     assert.ok(pons > 0);
@@ -981,7 +981,7 @@ describe("tails", () => {
     );
   });
 
-  it("MERRYMEN_FOMO_TAILS=0: refused as switched off, nothing read or stored; stopping still works and status says they are on hold", async () => {
+  it("AGENTCAP_FOMO_TAILS=0: refused as switched off, nothing read or stored; stopping still works and status says they are on hold", async () => {
     const on = await harness({ liveFeed: true });
     await on.invoke<TailData>("fomo_tail_trader", { trader: KALEO, consider: true });
     const h = await harness({ liveFeed: true, tailsEnabled: false, db: on.db, raw: on.raw });
@@ -2233,9 +2233,9 @@ describe("a received-only position is not a buy (C36)", () => {
 
 describe("reads do not depend on trading or monitoring (C40)", () => {
   it("with trading paused and monitoring and follow off, lookups still answer", async () => {
-    const prior = process.env.MERRYMEN_HOME;
+    const prior = process.env.AGENTCAP_HOME;
     const home = mkdtempSync(path.join(os.tmpdir(), "fomo-paused-"));
-    process.env.MERRYMEN_HOME = home;
+    process.env.AGENTCAP_HOME = home;
     try {
       writeFileSync(homePaths.paused(), "paused", "utf8");
       assert.ok(existsSync(homePaths.paused()), "the pause marker the tick loop honours is set");
@@ -2252,8 +2252,8 @@ describe("reads do not depend on trading or monitoring (C40)", () => {
       }
       assert.ok(h.calls.length > 0);
     } finally {
-      if (prior === undefined) delete process.env.MERRYMEN_HOME;
-      else process.env.MERRYMEN_HOME = prior;
+      if (prior === undefined) delete process.env.AGENTCAP_HOME;
+      else process.env.AGENTCAP_HOME = prior;
       rmSync(home, { recursive: true, force: true });
     }
   });

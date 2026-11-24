@@ -4,9 +4,9 @@ The source, simulator checks and unsigned archive can be built without an Apple 
 
 ## Public configuration
 
-1. In Privy, create the native iOS client for bundle **`dev.merrymen.app`**, callback scheme **`merrymen`**. Set its public `PRIVY_CLIENT_ID`; the public App ID is already configured. Enable the intended email and X login methods in that app.
-2. In Reown, create or select Merrymen's project and set public `WALLETCONNECT_PROJECT_ID`. The app's native callback is **`merrymen://walletconnect`**. The connection requests only `personal_sign` for ownership proofs; agent trading uses the separately reviewed permission flow.
-3. On a Mac, sign in to Xcode with the Apple Developer account and set `DEVELOPMENT_TEAM`. Use automatic provisioning for `dev.merrymen.app`. Confirm the wallet SDK's Keychain group resolves to the signed app identifier.
+1. In Privy, create the native iOS client for bundle **`dev.agentcap.app`**, callback scheme **`agentcap`**. Set its public `PRIVY_CLIENT_ID`; the public App ID is already configured. Enable the intended email and X login methods in that app.
+2. In Reown, create or select AgentCap's project and set public `WALLETCONNECT_PROJECT_ID`. The app's native callback is **`agentcap://walletconnect`**. The connection requests only `personal_sign` for ownership proofs; agent trading uses the separately reviewed permission flow.
+3. On a Mac, sign in to Xcode with the Apple Developer account and set `DEVELOPMENT_TEAM`. Use automatic provisioning for `dev.agentcap.app`. Confirm the wallet SDK's Keychain group resolves to the signed app identifier.
 
 Set these in `project.yml` or pass build-setting overrides to Xcode. Never commit signing keys, certificates, wallet keys or service secrets. Public App/Client/Project IDs are not secrets. Regenerate with `xcodegen generate` after project changes.
 
@@ -23,9 +23,9 @@ The unsigned archive proves compilation and packaging for devices. It is not an 
 ```sh
 cd ios-native
 xcodegen generate
-xcodebuild archive -project Merrymen.xcodeproj -scheme Merrymen \
+xcodebuild archive -project AgentCap.xcodeproj -scheme AgentCap \
   -configuration Release -destination 'generic/platform=iOS' \
-  -archivePath Merrymen.xcarchive DEVELOPMENT_TEAM=YOUR_TEAM \
+  -archivePath AgentCap.xcarchive DEVELOPMENT_TEAM=YOUR_TEAM \
   PRIVY_CLIENT_ID=YOUR_PUBLIC_CLIENT_ID WALLETCONNECT_PROJECT_ID=YOUR_PUBLIC_PROJECT_ID
 ```
 

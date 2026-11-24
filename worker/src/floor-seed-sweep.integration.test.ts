@@ -14,7 +14,7 @@
  * overwrites. A floor restored with no basis beside it failed exactly here: the
  * sweep never saw it, and the new entry ran on the old, wider stop.
  *
- * MERRYMEN_HOME is set before the store import; node's --test runs each file in
+ * AGENTCAP_HOME is set before the store import; node's --test runs each file in
  * its own process, so the override never leaks.
  */
 import assert from "node:assert/strict";
@@ -23,8 +23,8 @@ import { mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-floor-seed-"));
-process.env.MERRYMEN_HOME = HOME;
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-floor-seed-"));
+process.env.AGENTCAP_HOME = HOME;
 
 const { DatabaseSync } = await import("node:sqlite");
 const { wrapSqlite } = await import("./db");
@@ -57,7 +57,7 @@ describe("a restored floor is swept with its basis", () => {
     await setBasis(ACCOUNT, "live", "PEPE", { qtyRaw: 5n, costUsdg: 50_000_000n });
     // The floor seed's, over the child's own file — the orchestrator opens it
     // the same way (seedBasisForChild).
-    const childRaw = new DatabaseSync(path.join(HOME, "merrymen.db"));
+    const childRaw = new DatabaseSync(path.join(HOME, "agentcap.db"));
     try {
       const plan = await seedPositionFloors({
         child: wrapSqlite(childRaw),

@@ -1,5 +1,5 @@
 /** Real Postgres locking and reader checks. Opt-in, disposable loopback DB only.
- * MERRYMEN_TEST_PG_URL=postgres://user@127.0.0.1:port/db node --import tsx --test --test-force-exit worker/src/xpost/store.postgres.test.ts
+ * AGENTCAP_TEST_PG_URL=postgres://user@127.0.0.1:port/db node --import tsx --test --test-force-exit worker/src/xpost/store.postgres.test.ts
  * With no test URL, this skips without loading the runtime-only pg package.
  */
 import assert from "node:assert/strict";
@@ -9,7 +9,7 @@ import test from "node:test";
 import { makePgDb, type Db } from "../db";
 import * as store from "./store";
 
-const url = process.env.MERRYMEN_TEST_PG_URL ?? process.env.MERRYMEN_TEST_POSTGRES_URL;
+const url = process.env.AGENTCAP_TEST_PG_URL ?? process.env.AGENTCAP_TEST_POSTGRES_URL;
 const DAY = 86_400_000, NOW = Date.UTC(2026, 9, 18);
 const OWNER_A = `0x${"ab".repeat(20)}`, OWNER_B = `0x${"cd".repeat(20)}`;
 const BODY = "hey, happy to chat. keeping things simple over here.";

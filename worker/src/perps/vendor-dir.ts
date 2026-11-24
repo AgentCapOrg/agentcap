@@ -26,7 +26,7 @@
  * for a directory the build fails. Path arithmetic on the module's own file is
  * invisible to it.
  *
- * THE OVERRIDE WINS EVEN WHEN IT IS WRONG. MERRYMEN_LIGHTER_VENDOR_DIR is an
+ * THE OVERRIDE WINS EVEN WHEN IT IS WRONG. AGENTCAP_LIGHTER_VENDOR_DIR is an
  * operator saying "the signer is HERE". Falling back past a mistyped override
  * would load a different copy than the one they pointed at, silently; failing
  * on the path they named is the honest answer.
@@ -40,7 +40,7 @@ import { fileURLToPath } from "node:url";
 const WASM_FILE = "lighter-signer.wasm";
 
 /** The operator override: an absolute (or cwd-relative) directory holding both pinned files. */
-export const LIGHTER_VENDOR_DIR_ENV = "MERRYMEN_LIGHTER_VENDOR_DIR";
+export const LIGHTER_VENDOR_DIR_ENV = "AGENTCAP_LIGHTER_VENDOR_DIR";
 
 /** worker/vendor/lighter relative to this file, or null when the module has no file URL to go from. */
 function moduleRelative(): string | null {

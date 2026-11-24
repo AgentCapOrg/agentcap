@@ -193,7 +193,7 @@ export async function packRuntime({ root, outDir, bundleRoots = BUNDLE_ROOTS, re
   const omittedPackages = buildOnlyPackages(manifest, lock, buildOnlyRoots);
   if (omittedPackages.length) assertBuildOnlyBundled(root, omittedPackages);
   const plan = runtimeBundlePlan(manifest, lock, bundleRoots, buildOnlyRoots);
-  const stage = mkdtempSync(path.join(tmpdir(), "merrymen-release-"));
+  const stage = mkdtempSync(path.join(tmpdir(), "agentcap-release-"));
   try {
     // npm 10 still runs prepare during `pack --dry-run --ignore-scripts`.
     // Read npm's file list directly so source lifecycle scripts cannot execute.

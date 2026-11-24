@@ -26,8 +26,8 @@ export function solanaRebindMessage(principal: SolanaPrincipal, owner: string, p
     throw new SolanaWebError(400, "Invalid account identity.");
   }
   return [
-    "Merrymen Solana wallet re-bind v1", "",
-    "Move this Solana account's controls to my current Merrymen sign-in. The previous sign-in below verified this wallet; after this it no longer controls the account, and my current sign-in does: its live mode and trading limits, the trading permission registered on Solana, the autonomous strategy (turned off until I turn it on again), and owner actions such as revoking and withdrawing.", "",
+    "AgentCap Solana wallet re-bind v1", "",
+    "Move this Solana account's controls to my current AgentCap sign-in. The previous sign-in below verified this wallet; after this it no longer controls the account, and my current sign-in does: its live mode and trading limits, the trading permission registered on Solana, the autonomous strategy (turned off until I turn it on again), and owner actions such as revoking and withdrawing.", "",
     `Tenant: ${principal.tenant}`, `Previous identity: ${previousDid}`, `Identity: ${principal.did}`, `Chain: ${CHAINS.solana}`,
     `Owner: ${owner}`, `URI: ${origin}`, `Nonce: ${nonce}`,
   ].join("\n");

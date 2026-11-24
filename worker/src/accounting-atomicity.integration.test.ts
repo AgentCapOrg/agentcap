@@ -8,10 +8,10 @@ import { reconstruct, verifyChain } from "./audit";
 import type { FlowRow } from "./store";
 
 // Neither the test home nor either legacy migration path can contain user data.
-const scratch = mkdtempSync(path.join(os.tmpdir(), "merrymen-accounting-atomicity-"));
+const scratch = mkdtempSync(path.join(os.tmpdir(), "agentcap-accounting-atomicity-"));
 const isolatedCwd = path.join(scratch, "cwd");
 mkdirSync(isolatedCwd);
-process.env.MERRYMEN_HOME = path.join(scratch, "home");
+process.env.AGENTCAP_HOME = path.join(scratch, "home");
 delete process.env.DATABASE_URL;
 const originalCwd = process.cwd();
 const store = await import("./store");
@@ -21,7 +21,7 @@ try {
 } finally {
   process.chdir(originalCwd);
 }
-const raw = new DatabaseSync(path.join(process.env.MERRYMEN_HOME, "merrymen.db"));
+const raw = new DatabaseSync(path.join(process.env.AGENTCAP_HOME, "agentcap.db"));
 
 after(() => {
   raw.close();

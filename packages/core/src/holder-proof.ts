@@ -1,5 +1,5 @@
 /**
- * PROVING YOU HOLD $MERRYMEN IN A WALLET THAT IS NOT YOUR LOGIN.
+ * PROVING YOU HOLD $AGENTCAP IN A WALLET THAT IS NOT YOUR LOGIN.
  *
  * THE PROBLEM, raised by a tester: "it can happen that you don't own tokens in
  * your privy based wallet and you have them somewhere else… the app should have
@@ -24,7 +24,7 @@
  *   THE HOLDER, so the reader of the prompt knows which wallet they are
  *   linking. Recovered from the signature rather than trusted from the body.
  *
- *   THE MERRYMEN ACCOUNT. Without it a signature is "I control this wallet"
+ *   THE AGENTCAP ACCOUNT. Without it a signature is "I control this wallet"
  *   and nothing more — captured anywhere, it would link that wallet to ANY
  *   account that replayed it. Naming the tenant makes the signature useless
  *   to everyone else, which is the same job the DID does in
@@ -48,7 +48,7 @@
 export interface HolderProofClaim {
   /** The wallet being linked — the one that signs. */
   holder: string;
-  /** The merrymen account it is being linked to: the session-verified tenant. */
+  /** The agentcap account it is being linked to: the session-verified tenant. */
   tenant: string;
   /** Where the request came from, bound into the text. */
   origin: string;
@@ -66,14 +66,14 @@ export interface HolderProofClaim {
  */
 export function holderProofMessage(args: HolderProofClaim): string {
   return [
-    `${args.origin} wants you to link a wallet to your merrymen account.`,
+    `${args.origin} wants you to link a wallet to your agentcap account.`,
     "",
-    "This proves you control the wallet below, so your $MERRYMEN balance can count",
+    "This proves you control the wallet below, so your $AGENTCAP balance can count",
     "toward your tier. It moves no funds, grants no trading permission, and the",
     "wallet is only ever read.",
     "",
     `Holder wallet: ${args.holder.toLowerCase()}`,
-    `merrymen account: ${args.tenant.toLowerCase()}`,
+    `agentcap account: ${args.tenant.toLowerCase()}`,
     `URI: ${args.origin}`,
     `Nonce: ${args.nonce}`,
   ].join("\n");
@@ -102,7 +102,7 @@ export function isHolderProof(v: unknown): v is HolderProof {
 /** Which account holds the claim on a wallet (lower-cased), or nothing when nobody does. */
 export type HolderClaimOf = (wallet: string) => string | null | undefined;
 
-/** The wallet whose $MERRYMEN counts for an account, and how it earned that. */
+/** The wallet whose $AGENTCAP counts for an account, and how it earned that. */
 export interface EffectiveHolder {
   address: `0x${string}`;
   source: "linked" | "login";
@@ -111,7 +111,7 @@ export interface EffectiveHolder {
 const WALLET = /^0x[0-9a-f]{40}$/;
 
 /**
- * ONE $MERRYMEN WALLET POWERS ONE AGENT.
+ * ONE $AGENTCAP WALLET POWERS ONE AGENT.
  *
  * THE HOLE. A proof binds a wallet to an account, and nothing bound it the
  * other way: one 100,000-token wallet could be linked by any number of

@@ -42,7 +42,7 @@ import { custodyAddressesOf } from "./custody";
 import { ownerOperationOf, type OwnerOperationReading } from "./owner-operations";
 import { classifyRpcError } from "./rpc-error";
 
-export const AUDIT_FORMAT = "merrymen.owner-op-audit.v1";
+export const AUDIT_FORMAT = "agentcap.owner-op-audit.v1";
 /** The only RPC methods the audit may call. No eth_call, no eth_getLogs, nothing that sends. */
 export const AUDIT_RPC_METHODS: readonly string[] = Object.freeze(["eth_chainId", "eth_blockNumber", "eth_getTransactionReceipt", "eth_getBlockByNumber"]);
 /** At most this many receipts per run unless the operator says otherwise; past it, coverage is incomplete and says by how much. */

@@ -4,20 +4,20 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { after, beforeEach, test } from "node:test";
-import { purposeHome } from "@merrymen/home";
+import { purposeHome } from "@agentcap/home";
 import { readHostedOrder } from "@/lib/order-state";
 import { writeCommand, writeCommandResult, runTickCommand, markRunning } from "../../../../../worker/src/command-files";
 import { GET } from "./route";
 
 const ACCOUNT = `0x${"b".repeat(40)}`, OTHER = `0x${"c".repeat(40)}`;
-const keys = ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "DATABASE_URL", "MERRYMEN_PERPS"];
+const keys = ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "DATABASE_URL", "AGENTCAP_PERPS"];
 const saved = new Map(keys.map(key => [key, process.env[key]]));
 const homes: string[] = [];
 let home: string;
 beforeEach(() => {
-  home = mkdtempSync(path.join(tmpdir(), "merrymen-reset-status-")); homes.push(home);
-  process.env.MERRYMEN_HOME = home; process.env.MERRYMEN_PERPS = "paper";
-  delete process.env.MERRYMEN_HOSTED; delete process.env.DATABASE_URL;
+  home = mkdtempSync(path.join(tmpdir(), "agentcap-reset-status-")); homes.push(home);
+  process.env.AGENTCAP_HOME = home; process.env.AGENTCAP_PERPS = "paper";
+  delete process.env.AGENTCAP_HOSTED; delete process.env.DATABASE_URL;
   mkdirSync(purposeHome("perps"), { recursive: true });
   writeFileSync(path.join(purposeHome("perps"), "grant.json"), JSON.stringify({ purpose: "perps", smartAccount: ACCOUNT }));
 });
@@ -60,7 +60,7 @@ test("expired reset carries its own bound refusal, with no practice work run", a
 
 test("reset status is Perps-only and unavailable when the paper offering is off", async () => {
   for (const query of ["", "?wallet=spot"]) assert.equal((await GET(new Request(`http://localhost/api/paper-reset${query}`))).status, 404);
-  for (const mode of ["off", "live", ""]) { process.env.MERRYMEN_PERPS = mode; assert.equal((await read("reset")).status, 404); }
+  for (const mode of ["off", "live", ""]) { process.env.AGENTCAP_PERPS = mode; assert.equal((await read("reset")).status, 404); }
 });
 
 test("hosted reset SELECT binds both account and command kind and reports an unread database", async () => {

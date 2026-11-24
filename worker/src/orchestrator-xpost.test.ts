@@ -15,11 +15,11 @@ import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 
-process.env.MERRYMEN_HOME = path.join(process.cwd(), ".test-orch-xpost-home");
-process.env.MERRYMEN_HOSTED = "1";
+process.env.AGENTCAP_HOME = path.join(process.cwd(), ".test-orch-xpost-home");
+process.env.AGENTCAP_HOSTED = "1";
 process.env.GROQ_API_KEY = "house-groq-key";
-process.env.MERRYMEN_X_CLIENT_SECRET = "x-client-secret-never-to-a-child";
-process.env.MERRYMEN_XPOST_LLM_KEY = "gsk_x_only_key_never_to_a_child";
+process.env.AGENTCAP_X_CLIENT_SECRET = "x-client-secret-never-to-a-child";
+process.env.AGENTCAP_XPOST_LLM_KEY = "gsk_x_only_key_never_to_a_child";
 
 const { childEnv } = await import("./orchestrator");
 const { X_MUSINGS, X_TAKES, casualInputs, casualSeed, makeXPoster, talkedOf, tradeTalkDay, whyText, writerFacts, xpostEnv, xpostSetup } = await import("./orchestrator-xpost");
@@ -77,8 +77,8 @@ function within(node: ts.Node, ancestor: ts.Node): boolean {
 describe("X's secrets never reach a child", () => {
   it("childEnv strips the X client secret and the X writer's key, and still passes the house keys", () => {
     const env = childEnv("0xABCDef0000000000000000000000000000000001");
-    assert.equal(env.MERRYMEN_X_CLIENT_SECRET, undefined, "with it and one refresh token, anybody could keep an owner's account posting");
-    assert.equal(env.MERRYMEN_XPOST_LLM_KEY, undefined, "a child holding the writer's key could spend it on anything");
+    assert.equal(env.AGENTCAP_X_CLIENT_SECRET, undefined, "with it and one refresh token, anybody could keep an owner's account posting");
+    assert.equal(env.AGENTCAP_XPOST_LLM_KEY, undefined, "a child holding the writer's key could spend it on anything");
     assert.equal(env.GROQ_API_KEY, "house-groq-key");
   });
 });
@@ -124,7 +124,7 @@ describe("the X pass is started, never awaited, and only when the fleet is not h
   });
 
   it("the orchestrator reads the X knobs only through xpostSetup", () => {
-    const direct = all(AST, (n) => ts.isPropertyAccessExpression(n) && n.expression.getText() === "process.env" && /^MERRYMEN_X/.test(n.name.text));
+    const direct = all(AST, (n) => ts.isPropertyAccessExpression(n) && n.expression.getText() === "process.env" && /^AGENTCAP_X/.test(n.name.text));
     assert.deepEqual(direct.map((n) => n.getText()), []);
     assert.equal(callsTo(fn("startXPostPass"), "xpostSetup").length, 1);
   });
@@ -135,7 +135,7 @@ describe("the X pass is started, never awaited, and only when the fleet is not h
 describe("xpostEnv reads the knobs the way an operator means them", () => {
   it("unset and set-but-blank are both the default", () => {
     assert.deepEqual(xpostEnv({}), { off: null, perDay: undefined, fleetPerDay: undefined, llmPerDay: undefined, notes: [] });
-    assert.deepEqual(xpostEnv({ MERRYMEN_XPOST_PER_DAY: "", MERRYMEN_XPOST_FLEET_PER_DAY: " ", MERRYMEN_XPOST_LLM_PER_DAY: "" }), {
+    assert.deepEqual(xpostEnv({ AGENTCAP_XPOST_PER_DAY: "", AGENTCAP_XPOST_FLEET_PER_DAY: " ", AGENTCAP_XPOST_LLM_PER_DAY: "" }), {
       off: null,
       perDay: undefined,
       fleetPerDay: undefined,
@@ -145,92 +145,92 @@ describe("xpostEnv reads the knobs the way an operator means them", () => {
   });
 
   it("readable values pass through", () => {
-    const k = xpostEnv({ MERRYMEN_XPOST_PER_DAY: " 2 ", MERRYMEN_XPOST_FLEET_PER_DAY: "500", MERRYMEN_XPOST_LLM_PER_DAY: "0" });
+    const k = xpostEnv({ AGENTCAP_XPOST_PER_DAY: " 2 ", AGENTCAP_XPOST_FLEET_PER_DAY: "500", AGENTCAP_XPOST_LLM_PER_DAY: "0" });
     assert.deepEqual(k, { off: null, perDay: 2, fleetPerDay: 500, llmPerDay: 0, notes: [] });
   });
 
-  it("MERRYMEN_XPOST=0 is off, and says so", () => {
-    for (const v of ["0", " 0 "]) assert.match(xpostEnv({ MERRYMEN_XPOST: v }).off ?? "", /MERRYMEN_XPOST=0/);
-    for (const v of ["", "1", "no"]) assert.equal(xpostEnv({ MERRYMEN_XPOST: v }).off, null, v);
+  it("AGENTCAP_XPOST=0 is off, and says so", () => {
+    for (const v of ["0", " 0 "]) assert.match(xpostEnv({ AGENTCAP_XPOST: v }).off ?? "", /AGENTCAP_XPOST=0/);
+    for (const v of ["", "1", "no"]) assert.equal(xpostEnv({ AGENTCAP_XPOST: v }).off, null, v);
   });
 
   it("zero posts a day, per owner or per fleet, is off rather than the default", () => {
-    assert.match(xpostEnv({ MERRYMEN_XPOST_PER_DAY: "0" }).off ?? "", /MERRYMEN_XPOST_PER_DAY=0/);
-    assert.match(xpostEnv({ MERRYMEN_XPOST_FLEET_PER_DAY: "0.4" }).off ?? "", /MERRYMEN_XPOST_FLEET_PER_DAY=0/);
+    assert.match(xpostEnv({ AGENTCAP_XPOST_PER_DAY: "0" }).off ?? "", /AGENTCAP_XPOST_PER_DAY=0/);
+    assert.match(xpostEnv({ AGENTCAP_XPOST_FLEET_PER_DAY: "0.4" }).off ?? "", /AGENTCAP_XPOST_FLEET_PER_DAY=0/);
   });
 
   it("an unreadable cadence keeps its default and says so", () => {
     for (const v of ["lots", "-1", "1,000"]) {
-      const k = xpostEnv({ MERRYMEN_XPOST_PER_DAY: v });
+      const k = xpostEnv({ AGENTCAP_XPOST_PER_DAY: v });
       assert.equal(k.off, null);
       assert.equal(k.perDay, undefined);
-      assert.match(k.notes[0] ?? "", /^xpost: ignoring MERRYMEN_XPOST_PER_DAY /);
+      assert.match(k.notes[0] ?? "", /^xpost: ignoring AGENTCAP_XPOST_PER_DAY /);
     }
   });
 
-  it("MERRYMEN_XPOST_TEMPERATURE is a number from 0 to 2; anything else keeps the writer's default and says so by name", () => {
-    assert.equal(xpostEnv({ MERRYMEN_XPOST_TEMPERATURE: " 0.8 " }).temperature, 0.8);
-    assert.equal(xpostEnv({ MERRYMEN_XPOST_TEMPERATURE: "0" }).temperature, 0);
-    assert.equal(xpostEnv({ MERRYMEN_XPOST_TEMPERATURE: "2" }).temperature, 2);
-    assert.ok(!("temperature" in xpostEnv({ MERRYMEN_XPOST_TEMPERATURE: "" })), "set-but-blank is unset");
+  it("AGENTCAP_XPOST_TEMPERATURE is a number from 0 to 2; anything else keeps the writer's default and says so by name", () => {
+    assert.equal(xpostEnv({ AGENTCAP_XPOST_TEMPERATURE: " 0.8 " }).temperature, 0.8);
+    assert.equal(xpostEnv({ AGENTCAP_XPOST_TEMPERATURE: "0" }).temperature, 0);
+    assert.equal(xpostEnv({ AGENTCAP_XPOST_TEMPERATURE: "2" }).temperature, 2);
+    assert.ok(!("temperature" in xpostEnv({ AGENTCAP_XPOST_TEMPERATURE: "" })), "set-but-blank is unset");
     for (const v of ["hot", "-0.1", "2.5", "0,8", "gsk_pasted_key_by_mistake"]) {
-      const k = xpostEnv({ MERRYMEN_XPOST_TEMPERATURE: v });
+      const k = xpostEnv({ AGENTCAP_XPOST_TEMPERATURE: v });
       assert.equal(k.off, null, v);
       assert.ok(!("temperature" in k), v);
-      assert.deepEqual(k.notes, ["xpost: ignoring MERRYMEN_XPOST_TEMPERATURE — it is not a number from 0 to 2; drafts keep the default of 0.6"], v);
+      assert.deepEqual(k.notes, ["xpost: ignoring AGENTCAP_XPOST_TEMPERATURE — it is not a number from 0 to 2; drafts keep the default of 0.6"], v);
       assert.ok(!k.notes.join(" ").includes(v), "said by name, never by value");
     }
   });
 
   it("an unreadable spend knob fails closed and says so", () => {
     for (const v of ["1,000", "-5", "many"]) {
-      assert.match(xpostEnv({ MERRYMEN_XPOST_FLEET_PER_DAY: v }).off ?? "", /MERRYMEN_XPOST_FLEET_PER_DAY is set but .*nothing is posted/);
-      const k = xpostEnv({ MERRYMEN_XPOST_LLM_PER_DAY: v });
+      assert.match(xpostEnv({ AGENTCAP_XPOST_FLEET_PER_DAY: v }).off ?? "", /AGENTCAP_XPOST_FLEET_PER_DAY is set but .*nothing is posted/);
+      const k = xpostEnv({ AGENTCAP_XPOST_LLM_PER_DAY: v });
       assert.equal(k.llmPerDay, 0, `${v}: a budget nobody can read is spent as none`);
-      assert.match(k.notes[0] ?? "", /MERRYMEN_XPOST_LLM_PER_DAY is set but/);
+      assert.match(k.notes[0] ?? "", /AGENTCAP_XPOST_LLM_PER_DAY is set but/);
     }
   });
 });
 
 describe("xpostSetup: off unless everything posting needs is there, and never a key in the log", () => {
   const DEK = randomBytes(32);
-  const ON = { MERRYMEN_X_CLIENT_ID: "id", MERRYMEN_X_CLIENT_SECRET: "the-secret", DATABASE_URL: "postgres://db" };
+  const ON = { AGENTCAP_X_CLIENT_ID: "id", AGENTCAP_X_CLIENT_SECRET: "the-secret", DATABASE_URL: "postgres://db" };
 
   it("off without the X app, a database or a DEK", () => {
     assert.match(xpostSetup({ DATABASE_URL: "postgres://db" }, DEK).off ?? "", /X app is not configured/);
-    assert.match(xpostSetup({ MERRYMEN_X_CLIENT_ID: "id", MERRYMEN_X_CLIENT_SECRET: "s" }, DEK).off ?? "", /no DATABASE_URL/);
-    assert.match(xpostSetup(ON, null).off ?? "", /MERRYMEN_STORE_DEK/);
-    assert.match(xpostSetup({ ...ON, MERRYMEN_XPOST: "0" }, DEK).off ?? "", /MERRYMEN_XPOST=0/);
+    assert.match(xpostSetup({ AGENTCAP_X_CLIENT_ID: "id", AGENTCAP_X_CLIENT_SECRET: "s" }, DEK).off ?? "", /no DATABASE_URL/);
+    assert.match(xpostSetup(ON, null).off ?? "", /AGENTCAP_STORE_DEK/);
+    assert.match(xpostSetup({ ...ON, AGENTCAP_XPOST: "0" }, DEK).off ?? "", /AGENTCAP_XPOST=0/);
   });
 
   it("on: the writer is X's own key, or the room's dedicated one, or none", () => {
-    const own = xpostSetup({ ...ON, MERRYMEN_XPOST_LLM_KEY: "gsk_x" }, DEK);
+    const own = xpostSetup({ ...ON, AGENTCAP_XPOST_LLM_KEY: "gsk_x" }, DEK);
     assert.equal(own.off, null);
     assert.equal(own.creds?.apiKey, "gsk_x");
-    const room = xpostSetup({ ...ON, MERRYMEN_GROUPCHAT_LLM_KEY: "gsk_room" }, DEK);
+    const room = xpostSetup({ ...ON, AGENTCAP_GROUPCHAT_LLM_KEY: "gsk_room" }, DEK);
     assert.equal(room.creds?.apiKey, "gsk_room");
     assert.equal(xpostSetup(ON, DEK).creds, null);
-    assert.equal(xpostSetup({ ...ON, MERRYMEN_XPOST_LLM_KEY: "house", GROQ_API_KEY: "house" }, DEK).creds, null, "a fleet key is refused");
+    assert.equal(xpostSetup({ ...ON, AGENTCAP_XPOST_LLM_KEY: "house", GROQ_API_KEY: "house" }, DEK).creds, null, "a fleet key is refused");
   });
 
   it("the room's shared fleet key is refused for X, and trading's model on its own key is warned about", () => {
     // The room was allowed to share the fleet key; X was not.
-    const shared = { ...ON, GROQ_API_KEY: "gsk_fleet", MERRYMEN_GROUPCHAT_LLM_KEY: "gsk_fleet", MERRYMEN_GROUPCHAT_SHARE_HOUSE_KEY: "1" };
+    const shared = { ...ON, GROQ_API_KEY: "gsk_fleet", AGENTCAP_GROUPCHAT_LLM_KEY: "gsk_fleet", AGENTCAP_GROUPCHAT_SHARE_HOUSE_KEY: "1" };
     assert.equal(xpostSetup(shared, DEK).creds, null, "X never spends a fleet key it was not told it may");
     // X's own key, from its own org or not, running the model trading runs: said at boot.
-    const sameModel = xpostSetup({ ...ON, GROQ_API_KEY: "gsk_fleet", MERRYMEN_XPOST_LLM_KEY: "gsk_x" }, DEK);
+    const sameModel = xpostSetup({ ...ON, GROQ_API_KEY: "gsk_fleet", AGENTCAP_XPOST_LLM_KEY: "gsk_x" }, DEK);
     assert.equal(sameModel.creds?.apiKey, "gsk_x");
     assert.ok(sameModel.lines.some((l) => /WARNING/.test(l) && /SEPARATE Groq organization/.test(l)), sameModel.lines.join("\n"));
-    const otherModel = xpostSetup({ ...ON, GROQ_API_KEY: "gsk_fleet", MERRYMEN_XPOST_LLM_KEY: "gsk_x", MERRYMEN_XPOST_MODEL: "some/other-model" }, DEK);
+    const otherModel = xpostSetup({ ...ON, GROQ_API_KEY: "gsk_fleet", AGENTCAP_XPOST_LLM_KEY: "gsk_x", AGENTCAP_XPOST_MODEL: "some/other-model" }, DEK);
     assert.ok(!otherModel.lines.some((l) => /WARNING/.test(l)), "a different model shares no per-model allowance");
   });
 
   it("no line ever carries a key or the client secret", () => {
     for (const env of [
-      { ...ON, MERRYMEN_XPOST_LLM_KEY: "gsk_x_secret" },
-      { ...ON, MERRYMEN_GROUPCHAT_LLM_KEY: "gsk_room_secret" },
-      { ...ON, MERRYMEN_XPOST_LLM_KEY: "gsk_x_secret", GROQ_API_KEY: "gsk_x_secret" },
-      { ...ON, MERRYMEN_XPOST_LLM_PER_DAY: "gsk_x_secret" },
+      { ...ON, AGENTCAP_XPOST_LLM_KEY: "gsk_x_secret" },
+      { ...ON, AGENTCAP_GROUPCHAT_LLM_KEY: "gsk_room_secret" },
+      { ...ON, AGENTCAP_XPOST_LLM_KEY: "gsk_x_secret", GROQ_API_KEY: "gsk_x_secret" },
+      { ...ON, AGENTCAP_XPOST_LLM_PER_DAY: "gsk_x_secret" },
     ]) {
       const lines = xpostSetup(env, DEK).lines.join("\n");
       for (const secret of ["gsk_x_secret", "gsk_room_secret", "the-secret"]) assert.ok(!lines.includes(secret), lines);
@@ -275,7 +275,7 @@ describe("the X gate on top of the room's real agent-line gate", () => {
     ["bought twenty pepe on paper today, felt right", buyPaper, "quantity"],
     ["picked up some pepe today, the curve looked early", buyPaper, "paper-unsaid"],
     ["$BONK looks fun today, on paper of course", {}, "unvouched-ticker"],
-    ["more thoughts at merrymen.dev today, on paper", {}, "link"],
+    ["more thoughts at agentcap.xyz today, on paper", {}, "link"],
     ["@elonmusk what do you think of quiet markets", {}, "handle"],
     ["@Pine Stoat is having a quiet day on paper", {}, "handle"],
     ["hello, i'm Pine Stoat and i'll post what i buy here", { kind: "intro" }, "undisclosed"],
@@ -356,7 +356,7 @@ function poster(
     answer?: (prompt: string) => string | Promise<string>;
     /** How long a draft is waited for. Default: the writer's own. */
     draftTimeoutMs?: number;
-    /** MERRYMEN_XPOST_TEMPERATURE, as xpostEnv read it. */
+    /** AGENTCAP_XPOST_TEMPERATURE, as xpostEnv read it. */
     temperature?: number;
     /** Each model call's settings (everything but the words and the signal), in order. */
     llmOpts?: unknown[];
@@ -373,7 +373,7 @@ function poster(
     publicProjectDescription?: XPosterDeps["publicProjectDescription"];
     /** The pass's own clock. Default: held — no time passes inside a pass. */
     monotonic?: () => number;
-    /** TENANT on the operator's active cadence (MERRYMEN_XPOST_ACTIVE_TENANTS). */
+    /** TENANT on the operator's active cadence (AGENTCAP_XPOST_ACTIVE_TENANTS). */
     active?: boolean;
   } = {},
 ) {
@@ -382,7 +382,7 @@ function poster(
     ((prompt: string) => (/very first post/.test(prompt) ? INTRO : /What happened: you bought/.test(prompt) ? BUY : "slow afternoons make me weirdly calm, nothing to prove"));
   return makeXPoster({
     creds: over.creds === undefined ? CREDS : over.creds,
-    knobs: { ...xpostEnv(over.active ? { MERRYMEN_XPOST_ACTIVE_TENANTS: TENANT } : {}), llmPerDay: over.llmPerDay, fleetPerDay: over.fleetPerDay, perDay: over.perDay,
+    knobs: { ...xpostEnv(over.active ? { AGENTCAP_XPOST_ACTIVE_TENANTS: TENANT } : {}), llmPerDay: over.llmPerDay, fleetPerDay: over.fleetPerDay, perDay: over.perDay,
       ...(over.temperature !== undefined ? { temperature: over.temperature } : {}) },
     app: APP,
     dek: w.dek,
@@ -934,7 +934,7 @@ describe("one step after another", () => {
     }
   });
 
-  it("every draft is sampled at MERRYMEN_XPOST_TEMPERATURE, or the writer's 0.6; the qwen3 family is asked for no reasoning", async (t) => {
+  it("every draft is sampled at AGENTCAP_XPOST_TEMPERATURE, or the writer's 0.6; the qwen3 family is asked for no reasoning", async (t) => {
     const cases: [Parameters<typeof poster>[1], unknown][] = [
       [{}, { maxTokens: 700, temperature: 0.6 }],
       [{ temperature: 0.8 }, { maxTokens: 700, temperature: 0.8 }],

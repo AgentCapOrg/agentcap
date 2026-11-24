@@ -27,8 +27,8 @@ import { after, beforeEach, describe, it, mock } from "node:test";
 
 import type { TelegramState } from "./state";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-backlog-"));
-process.env.MERRYMEN_HOME = HOME; // the soul files, a /link's settings patch and the pause marker land here
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-backlog-"));
+process.env.AGENTCAP_HOME = HOME; // the soul files, a /link's settings patch and the pause marker land here
 after(() => rmSync(HOME, { recursive: true, force: true }));
 
 const { startTelegram, isPaused, setPaused } = await import("./service");
@@ -805,10 +805,10 @@ describe("/start <code>, the deep link", () => {
   it("a bare /start or /help from a stranger gets the way in, with their chat id and nothing about the agent", async () => {
     await withService({ script: firstPoll(() => [text(1, 999, "/start"), text(2, 998, "/help")]) }, async (h) => {
       assert.deepEqual(h.sentTo(999), [
-        "This is a private Merrymen bot. If it's yours, send the /link code shown in Settings → Telegram. Your chat id is 999.",
+        "This is a private AgentCap bot. If it's yours, send the /link code shown in Settings → Telegram. Your chat id is 999.",
       ]);
       assert.deepEqual(h.sentTo(998), [
-        "This is a private Merrymen bot. If it's yours, send the /link code shown in Settings → Telegram. Your chat id is 998.",
+        "This is a private AgentCap bot. If it's yours, send the /link code shown in Settings → Telegram. Your chat id is 998.",
       ]);
     });
   });

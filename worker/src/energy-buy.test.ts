@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { ENERGY, ENERGY_FULL_RAW, MERRYMEN_TOKEN } from "../../packages/core/src/index";
+import { ENERGY, ENERGY_FULL_RAW, AGENTCAP_TOKEN } from "../../packages/core/src/index";
 import {
   ENERGY_BUFFER_BPS,
   energyAskFor,
@@ -19,7 +19,7 @@ import { grossNeededFor } from "./venues/uniswap-v2";
 
 const TOKEN = 10n ** 18n;
 const USDG = 1_000_000n;
-/** A pool that sells 2,000 $MERRYMEN (pre-tax) per USDG, rounding the input up like getAmountsIn. */
+/** A pool that sells 2,000 $AGENTCAP (pre-tax) per USDG, rounding the input up like getAmountsIn. */
 const perUsdg = 2_000n * TOKEN;
 const linear = (gross: bigint) => (gross * USDG + perUsdg - 1n) / perUsdg;
 
@@ -371,13 +371,13 @@ describe("the fixed sentences — each names what to do instead", async () => {
   const { liveBlockerText } = await import("./exec-mode");
   it("not an order: the app chat's get-energy, or send it directly — never /settings", () => {
     assert.match(m.ENERGY_NOT_AN_ORDER, /get my energy/);
-    assert.match(m.ENERGY_NOT_AN_ORDER, /Merrymen app chat/);
+    assert.match(m.ENERGY_NOT_AN_ORDER, /AgentCap app chat/);
     assert.match(m.ENERGY_NOT_AN_ORDER, /Robinhood Chain directly/);
     assert.doesNotMatch(m.ENERGY_NOT_AN_ORDER, /\/settings/);
   });
   it("no sell: the key cannot, recover can", () => {
     assert.match(m.ENERGY_NO_SELL, /can't sell/);
-    assert.match(m.ENERGY_NO_SELL, /merrymen recover/);
+    assert.match(m.ENERGY_NO_SELL, /agentcap recover/);
   });
   it("not mainnet: keep it in your own wallet on Robinhood Chain", () => {
     assert.match(m.ENERGY_NOT_MAINNET, /own wallet on Robinhood Chain/);
@@ -392,7 +392,7 @@ describe("the fixed sentences — each names what to do instead", async () => {
     const line = m.energyNeedsLiveLine(liveBlockerText("live-not-enabled"));
     assert.match(line, /only while trading live/);
     assert.match(line, /live trading is off/);
-    assert.match(line, /Turn on Live trading, or send \$MERRYMEN to my account on Robinhood Chain directly/);
+    assert.match(line, /Turn on Live trading, or send \$AGENTCAP to my account on Robinhood Chain directly/);
     assert.match(m.energyNeedsLiveLine(null), /and I'm not\. Turn on/);
   });
   it("none of them says anything about price, returns or a percentage", () => {
@@ -405,7 +405,7 @@ describe("the fixed sentences — each names what to do instead", async () => {
 /**
  * AN ORDINARY ORDER IS RESOLVED BY ADDRESS — the watch set first.
  *
- * submitChatTrade refused any symbol reading MERRYMEN before it looked at the
+ * submitChatTrade refused any symbol reading AGENTCAP before it looked at the
  * watch set, so a watched coin at another address under that name could be
  * neither bought nor sold by its owner, and every surface told them "I never
  * sell it" about a coin they held. resolveOrderToken is the decision it now
@@ -415,33 +415,33 @@ describe("resolveOrderToken — the reserve by address, a lookalike like any coi
   const CLONE = "0x00000000000000000000000000000000000c1011";
   const TSLA = { symbol: "TSLA", address: "0x00000000000000000000000000000000000000a5" };
 
-  it("A WATCHED LOOKALIKE CALLED MERRYMEN RESOLVES TO ITS OWN ADDRESS — bought and sold like any token", () => {
-    assert.deepEqual(resolveOrderToken("MERRYMEN", [TSLA, { symbol: "MERRYMEN", address: CLONE }]), { kind: "token", address: CLONE, symbol: "MERRYMEN" });
+  it("A WATCHED LOOKALIKE CALLED AGENTCAP RESOLVES TO ITS OWN ADDRESS — bought and sold like any token", () => {
+    assert.deepEqual(resolveOrderToken("AGENTCAP", [TSLA, { symbol: "AGENTCAP", address: CLONE }]), { kind: "token", address: CLONE, symbol: "AGENTCAP" });
   });
 
   it("A MIXED-CASE LOOKALIKE IS FOUND HOWEVER THE ORDER SPELLS IT — never told 'I never sell it' about a coin its owner holds", () => {
-    // Settings keeps "MerryMen" as typed; the app's sell card and Telegram
+    // Settings keeps "AgentCap" as typed; the app's sell card and Telegram
     // upper-case the order's symbol. An exact match missed it, fell through to
     // the reserve's name, and the owner got ENERGY_NOT_AN_ORDER.
-    const watch = [TSLA, { symbol: "MerryMen", address: CLONE }];
-    for (const s of ["MERRYMEN", "merrymen", "MerryMen", "$MERRYMEN", " MERRYMEN "]) {
-      assert.deepEqual(resolveOrderToken(s, watch), { kind: "token", address: CLONE, symbol: "MerryMen" }, s);
+    const watch = [TSLA, { symbol: "AgentCap", address: CLONE }];
+    for (const s of ["AGENTCAP", "agentcap", "AgentCap", "$AGENTCAP", " AGENTCAP "]) {
+      assert.deepEqual(resolveOrderToken(s, watch), { kind: "token", address: CLONE, symbol: "AgentCap" }, s);
     }
     // The name comes back as the watch set spells it — the book's key for the position a sell reads.
     assert.deepEqual(resolveOrderToken("pepe", [{ symbol: "Pepe", address: CLONE }]), { kind: "token", address: CLONE, symbol: "Pepe" });
   });
 
   it("case folding never reaches past the address check: the reserve itself, however spelt, is still refused", () => {
-    assert.deepEqual(resolveOrderToken("merrymen", [{ symbol: "MERRYMEN", address: MERRYMEN_TOKEN.address }]), { kind: "reserve" });
+    assert.deepEqual(resolveOrderToken("agentcap", [{ symbol: "AGENTCAP", address: AGENTCAP_TOKEN.address }]), { kind: "reserve" });
   });
 
   it("NOTHING WATCHED ANSWERS AND THE NAME IS THE RESERVE'S: refused as the reserve, never 'unknown'", () => {
-    for (const s of ["MERRYMEN", "$MERRYMEN", "merrymen"]) assert.deepEqual(resolveOrderToken(s, [TSLA]), { kind: "reserve" }, s);
+    for (const s of ["AGENTCAP", "$AGENTCAP", "agentcap"]) assert.deepEqual(resolveOrderToken(s, [TSLA]), { kind: "reserve" }, s);
   });
 
   it("a watched entry AT the reserve address is refused whatever it is called (defence in depth)", () => {
-    assert.deepEqual(resolveOrderToken("MM", [{ symbol: "MM", address: MERRYMEN_TOKEN.address }]), { kind: "reserve" });
-    assert.deepEqual(resolveOrderToken("MERRYMEN", [{ symbol: "MERRYMEN", address: MERRYMEN_TOKEN.address.toUpperCase().replace("0X", "0x") }]), { kind: "reserve" });
+    assert.deepEqual(resolveOrderToken("MM", [{ symbol: "MM", address: AGENTCAP_TOKEN.address }]), { kind: "reserve" });
+    assert.deepEqual(resolveOrderToken("AGENTCAP", [{ symbol: "AGENTCAP", address: AGENTCAP_TOKEN.address.toUpperCase().replace("0X", "0x") }]), { kind: "reserve" });
   });
 
   it("an ordinary watched symbol resolves; an unwatched one is unknown", () => {

@@ -3,7 +3,7 @@
  * CLASS EXITS STILL RUN.
  *
  * The gate used to `return` from the tick ahead of the class route's exits, so
- * an owner who fell below 100,000 $MERRYMEN with a class position open had an
+ * an owner who fell below 100,000 $AGENTCAP with a class position open had an
  * agent that could close nothing. The first fix let the strategy tick and
  * passed on its "exits" — which, for even-keel, are the trims of a rebalance
  * whose top-ups were dropped: every tick sold the book further into cash, the
@@ -173,8 +173,8 @@ describe("a Circle strategy below the tier", () => {
  * The latch was keyed on "short" alone, so a first read that failed sent "our
  * read is failing — it should clear on its own" and the real shortfall the next
  * read found was never said. And on a grant off Robinhood Chain it told the
- * owner to hold $MERRYMEN "between your wallet and my account", an account
- * whose $MERRYMEN does not count there.
+ * owner to hold $AGENTCAP "between your wallet and my account", an account
+ * whose $AGENTCAP does not count there.
  */
 describe("the Circle note", () => {
   /** Run a sequence of ticks through the latch; the notes that went out. */
@@ -214,12 +214,12 @@ describe("the Circle note", () => {
   const text = (say: "unread" | "short", accountCounts: boolean) => circleNote(say, { strategyName: "even-keel", accountCounts });
 
   it("ON ROBINHOOD CHAIN it names the combined balance, and keeps its pinned half", () => {
-    assert.match(text("short", true), /^even-keel is a Merry Circle strategy — hold 100,000 \$MERRYMEN between your wallet and my account \(Merry Man tier\) to run it; idle until then/);
+    assert.match(text("short", true), /^even-keel is a Merry Circle strategy — hold 100,000 \$AGENTCAP between your wallet and my account \(Merry Man tier\) to run it; idle until then/);
   });
 
   it("OFF ROBINHOOD CHAIN it names the one place that counts, and never the account", () => {
     const t = text("short", false);
-    assert.match(t, /hold 100,000 \$MERRYMEN in your own wallet on Robinhood Chain \(Merry Man tier\) to run it/);
+    assert.match(t, /hold 100,000 \$AGENTCAP in your own wallet on Robinhood Chain \(Merry Man tier\) to run it/);
     assert.doesNotMatch(t, /my account/);
   });
 
@@ -272,15 +272,15 @@ describe("the tick's wiring below the tier", () => {
   it("the owner is told once per change of reason, in the words for this grant's chain", () => {
     const block = CODE.slice(gate, tick);
     assert.match(block, /const circleStep = circleNoteStep\(circleNoted, \{ short: circleShort, readOk: circle\.known \}\);\s*circleNoted = circleStep\.noted;\s*if \(circleStep\.say\) \{/);
-    assert.match(block, /circleNote\(circleStep\.say, \{ strategyName: strategy\.name, accountCounts: grant\.chainId === MERRYMEN_TOKEN\.chainId \}\)/);
+    assert.match(block, /circleNote\(circleStep\.say, \{ strategyName: strategy\.name, accountCounts: grant\.chainId === AGENTCAP_TOKEN\.chainId \}\)/);
     // The same test that decides whether the account is read at all.
-    assert.match(CODE, /const energyAccount = grant\.chainId === MERRYMEN_TOKEN\.chainId \?/);
+    assert.match(CODE, /const energyAccount = grant\.chainId === AGENTCAP_TOKEN\.chainId \?/);
     assert.doesNotMatch(CODE, /circleBlockedNoted/, "the boolean latch that stuck on 'our read failed' is gone");
   });
 });
 
 /**
- * A RESTART WHOSE FIRST $MERRYMEN READ FAILS DOES NOT LOCK A MERRY MAN OUT.
+ * A RESTART WHOSE FIRST $AGENTCAP READ FAILS DOES NOT LOCK A MERRY MAN OUT.
  *
  * holderTier starts at the outsider in every new process and moves only on a
  * read where every part answered — right for the fee discount, which is money,

@@ -10,7 +10,7 @@ import * as solanaLive from "./solana-live";
 /**
  * THE PHONE BUNDLES THIS BARREL.
  *
- * mobile/metro.config.js aliases @merrymen/core to packages/core/src, and
+ * mobile/metro.config.js aliases @agentcap/core to packages/core/src, and
  * Metro bundles every file index.ts reaches, used or not. An EAS build installs
  * mobile/ only, so a package the barrel reaches that mobile/package.json lacks
  * fails the release build, and @solana/kit would ship to every phone even if it

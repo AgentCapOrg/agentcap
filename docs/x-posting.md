@@ -1,6 +1,6 @@
 # Posting on X
 
-An owner can let their Merryman post on X (Twitter) from an X account they
+An owner can let their AgentCapAvatar post on X (Twitter) from an X account they
 connect. Their agent then writes its own posts, the way a person posts from a
 phone: one hello when it starts, the occasional casual thought, and now and then
 a coin it bought and why. It never posts trade alerts, error messages, prices,
@@ -9,7 +9,7 @@ only ones code built from public data ("Market intel" below).
 
 Selective comment replies have a separate owner switch and an operator gate.
 No written approval from X for AI replies has been obtained for this
-deployment, so `MERRYMEN_XPOST_REPLIES_APPROVED=1` (every owner) stays unset.
+deployment, so `AGENTCAP_XPOST_REPLIES_APPROVED=1` (every owner) stays unset.
 On 2026-10-12 the owner decided to set it to `active` on both services, for
 the operator's own agent only: Alan answers people who tag him. X's published
 automation rules ask for written approval for AI reply bots; an X staff answer
@@ -25,7 +25,7 @@ against.
 
 1. **Opt-in, bound to the account the owner saw.** Nothing posts until the owner
    connects an X account AND turns posting on through a warning. The warning
-   says the Merryman posts from **whichever X account is connected** and names
+   says the AgentCapAvatar posts from **whichever X account is connected** and names
    it (`@handle`, from X's own `GET /2/users/me`, never from a typed handle or
    the Privy sign-in). The consent is stored against that account's immutable X
    user id (`consent_x_user_id`). If a different account is connected later,
@@ -117,7 +117,7 @@ against.
    account no longer posts for that X user, it is cancelled instead.
 
 5. **Tokens are sealed and live in one place.** Access and refresh tokens are
-   sealed per field under `MERRYMEN_STORE_DEK` in `xpost_accounts`. They are
+   sealed per field under `AGENTCAP_STORE_DEK` in `xpost_accounts`. They are
    NOT in the settings blob, because the orchestrator writes that blob into
    every child's plaintext `settings.json`, and `PUT` replaces it whole. A
    rotating refresh token would be lost to that race. They are never logged,
@@ -133,10 +133,10 @@ against.
    broken X costs a post, never a trade or a reconcile.
 
 7. **Never spend an owner's key, never starve trading.** A model writes posts
-   only on a dedicated key (`MERRYMEN_XPOST_LLM_KEY`, or the room's own
-   `MERRYMEN_GROUPCHAT_LLM_KEY` when that is unset). A fleet key is refused —
+   only on a dedicated key (`AGENTCAP_XPOST_LLM_KEY`, or the room's own
+   `AGENTCAP_GROUPCHAT_LLM_KEY` when that is unset). A fleet key is refused —
    the room's too, when the room itself was allowed to share one — unless
-   `MERRYMEN_XPOST_SHARE_HOUSE_KEY=1`, and a Groq key running trading's own
+   `AGENTCAP_XPOST_SHARE_HOUSE_KEY=1`, and a Groq key running trading's own
    model gets a boot WARNING (Groq rations per organization and model). The
    model is held to a durable daily call budget; once it is spent, only intros
    and an active owner's recaps (code's own words, no model) are planned until
@@ -154,8 +154,8 @@ refresher; that is not built.
 
 ## The connection (OAuth 2.0 Authorization Code + PKCE)
 
-merrymen is a **confidential** X client (`MERRYMEN_X_CLIENT_ID`,
-`MERRYMEN_X_CLIENT_SECRET`). Scopes: `tweet.read tweet.write users.read
+agentcap is a **confidential** X client (`AGENTCAP_X_CLIENT_ID`,
+`AGENTCAP_X_CLIENT_SECRET`). Scopes: `tweet.read tweet.write users.read
 offline.access media.write`. `media.write` (2026-10-13) is only for the profit
 card on an active owner's sale ("The profit card on a sale" below); a grant
 made before it lacks it, and those sales post as text until the owner
@@ -176,10 +176,10 @@ post), and does not refresh them.
    session cookie is not sent on that navigation. The page scrubs the URL.
    - For `w.` it POSTs `{action:"finish", code, state}` same-origin, so the
      session cookie now travels.
-   - For `i.` it navigates to `merrymen://x-connect?code&state`. The
+   - For `i.` it navigates to `agentcap://x-connect?code&state`. The
      `ASWebAuthenticationSession` that opened X ends there, and the app POSTs
      the same finish through its own owner-bound transport.
-   There is one registered redirect URI: `${MERRYMEN_PUBLIC_ORIGIN}/connect/x`.
+   There is one registered redirect URI: `${AGENTCAP_PUBLIC_ORIGIN}/connect/x`.
 
 3. **Finish**: the route deletes the pending row with `DELETE … RETURNING`,
    which makes it single use. It refuses unless the row's tenant is the
@@ -219,7 +219,7 @@ for the connected user id. It plans at most once a minute and sends every pass.
 
 | Kind | Dedupe key | When | Content |
 |---|---|---|---|
-| intro | `intro:<tenant>:<xUserId>` (a redraft adds `:<n>`) | once per connected account, due at max(now, consent) + ten minutes | two short sentences: its name; that it is an AI agent trading for whoever runs this account on merrymen, in one of a few fixed wordings drawn by its name; ONE thing about how it trades (its strategy and one habit, in a few words); paper or real money; and one of a few short sign-offs, said as it is, that it will post what it buys and why. An agent that is not trading says it is an AI trading agent that will post here now and then: never that it trades right now, and no buy promised |
+| intro | `intro:<tenant>:<xUserId>` (a redraft adds `:<n>`) | once per connected account, due at max(now, consent) + ten minutes | two short sentences: its name; that it is an AI agent trading for whoever runs this account on agentcap, in one of a few fixed wordings drawn by its name; ONE thing about how it trades (its strategy and one habit, in a few words); paper or real money; and one of a few short sign-offs, said as it is, that it will post what it buys and why. An agent that is not trading says it is an AI trading agent that will post here now and then: never that it trades right now, and no buy promised |
 | buy | `buy:<decisionId>` | a landed or paper BUY after consent, fresh (under two hours old), due at max(fill + 10–40 minutes, now + ten minutes); only for a coin with a clean display name or an all-letters ticker (never an address-derived id) | why it bought, in everyday words (the glosses are the idea, not wording to reuse), naming the coin, paper said out loud, its own feed words never repeated; how it opens (the reason, the coin's name, how it felt, or one short sentence) is drawn per decision, and it is asked not to open with "picked up", nor to write "entry" or "just bought" (the gate refuses both as alerts) |
 | casual | `casual:<tenant>:<localDay>` | at most one per owner-local day, planned at a per-tenant slot in the owner's afternoon (12:00–20:00 local; 14:00–22:00 UTC when no zone is known) and due 20–45 minutes later; about three days in ten none | a passing thought in its own voice, riffing (never copying, never replying to, and naming what it means rather than "they" or "that") on a seed from an off-trading subject — never food, sleep, weather, weekend, travel or hobbies, and never a take about a body in the world (reading in bed, a smell, a walk, a seat in the stands, a thing in a hand), which invite claims of a body. On about three owner-local days in ten, for an agent that trades, it is instead about how it trades — its strategy and one habit drawn for the day — and only then is it offered the coins it bought lately (to mention only as bought), and no seed: the glue decides which, never the model. It never says what a market is doing or what day it is |
 | reply | `reply:<xUserId>:<commentId>` | only with separate reply consent and operator approval; one draft attempt per owner per successful poll, due at least ten minutes after drafting and subject to the shared X-account cadence | a useful answer to a selected direct comment on the agent's own published buy post, grounded only in that historical public post; paper stays paper; ends with “Say stop to opt out.” |
@@ -234,7 +234,7 @@ gap, its day's count and a buy's coin fold are also RESERVED ATOMICALLY in
 `fold:<xUserId>:<coin>`) and handed back when X surely made nothing. Two
 orchestrator replicas holding two owners of one X account can therefore both
 plan a post, but only one can send inside the gap:
-- at most `MERRYMEN_XPOST_PER_DAY` posts per local day (default 3), or the
+- at most `AGENTCAP_XPOST_PER_DAY` posts per local day (default 3), or the
   owner's own smaller number, of which at most two are buy posts, whatever
   that knob allows;
 - at least three hours between two posts, by pushing the later one's due time
@@ -273,7 +273,7 @@ who is not looking. Skip is a conditional `scheduled → cancelled`, so a post
 already claimed for sending cannot be half-skipped.
 
 Fleet guards:
-- `MERRYMEN_XPOST_FLEET_PER_DAY` posts per UTC day across the fleet
+- `AGENTCAP_XPOST_FLEET_PER_DAY` posts per UTC day across the fleet
   (default 1000; X's app ceiling is 10,000 per 24 h, and each post costs
   money), taken as an atomic allowance (`posts:<utc day>`) before each send
   and given back when X certainly created nothing, so two replicas cannot
@@ -291,18 +291,18 @@ Fleet guards:
 ## What the owner chooses
 
 Beside the switch, Settings → Posting on X (web) lets the owner choose what
-their Merryman posts. These choices only narrow what the rules above allow;
+their AgentCapAvatar posts. These choices only narrow what the rules above allow;
 none of them adds a kind of post or relaxes a rule.
 
 | Choice | Default | Effect |
 |---|---|---|
 | Coins it buys, and why | on | off: no buy post is planned, every buy draft waiting under Coming up is cancelled (`kind-off`), and a passing thought on a trade-talk day is offered no coin to name |
 | The odd passing thought | on | off: no casual post is planned, and waiting casual drafts are cancelled (`kind-off`) |
-| Posts a day, at most | Usual: the server's number | Usual, 1, 2 or 3 (`OWNER_PER_DAY_MAX`). Usual is `MERRYMEN_XPOST_PER_DAY`; a number is used when smaller than it, both when planning and in the account's day allowance at send time. Lowering it leaves drafts alone; each one still has to take a place in the day's count before it is sent. Each owner has a separate day count for their posts, and all owners using one X account also share the server's account limit. The current saved owner preference is read when reserving that owner's allowance |
+| Posts a day, at most | Usual: the server's number | Usual, 1, 2 or 3 (`OWNER_PER_DAY_MAX`). Usual is `AGENTCAP_XPOST_PER_DAY`; a number is used when smaller than it, both when planning and in the account's day allowance at send time. Lowering it leaves drafts alone; each one still has to take a place in the day's count before it is sent. Each owner has a separate day count for their posts, and all owners using one X account also share the server's account limit. The current saved owner preference is read when reserving that owner's allowance |
 
 - **Coin posts are only ever about coins it bought** (rule 3): a real fill,
   never a coin it is only watching or considering. The section says so, and
-  points an owner who wants their Merryman to hunt memecoins at Trencher mode
+  points an owner who wants their AgentCapAvatar to hunt memecoins at Trencher mode
   (`/settings#trencher-mode`), whose buys then get their posts.
 - **The hello is not a choice.** It is the post that says an AI trading agent
   posts here, so it still comes first. The owner can Skip it under Coming up,
@@ -329,8 +329,8 @@ none of them adds a kind of post or relaxes a rule.
 ## Selective comment replies
 
 **Availability and consent.** The web and orchestrator both require
-`MERRYMEN_XPOST_REPLIES_APPROVED` to be exactly `1` (every owner) or `active`
-(only the owners in `MERRYMEN_XPOST_ACTIVE_TENANTS`; see "Active owners").
+`AGENTCAP_XPOST_REPLIES_APPROVED` to be exactly `1` (every owner) or `active`
+(only the owners in `AGENTCAP_XPOST_ACTIVE_TENANTS`; see "Active owners").
 `1` is for use only after written X approval; `active` is the owner's 2026-10-12
 decision for the operator's own agent (see the top of this file). Without it, the owner sees “Comment replies
 aren’t available yet.” Existing posting consent does not turn replies on.
@@ -379,7 +379,7 @@ same at-most-once claim and crash rules apply.
 equivalent opt-out requests before filtering or choosing comments, including
 requests in old or nested threads. This runs even when there is no model
 budget. The opt-out is stored per posting X user id and comment author's X
-id, so reconnecting or sharing that X account through another Merrymen owner
+id, so reconnecting or sharing that X account through another AgentCap owner
 does not undo it. It cancels that person's waiting replies. Every comment
 reply includes “Say stop to opt out.”; an active agent's answer carries no
 opt-out line at all, because whoever tags it, replies to it or quotes it is
@@ -523,7 +523,7 @@ The X writer's model call has its own settings (`writer.ts` `tryDraft`),
 passed to `llmText` per call. Every other caller (trading, the strategist,
 the scout, the room) sends exactly what it sent before.
 
-- **Temperature.** `MERRYMEN_XPOST_TEMPERATURE`, a number from 0 to 2,
+- **Temperature.** `AGENTCAP_XPOST_TEMPERATURE`, a number from 0 to 2,
   default 0.6 (`llmText`'s own, so unset changes nothing). Anything else is
   named in a boot line and the default applies. One draft per slot is still
   all there is, and the gate judges it the same way: a hotter draft is only
@@ -555,31 +555,31 @@ thinking switch. No screen, gate, cap or allowance changed.
 
 | Var | Where | Default | Meaning |
 |---|---|---|---|
-| `MERRYMEN_X_CLIENT_ID` | web + orchestrator | unset | the X app's OAuth 2.0 client id; unset = feature unavailable |
-| `MERRYMEN_X_CLIENT_SECRET` | web + orchestrator (stripped from children) | unset | the X app's client secret |
-| `MERRYMEN_PUBLIC_ORIGIN` | web | — | builds the redirect URI `${origin}/connect/x`, which must be registered on the X app (the orchestrator only refreshes and posts, which need no redirect) |
-| `MERRYMEN_X_REDIRECT_URI` | web | built from the origin | an explicit redirect URI instead; it must still be this web service's own `/connect/x` page (the finish needs its session), registered byte for byte on the X app |
-| `MERRYMEN_XPOST` | orchestrator | on | `0` stops all posting (the web still lets owners connect) |
-| `MERRYMEN_XPOST_REPLIES_APPROVED` | web + orchestrator | unset (off) | exactly `1` permits reply consent and processing for every owner; exactly `active` permits them only for the owners in `MERRYMEN_XPOST_ACTIVE_TENANTS` (see "Active owners"); any other value is off, with a boot line naming the variable. `1` only after written X approval for AI replies, which this deployment does not have, so `1` stays unset. `active` is set on web and orchestrator for the operator's own agent (Alan) per the owner's 2026-10-12 decision (see the top of this file) |
-| `MERRYMEN_XPOST_REPLY_POLLS_PER_DAY` | orchestrator | 200 | fleet polls per UTC day; each can read up to eight pages; `0` or unreadable = polling off, the active owners' too. Active owners' fifteen-second polls spend their own 6000 per X account per UTC day, not this |
-| `MERRYMEN_XPOST_LLM_KEY` | orchestrator (stripped from children) | unset | a key used ONLY for X posts; when unset, the room's `MERRYMEN_GROUPCHAT_LLM_KEY` credentials are used as they are, unless they are a fleet key (the X provider and model knobs apply only to the X key) |
-| `MERRYMEN_XPOST_LLM_PROVIDER` | orchestrator | `groq` | `groq`, `anthropic` or `openai` (OpenAI-compatible). A provider other than Groq receives the writer's inputs, so it must be named in the privacy policy (`site/components/PrivacyPolicyDoc.tsx`, section 5) before it is deployed |
-| `MERRYMEN_XPOST_MODEL` | orchestrator | `qwen/qwen3.8-27b` (groq), `claude-opus-5` (anthropic) | the writer's model; required for `openai` |
-| `MERRYMEN_XPOST_LLM_BASE_URL` | orchestrator | — | the https `…/v1` base, required for `openai` |
-| `MERRYMEN_XPOST_TEMPERATURE` | orchestrator | 0.6 | the writer's sampling temperature, a number from 0 to 2; anything else is named in a boot line and the default applies. OpenAI-compatible providers only. See "How the writer calls its model" |
-| `MERRYMEN_XPOST_SHARE_HOUSE_KEY` | orchestrator | unset | `1` lets the writer use a fleet key, its own or the room's; otherwise a fleet key is refused |
-| `MERRYMEN_XPOST_LLM_PER_DAY` | orchestrator | 400 | model calls per UTC day across the fleet; `0` = intro templates only; unreadable = none. An active owner's answers also stop at 48 a day per X account |
-| `MERRYMEN_XPOST_PER_DAY` | orchestrator | 3 | posts per X account per local day (at most two of them buy posts); `0` = off; unreadable = the default |
-| `MERRYMEN_XPOST_FLEET_PER_DAY` | orchestrator | 1000 | posts per UTC day across the fleet; `0` or unreadable = off |
-| `MERRYMEN_XPOST_ACTIVE_TENANTS` | web + orchestrator, same value | unset | comma-separated tenant addresses of the operator's **own** agents: the active cadence, immediate answers to tags, and reply consent the orchestrator records; see "Active owners" below. The web reads it for the reply warning, through the same parser (`worker/src/xpost/scope.ts`). An entry that is not an address is named by position and ignored |
-| `MERRYMEN_XPOST_RESEARCH` | orchestrator | unset (off) | exactly `1`: an active agent's answers look things up first; see "Research for answers" below. Off: nothing is looked up and tags are selected exactly as without it |
-| `MERRYMEN_XPOST_FOMO` | orchestrator | unset (off) | exactly `1`, with research on: answers may use Fomo's token activity and quick theses, paraphrased and attributed. Enterprise rights confirmed by the owner on 2026-10-12 (see "Fomo on X" below). Needs the Fomo pass on (`MERRYMEN_FOMO_ENABLED=1`); set without research it does nothing, and the boot log says so |
-| `MERRYMEN_XPOST_RESEARCH_PER_HOUR` | orchestrator | 120 | public-index lookups (a name search, a coin's facts) per hour across every X account; `0` = none; unreadable = the default. Each X account also has at most eight per ten minutes |
-| `MERRYMEN_FOMO_X_HOURLY_CREDITS` | orchestrator | 3000 | Fomo credits per X account per clock hour for answers (`docs/fomo.md`); one owner's answers also spend at most a quarter of her daily Fomo cap. `0` = no Fomo in answers at all: no broker is handed to them and the service refuses the surface before any cache read |
+| `AGENTCAP_X_CLIENT_ID` | web + orchestrator | unset | the X app's OAuth 2.0 client id; unset = feature unavailable |
+| `AGENTCAP_X_CLIENT_SECRET` | web + orchestrator (stripped from children) | unset | the X app's client secret |
+| `AGENTCAP_PUBLIC_ORIGIN` | web | — | builds the redirect URI `${origin}/connect/x`, which must be registered on the X app (the orchestrator only refreshes and posts, which need no redirect) |
+| `AGENTCAP_X_REDIRECT_URI` | web | built from the origin | an explicit redirect URI instead; it must still be this web service's own `/connect/x` page (the finish needs its session), registered byte for byte on the X app |
+| `AGENTCAP_XPOST` | orchestrator | on | `0` stops all posting (the web still lets owners connect) |
+| `AGENTCAP_XPOST_REPLIES_APPROVED` | web + orchestrator | unset (off) | exactly `1` permits reply consent and processing for every owner; exactly `active` permits them only for the owners in `AGENTCAP_XPOST_ACTIVE_TENANTS` (see "Active owners"); any other value is off, with a boot line naming the variable. `1` only after written X approval for AI replies, which this deployment does not have, so `1` stays unset. `active` is set on web and orchestrator for the operator's own agent (Alan) per the owner's 2026-10-12 decision (see the top of this file) |
+| `AGENTCAP_XPOST_REPLY_POLLS_PER_DAY` | orchestrator | 200 | fleet polls per UTC day; each can read up to eight pages; `0` or unreadable = polling off, the active owners' too. Active owners' fifteen-second polls spend their own 6000 per X account per UTC day, not this |
+| `AGENTCAP_XPOST_LLM_KEY` | orchestrator (stripped from children) | unset | a key used ONLY for X posts; when unset, the room's `AGENTCAP_GROUPCHAT_LLM_KEY` credentials are used as they are, unless they are a fleet key (the X provider and model knobs apply only to the X key) |
+| `AGENTCAP_XPOST_LLM_PROVIDER` | orchestrator | `groq` | `groq`, `anthropic` or `openai` (OpenAI-compatible). A provider other than Groq receives the writer's inputs, so it must be named in the privacy policy (`site/components/PrivacyPolicyDoc.tsx`, section 5) before it is deployed |
+| `AGENTCAP_XPOST_MODEL` | orchestrator | `qwen/qwen3.8-27b` (groq), `claude-opus-5` (anthropic) | the writer's model; required for `openai` |
+| `AGENTCAP_XPOST_LLM_BASE_URL` | orchestrator | — | the https `…/v1` base, required for `openai` |
+| `AGENTCAP_XPOST_TEMPERATURE` | orchestrator | 0.6 | the writer's sampling temperature, a number from 0 to 2; anything else is named in a boot line and the default applies. OpenAI-compatible providers only. See "How the writer calls its model" |
+| `AGENTCAP_XPOST_SHARE_HOUSE_KEY` | orchestrator | unset | `1` lets the writer use a fleet key, its own or the room's; otherwise a fleet key is refused |
+| `AGENTCAP_XPOST_LLM_PER_DAY` | orchestrator | 400 | model calls per UTC day across the fleet; `0` = intro templates only; unreadable = none. An active owner's answers also stop at 48 a day per X account |
+| `AGENTCAP_XPOST_PER_DAY` | orchestrator | 3 | posts per X account per local day (at most two of them buy posts); `0` = off; unreadable = the default |
+| `AGENTCAP_XPOST_FLEET_PER_DAY` | orchestrator | 1000 | posts per UTC day across the fleet; `0` or unreadable = off |
+| `AGENTCAP_XPOST_ACTIVE_TENANTS` | web + orchestrator, same value | unset | comma-separated tenant addresses of the operator's **own** agents: the active cadence, immediate answers to tags, and reply consent the orchestrator records; see "Active owners" below. The web reads it for the reply warning, through the same parser (`worker/src/xpost/scope.ts`). An entry that is not an address is named by position and ignored |
+| `AGENTCAP_XPOST_RESEARCH` | orchestrator | unset (off) | exactly `1`: an active agent's answers look things up first; see "Research for answers" below. Off: nothing is looked up and tags are selected exactly as without it |
+| `AGENTCAP_XPOST_FOMO` | orchestrator | unset (off) | exactly `1`, with research on: answers may use Fomo's token activity and quick theses, paraphrased and attributed. Enterprise rights confirmed by the owner on 2026-10-12 (see "Fomo on X" below). Needs the Fomo pass on (`AGENTCAP_FOMO_ENABLED=1`); set without research it does nothing, and the boot log says so |
+| `AGENTCAP_XPOST_RESEARCH_PER_HOUR` | orchestrator | 120 | public-index lookups (a name search, a coin's facts) per hour across every X account; `0` = none; unreadable = the default. Each X account also has at most eight per ten minutes |
+| `AGENTCAP_FOMO_X_HOURLY_CREDITS` | orchestrator | 3000 | Fomo credits per X account per clock hour for answers (`docs/fomo.md`); one owner's answers also spend at most a quarter of her daily Fomo cap. `0` = no Fomo in answers at all: no broker is handed to them and the service refuses the surface before any cache read |
 
 ## Active owners
 
-**Only the operator's own agents.** `MERRYMEN_XPOST_ACTIVE_TENANTS` names
+**Only the operator's own agents.** `AGENTCAP_XPOST_ACTIVE_TENANTS` names
 agents the operator owns, such as the house agent Alan Al Dale; the operator
 is their owner. Never list someone else's agent. Being named means:
 
@@ -609,7 +609,7 @@ is their owner. Never list someone else's agent. Being named means:
   Counts distinguish `drafted-insight-model`, `drafted-insight-code`, and
   `insight-code-words:<reason>`. No draft or provider error text is logged;
 - **reply consent recorded by the orchestrator.** When replies are in scope
-  (`MERRYMEN_XPOST_REPLIES_APPROVED` is `1` or `active`) and the agent's X
+  (`AGENTCAP_XPOST_REPLIES_APPROVED` is `1` or `active`) and the agent's X
   posting is on for its connected account, the orchestrator records reply
   consent once, before it first polls, and logs one line naming the tenant
   (`xpost: recorded reply consent for house agent …`). Posting must already
@@ -655,7 +655,7 @@ comment-reply prompts alike: `ownRecentBodies`). The gate still checks each
 draft against all of its recent posts, research answers included, so none
 is repeated.
 
-**Answers to tags.** With replies in scope (`MERRYMEN_XPOST_REPLIES_APPROVED`
+**Answers to tags.** With replies in scope (`AGENTCAP_XPOST_REPLIES_APPROVED`
 is `1` or `active`) and the owner's reply consent, an active owner's agent
 also answers posts that mention it: tags, replies to it and quotes of its
 own posts that its mentions read carries. These are `answer` posts, replying
@@ -677,10 +677,10 @@ to the mention itself. They go out **right away**:
   orchestrator. These polls spend the agent's own allowance of 6000 per X
   account per UTC day (`reply-polls-active:<xUserId>:<day>`; a whole day at
   one read every fifteen seconds is 5760), never the fleet's
-  `MERRYMEN_XPOST_REPLY_POLLS_PER_DAY`. Active agents are polled
+  `AGENTCAP_XPOST_REPLY_POLLS_PER_DAY`. Active agents are polled
   first within each pass's two polls, so the fleet cannot starve them and
   they cannot spend the fleet's allowance. Setting
-  `MERRYMEN_XPOST_REPLY_POLLS_PER_DAY=0` still turns every poll off.
+  `AGENTCAP_XPOST_REPLY_POLLS_PER_DAY=0` still turns every poll off.
 - **Sent on the pass that read the tag.** An answer is only ever sent on a
   pass that has just read that X account's mentions successfully, so opt-outs
   are always handled first: every STOP in the batch is recorded, and any
@@ -734,7 +734,7 @@ to the mention itself. They go out **right away**:
   answered.
 - **A model allowance of their own.** An X account's answer drafts may make
   48 model calls per UTC day (`llm-answers:<xUserId>:<day>`), taken before
-  the fleet's `MERRYMEN_XPOST_LLM_PER_DAY` and counted in it too. A PASS or
+  the fleet's `AGENTCAP_XPOST_LLM_PER_DAY` and counted in it too. A PASS or
   a refused draft counts toward none of the day's answers, so without this a
   wave of strangers' tags could spend the fleet's allowance and stop every
   owner's posts for the day. It stayed 48 when the day's answers went to
@@ -769,7 +769,7 @@ to the mention itself. They go out **right away**:
   ordinary punctuation (the phone's curly quotes, dashes and ellipsis among
   it) and one emoji at most, with nothing but an apostrophe, dash, stop,
   comma, colon or digits between two letters. A steer ("new rule from
-  merrymen", "from now on", "pretend you're my financial advisor") is
+  agentcap", "from now on", "pretend you're my financial advisor") is
   refused; a request for advice or a forecast in other words ("a good buy?",
   "worth buying?", "will it go up?") is flagged as advice and declined in
   code's words.
@@ -819,9 +819,9 @@ to the mention itself. They go out **right away**:
   most two greeting words may come first (gm, yo, hey, hi, ser, fren, bro,
   alan), and "for trading" or "to trade" may follow. A tag that carries a
   contract is never the model question. Such a question is answered with a
-  code-built line, not a draft: built by merrymen, and the new `sherwood-1`
+  code-built line, not a draft: built by agentcap, and the new `sherwood-1`
   (`SHERWOOD_ON_X`, the one name the gate lets an answer write with a digit)
-  is merrymen's own model, cooking. There are eight lines that share too few
+  is agentcap's own model, cooking. There are eight lines that share too few
   words to be each other's repeat (`modelAnswers`), the mention's own first,
   then the next the gate admits, so the question asked again is answered
   again in other words; a paper agent's lines each add a short paper clause
@@ -1008,8 +1008,8 @@ to the mention itself. They go out **right away**:
   (`sherwoodMentioned` in `gate.ts`), so "$SHERWOODINU", "sherwood-1",
   "sherw00d", "s h e r w o o d", "sher<zero-width>wood", small capitals,
   a Greek "ο" and "sherwod" all count. Anyone can launch `$SHERWOOD`, and
-  the model line under "sherwood TGE soon?" or "is sherwood merrymen's next
-  ICO?" would read as Merrymen confirming a token. Four review rounds found
+  the model line under "sherwood TGE soon?" or "is sherwood agentcap's next
+  ICO?" would read as AgentCap confirming a token. Four review rounds found
   token phrasings that a list of token words missed, so there is no such
   list: a sherwood question is never answered, whatever else it says. A tag
   that looks like a model question (the old classifier's reading: "what ai
@@ -1095,7 +1095,7 @@ to the mention itself. They go out **right away**:
   says sherwood runs it ("running on", "powered by", "sherwood-1 is live"),
   with the digit or without, is refused as `gate:sherwood-claim`, research on
   or off. So is one with any sentence that names sherwood without teasing it
-  (cooking, in the oven, in the works, merrymen's own…) or with a word about
+  (cooking, in the oven, in the works, agentcap's own…) or with a word about
   trading, deciding, what it does or who it is ("picks", "trades", "calls",
   "my", "me", "behind", "now"…): an allowlist, not only a list of verbs.
   An answer that was told none of its buys may say no first-person buy at
@@ -1277,8 +1277,8 @@ stop." Its posting warning says "It never posts trade alerts or error
 messages, and its answers may carry market figures built from public data."
 
 **Replies for the active owners only.** Setting
-`MERRYMEN_XPOST_REPLIES_APPROVED=active` approves replies only for the
-owners `MERRYMEN_XPOST_ACTIVE_TENANTS` names. Every other owner is treated
+`AGENTCAP_XPOST_REPLIES_APPROVED=active` approves replies only for the
+owners `AGENTCAP_XPOST_ACTIVE_TENANTS` names. Every other owner is treated
 as if replies were not approved. They are not polled and nothing is drafted
 for them. A reply or answer of theirs that is still waiting is cancelled
 (`replies-off`) when it comes due. The web reports replies as unavailable to
@@ -1289,7 +1289,7 @@ variable but never its value.
 
 ## Research for answers
 
-With `MERRYMEN_XPOST_RESEARCH=1` (default off), an active agent's answer
+With `AGENTCAP_XPOST_RESEARCH=1` (default off), an active agent's answer
 looks things up first, the way Shogun does in a Telegram group
 (`worker/src/orchestrator-xpost-research.ts`). Off, nothing below happens.
 
@@ -1342,9 +1342,9 @@ looks things up first, the way Shogun does in a Telegram group
   a sale is never said, and neither is "you passed": a symbol's thesis
   without a trade is a hold of a coin it may still own); the public index's coin facts on the FLEET Gecko lane (the
   orchestrator passes its home explicitly; `process.env` is untouched); with
-  `MERRYMEN_XPOST_FOMO=1`, Fomo's token activity and quick theses; and,
+  `AGENTCAP_XPOST_FOMO=1`, Fomo's token activity and quick theses; and,
   while the Bitquery lane is configured on the orchestrator
-  (`MERRYMEN_BITQUERY_API_KEY`, [`bitquery-lane.md`](bitquery-lane.md)),
+  (`AGENTCAP_BITQUERY_API_KEY`, [`bitquery-lane.md`](bitquery-lane.md)),
   onchain flow for a known contract: the orchestrator's own `flowFor`,
   said only through `flowXLines(result, "<tenant>|<token>")`, the closed,
   digit-free bands ("on-chain data shows buys clearly outweighing sells
@@ -1386,7 +1386,7 @@ looks things up first, the way Shogun does in a Telegram group
   coin reached by a `$ticker` or a name: a description that showed up only
   under coins it traded would tell a prober which ones it bought). It is
   refused when it carries an endorsement, an affiliation
-  (merrymen, robinhood, official, partner, backed), a promise, urgency, a
+  (agentcap, robinhood, official, partner, backed), a promise, urgency, a
   call to act or an attempt to steer it. It passes only as a short phrase in
   plain words (ten words at most, letters with spaces, commas, apostrophes
   and hyphens) that says nothing of listings or exchanges, liquidity, locks,
@@ -1416,8 +1416,8 @@ looks things up first, the way Shogun does in a Telegram group
   defaults, `xpost_meta` `x-answer-flow:<day>`), taken before the read, so
   strangers' tags never eat into the trading reviews' share. Index lookups:
   eight per X account per ten minutes,
-  `MERRYMEN_XPOST_RESEARCH_PER_HOUR` across X accounts. Fomo: the `x-answer`
-  surface's own hourly cap per X account (`MERRYMEN_FOMO_X_HOURLY_CREDITS`)
+  `AGENTCAP_XPOST_RESEARCH_PER_HOUR` across X accounts. Fomo: the `x-answer`
+  surface's own hourly cap per X account (`AGENTCAP_FOMO_X_HOURLY_CREDITS`)
   and at most a quarter of the owner's daily Fomo cap per day across her X
   accounts, under her caps and the fleet's pools; Fomo is advertised in
   "what can you do?" and asked only for an owner whose data access is on. A
@@ -1430,7 +1430,7 @@ looks things up first, the way Shogun does in a Telegram group
 - **Fomo on X: Enterprise rights confirmed.** Paraphrased, attributed Fomo
   facts in these answers republish provider-derived data, which needs the
   provider's Enterprise redistribution rights. The owner confirmed on
-  2026-10-12 that Merrymen holds them and that the plan covers these answers
+  2026-10-12 that AgentCap holds them and that the plan covers these answers
   (`docs/fomo.md` "Publication"). Every other Fomo publication draft stays
   policy-blocked.
 - **Logs:** counts only (`answer-intent-coin`, `answer-lookups`,
@@ -1444,8 +1444,8 @@ better: a coin by name or ticker gets market-level facts, and "what's hot"
 gets an overview, with figures allowed ONLY when built by code from
 CoinGecko, GeckoTerminal, Fomo or Bitquery data. Everything in the list
 above still holds; this adds three things, all inside research
-(`MERRYMEN_XPOST_RESEARCH=1`) and all for active owners only
-(`MERRYMEN_XPOST_ACTIVE_TENANTS`): only an active owner answers tags at all,
+(`AGENTCAP_XPOST_RESEARCH=1`) and all for active owners only
+(`AGENTCAP_XPOST_ACTIVE_TENANTS`): only an active owner answers tags at all,
 and code puts a figures line only into an active owner's answer. Every
 other owner's agent, and its posting and reply warnings, are unchanged.
 
@@ -1671,7 +1671,7 @@ other owner's agent, and its posting and reply warnings, are unchanged.
   ticker is shown only if it is A-Z, two to ten letters, never a digit
   (anything else is dropped, never repaired or echoed: `$1B`, `$97K` and
   `$100X` read as sums and a multiple no code built, red-team 2026-10-12),
-  spells no sherwood, merrymen, robinhood, the agent, slur, political name,
+  spells no sherwood, agentcap, robinhood, the agent, slur, political name,
   hype word or sum in words ("MILLION", "BUCKS"), holds no advice or hype run
   together into one word (`BUYNOW`, `SENDIT`, `APEIN`, `GOBUY`, `SAFU`,
   `RISKFREE`: buy, sell, send, ape, bull, bear, rich, free, risk, long,
@@ -1699,12 +1699,12 @@ other owner's agent, and its posting and reply warnings, are unchanged.
   chain's and the agent's shortened names (`RBNHD`, `ALDALE`) and every
   model or provider name; a chain coin's ticker is three letters at least;
   and research and then the orchestrator leave out a coin named after the
-  agent itself, whatever it is called. Merrymen's own name is refused in any spelling the letters
+  agent itself, whatever it is called. AgentCap's own name is refused in any spelling the letters
   allow ("MERRIMEN", "MERYMEN", "MRYMN", and "MARRYMEN", "MURRYMEN",
   "MIRRYMEN", posted at fbcf8756: an m, r, m and n with any vowels or y
   between), and the Trencher on its consonants ("TRNCHR"), in the sanitiser
   and again, ticker by ticker, beside the sherwood screen
-  (`merrymenMentioned`); the house's provider and the models a reader knows
+  (`agentcapMentioned`); the house's provider and the models a reader knows
   it by ("GROQ", "OPUS", "SONNET", "HAIKU", "KIMI", "CODEX") are model
   names everywhere a model name is read (`modelNamed`, the sanitiser). Money is compact (`~$1.9T`, `~$850M`, `~$85k`, `~$3.4k`);
   under a thousand dollars is left out. A change has an explicit sign and at
@@ -1802,25 +1802,25 @@ other owner's agent, and its posting and reply warnings, are unchanged.
   Bitquery figures none more. Every index read takes a slot (`indexSlot`): a
   lookup left in the bundle's six, time left in its twelve seconds, then
   the X account's eight per ten minutes and
-  `MERRYMEN_XPOST_RESEARCH_PER_HOUR` across X accounts. Each read is handed
+  `AGENTCAP_XPOST_RESEARCH_PER_HOUR` across X accounts. Each read is handed
   at most four seconds and passes that to the fleet lane as its budget, so
   a CoinGecko slot that does not come in time is skipped (no request, no
   credit), never waited on. CoinGecko's main API rides the fleet's Pro lane
   (`cachedCoinGecko`, `venues/coingecko-coins.ts`): the same spacing
-  (`MERRYMEN_COINGECKO_PRO_SPACING_MS`, its evidence row), 429 cooldown,
+  (`AGENTCAP_COINGECKO_PRO_SPACING_MS`, its evidence row), 429 cooldown,
   plan-refusal latch (the `search`, `coins/markets` and `search/trending`
   families, per key) and monthly credit ceiling
-  (`MERRYMEN_COINGECKO_MONTHLY_CREDITS`) as every onchain read, with a
+  (`AGENTCAP_COINGECKO_MONTHLY_CREDITS`) as every onchain read, with a
   minute's cache per coin; the Pro key goes only to its fixed origin, in a
   header, and there is no public fallback. Fomo stays under the `x-answer`
   surface's own caps, and every drafted answer under the answer model
   allowance.
 - **The reply warning says so**, for an active owner only (web and iOS, the
   same words): answers may include market figures from public data
-  (CoinGecko, GeckoTerminal, Fomo and Bitquery), added by Merrymen as the
+  (CoinGecko, GeckoTerminal, Fomo and Bitquery), added by AgentCap as the
   data showed them, never advice.
 - **No new knob.** Majors and CoinGecko's trending list need
-  `MERRYMEN_COINGECKO_PRO_API_KEY` on the orchestrator, which already holds
+  `AGENTCAP_COINGECKO_PRO_API_KEY` on the orchestrator, which already holds
   it: its children inherit it from there, and an answer's coin facts already
   read it on the same fleet lane.
 
@@ -1831,7 +1831,7 @@ four were posted. The night held the plan until 06:23, by then the two-hour
 freshness had dropped half the burst, and the seventy-five-minute gap queued
 the rest until they went stale. The owner's ask: let his trade posts through
 at night, widen the window, and post one recap for a burst. Only the active
-cadence (`MERRYMEN_XPOST_ACTIVE_TENANTS`) changes; every other owner's
+cadence (`AGENTCAP_XPOST_ACTIVE_TENANTS`) changes; every other owner's
 cadence is as before.
 
 - **Through the night** (`PlanCadence.tradesAtNight`): buys, sales and
@@ -1960,7 +1960,7 @@ now goes out alone only when it is a win:
 
 The owner's ask: Alan checks whether a website or a coin is real when someone
 tags him under a post, the way larpcheck.app does, and says so casually.
-Behind `MERRYMEN_XPOST_CHECKS=1`, with research on; off by default.
+Behind `AGENTCAP_XPOST_CHECKS=1`, with research on; off by default.
 
 **What counts as a check** (xpost/check.ts `checkAsk`): the whole tag, once
 the leading handles, links, a contract and one emoji are off, is one of the
@@ -1973,7 +1973,7 @@ is a tag with anyone's handle in it but the X prefix's.
 then the post it replies to; then the post it quotes; then the profile link
 of whoever wrote the post it sits under. One contract (with that post's one
 site, if any), else one site. Two contracts, X itself, chat apps, charting
-and swap sites, plain http, a private host and any merrymen page are no
+and swap sites, plain http, a private host and any agentcap page are no
 target. Never one of its own posts. Mentions now expand the posts a tag
 refers to (`referenced_tweets.id`, their authors and those authors' profile
 links, and every t.co's real destination); that context is read only here,
@@ -1984,10 +1984,10 @@ screens, which exist because code never read what a tag sits under; a check
 reads exactly that, and speaks only of the one target it found. Opt-outs,
 abuse, sensitive topics and distress are read on the tag and on the post
 under it as before. Never under a post, quote, author or target that names
-sherwood in any form or merrymen. Never when X did not hand over the post
+sherwood in any form or agentcap. Never when X did not hand over the post
 the tag replies to or quotes, or that post's author (deleted, protected or
 suspended; `XReply.contextUnread`, 2026-10-18): those screens could not read
-it, so the tag is read as any other tag. At most `MERRYMEN_XPOST_CHECKS_PER_DAY`
+it, so the tag is read as any other tag. At most `AGENTCAP_XPOST_CHECKS_PER_DAY`
 (default 80) a UTC day across X accounts, counted before anything is read,
 and inside the answer caps (sixty a day, six a person).
 
@@ -2042,12 +2042,12 @@ creator 1%."*
 `answer-research-check-site-read`, `answer-research-check-github-<failure>`,
 `answer-check-coded` (code's line stood in), `answer-checks-spent`.
 
-**Knobs:** `MERRYMEN_XPOST_CHECKS=1`, `MERRYMEN_XPOST_CHECKS_PER_DAY`, and
-`MERRYMEN_GITHUB_TOKEN` (optional, any token with no permissions: GitHub
+**Knobs:** `AGENTCAP_XPOST_CHECKS=1`, `AGENTCAP_XPOST_CHECKS_PER_DAY`, and
+`AGENTCAP_GITHUB_TOKEN` (optional, any token with no permissions: GitHub
 allows sixty unauthenticated calls an hour from one address, shared by the
 fleet's egress; read only by the orchestrator, stripped from children). The
-browser is the existing `merrymen-browser` service
-(`MERRYMEN_BROWSER_URL`/`_TOKEN`, already on the orchestrator); it must be
+browser is the existing `agentcap-browser` service
+(`AGENTCAP_BROWSER_URL`/`_TOKEN`, already on the orchestrator); it must be
 redeployed from this release for `/scan`. Until then every scan is a 404,
 which is read as "not read" (never as the site being down), so a check that
 needs the site answers that it can't tell. Only Chromium's own navigation
@@ -2057,27 +2057,27 @@ failure (`net::ERR_…`, a navigation timeout) is said as the site not loading.
 
 How this release is turned on for Alan Al Dale, the operator's own agent,
 every service and value in order: the X steps (5 and 6) rest on the research
-lanes before them. Unset is the default and changes nothing, except for an account already on `MERRYMEN_DECISION_RESEARCH_ACCOUNTS` (step 1). This table is the same in [`hosted-deploy.md`](hosted-deploy.md) and [`x-posting.md`](x-posting.md); change both together.
+lanes before them. Unset is the default and changes nothing, except for an account already on `AGENTCAP_DECISION_RESEARCH_ACCOUNTS` (step 1). This table is the same in [`hosted-deploy.md`](hosted-deploy.md) and [`x-posting.md`](x-posting.md); change both together.
 
 | Step | Variable | Service | Value for Alan's rollout | What it does, and what to look for |
 |---|---|---|---|---|
-| 1 | *(deploy)* | Brain service, orchestrator, web; the gateway (its own project) first or with them | this commit | The worker sends the Trencher terms and the flow lens only once Brain's `/health` lists `strategy-terms` and `onchain-flow`, so either order is safe. The worker's Bearer fix starts gateway spending, under the gateway's own cap (below). **An account already on `MERRYMEN_DECISION_RESEARCH_ACCOUNTS` changes at deploy, with nothing else set:** its live fast-Trencher entry reviews get the new momentum plan at once, the Trencher terms once Brain lists `strategy-terms`, and, with Fomo already on and the owner's monitoring or follow setting on, Fomo research on its review candidates. To stage those, take the account out of the variable before deploying and put it back at step 3 |
-| 2 | `MERRYMEN_COINGECKO_PRO_SPACING_MS` | orchestrator (children inherit it) | `800` | One `[gecko] coingecko-pro fleet lane: 800 ms` line per child |
-| 2 | `MERRYMEN_COINGECKO_PRO_SPACING_MS` | web | `2600` | One `local lane: 2600 ms` line on web. From here web's chart reads are paced too (unset, they stay unpaced as before), so two cold token pages opened within about 2.6 s may show the second one's chart as unreachable until it is read again |
-| 2 | `MERRYMEN_COINGECKO_MONTHLY_CREDITS` | orchestrator and web | `5000000` | The plan's month; a spacing below the floor it allows is raised to it. `MERRYMEN_COINGECKO_PRO_API_KEY` stays as it is |
-| 3 | `MERRYMEN_FOMO_ENABLED` | web + orchestrator, same value | `1` | Fomo itself, and the IPC channel a child asks the flow lane over |
-| 3 | `MERRYMEN_DECISION_RESEARCH_ACCOUNTS` | orchestrator (children inherit it) | Alan's smart account, from the deploy environment (this repository names no account) | Cost quotes, his own outcomes, the momentum plan, the Trencher terms and indexed flow for his live fast-Trencher entry reviews. Decision log lines end `· terms sent` |
-| 4 | `MERRYMEN_BITQUERY_API_KEY` | **orchestrator only** | the plan's key, after the IDE checks in [`bitquery-lane.md`](bitquery-lane.md) step 1 | Never on web, Brain or a child (stripped). Boot line `bitquery lane: on — 25000 points/UTC day (20000 for child evidence) …`; reviews log `[trencher] flow SYMBOL: lens` |
-| 4 | `MERRYMEN_BITQUERY_LANE`, `MERRYMEN_BITQUERY_POINTS_PER_DAY`, `MERRYMEN_BITQUERY_RPM` | orchestrator | unset (on, `25000`, `60`) | |
-| 4 | `MERRYMEN_GATEWAY_BITQUERY_POINTS_PER_DAY` | gateway | `12500`, set explicitly when its key shares the plan | A separate counter from the lane's `25000`: lane plus gateway is 37,500 points a day, sized by the operator to the plan. The gateway's 12,500 includes the public memescope's own 10,000 (at most 9,605 used, one refresh per 45 s, matching the Markets page's own 45 s poll); holders get the other 2,500, at most 750 a day each |
-| 4 | `MERRYMEN_FLOW_BROKER` | none | never set | The orchestrator writes it into each child that may ask, and removes an inherited copy |
-| 5 | `MERRYMEN_XPOST_ACTIVE_TENANTS` | web + orchestrator, same value | Alan's tenant address, from the deploy environment | The active cadence, his reply consent recorded by the orchestrator, and answers to tags sent right away. The web reads it for the reply warning |
-| 5 | `MERRYMEN_XPOST_REPLIES_APPROVED` | web + orchestrator, same value | `active` (the owner's decision of 2026-10-12, for the operator's own agent only; `1` stays unset until X's written approval) | Without it there are no comment replies and no answers to tags. On 2026-10-12 the owner (Milla) decided to set it to `active` on both services for the operator's own agent only, so Alan answers people who tag him. X's published automation rules ask for written approval for AI reply bots; an X staff answer on the developer forum says replies triggered by a mention do not need it, and Alan's request for clarification is pending. `1` (every owner) stays unset until written approval exists. |
-| 5 | `MERRYMEN_XPOST_REPLY_POLLS_PER_DAY` | orchestrator | unset (`200` for the fleet) | Alan's fifteen-second polls spend their own 6,000 per X account per UTC day |
-| 6 | `MERRYMEN_XPOST_RESEARCH` | orchestrator | `1` | Answers look things up first. Boot line `xpost: on — … answers look things up first`; with the Bitquery key also `xpost: answers may read onchain flow — up to 200 readings per UTC day …`. With the CoinGecko Pro key the orchestrator already holds, a coin asked by name or ticker (a major, ranked in CoinGecko's top 200) and "what's hot?" are answered too, with code's figures line after the words (x-posting.md "Market intel"); counts `answer-intent-major`, `answer-intent-hot`, `answer-figures` |
-| 6 | `MERRYMEN_XPOST_RESEARCH_PER_HOUR` | orchestrator | unset (`120`) | Public-index lookups per hour across X accounts |
-| 6 | `MERRYMEN_XPOST_FOMO` | orchestrator | `1` (Enterprise rights confirmed by the owner on 2026-10-12, [`fomo.md`](fomo.md) "Publication") | Paraphrased, attributed Fomo facts in answers |
-| 6 | `MERRYMEN_FOMO_X_HOURLY_CREDITS` | orchestrator | unset (`3000`) | Per X account per hour, and at most a quarter of the owner's daily Fomo cap |
+| 1 | *(deploy)* | Brain service, orchestrator, web; the gateway (its own project) first or with them | this commit | The worker sends the Trencher terms and the flow lens only once Brain's `/health` lists `strategy-terms` and `onchain-flow`, so either order is safe. The worker's Bearer fix starts gateway spending, under the gateway's own cap (below). **An account already on `AGENTCAP_DECISION_RESEARCH_ACCOUNTS` changes at deploy, with nothing else set:** its live fast-Trencher entry reviews get the new momentum plan at once, the Trencher terms once Brain lists `strategy-terms`, and, with Fomo already on and the owner's monitoring or follow setting on, Fomo research on its review candidates. To stage those, take the account out of the variable before deploying and put it back at step 3 |
+| 2 | `AGENTCAP_COINGECKO_PRO_SPACING_MS` | orchestrator (children inherit it) | `800` | One `[gecko] coingecko-pro fleet lane: 800 ms` line per child |
+| 2 | `AGENTCAP_COINGECKO_PRO_SPACING_MS` | web | `2600` | One `local lane: 2600 ms` line on web. From here web's chart reads are paced too (unset, they stay unpaced as before), so two cold token pages opened within about 2.6 s may show the second one's chart as unreachable until it is read again |
+| 2 | `AGENTCAP_COINGECKO_MONTHLY_CREDITS` | orchestrator and web | `5000000` | The plan's month; a spacing below the floor it allows is raised to it. `AGENTCAP_COINGECKO_PRO_API_KEY` stays as it is |
+| 3 | `AGENTCAP_FOMO_ENABLED` | web + orchestrator, same value | `1` | Fomo itself, and the IPC channel a child asks the flow lane over |
+| 3 | `AGENTCAP_DECISION_RESEARCH_ACCOUNTS` | orchestrator (children inherit it) | Alan's smart account, from the deploy environment (this repository names no account) | Cost quotes, his own outcomes, the momentum plan, the Trencher terms and indexed flow for his live fast-Trencher entry reviews. Decision log lines end `· terms sent` |
+| 4 | `AGENTCAP_BITQUERY_API_KEY` | **orchestrator only** | the plan's key, after the IDE checks in [`bitquery-lane.md`](bitquery-lane.md) step 1 | Never on web, Brain or a child (stripped). Boot line `bitquery lane: on — 25000 points/UTC day (20000 for child evidence) …`; reviews log `[trencher] flow SYMBOL: lens` |
+| 4 | `AGENTCAP_BITQUERY_LANE`, `AGENTCAP_BITQUERY_POINTS_PER_DAY`, `AGENTCAP_BITQUERY_RPM` | orchestrator | unset (on, `25000`, `60`) | |
+| 4 | `AGENTCAP_GATEWAY_BITQUERY_POINTS_PER_DAY` | gateway | `12500`, set explicitly when its key shares the plan | A separate counter from the lane's `25000`: lane plus gateway is 37,500 points a day, sized by the operator to the plan. The gateway's 12,500 includes the public memescope's own 10,000 (at most 9,605 used, one refresh per 45 s, matching the Markets page's own 45 s poll); holders get the other 2,500, at most 750 a day each |
+| 4 | `AGENTCAP_FLOW_BROKER` | none | never set | The orchestrator writes it into each child that may ask, and removes an inherited copy |
+| 5 | `AGENTCAP_XPOST_ACTIVE_TENANTS` | web + orchestrator, same value | Alan's tenant address, from the deploy environment | The active cadence, his reply consent recorded by the orchestrator, and answers to tags sent right away. The web reads it for the reply warning |
+| 5 | `AGENTCAP_XPOST_REPLIES_APPROVED` | web + orchestrator, same value | `active` (the owner's decision of 2026-10-12, for the operator's own agent only; `1` stays unset until X's written approval) | Without it there are no comment replies and no answers to tags. On 2026-10-12 the owner (Milla) decided to set it to `active` on both services for the operator's own agent only, so Alan answers people who tag him. X's published automation rules ask for written approval for AI reply bots; an X staff answer on the developer forum says replies triggered by a mention do not need it, and Alan's request for clarification is pending. `1` (every owner) stays unset until written approval exists. |
+| 5 | `AGENTCAP_XPOST_REPLY_POLLS_PER_DAY` | orchestrator | unset (`200` for the fleet) | Alan's fifteen-second polls spend their own 6,000 per X account per UTC day |
+| 6 | `AGENTCAP_XPOST_RESEARCH` | orchestrator | `1` | Answers look things up first. Boot line `xpost: on — … answers look things up first`; with the Bitquery key also `xpost: answers may read onchain flow — up to 200 readings per UTC day …`. With the CoinGecko Pro key the orchestrator already holds, a coin asked by name or ticker (a major, ranked in CoinGecko's top 200) and "what's hot?" are answered too, with code's figures line after the words (x-posting.md "Market intel"); counts `answer-intent-major`, `answer-intent-hot`, `answer-figures` |
+| 6 | `AGENTCAP_XPOST_RESEARCH_PER_HOUR` | orchestrator | unset (`120`) | Public-index lookups per hour across X accounts |
+| 6 | `AGENTCAP_XPOST_FOMO` | orchestrator | `1` (Enterprise rights confirmed by the owner on 2026-10-12, [`fomo.md`](fomo.md) "Publication") | Paraphrased, attributed Fomo facts in answers |
+| 6 | `AGENTCAP_FOMO_X_HOURLY_CREDITS` | orchestrator | unset (`3000`) | Per X account per hour, and at most a quarter of the owner's daily Fomo cap |
 
 No migrations: the new state is `xpost_meta` keys only (`answer-author:…`,
 `replies-off:…`, `reply-polls-active:…`, `x-answer-flow:…`). No trading cap,
@@ -2091,8 +2091,8 @@ merging: each value is the operator's to set on the service named.
 reads an `answer` row as a casual post, with no reply target, and would
 publish a queued answer (a reply to one person) as a standalone post on Alan's timeline the same day. So before
 deploying an older orchestrator, empty the queue first. Either unset
-`MERRYMEN_XPOST_REPLIES_APPROVED` (or take Alan's tenant out of
-`MERRYMEN_XPOST_ACTIVE_TENANTS`) on the orchestrator and let one pass of this
+`AGENTCAP_XPOST_REPLIES_APPROVED` (or take Alan's tenant out of
+`AGENTCAP_XPOST_ACTIVE_TENANTS`) on the orchestrator and let one pass of this
 release run, which cancels every waiting answer as `replies-off`; or cancel
 them directly on the shared database:
 `UPDATE xpost_posts SET status = 'cancelled', reason = 'rollback' WHERE kind = 'answer' AND status = 'scheduled';`
@@ -2129,7 +2129,7 @@ A recap already posted stays on X; the older build does not read it as cover.
   as. A commenter can say stop to opt out.
 - The reply warning says exactly what it turns on, per agent
   (`repliesActive` in `GET /api/x/account`, from the web's
-  `MERRYMEN_XPOST_ACTIVE_TENANTS`). For an active owner's agent it describes
+  `AGENTCAP_XPOST_ACTIVE_TENANTS`). For an active owner's agent it describes
   answers to posts that tag it, reply to it or quote it, comments on its own
   posts included. Answers go out right away and do not wait under Coming up.
   It answers each person a few times a day: up to 60 a day on top of its
@@ -2137,7 +2137,7 @@ A recap already posted stays on X; the older build does not read it as cover.
   it never answers someone who asked it to stop; no sentence promises anyone
   they can reply stop. Its answers may include market figures from public
   data (CoinGecko, GeckoTerminal, Fomo and Bitquery), such as a coin's
-  price, market cap, volume or recent change, added by Merrymen as the data
+  price, market cap, volume or recent change, added by AgentCap as the data
   showed them and never advice ("Market intel" above). Every other owner is
   told about comment replies on coin posts only, and nothing about figures.
   Web and iOS use the same sentences, and the tests pin them.
@@ -2164,7 +2164,7 @@ The private `agentBrief` never enters an X prompt.
   forbidden, and unsupported networks or missing proof withhold the post.
   Since 2026-10-13 the CA stands alone on the post's last line after a blank
   line, with no label and no chain name, so it copies cleanly. For the
-  operator's own agents (`MERRYMEN_XPOST_ACTIVE_TENANTS`) a live trade's
+  operator's own agents (`AGENTCAP_XPOST_ACTIVE_TENANTS`) a live trade's
   explorer link (`https://robinhoodchain.blockscout.com/tx/<hash>`, from the
   same receipt) goes on its own line just above it; paper and testnet trades
   get no link. Both are added by code after the gate; the model never types a
@@ -2222,7 +2222,7 @@ The private `agentBrief` never enters an X prompt.
 A win nobody sees is a win nobody notices: the owner's teammate asked for the
 profit card to be shared when the agent makes a profit. So a **profitable**
 completed sale by one of the operator's own
-agents (`MERRYMEN_XPOST_ACTIVE_TENANTS`, today Alan Al Dale only) carries its
+agents (`AGENTCAP_XPOST_ACTIVE_TENANTS`, today Alan Al Dale only) carries its
 P&L card as an image: the same house card the owner's desk downloads
 (`/api/pnl`) and Telegram sends, drawn by `worker/src/pnl-card.ts` on
 `pnl/PNL.jpg` (in the image at `/app/pnl/PNL.jpg`, resolved from the module,
@@ -2290,8 +2290,8 @@ Two staged switches start **off**:
 
 | Setting | Effect when exactly `1` |
 | --- | --- |
-| `MERRYMEN_XPOST_VARIETY` | Active owners rotate market 40%, hot 15%, software day 15%, a vetted question 10%, trading habit 10%, and passing thought 10%. Ten casual opportunities within the existing twelve-post daily timeline ceiling; the trade limit, 75-minute gap, review window, owner preference and fleet cap still apply. A quiet slot is not a posting quota. |
-| `MERRYMEN_XPOST_SMALLTALK_DRAFTS` | Already eligible greetings, reactions and banter at top level or directly under plain posts may use a model. Trade/closed threads and arbitrary free chat stay out. The complete draft gate, post-gate coin/house/trust/market/deictic checks and a closed conversational vocabulary all apply. PASS, errors, exhausted budget or unsafe wording use the vetted code reply. |
+| `AGENTCAP_XPOST_VARIETY` | Active owners rotate market 40%, hot 15%, software day 15%, a vetted question 10%, trading habit 10%, and passing thought 10%. Ten casual opportunities within the existing twelve-post daily timeline ceiling; the trade limit, 75-minute gap, review window, owner preference and fleet cap still apply. A quiet slot is not a posting quota. |
+| `AGENTCAP_XPOST_SMALLTALK_DRAFTS` | Already eligible greetings, reactions and banter at top level or directly under plain posts may use a model. Trade/closed threads and arbitrary free chat stay out. The complete draft gate, post-gate coin/house/trust/market/deictic checks and a closed conversational vocabulary all apply. PASS, errors, exhausted budget or unsafe wording use the vetted code reply. |
 
 The mixed timeline's questions are code-written and require reply consent.
 Only a finite whole-tag response to an exact own posted question gets the
@@ -2326,11 +2326,11 @@ or deployment is authorized by these notes.
 
 ## Known limits
 
-- **The iOS hand-off uses the `merrymen://` scheme.** For an `i.` state the
-  `/connect/x` page hands the code to `merrymen://x-connect`. Inside the app's
+- **The iOS hand-off uses the `agentcap://` scheme.** For an `i.` state the
+  `/connect/x` page hands the code to `agentcap://x-connect`. Inside the app's
   own sign-in sheet that is safe. But if an attacker started an iOS connect
-  from their own merrymen account, got a victim to approve it on X, and an app
-  on the victim's phone had claimed the `merrymen` scheme, the code could reach
+  from their own agentcap account, got a victim to approve it on X, and an app
+  on the victim's phone had claimed the `agentcap` scheme, the code could reach
   the attacker, and the victim's X account would be connected to the
   attacker's agent. A cookie set on the way into the sheet would not close
   this, because the attacker could send that URL instead. The fix is an

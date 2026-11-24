@@ -5,11 +5,11 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, before, beforeEach, it, mock } from "node:test";
 
-const ORIGIN = "https://app.merrymen.dev";
+const ORIGIN = "https://app.agentcap.xyz";
 const A = `0x${"a".repeat(40)}` as `0x${string}`;
 const B = `0x${"b".repeat(40)}` as `0x${string}`;
 const saved = Object.fromEntries(
-  ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_SESSION_SECRET", "DATABASE_URL", "MERRYMEN_STORE_DEK"].map((key) => [key, process.env[key]]),
+  ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_SESSION_SECRET", "DATABASE_URL", "AGENTCAP_STORE_DEK"].map((key) => [key, process.env[key]]),
 );
 
 let home: string;
@@ -29,10 +29,10 @@ const perpsAsked: string[] = [];
 
 before(async () => {
   home = mkdtempSync(path.join(tmpdir(), "mm-grant-tenant-"));
-  process.env.MERRYMEN_HOME = home;
-  process.env.MERRYMEN_HOSTED = "1";
-  process.env.MERRYMEN_SESSION_SECRET = "test-secret-at-least-thirty-two-characters-long";
-  process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
+  process.env.AGENTCAP_HOME = home;
+  process.env.AGENTCAP_HOSTED = "1";
+  process.env.AGENTCAP_SESSION_SECRET = "test-secret-at-least-thirty-two-characters-long";
+  process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
   process.env.DATABASE_URL = "postgres://127.0.0.1:1/never-connected";
 
   auth = await import("@/lib/auth");

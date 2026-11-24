@@ -255,12 +255,12 @@ describe("what a size is allowed to be", () => {
  * THE ENERGY MARKER — the only thing that routes an order to the energy buy.
  *
  * The worker used to route on the symbol, so a plain buy, a snipe or an MCP
- * proposal naming MERRYMEN bought the reserve. It routes on `purpose` now
+ * proposal naming AGENTCAP bought the reserve. It routes on `purpose` now
  * (worker/src/order-gate.ts orderRoute), which makes this route the place the
  * marker is either carried exactly or not at all.
  */
 describe("the energy marker", () => {
-  const ENERGY = { side: "buy", symbol: "MERRYMEN", usdgAmount: 30 } as const;
+  const ENERGY = { side: "buy", symbol: "AGENTCAP", usdgAmount: 30 } as const;
 
   it("IS KEPT ONLY WHEN IT IS EXACTLY 'energy' — every other value is dropped, never passed on", () => {
     assert.deepEqual(readOrder({ ...ENERGY, purpose: "energy" }), { order: { ...ENERGY, purpose: "energy" } });
@@ -269,19 +269,19 @@ describe("the energy marker", () => {
     }
   });
 
-  it("an ordinary order never gains one — a buy of MERRYMEN is just a buy", () => {
-    const read = readOrder({ side: "buy", symbol: "merrymen", usdgAmount: 50 });
+  it("an ordinary order never gains one — a buy of AGENTCAP is just a buy", () => {
+    const read = readOrder({ side: "buy", symbol: "agentcap", usdgAmount: 50 });
     assert.ok("order" in read);
     assert.equal("purpose" in read.order, false);
   });
 
-  it("A MARKED ORDER THAT IS NOT A BUY OF $MERRYMEN IS REFUSED — the energy route buys the reserve whatever the symbol says", () => {
+  it("A MARKED ORDER THAT IS NOT A BUY OF $AGENTCAP IS REFUSED — the energy route buys the reserve whatever the symbol says", () => {
     for (const bad of [
-      { side: "sell", symbol: "MERRYMEN", usdgAmount: 30 },
+      { side: "sell", symbol: "AGENTCAP", usdgAmount: 30 },
       { side: "buy", symbol: "TSLA", usdgAmount: 30 },
-      { side: "buy", symbol: "MERRYMENX", usdgAmount: 30 },
+      { side: "buy", symbol: "AGENTCAPX", usdgAmount: 30 },
     ]) {
-      assert.deepEqual(readOrder({ ...bad, purpose: "energy" }), { error: "an energy order is a buy of $MERRYMEN and nothing else" }, JSON.stringify(bad));
+      assert.deepEqual(readOrder({ ...bad, purpose: "energy" }), { error: "an energy order is a buy of $AGENTCAP and nothing else" }, JSON.stringify(bad));
     }
   });
 
@@ -474,7 +474,7 @@ describe("what the review found, pinned so it cannot come back", () => {
   });
 
   it("THE CEILING IS THE CALLER'S, not this container's", async () => {
-    // `resolveConfig()` reads the WEB process's own ~/.merrymen/settings.json —
+    // `resolveConfig()` reads the WEB process's own ~/.agentcap/settings.json —
     // hosted, the house's file, which has nothing to do with this tenant, whose
     // settings live in the per-tenant store /api/settings reads. Every hosted
     // tenant was held to the house default whatever they had configured.

@@ -40,7 +40,7 @@ export type { EnergyLevel, EnergyMode } from "../../packages/core/src/index";
 const DAY_SEC = 86_400;
 
 /**
- * MERRYMEN_ENERGY_GATE, read once by settings.ts (hosted only).
+ * AGENTCAP_ENERGY_GATE, read once by settings.ts (hosted only).
  *
  * Unset, '0' and anything unrecognised are OFF: the gate is an operator
  * switch that defaults to doing nothing, and a typo must not throttle a fleet.
@@ -58,7 +58,7 @@ const ACCOUNT_ADDRESS = /^0x[0-9a-fA-F]{40}$/;
 const ZERO_ACCOUNT = `0x${"0".repeat(40)}`;
 
 /**
- * Operator-only MERRYMEN_ENERGY_EXEMPT_ACCOUNTS. Exact smart-account addresses,
+ * Operator-only AGENTCAP_ENERGY_EXEMPT_ACCOUNTS. Exact smart-account addresses,
  * never names, owners, prefixes or `all`. An invalid list exempts nobody.
  */
 export function energyExemptAccountsOf(raw: string | undefined): readonly string[] {
@@ -555,7 +555,7 @@ export function energyBuyOf(i: { chainId: number; live: boolean; hasRoute: boole
 }
 
 /**
- * The raw $MERRYMEN still missing for full energy, or null when that is not
+ * The raw $AGENTCAP still missing for full energy, or null when that is not
  * known. Only a reading where EVERY present part answered can say how far
  * short it is; a lower bound from a half-read would overstate the shortfall,
  * and the estimate built on it would ask the owner for more than they need.

@@ -4,7 +4,7 @@
  * replace the subject before the next lookup, factual questions stay factual,
  * ambiguity becomes a question, injected text stays data, and a group hears
  * one named trader's public data but never the owner's own state or who
- * Merrymen watches.
+ * AgentCap watches.
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -349,7 +349,7 @@ describe("answerFomoQuestion", () => {
     assert.equal(Number((s.raw.prepare("SELECT COUNT(*) AS n FROM fomo_assessments").get() as { n: number }).n), 0, "analysis is not an assessment");
 
     const fallback = await s.ask("should we follow this?", { compose: async () => { throw new Error("model down"); } });
-    assert.ok(fallback.handled && fallback.text.includes("Merrymen's research"));
+    assert.ok(fallback.handled && fallback.text.includes("AgentCap's research"));
     assert.ok(fallback.text.includes(NOT_PERMISSION_LINE));
     const nulled = await s.ask("should we follow this?", { compose: async () => null });
     assert.ok(nulled.handled && nulled.text.includes(FOMO_ATTRIBUTION));
@@ -383,7 +383,7 @@ describe("answerFomoQuestion", () => {
     assert.equal(s.brokerCalls[0]!.opts.groupId, "-100123");
   });
 
-  it("in a group: one named trader's public data is answered, for anyone, never whether Merrymen watches them (Milla, 2026-10-07)", async () => {
+  it("in a group: one named trader's public data is answered, for anyone, never whether AgentCap watches them (Milla, 2026-10-07)", async () => {
     const s = await setup();
     const g = { audience: "group" as const, surface: "telegram-group" as const, groupId: "-100123", conversationKey: "group-1" };
     const r = await s.ask("what is @CryptoKaleo holding?", g);
@@ -391,7 +391,7 @@ describe("answerFomoQuestion", () => {
     assert.notEqual(r.text, GROUP_DM_DEFLECTION);
     assert.deepEqual(s.brokerCalls.map((c) => [c.tool, c.args, c.opts.audience]), [["fomo_get_trader_context", { trader: "CryptoKaleo" }, "group"]]);
     assert.match(r.text, /^CryptoKaleo on Fomo holds 2 coins worth \$3\.1k \(provider-reported snapshot, valued at current prices\)\.\nLargest held by CryptoKaleo: PONS on robinhood \$3\.1k, FU2O on solana \$13\./);
-    assert.doesNotMatch(r.text, /cohort|watched|follow|P&L|@|0x[0-9a-f]{6}|\$PONS/i, "never who Merrymen watches, never an owner-side figure or an address");
+    assert.doesNotMatch(r.text, /cohort|watched|follow|P&L|@|0x[0-9a-f]{6}|\$PONS/i, "never who AgentCap watches, never an owner-side figure or an address");
     // The owner's own answer about the same trader keeps its detail.
     const owner = await s.ask("what is @CryptoKaleo holding?");
     assert.ok(owner.handled);
@@ -432,7 +432,7 @@ describe("answerFomoQuestion", () => {
     assert.equal(s.brokerCalls.length, 0);
   });
 
-  it("in a group: the public leaderboard is answered, handles and short P&L, never who Merrymen follows", async () => {
+  it("in a group: the public leaderboard is answered, handles and short P&L, never who AgentCap follows", async () => {
     const s = await setup();
     s.serve.set("/v2/leaderboard/24h", () => json(fixture("leaderboard-24h")));
     const g = { audience: "group" as const, surface: "telegram-group" as const, groupId: "-100123", conversationKey: "group-1" };
@@ -496,7 +496,7 @@ describe("answerFomoQuestion", () => {
       assert.ok(r.handled && r.text.includes("That board has no 3rd trader."), r.handled ? r.text : "");
     });
 
-    it("the board is remembered, so 'the second one' next is its 2nd row; never a board cut to Merrymen's watched traders", async () => {
+    it("the board is remembered, so 'the second one' next is its 2nd row; never a board cut to AgentCap's watched traders", async () => {
       const s = await board();
       const g = { audience: "group" as const, surface: "telegram-group" as const, groupId: "-100123", conversationKey: "group-rows" };
       await s.ask("who are the top traders on fomo today?", g);
@@ -574,7 +574,7 @@ describe("answerFomoQuestion", () => {
     assert.deepEqual(s.brokerCalls.map((c) => c.tool), ["fomo_get_token_theses"]);
   });
 
-  it("in a group: the leaderboard cut to the traders Merrymen watches is the watch list, so it is deflected with no lookup", async () => {
+  it("in a group: the leaderboard cut to the traders AgentCap watches is the watch list, so it is deflected with no lookup", async () => {
     const s = await setup();
     s.serve.set("/v2/leaderboard/24h", () => json(fixture("leaderboard-24h")));
     const g = { audience: "group" as const, surface: "telegram-group" as const, groupId: "-100123", conversationKey: "group-1" };

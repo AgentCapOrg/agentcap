@@ -3,7 +3,7 @@
 import { useId, useRef, useState } from "react";
 import { Icon } from "../../components/Icon";
 
-const SETUP_PROMPT = "Set up a practice Merryman for me. Check my setup first and reuse anything already prepared. Send me one link to review the setup and sign in Merrymen, then check whether it is running.";
+const SETUP_PROMPT = "Set up a practice AgentCapAvatar for me. Check my setup first and reuse anything already prepared. Send me one link to review the setup and sign in AgentCap, then check whether it is running.";
 
 /** The text stays visible and selectable when clipboard access is unavailable. */
 function CopyField({ label, value, action }: { label: string; value: string; action: string }) {
@@ -56,25 +56,25 @@ export function GrokQuickStart({ server }: { server: string }) {
       <ol className="grok-quick-steps">
         <li>
           <span className="grok-step-number" aria-hidden>1</span>
-          <div className="grok-step-title"><h3>Add Merrymen to Grok.</h3><p>A one-time manual step.</p></div>
+          <div className="grok-step-title"><h3>Add AgentCap to Grok.</h3><p>A one-time manual step.</p></div>
           <div className="grok-step-body">
             <p>Open <strong>Plugins → Connectors → New Connector → Custom</strong>. Enter these details, then choose <strong>Add Connector</strong>.</p>
             <div className="grok-connection-fields">
-              <CopyField label="Name" value="Merrymen" action="Copy name" />
+              <CopyField label="Name" value="AgentCap" action="Copy name" />
               <CopyField label="Server URL" value={server} action="Copy address" />
             </div>
             <a className="grok-text-link" href="https://grok.com/connectors" target="_blank" rel="noopener noreferrer">
               Open Grok connectors <Icon name="arrow" size={16} />
               <span className="grok-sr-only"> (opens in a new tab)</span>
             </a>
-            <p className="grok-quick-note">This opens settings. Asking chat to find Merrymen does not install it.</p>
+            <p className="grok-quick-note">This opens settings. Asking chat to find AgentCap does not install it.</p>
           </div>
         </li>
         <li>
           <span className="grok-step-number" aria-hidden>2</span>
           <div className="grok-step-title"><h3>Make it yours.</h3><p>Your account. Your permissions.</p></div>
           <div className="grok-step-body">
-            <p>Sign in to Merrymen with email or X, or create your account. Choose which Merryman and permissions to share with Grok.</p>
+            <p>Sign in to AgentCap with email or X, or create your account. Choose which AgentCapAvatar and permissions to share with Grok.</p>
             <p>Want to create one from chat? Allow <strong>Prepare agent setups and suggest setting changes</strong> on the consent page.</p>
             <p className="grok-quick-note">That permission prepares proposals. You still approve the setup and wallet limits yourself.</p>
           </div>
@@ -83,9 +83,9 @@ export function GrokQuickStart({ server }: { server: string }) {
           <span className="grok-step-number" aria-hidden>3</span>
           <div className="grok-step-title"><h3>Start the conversation.</h3><p>Try practice first.</p></div>
           <div className="grok-step-body">
-            <p>Return to Grok and send this message. Follow its Merrymen link to review your setup and sign, then ask Grok to check the result.</p>
+            <p>Return to Grok and send this message. Follow its AgentCap link to review your setup and sign, then ask Grok to check the result.</p>
             <CopyField label="First message" value={SETUP_PROMPT} action="Copy setup prompt" />
-            <p className="grok-quick-note">A connection or draft is only the start. The fresh status check tells you whether your Merryman is running.</p>
+            <p className="grok-quick-note">A connection or draft is only the start. The fresh status check tells you whether your AgentCapAvatar is running.</p>
           </div>
         </li>
       </ol>

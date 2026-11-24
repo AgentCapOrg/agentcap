@@ -45,12 +45,12 @@ import { PERSONAL_MEMORY_TABLE_SQL } from "./personal-memory-ferry";
 import { TELEGRAM_STATE_DDL, publishTenantTelegram } from "./telegram-store";
 import type { TenantLease } from "./tenant-lease";
 
-const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-restored-link-offset-")));
-process.env.MERRYMEN_HOME = fleet;
-process.env.MERRYMEN_HOSTED = "1";
+const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-restored-link-offset-")));
+process.env.AGENTCAP_HOME = fleet;
+process.env.AGENTCAP_HOSTED = "1";
 delete process.env.DATABASE_URL;
 const dek = Buffer.alloc(32, 29);
-process.env.MERRYMEN_STORE_DEK = dek.toString("base64");
+process.env.AGENTCAP_STORE_DEK = dek.toString("base64");
 
 const orch = await import("./orchestrator");
 const { childHome, reconcile, setSpawnForTest, setRetirementMemoryStoreForTest, setPaperRestoreForTest, setPersistentHomeVerifierForTest,
@@ -89,9 +89,9 @@ setPaperRestoreForTest(async (tenant) => unrestorable.has(tenant)
 
 /** telegram.json as the process starting in `home` loads it (telegram/state.ts loadTelegramState). */
 function loadedIn(home: string) {
-  const prior = process.env.MERRYMEN_HOME;
-  process.env.MERRYMEN_HOME = home;
-  try { return loadTelegramState(); } finally { process.env.MERRYMEN_HOME = prior; }
+  const prior = process.env.AGENTCAP_HOME;
+  process.env.AGENTCAP_HOME = home;
+  try { return loadTelegramState(); } finally { process.env.AGENTCAP_HOME = prior; }
 }
 class FakeProc extends EventEmitter {
   readonly stdout = null; readonly stderr = null;
@@ -101,7 +101,7 @@ class FakeProc extends EventEmitter {
 /** Every start: whose home, worker or hold process, and its telegram.json then, as written and as loaded. */
 const starts: Array<{ home: string; kind: "worker" | "hold"; file: Record<string, unknown> | null; offset: number; ownerId: number | null }> = [];
 setSpawnForTest((_c, args, options) => {
-  const home = String(options.env?.MERRYMEN_HOME);
+  const home = String(options.env?.AGENTCAP_HOME);
   const file = path.join(home, "telegram.json");
   const state = loadedIn(home);
   starts.push({

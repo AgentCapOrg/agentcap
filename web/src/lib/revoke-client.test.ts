@@ -9,7 +9,7 @@ import { assertRevocationFunded } from "./revoke-client";
 
 const ACCOUNT = `0x${"ab".repeat(20)}` as const;
 const CHAIN = 4663;
-const KEY = `merrymen.permission-revocation.v1.${CHAIN}.${ACCOUNT}`;
+const KEY = `agentcap.permission-revocation.v1.${CHAIN}.${ACCOUNT}`;
 const realFetch = globalThis.fetch;
 const storageDescriptor = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
 let stored: Map<string, string>;

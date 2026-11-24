@@ -1,7 +1,7 @@
 /**
  * The gateway's /developer/v1 routes, as this site's SERVER reaches them.
  *
- * Server-only: it reads MERRYMEN_DEVELOPER_PORTAL_SECRET. The proxy route and
+ * Server-only: it reads AGENTCAP_DEVELOPER_PORTAL_SECRET. The proxy route and
  * the /api page import it; the console (a client component) must not, and
  * imports developer-billing.ts instead.
  */
@@ -10,21 +10,21 @@ import { FALLBACK_PLANS, normalizePlans, type PlansView } from "./developer-bill
 /**
  * Where the portal credential goes, or null to fail closed.
  *
- * MERRYMEN_DEVELOPER_GATEWAY_ORIGIN points a preview or local site at another
+ * AGENTCAP_DEVELOPER_GATEWAY_ORIGIN points a preview or local site at another
  * gateway. The secret travels with every request, so the override must be a
  * bare https origin (plain http only on localhost), and a malformed one is
  * refused rather than ignored. The secret needs 32+ bytes, as the gateway
  * already requires: a shorter one could only ever be refused there.
  */
 export function developerGateway(): { origin: string; secret: string } | null {
-  const secret = process.env.MERRYMEN_DEVELOPER_PORTAL_SECRET;
-  if (!secret || Buffer.byteLength(secret) < 32) { console.error("[developer] MERRYMEN_DEVELOPER_PORTAL_SECRET is unset or under 32 bytes"); return null; }
+  const secret = process.env.AGENTCAP_DEVELOPER_PORTAL_SECRET;
+  if (!secret || Buffer.byteLength(secret) < 32) { console.error("[developer] AGENTCAP_DEVELOPER_PORTAL_SECRET is unset or under 32 bytes"); return null; }
   try {
-    const url = new URL(process.env.MERRYMEN_DEVELOPER_GATEWAY_ORIGIN || "https://ai.merrymen.dev");
+    const url = new URL(process.env.AGENTCAP_DEVELOPER_GATEWAY_ORIGIN || "https://ai.agentcap.xyz");
     const local = url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname);
     if ((url.protocol === "https:" || local) && !url.username && !url.password && url.pathname === "/" && !url.search && !url.hash) return { origin: url.origin, secret };
   } catch { /* Reported below. */ }
-  console.error("[developer] MERRYMEN_DEVELOPER_GATEWAY_ORIGIN must be an https origin, or http on localhost");
+  console.error("[developer] AGENTCAP_DEVELOPER_GATEWAY_ORIGIN must be an https origin, or http on localhost");
   return null;
 }
 

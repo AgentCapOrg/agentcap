@@ -20,8 +20,8 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-unread-basis-"));
-process.env.MERRYMEN_HOME = HOME;
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-unread-basis-"));
+process.env.AGENTCAP_HOME = HOME;
 
 const { DatabaseSync } = await import("node:sqlite");
 const { closeStoreForTest, getBasis, initStore, openBasisQty, setBasis } = await import("./store");
@@ -46,7 +46,7 @@ describe("the unread-balance guard over a real ledger", () => {
   it("a FAILED QUERY counts as held, where getBasis would have answered zero", async () => {
     // A real failure, not a stub: the table is dropped under the store's open
     // file, so the store's own prepare throws "no such table".
-    const raw = new DatabaseSync(path.join(HOME, "merrymen.db"));
+    const raw = new DatabaseSync(path.join(HOME, "agentcap.db"));
     try {
       raw.exec("DROP TABLE cost_basis");
     } finally {

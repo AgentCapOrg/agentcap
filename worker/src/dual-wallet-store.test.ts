@@ -5,7 +5,7 @@
  * the Spot record byte for byte as it was, and the cross-wallet rules are
  * decided under the one writer lock both wallets share.
  *
- * MERRYMEN_HOME is set before the stores resolve their directories; node's
+ * AGENTCAP_HOME is set before the stores resolve their directories; node's
  * --test runs each file in its own process, so it never leaks.
  */
 import assert from "node:assert/strict";
@@ -16,9 +16,9 @@ import { after, describe, it } from "node:test";
 import { privateKeyToAccount } from "viem/accounts";
 import type { StoredGrant } from "../../packages/core/src/index";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-dual-wallet-"));
-process.env.MERRYMEN_HOME = HOME;
-process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 4).toString("base64");
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-dual-wallet-"));
+process.env.AGENTCAP_HOME = HOME;
+process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 4).toString("base64");
 const { FileGrantStore, GrantReplacementConflict, GrantWalletConflict, getGrantStore } = await import("./grant-store");
 const { FileSettingsStore } = await import("./settings-store");
 const { purposeHome } = await import("./home");

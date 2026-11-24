@@ -623,7 +623,7 @@ describe("an owner's line", () => {
     assert.equal(postError(429, {}), "Slow down a little — try again in a minute.");
     assert.equal(postError(429, { error: "Easy — six a minute." }), "Easy — six a minute.");
     assert.equal(postError(401, null), "Sign in again to post.");
-    assert.equal(postError(403, null), "Only owners with a Merryman can post.");
+    assert.equal(postError(403, null), "Only owners with a AgentCapAvatar can post.");
     assert.doesNotMatch(postError(500, { error: "connect ECONNREFUSED 127.0.0.1:5432" }), /ECONNREFUSED/, "a driver's error never reaches an owner");
     assert.match(postError(0, null), /Can't reach/);
   });

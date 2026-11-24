@@ -1,5 +1,5 @@
 /**
- * ONE $MERRYMEN WALLET POWERS ONE AGENT — as every holder screen sees it.
+ * ONE $AGENTCAP WALLET POWERS ONE AGENT — as every holder screen sees it.
  *
  * /api/tier, /api/circle and /api/alpha all ask holderWalletFor whose wallet
  * counts, and the orchestrator asks effectiveHolder the same question about the
@@ -14,24 +14,24 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, before, beforeEach, describe, it } from "node:test";
 
-import { getSettingsStore, resetSettingsStoreForTest } from "@merrymen/settings-store";
+import { getSettingsStore, resetSettingsStoreForTest } from "@agentcap/settings-store";
 import { holderWalletFor } from "./holder-wallet";
 
 const A = "0x00000000000000000000000000000000000000a1";
 const B = "0x00000000000000000000000000000000000000b2";
 const W = "0x000000000000000000000000000000000000beef";
-const KEYS = ["MERRYMEN_HOME", "DATABASE_URL", "MERRYMEN_STORE_DEK"] as const;
+const KEYS = ["AGENTCAP_HOME", "DATABASE_URL", "AGENTCAP_STORE_DEK"] as const;
 const original = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
 let root: string;
 let n = 0;
 
 before(() => {
-  root = mkdtempSync(path.join(tmpdir(), "merrymen-holder-wallet-"));
+  root = mkdtempSync(path.join(tmpdir(), "agentcap-holder-wallet-"));
   delete process.env.DATABASE_URL;
 });
 beforeEach(() => {
   // A fresh home (and a fresh store over it) per case: no claims, no proofs.
-  process.env.MERRYMEN_HOME = path.join(root, `case-${++n}`);
+  process.env.AGENTCAP_HOME = path.join(root, `case-${++n}`);
   resetSettingsStoreForTest();
 });
 after(() => {
@@ -88,7 +88,7 @@ describe("holderWalletFor — whose wallet counts", () => {
 
   it("AN UNREADABLE CLAIMS STORE THROWS — it used to fall back to the login wallet, which may be another account's now", async () => {
     await getSettingsStore("spot").claimHolder(A, B);
-    const dir = path.join(process.env.MERRYMEN_HOME!, "holder-claims");
+    const dir = path.join(process.env.AGENTCAP_HOME!, "holder-claims");
     mkdirSync(dir, { recursive: true });
     writeFileSync(path.join(dir, `${A}.json`), "{ torn");
     await assert.rejects(holderWalletFor(A));

@@ -423,11 +423,11 @@ describe("the group research lane", () => {
   });
 
   it("a free theses answer whose paraphrase called the model keeps its slot (review r2)", async () => {
-    envVars.MERRYMEN_TG_THESES_MODEL = "1";
-    envVars.MERRYMEN_TG_GROUPS_LLM_KEY = "k-test";
-    envVars.MERRYMEN_TG_GROUPS_LLM_PROVIDER = "openai";
-    envVars.MERRYMEN_TG_GROUPS_LLM_BASE_URL = "https://llm.test/v1";
-    envVars.MERRYMEN_TG_GROUPS_MODEL = "fake";
+    envVars.AGENTCAP_TG_THESES_MODEL = "1";
+    envVars.AGENTCAP_TG_GROUPS_LLM_KEY = "k-test";
+    envVars.AGENTCAP_TG_GROUPS_LLM_PROVIDER = "openai";
+    envVars.AGENTCAP_TG_GROUPS_LLM_BASE_URL = "https://llm.test/v1";
+    envVars.AGENTCAP_TG_GROUPS_MODEL = "fake";
     let calls = 0;
     globalThis.fetch = (async () => {
       calls += 1;
@@ -545,7 +545,7 @@ describe("the group research lane", () => {
     make();
     await said(msg("pine what are fomo traders buying?"));
     fomo = new SpyFomo();
-    envVars.MERRYMEN_TG_GROUPS_FOMO = "0";
+    envVars.AGENTCAP_TG_GROUPS_FOMO = "0";
     clock += 3 * MIN;
     await said(msg("pine what are fomo traders buying now?"));
     assert.equal(fomo.asks.length, 0);
@@ -579,10 +579,10 @@ describe("the router: a line no rule knew (route.ts)", () => {
   let routeCalls: number;
   let chatCalls: number;
   const useModel = (): void => {
-    envVars.MERRYMEN_TG_GROUPS_LLM_KEY = "k-test";
-    envVars.MERRYMEN_TG_GROUPS_LLM_PROVIDER = "openai";
-    envVars.MERRYMEN_TG_GROUPS_LLM_BASE_URL = "https://llm.test/v1";
-    envVars.MERRYMEN_TG_GROUPS_MODEL = "fake";
+    envVars.AGENTCAP_TG_GROUPS_LLM_KEY = "k-test";
+    envVars.AGENTCAP_TG_GROUPS_LLM_PROVIDER = "openai";
+    envVars.AGENTCAP_TG_GROUPS_LLM_BASE_URL = "https://llm.test/v1";
+    envVars.AGENTCAP_TG_GROUPS_MODEL = "fake";
     globalThis.fetch = (async (url: string, init: { body: string }) => {
       assert.ok(String(url).startsWith("https://llm.test/"));
       const body = JSON.parse(init.body) as { tools?: unknown };
@@ -684,17 +684,17 @@ describe("the router: a line no rule knew (route.ts)", () => {
     assert.equal(chatCalls, 0, "the persona never answered either");
   });
 
-  it("MERRYMEN_TG_GROUPS_ROUTER=0, a spent reserve, a private ask, a two-word line: no routing call", async () => {
+  it("AGENTCAP_TG_GROUPS_ROUTER=0, a spent reserve, a private ask, a two-word line: no routing call", async () => {
     pick = { action: "fomo_leaderboard" };
-    envVars.MERRYMEN_TG_GROUPS_ROUTER = "0";
+    envVars.AGENTCAP_TG_GROUPS_ROUTER = "0";
     make();
     await said(msg("pine i'm sorry, who's been winning the most lately"));
     assert.equal(routeCalls, 0);
 
     groups.stop();
     await groups.drain();
-    envVars.MERRYMEN_TG_GROUPS_ROUTER = "";
-    envVars.MERRYMEN_TG_GROUPS_LLM_PER_DAY = "20";
+    envVars.AGENTCAP_TG_GROUPS_ROUTER = "";
+    envVars.AGENTCAP_TG_GROUPS_LLM_PER_DAY = "20";
     make();
     clock += 3 * MIN;
     await said(msg("pine honestly who's been winning the most lately", { fromId: ANN + 1 }));
@@ -702,7 +702,7 @@ describe("the router: a line no rule knew (route.ts)", () => {
 
     groups.stop();
     await groups.drain();
-    envVars.MERRYMEN_TG_GROUPS_LLM_PER_DAY = "";
+    envVars.AGENTCAP_TG_GROUPS_LLM_PER_DAY = "";
     make();
     clock += 3 * MIN;
     await said(msg("pine who do you copy trade?", { fromId: ANN + 2 }));
@@ -731,10 +731,10 @@ describe("the router after review (2026-10-07)", () => {
     routeCalls = 0;
     chatCalls = 0;
     chatReply = "ngl no clue";
-    envVars.MERRYMEN_TG_GROUPS_LLM_KEY = "k-test";
-    envVars.MERRYMEN_TG_GROUPS_LLM_PROVIDER = "openai";
-    envVars.MERRYMEN_TG_GROUPS_LLM_BASE_URL = "https://llm.test/v1";
-    envVars.MERRYMEN_TG_GROUPS_MODEL = "fake";
+    envVars.AGENTCAP_TG_GROUPS_LLM_KEY = "k-test";
+    envVars.AGENTCAP_TG_GROUPS_LLM_PROVIDER = "openai";
+    envVars.AGENTCAP_TG_GROUPS_LLM_BASE_URL = "https://llm.test/v1";
+    envVars.AGENTCAP_TG_GROUPS_MODEL = "fake";
     globalThis.fetch = (async (_url: string, init: { body: string }) => {
       const body = JSON.parse(init.body) as { tools?: unknown };
       if (body.tools) {
@@ -943,10 +943,10 @@ describe("a Fomo tail asked for in the room (docs/fomo.md \"Tailing a trader\")"
     chatCalls = 0;
     tails = [];
     outcome = "sent";
-    envVars.MERRYMEN_TG_GROUPS_LLM_KEY = "k-test";
-    envVars.MERRYMEN_TG_GROUPS_LLM_PROVIDER = "openai";
-    envVars.MERRYMEN_TG_GROUPS_LLM_BASE_URL = "https://llm.test/v1";
-    envVars.MERRYMEN_TG_GROUPS_MODEL = "fake";
+    envVars.AGENTCAP_TG_GROUPS_LLM_KEY = "k-test";
+    envVars.AGENTCAP_TG_GROUPS_LLM_PROVIDER = "openai";
+    envVars.AGENTCAP_TG_GROUPS_LLM_BASE_URL = "https://llm.test/v1";
+    envVars.AGENTCAP_TG_GROUPS_MODEL = "fake";
     globalThis.fetch = (async (_url: string, init: { body: string }) => {
       const body = JSON.parse(init.body) as { tools?: unknown };
       if (body.tools) {
@@ -1058,7 +1058,7 @@ describe("a Fomo tail asked for in the room (docs/fomo.md \"Tailing a trader\")"
 });
 
 describe("live 2026-10-07: a yes under its own offer, and no fake progress (d2 reversed)", () => {
-  const SHOGUN: BotSelf = { id: 999999, username: "Merrymanme_bot", name: "Shogun" };
+  const SHOGUN: BotSelf = { id: 999999, username: "AgentCapAvatarme_bot", name: "Shogun" };
   const BOARD = "Trending on Fomo (board position is popularity, not quality):\n1. ETAC on solana, market cap $874.6k\n2. CATE on solana, market cap $57.2M";
   const OFFER = "i can pull the fomo board for robinhood chain coins if you want, just say the word";
   /** What the model is scripted to pick (routing) and to write (the persona), in order. */
@@ -1071,10 +1071,10 @@ describe("live 2026-10-07: a yes under its own offer, and no fake progress (d2 r
     replies = [];
     routePrompts = [];
     personaPrompts = [];
-    envVars.MERRYMEN_TG_GROUPS_LLM_KEY = "k-test";
-    envVars.MERRYMEN_TG_GROUPS_LLM_PROVIDER = "openai";
-    envVars.MERRYMEN_TG_GROUPS_LLM_BASE_URL = "https://llm.test/v1";
-    envVars.MERRYMEN_TG_GROUPS_MODEL = "fake";
+    envVars.AGENTCAP_TG_GROUPS_LLM_KEY = "k-test";
+    envVars.AGENTCAP_TG_GROUPS_LLM_PROVIDER = "openai";
+    envVars.AGENTCAP_TG_GROUPS_LLM_BASE_URL = "https://llm.test/v1";
+    envVars.AGENTCAP_TG_GROUPS_MODEL = "fake";
     store.update(CHAT, (r) => { r.ownerName = "Milla"; });
     globalThis.fetch = (async (_url: string, init: { body: string }) => {
       const body = JSON.parse(init.body) as { tools?: unknown; messages: Array<{ role: string; content: string }> };
@@ -1190,7 +1190,7 @@ describe("live 2026-10-07: a yes under its own offer, and no fake progress (d2 r
     // As the real planner with the Fomo conversation remembered: a chain alone re-asks the board; a bare name before "on base?" is no plan.
     fomo!.answer = (q) => (q.request ? { text: q.request.kind === "board" && q.request.chain ? SOL : BOARD, deflect: false } : /trending on fomo/.test(q.text) ? { text: BOARD, deflect: false } : /solana/.test(q.text) ? { text: SOL, deflect: false } : null);
     await said(mine("shogun what's trending on fomo?"));
-    for (const t of ["@Merrymanme_bot and on solana?", "shogun solana ones?"]) {
+    for (const t of ["@AgentCapAvatarme_bot and on solana?", "shogun solana ones?"]) {
       clock += MIN;
       const before = fomo!.asks.length;
       await said(mine(t));
@@ -1561,12 +1561,12 @@ describe("a coin's theses in the group model's own words (plan WP9 P2, D5)", () 
   let choice: Record<string, unknown> | string;
   let thesesCalls: number;
   const useModel = (): void => {
-    envVars.MERRYMEN_TG_GROUPS_LLM_KEY = "k-test";
-    envVars.MERRYMEN_TG_GROUPS_LLM_PROVIDER = "openai";
-    envVars.MERRYMEN_TG_GROUPS_LLM_BASE_URL = "https://llm.test/v1";
-    envVars.MERRYMEN_TG_GROUPS_MODEL = "fake";
-    // Opted in: the paraphrase is off unless MERRYMEN_TG_THESES_MODEL=1 (Milla, 2026-10-08).
-    envVars.MERRYMEN_TG_THESES_MODEL = "1";
+    envVars.AGENTCAP_TG_GROUPS_LLM_KEY = "k-test";
+    envVars.AGENTCAP_TG_GROUPS_LLM_PROVIDER = "openai";
+    envVars.AGENTCAP_TG_GROUPS_LLM_BASE_URL = "https://llm.test/v1";
+    envVars.AGENTCAP_TG_GROUPS_MODEL = "fake";
+    // Opted in: the paraphrase is off unless AGENTCAP_TG_THESES_MODEL=1 (Milla, 2026-10-08).
+    envVars.AGENTCAP_TG_THESES_MODEL = "1";
     globalThis.fetch = (async (_url: string, init: { body: string }) => {
       const body = JSON.parse(init.body) as { tools?: unknown };
       if (JSON.stringify(body.tools ?? "").includes("summarise_theses")) {
@@ -1599,18 +1599,18 @@ describe("a coin's theses in the group model's own words (plan WP9 P2, D5)", () 
     assert.deepEqual(tg.texts(CHAT), [DIGEST]);
   });
 
-  it("MERRYMEN_TG_THESES_MODEL=0: the code digest, and no call", async () => {
+  it("AGENTCAP_TG_THESES_MODEL=0: the code digest, and no call", async () => {
     useModel();
-    envVars.MERRYMEN_TG_THESES_MODEL = "0";
+    envVars.AGENTCAP_TG_THESES_MODEL = "0";
     make();
     await said(msg("pine what are people saying about $PONS on fomo?"));
     assert.equal(thesesCalls, 0);
     assert.deepEqual(tg.texts(CHAT), [DIGEST]);
   });
 
-  it("off by default: with MERRYMEN_TG_THESES_MODEL unset, the code digest and no call (Milla, 2026-10-08)", async () => {
+  it("off by default: with AGENTCAP_TG_THESES_MODEL unset, the code digest and no call (Milla, 2026-10-08)", async () => {
     useModel();
-    delete envVars.MERRYMEN_TG_THESES_MODEL;
+    delete envVars.AGENTCAP_TG_THESES_MODEL;
     make();
     await said(msg("pine what are people saying about $PONS on fomo?"));
     assert.equal(thesesCalls, 0);
@@ -1751,7 +1751,7 @@ describe("fixed answers about itself, through the real handler (WP11; g1 b06, b1
     clock += 2 * MIN;
     await said(msg("pine why do scammers always slide into the dms?", { fromId: ANN + 2 }));
     for (const t of tg.texts(CHAT).slice(1)) {
-      assert.doesNotMatch(t, /open Merrymen on the web, sign in, then choose Create agent/, t);
+      assert.doesNotMatch(t, /open AgentCap on the web, sign in, then choose Create agent/, t);
       assert.doesNotMatch(t, /stay in DMs/, t);
     }
   });
@@ -1759,7 +1759,7 @@ describe("fixed answers about itself, through the real handler (WP11; g1 b06, b1
   it("'how do i get my own agent' is the onboarding answer", async () => {
     make();
     await said(msg("pine how do i get my own agent"));
-    assert.match(tg.texts(CHAT)[0]!, /open Merrymen on the web, sign in, then choose Create agent/);
+    assert.match(tg.texts(CHAT)[0]!, /open AgentCap on the web, sign in, then choose Create agent/);
   });
 
   it("'why can't you answer in the group?' and a bare 'why?' under its deflection get the DM policy, never a market read", async () => {
@@ -2069,10 +2069,10 @@ describe("rug banter: only with a collapse permit, never at a person, never a br
   let content = "";
   let modelCalls = 0;
   const withModel = (): void => {
-    envVars.MERRYMEN_TG_GROUPS_LLM_KEY = "k-test";
-    envVars.MERRYMEN_TG_GROUPS_LLM_PROVIDER = "openai";
-    envVars.MERRYMEN_TG_GROUPS_LLM_BASE_URL = "https://llm.test/v1";
-    envVars.MERRYMEN_TG_GROUPS_MODEL = "fake";
+    envVars.AGENTCAP_TG_GROUPS_LLM_KEY = "k-test";
+    envVars.AGENTCAP_TG_GROUPS_LLM_PROVIDER = "openai";
+    envVars.AGENTCAP_TG_GROUPS_LLM_BASE_URL = "https://llm.test/v1";
+    envVars.AGENTCAP_TG_GROUPS_MODEL = "fake";
     modelCalls = 0;
     globalThis.fetch = (async () => {
       modelCalls += 1;
@@ -2115,13 +2115,13 @@ describe("rug banter: only with a collapse permit, never at a person, never a br
     await said(msg("pine what happened to it"));
     assert.ok(logs.includes("[tg-groups] collapse measured"), logs.join("\n"));
     clock += MIN;
-    content = "rugged cause it wasn't merrymen 😤";
+    content = "rugged cause it wasn't agentcap 😤";
     await said(msg("pine lmao auton"));
-    assert.equal(last(), "rugged cause it wasn't merrymen 😤");
+    assert.equal(last(), "rugged cause it wasn't agentcap 😤");
     clock += MIN;
-    content = "should've been a merrymen coin";
+    content = "should've been a agentcap coin";
     await said(msg("pine rip"));
-    assert.notEqual(last(), "should've been a merrymen coin", "a brag right after a brag is refused (brag: false)");
+    assert.notEqual(last(), "should've been a agentcap coin", "a brag right after a brag is refused (brag: false)");
     clock += MIN;
     content = "the dev rugged it";
     await said(msg("pine auton tho"));

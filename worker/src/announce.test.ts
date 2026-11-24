@@ -34,7 +34,7 @@ describe("what the announcer must never do", () => {
   });
 
   it("never logs, prints or persists a bot token", () => {
-    // Tokens are sealed under MERRYMEN_STORE_DEK precisely so they never sit in
+    // Tokens are sealed under AGENTCAP_STORE_DEK precisely so they never sit in
     // the clear. Any console line or write that could carry one is banned by
     // shape, because the leak would be a fleet of live credentials at once.
     assert.doesNotMatch(code, /console\./, "this module must be silent; the caller reports");
@@ -471,7 +471,7 @@ describe("the personalised line", () => {
     assert.match(line, /<b>Your agent, right now:<\/b>/);
     // The diagnosis is useless without somewhere to act on it, and the reader
     // is in a chat, not on the dashboard.
-    assert.match(line, /app\.merrymen\.dev/);
+    assert.match(line, /app\.agentcap\.xyz/);
   });
 
   it("omits a cached blocker from the general recovery update", async () => {
@@ -515,12 +515,12 @@ describe("the phone-fireable trigger on the orchestrator", () => {
   });
 
   it("ARMING and SENDING are two different variables", () => {
-    // MERRYMEN_ANNOUNCE_ID alone is a dry run. Messaging 43 real people must
+    // AGENTCAP_ANNOUNCE_ID alone is a dry run. Messaging 43 real people must
     // never be one variable set by muscle memory.
-    assert.match(BLOCK, /MERRYMEN_ANNOUNCE_ID/);
+    assert.match(BLOCK, /AGENTCAP_ANNOUNCE_ID/);
     assert.match(BLOCK, /announcementConfirmation\(/);
-    assert.match(BLOCK, /MERRYMEN_ANNOUNCE_CONFIRM/);
-    assert.match(BLOCK, /MERRYMEN_ANNOUNCE_BODY_SHA256/);
+    assert.match(BLOCK, /AGENTCAP_ANNOUNCE_CONFIRM/);
+    assert.match(BLOCK, /AGENTCAP_ANNOUNCE_BODY_SHA256/);
   });
 
   it("is safe to leave set, because Railway restarts services freely", () => {

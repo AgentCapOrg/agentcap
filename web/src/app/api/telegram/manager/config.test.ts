@@ -3,13 +3,13 @@ import { afterEach, beforeEach, describe, it } from "node:test";
 import { telegramManagerConfig } from "./config";
 
 const fixture = {
-  MERRYMEN_HOSTED: "1",
-  MERRYMEN_TELEGRAM_CREATE_ENABLED: "true",
+  AGENTCAP_HOSTED: "1",
+  AGENTCAP_TELEGRAM_CREATE_ENABLED: "true",
   DATABASE_URL: "postgres://fixture@127.0.0.1:55441/unused",
-  MERRYMEN_STORE_DEK: Buffer.alloc(32, 73).toString("base64"),
-  MERRYMEN_TELEGRAM_MANAGER_TOKEN: "11111:manager_test_secret",
-  MERRYMEN_TELEGRAM_MANAGER_USERNAME: "merrymen_manager_bot",
-  MERRYMEN_TELEGRAM_MANAGER_WEBHOOK_SECRET: "a".repeat(32),
+  AGENTCAP_STORE_DEK: Buffer.alloc(32, 73).toString("base64"),
+  AGENTCAP_TELEGRAM_MANAGER_TOKEN: "11111:manager_test_secret",
+  AGENTCAP_TELEGRAM_MANAGER_USERNAME: "agentcap_manager_bot",
+  AGENTCAP_TELEGRAM_MANAGER_WEBHOOK_SECRET: "a".repeat(32),
 };
 type Key = keyof typeof fixture;
 let saved: Record<Key, string | undefined>;
@@ -26,9 +26,9 @@ afterEach(() => {
 describe("managed Telegram API configuration", () => {
   it("requires explicit hosted activation and every credential before becoming available", () => {
     assert.deepEqual(telegramManagerConfig(), {
-      token: fixture.MERRYMEN_TELEGRAM_MANAGER_TOKEN,
-      username: fixture.MERRYMEN_TELEGRAM_MANAGER_USERNAME,
-      webhookSecret: fixture.MERRYMEN_TELEGRAM_MANAGER_WEBHOOK_SECRET,
+      token: fixture.AGENTCAP_TELEGRAM_MANAGER_TOKEN,
+      username: fixture.AGENTCAP_TELEGRAM_MANAGER_USERNAME,
+      webhookSecret: fixture.AGENTCAP_TELEGRAM_MANAGER_WEBHOOK_SECRET,
     });
     for (const key of Object.keys(fixture) as Key[]) {
       delete process.env[key];
@@ -36,12 +36,12 @@ describe("managed Telegram API configuration", () => {
       process.env[key] = fixture[key];
     }
     for (const [key, value] of [
-      ["MERRYMEN_HOSTED", "false"],
-      ["MERRYMEN_TELEGRAM_CREATE_ENABLED", "false"],
-      ["MERRYMEN_STORE_DEK", Buffer.alloc(31).toString("base64")],
-      ["MERRYMEN_TELEGRAM_MANAGER_TOKEN", "11111:bad/token"],
-      ["MERRYMEN_TELEGRAM_MANAGER_USERNAME", "not_a_bot_username"],
-      ["MERRYMEN_TELEGRAM_MANAGER_WEBHOOK_SECRET", "short"],
+      ["AGENTCAP_HOSTED", "false"],
+      ["AGENTCAP_TELEGRAM_CREATE_ENABLED", "false"],
+      ["AGENTCAP_STORE_DEK", Buffer.alloc(31).toString("base64")],
+      ["AGENTCAP_TELEGRAM_MANAGER_TOKEN", "11111:bad/token"],
+      ["AGENTCAP_TELEGRAM_MANAGER_USERNAME", "not_a_bot_username"],
+      ["AGENTCAP_TELEGRAM_MANAGER_WEBHOOK_SECRET", "short"],
     ] as [Key, string][]) {
       process.env[key] = value;
       assert.equal(telegramManagerConfig(), null, `invalid ${key} must keep creation unavailable`);
@@ -50,7 +50,7 @@ describe("managed Telegram API configuration", () => {
   });
   it("reads activation at request time so disabling it takes effect without rebuilding", () => {
     assert.ok(telegramManagerConfig());
-    process.env.MERRYMEN_TELEGRAM_CREATE_ENABLED = "false";
+    process.env.AGENTCAP_TELEGRAM_CREATE_ENABLED = "false";
     assert.equal(telegramManagerConfig(), null);
   });
 });

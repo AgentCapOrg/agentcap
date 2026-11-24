@@ -19,7 +19,7 @@ import { walletNotSupported } from "@/lib/route-guard";
  * which proxied `/robinhood/:path*`, `/yahoo/:path*` and `/blockscout/:path*`
  * to their upstreams. Those rewrites were same-origin, so the browser attached
  * the reader's `httpOnly; path:"/"` session cookie to every chart request and
- * Next forwarded it upstream — a live merrymen session posted to Yahoo on every
+ * Next forwarded it upstream — a live agentcap session posted to Yahoo on every
  * page view. They were also unauthenticated open proxies at an attacker-chosen
  * path, outside the middleware guards, which only cover `/api/`.
  *

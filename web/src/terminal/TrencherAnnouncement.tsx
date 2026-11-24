@@ -8,7 +8,7 @@ import Link from "./Link";
  */
 import { releaseNotice } from "./release-notice";
 
-const RELEASE = "merrymen:trencher-fast:v2";
+const RELEASE = "agentcap:trencher-fast:v2";
 const TITLE = "Trencher mode is here";
 const MESSAGE = "Trencher now screens high-volume memecoins and asks Brain to approve trades, with 15-second execution checks and independent automatic exits. Review and opt in from Settings. Trading limits still apply.";
 

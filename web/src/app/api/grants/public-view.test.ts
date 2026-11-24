@@ -28,16 +28,16 @@ import { after, before, describe, it, mock } from "node:test";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 
 const saved = Object.fromEntries(
-  ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_SESSION_SECRET", "DATABASE_URL", "MERRYMEN_STORE_DEK", "MERRYMEN_PERPS"].map((k) => [k, process.env[k]]),
+  ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_SESSION_SECRET", "DATABASE_URL", "AGENTCAP_STORE_DEK", "AGENTCAP_PERPS"].map((k) => [k, process.env[k]]),
 );
 const home = mkdtempSync(path.join(tmpdir(), "mm-grants-public-view-"));
 const PERPS_HOME = path.join(home, "accounts", "perps");
-process.env.MERRYMEN_HOME = home;
-process.env.MERRYMEN_SESSION_SECRET = "test-secret-at-least-thirty-two-characters-long";
-process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
+process.env.AGENTCAP_HOME = home;
+process.env.AGENTCAP_SESSION_SECRET = "test-secret-at-least-thirty-two-characters-long";
+process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
 delete process.env.DATABASE_URL;
-delete process.env.MERRYMEN_HOSTED;
-delete process.env.MERRYMEN_PERPS;
+delete process.env.AGENTCAP_HOSTED;
+delete process.env.AGENTCAP_PERPS;
 
 let GET: (req: Request) => Promise<Response>;
 let auth: typeof import("@/lib/auth");
@@ -57,7 +57,7 @@ before(async () => {
   const { applyLedgerSchema } = await import("../../../../../worker/src/store");
   for (const dir of [home, PERPS_HOME]) {
     mkdirSync(dir, { recursive: true });
-    const raw = new DatabaseSync(path.join(dir, "merrymen.db"));
+    const raw = new DatabaseSync(path.join(dir, "agentcap.db"));
     try { await applyLedgerSchema(wrapSqlite(raw)); } finally { raw.close(); }
   }
 });
@@ -155,7 +155,7 @@ const SECRETS = {
 
 describe("self-hosted: the Perps home's grant.json with every secret, and a stray 80-hex key", () => {
   before(() => {
-    delete process.env.MERRYMEN_HOSTED;
+    delete process.env.AGENTCAP_HOSTED;
     writeFileSync(path.join(PERPS_HOME, "grant.json"), JSON.stringify(fullGrant({ someFutureField: { nested: STRAY_80 } }), null, 2));
   });
 
@@ -195,16 +195,16 @@ describe("hosted: the real file grant store, a real session", () => {
     writeFileSync(file, JSON.stringify({ tenant: tenant.toLowerCase(), chainId: 4663, grant: rest, sealedSessionKey: sealSecret(demoSessionPrivateKey, Buffer.alloc(32, 7)), updatedAt: 1 }));
   };
   before(() => {
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOSTED = "1";
   });
   after(() => {
-    delete process.env.MERRYMEN_HOSTED;
+    delete process.env.AGENTCAP_HOSTED;
   });
 
   it("the store joins the session key back in; the Perps answer carries none of it — nor a stray 64-hex key", async () => {
     const stray64 = `0x${"7c".repeat(32)}`;
     writeRecord("tenants-perps", fullGrant({ demoOwnerPrivateKey: undefined, leftover: { deep: [stray64] } }));
-    const res = await GET(new Request("https://app.merrymen.dev/api/grants?wallet=perps", { headers: { cookie: cookie() } }));
+    const res = await GET(new Request("https://app.agentcap.xyz/api/grants?wallet=perps", { headers: { cookie: cookie() } }));
     assert.equal(res.status, 200);
     assertNoStore(res);
     const body = await scan(res, { ...SECRETS, "stray 64-hex key": stray64 });
@@ -217,7 +217,7 @@ describe("hosted: the real file grant store, a real session", () => {
     delete (spot as Record<string, unknown>).purpose;
     delete (spot as Record<string, unknown>).perp;
     writeRecord("tenants", spot);
-    const res = await GET(new Request("https://app.merrymen.dev/api/grants", { headers: { cookie: cookie() } }));
+    const res = await GET(new Request("https://app.agentcap.xyz/api/grants", { headers: { cookie: cookie() } }));
     assertNoStore(res);
     const body = (await res.json()) as { grant: Record<string, unknown> };
     const { serialized: _s, demoSessionPrivateKey: _k, demoOwnerPrivateKey: _o, ...expected } = spot;
@@ -227,7 +227,7 @@ describe("hosted: the real file grant store, a real session", () => {
 
   it("signed out: { exists: false }, no-store, for either wallet", async () => {
     for (const query of ["?wallet=perps", ""]) {
-      const res = await GET(new Request(`https://app.merrymen.dev/api/grants${query}`));
+      const res = await GET(new Request(`https://app.agentcap.xyz/api/grants${query}`));
       assert.deepEqual(await res.json(), { exists: false, tenant: null });
       assertNoStore(res);
     }

@@ -23,9 +23,9 @@ import {
 } from "./persistent-home";
 import type { TenantLease } from "./tenant-lease";
 
-const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-persistent-reconcile-")));
-process.env.MERRYMEN_HOME = fleet;
-process.env.MERRYMEN_HOSTED = "1";
+const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-persistent-reconcile-")));
+process.env.AGENTCAP_HOME = fleet;
+process.env.AGENTCAP_HOSTED = "1";
 delete process.env.DATABASE_URL;
 const {
   childHome, fleetHaltFile, hasLeaseForTest, honourFleetHalt, reconcile, setPaperRestoreForTest, setPersistentHomeVerifierForTest,
@@ -76,7 +76,7 @@ function createAgent(db: DatabaseSync, f: Awaited<ReturnType<typeof fixture>>) {
     .run(f.account, f.owner, f.grant.sessionKeyAddress);
 }
 async function sourceBook(f: Awaited<ReturnType<typeof fixture>>) {
-  const original = realpathSync(mkdtempSync(path.join(fleet, "original-"))), file = path.join(original, "merrymen.db"), db = new DatabaseSync(file);
+  const original = realpathSync(mkdtempSync(path.join(fleet, "original-"))), file = path.join(original, "agentcap.db"), db = new DatabaseSync(file);
   await applyLedgerSchema(wrapSqlite(db)); createAgent(db, f);
   db.prepare("INSERT INTO trades(id,agent_id,kind,target,amount_usdg,status,created_at,epoch) VALUES(37,?,'swap','fixture',5,'landed',1037,3)").run(f.account);
   db.prepare("INSERT INTO events(id,agent_id,message,created_at) VALUES(40,?,'original event',1040)").run(f.account);
@@ -108,7 +108,7 @@ it("registers a genuinely new persistent book before partial paper restore and t
     if (tenant === f.tenant) {
       paperCalls++;
       assert.equal(raw.prepare("SELECT state,sealed FROM tenant_ledger_import WHERE tenant=?").get(tenant)!.state, "consumed");
-      const db = new DatabaseSync(path.join(f.home, "merrymen.db")); try { assert.equal(db.prepare("SELECT count(*) AS n FROM agents").get()!.n, 0); createAgent(db, f); } finally { db.close(); }
+      const db = new DatabaseSync(path.join(f.home, "agentcap.db")); try { assert.equal(db.prepare("SELECT count(*) AS n FROM agents").get()!.n, 0); createAgent(db, f); } finally { db.close(); }
     }
     return { ok: true, line: null };
   });
@@ -119,11 +119,11 @@ it("registers a genuinely new persistent book before partial paper restore and t
 
 it("restores the original witness rows and memory before partial restore or trading fork", async () => {
   const f = await fixture(); const { original } = await sourceBook(f); setTenantLeaseForTest(f.tenant, f.lease);
-  const expected = financialFacts(path.join(original, "merrymen.db")); let paperCalls = 0;
+  const expected = financialFacts(path.join(original, "agentcap.db")); let paperCalls = 0;
   setPaperRestoreForTest(async tenant => {
     if (tenant === f.tenant) {
-      paperCalls++; assert.deepEqual(financialFacts(path.join(f.home, "merrymen.db")), expected);
-      const db = new DatabaseSync(path.join(f.home, "merrymen.db"), { readOnly: true });
+      paperCalls++; assert.deepEqual(financialFacts(path.join(f.home, "agentcap.db")), expected);
+      const db = new DatabaseSync(path.join(f.home, "agentcap.db"), { readOnly: true });
       try { assert.equal(db.prepare("SELECT content FROM chat_turns WHERE chat_id=42").get()!.content, "private owner memory"); } finally { db.close(); }
       assert.equal(readFileSync(path.join(f.home, "soul", "OWNER.md"), "utf8"), "original owner notes");
     }
@@ -135,10 +135,10 @@ it("restores the original witness rows and memory before partial restore or trad
 });
 
 it("a consumed book lost from the volume refuses before any partial restore can recreate it", async () => {
-  const f = await fixture(); await registerLedgerSource(f.options); rmSync(path.join(f.home, "merrymen.db")); setTenantLeaseForTest(f.tenant, f.lease);
+  const f = await fixture(); await registerLedgerSource(f.options); rmSync(path.join(f.home, "agentcap.db")); setTenantLeaseForTest(f.tenant, f.lease);
   let paperCalls = 0; setPaperRestoreForTest(async () => { paperCalls++; return { ok: true, line: null }; });
   const before = spawned.length; await reconcile(); await reconcile();
-  assert.equal(spawned.length, before); assert.equal(paperCalls, 0); assert.equal(existsSync(path.join(f.home, "merrymen.db")), false);
+  assert.equal(spawned.length, before); assert.equal(paperCalls, 0); assert.equal(existsSync(path.join(f.home, "agentcap.db")), false);
   assert.equal(raw.prepare("SELECT state,sealed FROM tenant_ledger_import WHERE tenant=?").get(f.tenant)!.state, "consumed");
   assert.equal(hasLeaseForTest(f.tenant), true); await remove(f); setPaperRestoreForTest(async () => ({ ok: true, line: null }));
 });
@@ -153,24 +153,24 @@ it("ordinary reconciliation completes a consumed pending import without replay b
   await assert.rejects(restoreLedgerImport({ ...f.options, shared: lostAck }), /lost commit acknowledgement/);
   assert.equal(raw.prepare("SELECT state FROM tenant_ledger_import WHERE tenant=?").get(f.tenant)!.state, "consumed");
   assert.equal(existsSync(path.join(f.home, LEDGER_IMPORT_PENDING_FILE)), true);
-  const expected = financialFacts(path.join(original, "merrymen.db")); setTenantLeaseForTest(f.tenant, f.lease);
+  const expected = financialFacts(path.join(original, "agentcap.db")); setTenantLeaseForTest(f.tenant, f.lease);
   const before = spawned.length; await reconcile();
   assert.equal(spawned.length, before + 1); assert.equal(existsSync(path.join(f.home, LEDGER_IMPORT_PENDING_FILE)), false);
-  assert.deepEqual(financialFacts(path.join(f.home, "merrymen.db")), expected);
+  assert.deepEqual(financialFacts(path.join(f.home, "agentcap.db")), expected);
   await remove(f, spawned.at(-1));
 });
 
 it("explicit removal waits for writer exit, then clears private access and DM memory while retaining original accounting IDs", async () => {
   const f = await fixture(); const { original } = await sourceBook(f); setTenantLeaseForTest(f.tenant, f.lease);
-  await reconcile(); const proc = spawned.at(-1)!; const before = financialFacts(path.join(original, "merrymen.db"));
+  await reconcile(); const proc = spawned.at(-1)!; const before = financialFacts(path.join(original, "agentcap.db"));
   writeFileSync(path.join(f.home, "telegram.json"), "{\"privateBotState\":true}"); writeFileSync(path.join(f.home, "settings.json"), "{\"privateBotConfig\":true}");
   await getGrantStore("spot").remove(f.tenant); raw.prepare("DELETE FROM grants WHERE tenant=?").run(f.tenant); await reconcile();
   assert.deepEqual(proc.signals, ["SIGTERM"]); assert.equal(existsSync(path.join(f.home, "grant.json")), true);
-  assert.equal(existsSync(path.join(f.home, "soul", "OWNER.md")), true); assert.deepEqual(financialFacts(path.join(f.home, "merrymen.db")), before);
+  assert.equal(existsSync(path.join(f.home, "soul", "OWNER.md")), true); assert.deepEqual(financialFacts(path.join(f.home, "agentcap.db")), before);
   assert.equal(hasLeaseForTest(f.tenant), true); proc.exit(); await reconcile();
-  assert.equal(existsSync(path.join(f.home, "merrymen.db")), true); assert.deepEqual(financialFacts(path.join(f.home, "merrymen.db")), before);
+  assert.equal(existsSync(path.join(f.home, "agentcap.db")), true); assert.deepEqual(financialFacts(path.join(f.home, "agentcap.db")), before);
   for (const file of ["grant.json", "settings.json", "telegram.json", "soul/OWNER.md"]) assert.equal(existsSync(path.join(f.home, file)), false, file);
-  const db = new DatabaseSync(path.join(f.home, "merrymen.db"), { readOnly: true });
+  const db = new DatabaseSync(path.join(f.home, "agentcap.db"), { readOnly: true });
   try { assert.equal(db.prepare("SELECT count(*) AS n FROM chat_turns WHERE chat_id>0").get()!.n, 0); } finally { db.close(); }
   setTenantLeaseForTest(f.tenant, null);
 });
@@ -178,18 +178,18 @@ it("explicit removal waits for writer exit, then clears private access and DM me
 it("cold inactive tenants scrub an obsolete cached signing key without a process or lease", async () => {
   const now = Math.floor(Date.now() / 1000), f = await fixture(now); mkdirSync(f.home, { recursive: true });
   writeFileSync(path.join(f.home, "grant.json"), JSON.stringify(f.grant), { mode: 0o600 });
-  const db = new DatabaseSync(path.join(f.home, "merrymen.db")); await applyLedgerSchema(wrapSqlite(db)); createAgent(db, f);
+  const db = new DatabaseSync(path.join(f.home, "agentcap.db")); await applyLedgerSchema(wrapSqlite(db)); createAgent(db, f);
   db.exec("INSERT INTO chat_turns(chat_id,role,content,at) VALUES(42,'user','retained private memory',1000)"); db.close();
   mkdirSync(path.join(f.home, "soul")); writeFileSync(path.join(f.home, "soul", "OWNER.md"), "retained notes");
-  const expected = financialFacts(path.join(f.home, "merrymen.db")), before = spawned.length; await reconcile();
+  const expected = financialFacts(path.join(f.home, "agentcap.db")), before = spawned.length; await reconcile();
   assert.equal(spawned.length, before); assert.equal(hasLeaseForTest(f.tenant), false); assert.equal(existsSync(path.join(f.home, "grant.json")), false);
-  assert.deepEqual(financialFacts(path.join(f.home, "merrymen.db")), expected); assert.equal(readFileSync(path.join(f.home, "soul", "OWNER.md"), "utf8"), "retained notes");
+  assert.deepEqual(financialFacts(path.join(f.home, "agentcap.db")), expected); assert.equal(readFileSync(path.join(f.home, "soul", "OWNER.md"), "utf8"), "retained notes");
   await remove(f);
 });
 
 it("removed blocked sources retain the original book and recovery lease after the writer exits", async () => {
   const f = await fixture(); await sourceBook(f); setTenantLeaseForTest(f.tenant, f.lease); await reconcile();
-  const proc = spawned.at(-1)!, file = path.join(f.home, "merrymen.db"), expected = financialFacts(file);
+  const proc = spawned.at(-1)!, file = path.join(f.home, "agentcap.db"), expected = financialFacts(file);
   writeFileSync(path.join(f.home, "ledger-source-blocked.json"), JSON.stringify({ version: 1, state: "pending-mirror" }), { mode: 0o600 });
   await getGrantStore("spot").remove(f.tenant); raw.prepare("DELETE FROM grants WHERE tenant=?").run(f.tenant); await reconcile(); proc.exit(); await reconcile();
   assert.deepEqual(financialFacts(file), expected); assert.equal(existsSync(path.join(f.home, "ledger-source-blocked.json")), true);
@@ -202,7 +202,7 @@ it("removed blocked sources retain the original book and recovery lease after th
 
 it("an unconfirmed final copy retains its lease and original IDs until a healthy retry confirms the rows", async () => {
   const f = await fixture(); await sourceBook(f); setTenantLeaseForTest(f.tenant, f.lease); await reconcile();
-  const proc = spawned.at(-1)!, file = path.join(f.home, "merrymen.db"), local = new DatabaseSync(file);
+  const proc = spawned.at(-1)!, file = path.join(f.home, "agentcap.db"), local = new DatabaseSync(file);
   local.prepare("INSERT INTO events(id,agent_id,message,created_at) VALUES(100,?,'unmirrored final event',1100)").run(f.account); local.close();
   const expected = financialFacts(file);
   const failEventCopy = (db: Db): Db => ({ exec: sql => db.exec(sql), tx: fn => db.tx(tx => fn(failEventCopy(tx))), prepare(sql) {
@@ -224,7 +224,7 @@ it("an unconfirmed final copy retains its lease and original IDs until a healthy
 
 it("a final source larger than one batch retains its recovery lease until every row is copied", async () => {
   const f = await fixture(); await sourceBook(f); setTenantLeaseForTest(f.tenant, f.lease); await reconcile();
-  const proc = spawned.at(-1)!, file = path.join(f.home, "merrymen.db"), local = new DatabaseSync(file);
+  const proc = spawned.at(-1)!, file = path.join(f.home, "agentcap.db"), local = new DatabaseSync(file);
   local.exec("BEGIN"); const insert = local.prepare("INSERT INTO events(id,agent_id,message,created_at) VALUES(?,?,'final backlog',?)");
   for (let id = 100; id <= 700; id++) insert.run(id, f.account, 1000 + id); local.exec("COMMIT"); local.close();
   const expected = financialFacts(file);
@@ -256,7 +256,7 @@ it("a failed persistent root proof writes no cached key, child book or partial r
     assert.equal(raw.prepare("SELECT since_at FROM fleet_recovery_health WHERE tenant=?").get(f.tenant)!.since_at, report.since_at);
     assert.equal(spawned.length, before); assert.equal(paperCalls, 0);
     assert.equal(existsSync(f.home), false);
-    assert.equal(existsSync(path.join(f.home, "grant.json")), false); assert.equal(existsSync(path.join(f.home, "merrymen.db")), false);
+    assert.equal(existsSync(path.join(f.home, "grant.json")), false); assert.equal(existsSync(path.join(f.home, "agentcap.db")), false);
     assert.equal(existsSync(path.join(f.home, "recovery-command-barrier.json")), false);
     assert.deepEqual(await getGrantStore("spot").get(f.tenant), expectedGrant); assert.deepEqual(sharedFacts(), expectedShared);
     assert.equal(hasLeaseForTest(f.tenant), true); assert.equal(f.releases.n, 0);
@@ -273,14 +273,14 @@ it("an adopted fleet root spawns nothing until its reviewed release, and a hand-
   writeFileSync(halt, original, { mode: 0o600 });
   const major = ((rootStat.dev >> 8n) & 0xfffn) | ((rootStat.dev >> 32n) & 0xfffff000n), minor = (rootStat.dev & 0xffn) | ((rootStat.dev >> 12n) & 0xffffff00n);
   const options = { readMountInfo: () => `40 20 ${major}:${minor} / ${fleet} rw,relatime - ext4 /dev/volume rw\n` };
-  const adopt = { MERRYMEN_PERSISTENT_HOME_REQUIRED: "1", MERRYMEN_HOME: fleet, RAILWAY_VOLUME_MOUNT_PATH: fleet, MERRYMEN_HOME_VOLUME_ID: volume.id,
-    MERRYMEN_INITIAL_HANDOVER: token, MERRYMEN_ADOPT_HOME_HALT_SHA256: createHash("sha256").update(original).digest("hex") };
-  const release = { ...adopt, MERRYMEN_RELEASE_HOME_HALT: token, MERRYMEN_FLEET_ROLLOUT: `${f.tenant}:trade` };
+  const adopt = { AGENTCAP_PERSISTENT_HOME_REQUIRED: "1", AGENTCAP_HOME: fleet, RAILWAY_VOLUME_MOUNT_PATH: fleet, AGENTCAP_HOME_VOLUME_ID: volume.id,
+    AGENTCAP_INITIAL_HANDOVER: token, AGENTCAP_ADOPT_HOME_HALT_SHA256: createHash("sha256").update(original).digest("hex") };
+  const release = { ...adopt, AGENTCAP_RELEASE_HOME_HALT: token, AGENTCAP_FLEET_ROLLOUT: `${f.tenant}:trade` };
   const before = spawned.length;
   try {
     assert.equal(adoptPopulatedPersistentHome(adopt, options)!.handoverState, "held");
     await reconcile(); assert.equal(spawned.length, before, "the canonical halt holds like the original");
-    assert.equal(controlAdoptedPersistentHomeHalt({ ...release, MERRYMEN_FLEET_ROLLOUT: "none" }, options)!.action, "withheld");
+    assert.equal(controlAdoptedPersistentHomeHalt({ ...release, AGENTCAP_FLEET_ROLLOUT: "none" }, options)!.action, "withheld");
     await reconcile(); assert.equal(spawned.length, before);
     assert.equal(controlAdoptedPersistentHomeHalt(release, options)!.action, "released");
     await reconcile(); assert.equal(spawned.length, before + 1);
@@ -313,13 +313,13 @@ it("startup adopts, then applies the env release or re-halt, then re-proves the 
 /**
  * The real entry point, in its own process: runOrchestrator() is what the
  * container runs, and process.exit is what is being tested. Deliberately NOT
- * process.env — this file pointed MERRYMEN_HOME at its in-process fleet, and
+ * process.env — this file pointed AGENTCAP_HOME at its in-process fleet, and
  * no DATABASE_URL from a developer's shell may reach a supervisor started here.
  * Started directly, NOT through container-start.sh: what is under test is the
  * check that holds however the process was started. Correctly configured
  * apart from what each test changes.
  *
- * That includes MERRYMEN_FLEET_ROLLOUT, as `none`: once the orchestrator
+ * That includes AGENTCAP_FLEET_ROLLOUT, as `none`: once the orchestrator
  * reads its rollout scope at boot, a Railway-hosted one without the variable
  * refuses to start, which would answer every test here before the check under
  * test is reached. `none` admits nobody, and it is not `all`, so the one-shot
@@ -329,24 +329,24 @@ const FLEET_SERVICE = "227ff49a-1111-4222-8333-444455556666";
 function hostedOrchestrator(home: string, extra: NodeJS.ProcessEnv) {
   return spawnSync(process.execPath, ["--import", "tsx", "worker/src/orchestrator.ts"], {
     cwd: path.join(import.meta.dirname, "..", ".."), encoding: "utf8", timeout: 60_000,
-    env: { PATH: process.env.PATH, HOME: path.dirname(home), MERRYMEN_HOSTED: "1", MERRYMEN_HOME: home, RAILWAY_VOLUME_MOUNT_PATH: home,
+    env: { PATH: process.env.PATH, HOME: path.dirname(home), AGENTCAP_HOSTED: "1", AGENTCAP_HOME: home, RAILWAY_VOLUME_MOUNT_PATH: home,
       RAILWAY_ENVIRONMENT_ID: "e1e1e1e1-1111-4222-8333-444455556666", RAILWAY_SERVICE_ID: FLEET_SERVICE,
-      MERRYMEN_FLEET_SERVICE_ID: FLEET_SERVICE, MERRYMEN_IMAGE: DEPLOY_GUARD_IMAGE, MERRYMEN_FLEET_ROLLOUT: "none", ...extra },
+      AGENTCAP_FLEET_SERVICE_ID: FLEET_SERVICE, AGENTCAP_IMAGE: DEPLOY_GUARD_IMAGE, AGENTCAP_FLEET_ROLLOUT: "none", ...extra },
   });
 }
 const refusals = (stdout: string) => stdout.split("\n").filter((l) => l.startsWith("[orchestrator] refusing to start — "));
 
 it("a Railway-hosted orchestrator without the persistent-home opt-in exits 78 before it touches its home", () => {
   for (const required of [undefined, "0", ""]) {
-    const dir = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-hosted-ephemeral-"))), home = path.join(dir, "home");
+    const dir = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-hosted-ephemeral-"))), home = path.join(dir, "home");
     mkdirSync(home, { mode: 0o700 });
     try {
       // The report-only entry is behind the same gate: it must not get first word.
-      const r = hostedOrchestrator(home, { MERRYMEN_FLEET_RECOVERY_REPORT_ONLY: "1",
-        ...(required === undefined ? {} : { MERRYMEN_PERSISTENT_HOME_REQUIRED: required }) });
+      const r = hostedOrchestrator(home, { AGENTCAP_FLEET_RECOVERY_REPORT_ONLY: "1",
+        ...(required === undefined ? {} : { AGENTCAP_PERSISTENT_HOME_REQUIRED: required }) });
       assert.equal(r.status, 78, `${JSON.stringify(required)}: ${r.stdout}${r.stderr}`);
       assert.equal(refusals(r.stdout).length, 1, r.stdout);
-      assert.match(r.stdout, /^\[orchestrator\] refusing to start — MERRYMEN_PERSISTENT_HOME_REQUIRED is not 1 — a fleet role runs only on a home proven to be the mounted volume/m);
+      assert.match(r.stdout, /^\[orchestrator\] refusing to start — AGENTCAP_PERSISTENT_HOME_REQUIRED is not 1 — a fleet role runs only on a home proven to be the mounted volume/m);
       assert.doesNotMatch(r.stdout, /\[orchestrator\] starting/);
       assert.deepEqual(readdirSync(home), []);
     } finally { rmSync(dir, { recursive: true, force: true }); }
@@ -356,17 +356,17 @@ it("a Railway-hosted orchestrator without the persistent-home opt-in exits 78 be
 it("without the start script, a hosted orchestrator on the wrong service, or with a one-shot set mid-rollout, still exits 78", () => {
   // A Start Command on the service, or node run by hand, never passes through
   // container-start.sh and its guard; runOrchestrator() holds the same line.
-  const dir = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-hosted-unguarded-"))), home = path.join(dir, "home");
+  const dir = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-hosted-unguarded-"))), home = path.join(dir, "home");
   mkdirSync(home, { mode: 0o700 });
   const secret = `apply-${"7".repeat(40)}`;
   try {
-    const r = hostedOrchestrator(home, { MERRYMEN_PERSISTENT_HOME_REQUIRED: "1", MERRYMEN_FLEET_SERVICE_ID: "b72f7ad9-1111-4222-8333-444455556666",
-      MERRYMEN_REPAIR_HWM: secret, MERRYMEN_FLEET_ROLLOUT: "none" });
+    const r = hostedOrchestrator(home, { AGENTCAP_PERSISTENT_HOME_REQUIRED: "1", AGENTCAP_FLEET_SERVICE_ID: "b72f7ad9-1111-4222-8333-444455556666",
+      AGENTCAP_REPAIR_HWM: secret, AGENTCAP_FLEET_ROLLOUT: "none" });
     assert.equal(r.status, 78, `${r.stdout}${r.stderr}`);
     const lines = refusals(r.stdout);
     assert.equal(lines.length, 2, r.stdout);
     assert.match(lines[0]!, /refusing to start — this is not the fleet's service/);
-    assert.match(lines[1]!, /refusing to start — one-shot operator variables are set \(MERRYMEN_REPAIR_HWM\) while MERRYMEN_FLEET_ROLLOUT is not all/);
+    assert.match(lines[1]!, /refusing to start — one-shot operator variables are set \(AGENTCAP_REPAIR_HWM\) while AGENTCAP_FLEET_ROLLOUT is not all/);
     assert.ok(!`${r.stdout}${r.stderr}`.includes(secret), "a one-shot value reached the log");
     assert.doesNotMatch(r.stdout, /\[orchestrator\] starting/);
     assert.deepEqual(readdirSync(home), []);
@@ -374,12 +374,12 @@ it("without the start script, a hosted orchestrator on the wrong service, or wit
 });
 
 it("with the opt-in, a hosted orchestrator goes on to the real volume proof, which still decides", () => {
-  const dir = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-hosted-persistent-"))), home = path.join(dir, "home");
+  const dir = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-hosted-persistent-"))), home = path.join(dir, "home");
   mkdirSync(home, { mode: 0o700 });
   try {
     // No provider volume UUID: past the gate, persistent-home.ts refuses — the
     // gate only ever adds a refusal, it never stands in for the proof.
-    const r = hostedOrchestrator(home, { MERRYMEN_PERSISTENT_HOME_REQUIRED: "1" });
+    const r = hostedOrchestrator(home, { AGENTCAP_PERSISTENT_HOME_REQUIRED: "1" });
     assert.notEqual(r.status, 0);
     assert.notEqual(r.status, 78, `${r.stdout}${r.stderr}`);
     assert.doesNotMatch(r.stdout, /refusing to start/);

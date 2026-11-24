@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { it } from "node:test";
-import { DEFAULT_BASKET_SYMBOLS, RISK_PROFILES } from "@merrymen/core";
+import { DEFAULT_BASKET_SYMBOLS, RISK_PROFILES } from "@agentcap/core";
 import { approvedMcpSetup, mcpSetupRequest, reviewMcpCreateSetup } from "./mcp-create-setup";
 import { headline, walletSetupUrl, type View } from "../app/connect/approve/[id]/approve-view";
 

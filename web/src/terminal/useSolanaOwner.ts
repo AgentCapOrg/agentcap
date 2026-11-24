@@ -39,7 +39,7 @@ export function useSolanaOwner() {
     login: authenticated ? walletLoginText(user) : null,
     /**
      * Ends the wallet sign-in (Privy) in this browser, and nothing else: the
-     * Merrymen session and every saved grant stay. For a page whose wallet
+     * AgentCap session and every saved grant stay. For a page whose wallet
      * sign-in is the wrong login, so the owner can sign in with the right one.
      */
     async signOutWallet() { await logout(); },
@@ -66,7 +66,7 @@ export function useSolanaOwner() {
     },
     /**
      * Opens Privy's own export window for exactly this owner wallet, so the
-     * owner can recover the vault without Merrymen. The key is shown in an
+     * owner can recover the vault without AgentCap. The key is shown in an
      * iframe on Privy's domain; this page never receives it.
      */
     async exportKey() {

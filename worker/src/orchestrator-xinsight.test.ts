@@ -60,7 +60,7 @@ async function world(t: TestContext, o: { active?: boolean; research?: XResearch
   const prompts: string[] = [];
   const asked: string[] = [];
   const research = o.research === undefined ? null : o.research;
-  const env = { ...(o.active === false ? {} : { MERRYMEN_XPOST_ACTIVE_TENANTS: TENANT }), ...(research ? { MERRYMEN_XPOST_RESEARCH: "1" } : {}), ...(o.variety ? { MERRYMEN_XPOST_VARIETY: "1" } : {}) };
+  const env = { ...(o.active === false ? {} : { AGENTCAP_XPOST_ACTIVE_TENANTS: TENANT }), ...(research ? { AGENTCAP_XPOST_RESEARCH: "1" } : {}), ...(o.variety ? { AGENTCAP_XPOST_VARIETY: "1" } : {}) };
   const poster = makeXPoster({
     app: { clientId: "client", clientSecret: "secret", redirectUri: "https://app.test/connect/x" }, dek,
     creds: o.noModel ? null : { provider: "groq", transport: "openai", model: "test", apiKey: "private-model", baseUrl: "https://model.test/v1", vision: false },

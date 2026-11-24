@@ -53,7 +53,7 @@ test('all four real jobs must succeed, skipped is not a pass', () => {
 
 function fixture() {
   const s = {
-    pr: { number: 7, state: 'open', draft: false, user: { id: 42 }, base: { ref: 'main', repo: { full_name: 'millw14/merrymen' } }, head: { sha: HEAD }, labels: [], mergeable: true, mergeable_state: 'clean', changed_files: 1 },
+    pr: { number: 7, state: 'open', draft: false, user: { id: 42 }, base: { ref: 'main', repo: { full_name: 'millw14/agentcap' } }, head: { sha: HEAD }, labels: [], mergeable: true, mergeable_state: 'clean', changed_files: 1 },
     base: BASE, reviews: [review()], files: [file('README.md')], jobs: jobs(), checks: [], statuses: [], threads: [],
     ci: [{ id: 100, path: '.github/workflows/ci.yml', head_sha: HEAD, pull_requests: [{ number: 7 }], status: 'completed', conclusion: 'success' }],
     comparison: 'ahead', merges: [], dispatches: [], comments: [], failures: [], reads: 0,
@@ -68,7 +68,7 @@ function fixture() {
     checks: { listForRef: async () => s.checks }, issues: { createComment: async args => s.comments.push(args) },
   };
   const github = { rest, paginate: async (fn, args) => fn(args), graphql: async () => ({ repository: { pullRequest: { reviewThreads: { nodes: s.threads, pageInfo: { hasNextPage: false } } } } }) };
-  return { s, github, context: { repo: { owner: 'millw14', repo: 'merrymen' } }, core: { info() {}, setFailed: text => s.failures.push(text) } };
+  return { s, github, context: { repo: { owner: 'millw14', repo: 'agentcap' } }, core: { info() {}, setFailed: text => s.failures.push(text) } };
 }
 test('full gate accepts the verified revision and merge pins its SHA', async () => {
   const f = fixture();
@@ -113,6 +113,6 @@ test('review thread pagination includes findings after first page', async () => 
       nodes: [{ isResolved: calls === 1 }], pageInfo: { hasNextPage: calls === 1, endCursor: 'next' },
     } } } };
   };
-  const result = await evaluate({ github: f.github, owner: 'millw14', repo: 'merrymen', number: 7 });
+  const result = await evaluate({ github: f.github, owner: 'millw14', repo: 'agentcap', number: 7 });
   assert.equal(result.eligible, false); assert.equal(calls, 2);
 });

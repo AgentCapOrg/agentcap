@@ -14,8 +14,8 @@ import { McpConnectClient, connectedSummary, lastUsedWords } from "./McpConnectC
 // See wire-ring.test.ts: tsx compiles `.tsx` against a global React.
 (globalThis as unknown as { React: typeof React }).React = React;
 
-const URL_ = "https://mcp.merrymen.dev/mcp";
-const APP = "https://app.merrymen.dev";
+const URL_ = "https://mcp.agentcap.xyz/mcp";
+const APP = "https://app.agentcap.xyz";
 const render = (enabled: boolean, disabledWhy: string | null = null) =>
   renderToStaticMarkup(createElement(McpConnectClient, { url: URL_, app: APP, enabled, disabledWhy }));
 /** A staging or self-hosted server: not the address the plugin points at. */
@@ -46,7 +46,7 @@ test("every other assistant's action is on the page, and app links open the app,
     assert.ok(html.includes(`href="${link}"`), link);
     assert.ok(!html.includes(`href="${link}" target=`), `${link} opens the app itself`);
   }
-  for (const command of ["codex mcp add merrymen --url https://mcp.merrymen.dev/mcp", "claude mcp add --transport http --scope user merrymen https://mcp.merrymen.dev/mcp\nclaude mcp login merrymen", "gemini mcp add -s user -t http merrymen", "devin mcp login merrymen"]) {
+  for (const command of ["codex mcp add agentcap --url https://mcp.agentcap.xyz/mcp", "claude mcp add --transport http --scope user agentcap https://mcp.agentcap.xyz/mcp\nclaude mcp login agentcap", "gemini mcp add -s user -t http agentcap", "devin mcp login agentcap"]) {
     assert.ok(html.includes(command), command);
   }
   assert.ok(html.includes(`<code id=`) && html.includes(`>${URL_}</code>`), "the server address is shown");
@@ -57,7 +57,7 @@ test("Grok and Grok Bot have separate visible connection routes and owner handof
   const grok = html.slice(html.indexOf('<li class="mcp-hub-row" id="grok">'), html.indexOf('<h3>Codex</h3>'));
   assert.match(grok, /<h3>Grok<\/h3>/);
   assert.match(grok, /Plugins → Connectors → New Connector → Custom/);
-  assert.match(grok, /Set <b>Name<\/b> to <b>Merrymen<\/b>/);
+  assert.match(grok, /Set <b>Name<\/b> to <b>AgentCap<\/b>/);
   assert.match(grok, /<b>Server URL<\/b>, then choose <b>Add Connector<\/b>/);
   assert.match(grok, /does not install this unlisted custom connector/);
   assert.match(grok, /aria-label="Copy address for Grok"/);
@@ -65,9 +65,9 @@ test("Grok and Grok Bot have separate visible connection routes and owner handof
   assert.match(grok, /aria-label="Copy the Grok Bot setup prompt"/);
   assert.match(grok, /<summary>Read the setup prompt/);
   assert.match(grok, /browser on my own device/);
-  assert.match(grok, /Do not sign in to Merrymen, approve proposals, create wallets or sign permissions/);
-  assert.match(grok, /call get_merryman_setup before acting/);
-  assert.match(grok, /After the owner returns, call get_merryman_setup again/);
+  assert.match(grok, /Do not sign in to AgentCap, approve proposals, create wallets or sign permissions/);
+  assert.match(grok, /call get_agentcapavatar_setup before acting/);
+  assert.match(grok, /After the owner returns, call get_agentcapavatar_setup again/);
   assert.match(grok, /Report practice active only when setup reports phase=paper with a fresh worker report/);
   assert.match(grok, /Signing or approval alone is not activation/);
   assert.match(grok, /do not assume a Grok chat connector is installed in this Bot/);
@@ -81,10 +81,10 @@ test("Grok Bot setup and manual configuration preserve this server's address", (
   const grok = html.slice(html.indexOf('<li class="mcp-hub-row" id="grok-bot">'), html.indexOf('<h3>Codex</h3>'));
   assert.match(grok, /https:\/\/app\.staging\.example\/llms\.txt/);
   assert.match(grok, /Use only this remote MCP server: https:\/\/mcp\.staging\.example\/mcp/);
-  assert.match(grok, /grok mcp add --transport http merrymen https:\/\/mcp\.staging\.example\/mcp/);
+  assert.match(grok, /grok mcp add --transport http agentcap https:\/\/mcp\.staging\.example\/mcp/);
   assert.match(grok, /&quot;url&quot;: &quot;https:\/\/mcp\.staging\.example\/mcp&quot;/);
-  assert.ok(!grok.includes("mcp.merrymen.dev"), "no production install on another server");
-  assert.ok(!grok.includes("merrymen.dev/llms.txt"), "instructions come from this server");
+  assert.ok(!grok.includes("mcp.agentcap.xyz"), "no production install on another server");
+  assert.ok(!grok.includes("agentcap.xyz/llms.txt"), "instructions come from this server");
 });
 
 test("every control has an accessible name, and every copy announces itself", () => {
@@ -103,7 +103,7 @@ test("Claude Code comes first among the others, with the plugin's two commands c
   const html = unescape(render(true));
   const others = html.slice(html.indexOf("Other assistants"));
   assert.ok(others.indexOf("Claude Code") < others.indexOf("ChatGPT"), "Claude Code is the first row");
-  for (const line of ["/plugin marketplace add https://github.com/millw14/merrymen.git", "/plugin install merrymen@merrymen"]) {
+  for (const line of ["/plugin marketplace add https://github.com/millw14/agentcap.git", "/plugin install agentcap@agentcap"]) {
     assert.ok(html.includes(`<code>${line}</code>`), `${line} in a block of its own`);
   }
   assert.match(html, /aria-label="Copy the first Claude Code command"/);
@@ -111,19 +111,19 @@ test("Claude Code comes first among the others, with the plugin's two commands c
   // Any other server (staging, self-hosted) gets no plugin, which points at production.
   const other = renderOther();
   assert.ok(!other.includes("/plugin install"));
-  assert.ok(other.includes("claude mcp add --transport http --scope user merrymen https://mcp.staging.example/mcp"));
+  assert.ok(other.includes("claude mcp add --transport http --scope user agentcap https://mcp.staging.example/mcp"));
 });
 
 test("Claude Code: a sentence to just tell it, pointing at the setup text for this server", () => {
   const html = render(true);
   const claudeCode = html.slice(html.indexOf("<h3>Claude Code</h3>"), html.indexOf("<h3>ChatGPT</h3>"));
   assert.ok(claudeCode.includes("Or just tell Claude Code:"));
-  assert.ok(claudeCode.includes("<code>Set up the Merrymen MCP server. Instructions: https://merrymen.dev/llms.txt</code>"), "the static copy merrymen.dev serves");
+  assert.ok(claudeCode.includes("<code>Set up the AgentCap MCP server. Instructions: https://agentcap.xyz/llms.txt</code>"), "the static copy agentcap.xyz serves");
   assert.match(claudeCode, /aria-label="Copy the sentence to tell Claude Code"/);
   // Another server points at its own /llms.txt, never at production's.
   const other = renderOther();
-  assert.ok(other.includes("<code>Set up the Merrymen MCP server. Instructions: https://app.staging.example/llms.txt</code>"));
-  assert.ok(!other.includes("merrymen.dev/llms.txt"));
+  assert.ok(other.includes("<code>Set up the AgentCap MCP server. Instructions: https://app.staging.example/llms.txt</code>"));
+  assert.ok(!other.includes("agentcap.xyz/llms.txt"));
 });
 
 test("the page ends with small print for AI assistants, and makes no liveness claim it cannot back", () => {
@@ -134,23 +134,23 @@ test("the page ends with small print for AI assistants, and makes no liveness cl
   assert.ok(ai.length < html.length && html.indexOf("mcp-hub-ai") > html.indexOf("Good to know"), "the last section of the panel");
   assert.ok(ai.includes(`<h2 id="mcp-hub-ai">For AI assistants</h2>`));
   assert.equal((ai.slice(0, ai.indexOf("</section>")).match(/<li>/g) ?? []).length, 3, "three bullets");
-  assert.ok(ai.includes("<code>claude mcp add --transport http --scope user merrymen https://mcp.merrymen.dev/mcp</code>"));
+  assert.ok(ai.includes("<code>claude mcp add --transport http --scope user agentcap https://mcp.agentcap.xyz/mcp</code>"));
   assert.ok(ai.includes("<code>/mcp</code>") && ai.includes("Authenticate"));
   // The same guards as llms.txt: check before adding, leave the sign-in to the owner, never ask for a token.
-  assert.ok(ai.includes("run <code>claude mcp list</code> first; an entry at <code>https://mcp.merrymen.dev/mcp</code> means it is already set up"));
+  assert.ok(ai.includes("run <code>claude mcp list</code> first; an entry at <code>https://mcp.agentcap.xyz/mcp</code> means it is already set up"));
   assert.ok(ai.includes("do not run <code>claude mcp login</code> yourself") && ai.includes("never ask for one"));
   assert.ok(ai.includes(`href="${installLinks(URL_).claude}" target="_blank" rel="noopener noreferrer">Add to Claude link`));
-  assert.ok(ai.includes('<a href="https://merrymen.dev/llms.txt">https://merrymen.dev/llms.txt</a>'));
+  assert.ok(ai.includes('<a href="https://agentcap.xyz/llms.txt">https://agentcap.xyz/llms.txt</a>'));
   assert.ok(!ai.includes("/plugin"), "the default route only; the plugin is llms.txt's alternative");
   const other = unescape(renderOther());
   assert.ok(other.includes('<a href="https://app.staging.example/llms.txt">https://app.staging.example/llms.txt</a>'));
-  assert.ok(other.includes("<code>claude mcp add --transport http --scope user merrymen https://mcp.staging.example/mcp</code>"));
+  assert.ok(other.includes("<code>claude mcp add --transport http --scope user agentcap https://mcp.staging.example/mcp</code>"));
 });
 
 test("when connections are off, the page says so and offers nothing to install", () => {
-  const html = render(false, "MCP is available on hosted Merrymen only");
+  const html = render(false, "MCP is available on hosted AgentCap only");
   assert.match(html, /Assistant connections are switched off on this server/);
-  assert.match(html, /MCP is available on hosted Merrymen only/);
+  assert.match(html, /MCP is available on hosted AgentCap only/);
   assert.ok(!html.includes("claude.ai"), "no Add to Claude");
   assert.ok(!html.includes("grok.com"), "no Grok connection link");
   assert.ok(!html.includes("Grok Bot"), "no Bot setup prompt");

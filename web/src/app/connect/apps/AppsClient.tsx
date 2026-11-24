@@ -2,7 +2,7 @@
 
 /**
  * Connected apps: every AI assistant connection and personal access token that
- * can reach this owner's Merrymen, what each may do, what it did recently, and
+ * can reach this owner's AgentCap, what each may do, what it did recently, and
  * a Disconnect button that takes effect on the assistant's next request.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -186,8 +186,8 @@ export function AppsClient() {
           {!loading && listing && !signedOut && <>
             {/* Nothing connected: offer the same one-click install as the connect hub, not a bare address. */}
             {listing.connections.length === 0 && <div className="mcp-hub-empty">
-              <p className="mcp-note">Nothing is connected. Add Merrymen to Claude in one click, or pick another assistant.</p>
-              <a className="flow-primary" href={installLinks(listing.endpoint).claude} target="_blank" rel="noopener noreferrer">Add Merrymen to Claude<span className="sr-only"> (opens in a new tab)</span></a>
+              <p className="mcp-note">Nothing is connected. Add AgentCap to Claude in one click, or pick another assistant.</p>
+              <a className="flow-primary" href={installLinks(listing.endpoint).claude} target="_blank" rel="noopener noreferrer">Add AgentCap to Claude<span className="sr-only"> (opens in a new tab)</span></a>
               <a className="connect-cancel" href="/connect/mcp">Other assistants</a>
             </div>}
             <ul className="mcp-apps">{listing.connections.map((c) => (
@@ -228,7 +228,7 @@ export function AppsClient() {
           {error && <div className="connect-error" role="alert"><p>{error}</p><button onClick={() => void load()}>Try again</button></div>}
         </section>
       </main>
-      <footer className="connect-footer">Merrymen never shares your keys or moves funds for a connected app.</footer>
+      <footer className="connect-footer">AgentCap never shares your keys or moves funds for a connected app.</footer>
     </div>
   );
 }

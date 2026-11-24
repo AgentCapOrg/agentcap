@@ -8,11 +8,11 @@ import { after, it } from "node:test";
 import type { ChildProcess } from "node:child_process";
 import type { StoredGrant } from "../../packages/core/src/index";
 
-const fleet = mkdtempSync(path.join(os.tmpdir(), "merrymen-spawn-pressure-"));
-process.env.MERRYMEN_HOME = fleet;
-process.env.MERRYMEN_HOSTED = "1";
+const fleet = mkdtempSync(path.join(os.tmpdir(), "agentcap-spawn-pressure-"));
+process.env.AGENTCAP_HOME = fleet;
+process.env.AGENTCAP_HOSTED = "1";
 delete process.env.DATABASE_URL;
-process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 17).toString("base64");
+process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 17).toString("base64");
 
 const { adoptHolderForTest, childHome, reconcile, setSpawnForTest, setSpawnPacingForTest } = await import("./orchestrator");
 const { getGrantStore } = await import("./grant-store");

@@ -59,7 +59,7 @@ export interface TailNotifierDeps {
   researched?(): boolean;
   assessmentOf(tokenKey: string): FollowAssessment | null;
   holds?(tokenKey: string): boolean;
-  /** The operator's switch: false (MERRYMEN_FOMO_TAILS=0) sends nothing and reads nothing. Absent: on. */
+  /** The operator's switch: false (AGENTCAP_FOMO_TAILS=0) sends nothing and reads nothing. Absent: on. */
   enabled?(): boolean;
   now?(): number;
   log?(line: string): void;

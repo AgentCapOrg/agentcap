@@ -111,7 +111,7 @@ export function checkAsk(raw: unknown, own = ""): boolean {
  * platforms, the charting and swap sites. A post's link to its own status, a
  * Telegram invite or a chart is not what a larp check reads.
  */
-const NOT_A_SITE = /(?:^|\.)(?:x\.com|twitter\.com|t\.co|t\.me|telegram\.me|telegram\.org|discord\.gg|discord\.com|youtube\.com|youtu\.be|instagram\.com|tiktok\.com|facebook\.com|fb\.com|linkedin\.com|reddit\.com|linktr\.ee|medium\.com|substack\.com|google\.com|apple\.com|dexscreener\.com|geckoterminal\.com|coingecko\.com|coinmarketcap\.com|dextools\.io|birdeye\.so|solscan\.io|etherscan\.io|basescan\.org|bscscan\.com|blockscout\.com|gmgn\.ai|pump\.fun|axiom\.trade|bullx\.io|photon-sol\.tinyastro\.io|jup\.ag|raydium\.io|uniswap\.org|app\.uniswap\.org|opensea\.io|giphy\.com|imgur\.com|tenor\.com|merrymen\.dev|merrymen\.app)$/i;
+const NOT_A_SITE = /(?:^|\.)(?:x\.com|twitter\.com|t\.co|t\.me|telegram\.me|telegram\.org|discord\.gg|discord\.com|youtube\.com|youtu\.be|instagram\.com|tiktok\.com|facebook\.com|fb\.com|linkedin\.com|reddit\.com|linktr\.ee|medium\.com|substack\.com|google\.com|apple\.com|dexscreener\.com|geckoterminal\.com|coingecko\.com|coinmarketcap\.com|dextools\.io|birdeye\.so|solscan\.io|etherscan\.io|basescan\.org|bscscan\.com|blockscout\.com|gmgn\.ai|pump\.fun|axiom\.trade|bullx\.io|photon-sol\.tinyastro\.io|jup\.ag|raydium\.io|uniswap\.org|app\.uniswap\.org|opensea\.io|giphy\.com|imgur\.com|tenor\.com|agentcap\.xyz|agentcap\.app)$/i;
 
 /** A link that names a coin by its contract: a launchpad's or an explorer's page for one token. */
 const COIN_LINK: readonly { re: RegExp; chain: "evm" | "solana" }[] = [
@@ -132,12 +132,12 @@ function coinOfLink(url: string): { address: string; chain: "evm" | "solana" } |
 /**
  * A SITE WORTH SCANNING, OR NONE: https only (the research browser refuses
  * anything else), on a public host, not one of the platforms above, not a
- * merrymen page (the house never larp-checks itself). The fragment is off.
+ * agentcap page (the house never larp-checks itself). The fragment is off.
  */
 export function siteLink(raw: unknown): string | null {
   if (typeof raw !== "string") return null;
   const u = safeFetchUrl(raw);
-  if (!u || NOT_A_SITE.test(u.hostname) || /merrymen/i.test(u.hostname)) return null;
+  if (!u || NOT_A_SITE.test(u.hostname) || /agentcap/i.test(u.hostname)) return null;
   u.hash = "";
   return u.toString();
 }

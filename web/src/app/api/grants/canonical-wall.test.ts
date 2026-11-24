@@ -1,5 +1,5 @@
 /**
- * HOSTED POST /api/grants STORES THE MERRYMEN WALL, OR NOTHING.
+ * HOSTED POST /api/grants STORES THE AGENTCAP WALL, OR NOTHING.
  *
  * Driven through the real route in hosted mode with real signatures, like
  * owner-facing.test.ts: the tenant's wallet authorizes, the owner key
@@ -22,16 +22,16 @@ import path from "node:path";
 import { after, before, beforeEach, it, mock } from "node:test";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import type { LocalAccount } from "viem";
-import { bindingMessage, type StoredGrant } from "@merrymen/core";
+import { bindingMessage, type StoredGrant } from "@agentcap/core";
 import { resealed, signerGrant } from "@/lib/canonical-wall-fixture";
 
-const ORIGIN = "https://app.merrymen.dev";
+const ORIGIN = "https://app.agentcap.xyz";
 const SMART = "0x00000000000000000000000000000000000000a1" as const;
 const ATTACKER = "0x000000000000000000000000000000000000bad1" as const;
 const OWNERSHIP_UNREADABLE = "couldn't check this account's ownership — please try again";
 
 const saved = Object.fromEntries(
-  ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_SESSION_SECRET", "DATABASE_URL", "MERRYMEN_PUBLIC_ORIGIN", "MERRYMEN_STORE_DEK"].map((k) => [k, process.env[k]]),
+  ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_SESSION_SECRET", "DATABASE_URL", "AGENTCAP_PUBLIC_ORIGIN", "AGENTCAP_STORE_DEK"].map((k) => [k, process.env[k]]),
 );
 let home: string;
 let POST: (req: Request) => Promise<Response>;
@@ -41,12 +41,12 @@ let ownershipReads = 0;
 
 before(async () => {
   home = mkdtempSync(path.join(tmpdir(), "mm-grants-wall-"));
-  process.env.MERRYMEN_HOME = home;
-  process.env.MERRYMEN_HOSTED = "1";
-  process.env.MERRYMEN_SESSION_SECRET = "test-secret-at-least-thirty-two-characters-long";
-  process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
+  process.env.AGENTCAP_HOME = home;
+  process.env.AGENTCAP_HOSTED = "1";
+  process.env.AGENTCAP_SESSION_SECRET = "test-secret-at-least-thirty-two-characters-long";
+  process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
   process.env.DATABASE_URL = "postgres://127.0.0.1:1/never-connected";
-  delete process.env.MERRYMEN_PUBLIC_ORIGIN;
+  delete process.env.AGENTCAP_PUBLIC_ORIGIN;
   auth = await import("@/lib/auth");
   // Through require, for the reason owner-facing.test.ts gives: the route
   // reaches these worker modules by require, and a stub on the ESM instance is
@@ -113,7 +113,7 @@ it("an owner-enabled permission with an extra USDG transfer is refused before it
   const res = await post(drained, owner);
   assert.equal(res.status, 400, JSON.stringify(res.body));
   assert.equal(res.body.code, "invalid_wall");
-  assert.match(res.body.error ?? "", /does not implement the advertised Merrymen limits/);
+  assert.match(res.body.error ?? "", /does not implement the advertised AgentCap limits/);
   assert.match(res.body.error ?? "", /reload it and sign again/);
   assert.equal(noncesSpent, 0, "a refused wall must not burn the single-use nonce");
   assert.equal(ownershipReads, 0);
@@ -138,7 +138,7 @@ it("the Rialto target and the v4 UniversalRouter are refused the same way", asyn
   assert.equal(noncesSpent, 0);
 });
 
-it("a really signed claim for a chain Merrymen does not run on is refused before its nonce is spent", async () => {
+it("a really signed claim for a chain AgentCap does not run on is refused before its nonce is spent", async () => {
   // The wall does not read the chain, the binding signs whatever id it is
   // given, and the derivation maps any id but the testnet to mainnet: before
   // the chain check, chain 1 got as far as the ownership read.

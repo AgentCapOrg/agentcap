@@ -61,14 +61,14 @@ test("null / non-object / empty are clean, never a throw", () => {
 });
 
 test("assertNoOwnerKeysAtRest is inert when hosted mode is off", () => {
-  delete process.env.MERRYMEN_HOSTED;
+  delete process.env.AGENTCAP_HOSTED;
   // Even a dirty grant does not throw when self-hosted — the owner key on disk
   // is the user's own, on their own machine.
   assert.doesNotThrow(() => assertNoOwnerKeysAtRest([{ ...sessionOnlyGrant, demoOwnerPrivateKey: KEY }]));
 });
 
 test("assertNoOwnerKeysAtRest REFUSES to boot in hosted mode on a dirty grant", () => {
-  process.env.MERRYMEN_HOSTED = "1";
+  process.env.AGENTCAP_HOSTED = "1";
   try {
     assert.doesNotThrow(() => assertNoOwnerKeysAtRest([sessionOnlyGrant, sessionOnlyGrant]), "clean grants boot");
     assert.throws(
@@ -77,7 +77,7 @@ test("assertNoOwnerKeysAtRest REFUSES to boot in hosted mode on a dirty grant", 
       "one dirty grant halts the whole boot",
     );
   } finally {
-    delete process.env.MERRYMEN_HOSTED;
+    delete process.env.AGENTCAP_HOSTED;
   }
 });
 
@@ -89,7 +89,7 @@ function solanaKeypair(seedByte: number) {
   const seed = new Uint8Array(32).fill(seedByte);
   const pub = ed25519.getPublicKey(seed);
   const secret = new Uint8Array([...seed, ...pub]);
-  const sig = ed25519.sign(new TextEncoder().encode("merrymen"), seed);
+  const sig = ed25519.sign(new TextEncoder().encode("agentcap"), seed);
   return { b58: base58Encode(secret), bytes: [...secret], pub: base58Encode(pub), sig: base58Encode(sig) };
 }
 const SOL = solanaKeypair(7);
@@ -129,10 +129,10 @@ test("Solana public ids are never a secret: a signature, a public key, a mint", 
 });
 
 test("a stored grant with a Solana secret halts the hosted boot", () => {
-  process.env.MERRYMEN_HOSTED = "1";
+  process.env.AGENTCAP_HOSTED = "1";
   try {
     assert.throws(() => assertNoOwnerKeysAtRest([sessionOnlyGrant, { ...sessionOnlyGrant, solana: SOL.b58 }]), /refuses to start/);
   } finally {
-    delete process.env.MERRYMEN_HOSTED;
+    delete process.env.AGENTCAP_HOSTED;
   }
 });

@@ -213,7 +213,7 @@ beforeEach(() => {
   owner = OWNER;
   speakOk = true;
   dmOk = true;
-  dash = "https://merrymen.example/";
+  dash = "https://agentcap.example/";
   spoken = [];
   reacts = [];
   dms = [];
@@ -819,7 +819,7 @@ describe("not ready: the owner ask", () => {
     assert.equal(dms.length, 1);
     assert.match(dms[0]!.text, /«Frog Pond»/);
     assert.match(dms[0]!.text, /Trencher mode is off/);
-    assert.deepEqual(dms[0]!.button, { text: "⚙️ Open Settings", url: "https://merrymen.example/settings#trencher-mode" });
+    assert.deepEqual(dms[0]!.button, { text: "⚙️ Open Settings", url: "https://agentcap.example/settings#trencher-mode" });
     assert.equal(memoOf(CA1)!.verdict, "not-ready");
     assert.equal(memoOf(CA1)!.name, "Froggy");
     assert.equal(port!.nominations.length, 0);

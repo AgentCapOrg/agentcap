@@ -544,9 +544,9 @@ export async function attestReceipt(o: ReceiptAttestationOptions & { sharedFlowI
   let version: unknown;
   try { version = old ? (JSON.parse(String(old.plan_json)) as { version?: unknown }).version : undefined; } catch { refuse("permanent audit was modified"); }
   if (o.sharedFlowId === undefined) {
-    if (version === 2) refuse("this tenant's recorded attestation is for one flow of a traded book; set MERRYMEN_RECEIPT_ATTEST_FLOW to that flow's shared id");
+    if (version === 2) refuse("this tenant's recorded attestation is for one flow of a traded book; set AGENTCAP_RECEIPT_ATTEST_FLOW to that flow's shared id");
     return attestOriginalReceipt(o);
   }
-  if (old && version !== 2) refuse("this tenant's recorded attestation is the untouched-book protocol; remove MERRYMEN_RECEIPT_ATTEST_FLOW");
+  if (old && version !== 2) refuse("this tenant's recorded attestation is the untouched-book protocol; remove AGENTCAP_RECEIPT_ATTEST_FLOW");
   return attestTradedReceipt({ ...o, sharedFlowId: o.sharedFlowId });
 }

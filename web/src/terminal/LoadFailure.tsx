@@ -31,7 +31,7 @@ export function LoadFailure({
   inFlight?: boolean;
   /** Which half failed on the last pass. */
   failed?: { account: boolean; market: boolean };
-  /** Nothing answered at all — the one case "Can't reach merrymen" is true. */
+  /** Nothing answered at all — the one case "Can't reach agentcap" is true. */
   unreachable?: boolean;
 }) {
   const [now, setNow] = useState(() => Date.now());

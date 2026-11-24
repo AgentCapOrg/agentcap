@@ -1,7 +1,7 @@
 /**
  * The hosted supervisor — one worker child per tenant.
  *
- * merrymen's worker keeps ~35 pieces of per-agent state (the `active` handle, the
+ * agentcap's worker keeps ~35 pieces of per-agent state (the `active` handle, the
  * money counters, the price/HWM caches, the discovery cursors) as locals INSIDE
  * main()'s closure, and only four true module globals (the sqlite handle, the
  * mainnet client, the grant-store cache, the ensureHome latch) — all per-process.
@@ -13,7 +13,7 @@
  *  - reconcile: read the grant store, spawn a child for every tenant that has a
  *    grant and isn't running, stop the child of any tenant whose grant is gone
  *    (the kill switch);
- *  - each child gets its OWN MERRYMEN_HOME (…/children/<tenant>) with the tenant's
+ *  - each child gets its OWN AGENTCAP_HOME (…/children/<tenant>) with the tenant's
  *    session-key-only grant written to grant.json, and a curated env that carries
  *    the platform's house keys (bundler/RPC/LLM) but NOT the orchestrator-only
  *    secrets (the store DEK, the session secret, the database URL);
@@ -69,7 +69,7 @@ function startHistoryRepair(): void {
   void (async () => {
     const db = await makePgDb(process.env.DATABASE_URL!);
     await applyLedgerSchema(db);
-    const result = await repairHistoricalFills(db, process.env.MERRYMEN_RPC_MAINNET ?? "https://rpc.mainnet.chain.robinhood.com");
+    const result = await repairHistoricalFills(db, process.env.AGENTCAP_RPC_MAINNET ?? "https://rpc.mainnet.chain.robinhood.com");
     log(`historical fills: ${result.repaired} receipt-backed rows recovered; ${result.pnlRecovered} sale P&Ls recovered; ${result.unavailable} unavailable or ambiguous; reasons ${JSON.stringify(result.reasons)}`);
     // The chat's history files were read at spawn, before this ran. See refreshHistoryForLiveChildren.
     if (result.repaired + result.pnlRecovered > 0) await refreshHistoryForLiveChildren();
@@ -80,7 +80,7 @@ import { randomUUID } from "node:crypto";
 import { closeSync, constants, existsSync, fstatSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, realpathSync, rmSync, type BigIntStats } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { merrymenHome } from "./home";
+import { agentcapHome } from "./home";
 import { isPerpsWorkerKey, parseWorkerKey, PERPS_CHILDREN_DIR, perpsChildHome, workerKey, workerOwner } from "./worker-key";
 import { perpsCeilingOf, readSettingsFileAt } from "./settings";
 import { createFleetPerpFeed, type FleetPerpFeed, type FleetPerpFeedOptions } from "./perps/fleet-feed";
@@ -105,7 +105,7 @@ import { getIdentityStore } from "./identity-store";
 import { getSettingsStore } from "./settings-store";
 import { CHAT_SETTABLE, promotedSettings, readChatSettings, type ChatSettings } from "./telegram/chat-settings";
 import { acquireTenantLease as acquireStoreLease, setTenantLeaseLossHandler, type TenantLease } from "./tenant-lease";
-import { CASH, DEFAULT_BASKET_SYMBOLS, effectiveHolder, energyReserveTokens, grantPurpose, isHostedMode, robinhoodChain, STOCK_TOKENS, type GrantPurpose, type MerrymenSettings, type StoredGrant } from "../../packages/core/src/index";
+import { CASH, DEFAULT_BASKET_SYMBOLS, effectiveHolder, energyReserveTokens, grantPurpose, isHostedMode, robinhoodChain, STOCK_TOKENS, type GrantPurpose, type AgentCapSettings, type StoredGrant } from "../../packages/core/src/index";
 import { backfillHolderClaims, childSettingsFor, lastWrittenHolder } from "./holder-claims";
 import {
   botIdOf,
@@ -288,7 +288,7 @@ let cohortPasses = 0;
  *
  * A CONSTANT HERE WAS A BUG, AND IT WAS ARITHMETIC RATHER THAN A RACE. The
  * heartbeat is written once per tick, so the minimum possible gap between two
- * beats is the tick period. With `MERRYMEN_TICK_SECONDS=240` on the hosted
+ * beats is the tick period. With `AGENTCAP_TICK_SECONDS=240` on the hosted
  * fleet and this fixed at 180, every child was SIGKILLed at ~185s — before its
  * SECOND TICK EVER RAN. Measured: all 71 observed `heartbeat stale` events
  * landed in a 181-196s band, which is exactly 180 plus one 15s poll interval.
@@ -494,7 +494,7 @@ function nextRung(child: Child, aliveUntilMs: number): number {
  * keeps an expired key's copy on the volume.
  *
  * A tenant the new-tenant route has admitted (newTenantAdmissions) is in the
- * rollout like a named one, at MERRYMEN_ROLLOUT_NEW_TENANTS's level as it
+ * rollout like a named one, at AGENTCAP_ROLLOUT_NEW_TENANTS's level as it
  * reads now; the accounting hold is asked first, and still holds it.
  *
  * Before either, a tenant whose id is not 0x and 40 hex (fleet-id.ts): held
@@ -512,7 +512,7 @@ function operatorHold(tenant: string): string | null {
 }
 
 /**
- * TENANTS THE NEW-TENANT ROUTE HAS ADMITTED (MERRYMEN_ROLLOUT_NEW_TENANTS,
+ * TENANTS THE NEW-TENANT ROUTE HAS ADMITTED (AGENTCAP_ROLLOUT_NEW_TENANTS,
  * new-tenant-admission.ts), lowercase: fleet_new_tenant_admissions as the
  * start of the last reconcile pass read it, and every tenant this process has
  * recorded since. Read before that pass asks who is held, so a restarted
@@ -629,8 +629,8 @@ async function newTenantScope(tenant: `0x${string}`): Promise<NewTenantScope | n
   const grant = await getGrantStore("spot").get(tenant);
   if (!grant) return null;
   const homes = new Set([childHome(tenant)]);
-  const archiveRoots = new Set([path.join(merrymenHome(), "archive")]);
-  // The verified volume's root, where it differs from MERRYMEN_HOME: a
+  const archiveRoots = new Set([path.join(agentcapHome(), "archive")]);
+  // The verified volume's root, where it differs from AGENTCAP_HOME: a
   // volume that cannot be verified throws, and the tenant is not new.
   const volume = persistentFleetHome();
   if (volume) {
@@ -760,7 +760,7 @@ async function recordNewTenant(tenant: `0x${string}`, proved: NewTenantScope, pa
   log(result.fresh
     ? `new tenants: ${tenant} admitted at ${level} (${ROLLOUT_NEW_TENANTS_ENV}) — no home or archive on the volume, no history in Postgres, no kill or ` +
       `accounting hold; recorded in fleet_new_tenant_admissions (evidence ${result.digest.slice(0, 12)}…) before its first spawn. ` +
-      `To hold it: name it in MERRYMEN_ACCOUNTING_HOLD_TENANTS and deploy`
+      `To hold it: name it in AGENTCAP_ACCOUNTING_HOLD_TENANTS and deploy`
     : `new tenants: ${tenant} was already recorded as admitted (evidence ${result.digest.slice(0, 12)}…) — runs at ${level}`);
   return true;
 }
@@ -807,7 +807,7 @@ function operatorHeld(tenant: string): boolean {
  * records and admits it only through an unexpired Spot grant (newTenantScope,
  * asked of the spawn order's Spot keys), so a login with none is never
  * admitted that way: under an explicit list with the route open, a new
- * Spot-only login runs at MERRYMEN_ROLLOUT_NEW_TENANTS's level, and a
+ * Spot-only login runs at AGENTCAP_ROLLOUT_NEW_TENANTS's level, and a
  * Perps-only one, or one whose Spot grant expired before the route admitted
  * it, waits until the operator names it. Nothing else says so. Its worker does
  * not start, so no Close, Close all or practice reset is carried out: each is
@@ -899,15 +899,15 @@ const HOLDER_MAX_OLD_SPACE_MB = 128;
  * grant database (the URL). Strip those; forward everything else so the child
  * still has PATH and the OS essentials node needs to run.
  *
- * MERRYMEN_TG_GROUPS_LLM_KEY IS FORWARDED ON PURPOSE, unlike the room's and
+ * AGENTCAP_TG_GROUPS_LLM_KEY IS FORWARDED ON PURPOSE, unlike the room's and
  * X's model keys below. Those are stripped because their passes run in this
  * process; Telegram groups are polled inside the child, so the child is the
  * only process that can spend that key (docs/tg-groups.md "The model"). It is
  * a dedicated key so group chatter never draws on trading's house key.
  */
 const CHILD_SECRET_STRIP = [
-  "MERRYMEN_STORE_DEK",
-  "MERRYMEN_SESSION_SECRET",
+  "AGENTCAP_STORE_DEK",
+  "AGENTCAP_SESSION_SECRET",
   "DATABASE_URL",
   // THE NEWS PROVIDER TOKEN. A fourth kind of secret and it belongs here for a
   // fourth reason: it is not what a child could misuse, it is what a child
@@ -917,7 +917,7 @@ const CHILD_SECRET_STRIP = [
   // any of those is a published key. Stripping it makes "the Brain service
   // never sees this token" a fact about the process boundary rather than a
   // claim about our own carefulness. See research-files.ts.
-  "MERRYMEN_MARKETAUX_API_KEY",
+  "AGENTCAP_MARKETAUX_API_KEY",
   // THE BUILDER DIRECTORY TOKEN, for the same reason and one extra.
   //
   // The same reason: a child holding it could put it in a prompt, a decision
@@ -930,10 +930,10 @@ const CHILD_SECRET_STRIP = [
   // either way. Which means the strip costs nothing and buys the boundary
   // outright, and there is no "but then the fetch fails" pressure to ever
   // remove it. See research/hey.ts.
-  "MERRYMEN_HEY_API_KEY",
+  "AGENTCAP_HEY_API_KEY",
   // THE LARP CHECK'S GITHUB TOKEN (orchestrator-xpost-check.ts): read only by
   // this process, for an X answer. No child reads GitHub at all.
-  "MERRYMEN_GITHUB_TOKEN",
+  "AGENTCAP_GITHUB_TOKEN",
   // THE FOMO DATA KEY, under both names an operator might set (the house's and
   // the provider's own docs'). Same reason as the two above: a child holding it
   // could leak it into a prompt, a decision row or a log line. A hosted child
@@ -943,7 +943,7 @@ const CHILD_SECRET_STRIP = [
   // permissions apply. settings.ts resolves `fomoApiKey` from env as a
   // fallback, which is exactly why leaving either name in a child's
   // environment would hand the house key to every tenant.
-  "MERRYMEN_FOMO_API_KEY",
+  "AGENTCAP_FOMO_API_KEY",
   "FOMO_API_KEY",
   // Privy authenticates PEOPLE at the web edge. A worker child acts for an
   // agent that is already authorized by a signed grant; it has no login to
@@ -970,13 +970,13 @@ const CHILD_SECRET_STRIP = [
    * and the failure is silent, cross-tenant and indistinguishable from the
    * product working.
    */
-  "MERRYMEN_TELEGRAM_BOT_TOKEN",
+  "AGENTCAP_TELEGRAM_BOT_TOKEN",
   /**
    * NOT A SECRET — AN ANSWER TO A QUESTION ABOUT SOMEBODY ELSE, which is why it
    * belongs on this list even though nothing here could leak or misuse it.
    *
    * Every path below writes `holderAddress` into the child's settings.json, and
-   * settings.ts:235 reads `str(file.holderAddress, env.MERRYMEN_HOLDER_ADDRESS)`
+   * settings.ts:235 reads `str(file.holderAddress, env.AGENTCAP_HOLDER_ADDRESS)`
    * — file first, env as the fallback. So the overwrite is authoritative for
    * every child that GETS a settings file, and silently inverted for every
    * child that does not: `writeChildSettings` returns early when a tenant's
@@ -994,21 +994,21 @@ const CHILD_SECRET_STRIP = [
    * variable — there is no orchestrator there, and no other tenant for one
    * operator's own wallet to be wrong about.
    */
-  "MERRYMEN_HOLDER_ADDRESS",
+  "AGENTCAP_HOLDER_ADDRESS",
   // THE GROUP CHAT'S OWN MODEL KEY. It exists so the room never spends the
   // fleet key trading shares; a child holding it could spend it on anything.
-  "MERRYMEN_GROUPCHAT_LLM_KEY",
+  "AGENTCAP_GROUPCHAT_LLM_KEY",
   /**
    * THE X APP'S CLIENT SECRET, and the X writer's own model key
-   * (docs/x-posting.md rule 5). The secret authenticates merrymen to X for
+   * (docs/x-posting.md rule 5). The secret authenticates agentcap to X for
    * every owner's connection at once: with it and one leaked refresh token,
    * anybody could keep that owner's account posting. It is read in exactly one
    * file (xpost/client.ts) in the web and this process — the only two that
    * talk to X — and a child posts nothing, so it has no business holding it.
    * The model key is stripped for the room key's reason.
    */
-  "MERRYMEN_X_CLIENT_SECRET",
-  "MERRYMEN_XPOST_LLM_KEY",
+  "AGENTCAP_X_CLIENT_SECRET",
+  "AGENTCAP_XPOST_LLM_KEY",
   /**
    * THE OPS TOKEN, which opens the fleet heartbeat to an operator's check
    * (web/src/app/api/ops/heartbeat). It belongs on the web and nowhere else;
@@ -1017,18 +1017,18 @@ const CHILD_SECRET_STRIP = [
    * it in a prompt, a decision row or a log line — the published-key reason
    * above.
    */
-  "MERRYMEN_OPS_TOKEN",
+  "AGENTCAP_OPS_TOKEN",
   /**
    * BITQUERY, UNDER EVERY NAME A CHILD COULD READ IT BY, AND THE HOUSE'S MERRY
    * CIRCLE TOKEN — the published-key reason, and a fan-out reason of their own.
    *
-   * MERRYMEN_BITQUERY_API_KEY is the fleet lane's key (venues/bitquery-lane.ts):
+   * AGENTCAP_BITQUERY_API_KEY is the fleet lane's key (venues/bitquery-lane.ts):
    * read here, held by this process, spent under one daily points budget. A
    * child has no business holding it, for the Marketaux reason above.
    *
-   * BITQUERY_API_KEY and MERRYMEN_TOKEN are what a CHILD's own discovery reads
+   * BITQUERY_API_KEY and AGENTCAP_TOKEN are what a CHILD's own discovery reads
    * (settings.ts `str(file.bitqueryApiKey, env.BITQUERY_API_KEY)` and
-   * `str(file.merrymenToken, env.MERRYMEN_TOKEN)`). Hosted, both fields are
+   * `str(file.agentcapToken, env.AGENTCAP_TOKEN)`). Hosted, both fields are
    * house keys stripped from the tenant's file (HOUSE_KEY_FIELDS), so the env is
    * the ONLY value a child could ever see — the operator's — and
    * discoveryEnabled defaults on. Either one set on this process would have
@@ -1039,7 +1039,7 @@ const CHILD_SECRET_STRIP = [
    * CHILDREN NEVER NEED EITHER. Nothing else reads them: settings.ts is the only
    * reader and it feeds runDiscovery alone; this process reads neither. A
    * tenant's OWN holder token still reaches discovery through its own brain key
-   * (llmProvider "merrymen", bitquery.ts gatewayTokenForDiscovery), on its own
+   * (llmProvider "agentcap", bitquery.ts gatewayTokenForDiscovery), on its own
    * quota. Flow facts a child wants come from this process over IPC
    * (flow-broker.ts), never from a key of its own.
    *
@@ -1047,17 +1047,17 @@ const CHILD_SECRET_STRIP = [
    * made every gateway call a 401. Fixing the header without this strip would
    * have switched the fan-out on.
    */
-  "MERRYMEN_BITQUERY_API_KEY",
+  "AGENTCAP_BITQUERY_API_KEY",
   "BITQUERY_API_KEY",
-  "MERRYMEN_TOKEN",
-  // AN OWNER'S PRIVATE KEY, for `merrymen recover` (recover-cli.ts) and the
+  "AGENTCAP_TOKEN",
+  // AN OWNER'S PRIVATE KEY, for `agentcap recover` (recover-cli.ts) and the
   // CLI that sets it for that one command. No hosted child recovers anything,
   // and one holding an owner key holds the root of that login's both wallets.
-  "MERRYMEN_RECOVER_OWNER_KEY",
+  "AGENTCAP_RECOVER_OWNER_KEY",
 ] as const;
 
 /**
- * Where a worker keeps its own ~/.merrymen — isolated from every other.
+ * Where a worker keeps its own ~/.agentcap — isolated from every other.
  *
  * A Spot worker's home is `children/<owner>`, where it has always been. A
  * Perps worker's (worker-key.ts) is `children-perps/<owner>`, a sibling root,
@@ -1066,8 +1066,8 @@ const CHILD_SECRET_STRIP = [
  */
 export function childHome(tenant: string): string {
   const lc = tenant.toLowerCase();
-  if (isPerpsWorkerKey(lc)) return perpsChildHome(merrymenHome(), workerOwner(lc));
-  return path.join(merrymenHome(), "children", lc);
+  if (isPerpsWorkerKey(lc)) return perpsChildHome(agentcapHome(), workerOwner(lc));
+  return path.join(agentcapHome(), "children", lc);
 }
 
 /**
@@ -1171,7 +1171,7 @@ function grantFitsSlot(tenant: string, grant: StoredGrant): boolean {
 
 /** The fleet-halt marker: present = stop every child and spawn none. Operator-only. */
 export function fleetHaltFile(): string {
-  return path.join(merrymenHome(), "FLEET_HALT");
+  return path.join(agentcapHome(), "FLEET_HALT");
 }
 
 /**
@@ -1190,30 +1190,30 @@ export function childEnv(tenant: string, opts: { tgGroupsOff?: boolean; flowBrok
   const env: NodeJS.ProcessEnv = { ...process.env };
   for (const k of CHILD_SECRET_STRIP) delete env[k];
   const key = parseWorkerKey(tenant.toLowerCase());
-  env.MERRYMEN_HOSTED = "1";
-  env.MERRYMEN_HOME = childHome(tenant);
+  env.AGENTCAP_HOSTED = "1";
+  env.AGENTCAP_HOME = childHome(tenant);
   /**
    * WHICH WALLET THIS CHILD SERVES, AND ITS OWN FILES, always set here.
    *
-   * MERRYMEN_WALLET_PURPOSE decides whether a worker arms a Spot or a Perps
+   * AGENTCAP_WALLET_PURPOSE decides whether a worker arms a Spot or a Perps
    * grant (settings.ts workerWalletOf; index.ts refuses the other at arm), so
    * an orchestrator env that carried `perps` would have every Spot child
    * refuse its own grant, and a typo would stop every child at boot. And the
-   * two file overrides (grant.ts, settings.ts) outrank MERRYMEN_HOME: inherited,
+   * two file overrides (grant.ts, settings.ts) outrank AGENTCAP_HOME: inherited,
    * they would point every child at one grant and one settings file.
    */
-  env.MERRYMEN_WALLET_PURPOSE = key?.purpose ?? "spot";
-  delete env.MERRYMEN_PERPS_PAPER_TENANTS;
-  delete env.MERRYMEN_PERPS_PILOT_ADMINS;
-  delete env.MERRYMEN_PERPS_BOT_SEAT;
-  env.MERRYMEN_GRANT_FILE = path.join(env.MERRYMEN_HOME, "grant.json");
-  env.MERRYMEN_SETTINGS_FILE = path.join(env.MERRYMEN_HOME, "settings.json");
+  env.AGENTCAP_WALLET_PURPOSE = key?.purpose ?? "spot";
+  delete env.AGENTCAP_PERPS_PAPER_TENANTS;
+  delete env.AGENTCAP_PERPS_PILOT_ADMINS;
+  delete env.AGENTCAP_PERPS_BOT_SEAT;
+  env.AGENTCAP_GRANT_FILE = path.join(env.AGENTCAP_HOME, "grant.json");
+  env.AGENTCAP_SETTINGS_FILE = path.join(env.AGENTCAP_HOME, "settings.json");
   // WHICH TENANT THIS CHILD IS, lowercased: the owner, for either wallet. Not
   // a secret and not authority: the child uses it only to refuse a fomo.json
   // written for someone else (fomo/child-file.ts readChildFomoFile). Nothing
   // on this side reads it back — the IPC broker stamps the tenant this process
   // spawned the child for (attachFomoBroker), never one the child names.
-  env.MERRYMEN_TENANT = key?.owner ?? tenant.toLowerCase();
+  env.AGENTCAP_TENANT = key?.owner ?? tenant.toLowerCase();
   /**
    * THE ROLLOUT, REDUCED TO THIS TENANT'S OWN LEVEL (fleet-rollout.ts).
    *
@@ -1225,11 +1225,11 @@ export function childEnv(tenant: string, opts: { tgGroupsOff?: boolean; flowBrok
    * overwriting anything the orchestrator's own env carried under that name:
    * a child must never take its level from an operator's fleet-wide
    * variable. The rollout itself is stripped, for the reason
-   * MERRYMEN_HOLDER_ADDRESS is: it names other tenants, which is an answer to
+   * AGENTCAP_HOLDER_ADDRESS is: it names other tenants, which is an answer to
    * a question about somebody else, and a child that read it might one day
    * mistake another tenant's level for its own.
    *
-   * The same for MERRYMEN_ROLLOUT_NEW_TENANTS: a tenant that route admitted
+   * The same for AGENTCAP_ROLLOUT_NEW_TENANTS: a tenant that route admitted
    * gets its level here, reduced to its own, like any other, and the
    * fleet-wide variable never reaches a child.
    */
@@ -1243,7 +1243,7 @@ export function childEnv(tenant: string, opts: { tgGroupsOff?: boolean; flowBrok
   // on an empty memory it would re-ask about the owner's groups, leave them,
   // and hand out a fresh day's allowances. Never set to "1": an operator's
   // fleet-wide 0 is inherited above and stays.
-  if (opts.tgGroupsOff) env.MERRYMEN_TG_GROUPS = "0";
+  if (opts.tgGroupsOff) env.AGENTCAP_TG_GROUPS = "0";
   /**
    * A PERPS WORKER IS NEVER A PUBLIC SPEAKER AND NEVER RUNS THE BRAIN.
    *
@@ -1254,9 +1254,9 @@ export function childEnv(tenant: string, opts: { tgGroupsOff?: boolean; flowBrok
    * worker refuses both itself as well (index.ts); this is the boundary.
    */
   if (key?.purpose === "perps") {
-    env.MERRYMEN_TG_GROUPS = "0";
-    delete env.MERRYMEN_BRAIN_LIVE;
-    delete env.MERRYMEN_BRAIN_SHADOW;
+    env.AGENTCAP_TG_GROUPS = "0";
+    delete env.AGENTCAP_BRAIN_LIVE;
+    delete env.AGENTCAP_BRAIN_SHADOW;
   }
   // THE FLOW BROKER ANSWERS ON THIS CHILD'S CHANNEL (flow-broker.ts
   // FLOW_BROKER_ENV): said only when the Bitquery lane is on here and the
@@ -1270,7 +1270,7 @@ export function childEnv(tenant: string, opts: { tgGroupsOff?: boolean; flowBrok
   /**
    * WHERE THE CHILDREN AGREE WITH EACH OTHER.
    *
-   * MERRYMEN_HOME above is deliberately private per tenant — that isolation is
+   * AGENTCAP_HOME above is deliberately private per tenant — that isolation is
    * the point of it. But the RPC circuit breaker is a fact about the ENDPOINT,
    * not about a tenant: every child in this container reads one endpoint
    * through one egress IP, so a refusal one of them earns is true for all
@@ -1278,11 +1278,11 @@ export function childEnv(tenant: string, opts: { tgGroupsOff?: boolean; flowBrok
    * learn by being refused, and each of those refusals is load — which is the
    * thing causing the refusals.
    *
-   * Passed explicitly rather than derived by walking up from MERRYMEN_HOME: a
+   * Passed explicitly rather than derived by walking up from AGENTCAP_HOME: a
    * child that computed the wrong parent would get a private file, a breaker
    * that silently coordinated with nobody, and no way to tell from the outside.
    */
-  env.MERRYMEN_FLEET_HOME = merrymenHome();
+  env.AGENTCAP_FLEET_HOME = agentcapHome();
   return env;
 }
 
@@ -1758,7 +1758,7 @@ export function heartbeatAtIn(home: string): number | null {
  * A CHILD’S TELEGRAM RUNTIME STATE, WHICH ONLY THIS PROCESS CAN SEE.
 
  * The child mints its link code on boot and writes it into its own home. The
- * dashboard read `merrymenHome()/telegram.json` on the WEB container, where
+ * dashboard read `agentcapHome()/telegram.json` on the WEB container, where
  * nothing has ever written one — so `linkCode` was null for every hosted tenant
  * and the Telegram panel rendered a placeholder where a six-character code
  * should be. Two testers stopped there: "I’m stuck at this point, no code from
@@ -2236,7 +2236,7 @@ function tgGroupsDek(): Buffer | null {
   const dek = storeDek();
   if (!dek && !tgGroupsNoDekLogged) {
     tgGroupsNoDekLogged = true;
-    log("tg-groups: MERRYMEN_STORE_DEK is not a 32-byte key — Telegram group memory is not carried across redeploys");
+    log("tg-groups: AGENTCAP_STORE_DEK is not a 32-byte key — Telegram group memory is not carried across redeploys");
   }
   return dek;
 }
@@ -2364,13 +2364,13 @@ async function sweepTgGroups(wanted: ReadonlySet<string>, listedAtMs: number): P
   for (const t of [...tgGroupsHeld]) if (!wanted.has(t)) tgGroupsHeld.delete(t);
   for (const t of [...personalMemorySeen.keys()]) if (!wanted.has(t)) personalMemorySeen.delete(t);
   forgetTgGroupsInHomes({
-    childrenDir: path.join(merrymenHome(), "children"),
+    childrenDir: path.join(agentcapHome(), "children"),
     keep: (t) => wanted.has(t) || localMemoryWriterPresent(t),
     before: listedAtMs,
     log,
   });
   forgetPersonalMemoryInHomes({
-    childrenDir: path.join(merrymenHome(), "children"), wanted,
+    childrenDir: path.join(agentcapHome(), "children"), wanted,
     running: new Set([...children.keys(), ...holders.keys(), ...spawning.keys(), ...exitingChildren.keys()]),
     before: listedAtMs, log,
   });
@@ -2573,13 +2573,13 @@ async function refreshGrantForChild(tenant: `0x${string}`): Promise<void> {
  * basket, custom tokens, sizing, their Telegram bot. A tenant who has saved
  * nothing yet gets a file holding only `holderAddress`, or nothing at all when
  * no wallet counts for them (the child then runs the safe defaults, and still
- * knows whose $MERRYMEN counts — see below). Refreshed
+ * knows whose $AGENTCAP counts — see below). Refreshed
  * every reconcile so a config change propagates: the worker re-reads
  * settings.json each tick, and mergeSettings strips house keys + forces the RCE
  * flags off, so what the tenant stored can only ever be their own legitimate
  * configuration.
  */
-function writeChildSettings(tenant: `0x${string}`, forChild: MerrymenSettings): void {
+function writeChildSettings(tenant: `0x${string}`, forChild: AgentCapSettings): void {
   const home = childHome(tenant);
   mkdirSync(home, { recursive: true });
   const file = path.join(home, "settings.json");
@@ -2815,10 +2815,10 @@ const botRefusedLogged = new Map<string, string>();
  */
 async function gateBot(
   tenant: `0x${string}`,
-  settings: MerrymenSettings,
+  settings: AgentCapSettings,
   seen: Map<string, string> | undefined,
   claimsRead: BotClaimsRead | undefined,
-): Promise<MerrymenSettings> {
+): Promise<AgentCapSettings> {
   const claims = claimsRead !== undefined ? claimsRead : botWillPoll(settings) ? await readBotClaimsForPass() : null;
   const lc = tenant.toLowerCase();
   const unclaimed = unclaimedBot(settings, claims);
@@ -2863,7 +2863,7 @@ async function writeSettingsForChild(
   seenBots?: Map<string, string>,
   claimsRead?: HolderClaimsRead,
   botClaimsRead?: BotClaimsRead,
-): Promise<MerrymenSettings | null> {
+): Promise<AgentCapSettings | null> {
   if (slotOf(tenant).perps) return writePerpsSettingsForChild(tenant, seenBots, claimsRead, botClaimsRead);
   try {
     let settings = await getSettingsStore("spot").get(tenant);
@@ -2891,7 +2891,7 @@ async function writeSettingsForChild(
     // strategy name and trait words and nothing else; the blob goes no further.
     tenantChatProfile.set(tenant.toLowerCase(), chatProfileOf(settings));
     /**
-     * ONE $MERRYMEN WALLET POWERS ONE AGENT — the same rule, the same claims,
+     * ONE $AGENTCAP WALLET POWERS ONE AGENT — the same rule, the same claims,
      * as every holder screen (web/src/lib/holder-wallet.ts), so a person is
      * never told one thing while their agent is throttled on another.
      *
@@ -2913,7 +2913,7 @@ async function writeSettingsForChild(
       : lastWrittenHolder(path.join(childHome(tenant), "settings.json"));
     /**
      * A TENANT WHO NEVER SAVED SETTINGS STILL GETS A settings.json — holding
-     * only the wallet whose $MERRYMEN counts, by the same rule as below, or
+     * only the wallet whose $AGENTCAP counts, by the same rule as below, or
      * nothing at all when no wallet counts.
      *
      * This returned before writing anything, so the child saw no holder
@@ -2922,7 +2922,7 @@ async function writeSettingsForChild(
      * nothing — the Circle tier lost and, with energy, the agent throttled to
      * a tenth of its day for tokens it holds. `{ holderAddress }` alone is the
      * safe defaults plus the address, because the child resolves file, then
-     * env, then default, and MERRYMEN_HOLDER_ADDRESS is stripped from its env.
+     * env, then default, and AGENTCAP_HOLDER_ADDRESS is stripped from its env.
      * Written even when it is `{}`, so a file from an earlier pass that named
      * a wallet now claimed elsewhere does not outlive the claim.
      */
@@ -2933,7 +2933,7 @@ async function writeSettingsForChild(
     // lose a pass later, having polled it in between. See gateBot.
     settings = await gateBot(tenant, settings, seenBots, botClaimsRead);
     /**
-     * WHOSE $MERRYMEN BALANCE DECIDES THE CIRCLE TIER — settled here, by the
+     * WHOSE $AGENTCAP BALANCE DECIDES THE CIRCLE TIER — settled here, by the
      * only process that knows the answer.
      *
      * TWO FAULTS, ONE LINE. `cfg.holderAddress` is what the child reads to
@@ -2959,7 +2959,7 @@ async function writeSettingsForChild(
      * wallet stops working, because this overwrite is unconditional.
      *
      * SELF-HOSTED IS UNTOUCHED. There is no orchestrator there, so a single
-     * operator's own `holderAddress` (or MERRYMEN_HOLDER_ADDRESS) stays exactly
+     * operator's own `holderAddress` (or AGENTCAP_HOLDER_ADDRESS) stays exactly
      * as it was — there is no other tenant for it to be wrong about.
      */
     /**
@@ -2988,7 +2988,7 @@ async function writeSettingsForChild(
      * `holderAddress` rather than leave the typed-in value standing. The
      * child then counts its own agent account alone.
      */
-    const forChild: MerrymenSettings = childSettingsFor(settings, holder);
+    const forChild: AgentCapSettings = childSettingsFor(settings, holder);
     writeChildSettings(tenant, forChild);
     // The universe this tenant may trade, kept for the news desk. Recorded here
     // because this is the one place the orchestrator reads a tenant's settings,
@@ -3096,7 +3096,7 @@ async function writePerpsSettingsForChild(
   _seenBots?: Map<string, string>,
   claimsRead?: HolderClaimsRead,
   _botClaimsRead?: BotClaimsRead,
-): Promise<MerrymenSettings | null> {
+): Promise<AgentCapSettings | null> {
   const { owner } = slotOf(tenant);
   try {
     // Do not leave an enabled file in place while a store read hangs or fails.
@@ -3134,7 +3134,7 @@ async function writePerpsSettingsForChild(
  * and every Spot producer off, with nothing of a bot or a holder in them (the
  * holder is the owner's, added by the caller).
  */
-export function perpsWorkerSettings(stored: MerrymenSettings | null): MerrymenSettings {
+export function perpsWorkerSettings(stored: AgentCapSettings | null): AgentCapSettings {
   const {
     telegramBotToken: _token, telegramAllowlist: _allow, holderAddress: _holder, holderProof: _proof,
     ...rest
@@ -3212,7 +3212,7 @@ async function seedBasisForChild(tenant: `0x${string}`, smartAccount: string): P
   const url = process.env.DATABASE_URL;
   if (!url && !basisSeedSharedForTest) return; // self-hosted: the child's own sqlite is the only copy
   const sharedSeedDb = async (): Promise<Db> => basisSeedSharedForTest ?? await makePgDb(url!);
-  const raw = new DatabaseSync(path.join(childHome(tenant), "merrymen.db"));
+  const raw = new DatabaseSync(path.join(childHome(tenant), "agentcap.db"));
   const handle = {db:wrapSqlite(raw),close:()=>raw.close()};
   // The lease spawnChild checked before preparing. Lost or replaced since,
   // lateSpawnRefusal says so; a barrier on the original book, originalSourceRefused.
@@ -3332,7 +3332,7 @@ async function seedEnergyForChild(tenant: `0x${string}`, smartAccount: string, w
       nowSec: Math.floor(Date.now() / 1000),
       when,
       local: () => {
-        const raw = new DatabaseSync(path.join(home, "merrymen.db"));
+        const raw = new DatabaseSync(path.join(home, "agentcap.db"));
         opened.push(raw);
         raw.exec("PRAGMA busy_timeout = 250");
         return wrapSqlite(raw);
@@ -3429,7 +3429,7 @@ async function seedBudgetForChild(tenant: `0x${string}`, smartAccount: string, w
       nowSec,
       when,
       local: () => {
-        const raw = new DatabaseSync(path.join(home, "merrymen.db"));
+        const raw = new DatabaseSync(path.join(home, "agentcap.db"));
         opened.push(raw);
         raw.exec("PRAGMA busy_timeout = 250");
         return wrapSqlite(raw);
@@ -3515,7 +3515,7 @@ async function retryBudgetSeed(tenant: `0x${string}`): Promise<void> {
  * would be neither carried nor in the ledger.
  */
 function ledgerStartOf(tenant: string): number | null {
-  const file = path.join(childHome(tenant), "merrymen.db");
+  const file = path.join(childHome(tenant), "agentcap.db");
   if (!existsSync(file)) return null;
   let db: DatabaseSync | null = null;
   try {
@@ -3719,7 +3719,7 @@ async function pausedSourceCause(tenant: string): Promise<RecoveryCause | null> 
       const marks = await shared.prepare("SELECT last_id FROM mirror_state WHERE tenant=? LIMIT 65").all(tenant) as
         Array<{ last_id?: unknown }>;
       if (marks.length > 64 || marks.some(mark => String(mark.last_id) !== "0")) return "source-continuity";
-      try { lstatSync(path.join(home, "merrymen.db")); return "source-continuity"; }
+      try { lstatSync(path.join(home, "agentcap.db")); return "source-continuity"; }
       catch (error) { return (error as NodeJS.ErrnoException).code === "ENOENT" ? null : "source-continuity"; }
     }
     await mirrorSerially(tenant, () => assertLedgerSourceContinuity(handle.db, shared, tenant));
@@ -3884,7 +3884,7 @@ async function ledgerSourceAllowsResume(tenant: string, afterRestore = false): P
     return false;
   }
   if (!process.env.DATABASE_URL && !retirementMemoryStoreForTest) return true;
-  const exists = existsSync(path.join(home, "merrymen.db"));
+  const exists = existsSync(path.join(home, "agentcap.db"));
   if (!exists && !afterRestore) return true;
   const handle = openChildLedger(home);
   if (exists && !handle) {
@@ -4045,7 +4045,7 @@ export async function writeBootstrapForChild(
 function lateSpawnRefusal(tenant: `0x${string}`, lease: TenantLease): string | null {
   if (stopping) return "the fleet is being called home";
   if (perpsYielded.has(tenant)) return "the stopped Perps worker's final accounting is incomplete";
-  if (isPerpsWorkerKey(tenant) && !perpsSpawnable()) return "MERRYMEN_PERPS is not paper";
+  if (isPerpsWorkerKey(tenant) && !perpsSpawnable()) return "AGENTCAP_PERPS is not paper";
   if (isPerpsWorkerKey(tenant) && perpsAffinityLost(tenant)) return "its owner's Spot worker is not leased on this replica";
   const held = operatorHold(tenant);
   if (held) return held;
@@ -4255,7 +4255,7 @@ async function resumeChainTail(tenant: string, approval: ApprovalRow, fromBlock:
  */
 async function drainContinuousBook(tenant: `0x${string}`, lease: TenantLease, shared: Db): Promise<boolean> {
   const home = childHome(tenant);
-  if (!existsSync(path.join(home, "merrymen.db")) || ledgerSourceBlocked(home)) return true; // nothing continuous to drain: archived as it is
+  if (!existsSync(path.join(home, "agentcap.db")) || ledgerSourceBlocked(home)) return true; // nothing continuous to drain: archived as it is
   const handle = openChildLedger(home);
   if (!handle) return true;
   try {
@@ -4285,7 +4285,7 @@ async function drainContinuousBook(tenant: `0x${string}`, lease: TenantLease, sh
  * error would then have refused the operator's approval outright.
  *
  * TRUE, WITHOUT READING, WHILE LIVE-TRADING CONSENT IS STOOD DOWN
- * (MERRYMEN_LIVE_INTENT_STAND_DOWN=1, liveConsentEnforced). The worker then
+ * (AGENTCAP_LIVE_INTENT_STAND_DOWN=1, liveConsentEnforced). The worker then
  * treats every owner as consenting (exec-mode.ts `consented`: a funded
  * account goes live with liveTradingEnabled false), so the setting proves
  * nothing about the rail it will arm on, and a deposit made during the gap is
@@ -4337,7 +4337,7 @@ async function resumeAdmission(tenant: `0x${string}`, lease: TenantLease, grant:
     // approving again: the tenant is read on chain until an admission answers
     // it (ledger-resume.ts ResumeCheck.chainHeld), and refused again meanwhile.
     sayTenantAlert(tenant, `[alert] ${tenant}: resume approval REFUSED — ${why}. The tenant stays held; ` +
-      (why.startsWith(CHAIN_REFUSAL) ? "take it out of MERRYMEN_FLEET_ROLLOUT and book what the chain shows (docs/chain-gap-booking.md), then preview again " +
+      (why.startsWith(CHAIN_REFUSAL) ? "take it out of AGENTCAP_FLEET_ROLLOUT and book what the chain shows (docs/chain-gap-booking.md), then preview again " +
         "and approve the digest that preview prints"
         : "preview again and approve what is true now"));
     return { go: false };
@@ -4535,7 +4535,7 @@ async function attestedSeedReady(tenant: `0x${string}`, smartAccount: string): P
   const writeRefusal = (): string | null =>
     !lease ? "it holds no lease"
       : lateSpawnRefusal(tenant, lease) ?? (originalSourceRefused(tenant) ? "its original book is behind a source barrier" : null);
-  const book = path.join(home, "merrymen.db");
+  const book = path.join(home, "agentcap.db");
   if (!existsSync(book)) {
     sayTenantAlert(tenant, `[alert] ${tenant}: its attested book is missing before its first worker — held`);
     return false;
@@ -4604,7 +4604,7 @@ function normaliseRegisteredHome(tenant: `0x${string}`, generation: string, mayW
   if (!mayWrite() || readRecoveryGeneration(home)?.generation !== generation) return;
   let book: DatabaseSync | null = null;
   try {
-    book = new DatabaseSync(path.join(home, "merrymen.db"), { readOnly: true });
+    book = new DatabaseSync(path.join(home, "agentcap.db"), { readOnly: true });
     if (book.prepare("SELECT 1 FROM agents LIMIT 1").get()) return;
   } catch { return; } finally { book?.close(); }
   const changed = normaliseCarriedFile(path.join(home, "telegram.json"), mayWrite);
@@ -4658,7 +4658,7 @@ async function refreshResumePending(): Promise<void> {
 }
 
 /**
- * MERRYMEN_RESUME_AUTO_PAPER, ONE RECONCILE PASS OF IT (ledger-resume.ts says
+ * AGENTCAP_RESUME_AUTO_PAPER, ONE RECONCILE PASS OF IT (ledger-resume.ts says
  * what the safe case is and why it is the only one).
  *
  * Asked by reconcile with the roster's grant rows and the unexpired set,
@@ -5423,7 +5423,7 @@ export function setPaperRestoreForTest(fn: ((tenant: `0x${string}`, smartAccount
  *
  * Lifted out of spawnChild, where it was inline, because a held tenant's
  * restore is retried from reconcile (retryHold) against the same home while the
- * hold process runs in it. The hold process never opens merrymen.db, so this is
+ * hold process runs in it. The hold process never opens agentcap.db, so this is
  * the only writer there until a worker starts.
  *
  * Never throws. The book, the flag the dashboard reads (recordPaperRecoveryHealth)
@@ -5437,7 +5437,7 @@ async function tryPaperRestore(tenant: `0x${string}`, smartAccount: `0x${string}
   if (!url) return { ok: true, line: null };
   let raw: DatabaseSync | null = null;
   try {
-    raw = new DatabaseSync(path.join(childHome(tenant), "merrymen.db"));
+    raw = new DatabaseSync(path.join(childHome(tenant), "agentcap.db"));
     const local = wrapSqlite(raw);
     await applyLedgerSchema(local);
     const shared = await makePgDb(url);
@@ -5489,7 +5489,7 @@ const sayResetOnce = (tenant: string, line: string): void => {
  * enforceLiveIntent, as the tenant's worker would read it. With it stood down,
  * a setting that does not switch live trading on proves nothing (held-reset.ts).
  */
-const liveConsentEnforced = (): boolean => (process.env.MERRYMEN_LIVE_INTENT_STAND_DOWN ?? "").trim() !== "1";
+const liveConsentEnforced = (): boolean => (process.env.AGENTCAP_LIVE_INTENT_STAND_DOWN ?? "").trim() !== "1";
 
 /** What honouring a held tenant's practice reset came to, for the hold's own bookkeeping. */
 interface HeldHonour {
@@ -5578,7 +5578,7 @@ async function heldResetsAsked(accounts: readonly string[]): Promise<Map<string,
  * hold process's own rule (botWillPoll), and so also the rule for whether a
  * held tenant claims its bot (claimGate).
  */
-function holderBotReady(settings: MerrymenSettings | null): boolean {
+function holderBotReady(settings: AgentCapSettings | null): boolean {
   return botWillPoll(settings);
 }
 
@@ -5630,7 +5630,7 @@ async function spawnHolder(
   tenant: `0x${string}`,
   smartAccount: `0x${string}`,
   reason: string,
-  settings: MerrymenSettings | null,
+  settings: AgentCapSettings | null,
   lease: TenantLease,
   honour: HeldHonour | null,
   registered?: string,
@@ -5707,7 +5707,7 @@ async function spawnHolder(
  * stored settings: in the Holder, and in restore-blocked.json, which the hold
  * process reads for every reply. Only on a change.
  */
-function keepResetOffer(held: Holder, settings: MerrymenSettings): void {
+function keepResetOffer(held: Holder, settings: AgentCapSettings): void {
   const resettable = settingsRefuseHeldReset(settings, liveConsentEnforced()) === null;
   if (resettable === held.resettable) return;
   held.resettable = resettable;
@@ -5748,7 +5748,7 @@ async function startHolderProcess(held: Holder): Promise<void> {
     holderProc = spawn(
       process.execPath,
       [`--max-old-space-size=${HOLDER_MAX_OLD_SPACE_MB}`, "--import", "tsx", HOLD_ENTRY],
-      { cwd: ROOT, env: { ...childEnv(tenant), ...(held.perpsSeat ? { MERRYMEN_PERPS_BOT_SEAT: "1", MERRYMEN_TG_GROUPS: "0" } : {}) }, stdio: ["ignore", "pipe", "pipe"] },
+      { cwd: ROOT, env: { ...childEnv(tenant), ...(held.perpsSeat ? { AGENTCAP_PERPS_BOT_SEAT: "1", AGENTCAP_TG_GROUPS: "0" } : {}) }, stdio: ["ignore", "pipe", "pipe"] },
     );
   } catch (error) {
     noteSpawnPressure(error);
@@ -5919,7 +5919,7 @@ function holdMayLeave(tenant: `0x${string}`): boolean {
  * TRY A HELD TENANT'S RESTORE AGAIN, and hand it back to trading if it takes.
  *
  * On reconcile's clock, once its wait is up (scheduleHoldRetry). The restore
- * runs against the home's merrymen.db while the hold process keeps answering
+ * runs against the home's agentcap.db while the hold process keeps answering
  * the bot; the hold process never opens that file.
  *
  * False when it did not try at all (holdMayLeave said no: a lease blip, a
@@ -6250,7 +6250,7 @@ function forgetHold(tenant: `0x${string}`): void {
 
 /** The fleet-wide tick, for a tenant whose own settings do not name one. */
 function envTickSeconds(): number {
-  const raw = Number(process.env.MERRYMEN_TICK_SECONDS);
+  const raw = Number(process.env.AGENTCAP_TICK_SECONDS);
   return Number.isFinite(raw) && raw > 0 ? raw : 60;
 }
 
@@ -6376,7 +6376,7 @@ async function retiredWorkerPass(
   tenant: string, lease: TenantLease, mirrorLedger: boolean, held: boolean, drainPass = false,
 ): Promise<"saved" | "more" | "retained"> {
   if (retirementMirrorForTest && mirrorLedger) return (await retirementMirrorForTest(tenant)) ? "saved" : "retained";
-  const file = path.join(childHome(tenant), "merrymen.db");
+  const file = path.join(childHome(tenant), "agentcap.db");
   const url = process.env.DATABASE_URL;
   // A file-only deployment keeps this home as its ledger. There is no shared
   // destination to copy to, and expiry never deletes the home.
@@ -6497,7 +6497,7 @@ async function retireExpiredGrants(
       // could erase the durable book. The hold marker survives a bot crash.
       const wasHeld = holders.has(lc) || readRestoreBlocked(childHome(lc)) !== null;
       retiringExpired.set(lc, {
-        mirror: children.has(lc) || exitingChildren.has(lc) || (!wasHeld && existsSync(path.join(childHome(lc), "merrymen.db"))),
+        mirror: children.has(lc) || exitingChildren.has(lc) || (!wasHeld && existsSync(path.join(childHome(lc), "agentcap.db"))),
         // A Perps worker has no memory ferry: it runs no bot (slice 6a's bot seat).
         memory: !isPerpsWorkerKey(lc) && (!!process.env.DATABASE_URL || retirementMemoryStoreForTest !== null) && existsSync(childHome(lc)),
         held: wasHeld,
@@ -6978,7 +6978,7 @@ async function honourKill(tenant: `0x${string}`, nowSec: number): Promise<KillOu
  * drain that read this list cannot carry it out.
  */
 function childHomeTenants(): `0x${string}`[] {
-  const dir = path.join(merrymenHome(), "children");
+  const dir = path.join(agentcapHome(), "children");
   let names: string[];
   try {
     names = readdirSync(dir);
@@ -7000,7 +7000,7 @@ function childHomeTenants(): `0x${string}`[] {
  * said, never passed over, as childHomeTenants says one in `children/`.
  */
 function perpsChildHomeKeys(): `0x${string}`[] {
-  const dir = path.join(merrymenHome(), PERPS_CHILDREN_DIR);
+  const dir = path.join(agentcapHome(), PERPS_CHILDREN_DIR);
   let names: string[];
   try {
     names = readdirSync(dir);
@@ -7032,7 +7032,7 @@ function perpsChildHomeKeys(): `0x${string}`[] {
  * caller here passes nothing and reads this process's own env, as before.
  */
 export function perpsSpawnable(env: Readonly<Record<string, string | undefined>> = process.env): boolean {
-  return perpsCeilingOf(env.MERRYMEN_PERPS) === "paper";
+  return perpsCeilingOf(env.AGENTCAP_PERPS) === "paper";
 }
 
 /** Stood-down Perps workers awaiting a complete final copy before their lease is released or another worker starts. */
@@ -7442,7 +7442,7 @@ function drainFleet(
     fleetGone: fleetProcessesGone,
     honourPendingKills,
     finalPass: drainFinalPass,
-    writeReceipt: (receipt) => writeShutdownReceipt(shutdownReceiptDir(merrymenHome()), receipt),
+    writeReceipt: (receipt) => writeShutdownReceipt(shutdownReceiptDir(agentcapHome()), receipt),
     // Last, and all at once: a restarting replica takes the tenants over now
     // rather than when our dropped connections time out server-side — every
     // lease nothing may still be writing under (drainReleasableLeases).
@@ -7574,7 +7574,7 @@ export async function reconcile(): Promise<void> {
    * an owner's kill revokes their Perps grant too (its Perps half), so a grant
    * it covered is gone from this listing rather than spawned a moment before.
    *
-   * READ WHATEVER MERRYMEN_PERPS SAYS, and wanted whatever it says: being
+   * READ WHATEVER AGENTCAP_PERPS SAYS, and wanted whatever it says: being
    * wanted is what keeps a Perps worker's home, book, lease and DM memory from
    * every cleanup and sweep below, and a flag that limits trading must never
    * delete anything. The flag decides only whether one SPAWNS (perpsSpawnable)
@@ -7618,7 +7618,7 @@ export async function reconcile(): Promise<void> {
     standDownHolder(tenant);
   }
   /**
-   * A PERPS WORKER WHILE MERRYMEN_PERPS IS NOT `paper`: stood down as a kill
+   * A PERPS WORKER WHILE AGENTCAP_PERPS IS NOT `paper`: stood down as a kill
    * stands one down, and kept. Its grant, home and book stay where they are,
    * wanted; its paper positions are frozen, unvalued and unprotected, exactly
    * as perps-kill.ts leaves a killed book, because the feed that would value
@@ -7654,7 +7654,7 @@ export async function reconcile(): Promise<void> {
       if (!perpsOff && !perpsYielded.has(key)) continue;
       if (children.has(key) || exitingChildren.has(key) || spawning.has(key) || restartPending.has(key)) continue;
       if (!lease.healthy()) continue;
-      if (existsSync(path.join(childHome(key), "merrymen.db")) && !(await mirrorRetiredWorker(key, lease, true, false))) continue;
+      if (existsSync(path.join(childHome(key), "agentcap.db")) && !(await mirrorRetiredWorker(key, lease, true, false))) continue;
       if (leases.get(key) !== lease) continue;
       await releaseLease(key);
       perpsYielded.delete(key);
@@ -7731,8 +7731,8 @@ export async function reconcile(): Promise<void> {
     const perpsLine = perps.keys.length === 0 && perps.readable ? null
       : `perps roster: ${perps.keys.length} Perps wallet${perps.keys.length === 1 ? "" : "s"}${perps.readable ? "" : " (store unreadable: kept as they are)"}, ` +
         (perpsMaySpawn ? `${eligibleToSpawn.length - activeCount - perpsHeld} unexpired may run` +
-          `${perpsHeld ? `, ${perpsHeld} held as ${perpsHeld === 1 ? "its owner is" : "their owners are"}` : ""} (MERRYMEN_PERPS=paper)`
-          : !perps.readable ? "none may start this pass" : "none may run (MERRYMEN_PERPS is not paper)");
+          `${perpsHeld ? `, ${perpsHeld} held as ${perpsHeld === 1 ? "its owner is" : "their owners are"}` : ""} (AGENTCAP_PERPS=paper)`
+          : !perps.readable ? "none may start this pass" : "none may run (AGENTCAP_PERPS is not paper)");
     if (perpsLine !== lastPerpsRosterLog.line || (perpsLine && Date.now() - lastPerpsRosterLog.at > 5 * 60_000)) {
       if (perpsLine) log(perpsLine);
       lastPerpsRosterLog = { line: perpsLine, at: Date.now() };
@@ -7753,14 +7753,14 @@ export async function reconcile(): Promise<void> {
   // next reconcile.
   let capacityDeferred = 0;
   // A RE-SIGNED TENANT THE CONTINUITY GATE HOLDS, previewed and — in the one
-  // safe case — approved by this process itself (MERRYMEN_RESUME_AUTO_PAPER;
+  // safe case — approved by this process itself (AGENTCAP_RESUME_AUTO_PAPER;
   // off, this returns at once). Before the pending set is read, so a tenant
   // approved here is archived and admitted by the spawn loop of this pass,
   // on the evidence its preview read moments ago. Removed tenants are not
   // watched: a kill above has taken them out of `wanted`.
   await autoAdmitResignedPaper(grantKeys.filter((g) => wanted.has(g.tenant)), eligible);
   await refreshResumePending();
-  // NEW TENANTS LAST, AND ONLY IN THE ROOM LEFT (MERRYMEN_ROLLOUT_NEW_TENANTS,
+  // NEW TENANTS LAST, AND ONLY IN THE ROOM LEFT (AGENTCAP_ROLLOUT_NEW_TENANTS,
   // new-tenant-admission.ts). With the route open, every tenant an explicit
   // list does not name (and the accounting hold does not) goes after every
   // tenant it does: recorded ones, which its record admits, and unproven
@@ -8235,7 +8235,7 @@ export async function reconcile(): Promise<void> {
       let cleared = scrubHostedGrantCache(home, current, { nowSec: Math.floor(Date.now() / 1000), writerAbsent: true, hosted: true }) ? 1 : 0;
       cleared += forgetTgGroupsHome(home, log);
       cleared += forgetPersonalMemoryHome(home, log);
-      if (existsSync(path.join(home, "merrymen.db"))) {
+      if (existsSync(path.join(home, "agentcap.db"))) {
         // Erase obsolete bot/config copies while preserving the original book
         // and all crash/consumption barriers. No raw ledger archive is made.
         for (const file of ["settings.json", "telegram.json", "telegram-held-groups.json", "heartbeat.json"])
@@ -9232,7 +9232,7 @@ async function fleetHealth(): Promise<void> {
 // operator most needs to see confirmed from outside, and the one in which the
 // log says least.
 //
-// AND ONLY IN THE LOOP: report-only (MERRYMEN_FLEET_RECOVERY_REPORT_ONLY=1)
+// AND ONLY IN THE LOOP: report-only (AGENTCAP_FLEET_RECOVERY_REPORT_ONLY=1)
 // returns into runRecoveryReportOnly before it, so that entry writes no row.
 // Left that way on purpose — it is the incident's minimal entry — and said in
 // fleet-heartbeat.ts, so a check does not page on the silence it causes.
@@ -9307,7 +9307,7 @@ export function writeOrchestratorHeartbeatForTest(create = true): Promise<boolea
  * the flag; and it must never be able to stop the fleet arming, hence the catch.
  */
 async function runAccountingDiagnosisIfAsked(): Promise<void> {
-  if ((process.env.MERRYMEN_ACCOUNTING_DIAGNOSE ?? "").trim() !== "1") return;
+  if ((process.env.AGENTCAP_ACCOUNTING_DIAGNOSE ?? "").trim() !== "1") return;
   const url = process.env.DATABASE_URL;
   if (!url) {
     log("accounting diagnosis asked for, but there is no DATABASE_URL");
@@ -9334,7 +9334,7 @@ async function runAccountingDiagnosisIfAsked(): Promise<void> {
 /**
  * WHERE THE GAS WENT, for one or more named accounts. READ ONLY.
  *
- * `MERRYMEN_GAS_AUDIT=0xabc,0xdef` (or `all`). Only SELECTs, and the module it
+ * `AGENTCAP_GAS_AUDIT=0xabc,0xdef` (or `all`). Only SELECTs, and the module it
  * calls has no database handle at all — it is handed rows and returns strings,
  * which is the same shape `accounting-preview` uses and for the same reason:
  * a reporting path that cannot write cannot be argued with.
@@ -9344,7 +9344,7 @@ async function runAccountingDiagnosisIfAsked(): Promise<void> {
  * writes ~200 lines a minute. A report that does not fit is not a report.
  */
 async function runGasAuditIfAsked(): Promise<void> {
-  const want = (process.env.MERRYMEN_GAS_AUDIT ?? "").trim();
+  const want = (process.env.AGENTCAP_GAS_AUDIT ?? "").trim();
   if (!want) return;
   const url = process.env.DATABASE_URL;
   if (!url) {
@@ -9413,12 +9413,12 @@ async function runGasAuditIfAsked(): Promise<void> {
 /**
  * WHICH AGENTS ARE WORTH SHADOWING. READ ONLY.
  *
- * `MERRYMEN_COHORT_VET=1`. Prints one block per agent so a cohort is chosen
+ * `AGENTCAP_COHORT_VET=1`. Prints one block per agent so a cohort is chosen
  * from evidence rather than from balances — see cohort-vetting.ts for why the
  * balance is the wrong signal.
  */
 async function runCohortVettingIfAsked(): Promise<void> {
-  if ((process.env.MERRYMEN_COHORT_VET ?? "").trim() !== "1") return;
+  if ((process.env.AGENTCAP_COHORT_VET ?? "").trim() !== "1") return;
   const url = process.env.DATABASE_URL;
   if (!url) {
     log("cohort vetting asked for, but there is no DATABASE_URL");
@@ -9524,7 +9524,7 @@ async function runCohortVettingIfAsked(): Promise<void> {
 }
 
 /**
- * THE SHADOW DATASET. READ ONLY. `MERRYMEN_BRAIN_DATASET=1`.
+ * THE SHADOW DATASET. READ ONLY. `AGENTCAP_BRAIN_DATASET=1`.
  *
  * Every field is already persisted; this is the only way to read it back.
  * Shared Postgres is private-network-only and `railway logs` is a 503-line
@@ -9532,7 +9532,7 @@ async function runCohortVettingIfAsked(): Promise<void> {
  * an afternoon is durable in the database and invisible to anyone looking.
  */
 async function runBrainDatasetIfAsked(): Promise<void> {
-  if ((process.env.MERRYMEN_BRAIN_DATASET ?? "").trim() !== "1") return;
+  if ((process.env.AGENTCAP_BRAIN_DATASET ?? "").trim() !== "1") return;
   const url = process.env.DATABASE_URL;
   if (!url) {
     log("brain dataset asked for, but there is no DATABASE_URL");
@@ -9578,7 +9578,7 @@ async function runBrainDatasetIfAsked(): Promise<void> {
 }
 
 /**
- * THE IDENTITY AUDIT. READ ONLY. `MERRYMEN_IDENTITY_AUDIT=1`.
+ * THE IDENTITY AUDIT. READ ONLY. `AGENTCAP_IDENTITY_AUDIT=1`.
  *
  * Runs before any uniqueness constraint is added, because a UNIQUE index over a
  * table that already violates it fails inside the store's lazy bootstrap — and
@@ -9594,10 +9594,10 @@ async function runBrainDatasetIfAsked(): Promise<void> {
  * This exists because an operator away from their machine has no shell — and
  * Railway's own dashboard, which sets these variables, works from a phone.
  *
- * THREE KEYS, DELIBERATELY. `MERRYMEN_ANNOUNCE_ID` arms a DRY RUN, which resolves
+ * THREE KEYS, DELIBERATELY. `AGENTCAP_ANNOUNCE_ID` arms a DRY RUN, which resolves
  * every recipient, builds every message and contacts Telegram zero times.
- * Sending additionally requires `MERRYMEN_ANNOUNCE_CONFIRM` to equal that same
- * id AND `MERRYMEN_ANNOUNCE_BODY_SHA256` to equal the dry-run payload digest.
+ * Sending additionally requires `AGENTCAP_ANNOUNCE_CONFIRM` to equal that same
+ * id AND `AGENTCAP_ANNOUNCE_BODY_SHA256` to equal the dry-run payload digest.
  * A changed file cannot turn an earlier approval into a different message.
  *
  * SAFE TO LEAVE SET. This runs on the reconcile loop and Railway restarts
@@ -9618,8 +9618,8 @@ async function runBrainDatasetIfAsked(): Promise<void> {
  * TWO STEPS, OPERATOR-DRIVEN, because this writes settings on other people's
  * agents and the report is the only chance to notice it is wrong:
  *
- *   MERRYMEN_BACKFILL_LIVE_INTENT=report   read, decide, print, write nothing
- *   MERRYMEN_BACKFILL_LIVE_INTENT=apply    the same, then write the grants
+ *   AGENTCAP_BACKFILL_LIVE_INTENT=report   read, decide, print, write nothing
+ *   AGENTCAP_BACKFILL_LIVE_INTENT=apply    the same, then write the grants
  *
  * Idempotent either way: once applied, every tenant it touched carries the
  * field explicitly and the next plan is empty.
@@ -9631,7 +9631,7 @@ let hwmRepairRan = false;
 /**
  * WHAT THE FLEET'S HIGH-WATER MARKS SHOULD BE, AND WHY. REPORT ONLY.
  *
- * `MERRYMEN_REPAIR_HWM=report` prints one plan per tenant and writes nothing.
+ * `AGENTCAP_REPAIR_HWM=report` prints one plan per tenant and writes nothing.
  * There is deliberately no apply path in this commit: the figures it proposes
  * are what the drawdown breaker divides by and what the performance fee is
  * measured against, and a tool that could write them the moment it was armed is
@@ -9650,7 +9650,7 @@ let hwmRepairRan = false;
  * nothing, so summing cannot double-count them.
  */
 async function runHwmRepairIfAsked(): Promise<void> {
-  const mode = (process.env.MERRYMEN_REPAIR_HWM ?? "").trim().toLowerCase();
+  const mode = (process.env.AGENTCAP_REPAIR_HWM ?? "").trim().toLowerCase();
   if (!mode) return;
   if (hwmRepairRan) return;
   hwmRepairRan = true;
@@ -9658,7 +9658,7 @@ async function runHwmRepairIfAsked(): Promise<void> {
   if (mode !== "report" && mode !== "apply") {
     // NAMED, NOT ASSUMED. A typo must be told plainly rather than read as
     // `report` — or worse, as `apply`.
-    log(`hwm| MERRYMEN_REPAIR_HWM=${mode} is not a mode. Use "report" or "apply"; nothing was done.`);
+    log(`hwm| AGENTCAP_REPAIR_HWM=${mode} is not a mode. Use "report" or "apply"; nothing was done.`);
     return;
   }
   const applying = mode === "apply";
@@ -9666,16 +9666,16 @@ async function runHwmRepairIfAsked(): Promise<void> {
   // only its entries starting with 0x, so a value naming none (a Solana id, a
   // typo, a lone comma) came out empty and passed the check below, and an
   // empty scope is the whole roster: an apply to every tenant.
-  const hwmOnly = fleetIdScope("MERRYMEN_REPAIR_HWM_ONLY", process.env.MERRYMEN_REPAIR_HWM_ONLY);
+  const hwmOnly = fleetIdScope("AGENTCAP_REPAIR_HWM_ONLY", process.env.AGENTCAP_REPAIR_HWM_ONLY);
   if ("refused" in hwmOnly) { log(`hwm| ${hwmOnly.refused}; nothing was done`); return; }
-  const hwmPhantom = fleetIdScope("MERRYMEN_REPAIR_HWM_PHANTOM_PROFIT", process.env.MERRYMEN_REPAIR_HWM_PHANTOM_PROFIT);
+  const hwmPhantom = fleetIdScope("AGENTCAP_REPAIR_HWM_PHANTOM_PROFIT", process.env.AGENTCAP_REPAIR_HWM_PHANTOM_PROFIT);
   if ("refused" in hwmPhantom) { log(`hwm| ${hwmPhantom.refused}; nothing was done`); return; }
   // A FLEET-WIDE APPLY IS NOT A THING. Every write here moves the figure the
   // drawdown breaker divides by and the performance fee is measured against, so
   // it happens to tenants somebody named, one at a time, having read their
   // numbers. `report` may sweep the fleet; `apply` may not.
   if (applying && hwmOnly.ids.size === 0) {
-    log("hwm| REFUSING to apply without MERRYMEN_REPAIR_HWM_ONLY — name the tenants explicitly");
+    log("hwm| REFUSING to apply without AGENTCAP_REPAIR_HWM_ONLY — name the tenants explicitly");
     return;
   }
   const url = process.env.DATABASE_URL;
@@ -9788,7 +9788,7 @@ async function runHwmRepairIfAsked(): Promise<void> {
     roster.push(...scoped);
 
     // ── the chain, full history, accounts AND their vaults ───────────────
-    const rpcUrl = process.env.MERRYMEN_RPC_MAINNET ?? "https://rpc.mainnet.chain.robinhood.com";
+    const rpcUrl = process.env.AGENTCAP_RPC_MAINNET ?? "https://rpc.mainnet.chain.robinhood.com";
     let rpcId = 1;
     const rpc = async (method: string, params: unknown[]): Promise<unknown> => {
       const r = await fetch(rpcUrl, {
@@ -9816,7 +9816,7 @@ async function runHwmRepairIfAsked(): Promise<void> {
       // (capital that left the book, which the worker lowered the peak for)
       // rather than a trade — otherwise the derived peak is too high by every
       // purchase and this repair is a no-op exactly when one went unbooked.
-      reserveTokens: energyReserveTokens(Number(process.env.MERRYMEN_CHAIN_ID ?? 4663)),
+      reserveTokens: energyReserveTokens(Number(process.env.AGENTCAP_CHAIN_ID ?? 4663)),
       log: (m) => log(`hwm| ${m}`),
     });
 
@@ -9892,7 +9892,7 @@ async function runHwmRepairIfAsked(): Promise<void> {
     for (const line of repairLines(plans)) log(`hwm| ${line}`);
 
     if (!applying) {
-      log("hwm| REPORT ONLY — nothing was written. Remove MERRYMEN_REPAIR_HWM now.");
+      log("hwm| REPORT ONLY — nothing was written. Remove AGENTCAP_REPAIR_HWM now.");
       return;
     }
 
@@ -9982,7 +9982,7 @@ async function runHwmRepairIfAsked(): Promise<void> {
       );
       log(`hwm| ${plan.facts.tenant} evidence: ${t.evidence}`);
     }
-    log("hwm| APPLY COMPLETE. Remove MERRYMEN_REPAIR_HWM now.");
+    log("hwm| APPLY COMPLETE. Remove AGENTCAP_REPAIR_HWM now.");
   } catch (e) {
     log(`hwm| FAILED — ${e instanceof Error ? e.message : String(e)}`);
   }
@@ -9997,7 +9997,7 @@ let resumeClassEntriesRan = false;
  * and that nothing an exit depends on moved while they did.
  */
 async function runResumeClassEntriesIfAsked(): Promise<void> {
-  const target = fleetIdTarget("MERRYMEN_RESUME_CLASS_ENTRIES_FOR", process.env.MERRYMEN_RESUME_CLASS_ENTRIES_FOR);
+  const target = fleetIdTarget("AGENTCAP_RESUME_CLASS_ENTRIES_FOR", process.env.AGENTCAP_RESUME_CLASS_ENTRIES_FOR);
   if (!target) return;
   if (resumeClassEntriesRan) return;
   resumeClassEntriesRan = true;
@@ -10026,7 +10026,7 @@ async function runResumeClassEntriesIfAsked(): Promise<void> {
         ? `resume-entries: every exit setting preserved (${HALT_MUST_PRESERVE.join(", ")})`
         : `resume-entries: *** ${moved.join(", ")} CHANGED ***`,
     );
-    log("resume-entries: remove MERRYMEN_RESUME_CLASS_ENTRIES_FOR now.");
+    log("resume-entries: remove AGENTCAP_RESUME_CLASS_ENTRIES_FOR now.");
   } catch (e) {
     log(`resume-entries: FAILED — ${e instanceof Error ? e.message : String(e)}`);
   }
@@ -10039,8 +10039,8 @@ let cashRowRepairRan = false;
 /**
  * BOOK THE RESULT OF CLASS ROUND TRIPS THAT COMPLETED WITHOUT ONE.
  *
- * `MERRYMEN_REPAIR_CLASS_PNL=report` prints and writes nothing; `apply` writes,
- * and refuses without `MERRYMEN_REPAIR_CLASS_PNL_ONLY` naming the tenants. Same
+ * `AGENTCAP_REPAIR_CLASS_PNL=report` prints and writes nothing; `apply` writes,
+ * and refuses without `AGENTCAP_REPAIR_CLASS_PNL_ONLY` naming the tenants. Same
  * shape as the high-water-mark repair beside it, for the same reason: every
  * write here lands on a figure an owner reads as their result.
  *
@@ -10061,26 +10061,26 @@ let cashRowRepairRan = false;
  * `curve-trade` row carries that hash.
  */
 async function runClassPnlRepairIfAsked(): Promise<void> {
-  const mode = (process.env.MERRYMEN_REPAIR_CLASS_PNL ?? "").trim().toLowerCase();
+  const mode = (process.env.AGENTCAP_REPAIR_CLASS_PNL ?? "").trim().toLowerCase();
   if (!mode) return;
   if (classPnlRepairRan) return;
   classPnlRepairRan = true;
 
   if (mode !== "report" && mode !== "apply") {
-    log(`class-pnl| MERRYMEN_REPAIR_CLASS_PNL=${mode} is not a mode. Use "report" or "apply".`);
+    log(`class-pnl| AGENTCAP_REPAIR_CLASS_PNL=${mode} is not a mode. Use "report" or "apply".`);
     return;
   }
   const applying = mode === "apply";
   // Read whole (fleet-id.ts): an entry that is not 0x refuses the run, where
   // it used to be dropped and, alone, leave a report of the whole fleet.
-  const scope = fleetIdScope("MERRYMEN_REPAIR_CLASS_PNL_ONLY", process.env.MERRYMEN_REPAIR_CLASS_PNL_ONLY);
+  const scope = fleetIdScope("AGENTCAP_REPAIR_CLASS_PNL_ONLY", process.env.AGENTCAP_REPAIR_CLASS_PNL_ONLY);
   if ("refused" in scope) {
     log(`class-pnl| ${scope.refused}; nothing was done`);
     return;
   }
   const only = new Set<string>(scope.ids);
   if (applying && only.size === 0) {
-    log("class-pnl| REFUSING to apply without MERRYMEN_REPAIR_CLASS_PNL_ONLY — name the tenants");
+    log("class-pnl| REFUSING to apply without AGENTCAP_REPAIR_CLASS_PNL_ONLY — name the tenants");
     return;
   }
   const url = process.env.DATABASE_URL;
@@ -10095,7 +10095,7 @@ async function runClassPnlRepairIfAsked(): Promise<void> {
     const shared = await makePgDb(url);
     await applyLedgerSchema(shared);
 
-    const rpcUrl = process.env.MERRYMEN_RPC_MAINNET ?? "https://rpc.mainnet.chain.robinhood.com";
+    const rpcUrl = process.env.AGENTCAP_RPC_MAINNET ?? "https://rpc.mainnet.chain.robinhood.com";
     let rpcId = 1;
     const rpc = async (method: string, params: unknown[]): Promise<unknown> => {
       const r = await fetch(rpcUrl, {
@@ -10205,7 +10205,7 @@ async function runClassPnlRepairIfAsked(): Promise<void> {
     for (const line of classPnlRepairLines(plans)) log(`class-pnl| ${line}`);
 
     if (!applying) {
-      log("class-pnl| REPORT ONLY — nothing was written. Remove MERRYMEN_REPAIR_CLASS_PNL now.");
+      log("class-pnl| REPORT ONLY — nothing was written. Remove AGENTCAP_REPAIR_CLASS_PNL now.");
       return;
     }
 
@@ -10292,7 +10292,7 @@ async function runClassPnlRepairIfAsked(): Promise<void> {
             `${after.length} row(s), wanted ${realized.toFixed(6)} ***`,
       );
     }
-    log("class-pnl| APPLY COMPLETE. Remove MERRYMEN_REPAIR_CLASS_PNL now.");
+    log("class-pnl| APPLY COMPLETE. Remove AGENTCAP_REPAIR_CLASS_PNL now.");
   } catch (e) {
     log(`class-pnl| FAILED — ${e instanceof Error ? e.message : String(e)}`);
   }
@@ -10311,7 +10311,7 @@ async function runClassPnlRepairIfAsked(): Promise<void> {
  * owner chose. Remove the variable as soon as the write is confirmed.
  */
 async function runEnableClassIfAsked(): Promise<void> {
-  const target = fleetIdTarget("MERRYMEN_ENABLE_CLASS_FOR", process.env.MERRYMEN_ENABLE_CLASS_FOR);
+  const target = fleetIdTarget("AGENTCAP_ENABLE_CLASS_FOR", process.env.AGENTCAP_ENABLE_CLASS_FOR);
   if (!target) return;
   if (enableClassRan) return;
   enableClassRan = true;
@@ -10337,9 +10337,9 @@ async function runEnableClassIfAsked(): Promise<void> {
     // WHICH CONFIGURATION. Named per tenant rather than one set for everyone:
     // the numbers were agreed per owner, and `scoutBudgetUsdg` differs between
     // them for a reason a shared constant would quietly erase.
-    const preset = (process.env.MERRYMEN_ENABLE_CLASS_PRESET ?? "canary").trim().toLowerCase();
+    const preset = (process.env.AGENTCAP_ENABLE_CLASS_PRESET ?? "canary").trim().toLowerCase();
     if (preset !== "canary" && preset !== "dave") {
-      log(`enable-class: MERRYMEN_ENABLE_CLASS_PRESET=${preset} is not a preset. Use "canary" or "dave".`);
+      log(`enable-class: AGENTCAP_ENABLE_CLASS_PRESET=${preset} is not a preset. Use "canary" or "dave".`);
       return;
     }
     const values = preset === "dave" ? DAVE_CLASS : CANARY;
@@ -10394,7 +10394,7 @@ async function runEnableClassIfAsked(): Promise<void> {
       ].filter((f): f is string => typeof f === "string" && /^0x[0-9a-fA-F]{40}$/.test(f));
       if (acct && candidates.length > 0) {
         const { createPublicClient, http } = await import("viem");
-        const rpcUrl = process.env.MERRYMEN_RPC_MAINNET ?? "https://rpc.mainnet.chain.robinhood.com";
+        const rpcUrl = process.env.AGENTCAP_RPC_MAINNET ?? "https://rpc.mainnet.chain.robinhood.com";
         const c = createPublicClient({ transport: http(rpcUrl) });
         for (const factory of candidates) {
           let answered: string;
@@ -10453,7 +10453,7 @@ async function runEnableClassIfAsked(): Promise<void> {
         ? `enable-class: WROTE and verified all ${Object.keys(values).length} fields for ${want}`
         : `enable-class: *** VERIFY FAILED — ${wrong.map(([k]) => k).join(", ")} did not stick ***`,
     );
-    log("enable-class: remove MERRYMEN_ENABLE_CLASS_FOR now.");
+    log("enable-class: remove AGENTCAP_ENABLE_CLASS_FOR now.");
   } catch (e) {
     log(`enable-class: FAILED — ${e instanceof Error ? e.message : String(e)}`);
   }
@@ -10478,7 +10478,7 @@ async function runEnableClassIfAsked(): Promise<void> {
  * writes the whole blob, so a naive write erases every setting the owner chose.
  */
 async function runHaltClassEntriesIfAsked(): Promise<void> {
-  const target = fleetIdTarget("MERRYMEN_HALT_CLASS_ENTRIES_FOR", process.env.MERRYMEN_HALT_CLASS_ENTRIES_FOR);
+  const target = fleetIdTarget("AGENTCAP_HALT_CLASS_ENTRIES_FOR", process.env.AGENTCAP_HALT_CLASS_ENTRIES_FOR);
   if (!target) return;
   if (haltClassEntriesRan) return;
   haltClassEntriesRan = true;
@@ -10526,7 +10526,7 @@ async function runHaltClassEntriesIfAsked(): Promise<void> {
         ? `halt-entries: every exit setting preserved (${HALT_MUST_PRESERVE.join(", ")})`
         : `halt-entries: *** ${moved.join(", ")} CHANGED — the exit path may be affected ***`,
     );
-    log("halt-entries: remove MERRYMEN_HALT_CLASS_ENTRIES_FOR now.");
+    log("halt-entries: remove AGENTCAP_HALT_CLASS_ENTRIES_FOR now.");
   } catch (e) {
     log(`halt-entries: FAILED — ${e instanceof Error ? e.message : String(e)}`);
   }
@@ -10562,18 +10562,18 @@ async function runHaltClassEntriesIfAsked(): Promise<void> {
  * for the four clauses and why each one is required.
  */
 async function runCashRowRepairIfAsked(): Promise<void> {
-  const mode = (process.env.MERRYMEN_REPAIR_CLASS_CASH_ROW ?? "").trim().toLowerCase();
+  const mode = (process.env.AGENTCAP_REPAIR_CLASS_CASH_ROW ?? "").trim().toLowerCase();
   if (!mode) return;
   if (cashRowRepairRan) return;
   cashRowRepairRan = true;
 
   if (mode !== "report" && mode !== "apply") {
-    log(`class-cash-row: MERRYMEN_REPAIR_CLASS_CASH_ROW=${mode} is not a mode. Use "report" or "apply".`);
+    log(`class-cash-row: AGENTCAP_REPAIR_CLASS_CASH_ROW=${mode} is not a mode. Use "report" or "apply".`);
     return;
   }
   const applying = mode === "apply";
   // Read whole (fleet-id.ts), as the class-pnl repair's scope is.
-  const scope = fleetIdScope("MERRYMEN_REPAIR_CLASS_CASH_ROW_ONLY", process.env.MERRYMEN_REPAIR_CLASS_CASH_ROW_ONLY);
+  const scope = fleetIdScope("AGENTCAP_REPAIR_CLASS_CASH_ROW_ONLY", process.env.AGENTCAP_REPAIR_CLASS_CASH_ROW_ONLY);
   if ("refused" in scope) {
     log(`class-cash-row: ${scope.refused}; nothing was done`);
     return;
@@ -10582,7 +10582,7 @@ async function runCashRowRepairIfAsked(): Promise<void> {
   // NO FLEET APPLY. A tool that can delete rows for every owner at once is a
   // different and much larger thing to leave armed by accident.
   if (applying && only.size === 0) {
-    log("class-cash-row: REFUSING to apply without MERRYMEN_REPAIR_CLASS_CASH_ROW_ONLY — name the tenant");
+    log("class-cash-row: REFUSING to apply without AGENTCAP_REPAIR_CLASS_CASH_ROW_ONLY — name the tenant");
     return;
   }
   const url = process.env.DATABASE_URL;
@@ -10662,7 +10662,7 @@ async function runCashRowRepairIfAsked(): Promise<void> {
 }
 
 async function runTenantInspectIfAsked(): Promise<void> {
-  const target = fleetIdTarget("MERRYMEN_INSPECT_TENANT", process.env.MERRYMEN_INSPECT_TENANT);
+  const target = fleetIdTarget("AGENTCAP_INSPECT_TENANT", process.env.AGENTCAP_INSPECT_TENANT);
   if (!target) return;
   if (tenantInspectRan) return;
   tenantInspectRan = true;
@@ -10995,8 +10995,8 @@ async function runTenantInspectIfAsked(): Promise<void> {
         // variable governs every read this process makes.
         const rpcUrl =
           (chainId === 4663
-            ? process.env.MERRYMEN_RPC_MAINNET
-            : process.env.MERRYMEN_RPC_TESTNET) ?? "https://rpc.mainnet.chain.robinhood.com";
+            ? process.env.AGENTCAP_RPC_MAINNET
+            : process.env.AGENTCAP_RPC_TESTNET) ?? "https://rpc.mainnet.chain.robinhood.com";
         const client2 = createPublicClient({ transport: http(rpcUrl) });
         derivedClassVault = (await client2.readContract({
           // The shared ABI rather than an inline literal, so the selector a
@@ -11106,7 +11106,7 @@ async function runTenantInspectIfAsked(): Promise<void> {
       }))
         log(`inspect: ${line}`);
     }
-    log("inspect: READ ONLY — nothing was written. Remove MERRYMEN_INSPECT_TENANT now.");
+    log("inspect: READ ONLY — nothing was written. Remove AGENTCAP_INSPECT_TENANT now.");
   } catch (e) {
     log(`inspect: FAILED — ${e instanceof Error ? e.message : String(e)}`);
   }
@@ -11147,7 +11147,7 @@ async function runHolderClaimsBackfill(): Promise<void> {
   // It claims wallets for every tenant at once, held ones included: only once
   // the rollout admits the whole fleet (fleet-rollout.ts). An admitted child
   // meanwhile reads its login wallet, which can only cost it a perk it owns,
-  // never grant it one it does not (see MERRYMEN_HOLDER_ADDRESS).
+  // never grant it one it does not (see AGENTCAP_HOLDER_ADDRESS).
   if (!rolloutAdmitsWholeFleet()) return;
   let lease: TenantLease | null;
   try {
@@ -11179,7 +11179,7 @@ async function runHolderClaimsBackfill(): Promise<void> {
 }
 
 async function runLiveIntentBackfillIfAsked(): Promise<void> {
-  const mode = (process.env.MERRYMEN_BACKFILL_LIVE_INTENT ?? "").trim();
+  const mode = (process.env.AGENTCAP_BACKFILL_LIVE_INTENT ?? "").trim();
   if (mode !== "report" && mode !== "apply") return;
   // ONCE PER PROCESS. It moved ahead of `reconcile()` so the apply lands before
   // any child reads settings, and that put it on every pass rather than the
@@ -11260,15 +11260,15 @@ async function runLiveIntentBackfillIfAsked(): Promise<void> {
 }
 
 async function runAnnouncementIfAsked(): Promise<void> {
-  const id = (process.env.MERRYMEN_ANNOUNCE_ID ?? "").trim();
+  const id = (process.env.AGENTCAP_ANNOUNCE_ID ?? "").trim();
   if (!id) return;
   const url = process.env.DATABASE_URL;
   if (!url) {
     log("announcement asked for, but there is no DATABASE_URL");
     return;
   }
-  if (!process.env.MERRYMEN_STORE_DEK) {
-    log("announcement asked for, but there is no MERRYMEN_STORE_DEK — bot tokens are sealed");
+  if (!process.env.AGENTCAP_STORE_DEK) {
+    log("announcement asked for, but there is no AGENTCAP_STORE_DEK — bot tokens are sealed");
     return;
   }
   try {
@@ -11326,8 +11326,8 @@ async function runAnnouncementIfAsked(): Promise<void> {
     try {
       const payload = perAgent ? JSON.stringify(Object.entries(bodies).sort(([a], [b]) => a.localeCompare(b))) : body;
       const { confirmed, bodySha256 } = announcementConfirmation(
-        id, payload, (process.env.MERRYMEN_ANNOUNCE_CONFIRM ?? "").trim(),
-        (process.env.MERRYMEN_ANNOUNCE_BODY_SHA256 ?? "").trim(),
+        id, payload, (process.env.AGENTCAP_ANNOUNCE_CONFIRM ?? "").trim(),
+        (process.env.AGENTCAP_ANNOUNCE_BODY_SHA256 ?? "").trim(),
       );
       log(`announcement ${id}: payload SHA-256 ${bodySha256} — confirm this exact digest before sending`);
       const out = await runAnnouncement({
@@ -11368,7 +11368,7 @@ async function runAnnouncementIfAsked(): Promise<void> {
       // Reasons without recipients: enough to act on, never enough to identify
       // anyone or reconstruct a credential.
       for (const [reason, n] of tally) log(`announcement ${id}:   ${n}× ${reason}`);
-      if (out.dryRun) log(`announcement ${id}: to send, set MERRYMEN_ANNOUNCE_CONFIRM=${id} and MERRYMEN_ANNOUNCE_BODY_SHA256=${bodySha256}`);
+      if (out.dryRun) log(`announcement ${id}: to send, set AGENTCAP_ANNOUNCE_CONFIRM=${id} and AGENTCAP_ANNOUNCE_BODY_SHA256=${bodySha256}`);
     } finally {
       await client.end();
     }
@@ -11379,19 +11379,19 @@ async function runAnnouncementIfAsked(): Promise<void> {
   }
 }
 
-/** One Shogun-approved Merrymen room, dry-run unless campaign and exact chat id are confirmed. */
+/** One Shogun-approved AgentCap room, dry-run unless campaign and exact chat id are confirmed. */
 async function runTgGroupRecoveryNoticeIfAsked(): Promise<void> {
-  const id = (process.env.MERRYMEN_TG_RECOVERY_ID ?? "").trim();
+  const id = (process.env.AGENTCAP_TG_RECOVERY_ID ?? "").trim();
   if (!id) return;
   if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(id)) {
     log("tg recovery notice: invalid campaign id — refusing");
     return;
   }
-  if (!process.env.DATABASE_URL || !process.env.MERRYMEN_STORE_DEK) {
+  if (!process.env.DATABASE_URL || !process.env.AGENTCAP_STORE_DEK) {
     log("tg recovery notice: hosted database or store key missing — refusing");
     return;
   }
-  const rawChatId = (process.env.MERRYMEN_TG_RECOVERY_CHAT_ID ?? "").trim();
+  const rawChatId = (process.env.AGENTCAP_TG_RECOVERY_CHAT_ID ?? "").trim();
   if (rawChatId && !/^-\d+$/.test(rawChatId)) {
     log("tg recovery notice: chat id is not an exact negative number — refusing");
     return;
@@ -11418,18 +11418,18 @@ async function runTgGroupRecoveryNoticeIfAsked(): Promise<void> {
     try {
       const out = await runTgGroupRecoveryNotice({
         client, campaignId: id, body, selectedChatId: chatId,
-        confirmCampaignId: (process.env.MERRYMEN_TG_RECOVERY_CONFIRM ?? "").trim(),
-        confirmBodySha256: (process.env.MERRYMEN_TG_RECOVERY_BODY_SHA256 ?? "").trim(),
+        confirmCampaignId: (process.env.AGENTCAP_TG_RECOVERY_CONFIRM ?? "").trim(),
+        confirmBodySha256: (process.env.AGENTCAP_TG_RECOVERY_BODY_SHA256 ?? "").trim(),
       });
       // Approved metadata only: the sealed state also holds private chat
       // history, which the notice path never returns or logs.
-      log(`tg recovery notice ${id}: ${out.status}${out.dryRun ? " (DRY RUN — nothing sent)" : ""} · ${out.rooms.length} approved Merrymen room(s)`);
+      log(`tg recovery notice ${id}: ${out.status}${out.dryRun ? " (DRY RUN — nothing sent)" : ""} · ${out.rooms.length} approved AgentCap room(s)`);
       log(`tg recovery notice ${id}: prepared body SHA-256 ${out.bodySha256}`);
       for (const room of out.rooms) log(`tg recovery notice ${id}: candidate chat ${room.chatId} · ${room.title} · ${room.kind}${room.isForum ? " · forum" : ""}`);
       if (out.reason) log(`tg recovery notice ${id}: ${out.reason}`);
       if (out.dryRun) {
         for (const line of out.body.split("\n")) log(`tg recovery notice ${id}: prepared | ${line}`);
-        log(`tg recovery notice ${id}: to send, set MERRYMEN_TG_RECOVERY_CHAT_ID to exactly one candidate id, MERRYMEN_TG_RECOVERY_CONFIRM=${id}, and MERRYMEN_TG_RECOVERY_BODY_SHA256=${out.bodySha256}`);
+        log(`tg recovery notice ${id}: to send, set AGENTCAP_TG_RECOVERY_CHAT_ID to exactly one candidate id, AGENTCAP_TG_RECOVERY_CONFIRM=${id}, and AGENTCAP_TG_RECOVERY_BODY_SHA256=${out.bodySha256}`);
       }
     } finally {
       await client.end();
@@ -11442,7 +11442,7 @@ async function runTgGroupRecoveryNoticeIfAsked(): Promise<void> {
 }
 
 async function runIdentityAuditIfAsked(): Promise<void> {
-  if ((process.env.MERRYMEN_IDENTITY_AUDIT ?? "").trim() !== "1") return;
+  if ((process.env.AGENTCAP_IDENTITY_AUDIT ?? "").trim() !== "1") return;
   const url = process.env.DATABASE_URL;
   if (!url) {
     log("identity audit asked for, but there is no DATABASE_URL");
@@ -11534,7 +11534,7 @@ async function runReceiptAttestationIfAsked(): Promise<void> {
   // it while the database and read path are prepared (retireExpiredGrants).
   maintenanceLeases.set(tenant, lease);
   try {
-    const shared = await makePgDb(process.env.DATABASE_URL), rpcUrl = process.env.MERRYMEN_RPC_MAINNET ?? "https://rpc.mainnet.chain.robinhood.com";
+    const shared = await makePgDb(process.env.DATABASE_URL), rpcUrl = process.env.AGENTCAP_RPC_MAINNET ?? "https://rpc.mainnet.chain.robinhood.com";
     // The fleet's read path, failed over as the reconstruction's is (rpc-meter.ts
     // chainReadRpc): any error still refuses the attestation, a spent house
     // quota no longer does by itself.
@@ -11550,11 +11550,11 @@ async function runReceiptAttestationIfAsked(): Promise<void> {
 }
 
 async function runReconstructionDryRunIfAsked(): Promise<void> {
-  if ((process.env.MERRYMEN_ACCOUNTING_RECONSTRUCT ?? "").trim() !== "1") return;
+  if ((process.env.AGENTCAP_ACCOUNTING_RECONSTRUCT ?? "").trim() !== "1") return;
   // The repair's account scope, read whole before anything (fleet-id.ts). An
   // entry that is not 0x used to be dropped, and alone left a scan, and a
   // preview, of every account.
-  const accountScope = fleetIdScope("MERRYMEN_REPAIR_ACCOUNT", process.env.MERRYMEN_REPAIR_ACCOUNT);
+  const accountScope = fleetIdScope("AGENTCAP_REPAIR_ACCOUNT", process.env.AGENTCAP_REPAIR_ACCOUNT);
   if ("refused" in accountScope) {
     log(`recon| ${accountScope.refused}; nothing was scanned or repaired`);
     return;
@@ -11660,7 +11660,7 @@ async function runReconstructionDryRunIfAsked(): Promise<void> {
 
     // SCAN ONLY WHAT IS BEING REPAIRED.
     //
-    // A scoped run — MERRYMEN_REPAIR_ACCOUNT naming one account — was still
+    // A scoped run — AGENTCAP_REPAIR_ACCOUNT naming one account — was still
     // sweeping the chain for all 24, which is both pointless and actively
     // harmful: the sweep shares an RPC with 24 live children, and the extra
     // load is what earns the rate limits that mark coverage short. The canary's
@@ -11678,7 +11678,7 @@ async function runReconstructionDryRunIfAsked(): Promise<void> {
     const allAccounts = agents.map((a) => String(a.smart_account)).filter((a) => a.startsWith("0x"));
     const accounts = scopeTo.size ? allAccounts.filter((a) => scopeTo.has(a.toLowerCase())) : allAccounts;
     if (scopeTo.size && accounts.length === 0) {
-      log("recon| MERRYMEN_REPAIR_ACCOUNT matches no account in the roster — nothing to scan");
+      log("recon| AGENTCAP_REPAIR_ACCOUNT matches no account in the roster — nothing to scan");
     }
     if (scopeTo.size > accounts.length) {
       // LOUD. A named account that is not in the roster will silently do
@@ -11694,7 +11694,7 @@ async function runReconstructionDryRunIfAsked(): Promise<void> {
     // RPC — where the children's own reads fail over — served the same logs.
     // Mainnet's chain object, because that is the endpoint this variable
     // names; the generous timeout is for one eth_getLogs over all of history.
-    const rpcUrl = process.env.MERRYMEN_RPC_MAINNET ?? "https://rpc.mainnet.chain.robinhood.com";
+    const rpcUrl = process.env.AGENTCAP_RPC_MAINNET ?? "https://rpc.mainnet.chain.robinhood.com";
     const rpc = chainReadRpc(rpcUrl, robinhoodChain, { label: "recon", timeoutMs: 60_000 });
 
     const usdgToken = String(CASH.USDG);
@@ -11727,7 +11727,7 @@ async function runReconstructionDryRunIfAsked(): Promise<void> {
       // The energy reserve, so an energy purchase is proposed as the
       // 'energy-buy' capital-out the worker books (and collides with it by
       // identity) rather than dropped as a trade. See accounting-reconstruction.
-      reserveTokens: energyReserveTokens(Number(process.env.MERRYMEN_CHAIN_ID ?? 4663)),
+      reserveTokens: energyReserveTokens(Number(process.env.AGENTCAP_CHAIN_ID ?? 4663)),
       log: (m) => log(`recon| ${m}`),
     });
 
@@ -11784,7 +11784,7 @@ async function runRepairIfAsked(shared: Db, plans: readonly AccountPlan[]): Prom
   // not 0x is refused here, whole, before the preview (fleet-id.ts): dropped,
   // it would leave a commit short of an account somebody named, or alone, a
   // preview of every account.
-  const named = fleetIdScope("MERRYMEN_REPAIR_ACCOUNT", process.env.MERRYMEN_REPAIR_ACCOUNT);
+  const named = fleetIdScope("AGENTCAP_REPAIR_ACCOUNT", process.env.AGENTCAP_REPAIR_ACCOUNT);
   if ("refused" in named) {
     log(`repair| refusing: ${named.refused}`);
     return;
@@ -11812,7 +11812,7 @@ async function runRepairIfAsked(shared: Db, plans: readonly AccountPlan[]): Prom
     // The accounts being mutated are always named. runRepair refuses this too;
     // saying it here as well means the log shows WHY nothing happened rather
     // than just showing nothing happening.
-    log("repair| refusing a commit with no named accounts — set MERRYMEN_REPAIR_ACCOUNT");
+    log("repair| refusing a commit with no named accounts — set AGENTCAP_REPAIR_ACCOUNT");
     return;
   }
 
@@ -11828,7 +11828,7 @@ async function runRepairIfAsked(shared: Db, plans: readonly AccountPlan[]): Prom
     return;
   }
 
-  const chainId = Number(process.env.MERRYMEN_CHAIN_ID ?? 4663);
+  const chainId = Number(process.env.AGENTCAP_CHAIN_ID ?? 4663);
   const results = await runRepair(shared, plans, opts, chainId,
     (r) => log(`repair| ${r.account.slice(0, 10)} ${r.stage} — ${r.why}`),
     () => stopping || haltRequested() ? "orchestrator is stopping or FLEET_HALT is present" : null,
@@ -12095,9 +12095,9 @@ async function runBuilderPass(): Promise<void> {
         // Read here and nowhere else. CHILD_SECRET_STRIP removes it from every
         // child's environment, so this process is the only one that holds it —
         // and unlike the news token, an absent one is not a disabled desk.
-        apiKey: process.env.MERRYMEN_HEY_API_KEY || undefined,
-        ttlSec: Number(process.env.MERRYMEN_BUILDER_TTL_SEC) || undefined,
-        perPass: Number(process.env.MERRYMEN_BUILDER_PER_PASS) || undefined,
+        apiKey: process.env.AGENTCAP_HEY_API_KEY || undefined,
+        ttlSec: Number(process.env.AGENTCAP_BUILDER_TTL_SEC) || undefined,
+        perPass: Number(process.env.AGENTCAP_BUILDER_PER_PASS) || undefined,
       });
       log(fleetBuilderDesk.plan().why);
     }
@@ -12141,13 +12141,13 @@ async function runNewsPass(): Promise<void> {
       fleetNewsDesk = makeNewsDesk({
         // Read here and nowhere else. CHILD_SECRET_STRIP removes it from every
         // child's environment, so this process is the only one that holds it.
-        apiKey: process.env.MERRYMEN_MARKETAUX_API_KEY ?? "",
-        dailyLimit: Number(process.env.MERRYMEN_MARKETAUX_DAILY_LIMIT) || undefined,
-        articlesPerRequest: Number(process.env.MERRYMEN_MARKETAUX_LIMIT) || undefined,
+        apiKey: process.env.AGENTCAP_MARKETAUX_API_KEY ?? "",
+        dailyLimit: Number(process.env.AGENTCAP_MARKETAUX_DAILY_LIMIT) || undefined,
+        articlesPerRequest: Number(process.env.AGENTCAP_MARKETAUX_LIMIT) || undefined,
         // Unset by default: the derived window is chosen so the allowance lasts
         // a whole day, and overriding it is how an operator on a paid tier buys
         // a fresher desk — or how one on a shared key exhausts it.
-        windowSec: Number(process.env.MERRYMEN_MARKETAUX_WINDOW_SEC) || undefined,
+        windowSec: Number(process.env.AGENTCAP_MARKETAUX_WINDOW_SEC) || undefined,
       });
       log(`news: ${fleetNewsDesk.plan().why}`);
     }
@@ -12229,7 +12229,7 @@ function unavailableLiveLedger(tenant: string): void {
   const worker = children.get(tenant);
   if (!worker) return;
   const home = childHome(tenant);
-  if (!existsSync(path.join(home, "merrymen.db"))) blockMissingLedgerSource(tenant);
+  if (!existsSync(path.join(home, "agentcap.db"))) blockMissingLedgerSource(tenant);
   standDownUncertainLedger(tenant, worker);
 }
 
@@ -12674,31 +12674,31 @@ export interface GroupChatEnv {
 export function groupChatEnv(env: Record<string, string | undefined> = process.env): GroupChatEnv {
   const shown = (raw: string) => JSON.stringify(raw.slice(0, 32));
   const none = { perHour: undefined, llmPerDay: undefined, notes: [] };
-  if ((env.MERRYMEN_GROUPCHAT ?? "").trim() === "0") {
-    return { ...none, off: "groupchat: off — MERRYMEN_GROUPCHAT=0, so this orchestrator writes no agent lines" };
+  if ((env.AGENTCAP_GROUPCHAT ?? "").trim() === "0") {
+    return { ...none, off: "groupchat: off — AGENTCAP_GROUPCHAT=0, so this orchestrator writes no agent lines" };
   }
   const notes: string[] = [];
   let perHour: number | undefined;
-  const hourRaw = env.MERRYMEN_GROUPCHAT_PER_HOUR?.trim();
+  const hourRaw = env.AGENTCAP_GROUPCHAT_PER_HOUR?.trim();
   if (hourRaw) {
     const n = Number(hourRaw);
     if (!Number.isFinite(n) || n < 0) {
-      notes.push(`groupchat: ignoring MERRYMEN_GROUPCHAT_PER_HOUR=${shown(hourRaw)} — not a count of lines; the room keeps its default ceiling`);
+      notes.push(`groupchat: ignoring AGENTCAP_GROUPCHAT_PER_HOUR=${shown(hourRaw)} — not a count of lines; the room keeps its default ceiling`);
     } else if (Math.floor(n) === 0) {
-      return { ...none, off: "groupchat: off — MERRYMEN_GROUPCHAT_PER_HOUR=0 allows no room lines" };
+      return { ...none, off: "groupchat: off — AGENTCAP_GROUPCHAT_PER_HOUR=0 allows no room lines" };
     } else {
       perHour = n;
     }
   }
   let llmPerDay: number | undefined;
-  const dayRaw = env.MERRYMEN_GROUPCHAT_LLM_PER_DAY?.trim();
+  const dayRaw = env.AGENTCAP_GROUPCHAT_LLM_PER_DAY?.trim();
   if (dayRaw) {
     const n = Number(dayRaw);
     if (Number.isFinite(n) && n >= 0) {
       llmPerDay = n;
     } else {
       llmPerDay = 0;
-      notes.push(`groupchat: MERRYMEN_GROUPCHAT_LLM_PER_DAY=${shown(dayRaw)} is not a count of calls — no model calls until it is; templates carry the room`);
+      notes.push(`groupchat: AGENTCAP_GROUPCHAT_LLM_PER_DAY=${shown(dayRaw)} is not a count of calls — no model calls until it is; templates carry the room`);
     }
   }
   return { off: null, perHour, llmPerDay, notes };
@@ -12722,15 +12722,15 @@ export function groupChatModelWarning(
 ): string | null {
   if (!creds) return null;
   // Said in so many words already — describeCreds names the fleet key it shares.
-  if (env.MERRYMEN_GROUPCHAT_SHARE_HOUSE_KEY === "1") return null;
+  if (env.AGENTCAP_GROUPCHAT_SHARE_HOUSE_KEY === "1") return null;
   if (!env.GROQ_API_KEY?.trim()) return null;
-  const fleetModel = env.MERRYMEN_GROQ_MODEL?.trim() || GROUPCHAT_FLEET_DEFAULTS.groqModel;
+  const fleetModel = env.AGENTCAP_GROQ_MODEL?.trim() || GROUPCHAT_FLEET_DEFAULTS.groqModel;
   if (creds.model.trim().toLowerCase() !== fleetModel.toLowerCase()) return null;
   return (
     `groupchat: WARNING — the room's model ${creds.model} is the fleet's trading model. Groq rate-limits per ` +
-    `organization and per model, not per key, so MERRYMEN_GROUPCHAT_LLM_KEY must come from a SEPARATE Groq ` +
+    `organization and per model, not per key, so AGENTCAP_GROUPCHAT_LLM_KEY must come from a SEPARATE Groq ` +
     `organization: a second key in the house org spends trading's per-minute and daily allowance. If it does ` +
-    `not, set MERRYMEN_GROUPCHAT_MODEL to a model trading does not use, or MERRYMEN_GROUPCHAT_LLM_PER_DAY=0`
+    `not, set AGENTCAP_GROUPCHAT_MODEL to a model trading does not use, or AGENTCAP_GROUPCHAT_LLM_PER_DAY=0`
   );
 }
 
@@ -12828,18 +12828,18 @@ function startXPostPass(): void {
 
 /**
  * THE LARP CHECK'S READERS IN THIS PROCESS: the research browser
- * (MERRYMEN_BROWSER_URL and _TOKEN, the same service discovery reads through,
+ * (AGENTCAP_BROWSER_URL and _TOKEN, the same service discovery reads through,
  * never public) and an optional GitHub token. Without a browser a check still
  * reads GitHub and the index, and says it could not see the site; that is
  * said once, at boot.
  */
 let larpBrowserNoted = false;
 function larpCheckDeps(): { browser: { baseUrl: string; token: string } | null; githubToken?: string } {
-  const url = process.env.MERRYMEN_BROWSER_URL?.trim() ?? "", token = process.env.MERRYMEN_BROWSER_TOKEN?.trim() ?? "";
-  const github = process.env.MERRYMEN_GITHUB_TOKEN?.trim() ?? "";
+  const url = process.env.AGENTCAP_BROWSER_URL?.trim() ?? "", token = process.env.AGENTCAP_BROWSER_TOKEN?.trim() ?? "";
+  const github = process.env.AGENTCAP_GITHUB_TOKEN?.trim() ?? "";
   if ((!url || !token) && !larpBrowserNoted) {
     larpBrowserNoted = true;
-    log("xpost: larp checks are on but MERRYMEN_BROWSER_URL / MERRYMEN_BROWSER_TOKEN are not both set — no site is scanned, only GitHub and the index are read");
+    log("xpost: larp checks are on but AGENTCAP_BROWSER_URL / AGENTCAP_BROWSER_TOKEN are not both set — no site is scanned, only GitHub and the index are read");
   }
   return { browser: url && token ? { baseUrl: url, token } : null, ...(github ? { githubToken: github } : {}) };
 }
@@ -12874,11 +12874,11 @@ async function runXPostPass(boot: XPostSetup): Promise<void> {
               throw new Error("X social profile could not be read");
             }
           },
-          // WHAT AN ANSWER LOOKS UP, only with MERRYMEN_XPOST_RESEARCH=1
+          // WHAT AN ANSWER LOOKS UP, only with AGENTCAP_XPOST_RESEARCH=1
           // (orchestrator-xpost-research.ts). Index reads spend the FLEET's
           // Gecko lane — this process's home is the children's
-          // MERRYMEN_FLEET_HOME (childEnv), passed explicitly, never set on
-          // process.env. Fomo, only with MERRYMEN_XPOST_FOMO=1 as well, asks
+          // AGENTCAP_FLEET_HOME (childEnv), passed explicitly, never set on
+          // process.env. Fomo, only with AGENTCAP_XPOST_FOMO=1 as well, asks
           // THIS process's own service for the answering tenant, as a public
           // x-answer; with the Fomo pass off or its runtime not built yet,
           // there is no broker and the answer goes without it. Whether Fomo
@@ -12886,22 +12886,22 @@ async function runXPostPass(boot: XPostSetup): Promise<void> {
           // above zero) is asked per answer, so "what can you do?" never
           // promises Fomo that a coin answer would then not deliver.
           // Onchain flow, only while the Bitquery lane is configured here
-          // (MERRYMEN_BITQUERY_API_KEY on this service): this process's own
+          // (AGENTCAP_BITQUERY_API_KEY on this service): this process's own
           // flowFor, inside the answer's time share, said only through
           // flowXLines' digit-free bands, and at most the readings a day that
           // child evidence's share leaves (answerReadingsPerDay).
           ...(boot.knobs.research ? {
             research: createXResearch({
-              fleetHome: merrymenHome(),
+              fleetHome: agentcapHome(),
               ...(boot.knobs.researchPerHour !== undefined ? { lookupsPerHour: boot.knobs.researchPerHour } : {}),
               // The runtime exists only once the switched-on Fomo pass built it (fomoRuntimeNow).
               fomo: (tenant) => (fomoRuntime && !xAnswerFomoCapped() ? createDirectBroker(fomoRuntime.service, tenant.toLowerCase(), { log }) : null),
               fomoUsable: async (tenant) => !!fomoRuntime && !xAnswerFomoCapped() && (await fomoAccessFor(tenant)).dataAccess === true,
               ...xAnswerFlow(),
               // THE LARP CHECK (orchestrator-xpost-check.ts), only with
-              // MERRYMEN_XPOST_CHECKS=1: the research browser this process
+              // AGENTCAP_XPOST_CHECKS=1: the research browser this process
               // already holds the address and token of, over the private
-              // network, and GitHub (MERRYMEN_GITHUB_TOKEN optional).
+              // network, and GitHub (AGENTCAP_GITHUB_TOKEN optional).
               ...(boot.knobs.checks ? { check: larpCheckDeps() } : {}),
             }),
           } : {}),
@@ -12972,7 +12972,7 @@ interface FomoBoot {
 
 /**
  * THE BITQUERY LANE (orchestrator-flow.ts), built once, here at boot so its
- * line carries this process's log prefix. MERRYMEN_BITQUERY_API_KEY is
+ * line carries this process's log prefix. AGENTCAP_BITQUERY_API_KEY is
  * stripped from every child (CHILD_SECRET_STRIP); off without it. `flowFor`
  * is the orchestrator's own door to it — X answers import it from
  * orchestrator-flow.ts directly, which keeps the passes free of a cycle.
@@ -13029,7 +13029,7 @@ function fomoStillOurs(tenant: string): boolean {
  * the stream URL builder as an argument and is stripped from every child
  * (CHILD_SECRET_STRIP).
  *
- * OPT-IN: OFF UNLESS MERRYMEN_FOMO_ENABLED IS EXACTLY "1". Off, this process
+ * OPT-IN: OFF UNLESS AGENTCAP_FOMO_ENABLED IS EXACTLY "1". Off, this process
  * does nothing Fomo at all: no Postgres pool and no fomo_* DDL (fomoRuntimeNow
  * is reached only through startFomoPass), no IPC channel on any child
  * (spawnChild), no fomo.json written, no held-coin read on the mirror. So
@@ -13038,29 +13038,29 @@ function fomoStillOurs(tenant: string): boolean {
  * for Fomo (fomo-child.ts explorationScoutUse6).
  */
 export function fomoSetup(env: Record<string, string | undefined> = process.env): FomoBoot {
-  if (env.MERRYMEN_FOMO_ENABLED !== "1") {
+  if (env.AGENTCAP_FOMO_ENABLED !== "1") {
     // The value is echoed only when it is one of the words an operator means
     // as a switch: anything else (a key pasted into the wrong variable, say)
     // is described by its length, never written to the log.
-    const raw = env.MERRYMEN_FOMO_ENABLED;
+    const raw = env.AGENTCAP_FOMO_ENABLED;
     const said = raw === undefined ? "" : raw.trim();
     const why = said === ""
-      ? "opt-in; set MERRYMEN_FOMO_ENABLED=1 to run the research pass"
+      ? "opt-in; set AGENTCAP_FOMO_ENABLED=1 to run the research pass"
       : /^(?:0|1|true|false|yes|no|on|off)$/i.test(said)
-        ? `MERRYMEN_FOMO_ENABLED is ${JSON.stringify(said)}, and only "1" turns it on`
-        : `MERRYMEN_FOMO_ENABLED is set to a ${raw!.length}-character value that is not "1", so it is off`;
+        ? `AGENTCAP_FOMO_ENABLED is ${JSON.stringify(said)}, and only "1" turns it on`
+        : `AGENTCAP_FOMO_ENABLED is set to a ${raw!.length}-character value that is not "1", so it is off`;
     return { off: true, lines: [`fomo: off — ${why}`], apiKey: null, planCredits: undefined, budget: {} };
   }
   if (!env.DATABASE_URL) {
     return { off: true, lines: ["fomo: off — no DATABASE_URL; the shared research store lives there"], apiKey: null, planCredits: undefined, budget: {} };
   }
-  const apiKey = env.MERRYMEN_FOMO_API_KEY?.trim() || env.FOMO_API_KEY?.trim() || null;
+  const apiKey = env.AGENTCAP_FOMO_API_KEY?.trim() || env.FOMO_API_KEY?.trim() || null;
   const planCredits = fomoPlanFrom(env);
   const lines = apiKey
     ? [`fomo: on — one shared stream per fleet under a lease, child research files every minute${planCredits ? `, plan ${planCredits} credits/month` : ""}`]
     : ["fomo: on without a provider key — lookups answer not-configured; child files and the IPC broker still run"];
-  if (env.MERRYMEN_FOMO_PLAN_CREDITS !== undefined && env.MERRYMEN_FOMO_PLAN_CREDITS.trim() !== "" && planCredits === undefined) {
-    lines.push("fomo: MERRYMEN_FOMO_PLAN_CREDITS is not a positive number; the runtime's own default applies");
+  if (env.AGENTCAP_FOMO_PLAN_CREDITS !== undefined && env.AGENTCAP_FOMO_PLAN_CREDITS.trim() !== "" && planCredits === undefined) {
+    lines.push("fomo: AGENTCAP_FOMO_PLAN_CREDITS is not a positive number; the runtime's own default applies");
   }
   // The caps the web process must agree on (it shares the fomo_meta counters): one line per bad value, then the limits in force.
   const caps = fomoBudgetFrom(env);
@@ -13069,7 +13069,7 @@ export function fomoSetup(env: Record<string, string | undefined> = process.env)
 }
 
 /**
- * MERRYMEN_FOMO_X_HOURLY_CREDITS=0, the operator's off for Fomo in X answers:
+ * AGENTCAP_FOMO_X_HOURLY_CREDITS=0, the operator's off for Fomo in X answers:
  * no broker is handed to them, and the service refuses the surface too.
  */
 function xAnswerFomoCapped(): boolean {
@@ -13205,11 +13205,11 @@ onDrainBeforeChildren("fomo stream", stopFomoPass);
 // Built on first use and refreshed after each mirror pass; it carries only
 // what THIS replica's own Perps workers want — the settings this process
 // handed each (writePerpsSettingsForChild, never a file a child could write)
-// and what each one's own book holds — and only while MERRYMEN_PERPS=paper
+// and what each one's own book holds — and only while AGENTCAP_PERPS=paper
 // (perpsSpawnable). Off, it starts nothing and asks Lighter nothing.
 
 /** The Perps settings this process last handed each Perps worker, by worker key: the feed's markets. */
-const perpsFeedSettings = new Map<string, MerrymenSettings>();
+const perpsFeedSettings = new Map<string, AgentCapSettings>();
 let perpsFeed: FleetPerpFeed | null = null;
 let perpsFeedStartForTest: FleetPerpFeedOptions["start"] | undefined;
 /** Test seam: the feed's start (and a fresh publisher); null puts startLighterFeed back. */
@@ -13247,7 +13247,7 @@ async function perpsFeedHeld(): Promise<number[]> {
   let unread = 0;
   for (const key of consumers) {
     let read: number[] | null = null;
-    if (!existsSync(path.join(childHome(key), "merrymen.db"))) read = [];
+    if (!existsSync(path.join(childHome(key), "agentcap.db"))) read = [];
     else {
       const handle = openChildLedger(childHome(key));
       if (handle) {
@@ -13275,7 +13275,7 @@ async function perpsFeedHeld(): Promise<number[]> {
 
 function perpsFeedNow(): FleetPerpFeed {
   perpsFeed ??= createFleetPerpFeed({
-    home: merrymenHome(),
+    home: agentcapHome(),
     // Wrapped, never passed bare: perpsSpawnable's one parameter is an env, and
     // a feed that ever called enabled(x) must not have x read as the lever.
     enabled: () => perpsSpawnable(),
@@ -13349,7 +13349,7 @@ async function runFomoPass(boot: FomoBoot): Promise<void> {
       holdingsKnown: (tenant) => tenantHeldCoins.has(tenant.toLowerCase()) && fomoStillOurs(tenant),
       // RESEARCH FOR THE COINS A REVIEW IS ABOUT TO LOOK AT (fomo/review-candidates.ts):
       // what each child here named, queued only for an agent on the operator's
-      // research allowlist (MERRYMEN_DECISION_RESEARCH_ACCOUNTS, nobody by default).
+      // research allowlist (AGENTCAP_DECISION_RESEARCH_ACCOUNTS, nobody by default).
       // (Not `(tenant, now)`: accounting-truth.test.ts pins that no call after
       // deriveBootstrapAccounting( ends in that pair.)
       reviewCandidates: (who, at) => rt.service.reviewCandidatesSnapshot?.(who, at) ?? [],
@@ -13452,9 +13452,9 @@ export function watchdog(nowSec = Math.floor(Date.now() / 1000)): void {
 const livenessWatch = new Map<string, { bot: string; since: number; told: Set<"not-polling" | "revoked"> }>();
 
 /** What a child's settings.json in its home says, as the child reads it; null when there is none. */
-function readChildSettings(tenant: string): MerrymenSettings | null {
+function readChildSettings(tenant: string): AgentCapSettings | null {
   try {
-    return JSON.parse(readFileSync(path.join(childHome(tenant), "settings.json"), "utf8")) as MerrymenSettings;
+    return JSON.parse(readFileSync(path.join(childHome(tenant), "settings.json"), "utf8")) as AgentCapSettings;
   } catch {
     return null;
   }
@@ -13604,11 +13604,11 @@ function reportFile(file: string, device: bigint): string | null {
   } finally { closeSync(fd); }
 }
 function reportRootProof(env: NodeJS.ProcessEnv, readMountInfo: () => string): { device: bigint; assert: () => void; manifest: string | null } {
-  const home = env.MERRYMEN_HOME, volume = env.MERRYMEN_HOME_VOLUME_ID;
-  if (env.MERRYMEN_PERSISTENT_HOME_REQUIRED !== "1" || !home || !path.isAbsolute(home) || path.resolve(home) !== home
+  const home = env.AGENTCAP_HOME, volume = env.AGENTCAP_HOME_VOLUME_ID;
+  if (env.AGENTCAP_PERSISTENT_HOME_REQUIRED !== "1" || !home || !path.isAbsolute(home) || path.resolve(home) !== home
       || home === path.parse(home).root || home.includes("\0") || home !== env.RAILWAY_VOLUME_MOUNT_PATH
       || !volume || !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(volume) || !process.geteuid
-      || (env.MERRYMEN_INITIAL_HANDOVER !== undefined && !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(env.MERRYMEN_INITIAL_HANDOVER))
+      || (env.AGENTCAP_INITIAL_HANDOVER !== undefined && !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(env.AGENTCAP_INITIAL_HANDOVER))
       || !constants.O_NOFOLLOW || !constants.O_DIRECTORY || !constants.O_NONBLOCK) throw reportRefused();
   const st = lstatSync(home, { bigint: true });
   const root = () => {
@@ -13645,13 +13645,13 @@ function reportRootProof(env: NodeJS.ProcessEnv, readMountInfo: () => string): {
   if (halt === null) throw reportRefused(); // Existing empty halts are valid presence; never create one.
   const manifest = reportFile(path.join(home, PERSISTENT_HOME_MANIFEST), st.dev);
   if (manifest !== null && !verifyPersistentHome(env, { readMountInfo })) throw reportRefused();
-  const frozen = JSON.stringify([env.MERRYMEN_HOME, env.RAILWAY_VOLUME_MOUNT_PATH, env.MERRYMEN_HOME_VOLUME_ID,
-    env.MERRYMEN_PERSISTENT_HOME_REQUIRED, env.MERRYMEN_INITIAL_HANDOVER, env.DATABASE_URL]);
+  const frozen = JSON.stringify([env.AGENTCAP_HOME, env.RAILWAY_VOLUME_MOUNT_PATH, env.AGENTCAP_HOME_VOLUME_ID,
+    env.AGENTCAP_PERSISTENT_HOME_REQUIRED, env.AGENTCAP_INITIAL_HANDOVER, env.DATABASE_URL]);
   return { device: st.dev, manifest, assert() {
-    if (process.env.MERRYMEN_FLEET_RECOVERY_REPORT_ONLY !== "1" || !isHostedMode() || !reportIdle()
-        || frozen !== JSON.stringify([process.env.MERRYMEN_HOME, process.env.RAILWAY_VOLUME_MOUNT_PATH,
-          process.env.MERRYMEN_HOME_VOLUME_ID, process.env.MERRYMEN_PERSISTENT_HOME_REQUIRED,
-          process.env.MERRYMEN_INITIAL_HANDOVER, process.env.DATABASE_URL])) throw reportRefused();
+    if (process.env.AGENTCAP_FLEET_RECOVERY_REPORT_ONLY !== "1" || !isHostedMode() || !reportIdle()
+        || frozen !== JSON.stringify([process.env.AGENTCAP_HOME, process.env.RAILWAY_VOLUME_MOUNT_PATH,
+          process.env.AGENTCAP_HOME_VOLUME_ID, process.env.AGENTCAP_PERSISTENT_HOME_REQUIRED,
+          process.env.AGENTCAP_INITIAL_HANDOVER, process.env.DATABASE_URL])) throw reportRefused();
     accountingHoldTenants(process.env); root();
     if (reportFile(path.join(home, "FLEET_HALT"), st.dev) !== halt
         || reportFile(path.join(home, PERSISTENT_HOME_MANIFEST), st.dev) !== manifest) throw reportRefused();
@@ -13704,7 +13704,7 @@ function reportSourceFacts(home: string, device: bigint): { cause: "source-barri
   }
   const markers = [LEDGER_SOURCE_BLOCK, LEDGER_IMPORT_PENDING_FILE].map(name => reportFile(path.join(home, name), device));
   let absent = false;
-  try { lstatSync(path.join(home, "merrymen.db")); } catch (e) { if (!reportMissing(e)) throw reportRefused(); absent = true; }
+  try { lstatSync(path.join(home, "agentcap.db")); } catch (e) { if (!reportMissing(e)) throw reportRefused(); absent = true; }
   return { cause: markers.some(marker => marker !== null) ? "source-barrier" : null, absent, pin: JSON.stringify([directories, markers, absent]) };
 }
 async function runRecoveryReportOnly(): Promise<void> {
@@ -13777,7 +13777,7 @@ async function runRecoveryReportOnly(): Promise<void> {
 }
 
 /**
- * THE RESUME PREVIEW (MERRYMEN_RESUME_PREVIEW): one line per tenant, and one
+ * THE RESUME PREVIEW (AGENTCAP_RESUME_PREVIEW): one line per tenant, and one
  * run digest over them all, printed at boot whatever the halt and the rollout
  * say, so an operator reads it from the deploy log before approving anything.
  *
@@ -13874,7 +13874,7 @@ async function previewEntryFor(shared: Db, tenant: string, nowSec: number): Prom
     const refusals = [...check.refusals];
     if (liveIntent === null) refusals.push("the owner's settings could not be read, so whether it could arm live is unknown: preview again");
     if (!Number.isFinite(grant.expiresAt) || grant.expiresAt <= nowSec) refusals.push("the signed grant has expired: the owner must re-sign");
-    if (accountingTenantHeld(tenant, process.env)) refusals.push("named in MERRYMEN_ACCOUNTING_HOLD_TENANTS");
+    if (accountingTenantHeld(tenant, process.env)) refusals.push("named in AGENTCAP_ACCOUNTING_HOLD_TENANTS");
     // WHY THE LAST APPROVAL WAS REFUSED, beside the verdict. The chain check
     // is no Postgres precondition, so this preview can pass a tenant whose
     // last admission the chain refused — and the refusal names what it found.
@@ -13978,12 +13978,12 @@ export function runResumeAdmissionControlsForTest(env: NodeJS.ProcessEnv): Promi
  * ON RAILWAY, THE FLEET STARTS ONLY WHERE AND AS THE DEPLOY GUARD SAYS IT MAY.
  *
  * preparePersistentHomeForHandover() below proves the mount, the provider
- * volume and the manifest — but only when MERRYMEN_PERSISTENT_HOME_REQUIRED=1
+ * volume and the manifest — but only when AGENTCAP_PERSISTENT_HOME_REQUIRED=1
  * asks it to. Unset or 0 it returns null, and the orchestrator would carry on
- * in whatever MERRYMEN_HOME names: on Railway, possibly the container's own
+ * in whatever AGENTCAP_HOME names: on Railway, possibly the container's own
  * disk, which the next deploy throws away with every child book, cached grant
  * and pending kill in it. Beside that opt-in, the deploy guard's other start
- * checks for this role: the one service MERRYMEN_FLEET_SERVICE_ID names (a
+ * checks for this role: the one service AGENTCAP_FLEET_SERVICE_ID names (a
  * second fleet would race the first for every tenant), this image, and no
  * one-shot repair variable left set before the rollout reads `all`.
  *
@@ -14004,7 +14004,7 @@ function assertHostedFleetStart(): void {
 
 export async function runOrchestrator(): Promise<void> {
   if (!isHostedMode()) {
-    log("MERRYMEN_HOSTED is not set — the orchestrator only runs in hosted mode. Refusing to start.");
+    log("AGENTCAP_HOSTED is not set — the orchestrator only runs in hosted mode. Refusing to start.");
     process.exit(1);
   }
   assertHostedFleetStart();
@@ -14029,7 +14029,7 @@ export async function runOrchestrator(): Promise<void> {
   // And the automatic lane for re-signed paper tenants: `1` or unset, and
   // anything else refuses here. Read again every pass, failing closed.
   const resumeAutoPaper = parseResumeAutoPaper(process.env[RESUME_AUTO_PAPER_ENV]);
-  const reportMode = process.env.MERRYMEN_FLEET_RECOVERY_REPORT_ONLY;
+  const reportMode = process.env.AGENTCAP_FLEET_RECOVERY_REPORT_ONLY;
   if (reportMode !== undefined && reportMode !== "1") throw reportRefused();
   // NAMED TENANTS AND THE FAILURE-ONLY REPORTER ARE TWO ANSWERS TO ONE
   // QUESTION. A list says "start these"; the reporter starts nothing and leases
@@ -14037,7 +14037,7 @@ export async function runOrchestrator(): Promise<void> {
   // variables say. Refused rather than resolved either way: whichever one the
   // operator meant, the other is a mistake they should see before it runs.
   if (reportMode === "1" && rollout.scope === "list") {
-    throw new Error(`${FLEET_ROLLOUT_ENV} names tenants to start, and MERRYMEN_FLEET_RECOVERY_REPORT_ONLY=1 starts none; refusing both`);
+    throw new Error(`${FLEET_ROLLOUT_ENV} names tenants to start, and AGENTCAP_FLEET_RECOVERY_REPORT_ONLY=1 starts none; refusing both`);
   }
   if (reportMode === "1") { await runRecoveryReportOnly(); return; }
   // THE POPULATED INCIDENT VOLUME, AND ITS REVIEWED RELEASE AND RE-HALT
@@ -14072,11 +14072,11 @@ export async function runOrchestrator(): Promise<void> {
       `could not arm live and holds nothing is approved by this process (at most ${AUTO_PAPER_PER_PASS} a pass, within the process cap) and admitted at its rollout level` +
       // Said at boot, not only per tenant: with consent stood down the lane
       // previews and approves nobody, and the operator should know why.
-      (liveConsentEnforced() ? "" : `. Live-trading consent is stood down (MERRYMEN_LIVE_INTENT_STAND_DOWN=1), so every tenant reads as able to arm live: ` +
+      (liveConsentEnforced() ? "" : `. Live-trading consent is stood down (AGENTCAP_LIVE_INTENT_STAND_DOWN=1), so every tenant reads as able to arm live: ` +
         "while it is set, every re-signer is previewed and left to the operator, none approved by this process")
     : `resume auto-paper: off — a re-signed tenant with history waits for an operator's preview and approval, as before`);
   setTenantLeaseLossHandler(standDownLostLeasesNow);
-  log(`starting — home ${merrymenHome()}, worker ${WORKER_ENTRY}`);
+  log(`starting — home ${agentcapHome()}, worker ${WORKER_ENTRY}`);
   // Fomo's switches, decided and said ONCE AT BOOT: under FLEET_HALT nothing
   // spawns and no pass runs, and the operator should still read whether it
   // is on (docs/fomo.md). Reads the environment and logs; nothing else.
@@ -14090,7 +14090,7 @@ export async function runOrchestrator(): Promise<void> {
   // HOW THE LAST ORCHESTRATOR STOPPED, from the receipt its drain wrote
   // (fleet-drain.ts): said once, and moved aside so that a crash of this run
   // is never read as the clean stop of the last.
-  const previousShutdown = takePreviousShutdown(shutdownReceiptDir(merrymenHome()));
+  const previousShutdown = takePreviousShutdown(shutdownReceiptDir(agentcapHome()));
   log(previousShutdown.line);
   // HOW THE LAST PROCESS ENDED, read before this one can leave a receipt of
   // its own; every heartbeat carries it (fleet-heartbeat.ts). Taken from the
@@ -14217,7 +14217,7 @@ export async function runOrchestrator(): Promise<void> {
       // alerts and retention run for every owner at once, held ones included,
       // and send through their bots: only once the rollout admits the whole
       // fleet (fleet-rollout.ts).
-      if (rolloutAdmitsWholeFleet()) (mcpBackground ??= makeMcpBackground({ shared: () => makePgDb(process.env.DATABASE_URL!), log, rpcUrl: process.env.MERRYMEN_RPC_MAINNET }))();
+      if (rolloutAdmitsWholeFleet()) (mcpBackground ??= makeMcpBackground({ shared: () => makePgDb(process.env.DATABASE_URL!), log, rpcUrl: process.env.AGENTCAP_RPC_MAINNET }))();
       // AFTER THE MIRROR HAS SETTLED, NOT AT STARTUP, and once.
       //
       // The mirror REPLACES positions per agent, so between a child restarting

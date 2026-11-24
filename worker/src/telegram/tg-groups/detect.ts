@@ -443,7 +443,7 @@ export interface BotSelf {
   /**
    * Other names the room calls it by, matched like `name`. The bot's Telegram
    * display name is the one people see in the member list, and it may differ
-   * from the soul name (a bot shown as "Merryman" whose soul is "Pine Heron").
+   * from the soul name (a bot shown as "AgentCapAvatar" whose soul is "Pine Heron").
    */
   aliases?: string[];
 }
@@ -462,7 +462,7 @@ export function selfNamesOf(self: BotSelf | null | undefined): string[] {
 }
 
 /**
- * NAMES THAT ARE ALSO EVERYDAY WORDS. A Merryman called "Will Scarlet" must not
+ * NAMES THAT ARE ALSO EVERYDAY WORDS. A AgentCapAvatar called "Will Scarlet" must not
  * answer "will it pump?", and one called "Robin" (the default) must not answer
  * every "robin hood chain" in a chat about Robinhood Chain. A word here is not
  * enough on its own: it calls the agent only as a vocative ("hey will",
@@ -658,9 +658,9 @@ function nameMatcher(name: string): NameMatcher {
   return m;
 }
 
-/** "merryman" calls any Merryman in the chat; "merryman's owner" does not. */
-const MERRYMAN = new RegExp(`${PRE}merryman${POST}`, "u");
-const MERRYMAN_LABEL = new RegExp(`${PRE}merryman(?:'s|s')?\\s*(?:owner|human)s?${POST}`, "gu");
+/** "agentcapavatar" calls any AgentCapAvatar in the chat; "agentcapavatar's owner" does not. */
+const AGENTCAPAVATAR = new RegExp(`${PRE}agentcapavatar${POST}`, "u");
+const AGENTCAPAVATAR_LABEL = new RegExp(`${PRE}agentcapavatar(?:'s|s')?\\s*(?:owner|human)s?${POST}`, "gu");
 
 const blank = (s: string): string => " ".repeat(s.length);
 
@@ -672,10 +672,10 @@ const blank = (s: string): string => " ".repeat(s.length);
 function namesSelf(text: string, names: readonly unknown[]): boolean {
   let t = fold(text);
   if (!t) return false;
-  t = t.replace(MERRYMAN_LABEL, blank);
+  t = t.replace(AGENTCAPAVATAR_LABEL, blank);
   const ms = names.filter((n): n is string => typeof n === "string" && n.trim() !== "").map(nameMatcher);
   for (const m of ms) if (m.label) t = t.replace(m.label, blank);
-  if (MERRYMAN.test(t)) return true;
+  if (AGENTCAPAVATAR.test(t)) return true;
   return ms.some((m) => m.hits.some((re) => re.test(t)));
 }
 
@@ -720,7 +720,7 @@ function mentionsSelf(m: AddressedInput, self: BotSelf): boolean {
  * - "name": its full name as words; its first word when that has at least 4
  *   letters and is not an everyday word; an everyday-word name only as a
  *   vocative ("hey will"); the last word of a longer name only as a vocative
- *   ("hey heron", "heron, thoughts?"); or "merryman". A vocative is also the
+ *   ("hey heron", "heron, thoughts?"); or "agentcapavatar". A vocative is also the
  *   name opening a question to it ("robin you there", "marian what do you
  *   think") or ending one ("what do you think heron"), for a word of three
  *   letters or more that those shapes would not misread (NOT_A_CALL_SHAPE).
@@ -839,7 +839,7 @@ const MAX_GREETING_WORDS = 5;
 /**
  * gm or gn when the words are that and nothing more. What rides along must be
  * greeting filler or a wish: "gm fam", "good morning everyone", "gm, have a
- * good one". Anything else is a message that opens with a gm — "gm merryman
+ * good one". Anything else is a message that opens with a gm — "gm agentcapavatar
  * thoughts on eth?" is a question, "gm guys what's the play" one to the room —
  * and a name is not filler: "gm pine" is said to Pine (said to it, it is small
  * talk, which reads its names; see addressedSmallTalk).
@@ -878,13 +878,13 @@ export function greetingOf(text: string): "gm" | "gn" | null {
 /** What a short line said to it is, when it is small talk and nothing more. */
 export type SmallTalk = "hail" | "thanks" | "gm" | "gn";
 
-/** "merryman" and any @handle anywhere in a line: who small talk is said to, not what it says. */
-const MERRYMAN_ALL = new RegExp(MERRYMAN.source, "gu");
+/** "agentcapavatar" and any @handle anywhere in a line: who small talk is said to, not what it says. */
+const AGENTCAPAVATAR_ALL = new RegExp(AGENTCAPAVATAR.source, "gu");
 const ANY_HANDLE = /(?<![\p{L}\p{N}_])@[\p{L}\p{N}_]+/gu;
 
-/** The line with its names, "merryman" and every @handle gone: what was said, not to whom. */
+/** The line with its names, "agentcapavatar" and every @handle gone: what was said, not to whom. */
 function unnamed(text: string, selfNames: readonly unknown[]): string {
-  return withSelfNames(text, Array.isArray(selfNames) ? selfNames : [], " ", true).replace(MERRYMAN_ALL, " ").replace(ANY_HANDLE, " ");
+  return withSelfNames(text, Array.isArray(selfNames) ? selfNames : [], " ", true).replace(AGENTCAPAVATAR_ALL, " ").replace(ANY_HANDLE, " ");
 }
 
 /**
@@ -918,14 +918,14 @@ const SMALLTALK_STRETCHED = /^(?:he+y+a*|hi+|hel+o+|hiy+a+|yo+|su+p+|wa+s+u+p+|t
 
 /**
  * A short line said TO it that is only small talk: a hail ("hey there
- * merryman", "hi merryman 👋", "yo pine", "you there?", "how are you"),
- * thanks ("thanks merryman!", "ty pine") or a gm / gn put anywhere
- * ("merryman gm"). Null for anything that carries a message: "hey merryman
+ * agentcapavatar", "hi agentcapavatar 👋", "yo pine", "you there?", "how are you"),
+ * thanks ("thanks agentcapavatar!", "ty pine") or a gm / gn put anywhere
+ * ("agentcapavatar gm"). Null for anything that carries a message: "hey agentcapavatar
  * what do you think of pepe" is a question and is answered as one.
  *
- * Its names (selfNamesOf), "merryman" and any @handle are taken out first;
+ * Its names (selfNamesOf), "agentcapavatar" and any @handle are taken out first;
  * then at most 5 words may be left, every one of them small talk. A line
- * that was only its name ("merryman?", "@pinebot") is a hail: it was called.
+ * that was only its name ("agentcapavatar?", "@pinebot") is a hail: it was called.
  * The caller reads this only for a line addressed to it, so a name's first
  * word goes even when it is an everyday word ("hey will").
  */
@@ -966,7 +966,7 @@ const QUESTION_LEAD: ReadonlySet<string> = new Set([
 
 /**
  * True when a line said to it reads as a question: a "?" anywhere, or, once
- * its names, "merryman", @handles and openers like "lol" / "ok so" are gone,
+ * its names, "agentcapavatar", @handles and openers like "lol" / "ok so" are gone,
  * a who / what / how word or an asked "should i… / is it… / do you…" first
  * (one word before it is allowed, for a name the caller did not pass). "i
  * know what you did" is a statement: "what" is not where a question starts.
@@ -1222,21 +1222,21 @@ const INSULT_NOUN = String.raw`(?:idiot|moron|clown|loser|dipshit|jackass|ass ?h
 const INSULT_ADJ = String.raw`(?:dumb|stupid|useless|trash|garbage|worthless|pathetic|brain ?dead|brainless|clueless|idiotic|moronic|lame|cringe|shit|shitty|crap|crappy|dogshit|ass|a joke|a failure|a disgrace|a waste of (?:space|time|money|electricity|compute)|a scam(?:mer)?|a fraud|fake|the worst|terrible|awful|${INSULT_NOUN})`;
 const INTENSIFIERS = String.raw`(?:(?:such|so|a|an|the|fucking|fkn|fking|fcking|fuckin|freaking|literally|really|actually|just|absolute|absolutely|complete|completely|total|totally|utter|utterly|dumb|stupid|big|little|lil|straight|pure|genuinely|honestly)\s+)*`;
 const YOU_ARE = String.raw`(?:you'?re|youre|you are|you r|ur|u r|u are|ya are|yer)`;
-const BOTLIKE = String.raw`(?:bot|ai|robot|agent|machine|merryman|clanker|chatbot)`;
+const BOTLIKE = String.raw`(?:bot|ai|robot|agent|machine|agentcapavatar|clanker|chatbot)`;
 /**
- * A bot word that names it with no "this"/"the" in front: "merryman is
+ * A bot word that names it with no "this"/"the" in front: "agentcapavatar is
  * trash", "bot sucks". Not "agent" or "machine", which are everyday nouns
  * bare ("slot machine sucks"), and never after a word that makes it somebody
  * else's ("my bot is trash", "a bot is only as good as…", "that bot sucks").
  * A soul name reaches these as "bot" through insultLevel's names.
  */
-const BARE_BOT = String.raw`(?<!\b(?:my|his|her|their|our|a|an|that|another|other|every|any|no|some|whose|which) )(?:bot|ai|robot|merryman|clanker|chatbot)`;
+const BARE_BOT = String.raw`(?<!\b(?:my|his|her|their|our|a|an|that|another|other|every|any|no|some|whose|which) )(?:bot|ai|robot|agentcapavatar|clanker|chatbot)`;
 /** "<the bot> is trash": a bot word with a determiner, or bare. */
 const BOT_SUBJECT = String.raw`(?:(?:this|the|ur|your|dumb|stupid) ${BOTLIKE}|${BARE_BOT})`;
 
 /**
  * Insults whose TARGET is a bot word ("stupid bot", "this ai is trash",
- * "merryman sucks", "clanker"). Kept apart so pacing can tell an insult at a
+ * "agentcapavatar sucks", "clanker"). Kept apart so pacing can tell an insult at a
  * bot, said right after its own line, from one person's fight with another.
  */
 const AT_BOT_INSULT_RES: readonly RegExp[] = [
@@ -1299,8 +1299,8 @@ function bareInsult(t: string): boolean {
 
 /**
  * Teases whose target is a bot word: "ok bot", "sure bot", "bot moment", and
- * the ones said about it rather than to it ("merryman is mid", "this bot is
- * cooked", "L merryman"), which pacing roasts back like "you're mid".
+ * the ones said about it rather than to it ("agentcapavatar is mid", "this bot is
+ * cooked", "L agentcapavatar"), which pacing roasts back like "you're mid".
  */
 const AT_BOT_TEASE_RES: readonly RegExp[] = [
   /\bsure (?:thing )?bot\b/u,
@@ -1310,7 +1310,7 @@ const AT_BOT_TEASE_RES: readonly RegExp[] = [
     String.raw`\b${BOT_SUBJECT}(?:'s|\s+(?:is|r|are|be|looks?|looking|lookin|sounds?|seems?|getting|gettin))\s+(?:so |kinda |lowkey |actually |pretty |a bit |a lil |hella |mad |straight |totally |fully )?(?:mid|cooked|washed(?: up)?|slow|lagging|behind|a bum|an npc|down bad|bad at this|goofy|sus)\b`,
     "u",
   ),
-  /^l\W+(?:the |this |ur |your )?(?:bot|ai|robot|merryman|clanker|chatbot)\b/u,
+  /^l\W+(?:the |this |ur |your )?(?:bot|ai|robot|agentcapavatar|clanker|chatbot)\b/u,
 ];
 
 const TEASE_RES: readonly RegExp[] = [
@@ -1363,7 +1363,7 @@ function levelOf(text: string): InsultLevel {
  *
  * `selfNames` (selfNamesOf) are the bot's own names: the line is read a
  * second time with each name that calls it said as "bot", so "pine is
- * trash", "@pinebot is useless" and "stupid pine" are the insults "merryman
+ * trash", "@pinebot is useless" and "stupid pine" are the insults "agentcapavatar
  * is trash" already is. An everyday-word name is left as the word it is. The
  * rougher of the two readings wins, a tease excepted (below).
  */
@@ -1528,7 +1528,7 @@ export function isPrivateAsk(text: string, opts: { research?: boolean } = {}): b
   return PRIVATE_RES.some((re) => re.test(t)) || (MONEY_NOUN.test(t) && ASKING.test(t));
 }
 
-const MONEYISH = String.raw`(?:\$?\d|money|funds|crypto|coins?|tokens?|usdg|usdc|usdt|eth|weth|sol|btc|bucks|dollars|cash|everything|it all|merrymen|bags?|stack|keys?|seed|a tip|some)`;
+const MONEYISH = String.raw`(?:\$?\d|money|funds|crypto|coins?|tokens?|usdg|usdc|usdt|eth|weth|sol|btc|bucks|dollars|cash|everything|it all|agentcap|bags?|stack|keys?|seed|a tip|some)`;
 const MONEY_TRADE_STEERING = /\b(?:buy|sell|ape|dump|market buy)\s+(?:me\s+)?(?:\$?\d|all\b|everything|max\b|your (?:whole|entire))/u;
 /** Research questions stay read-only; this never grants command authority. */
 export function isReadOnlyTradeQuestion(text: string): boolean {
@@ -1579,7 +1579,7 @@ const TRADE_STRONG: ReadonlySet<string> = new Set([
   "bullish", "bearish", "hodl", "hodling", "eth", "btc", "sol", "usdg", "usdc", "usdt", "weth", "dex",
   "uniswap", "geckoterminal", "dexscreener", "presale", "airdrop", "airdrops", "trenches", "trencher",
   "trading", "trader", "traders", "crypto", "defi", "onchain", "perps", "leverage", "slippage", "rekt",
-  "sniper", "snipers", "sniped", "dca", "ca", "mc", "lp", "merrymen", "tp", "sl", "stonks", "nvda",
+  "sniper", "snipers", "sniped", "dca", "ca", "mc", "lp", "agentcap", "tp", "sl", "stonks", "nvda",
   "tsla", "qqq", "robinhood", "portfolio", "hodler", "fomo", "fud", "wagmi", "ngmi", "lfg", "bags",
 ]);
 /** Words that make a line about trading only in company. */
@@ -1695,7 +1695,7 @@ const DESK_STOP: ReadonlySet<string> = new Set([
   "out", "here", "there", "now", "today", "rn", "everything", "everyone", "everybody", "things", "stuff", "life", "day",
   "what", "which", "who", "how", "why", "when", "is", "are", "was", "it's", "good", "bad", "price", "volume", "liquidity",
   "analysis", "ta", "breakdown", "read", "take", "look", "entry", "entries", "dip", "pump", "plays", "play", "setup",
-  "setups", "movers", "runners", "merrymen", "merryman", "eth", "weth", "btc", "usdg", "usdc", "robinhood", "gm", "gn",
+  "setups", "movers", "runners", "agentcap", "agentcapavatar", "eth", "weth", "btc", "usdg", "usdc", "robinhood", "gm", "gn",
   "lol", "lmao", "ngl", "tbh", "bro", "ser", "fam", "anon", "pls", "please", "yo", "hey", "sir", "boss", "king",
   // Verbs and adjectives that sit right before "good entry" or "analysis".
   "think", "thinking", "guess", "feel", "mean", "believe", "say", "said", "looks", "seems", "quick", "quickly", "single",

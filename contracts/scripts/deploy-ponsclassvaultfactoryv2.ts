@@ -2,8 +2,8 @@
  * Deploy PonsClassVaultFactoryV2 — the factory whose vaults hold ONE CEILING PER
  * QUOTE ASSET.
  *
- *   $env:MERRYMEN_DEPLOYER_PRIVATE_KEY = "0x…"     # shell-only; close it after
- *   $env:MERRYMEN_V2_SEED = "USDG:250,NVDA:25"     # USD per quote, not raw
+ *   $env:AGENTCAP_DEPLOYER_PRIVATE_KEY = "0x…"     # shell-only; close it after
+ *   $env:AGENTCAP_V2_SEED = "USDG:250,NVDA:25"     # USD per quote, not raw
  *   npm run deploy:classfactoryv2:testnet
  *   npm run deploy:classfactoryv2:mainnet
  *
@@ -117,9 +117,9 @@ function parseSeed(raw: string): { symbol: string; usd: number }[] {
   const out: { symbol: string; usd: number }[] = [];
   for (const part of raw.split(",").map((s) => s.trim()).filter(Boolean)) {
     const [symbol, usdText] = part.split(":").map((s) => s.trim());
-    if (!symbol || !usdText) throw new Error(`MERRYMEN_V2_SEED entry "${part}" is not SYMBOL:USD`);
+    if (!symbol || !usdText) throw new Error(`AGENTCAP_V2_SEED entry "${part}" is not SYMBOL:USD`);
     if (!(symbol in QUOTES)) {
-      throw new Error(`MERRYMEN_V2_SEED names ${symbol}, which this script has no address for. Known: ${Object.keys(QUOTES).join(", ")}`);
+      throw new Error(`AGENTCAP_V2_SEED names ${symbol}, which this script has no address for. Known: ${Object.keys(QUOTES).join(", ")}`);
     }
     const usd = Number(usdText);
     if (!Number.isFinite(usd) || usd <= 0) throw new Error(`${symbol}: "${usdText}" is not a positive dollar figure`);
@@ -156,15 +156,15 @@ function parseSeed(raw: string): { symbol: string; usd: number }[] {
     // reverts for every owner. The factory now refuses it too, so this is the
     // second of three fences — but it is the one that says which symbol.
     if (out.some((q) => q.symbol === symbol)) {
-      throw new Error(`MERRYMEN_V2_SEED names ${symbol} twice. Two entries for one asset is one asset.`);
+      throw new Error(`AGENTCAP_V2_SEED names ${symbol} twice. Two entries for one asset is one asset.`);
     }
     out.push({ symbol, usd });
   }
-  if (out.length === 0) throw new Error("MERRYMEN_V2_SEED is empty — a factory with no seed mints vaults that can buy nothing");
+  if (out.length === 0) throw new Error("AGENTCAP_V2_SEED is empty — a factory with no seed mints vaults that can buy nothing");
   if (!out.some((q) => q.symbol === "USDG")) {
     // Every existing agent's route is USDG. A seed without it ships a factory
     // whose vaults cannot do the thing the fleet already does.
-    throw new Error("MERRYMEN_V2_SEED must include USDG — every current class entry is funded in it");
+    throw new Error("AGENTCAP_V2_SEED must include USDG — every current class entry is funded in it");
   }
   if (out.length > 8) throw new Error("the vault tracks at most 8 quotes (MAX_QUOTES)");
   return out;
@@ -199,7 +199,7 @@ async function main() {
   /**
    * REHEARSE THE SIZING WITHOUT SPENDING ANYTHING.
    *
-   *   MERRYMEN_V2_DRY_RUN=1 npm run deploy:classfactoryv2:mainnet
+   *   AGENTCAP_V2_DRY_RUN=1 npm run deploy:classfactoryv2:mainnet
    *
    * Reads every feed, every multiplier and every pause switch exactly as a real
    * run does, prints the raw caps it WOULD seal, and then stops before the
@@ -214,17 +214,17 @@ async function main() {
    * the factory to exist. It is the fourth check below, and it only runs for
    * real.
    */
-  const dryRun = /^(1|true|yes)$/i.test((process.env.MERRYMEN_V2_DRY_RUN ?? "").trim());
+  const dryRun = /^(1|true|yes)$/i.test((process.env.AGENTCAP_V2_DRY_RUN ?? "").trim());
 
   const [deployer] = await hre.viem.getWalletClients();
   if (!deployer && !dryRun) {
-    throw new Error("no deployer — set MERRYMEN_DEPLOYER_PRIVATE_KEY in this shell.");
+    throw new Error("no deployer — set AGENTCAP_DEPLOYER_PRIVATE_KEY in this shell.");
   }
   if (deployer && (await publicClient.getBalance({ address: deployer.account.address })) === 0n) {
     throw new Error(`deployer ${deployer.account.address} holds no ETH on ${KNOWN_CHAINS[chainId]}.`);
   }
 
-  const seed = parseSeed(process.env.MERRYMEN_V2_SEED ?? "");
+  const seed = parseSeed(process.env.AGENTCAP_V2_SEED ?? "");
   const now = Math.floor(Date.now() / 1000);
 
   console.log(
@@ -338,7 +338,7 @@ async function main() {
     console.log(`  vault init code hash for owner ${probeOwner}: ${hash}`);
     console.log("  (that hash is for the fixed probe owner above, NOT for your deployer — the owner is");
     console.log("   the vault's first constructor argument, so the real run's hash differs by design.)");
-    console.log("  Run again inside US market hours without MERRYMEN_V2_DRY_RUN to deploy,");
+    console.log("  Run again inside US market hours without AGENTCAP_V2_DRY_RUN to deploy,");
     console.log("  and expect the caps above to DIFFER — they are sized from a live price.");
     return;
   }
@@ -441,7 +441,7 @@ async function main() {
   console.log("  2. flatten the v1 vault first: SELL the open position, then sweep the residue");
   console.log("  3. RE-SIGN at /grant. The v2 vault is a different address; the wall seals it");
   console.log("  4. prove the USDG route on the new vault before any non-USDG quote is used");
-  console.log("  5. unset MERRYMEN_DEPLOYER_PRIVATE_KEY / close this shell");
+  console.log("  5. unset AGENTCAP_DEPLOYER_PRIVATE_KEY / close this shell");
   console.log("");
   console.log("what this does NOT unlock:");
   console.log("  - native-ETH-quoted curves. Still refused by name, still valueLimit 0 everywhere.");

@@ -452,9 +452,9 @@ describe("roomName", () => {
   it("replaces a name that reads as the room's own voice, in any case, spacing or lookalike", () => {
     const generated = agentNameForSlug(SLUG1);
     for (const name of [
-      "merrymen",
-      "Merrymen",
-      "MERRYMEN",
+      "agentcap",
+      "AgentCap",
+      "AGENTCAP",
       "Merry Men",
       "merry-men",
       "m.e.r.r.y.m.e.n",
@@ -1047,11 +1047,11 @@ describe("the gate holds without the SQL", () => {
 
 describe("the default identity read", () => {
   let home: string;
-  const saved = { home: process.env.MERRYMEN_HOME, url: process.env.DATABASE_URL };
+  const saved = { home: process.env.AGENTCAP_HOME, url: process.env.DATABASE_URL };
 
   before(() => {
     home = mkdtempSync(join(tmpdir(), "mm-facts-"));
-    process.env.MERRYMEN_HOME = home;
+    process.env.AGENTCAP_HOME = home;
     delete process.env.DATABASE_URL;
     resetIdentityStoreForTest();
     mkdirSync(join(home, "agent-identity"), { recursive: true });
@@ -1069,8 +1069,8 @@ describe("the default identity read", () => {
   });
   after(() => {
     resetIdentityStoreForTest();
-    if (saved.home === undefined) delete process.env.MERRYMEN_HOME;
-    else process.env.MERRYMEN_HOME = saved.home;
+    if (saved.home === undefined) delete process.env.AGENTCAP_HOME;
+    else process.env.AGENTCAP_HOME = saved.home;
     if (saved.url !== undefined) process.env.DATABASE_URL = saved.url;
     rmSync(home, { recursive: true, force: true });
   });

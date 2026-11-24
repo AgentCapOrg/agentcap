@@ -1,5 +1,5 @@
 /**
- * THE SHADOW PATH: a Merryman thinks, and nothing happens.
+ * THE SHADOW PATH: a AgentCapAvatar thinks, and nothing happens.
  *
  * worker state → buildPortfolioSnapshot() → trigger → Brain → persist.
  *
@@ -54,7 +54,7 @@ export interface ShadowInputs {
    * What to file this agent's thinking under. Defaults to `brain-shadow`.
    *
    * SHADOW_SOURCES (thesis-policy.ts) means "decisions that cannot reach a
-   * trade", and for an agent the owner has enrolled in MERRYMEN_BRAIN_LIVE that
+   * trade", and for an agent the owner has enrolled in AGENTCAP_BRAIN_LIVE that
    * is no longer true — filing its thinking as `brain-shadow` would make the
    * one list this codebase keeps of unreachable sources say something false
    * about the very agent it stopped being true for.
@@ -512,7 +512,7 @@ export async function persistBrainDecision(
   agentId: string,
   /**
    * What to file this run under. `brain-shadow` unless the caller has enrolled
-   * this agent in MERRYMEN_BRAIN_LIVE — see ShadowInputs.decisionSource. The
+   * this agent in AGENTCAP_BRAIN_LIVE — see ShadowInputs.decisionSource. The
    * comment below predicted this change and named the one place it would land.
    */
   source: string,

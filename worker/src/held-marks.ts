@@ -52,7 +52,7 @@
  * missing one arrives with the next migration and must be seen when it does.
  */
 import type { DatabaseSync } from "node:sqlite";
-// RELATIVE import only — the "@merrymen/core" alias exists solely in dev (see
+// RELATIVE import only — the "@agentcap/core" alias exists solely in dev (see
 // the note in telegram/service.ts).
 import { sameBookAsLatest, type EquityMarked } from "../../packages/core/src/index";
 import type { Db } from "./db";

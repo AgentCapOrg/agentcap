@@ -16,7 +16,7 @@ safe to authorize.
 
 ## Step 1 — Bitquery API key
 
-Discovery is how merrymen SEES new pairs (they launch through hooks on v4;
+Discovery is how agentcap SEES new pairs (they launch through hooks on v4;
 the hook address can only be learned from the Initialize event, and Bitquery
 indexes those). Without a key, discovery stays silently off.
 
@@ -26,7 +26,7 @@ indexes those). Without a key, discovery stays silently off.
 
 ## Step 2 — Verify a shared adapter, or deploy once per chain
 
-One `V4SelfSwap` contract can serve every Merrymen account on the same chain:
+One `V4SelfSwap` contract can serve every AgentCap account on the same chain:
 its payer and recipient are always the caller. Hosted users do not need a
 separate deployment. The platform operator should provide a verified address;
 a user then saves it and signs their own permission. Re-signing while the
@@ -54,9 +54,9 @@ with their funded deployment wallet. Deployment spends ETH; a hosted user's
 renewal only signs permission. An owner-operated shell can run:
 
 ```powershell
-$env:MERRYMEN_DEPLOYER_PRIVATE_KEY = "0x…"   # never send this key to another person
+$env:AGENTCAP_DEPLOYER_PRIVATE_KEY = "0x…"   # never send this key to another person
 npm run deploy:v4:mainnet
-Remove-Item Env:MERRYMEN_DEPLOYER_PRIVATE_KEY
+Remove-Item Env:AGENTCAP_DEPLOYER_PRIVATE_KEY
 ```
 
 The script uses the TypeScript loader required by this repository, refuses
@@ -84,7 +84,7 @@ https://faucet.testnet.chain.robinhood.com. The addresses may match or differ;
 verify each against its actual chain.
 
 Save the verified adapter in `/settings` → **v4 adapter contract** for the
-account that will sign. Setting only `MERRYMEN_V4_ADAPTER_ADDRESS` on the worker
+account that will sign. Setting only `AGENTCAP_V4_ADAPTER_ADDRESS` on the worker
 does not configure the hosted browser's signing settings or add permission to
 an existing grant. Complete step 4 once the correct address is saved.
 
@@ -131,8 +131,8 @@ sell-approve permission is sealed into the signature (the no-exit rule).
   exact signed token list; if you need to audit it, inspect your authenticated
   `/api/grants` response rather than assuming Settings proves what was signed.
 - For a **self-hosted installation only**, also inspect its local
-  `~/.merrymen/grant.json` (or the `grant.json` under its configured
-  `MERRYMEN_HOME`). Check `"chainId": 4663`, `"grantTokens"` for only the token
+  `~/.agentcap/grant.json` (or the `grant.json` under its configured
+  `AGENTCAP_HOME`). Check `"chainId": 4663`, `"grantTokens"` for only the token
   addresses you authorized, `"v4-adapter"` in `grantFeatures`, and
   `"v4AdapterAddress"` for the verified mainnet adapter.
 
@@ -159,12 +159,12 @@ step 4:
 ## Step 6 — Prove it
 
 ```bash
-merrymen preflight
+agentcap preflight
 ```
 Expect **0 blockers**. Then:
 
 ```bash
-merrymen selftest
+agentcap selftest
 ```
 It must print **PASSED** — it now exits non-zero for anything less, and green
 means the grant, the wall, the bundler and the ledger all work.

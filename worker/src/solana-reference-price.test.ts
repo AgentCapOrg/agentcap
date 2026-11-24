@@ -120,11 +120,11 @@ test("both Pyth generations are pinned, frozen and distinct, and each account is
 test("the generation setting defaults to the default generation and accepts only current or upgraded", () => {
   assert.equal(SOLANA_PYTH_DEFAULT_GENERATION, "current");
   assert.equal(solanaPythGeneration({}), SOLANA_PYTH_DEFAULT_GENERATION);
-  assert.equal(solanaPythGeneration({ MERRYMEN_SOLANA_PYTH_GENERATION: "" }), SOLANA_PYTH_DEFAULT_GENERATION);
-  assert.equal(solanaPythGeneration({ MERRYMEN_SOLANA_PYTH_GENERATION: "current" }), "current");
-  assert.equal(solanaPythGeneration({ MERRYMEN_SOLANA_PYTH_GENERATION: "upgraded" }), "upgraded");
+  assert.equal(solanaPythGeneration({ AGENTCAP_SOLANA_PYTH_GENERATION: "" }), SOLANA_PYTH_DEFAULT_GENERATION);
+  assert.equal(solanaPythGeneration({ AGENTCAP_SOLANA_PYTH_GENERATION: "current" }), "current");
+  assert.equal(solanaPythGeneration({ AGENTCAP_SOLANA_PYTH_GENERATION: "upgraded" }), "upgraded");
   for (const value of ["Upgraded", "UPGRADED", " upgraded", "upgraded ", "new", "both", "1", "pyt2F414BA6dPttK6RddPZUdHfapoBN24GL5wbrPCou", "toString"]) {
-    assert.throws(() => solanaPythGeneration({ MERRYMEN_SOLANA_PYTH_GENERATION: value }), SolanaReferencePriceError, value);
+    assert.throws(() => solanaPythGeneration({ AGENTCAP_SOLANA_PYTH_GENERATION: value }), SolanaReferencePriceError, value);
   }
 });
 
@@ -164,9 +164,9 @@ test("with the upgraded generation selected, the recorded upgraded account answe
   assert.throws(() => parsePythSolUsd(result.value, 458_681_624, snap.fetchedAtMs, "upgraded"), SolanaReferencePriceError);
 });
 
-test("without an explicit generation, reads and checks use the default generation, whatever this process's MERRYMEN_SOLANA_PYTH_GENERATION says", async t => {
-  const saved = Object.hasOwn(process.env, "MERRYMEN_SOLANA_PYTH_GENERATION") ? process.env.MERRYMEN_SOLANA_PYTH_GENERATION : undefined;
-  t.after(() => { if (saved === undefined) delete process.env.MERRYMEN_SOLANA_PYTH_GENERATION; else process.env.MERRYMEN_SOLANA_PYTH_GENERATION = saved; });
+test("without an explicit generation, reads and checks use the default generation, whatever this process's AGENTCAP_SOLANA_PYTH_GENERATION says", async t => {
+  const saved = Object.hasOwn(process.env, "AGENTCAP_SOLANA_PYTH_GENERATION") ? process.env.AGENTCAP_SOLANA_PYTH_GENERATION : undefined;
+  t.after(() => { if (saved === undefined) delete process.env.AGENTCAP_SOLANA_PYTH_GENERATION; else process.env.AGENTCAP_SOLANA_PYTH_GENERATION = saved; });
   const upgraded = pythSnapshotResult(PYTH_SOL_USD_UPGRADED_MAINNET_SNAPSHOT), current = pythSnapshotResult(PYTH_SOL_USD_MAINNET_SNAPSHOT);
   const at = PYTH_SOL_USD_UPGRADED_MAINNET_SNAPSHOT.fetchedAtMs, min = PYTH_SOL_USD_UPGRADED_MAINNET_SNAPSHOT.minContextSlot;
   const served = (by: Record<string, unknown>) => { const asked: string[] = [];
@@ -179,7 +179,7 @@ test("without an explicit generation, reads and checks use the default generatio
   // Unset, either generation, or a value that names none (as an operator's shell might export it): a caller
   // that passes no generation never consults the process's env, so none of them changes what it reads or accepts.
   for (const value of [undefined, "current", "upgraded", "Upgraded", "both"]) {
-    if (value === undefined) delete process.env.MERRYMEN_SOLANA_PYTH_GENERATION; else process.env.MERRYMEN_SOLANA_PYTH_GENERATION = value;
+    if (value === undefined) delete process.env.AGENTCAP_SOLANA_PYTH_GENERATION; else process.env.AGENTCAP_SOLANA_PYTH_GENERATION = value;
     const rpc = served(both), rec = recorder(), name = String(value);
     const price = await readSolanaReferencePrice(rpc.read, min, at, { alerts: createSolanaReferenceAlerts(rec.sink) });
     assert.deepEqual([price.account, price.price, rpc.asked], [fallback.account, "10516339767", [fallback.account]], name);
@@ -191,8 +191,8 @@ test("without an explicit generation, reads and checks use the default generatio
     assert.throws(() => verifySolanaReferenceBound(upgradedBound, sell, at), SolanaReferencePriceError, name);
   }
   // The setting counts only where an env is handed over: the app runtime's, through requireSolanaPythGeneration.
-  process.env.MERRYMEN_SOLANA_PYTH_GENERATION = "current";
-  assert.equal(requireSolanaPythGeneration({ MERRYMEN_SOLANA_PYTH_GENERATION: "upgraded" }, at, quiet), "upgraded");
+  process.env.AGENTCAP_SOLANA_PYTH_GENERATION = "current";
+  assert.equal(requireSolanaPythGeneration({ AGENTCAP_SOLANA_PYTH_GENERATION: "upgraded" }, at, quiet), "upgraded");
   const rpc = served(both);
   assert.equal((await readSolanaReferencePrice(rpc.read, min, at, { generation: "upgraded" })).account, UPGRADED.account);
   assert.deepEqual(verifySolanaReferenceBound(upgradedBound, sell, at, "upgraded"), upgradedBound);
@@ -312,9 +312,9 @@ test("a stored bound is checked against the configured tolerance, never only the
 
 test("the tolerance setting defaults to 3% and refuses out-of-range or malformed values", () => {
   assert.equal(solanaReferenceToleranceBps({}), 300);
-  assert.equal(solanaReferenceToleranceBps({ MERRYMEN_SOLANA_REFERENCE_TOLERANCE_BPS: "500" }), 500);
+  assert.equal(solanaReferenceToleranceBps({ AGENTCAP_SOLANA_REFERENCE_TOLERANCE_BPS: "500" }), 500);
   for (const value of ["49", "1001", "3e2", "-300", "300.5", " 300"]) {
-    assert.throws(() => solanaReferenceToleranceBps({ MERRYMEN_SOLANA_REFERENCE_TOLERANCE_BPS: value }), SolanaReferencePriceError, value);
+    assert.throws(() => solanaReferenceToleranceBps({ AGENTCAP_SOLANA_REFERENCE_TOLERANCE_BPS: value }), SolanaReferencePriceError, value);
   }
 });
 
@@ -328,7 +328,7 @@ const served = (value: unknown, slot = 1001) => async () => ({ context: { slot }
 /** Every refusal but `config`: the age limit alone, which spans a different number of Pyth posts in each generation. */
 const TAIL = " — no live Solana trade is admitted until a fresh, fully verified SOL/USD price is read (max age 120 s)";
 /** A setting that names no generation is not a Pyth outage: the line says what to fix, and never echoes the value. */
-const CONFIG_TAIL = " — MERRYMEN_SOLANA_PYTH_GENERATION must be current or upgraded (unset is current); no live Solana trade is admitted until the setting is fixed";
+const CONFIG_TAIL = " — AGENTCAP_SOLANA_PYTH_GENERATION must be current or upgraded (unset is current); no live Solana trade is admitted until the setting is fixed";
 const CURRENT = SOLANA_PYTH_FEEDS.current.account;
 async function refusal(promise: Promise<unknown>, reason: SolanaReferenceRefusal): Promise<SolanaReferencePriceError> {
   let caught: unknown;
@@ -467,23 +467,23 @@ test("without an alerts option, a refused read is said on this process's stderr 
 });
 
 test("requireSolanaPythGeneration reads only the env it is given, and says a setting that names no generation as one [alert] before refusing", async t => {
-  const saved = Object.hasOwn(process.env, "MERRYMEN_SOLANA_PYTH_GENERATION") ? process.env.MERRYMEN_SOLANA_PYTH_GENERATION : undefined;
-  t.after(() => { if (saved === undefined) delete process.env.MERRYMEN_SOLANA_PYTH_GENERATION; else process.env.MERRYMEN_SOLANA_PYTH_GENERATION = saved; });
-  process.env.MERRYMEN_SOLANA_PYTH_GENERATION = "both"; // never consulted
+  const saved = Object.hasOwn(process.env, "AGENTCAP_SOLANA_PYTH_GENERATION") ? process.env.AGENTCAP_SOLANA_PYTH_GENERATION : undefined;
+  t.after(() => { if (saved === undefined) delete process.env.AGENTCAP_SOLANA_PYTH_GENERATION; else process.env.AGENTCAP_SOLANA_PYTH_GENERATION = saved; });
+  process.env.AGENTCAP_SOLANA_PYTH_GENERATION = "both"; // never consulted
   const rec = recorder(), alerts = createSolanaReferenceAlerts(rec.sink);
   assert.equal(requireSolanaPythGeneration({}, NOW, alerts), SOLANA_PYTH_DEFAULT_GENERATION);
-  assert.equal(requireSolanaPythGeneration({ MERRYMEN_SOLANA_PYTH_GENERATION: "" }, NOW, alerts), SOLANA_PYTH_DEFAULT_GENERATION);
-  assert.equal(requireSolanaPythGeneration({ MERRYMEN_SOLANA_PYTH_GENERATION: "current" }, NOW, alerts), "current");
-  assert.equal(requireSolanaPythGeneration({ MERRYMEN_SOLANA_PYTH_GENERATION: "upgraded" }, NOW, alerts), "upgraded");
+  assert.equal(requireSolanaPythGeneration({ AGENTCAP_SOLANA_PYTH_GENERATION: "" }, NOW, alerts), SOLANA_PYTH_DEFAULT_GENERATION);
+  assert.equal(requireSolanaPythGeneration({ AGENTCAP_SOLANA_PYTH_GENERATION: "current" }, NOW, alerts), "current");
+  assert.equal(requireSolanaPythGeneration({ AGENTCAP_SOLANA_PYTH_GENERATION: "upgraded" }, NOW, alerts), "upgraded");
   assert.deepEqual(rec.lines.slice(), []);
-  assert.throws(() => requireSolanaPythGeneration({ MERRYMEN_SOLANA_PYTH_GENERATION: "upgraded\n[alert] forged" }, NOW, alerts),
+  assert.throws(() => requireSolanaPythGeneration({ AGENTCAP_SOLANA_PYTH_GENERATION: "upgraded\n[alert] forged" }, NOW, alerts),
     (error: unknown) => error instanceof SolanaReferencePriceError && error.reason === "config");
   assert.deepEqual(rec.lines, [["alert", `[alert] solana-reference-price refused: reason=config generation=invalid failingForMs=0 refused=1 suppressed=0${CONFIG_TAIL}`]]);
   // A log or tracker that throws never turns the refusal into an answer.
   const broken = createSolanaReferenceAlerts({ alert: () => { throw new Error("log down"); }, info: () => {} });
   const throwing = { refused: () => { throw new Error("tracker down"); }, read: () => {} };
   for (const sink of [broken, throwing]) {
-    assert.throws(() => requireSolanaPythGeneration({ MERRYMEN_SOLANA_PYTH_GENERATION: "Upgraded" }, NOW, sink),
+    assert.throws(() => requireSolanaPythGeneration({ AGENTCAP_SOLANA_PYTH_GENERATION: "Upgraded" }, NOW, sink),
       (error: unknown) => error instanceof SolanaReferencePriceError && error.reason === "config");
   }
 });

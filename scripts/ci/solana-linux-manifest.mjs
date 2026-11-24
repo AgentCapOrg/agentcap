@@ -13,7 +13,7 @@
 // embeds its own paths, so a macOS manifest never describes it). verify
 // refuses (exit 1) a manifest that is missing, unreadable, for another host,
 // or not for the tested artifact: its artifact.sha256 must equal
-// <tested sha256>, and target/deploy/merrymen_vault.so must still hash to it,
+// <tested sha256>, and target/deploy/agentcap_vault.so must still hash to it,
 // so --record's in-place build left the bytes the runtime tests ran against
 // untouched.
 //
@@ -72,7 +72,7 @@ import { provenance, releaseLine, releaseStatus } from "./solana-program-record.
 
 export const LINUX_HOST = "Linux-x86_64";
 export const LINUX_MANIFEST = `build-manifests/${LINUX_HOST}.json`;
-export const ARTIFACT = "target/deploy/merrymen_vault.so";
+export const ARTIFACT = "target/deploy/agentcap_vault.so";
 
 const HEX64 = /^[0-9a-f]{64}$/;
 

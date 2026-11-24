@@ -3,7 +3,7 @@
  * credential is read. Exercises the real Db driver and transaction boundaries,
  * including races that SQLite's single connection necessarily serializes.
  *
- * MERRYMEN_TEST_PG_URL=postgres://merrymen@127.0.0.1:55441/managed_test \
+ * AGENTCAP_TEST_PG_URL=postgres://agentcap@127.0.0.1:55441/managed_test \
  *   node --import tsx --test web/src/lib/telegram-managed-store.postgres.test.ts
  */
 import assert from "node:assert/strict";
@@ -15,7 +15,7 @@ import { makePgDb, type Db, type Stmt } from "../../../worker/src/db";
 import { openSecret, sealSecret } from "../../../worker/src/store-crypto";
 import { ensureManagedTelegramSchema, MANAGED_INTENT_TTL_MS, ManagedTelegramError, ManagedTelegramStore } from "./telegram-managed-store";
 
-const fixtureUrl = process.env.MERRYMEN_TEST_PG_URL;
+const fixtureUrl = process.env.AGENTCAP_TEST_PG_URL;
 const A = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const B = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 const MANAGER = "9000", BOT = "1001", USER = 1234567;
@@ -37,8 +37,8 @@ test("Postgres: managed bot intents, replay, claims and encrypted settings are a
   assert.match(schema, /^mm_managed_test_[a-f0-9]{16}$/);
   const admin = new pg.Client({ connectionString: target.toString() });
   await admin.connect();
-  const originalDek = process.env.MERRYMEN_STORE_DEK;
-  process.env.MERRYMEN_STORE_DEK = DEK.toString("base64");
+  const originalDek = process.env.AGENTCAP_STORE_DEK;
+  process.env.AGENTCAP_STORE_DEK = DEK.toString("base64");
   const scopedUrl = (service: string) => {
     const u = new URL(target);
     u.searchParams.set("options", `-c search_path=${schema} -c statement_timeout=10000 -c lock_timeout=5000`);
@@ -231,8 +231,8 @@ test("Postgres: managed bot intents, replay, claims and encrypted settings are a
       assert.equal(replay.outcome, "already_candidate");
     });
   } finally {
-    if (originalDek === undefined) delete process.env.MERRYMEN_STORE_DEK;
-    else process.env.MERRYMEN_STORE_DEK = originalDek;
+    if (originalDek === undefined) delete process.env.AGENTCAP_STORE_DEK;
+    else process.env.AGENTCAP_STORE_DEK = originalDek;
     await admin.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);
     await admin.end();
   }

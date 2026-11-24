@@ -25,18 +25,18 @@ import type { ChildProcess, SpawnOptions } from "node:child_process";
 import { privateKeyToAccount } from "viem/accounts";
 import type { StoredGrant } from "../../packages/core/src/index";
 
-const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-perps-unheard-pause-")));
-process.env.MERRYMEN_HOME = fleet;
-process.env.MERRYMEN_HOSTED = "1";
+const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-perps-unheard-pause-")));
+process.env.AGENTCAP_HOME = fleet;
+process.env.AGENTCAP_HOSTED = "1";
 delete process.env.DATABASE_URL;
-delete process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS;
-delete process.env.MERRYMEN_FLEET_RECOVERY_REPORT_ONLY;
-delete process.env.MERRYMEN_PERSISTENT_HOME_REQUIRED;
-delete process.env.MERRYMEN_FLEET_ROLLOUT;
+delete process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS;
+delete process.env.AGENTCAP_FLEET_RECOVERY_REPORT_ONLY;
+delete process.env.AGENTCAP_PERSISTENT_HOME_REQUIRED;
+delete process.env.AGENTCAP_FLEET_ROLLOUT;
 for (const key of Object.keys(process.env)) if (key.startsWith("RAILWAY_")) delete process.env[key];
 const dek = Buffer.alloc(32, 53);
-process.env.MERRYMEN_STORE_DEK = dek.toString("base64");
-process.env.MERRYMEN_PERPS = "paper";
+process.env.AGENTCAP_STORE_DEK = dek.toString("base64");
+process.env.AGENTCAP_PERPS = "paper";
 
 const orch = await import("./orchestrator");
 const { getGrantStore } = await import("./grant-store");
@@ -80,7 +80,7 @@ console.log = (...a: unknown[]) => { said.push(a.map(String).join(" ").replace(/
 const settle = async (n = 30) => { for (let i = 0; i < n; i++) await new Promise((r) => setImmediate(r)); };
 const spot = getGrantStore("spot"), perps = getGrantStore("perps");
 const perpsKey = (owner: string) => `${owner}:perps`;
-const live = (tenant: string) => spawned.filter((p) => p.env.MERRYMEN_HOME === orch.childHome(tenant) && !p.gone);
+const live = (tenant: string) => spawned.filter((p) => p.env.AGENTCAP_HOME === orch.childHome(tenant) && !p.gone);
 const pausedHere = (tenant: string) => existsSync(path.join(orch.childHome(tenant), "paused"));
 const unheard = (owner: string) => said.filter((l) => l.startsWith(`perps: ${perpsKey(owner)} is paused by its owner's`));
 
@@ -129,7 +129,7 @@ it("a Perps-only login's standing pause from a killed Spot wallet stays, and is 
   for (const l of [BOTH, KILLED]) {
     assert.equal(live(l).length, 1);
     // The Spot worker's own (empty) ledger, as a real one leaves: its final pass reads it.
-    const book = new DatabaseSync(path.join(orch.childHome(l), "merrymen.db"));
+    const book = new DatabaseSync(path.join(orch.childHome(l), "agentcap.db"));
     try { await applyLedgerSchema(wrapSqlite(book)); } finally { book.close(); }
     writeFileSync(path.join(orch.childHome(l), "paused"), "paused", "utf8");
   }

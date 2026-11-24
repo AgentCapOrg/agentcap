@@ -177,7 +177,7 @@ export interface AgentLimits {
    *
    * DELIBERATELY NOT IN allowedTargets. The router is a target only for the
    * one selector the wall pinned — swapExactTokensForTokensSupportingFee-
-   * OnTransferTokens over the frozen USDG → VIRTUAL → $MERRYMEN path into the
+   * OnTransferTokens over the frozen USDG → VIRTUAL → $AGENTCAP path into the
    * account itself. Listing it with the other targets would let any `swap`
    * intent name it, and the swap builder would then route that intent through
    * a v3 router it never quoted: a mirror looser than the chain. So a `swap`
@@ -189,7 +189,7 @@ export interface AgentLimits {
   energy?: {
     /** Uniswap v2 Router02 — the one address the wall pinned the energy swap on. */
     router: string;
-    /** The reserve token the route ends at ($MERRYMEN). */
+    /** The reserve token the route ends at ($AGENTCAP). */
     token: string;
   };
   /**
@@ -321,12 +321,12 @@ export type TradeIntent = {
   notionalUsdg: bigint;
 } | {
   /**
-   * USDG spent buying the agent's own ENERGY ($MERRYMEN) over the one route the
+   * USDG spent buying the agent's own ENERGY ($AGENTCAP) over the one route the
    * grant sealed (core energy.ts ENERGY_ROUTE_V1), at the owner's request.
    *
    * ITS OWN KIND, NOT A `swap`, for three reasons that are about safety:
    *
-   *   BUY-ONLY. The key can never sell $MERRYMEN — it has no approve for it
+   *   BUY-ONLY. The key can never sell $AGENTCAP — it has no approve for it
    *   anywhere in the wall — so `no-exit` would refuse every one of these, and
    *   carving an exemption into the swap branch (the most-travelled branch in
    *   this file) is how a looser mirror gets written by accident.
@@ -342,7 +342,7 @@ export type TradeIntent = {
    * A new kind also makes the compiler ask every consumer that reads a
    * notional what this means to it, which is how curve-trade was added.
    *
-   * `target` is the v2 router; the legs are USDG → $MERRYMEN (the VIRTUAL hop
+   * `target` is the v2 router; the legs are USDG → $AGENTCAP (the VIRTUAL hop
    * is fixed by the route, not chosen here). `notionalUsdg` must EQUAL
    * `sellAmountRaw`: the input is USDG itself, so the two are the same number
    * and a difference could only be an intent built wrong.
@@ -632,7 +632,7 @@ export interface PerpPolicyState {
   closeInFlightMarkets: ReadonlySet<number>;
   /** The durable perp-venue-incident flag (rule 16). */
   incident: boolean;
-  /** MERRYMEN_HALT_PERP_ENTRIES or the owner's /flatten halt: opens off, exits on. */
+  /** AGENTCAP_HALT_PERP_ENTRIES or the owner's /flatten halt: opens off, exits on. */
   entriesHalted: boolean;
   /** The grant's expiry; null falls back to AgentLimits.expiresAt. */
   grantExpiresAtSec: number | null;
@@ -643,7 +643,7 @@ export interface PerpPolicyState {
  * Everything the scout ceiling needs, supplied BY THE CALLER, never by the intent.
  *
  * That separation is the point. Intents come from strategies, including
- * user-written ones in ~/.merrymen/strategies, so a flag carried on the intent
+ * user-written ones in ~/.agentcap/strategies, so a flag carried on the intent
  * saying "this token is priceable" would be a flag a strategy could simply set —
  * and the budget on unpriceable positions would be bypassable by the very code
  * it exists to bound. Only the tick knows what it managed to price, so only the
@@ -1045,7 +1045,7 @@ function checkPerpMarginHome(intent: PerpMarginIntent, limits: AgentLimits, stat
         rule: "perp-not-granted",
         detail:
           "claiming a Lighter payout is a call through the signed permission, and it carries no perpetuals. " +
-          "Lighter's relayer usually claims it anyway, and `merrymen recover` can with the owner key.",
+          "Lighter's relayer usually claims it anyway, and `agentcap recover` can with the owner key.",
       };
     }
     if (state.nowSec >= limits.expiresAt) {
@@ -1542,14 +1542,14 @@ export function checkPolicy(
   // ── the energy buy ──────────────────────────────────────────────────────
   //
   // A MIRROR OF ONE PERMISSION, rule for rule. The wall seals the swap on the
-  // router, with the path pinned USDG → VIRTUAL → $MERRYMEN and the output
+  // router, with the path pinned USDG → VIRTUAL → $AGENTCAP and the output
   // pinned to the account, and funds it through the ONE capped USDG approve —
   // so the questions here are: did the grant seal it at all, is this that
   // router, are these those legs, and is the size a size. What it does NOT ask
   // is stated as carefully, because each would make this mirror STRICTER than
   // the chain:
   //
-  //   asset-allowlist (the watch set) — $MERRYMEN is never watched, by design;
+  //   asset-allowlist (the watch set) — $AGENTCAP is never watched, by design;
   //   no-exit — the key can never sell it, by design (recover moves it);
   //   scout — the budget on unpriceable POSITIONS, and this is not one.
   //
@@ -1562,7 +1562,7 @@ export function checkPolicy(
         rule: "energy-not-granted",
         detail:
           "this signed key has no energy route — it was signed before the energy buy existed, off Robinhood Chain, " +
-          "or without room for it. Re-sign at /grant, or send $MERRYMEN to the account directly.",
+          "or without room for it. Re-sign at /grant, or send $AGENTCAP to the account directly.",
       };
     }
     if (lc(intent.target) !== lc(limits.energy.router)) {
@@ -1576,7 +1576,7 @@ export function checkPolicy(
       return {
         ok: false,
         rule: "asset-allowlist",
-        detail: `the energy route is USDG → $MERRYMEN only; ${intent.sellToken} → ${intent.buyToken} is not it`,
+        detail: `the energy route is USDG → $AGENTCAP only; ${intent.sellToken} → ${intent.buyToken} is not it`,
       };
     }
     // POSITIVITY, and the one identity this kind has: its input IS USDG, so the
@@ -1835,7 +1835,7 @@ export function checkPolicy(
   // The two venues that ACQUIRE an asset. Named explicitly rather than relying
   // on `scout` being undefined elsewhere: a vault movement has no notional to
   // judge, and a future kind that does should have to opt in here on purpose.
-  // `energy-buy` has not, deliberately: $MERRYMEN is never a position, so a
+  // `energy-buy` has not, deliberately: $AGENTCAP is never a position, so a
   // budget on unpriceable POSITIONS has nothing to say about it.
   if (scout?.buyUnpriceable && (intent.kind === "swap" || intent.kind === "curve-trade")) {
     const verdict = scoutAllows(
@@ -1870,7 +1870,7 @@ export function checkPolicy(
           rule: "transfer-not-permitted",
           detail:
             "this wall carries no transfer permission — no withdrawal addresses were registered when it was signed. " +
-            "Re-sign the grant with a destination, or move funds with your owner key (`merrymen recover`).",
+            "Re-sign the grant with a destination, or move funds with your owner key (`agentcap recover`).",
         };
       }
       const to = intent.recipient.toLowerCase();

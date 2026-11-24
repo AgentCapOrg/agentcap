@@ -14,9 +14,9 @@ import os from "node:os";
 import path from "node:path";
 import { after, before, describe, it } from "node:test";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-pnl-restart-"));
-process.env.MERRYMEN_HOME = HOME;
-process.env.MERRYMEN_HOSTED = "1";
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-pnl-restart-"));
+process.env.AGENTCAP_HOME = HOME;
+process.env.AGENTCAP_HOSTED = "1";
 
 const { closeStoreForTest, initStore } = await import("../store");
 const { toolByName } = await import("./chat-tools");

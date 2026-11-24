@@ -1,5 +1,5 @@
 /**
- * IS THIS SERIALIZED PERMISSION THE MERRYMEN WALL? One check, every door.
+ * IS THIS SERIALIZED PERMISSION THE AGENTCAP WALL? One check, every door.
  *
  * A grant reaches the server as bytes built in a client the server does not
  * control — a browser tab, the iOS engine, a partner's SDK — and beside those
@@ -9,7 +9,7 @@
  * (packages/core/src/grant.ts grantHasTransfer), `grantTokens` and the sealed
  * adapter addresses decide what the agent may sell and call. An owner-signed
  * permission hash authenticates the bytes; it does not prove the bytes are the
- * wall the metadata describes, or the wall Merrymen mints at all.
+ * wall the metadata describes, or the wall AgentCap mints at all.
  *
  * So the check is a rebuild, not a scan. The canonical wall is rebuilt with
  * `buildWallPolicies` from the grant's own caps, timestamps, tokens and sealed
@@ -85,7 +85,7 @@ import {
   isGrantPurpose,
   robinhoodChain,
   type StoredGrant,
-} from "@merrymen/core";
+} from "@agentcap/core";
 
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
 const ZERO = "0x0000000000000000000000000000000000000000";
@@ -168,7 +168,7 @@ function address(value: unknown, label: string): Address {
 }
 
 /**
- * Does `grant.serialized` install exactly the wall Merrymen would mint for this
+ * Does `grant.serialized` install exactly the wall AgentCap would mint for this
  * grant's own declared caps, times, tokens, features and sealed addresses?
  *
  * PURE — no chain, no store, no clock — so a refusal costs nothing and burns no
@@ -304,7 +304,7 @@ function verify(grant: Record<string, unknown>): void {
   if (tokens !== undefined && (!Array.isArray(tokens) || tokens.length > 50 || tokens.some((a) => typeof a !== "string" || !ADDRESS.test(a)))) {
     refuse(400, "invalid_grant", "Invalid granted token addresses");
   }
-  // $MERRYMEN SEALED AS A TRADED TOKEN IS A SIGNER FROM BEFORE ENERGY. Every
+  // $AGENTCAP SEALED AS A TRADED TOKEN IS A SIGNER FROM BEFORE ENERGY. Every
   // current signer drops the reserve from the sealed extras (core wall.ts
   // usableExtraTokens), so `grantTokens` never names it; an iOS build or a tab
   // loaded before energy shipped still seals it, with an uncapped approve that
@@ -325,7 +325,7 @@ function verify(grant: Record<string, unknown>): void {
     refuse(
       400,
       "invalid_wall",
-      "This page or app version is out of date: it seals $MERRYMEN as a token your agent trades, but $MERRYMEN is " +
+      "This page or app version is out of date: it seals $AGENTCAP as a token your agent trades, but $AGENTCAP is " +
         "now its energy, which the agent's key may only buy. Reload the page (or update the app) and sign again",
     );
   }
@@ -381,7 +381,7 @@ function verify(grant: Record<string, unknown>): void {
   const unknown = (features as unknown[]).filter((f) => typeof f !== "string" || !CANONICAL_GRANT_FEATURES.includes(f));
   if (unknown.length > 0) {
     const named = unknown.slice(0, 5).map((f) => JSON.stringify(f)?.slice(0, 40) ?? String(f)).join(", ");
-    refuse(400, "invalid_grant", `The permission declares features the Merrymen wall does not grant: ${named}`);
+    refuse(400, "invalid_grant", `The permission declares features the AgentCap wall does not grant: ${named}`);
   }
   for (const [field, marker] of SEALED) {
     if (grant[field] !== undefined) address(grant[field], field);
@@ -493,7 +493,7 @@ function verify(grant: Record<string, unknown>): void {
           p.getPolicyData().toLowerCase() !== submitted[i].getPolicyData().toLowerCase(),
       )
     ) {
-      refuse(400, "invalid_wall", "The serialized permission does not implement the advertised Merrymen limits");
+      refuse(400, "invalid_wall", "The serialized permission does not implement the advertised AgentCap limits");
     }
   } catch (error) {
     if (error instanceof Refusal) throw error;

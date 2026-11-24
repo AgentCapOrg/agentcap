@@ -5,8 +5,8 @@ import "../mcp-connect.css";
 import { McpConnectClient } from "./McpConnectClient";
 
 export const metadata: Metadata = {
-  title: "Connect Merrymen to your AI assistant · merrymen",
-  description: "Connect your Merrymen agent to Claude, ChatGPT, Grok, Grok Bot, Codex, Cursor and other assistants.",
+  title: "Connect AgentCap to your AI assistant · agentcap",
+  description: "Connect your AgentCap agent to Claude, ChatGPT, Grok, Grok Bot, Codex, Cursor and other assistants.",
   referrer: "no-referrer",
 };
 
@@ -21,6 +21,6 @@ export const dynamic = "force-dynamic";
  */
 export default function ConnectMcpPage() {
   const cfg = mcpConfig();
-  const url = cfg.resource || "https://mcp.merrymen.dev/mcp";
+  const url = cfg.resource || "https://mcp.agentcap.xyz/mcp";
   return <McpConnectClient url={url} app={cfg.issuer} enabled={cfg.enabled} disabledWhy={cfg.disabledWhy} />;
 }

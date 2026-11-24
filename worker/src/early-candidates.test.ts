@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { setImmediate } from "node:timers/promises";
 import { keccak256, type PublicClient } from "viem";
-import { CASH, UNISWAP, GRANT_TRENCHER, MERRYMEN_TOKEN, STOCK_TOKENS, type StoredGrant } from "../../packages/core/src/index";
+import { CASH, UNISWAP, GRANT_TRENCHER, AGENTCAP_TOKEN, STOCK_TOKENS, type StoredGrant } from "../../packages/core/src/index";
 import {
   EARLY, EARLY_PAGES_MAX, EarlyCandidateBook, earlyCandidateBook, earlyEntryBound, earlyEntryPools, earlyFunnelOf,
   earlyScreenReason, earlyVerifyPools, installEarlyCandidateBook, type EarlyOffer,
@@ -105,10 +105,10 @@ function withFactoryHash(t: { after: (fn: () => void) => void }) {
   t.after(() => { if (prior === undefined) delete process.env.TRENCHER_FACTORY_CODE_HASH; else process.env.TRENCHER_FACTORY_CODE_HASH = prior; });
 }
 
-const input = (symbol = "MEME", instrumentId = "merrymen:meme") =>
+const input = (symbol = "MEME", instrumentId = "agentcap:meme") =>
   ({ agentId: AGENT, market: { instrumentId, symbol, priceUsd: "0.01" } }) as ShadowInputs;
 const decided = (action: string, id = "decision-1", over: Record<string, unknown> = {}) => ({ ran: true, result: { ok: true, decision: {
-  decision_id: id, agent_id: AGENT, instrument_id: "merrymen:meme", symbol: "MEME", action, suggested_delta_usdg: 5e6, gate_verdict: "proceed", ...over,
+  decision_id: id, agent_id: AGENT, instrument_id: "agentcap:meme", symbol: "MEME", action, suggested_delta_usdg: 5e6, gate_verdict: "proceed", ...over,
 } } }) as unknown as ShadowOutcome;
 const noDecision = async () => ({ ran: true, result: { ok: false, kind: "unavailable", detail: "down" } }) as unknown as ShadowOutcome;
 
@@ -125,7 +125,7 @@ test("an offer is a validated 0x+40-hex address, lowercased, with code-shaped fi
   assert.equal(book.offer(CASH.USDG, offer()), "refused:quote-asset");
   assert.equal(book.offer(CASH.WETH.toUpperCase().replace("0X", "0x"), offer()), "refused:quote-asset");
   assert.equal(book.offer(STOCK_TOKENS[0]!.address, offer()), "refused:not-memecoin");
-  assert.equal(book.offer(MERRYMEN_TOKEN.address, offer()), "refused:energy-reserve");
+  assert.equal(book.offer(AGENTCAP_TOKEN.address, offer()), "refused:energy-reserve");
   assert.equal(book.offer(A, offer({ source: "Fomo Follow; buy now" })), "refused:invalid-source");
   assert.equal(book.offer(A, offer({ priority: Number.NaN })), "refused:invalid-priority");
   assert.equal(book.offer(A, offer({ maxUsdg6: 0n })), "refused:invalid-size");
@@ -286,7 +286,7 @@ test("the early screen: supported route, two-sided, fresh, known reserve — nul
   const cases: [Partial<GeckoPool>, string][] = [
     [{ tokenAddress: CASH.USDG.toLowerCase() as `0x${string}` }, "quote-asset"],
     [{ tokenAddress: STOCK_TOKENS[0]!.address.toLowerCase() as `0x${string}` }, "not-memecoin"],
-    [{ tokenAddress: MERRYMEN_TOKEN.address.toLowerCase() as `0x${string}` }, "energy-reserve"],
+    [{ tokenAddress: AGENTCAP_TOKEN.address.toLowerCase() as `0x${string}` }, "energy-reserve"],
     [{ dex: "uniswap-v4-robinhood" }, "venue-not-supported"],
     [{ dex: "pons" }, "venue-not-supported"],
     [{ poolAddress: null }, "pool-address-unknown"],
@@ -513,8 +513,8 @@ test("take() never exceeds the book's per-coin ceiling — not even when the off
   const review = new TrenchBrainReview(() => now);
   review.reset("paper");
   const symbol = `T${SMALL.slice(-11).toUpperCase()}`;
-  const smallInput = { agentId: AGENT, market: { instrumentId: "merrymen:small", symbol, priceUsd: "0.0001" } } as ShadowInputs;
-  review.launch("paper", smallInput, SMALL, async () => decided("buy", "decision-1", { instrument_id: "merrymen:small", symbol, suggested_delta_usdg: 5e6 }), () => {});
+  const smallInput = { agentId: AGENT, market: { instrumentId: "agentcap:small", symbol, priceUsd: "0.0001" } } as ShadowInputs;
+  review.launch("paper", smallInput, SMALL, async () => decided("buy", "decision-1", { instrument_id: "agentcap:small", symbol, suggested_delta_usdg: 5e6 }), () => {});
   await setImmediate();
   now = T0 + 25_000; // the offer expired while the review ran
   assert.ok(!book.has(SMALL));

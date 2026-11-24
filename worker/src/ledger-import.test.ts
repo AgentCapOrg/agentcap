@@ -18,7 +18,7 @@ import {
 } from "./ledger-import";
 import type { TenantLease } from "./tenant-lease";
 
-const root = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-original-import-")));
+const root = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-original-import-")));
 const handles: DatabaseSync[] = [];
 after(() => { for (const raw of handles) raw.close(); rmSync(root, { recursive: true, force: true }); });
 const addr = (n: number) => `0x${n.toString(16).padStart(40, "0")}`;
@@ -32,7 +32,7 @@ async function fixture(empty = false) {
   const st = lstatSync(mountPath, { bigint: true });
   const volume: LedgerImportVolume = { id: `vol_fixture_${id}`, mountPath, homeRoot, device: String(st.dev), inode: String(st.ino) };
   const home = path.join(homeRoot, "children", tenant);
-  const raw = new DatabaseSync(path.join(sourceHome, "merrymen.db")), sharedRaw = new DatabaseSync(":memory:"); handles.push(raw, sharedRaw);
+  const raw = new DatabaseSync(path.join(sourceHome, "agentcap.db")), sharedRaw = new DatabaseSync(":memory:"); handles.push(raw, sharedRaw);
   const local = wrapSqlite(raw), shared = wrapSqlite(sharedRaw);
   await applyLedgerSchema(local); await applyLedgerSchema(shared); await shared.exec(MIRROR_STATE_DDL); await shared.exec(PAPER_CHECKPOINT_SCHEMA);
   sharedRaw.exec("CREATE TABLE grants(tenant TEXT PRIMARY KEY,grant_json TEXT NOT NULL,updated_at INTEGER NOT NULL,row_version INTEGER NOT NULL)");
@@ -77,7 +77,7 @@ it("imports original IDs/stamps, full financial rows and allocation high-water; 
   const clear = openSecret(artifact.sealed, dek); assert.ok(!clear.includes("EXCLUDED private DM")); assert.ok(!clear.includes("EXCLUDED credential"));
   assert.equal(await restoreLedgerImport(f.options), "restored");
   assert.deepEqual(await verifyRestoredLedgerImport({ ...f.options, artifact, assertSource() {} }), verified);
-  const importedRaw = new DatabaseSync(path.join(f.home, "merrymen.db")); handles.push(importedRaw); const imported = wrapSqlite(importedRaw);
+  const importedRaw = new DatabaseSync(path.join(f.home, "agentcap.db")); handles.push(importedRaw); const imported = wrapSqlite(importedRaw);
   for (const table of ["agents", "events", "posts", "trades", "equity", "flows", "fee_accruals", "journal", "positions", "cost_basis", "decisions", "risk_periods", "energy_days", "position_floors", "trench_positions", "brain_trigger_state", "agent_commands"]) {
     assert.deepEqual(importedRaw.prepare(`SELECT * FROM ${table}`).all(), f.raw.prepare(`SELECT * FROM ${table}`).all(), table);
   }
@@ -111,7 +111,7 @@ it("a book with mirrored owner operations stages, verifies and restores: the han
   const verified = await verifyLedgerImport({ artifact, home: f.sourceHome, shared: f.shared, dek, lease: f.lease, assertSource() {}, dialect: "sqlite" });
   assert.equal(verified.tables, 21, "the same tables as every other book: owner_operations is not part of the handover");
   assert.equal(await restoreLedgerImport(f.options), "restored");
-  const importedRaw = new DatabaseSync(path.join(f.home, "merrymen.db")); handles.push(importedRaw); const imported = wrapSqlite(importedRaw);
+  const importedRaw = new DatabaseSync(path.join(f.home, "agentcap.db")); handles.push(importedRaw); const imported = wrapSqlite(importedRaw);
   // The continuity proof names a fixed set of tables, and this is not one: an empty restored table proves nothing either way.
   await assertLedgerSourceContinuity(imported, f.shared, f.tenant);
   for (let i = 0; i < 2; i++) {
@@ -128,7 +128,7 @@ it("lost commit acknowledgement resumes the same published generation without re
   assert.equal(f.sharedRaw.prepare("SELECT state FROM tenant_ledger_import").get()!.state, "consumed");
   assert.ok(existsSync(path.join(f.home, LEDGER_IMPORT_PENDING_FILE)));
   assert.equal(await restoreLedgerImport(f.options), "resumed");
-  const raw = new DatabaseSync(path.join(f.home, "merrymen.db")); handles.push(raw); assert.equal(raw.prepare("SELECT count(*) AS n FROM trades").get()!.n, 1);
+  const raw = new DatabaseSync(path.join(f.home, "agentcap.db")); handles.push(raw); assert.equal(raw.prepare("SELECT count(*) AS n FROM trades").get()!.n, 1);
 });
 
 it("failure after no-clobber publication rolls back the consume and completes only that exact pending book", async () => {
@@ -136,21 +136,21 @@ it("failure after no-clobber publication rolls back the consume and completes on
   const wrap = (db: Db): Db => ({ exec: sql => db.exec(sql), prepare(sql) { const stmt = db.prepare(sql); return { ...stmt, async run(...args) { if (sql.startsWith("UPDATE tenant_ledger_import SET state = 'consumed'")) throw new Error("failed consume"); return stmt.run(...args); } }; }, tx: fn => db.tx(tx => fn(wrap(tx))) });
   await assert.rejects(restoreLedgerImport({ ...f.options, shared: wrap(f.shared) }));
   assert.equal(f.sharedRaw.prepare("SELECT state FROM tenant_ledger_import").get()!.state, "available");
-  assert.ok(existsSync(path.join(f.home, "merrymen.db"))); assert.ok(existsSync(path.join(f.home, LEDGER_IMPORT_PENDING_FILE)));
-  const before = lstatSync(path.join(f.home, "merrymen.db")); assert.equal(await restoreLedgerImport(f.options), "restored");
-  assert.equal(lstatSync(path.join(f.home, "merrymen.db")).ino, before.ino);
+  assert.ok(existsSync(path.join(f.home, "agentcap.db"))); assert.ok(existsSync(path.join(f.home, LEDGER_IMPORT_PENDING_FILE)));
+  const before = lstatSync(path.join(f.home, "agentcap.db")); assert.equal(await restoreLedgerImport(f.options), "restored");
+  assert.equal(lstatSync(path.join(f.home, "agentcap.db")).ino, before.ino);
 });
 
 it("consumed receipt refuses restoration after persistent-volume book loss, even when all cursors are zero", async () => {
-  const f = await fixture(true); assert.equal(existsSync(path.join(f.home, "merrymen.db")), false);
-  await registerLedgerSource(f.options); assert.equal(await restoreLedgerImport(f.options), "present"); rmSync(path.join(f.home, "merrymen.db"));
+  const f = await fixture(true); assert.equal(existsSync(path.join(f.home, "agentcap.db")), false);
+  await registerLedgerSource(f.options); assert.equal(await restoreLedgerImport(f.options), "present"); rmSync(path.join(f.home, "agentcap.db"));
   await assert.rejects(restoreLedgerImport(f.options));
-  assert.equal(existsSync(path.join(f.home, "merrymen.db")), false);
+  assert.equal(existsSync(path.join(f.home, "agentcap.db")), false);
 });
 
 it("a consumed zero-cursor original cannot be replaced in place after an unmirrored trade; missing incarnation is never reminted", async () => {
   const f = await fixture(true); await registerLedgerSource(f.options);
-  const file = path.join(f.home, "merrymen.db"), inode = lstatSync(file).ino;
+  const file = path.join(f.home, "agentcap.db"), inode = lstatSync(file).ino;
   const raw = new DatabaseSync(file);
   raw.prepare("INSERT INTO agents(smart_account,owner_address,session_key_address,chain_id,caps,granted_at,expires_at,hwm_usdg) VALUES(?,?,?,4663,'{}',1,9999999999,120)")
     .run(f.smartAccount, addr(0xf000 + fixtureId), addr(7));
@@ -167,7 +167,7 @@ it("a consumed zero-cursor original cannot be replaced in place after an unmirro
 });
 
 it("new registration requires empty original accounting and never permits an old positive cursor", async () => {
-  const f = await fixture(true); mkdirSync(f.home, { recursive: true }); const raw = new DatabaseSync(path.join(f.home, "merrymen.db")); await applyLedgerSchema(wrapSqlite(raw)); raw.close();
+  const f = await fixture(true); mkdirSync(f.home, { recursive: true }); const raw = new DatabaseSync(path.join(f.home, "agentcap.db")); await applyLedgerSchema(wrapSqlite(raw)); raw.close();
   f.sharedRaw.prepare("INSERT INTO mirror_state(tenant,table_name,last_id,last_stamp,updated_at) VALUES(?,'events',40,1040,1040)").run(f.tenant);
   await assert.rejects(registerLedgerSource(f.options)); assert.equal(f.sharedRaw.prepare("SELECT count(*) AS n FROM tenant_ledger_import").get()!.n, 0);
 });
@@ -194,7 +194,7 @@ it("historical gap binding is read-only, covers unchanged-cursor accounting corr
 it("newer authority incarnation or changed shared accounting/settlement refuses staged import without publishing a book", async () => {
   for (const mutation of ["UPDATE grants SET row_version=row_version+1", "UPDATE cost_basis SET cost_usdg='21'", "UPDATE trades SET budget_settled_at=1041,status='reverted',gas_wei='999'", "UPDATE fee_accruals SET fee_usdg=2", "UPDATE equity SET cash_usdg=91,equity_usdg=101"]) {
     const f = await fixture(); await f.stage(); f.sharedRaw.exec(mutation);
-    await assert.rejects(restoreLedgerImport(f.options)); assert.equal(existsSync(path.join(f.home, "merrymen.db")), false);
+    await assert.rejects(restoreLedgerImport(f.options)); assert.equal(existsSync(path.join(f.home, "agentcap.db")), false);
     assert.equal(f.sharedRaw.prepare("SELECT state FROM tenant_ledger_import").get()!.state, "available");
   }
 });
@@ -206,21 +206,21 @@ it("wrong tenant/account/chain/cipher or an unverified/different mounted home is
     { ...f.options, volume: { ...f.volume, id: "vol_wrong_identity" } }, { ...f.options, volume: { ...f.volume, device: "0" } },
     { ...f.options, home: path.join(root, "ephemeral-fallback") },
   ]) await assert.rejects(restoreLedgerImport(options));
-  assert.equal(existsSync(path.join(f.home, "merrymen.db")), false);
+  assert.equal(existsSync(path.join(f.home, "agentcap.db")), false);
   f.setHealthy(false); await assert.rejects(restoreLedgerImport(f.options));
 });
 
 it("never overwrites an existing financial book or follows a destination symlink", async () => {
   const f = await fixture(); await f.stage(); mkdirSync(f.home, { recursive: true });
-  const file = path.join(f.home, "merrymen.db"); writeFileSync(file, "original existing bytes");
+  const file = path.join(f.home, "agentcap.db"); writeFileSync(file, "original existing bytes");
   await assert.rejects(restoreLedgerImport(f.options)); assert.equal(readFileSync(file, "utf8"), "original existing bytes");
-  rmSync(file); symlinkSync(path.join(f.sourceHome, "merrymen.db"), file);
+  rmSync(file); symlinkSync(path.join(f.sourceHome, "agentcap.db"), file);
   await assert.rejects(restoreLedgerImport(f.options)); assert.ok(lstatSync(file).isSymbolicLink());
 });
 
 it("consumed books reject a symlink or another account, while healthy grown books exceed portable export limits safely", async () => {
   const f = await fixture(true); await registerLedgerSource(f.options);
-  const file = path.join(f.home, "merrymen.db"), preserved = file + ".preserved"; renameSync(file, preserved); symlinkSync(path.join(f.sourceHome, "merrymen.db"), file);
+  const file = path.join(f.home, "agentcap.db"), preserved = file + ".preserved"; renameSync(file, preserved); symlinkSync(path.join(f.sourceHome, "agentcap.db"), file);
   await assert.rejects(restoreLedgerImport(f.options)); rmSync(file); renameSync(preserved, file);
   const raw = new DatabaseSync(file); await applyLedgerSchema(wrapSqlite(raw));
   raw.prepare("INSERT INTO agents(smart_account,owner_address,session_key_address,chain_id,caps,granted_at,expires_at) VALUES(?,?,?,4663,'{}',1,9999999999)").run(f.smartAccount, addr(7), addr(8));
@@ -259,12 +259,12 @@ it("explicit deletion reattaches only the actual retained original source and ne
   const f = await fixture(), artifact = await f.stage(); await restoreLedgerImport(f.options);
   await invalidateLedgerImport(f.tenant, f.shared); f.sharedRaw.exec("UPDATE grants SET row_version=11,updated_at=1001");
   assert.equal(await restoreLedgerImport(f.options), "none");
-  const inode = lstatSync(path.join(f.home, "merrymen.db")).ino;
+  const inode = lstatSync(path.join(f.home, "agentcap.db")).ino;
   await registerLedgerSource(f.options); assert.equal(await restoreLedgerImport(f.options), "present");
-  assert.equal(lstatSync(path.join(f.home, "merrymen.db")).ino, inode);
+  assert.equal(lstatSync(path.join(f.home, "agentcap.db")).ino, inode);
   assert.equal(f.sharedRaw.prepare("SELECT state FROM tenant_ledger_import_generations WHERE generation=?").get(artifact.generation)!.state, "deleted");
   await assert.rejects(stageLedgerImport({ artifact, targetVolumeId: f.volume.id, shared: f.shared, dek, lease: f.lease, assertSource() {}, dialect: "sqlite" }));
   const empty = await fixture(true); await registerLedgerSource(empty.options); await invalidateLedgerImport(empty.tenant, empty.shared);
-  rmSync(path.join(empty.home, "merrymen.db")); await assert.rejects(registerLedgerSource(empty.options));
-  assert.equal(existsSync(path.join(empty.home, "merrymen.db")), false);
+  rmSync(path.join(empty.home, "agentcap.db")); await assert.rejects(registerLedgerSource(empty.options));
+  assert.equal(existsSync(path.join(empty.home, "agentcap.db")), false);
 });

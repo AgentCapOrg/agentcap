@@ -241,7 +241,7 @@ export const LEGACY_TRADEABLE_SYMBOLS = ["QQQ", "NVDA", "TSLA"] as const;
  */
 export const DEFAULT_BASKET_SYMBOLS = ["QQQ", "NVDA", "TSLA"] as const;
 
-/** Minimal Stock ABI — the surface merrymen reads. Extracted from verified source 2026-07-09. */
+/** Minimal Stock ABI — the surface agentcap reads. Extracted from verified source 2026-07-09. */
 export const STOCK_ABI = [
   // Standard ERC-20 reads
   { type: "function", name: "balanceOf", stateMutability: "view", inputs: [{ name: "account", type: "address" }], outputs: [{ type: "uint256" }] },
@@ -320,7 +320,7 @@ export function priceSourceNote(source: string): string {
 }
 
 /**
- * The four research desks Brain can run. Merrymen decides this, never the model.
+ * The four research desks Brain can run. AgentCap decides this, never the model.
  *
  * A desk is a set of analyst lenses: an equity has earnings, a memecoin has
  * liquidity and a crowd. Running a fundamentals analyst on a memecoin produces

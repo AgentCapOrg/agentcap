@@ -39,14 +39,14 @@
  *    directory, session key sealed when a DEK is present. The default.
  *
  * NODE-ONLY (node:crypto, node:fs, pg). Imported by web API routes (node
- * runtime) and the worker via the @merrymen/grant-store alias — never by the
+ * runtime) and the worker via the @agentcap/grant-store alias — never by the
  * browser bundle, which is why it lives here and not in core's browser barrel.
  */
 import { createHash } from "node:crypto";
 import { mkdir, readFile, readdir, rm, stat } from "node:fs/promises";
 import { DatabaseSync } from "node:sqlite";
 import path from "node:path";
-import { merrymenHome } from "./home";
+import { agentcapHome } from "./home";
 import { carriesOwnerKey, GRANT_PERP_LIGHTER, grantPurpose, isGrantPurpose } from "../../packages/core/src/index";
 import { openSecret, requireDek, sealSecret, storeDek } from "./store-crypto";
 import type { GrantPurpose, StoredGrant } from "../../packages/core/src/index";
@@ -173,7 +173,7 @@ export interface GrantStore {
    * Public grant expiry for process scheduling; no session key is decrypted.
    * `updatedAt` is the record's server-stamped write time (unix seconds), or
    * null when it cannot be read: what the orchestrator's re-sign watch
-   * (MERRYMEN_RESUME_AUTO_PAPER, ledger-resume.ts grantRowKey) tells one
+   * (AGENTCAP_RESUME_AUTO_PAPER, ledger-resume.ts grantRowKey) tells one
    * signature of the row from the next by, beside the expiry.
    */
   listTenantExpiries?(): Promise<Array<{ tenant: `0x${string}`; purpose: GrantPurpose; expiresAt: number | null; updatedAt?: number | null }>>;
@@ -378,10 +378,10 @@ export class FileGrantStore implements GrantStore {
   private readonly dir: string;
   constructor(readonly wallet: GrantPurpose) {
     if (!isGrantPurpose(wallet)) throw new Error("Unrecognised wallet purpose");
-    this.dir = path.join(merrymenHome(), WALLET_DIR[wallet]);
+    this.dir = path.join(agentcapHome(), WALLET_DIR[wallet]);
   }
   private file(tenant: string, wallet: GrantPurpose = this.wallet) {
-    return path.join(wallet === this.wallet ? this.dir : path.join(merrymenHome(), WALLET_DIR[wallet]), `${tenant.toLowerCase()}.json`);
+    return path.join(wallet === this.wallet ? this.dir : path.join(agentcapHome(), WALLET_DIR[wallet]), `${tenant.toLowerCase()}.json`);
   }
   /**
    * ONE WRITER AT A TIME, ACROSS PROCESSES — AND ACROSS BOTH WALLETS.
@@ -412,7 +412,7 @@ export class FileGrantStore implements GrantStore {
    * so a contended lock never blocks the event loop.
    */
   private async locked<T>(tenant: string, fn: () => Promise<T>): Promise<T> {
-    const lockDir = path.join(merrymenHome(), WALLET_DIR.spot);
+    const lockDir = path.join(agentcapHome(), WALLET_DIR.spot);
     await mkdir(lockDir, { recursive: true });
     const db = new DatabaseSync(path.join(lockDir, GRANT_STORE_LOCK_FILE));
     try {
@@ -590,7 +590,7 @@ export class FileGrantStore implements GrantStore {
     const want = smartAccount.toLowerCase();
     const holders = new Set<`0x${string}`>();
     for (const wallet of ["spot", "perps"] as const) {
-      for (const tenant of await this.tenantsIn(path.join(merrymenHome(), WALLET_DIR[wallet]))) {
+      for (const tenant of await this.tenantsIn(path.join(agentcapHome(), WALLET_DIR[wallet]))) {
         const rec = JSON.parse(await readFile(this.file(tenant, wallet), "utf8")) as StoredRecord;
         if (rec.grant?.smartAccount?.toLowerCase() === want) holders.add(tenant.toLowerCase() as `0x${string}`);
       }

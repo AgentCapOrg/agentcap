@@ -1,4 +1,4 @@
-import { isGrantPurpose, type GrantPurpose } from "@merrymen/core";
+import { isGrantPurpose, type GrantPurpose } from "@agentcap/core";
 
 /**
  * WHICH OF A LOGIN'S TWO WALLETS A REQUEST IS ABOUT: `?wallet=spot|perps`.

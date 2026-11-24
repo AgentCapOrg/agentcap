@@ -24,7 +24,7 @@ const nextConfig = {
   // /yahoo/:path* and /blockscout/:path* straight to those hosts. Because a
   // rewrite is same-origin, the browser attached the reader's session cookie —
   // `httpOnly, secure, sameSite:"strict", path:"/"` — to every one of those
-  // requests, and Next forwarded it upstream: a live merrymen session posted to
+  // requests, and Next forwarded it upstream: a live agentcap session posted to
   // Yahoo on every chart view. `sameSite:"strict"` offers nothing here, because
   // this IS the site. They were also unauthenticated open proxies at any path
   // the caller chose, outside middleware.ts, which guards only /api/.
@@ -35,7 +35,7 @@ const nextConfig = {
   // fails if a rewrite is ever added back.
   // core lives outside the web/ dir (packages/core, resolved via tsconfig
   // paths) — externalDir lets Next compile it. No workspace dep needed, which
-  // is what makes `npm install -g merrymen` possible.
+  // is what makes `npm install -g agentcap` possible.
   // ── URLS PEOPLE ALREADY HAVE ────────────────────────────────────────
   //
   // The board tab retired onto Home, and /leaderboard is a link testers have
@@ -66,7 +66,7 @@ const nextConfig = {
       { key: "Referrer-Policy", value: "no-referrer" },
     ];
     return [{ source: "/:path*", headers: browserHeaders },
-    { source: "/sdk/merrymen-browser.js", headers: [
+    { source: "/sdk/agentcap-browser.js", headers: [
       { key: "Access-Control-Allow-Origin", value: "*" },
       { key: "Cache-Control", value: "public, max-age=300" },
     ] }];

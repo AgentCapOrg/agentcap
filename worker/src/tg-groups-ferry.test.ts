@@ -85,7 +85,7 @@ async function sqlite(t: T, ensure = true): Promise<{ db: Db; raw: DatabaseSync 
 }
 
 function home(t: T): string {
-  const dir = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-tg-ferry-")));
+  const dir = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-tg-ferry-")));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   return dir;
 }
@@ -1329,14 +1329,14 @@ describe("the group files leave a home whose grant is gone while no child runs t
       `.${TG_GROUPS_FORGET_FILE}.1.x.clear`,
       "grant.json",
       "settings.json",
-      "merrymen.db",
+      "agentcap.db",
       "telegram.json",
     ]) {
       writeFileSync(path.join(dir, f), MARKER);
     }
     const { lines, log } = logs();
     assert.equal(forgetTgGroupsHome(dir, log), 7);
-    assert.deepEqual(readdirSync(dir).sort(), ["grant.json", "merrymen.db", "settings.json", "telegram.json"]);
+    assert.deepEqual(readdirSync(dir).sort(), ["grant.json", "agentcap.db", "settings.json", "telegram.json"]);
     assert.equal(forgetTgGroupsHome(dir, log), 0, "nothing left is nothing done");
     assert.equal(forgetTgGroupsHome(path.join(dir, "gone"), log), 0, "a missing home is not an error");
     assertClean(lines);
@@ -1409,7 +1409,7 @@ describe("the group files leave a home whose grant is gone while no child runs t
       Object.assign(process.env, saved);
       resetGrantStoreForTest();
     });
-    process.env.MERRYMEN_HOME = fleetHome;
+    process.env.AGENTCAP_HOME = fleetHome;
     delete process.env.DATABASE_URL;
     resetGrantStoreForTest();
     const { reconcile, childHome, honourPendingKills } = await import("./orchestrator");
@@ -1424,7 +1424,7 @@ describe("the group files leave a home whose grant is gone while no child runs t
       expiresAt: Math.floor(Date.now() / 1000) - 1,
       demoSessionPrivateKey: `0x${"ab".repeat(32)}`,
     }));
-    const book = path.join(gone, "merrymen.db");
+    const book = path.join(gone, "agentcap.db");
     const original = new DatabaseSync(book);
     original.exec("CREATE TABLE trades (id INTEGER PRIMARY KEY, usdg REAL); INSERT INTO trades VALUES (73, 12.5)");
     original.close();
@@ -1575,7 +1575,7 @@ describe("the orchestrator ferries it where the contract says", () => {
     assert.equal([...ORCH.matchAll(/(?:env: |\.\.\.)childEnv\(tenant(?:,|\))/g)].length, 2, "the child's spawn site and the hold process's");
     const holder = body("function startHolderProcess(");
     assert.ok(holder.includes("HOLD_ENTRY") && holder.includes("env: { ...childEnv(tenant),"), "the other one is the hold process, retaining the sanitized environment");
-    assert.match(holder, /held\.perpsSeat \? \{ MERRYMEN_PERPS_BOT_SEAT: "1", MERRYMEN_TG_GROUPS: "0" \} : \{\}/,
+    assert.match(holder, /held\.perpsSeat \? \{ AGENTCAP_PERPS_BOT_SEAT: "1", AGENTCAP_TG_GROUPS: "0" \} : \{\}/,
       "a Perps control seat explicitly disables group activity too");
 
     const mirror = body("async function mirrorLedgers(");
@@ -1621,7 +1621,7 @@ describe("the orchestrator ferries it where the contract says", () => {
     const walk = sweep.indexOf("forgetTgGroupsInHomes({");
     assert.ok(walk > 0 && walk < sweep.indexOf("const url = process.env.DATABASE_URL;"), "every pass, with or without a database");
     assert.match(sweep, /keep: \(t\) => wanted\.has\(t\) \|\| localMemoryWriterPresent\(t\),\s*before: listedAtMs,/);
-    assert.match(sweep, /childrenDir: path\.join\(merrymenHome\(\), "children"\),/, "the directory childHome uses");
+    assert.match(sweep, /childrenDir: path\.join\(agentcapHome\(\), "children"\),/, "the directory childHome uses");
   });
 
   test("childEnv, run: a held child gets the operator's switch at 0, and nobody else's is changed", async (t) => {
@@ -1630,15 +1630,15 @@ describe("the orchestrator ferries it where the contract says", () => {
       for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k];
       Object.assign(process.env, saved);
     });
-    process.env.MERRYMEN_HOME = home(t);
-    delete process.env.MERRYMEN_TG_GROUPS;
+    process.env.AGENTCAP_HOME = home(t);
+    delete process.env.AGENTCAP_TG_GROUPS;
     const { childEnv } = await import("./orchestrator");
-    assert.equal(childEnv(A, { tgGroupsOff: true }).MERRYMEN_TG_GROUPS, "0");
-    assert.equal(childEnv(A).MERRYMEN_TG_GROUPS, undefined);
-    assert.equal(childEnv(A, { tgGroupsOff: false }).MERRYMEN_TG_GROUPS, undefined);
+    assert.equal(childEnv(A, { tgGroupsOff: true }).AGENTCAP_TG_GROUPS, "0");
+    assert.equal(childEnv(A).AGENTCAP_TG_GROUPS, undefined);
+    assert.equal(childEnv(A, { tgGroupsOff: false }).AGENTCAP_TG_GROUPS, undefined);
     // An operator's fleet-wide off stays off for every child.
-    process.env.MERRYMEN_TG_GROUPS = "0";
-    assert.equal(childEnv(A, { tgGroupsOff: false }).MERRYMEN_TG_GROUPS, "0");
+    process.env.AGENTCAP_TG_GROUPS = "0";
+    assert.equal(childEnv(A, { tgGroupsOff: false }).AGENTCAP_TG_GROUPS, "0");
   });
 
   test("the grant store decides: a /kill that removes the grant, a spawn that finds none, and a sweep every pass", () => {
@@ -1711,10 +1711,10 @@ describe("the orchestrator ferries it where the contract says", () => {
   test("the group model key is forwarded to children and the DEK is not", () => {
     const i = ORCH.indexOf("const CHILD_SECRET_STRIP = [");
     const block = ORCH.slice(i, ORCH.indexOf("] as const;", i));
-    assert.ok(block.includes('"MERRYMEN_STORE_DEK"'));
-    assert.ok(!block.includes("MERRYMEN_TG_GROUPS_LLM_KEY"), "the child polls Telegram and needs its own key");
+    assert.ok(block.includes('"AGENTCAP_STORE_DEK"'));
+    assert.ok(!block.includes("AGENTCAP_TG_GROUPS_LLM_KEY"), "the child polls Telegram and needs its own key");
     const doc = ORCH.slice(ORCH.lastIndexOf("/**", i), i);
-    assert.match(doc, /MERRYMEN_TG_GROUPS_LLM_KEY IS FORWARDED ON PURPOSE/, "and it says why, where the next reader looks");
+    assert.match(doc, /AGENTCAP_TG_GROUPS_LLM_KEY IS FORWARDED ON PURPOSE/, "and it says why, where the next reader looks");
   });
 
   test("childEnv, run: the key reaches a child, the DEK and the database do not", async (t) => {
@@ -1723,15 +1723,15 @@ describe("the orchestrator ferries it where the contract says", () => {
       for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k];
       Object.assign(process.env, saved);
     });
-    process.env.MERRYMEN_HOME = home(t);
-    process.env.MERRYMEN_HOSTED = "1";
-    process.env.MERRYMEN_TG_GROUPS_LLM_KEY = "tg-groups-dedicated-key";
-    process.env.MERRYMEN_STORE_DEK = DEK.toString("base64");
+    process.env.AGENTCAP_HOME = home(t);
+    process.env.AGENTCAP_HOSTED = "1";
+    process.env.AGENTCAP_TG_GROUPS_LLM_KEY = "tg-groups-dedicated-key";
+    process.env.AGENTCAP_STORE_DEK = DEK.toString("base64");
     process.env.DATABASE_URL = "postgres://never-to-a-child";
     const { childEnv } = await import("./orchestrator");
     const env = childEnv(A as `0x${string}`);
-    assert.equal(env.MERRYMEN_TG_GROUPS_LLM_KEY, "tg-groups-dedicated-key");
-    assert.equal(env.MERRYMEN_STORE_DEK, undefined);
+    assert.equal(env.AGENTCAP_TG_GROUPS_LLM_KEY, "tg-groups-dedicated-key");
+    assert.equal(env.AGENTCAP_STORE_DEK, undefined);
     assert.equal(env.DATABASE_URL, undefined);
   });
 });

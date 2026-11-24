@@ -10,10 +10,10 @@ exists.
 
 ## Why the shape matters here
 
-merrymen is non-custodial. The owner key never leaves the user, which is the
+agentcap is non-custodial. The owner key never leaves the user, which is the
 whole safety claim — and it makes the support room the softest target in the
 product. An attacker cannot drain a wallet through the gateway, so they will
-try the room instead: a DM from "merrymen support" asking for a recovery
+try the room instead: a DM from "agentcap support" asking for a recovery
 phrase to "restore your agent". Every structural decision below exists to make
 that DM obviously fake.
 
@@ -70,5 +70,5 @@ a default invite expires in seven days, and a dead link in the footer of a
 non-custodial trading product reads as an abandoned project.
 
 Do not put the Discord in `terms/page.tsx` or `PrivacyPolicyDoc.tsx`. Those
-name `support@merrymen.dev` as the contact of record, and a chat room is not
+name `support@agentcap.xyz` as the contact of record, and a chat room is not
 a contact of record.

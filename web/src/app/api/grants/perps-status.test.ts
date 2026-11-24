@@ -14,7 +14,7 @@
  * live, and are not in this build. The Spot answer carries no `perps` at all.
  *
  * Driven through the real route, self-hosted, against the worker's own ledger
- * schema in the Perps home ($MERRYMEN_HOME/accounts/perps/merrymen.db).
+ * schema in the Perps home ($AGENTCAP_HOME/accounts/perps/agentcap.db).
  * Adapted from the perps branch's perps-status.test.ts (112dbeb6), its three
  * report cases.
  */
@@ -25,15 +25,15 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { after, before, describe, it, mock } from "node:test";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-import type { PerpsReport } from "@merrymen/core";
+import type { PerpsReport } from "@agentcap/core";
 
-const saved = Object.fromEntries(["MERRYMEN_HOME", "MERRYMEN_HOSTED", "DATABASE_URL", "MERRYMEN_PERPS"].map((k) => [k, process.env[k]]));
+const saved = Object.fromEntries(["AGENTCAP_HOME", "AGENTCAP_HOSTED", "DATABASE_URL", "AGENTCAP_PERPS"].map((k) => [k, process.env[k]]));
 const home = mkdtempSync(path.join(tmpdir(), "mm-grants-perps-status-"));
 const PERPS_HOME = path.join(home, "accounts", "perps");
-process.env.MERRYMEN_HOME = home;
-delete process.env.MERRYMEN_HOSTED;
+process.env.AGENTCAP_HOME = home;
+delete process.env.AGENTCAP_HOSTED;
 delete process.env.DATABASE_URL;
-delete process.env.MERRYMEN_PERPS;
+delete process.env.AGENTCAP_PERPS;
 
 let GET: (req: Request) => Promise<Response>;
 
@@ -94,7 +94,7 @@ const REPORT: PerpsReport = {
 async function writeLedger(perps: string | null) {
   const { wrapSqlite } = await import("../../../../../worker/src/db");
   const { applyLedgerSchema } = await import("../../../../../worker/src/store");
-  const file = path.join(PERPS_HOME, "merrymen.db");
+  const file = path.join(PERPS_HOME, "agentcap.db");
   rmSync(file, { force: true });
   const raw = new DatabaseSync(file);
   try {
@@ -159,7 +159,7 @@ describe("GET /api/grants?wallet=perps carries the Perps worker's report", () =>
     const body = (await (await perpsStatus()).json()) as { perps?: unknown };
     assert.equal(body.perps, null);
     // No ledger at all is not said too.
-    rmSync(path.join(PERPS_HOME, "merrymen.db"), { force: true });
+    rmSync(path.join(PERPS_HOME, "agentcap.db"), { force: true });
     assert.equal(((await (await perpsStatus()).json()) as { perps?: unknown }).perps, null);
   });
 

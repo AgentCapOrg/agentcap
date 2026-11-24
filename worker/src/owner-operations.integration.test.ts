@@ -2,12 +2,12 @@
  * THE OWNER'S OPERATIONS IN A REAL LEDGER: recorded once, known to the sweep,
  * counted by no limit, and no longer hiding a withdrawal from the deposit scan.
  *
- * Against a real sqlite file (the MERRYMEN_HOME pattern of
+ * Against a real sqlite file (the AGENTCAP_HOME pattern of
  * inflight-row.integration.test.ts), with the 0x4b6dcd account's own root-key
  * operations read off the public chain (testdata/owner-operations-receipts.json):
  * an invalidateNonce, its vault's sweep(USDG) and its recoverFunds.
  *
- * MERRYMEN_HOME is set before any store import runs getDb(); node's --test runs
+ * AGENTCAP_HOME is set before any store import runs getDb(); node's --test runs
  * each file in its own process, so the override never leaks.
  */
 import assert from "node:assert/strict";
@@ -17,8 +17,8 @@ import os from "node:os";
 import path from "node:path";
 import type { Hex } from "viem";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-owner-ops-"));
-process.env.MERRYMEN_HOME = HOME;
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-owner-ops-"));
+process.env.AGENTCAP_HOME = HOME;
 
 const { closeStoreForTest, initStore, getOpsToday, getSpentTodayUsdg, listOpHashes, recentTradeTxHashes, recordOwnerOperation, tradeOpsInTx } = await import("./store");
 const { homePaths } = await import("./home");

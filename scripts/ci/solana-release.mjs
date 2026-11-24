@@ -10,7 +10,7 @@
 // pinned Linux build matched the committed manifest). `solana · release`
 // needs app and runs only when it passed; for such a candidate it runs this
 // script, then uploads <release.json> as
-// merrymen-vault-release-<commit>-run<id>.<attempt>. That record is the
+// agentcap-vault-release-<commit>-run<id>.<attempt>. That record is the
 // release verdict: it names the candidate artifact holding the bytes and the
 // SHA-256 they must hash to, which solana · test tested and solana · rebuild
 // reproduced. No other step writes a name that says release.
@@ -23,7 +23,7 @@
 //   VAULT_REBUILT_SHA256  solana · rebuild's artifact hash
 // and the run's own GITHUB_* variables. Refuses (exit 1, nothing written)
 // unless the run is a push or manual run on refs/heads/main of
-// millw14/merrymen, the label is candidate-unconfirmed, the artifact name is
+// millw14/agentcap, the label is candidate-unconfirmed, the artifact name is
 // that label's for this commit and run (an earlier attempt of the run
 // included: a re-run of app keeps solana · test's upload), and the two hashes
 // are equal SHA-256s. app has already checked the hashes; checking them again
@@ -47,13 +47,13 @@ const POSITIVE = /^[1-9][0-9]{0,8}$/;
 
 /** What solana · release uploads its record as. */
 export function releaseArtifactName({ commit, runId, runAttempt }) {
-  return `merrymen-vault-release-${commit}-run${runId}.${runAttempt}`;
+  return `agentcap-vault-release-${commit}-run${runId}.${runAttempt}`;
 }
 
 /** The program a checkout declares and the local test program id, from the repository at `root`. */
 export function releaseSource(root = join(dirname(fileURLToPath(import.meta.url)), "..", "..")) {
   return {
-    programId: declaredProgramId(readFileSync(join(root, "contracts/solana/programs/merrymen-vault/src/lib.rs"), "utf8")),
+    programId: declaredProgramId(readFileSync(join(root, "contracts/solana/programs/agentcap-vault/src/lib.rs"), "utf8")),
     localTestId: readLocalTestProgramId(root),
   };
 }
@@ -91,12 +91,12 @@ export function releaseRecord(env, source) {
   if (!HEX64.test(tested)) throw new Error("no vault artifact hash from solana · test");
   if (tested !== rebuilt) throw new Error(`the rebuilt vault artifact ${JSON.stringify(rebuilt)} differs from the tested one ${tested}`);
   return {
-    program: "merrymen_vault",
+    program: "agentcap_vault",
     // lib.rs's declare_id! at this commit: not the local test program ID.
     programId,
     sha256: tested,
     // The bytes are in this artifact of the same run, at
-    // target/deploy/merrymen_vault.so beside their build record and the
+    // target/deploy/agentcap_vault.so beside their build record and the
     // Linux manifest; they must hash to sha256.
     artifact,
     commit: run.commit,
@@ -121,11 +121,11 @@ function main(argv) {
   const name = releaseArtifactName(record.provenance);
   if (process.env.GITHUB_STEP_SUMMARY) {
     appendFileSync(process.env.GITHUB_STEP_SUMMARY, [
-      "### merrymen_vault release",
+      "### agentcap_vault release",
       "",
       `- record: \`${name}\``,
       `- program ID: \`${record.programId}\` (not the local test program ID)`,
-      `- bytes: \`${record.artifact}\` (target/deploy/merrymen_vault.so)`,
+      `- bytes: \`${record.artifact}\` (target/deploy/agentcap_vault.so)`,
       `- SHA-256: \`${record.sha256}\` (tested and rebuilt)`,
       releaseLine(record.release),
       "",

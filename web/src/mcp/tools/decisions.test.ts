@@ -8,7 +8,7 @@
  */
 import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
-import { liveBlockerText } from "@merrymen/core";
+import { liveBlockerText } from "@agentcap/core";
 import { classifyEvent, diagnoseInactivity, emptyEvents, EMPTY_TALLY, parseRailNotice, type InactivityInputs } from "@/lib/services/inactivity";
 import { describeRule, pairRealizedEvidence, signalsSubsetOf } from "@/lib/services/decisions";
 import { projectSettings } from "@/lib/services/settings-view";
@@ -302,8 +302,8 @@ test("cross-owner: another owner's agent and decision ids read as not_found, wit
   // The resource obeys the same rule.
   const res = DECISIONS_RESOURCES[0];
   const ctxB = makeContext(pb, "t", new AbortController().signal, { now: () => NOW });
-  await assert.rejects(res.read(new URL(`merrymen://agents/${SLUG_A}/decisions/d-secret-a`), { agent: SLUG_A, decision_id: "d-secret-a" }, ctxB), /No such/);
-  await assert.rejects(res.read(new URL(`merrymen://agents/${SLUG_B}/decisions/d-secret-a`), { agent: SLUG_B, decision_id: "d-secret-a" }, ctxB), /No such decision/);
+  await assert.rejects(res.read(new URL(`agentcap://agents/${SLUG_A}/decisions/d-secret-a`), { agent: SLUG_A, decision_id: "d-secret-a" }, ctxB), /No such/);
+  await assert.rejects(res.read(new URL(`agentcap://agents/${SLUG_B}/decisions/d-secret-a`), { agent: SLUG_B, decision_id: "d-secret-a" }, ctxB), /No such decision/);
 });
 
 test("scope: a connection without decisions:read is refused every tool in the family", async () => {
@@ -352,10 +352,10 @@ test("get_decision: the lifecycle with each trade's book, confirmation and measu
   // The resource returns the same JSON, and lists only this owner's decisions.
   const ctxA = makeContext(pa, "t", new AbortController().signal, { now: () => NOW });
   const res = DECISIONS_RESOURCES[0];
-  const body = await res.read(new URL(`merrymen://agents/${SLUG_A}/decisions/dec_00112233aabbccdd`), { agent: SLUG_A, decision_id: "dec_00112233aabbccdd" }, ctxA);
+  const body = await res.read(new URL(`agentcap://agents/${SLUG_A}/decisions/dec_00112233aabbccdd`), { agent: SLUG_A, decision_id: "dec_00112233aabbccdd" }, ctxA);
   assert.equal(JSON.parse(body.text).decision.id, "dec_00112233aabbccdd");
   const listed = await res.list!(ctxA);
-  assert.deepEqual(listed.map((l) => l.uri), [`merrymen://agents/${SLUG_A}/decisions/dec_00112233aabbccdd`]);
+  assert.deepEqual(listed.map((l) => l.uri), [`agentcap://agents/${SLUG_A}/decisions/dec_00112233aabbccdd`]);
 });
 
 test("get_decision: realized_pnl_measured follows get_trade's rule — receipt proceeds against a quote-booked cost are an estimate", async () => {
@@ -611,7 +611,7 @@ test("inactivity: a stale heartbeat on an armed agent means the worker is not re
   assert.equal(r.checks.data_freshness.status, "unknown", "no mirror_state table in this database");
   // Kind and status stand; the remedy no longer promises a restart nothing here can see.
   assert.equal(r.checks.worker_liveness.status, "blocking");
-  assert.deepEqual(r.checks.worker_liveness.what_owner_can_do, ["If it stays stale, contact Merrymen support."]);
+  assert.deepEqual(r.checks.worker_liveness.what_owner_can_do, ["If it stays stale, contact AgentCap support."]);
   assert.ok(!/watchdog/i.test(r.text) && !/restart/i.test(JSON.stringify(r.checks.worker_liveness)), "no promise that a stale worker is restarted");
 });
 

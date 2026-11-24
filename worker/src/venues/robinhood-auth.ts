@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-// Relative, never the @merrymen/core alias: the alias lives in a dev tsconfig
+// Relative, never the @agentcap/core alias: the alias lives in a dev tsconfig
 // and does not resolve inside the installed package, where the worker would
 // then die at startup — silently, because the dashboard keeps running.
 // Guarded by imports.test.ts.
@@ -20,7 +20,7 @@ import {
  * core pulled it in, so the one host-specific step lives on the host.
  *
  * The phone does the equivalent with a registered URL scheme
- * (`merrymen://oauth/callback`) via expo-auth-session; it calls the SAME core
+ * (`agentcap://oauth/callback`) via expo-auth-session; it calls the SAME core
  * functions and only differs in how the code comes back.
  *
  * A LOOPBACK REDIRECT IS UNVERIFIED AGAINST THE LIVE SERVER. The spike never

@@ -32,9 +32,9 @@ const found = (over: Record<string, unknown> = {}) => ({
     ships_30d: 11,
     last_ship: "2026-09-21",
   },
-  project: { slug: "merrymen", name: "Merrymen", symbol: "MERRYMEN" },
-  project_url: "https://heyresearch.xyz/project/merrymen",
-  cta: { label: "See the builder on HEY", url: "https://heyresearch.xyz/project/merrymen" },
+  project: { slug: "agentcap", name: "AgentCap", symbol: "AGENTCAP" },
+  project_url: "https://heyresearch.xyz/project/agentcap",
+  cta: { label: "See the builder on HEY", url: "https://heyresearch.xyz/project/agentcap" },
   disclaimer: "Public, source-backed activity HEY recorded.",
   ...over,
 });
@@ -52,8 +52,8 @@ describe("a found scan becomes a record", () => {
   it("carries the project, the status and the counts", () => {
     const r = normalizeHey(found(), { address: ADDR, asOf: NOW });
     assert.equal(r.found, true);
-    assert.equal(r.name, "Merrymen");
-    assert.equal(r.symbol, "MERRYMEN");
+    assert.equal(r.name, "AgentCap");
+    assert.equal(r.symbol, "AGENTCAP");
     assert.equal(r.status, "Shipping");
     assert.equal(r.verified, true);
     assert.equal(r.activity.commits30d, 87);
@@ -176,7 +176,7 @@ describe("the url is https or it is nothing", () => {
 
   it("the cta url is the fallback when the project url is absent", () => {
     const r = normalizeHey(found({ project_url: undefined }), { address: ADDR, asOf: NOW });
-    assert.equal(r.url, "https://heyresearch.xyz/project/merrymen");
+    assert.equal(r.url, "https://heyresearch.xyz/project/agentcap");
   });
 });
 

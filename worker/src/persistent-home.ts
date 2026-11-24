@@ -13,7 +13,7 @@ import type { BigIntStats } from "node:fs";
 import path from "node:path";
 import { fleetRollout, type FleetRollout } from "./fleet-rollout";
 
-export const PERSISTENT_HOME_MANIFEST = ".merrymen-persistent-home.json";
+export const PERSISTENT_HOME_MANIFEST = ".agentcap-persistent-home.json";
 /** What the adopted volume's original operator halt was, kept byte for byte. */
 export const PERSISTENT_HOME_PREADOPTION = ".fleet-halt-preadoption.json";
 /** Which canonical halt the latest env re-halt created, before its manifest said so. */
@@ -94,20 +94,20 @@ const missing = (e: unknown) => (e as NodeJS.ErrnoException).code === "ENOENT";
 const nofollow = constants.O_NOFOLLOW ?? 0;
 
 function config(env: NodeJS.ProcessEnv): { id: string; home: string } | null {
-  if (env.MERRYMEN_PERSISTENT_HOME_REQUIRED !== "1") {
-    if (!env.MERRYMEN_PERSISTENT_HOME_REQUIRED || env.MERRYMEN_PERSISTENT_HOME_REQUIRED === "0") return null;
-    throw refuse("MERRYMEN_PERSISTENT_HOME_REQUIRED must be 1 or unset");
+  if (env.AGENTCAP_PERSISTENT_HOME_REQUIRED !== "1") {
+    if (!env.AGENTCAP_PERSISTENT_HOME_REQUIRED || env.AGENTCAP_PERSISTENT_HOME_REQUIRED === "0") return null;
+    throw refuse("AGENTCAP_PERSISTENT_HOME_REQUIRED must be 1 or unset");
   }
-  const home = env.MERRYMEN_HOME;
+  const home = env.AGENTCAP_HOME;
   if (!home || !path.isAbsolute(home) || path.resolve(home) !== home || home === path.parse(home).root
       || home.includes("\0") || home !== env.RAILWAY_VOLUME_MOUNT_PATH) {
-    throw refuse("MERRYMEN_HOME must exactly equal the absolute Railway volume mount path");
+    throw refuse("AGENTCAP_HOME must exactly equal the absolute Railway volume mount path");
   }
   // Railway injects volume NAME and MOUNT_PATH, not a provider UUID. The
   // operator must pin this ID from the volume API; names are not identity.
-  const id = env.MERRYMEN_HOME_VOLUME_ID;
+  const id = env.AGENTCAP_HOME_VOLUME_ID;
   if (!id || !UUID.test(id)) throw refuse("an explicit provider volume UUID is required");
-  if (env.MERRYMEN_INITIAL_HANDOVER !== undefined && !TOKEN.test(env.MERRYMEN_INITIAL_HANDOVER)) {
+  if (env.AGENTCAP_INITIAL_HANDOVER !== undefined && !TOKEN.test(env.AGENTCAP_INITIAL_HANDOVER)) {
     throw refuse("the initial handover operation token is invalid");
   }
   return { id: id.toLowerCase(), home };
@@ -175,7 +175,7 @@ function withRoot<T>(
     if ((st.mode & 0o7777n) !== 0o700n) {
       // Railway creates a fresh root with its default mode. This is the sole
       // allowed permission repair: explicit operation, proven mount, no data.
-      if (!initialPermissions || !env.MERRYMEN_INITIAL_HANDOVER || readdirSync(c.home).length !== 0) {
+      if (!initialPermissions || !env.AGENTCAP_INITIAL_HANDOVER || readdirSync(c.home).length !== 0) {
         throw refuse("the mounted root must have mode 0700; only explicit empty-volume initialization may set it");
       }
       fchmodSync(fd, 0o700);
@@ -211,7 +211,7 @@ function evidence(file: string, root: Root): Evidence | null {
   } finally { closeSync(fd); }
 }
 function haltText(id: string, token: string): string {
-  return `merrymen persistent-home handover v1\noperation=${token}\nvolume=${id}\n`;
+  return `agentcap persistent-home handover v1\noperation=${token}\nvolume=${id}\n`;
 }
 function readManifest(root: Root): { manifest: Manifest; evidence: Evidence } | null {
   const e = evidence(path.join(root.identity.homeRoot, PERSISTENT_HOME_MANIFEST), root);
@@ -226,7 +226,7 @@ function readManifest(root: Root): { manifest: Manifest; evidence: Evidence } | 
       || halt.operationToken !== h.operationToken || halt.path !== path.join(i.homeRoot, "FLEET_HALT")
       || halt.device !== m.device || typeof halt.inode !== "string" || !/^[1-9]\d*$/.test(halt.inode)
       || halt.text !== haltText(i.id, h.operationToken)
-      || (root.env.MERRYMEN_INITIAL_HANDOVER !== undefined && root.env.MERRYMEN_INITIAL_HANDOVER !== h.operationToken)) {
+      || (root.env.AGENTCAP_INITIAL_HANDOVER !== undefined && root.env.AGENTCAP_INITIAL_HANDOVER !== h.operationToken)) {
     throw refuse("the persistent manifest does not match the configured volume, root or handover");
   }
   // st_dev belongs to this mount namespace and may change when Railway
@@ -283,7 +283,7 @@ export function preparePersistentHomeForHandover(
       const m = verifiedManifest(root);
       return { ...root.identity, handoverState: m.handover.state, halt: m.handover.state === "held" ? m.handover.halt : null };
     }
-    const token = env.MERRYMEN_INITIAL_HANDOVER;
+    const token = env.AGENTCAP_INITIAL_HANDOVER;
     if (!token || readdirSync(root.identity.homeRoot).length !== 0) {
       throw refuse("only an empty mounted root with an explicit initial handover token may initialize");
     }
@@ -316,9 +316,9 @@ interface PreAdoption {
 }
 /** The operator's pin on the one original halt an adoption may replace, or null when none was asked for. */
 function pinnedHalt(env: NodeJS.ProcessEnv): string | null {
-  const pinned = env.MERRYMEN_ADOPT_HOME_HALT_SHA256;
+  const pinned = env.AGENTCAP_ADOPT_HOME_HALT_SHA256;
   if (pinned === undefined) return null;
-  if (!SHA256.test(pinned)) throw refuse("MERRYMEN_ADOPT_HOME_HALT_SHA256 must be the 64-hex SHA-256 of the original halt");
+  if (!SHA256.test(pinned)) throw refuse("AGENTCAP_ADOPT_HOME_HALT_SHA256 must be the 64-hex SHA-256 of the original halt");
   return pinned.toLowerCase();
 }
 function presentStat(file: string): BigIntStats | null {
@@ -370,7 +370,7 @@ function readPreAdoption(root: Root, pinned: string, token: string): PreAdoption
  * operator's hand-made FLEET_HALT, and no manifest. Ordinary preparation
  * refuses that root, rightly, because it cannot tell an old book from a stray
  * directory. Adoption is the one reviewed way in (docs/fleet-resume.md), and
- * it asks for two explicit things: MERRYMEN_ADOPT_HOME_HALT_SHA256, the hash
+ * it asks for two explicit things: AGENTCAP_ADOPT_HOME_HALT_SHA256, the hash
  * the operator recorded of that hand-made halt, and the initial handover token.
  *
  * THE HALT IS NEVER ABSENT. The original is recorded first (hash, inode and
@@ -400,7 +400,7 @@ export function adoptPopulatedPersistentHome(
     const i = root.identity;
     for (const name of [PERSISTENT_HOME_PREADOPTION, PERSISTENT_HOME_MANIFEST]) settleFirstWrite(root, path.join(i.homeRoot, name));
     const saved = readManifest(root);
-    const token = env.MERRYMEN_INITIAL_HANDOVER ?? saved?.manifest.handover.operationToken;
+    const token = env.AGENTCAP_INITIAL_HANDOVER ?? saved?.manifest.handover.operationToken;
     if (!token) throw refuse("adoption requires the explicit initial handover operation token");
     const haltPath = path.join(i.homeRoot, "FLEET_HALT"), canonical = haltText(i.id, token);
     let record = readPreAdoption(root, pinned, token);
@@ -466,7 +466,7 @@ export function adoptPopulatedPersistentHome(
  * never calls this. The one startup exception (decision 5 of the resume plan,
  * for Milla's review) is controlAdoptedPersistentHomeHalt below, which calls
  * it only for an ADOPTED volume whose manifest is `held`, only when
- * MERRYMEN_RELEASE_HOME_HALT names this manifest's operation and its standing
+ * AGENTCAP_RELEASE_HOME_HALT names this manifest's operation and its standing
  * halt generation, the pinned original-halt hash still matches the
  * pre-adoption record, and B1's parser reads a rollout scope other than
  * `none`. A completed receipt is durable before our own unchanged halt is removed.
@@ -525,7 +525,7 @@ interface RehaltReceipt {
   halt: { path: string; inode: string; text: string };
 }
 /**
- * MERRYMEN_RELEASE_HOME_HALT names the halt generation it lifts:
+ * AGENTCAP_RELEASE_HOME_HALT names the halt generation it lifts:
  * `<operation token>` for the adoption's own halt (generation 0), and
  * `<operation token>@<n>` for the halt the nth env re-halt put back. `@` is
  * outside TOKEN's alphabet, so neither spelling can be read as the other.
@@ -536,7 +536,7 @@ function releaseAsked(value: string): { token: string; generation: number } | nu
   return m ? { token: m[1]!, generation: m[2] === undefined ? 0 : Number(m[2]) } : null;
 }
 /** How an operator spells a release of this generation, with the token itself left out of every log. */
-const releaseSpelling = (generation: number) => `MERRYMEN_RELEASE_HOME_HALT=<operation token>${generation ? `@${generation}` : ""}`;
+const releaseSpelling = (generation: number) => `AGENTCAP_RELEASE_HOME_HALT=<operation token>${generation ? `@${generation}` : ""}`;
 /**
  * A release needs a scope that admits someone, read with B1's own parser
  * (fleet-rollout.ts), never a second and looser reading of the same value.
@@ -594,7 +594,7 @@ function releaseAdopted(
       return { action: "already-released", handoverState: "complete", detail: "already released; any FLEET_HALT present is an operator halt and stays" };
     }
     return { action: "withheld", handoverState: "complete",
-      detail: "FLEET_HALT matches the released manifest's own halt (a release stopped before removing it, or a copy made by hand); an env release never removes a halt once the manifest is complete, so it stays; MERRYMEN_REHALT_HOME holds the manifest on it again at the next generation" };
+      detail: "FLEET_HALT matches the released manifest's own halt (a release stopped before removing it, or a copy made by hand); an env release never removes a halt once the manifest is complete, so it stays; AGENTCAP_REHALT_HOME holds the manifest on it again at the next generation" };
   }
   assertHalt(root, handover.halt);
   // ONE RELEASE PER HALT GENERATION. A re-halt is a rollback, and it consumes
@@ -603,10 +603,10 @@ function releaseAdopted(
   // takes a new value naming the generation the re-halt put back.
   if (generation !== standing) {
     return { action: "withheld", handoverState: handover.state,
-      detail: `MERRYMEN_RELEASE_HOME_HALT names halt generation ${generation}, but the standing halt is generation ${standing}, so it stays; only ${releaseSpelling(standing)} lifts it` };
+      detail: `AGENTCAP_RELEASE_HOME_HALT names halt generation ${generation}, but the standing halt is generation ${standing}, so it stays; only ${releaseSpelling(standing)} lifts it` };
   }
   if (!rolloutAdmitsRelease(rollout)) {
-    return { action: "withheld", handoverState: handover.state, detail: "MERRYMEN_FLEET_ROLLOUT is none, so the halt stays" };
+    return { action: "withheld", handoverState: handover.state, detail: "AGENTCAP_FLEET_ROLLOUT is none, so the halt stays" };
   }
   markPersistentHomeHandoverComplete(root.identity, handover.halt, root.env, root.options);
   return { action: "released", handoverState: "complete", detail: "released into the configured rollout scope" };
@@ -614,7 +614,7 @@ function releaseAdopted(
 
 function rehaltAdopted(root: Root, saved: { manifest: Manifest; evidence: Evidence }, releaseIgnored: boolean): PersistentHomeHaltControl {
   const i = root.identity, m = saved.manifest, token = m.handover.operationToken, options = root.options;
-  const ignored = releaseIgnored ? "; MERRYMEN_RELEASE_HOME_HALT is ignored while a re-halt is asked for" : "";
+  const ignored = releaseIgnored ? "; AGENTCAP_RELEASE_HOME_HALT is ignored while a re-halt is asked for" : "";
   // The manifest changes only at the very end, so a re-halt resumed after a
   // crash computes the same next generation as the attempt it finishes.
   const standing = m.handover.haltGeneration ?? 0, next = standing + 1;
@@ -705,15 +705,15 @@ function holdManifest(
  * pilot's first release nor a rollback to listener-only mode needs a shell on
  * the container (docs/fleet-resume.md).
  *
- * MERRYMEN_RELEASE_HOME_HALT=<operation token>[@<generation>] releases only
+ * AGENTCAP_RELEASE_HOME_HALT=<operation token>[@<generation>] releases only
  * a `held` manifest whose standing halt is that generation, through
  * markPersistentHomeHandoverComplete itself, and only while
- * MERRYMEN_FLEET_ROLLOUT, read by B1's parser, admits someone. A malformed
+ * AGENTCAP_FLEET_ROLLOUT, read by B1's parser, admits someone. A malformed
  * rollout refuses before anything is touched. Once the manifest is `complete`
  * it removes nothing, ever: not a FLEET_HALT made by hand after a release, and
  * not the halt of a release that stopped before its unlink (re-halt instead).
  *
- * MERRYMEN_REHALT_HOME=<operation token> puts a canonical halt back with a
+ * AGENTCAP_REHALT_HOME=<operation token> puts a canonical halt back with a
  * no-replace link, records which inode it is in a receipt BEFORE publishing
  * it, and returns the manifest to `held` at the next halt generation, which
  * the earlier release value does not name. When both are set the re-halt
@@ -726,7 +726,7 @@ function holdManifest(
 export function controlAdoptedPersistentHomeHalt(
   env: NodeJS.ProcessEnv = process.env, options: PersistentHomeOptions = {},
 ): PersistentHomeHaltControl | null {
-  const release = env.MERRYMEN_RELEASE_HOME_HALT, rehalt = env.MERRYMEN_REHALT_HOME;
+  const release = env.AGENTCAP_RELEASE_HOME_HALT, rehalt = env.AGENTCAP_REHALT_HOME;
   if (release === undefined && rehalt === undefined) return null;
   // While a re-halt is asked for, only its own value is read: a release
   // variable left behind, stale or mistyped, must never stop a rollback.

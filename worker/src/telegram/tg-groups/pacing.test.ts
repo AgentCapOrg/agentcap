@@ -458,7 +458,7 @@ describe("decide: addressed", () => {
     assert.deepEqual(decide(input({ room: r, addressed: "name", signals: { greeting: "gn" } })), { act: "greet", word: "gn" });
   });
 
-  it("answers small talk with small talk, not a normal answer (\"hi merryman 👋\" is not a question)", () => {
+  it("answers small talk with small talk, not a normal answer (\"hi agentcapavatar 👋\" is not a question)", () => {
     for (const what of ["hail", "thanks", "gm", "gn"] as const) {
       assert.deepEqual(decide(input({ addressed: "mention", signals: { smallTalk: what } })), { act: "smalltalk", what });
     }

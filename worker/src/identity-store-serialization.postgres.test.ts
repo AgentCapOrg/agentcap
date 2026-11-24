@@ -6,7 +6,7 @@ import { createRequire } from "node:module";
 import test from "node:test";
 import { AccountAlreadyClaimed, PgIdentityStore } from "./identity-store";
 
-const url = process.env.MERRYMEN_TEST_PG_URL ?? process.env.MERRYMEN_TEST_POSTGRES_URL;
+const url = process.env.AGENTCAP_TEST_PG_URL ?? process.env.AGENTCAP_TEST_POSTGRES_URL;
 interface PgClient {
   connect(): Promise<void>;
   query(sql: string, values?: unknown[]): Promise<{ rows: Record<string, unknown>[]; rowCount?: number | null }>;

@@ -1,5 +1,5 @@
 /**
- * WHETHER THIS DEPLOYMENT OFFERS SOLANA AT ALL. Off unless MERRYMEN_SOLANA=1.
+ * WHETHER THIS DEPLOYMENT OFFERS SOLANA AT ALL. Off unless AGENTCAP_SOLANA=1.
  *
  * One server-side switch, read per request. The (app) layout hands it to the
  * terminal, which drops the network switch and the /solana screen; the /solana
@@ -8,5 +8,5 @@
  * still let a signed-in user bind a wallet and write solana_* rows.
  */
 export function solanaEnabled(): boolean {
-  return process.env.MERRYMEN_SOLANA?.trim() === "1";
+  return process.env.AGENTCAP_SOLANA?.trim() === "1";
 }

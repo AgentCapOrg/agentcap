@@ -47,7 +47,7 @@ describe("the Fomo data key", () => {
     const i = src.indexOf("const CHILD_SECRET_STRIP = [");
     assert.ok(i > 0, "the strip list must exist for this to mean anything");
     const block = src.slice(i, src.indexOf("] as const;", i));
-    for (const key of ["MERRYMEN_FOMO_API_KEY", "FOMO_API_KEY"]) {
+    for (const key of ["AGENTCAP_FOMO_API_KEY", "FOMO_API_KEY"]) {
       assert.ok(block.includes(`"${key}"`), `${key} is not stripped from a child's environment`);
     }
   });
@@ -57,7 +57,7 @@ describe("the Fomo data key", () => {
       ...walk(WORKER, (f) => f.endsWith(".ts") && !isTest(f)),
       ...walk(path.join(REPO, "web", "src"), (f) => /\.(ts|tsx)$/.test(f) && !isTest(f)),
     ];
-    const readers = files.filter((f) => /\b(?:MERRYMEN_)?FOMO_API_KEY\b/.test(code(f))).map(rel).sort();
+    const readers = files.filter((f) => /\b(?:AGENTCAP_)?FOMO_API_KEY\b/.test(code(f))).map(rel).sort();
     const allowed = new Set([
       "worker/src/orchestrator.ts",
       "worker/src/settings.ts",

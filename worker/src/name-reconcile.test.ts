@@ -15,13 +15,13 @@ import { carryStoredName, getName, nameSeat, setName } from "./soul";
 let home: string;
 let prev: string | undefined;
 beforeEach(() => {
-  prev = process.env.MERRYMEN_HOME;
+  prev = process.env.AGENTCAP_HOME;
   home = mkdtempSync(path.join(os.tmpdir(), "mm-name-reconcile-"));
-  process.env.MERRYMEN_HOME = home;
+  process.env.AGENTCAP_HOME = home;
 });
 afterEach(() => {
-  if (prev === undefined) delete process.env.MERRYMEN_HOME;
-  else process.env.MERRYMEN_HOME = prev;
+  if (prev === undefined) delete process.env.AGENTCAP_HOME;
+  else process.env.AGENTCAP_HOME = prev;
   rmSync(home, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
 });
 
@@ -229,10 +229,10 @@ describe("an existing letterless name survives: the letter rule is for names cho
     writeFileSync(
       identityFile(),
       [
-        "# 007 of the merrymen",
+        "# 007 of the agentcap",
         "born: 2026-03-01",
         "",
-        "I am 007, a merryman — an outlaw trader working Sherwood (Robinhood Chain)",
+        "I am 007, a agentcapavatar — an outlaw trader working Sherwood (Robinhood Chain)",
         "",
       ].join("\n"),
       "utf8",
@@ -298,7 +298,7 @@ describe("an existing letterless name survives: the letter rule is for names cho
     seed007();
     assert.deepEqual(setName("Bond"), { ok: true, name: "Bond" });
     const text = readFileSync(identityFile(), "utf8");
-    assert.match(text, /^# Bond of the merrymen$/m);
+    assert.match(text, /^# Bond of the agentcap$/m);
     assert.match(text, /^I am Bond,/m);
     assert.doesNotMatch(text, /007/);
   });

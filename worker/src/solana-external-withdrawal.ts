@@ -1,7 +1,7 @@
 /**
- * One provider's reading of an owner withdrawal made outside Merrymen (the
+ * One provider's reading of an owner withdrawal made outside AgentCap (the
  * owner's own key: solana-recover, another wallet), for OWNER WITHDRAWALS MADE
- * OUTSIDE MERRYMEN in solana-trading-store.ts. Read-only; the caller asks two
+ * OUTSIDE AGENTCAP in solana-trading-store.ts. Read-only; the caller asks two
  * providers and books only what both derive identically (readSolanaQuorum).
  *
  * Accepted: a finalized, successful transaction, without address lookup
@@ -28,7 +28,7 @@ export class SolanaExternalWithdrawalError extends Error {
   constructor(message: string) { super(message); this.name = "SolanaExternalWithdrawalError"; }
 }
 function refuse(message: string): never { throw new SolanaExternalWithdrawalError(message); }
-const NOT_A_WITHDRAWAL = "That transaction is not a withdrawal from your vault that Merrymen can record. Nothing was recorded.";
+const NOT_A_WITHDRAWAL = "That transaction is not a withdrawal from your vault that AgentCap can record. Nothing was recorded.";
 
 // Each owner instruction's 8-byte discriminator, from the same builders the app signs with.
 const any = SOLANA_SYSTEM_PROGRAM;

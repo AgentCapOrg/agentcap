@@ -1,5 +1,5 @@
 /**
- * MERRYMEN-PAID PLANS, END TO END, THROUGH THE REAL ENTRYPOINT.
+ * AGENTCAP-PAID PLANS, END TO END, THROUGH THE REAL ENTRYPOINT.
  *
  * server.mjs is spawned as it runs in production, on a temp data directory,
  * with a partner key owned by a test wallet. Its payments RPC is a fake
@@ -68,9 +68,9 @@ async function startWeb() {
 async function startGateway(env) {
   const port = await freePort();
   const child = spawn(process.execPath, ["--max-old-space-size=256", fileURLToPath(new URL("./server.mjs", import.meta.url))], { stdio: ["ignore", "pipe", "pipe"],
-    env: { PATH: process.env.PATH, PORT: String(port), MERRYMEN_GATEWAY_UPSTREAM_KEY: "unused", MERRYMEN_GATEWAY_SECRET: SECRET,
+    env: { PATH: process.env.PATH, PORT: String(port), AGENTCAP_GATEWAY_UPSTREAM_KEY: "unused", AGENTCAP_GATEWAY_SECRET: SECRET,
       // A temp directory stands in for the volume: on a CI runner it is on the root disk.
-      MERRYMEN_GATEWAY_RPC: "http://127.0.0.1:9", MERRYMEN_DATA_DIR_PERSISTENT: "1", ...env } });
+      AGENTCAP_GATEWAY_RPC: "http://127.0.0.1:9", AGENTCAP_DATA_DIR_PERSISTENT: "1", ...env } });
   children.add(child);
   let out = "", err = "";
   const exited = new Promise((resolve) => child.on("exit", (code, signal) => resolve({ code, signal })));
@@ -117,11 +117,11 @@ function developer(gw, wallet) {
   return d;
 }
 
-const quota = (h) => [h["x-merrymen-quota-limit"], h["x-merrymen-quota-remaining"], h["x-merrymen-quota-enforced"]];
+const quota = (h) => [h["x-agentcap-quota-limit"], h["x-agentcap-quota-remaining"], h["x-agentcap-quota-enforced"]];
 const ledger = async (dir) => (await readFile(path.join(dir, "billing.jsonl"), "utf8")).split("\n").filter(Boolean).map((l) => JSON.parse(l));
 
 test("an account pays, its plan lifts a spent quota, failures do not count, and a SIGTERM and a restart keep everything", async () => {
-  const dir = await mkdtemp(path.join(tmpdir(), "merrymen-billing-server-"));
+  const dir = await mkdtemp(path.join(tmpdir(), "agentcap-billing-server-"));
   cleanup.push(() => rm(dir, { recursive: true, force: true }));
   // Blocks are stamped ten minutes back, so depth alone decides when a transfer is final.
   const rpc = await startFakeChain({ head: 5_000, time: Math.floor(Date.now() / 1000) - 600 });
@@ -138,13 +138,13 @@ test("an account pays, its plan lifts a spent quota, failures do not count, and 
   await writeFile(path.join(dir, "usage.json"), JSON.stringify({ v: 1, windows: {
     [`${owner}|${anchor}`]: { end: anchor + PERIOD_MS, total: 996, keys: { [keyId]: 996 } } } }));
   const env = {
-    MERRYMEN_DATA_DIR: dir, MERRYMEN_DEVELOPER_PORTAL_SECRET: PORTAL,
-    MERRYMEN_PARTNER_BRIDGE_SECRET: BRIDGE, MERRYMEN_PARTNER_APP_ORIGIN: web.origin,
-    MERRYMEN_PARTNER_KEYS: JSON.stringify([{ keyId, appId: "acme-production", owner: wallet.address, name: "Acme backend", hash: hashSecret(SECRET, secret),
+    AGENTCAP_DATA_DIR: dir, AGENTCAP_DEVELOPER_PORTAL_SECRET: PORTAL,
+    AGENTCAP_PARTNER_BRIDGE_SECRET: BRIDGE, AGENTCAP_PARTNER_APP_ORIGIN: web.origin,
+    AGENTCAP_PARTNER_KEYS: JSON.stringify([{ keyId, appId: "acme-production", owner: wallet.address, name: "Acme backend", hash: hashSecret(SECRET, secret),
       scopes: ["read:agents", "write:agents", "chat:agents"], rpm: 30, status: "active", created_at: new Date(anchor).toISOString() }]),
-    MERRYMEN_BILLING: "enforce", MERRYMEN_PAYMENTS_TREASURY: TREASURY, MERRYMEN_PAYMENTS_START_BLOCK: "100",
+    AGENTCAP_BILLING: "enforce", AGENTCAP_PAYMENTS_TREASURY: TREASURY, AGENTCAP_PAYMENTS_START_BLOCK: "100",
     // Its own RPC: the gateway's (a closed port above) is the holder gate's, never asked about payments.
-    MERRYMEN_PAYMENTS_RPC: rpc.url, MERRYMEN_PAYMENTS_MIN_CONFIRMATIONS: "3", MERRYMEN_PAYMENTS_MIN_AGE_SEC: "0",
+    AGENTCAP_PAYMENTS_RPC: rpc.url, AGENTCAP_PAYMENTS_MIN_CONFIRMATIONS: "3", AGENTCAP_PAYMENTS_MIN_AGE_SEC: "0",
   };
   let gw = await startGateway(env);
   assert.match(gw.stdout(), new RegExp(`partner billing: enforce, quotas enforced; payments to ${TREASURY}`));
@@ -158,7 +158,7 @@ test("an account pays, its plan lifts a spent quota, failures do not count, and 
   let r = await partner(gw, key, "/agents");
   assert.equal(r.status, 200);
   assert.deepEqual(quota(r.headers), ["1000", "3", "true"]);
-  assert.equal(r.headers["x-merrymen-quota-reset"], String(Math.ceil((anchor + PERIOD_MS) / 1000)));
+  assert.equal(r.headers["x-agentcap-quota-reset"], String(Math.ceil((anchor + PERIOD_MS) / 1000)));
 
   // The platform failing is not the partner's request: each gives its unit back.
   for (const [reply, status] of [
@@ -169,7 +169,7 @@ test("an account pays, its plan lifts a spent quota, failures do not count, and 
     web.reply = () => reply;
     r = await partner(gw, key, "/agents/pa_123456789abc/messages", { method: "POST", body: { message: "hi", request_id: "msg_1" } });
     assert.equal(r.status, status);
-    assert.equal(r.headers["x-merrymen-quota-remaining"], "3", JSON.stringify(reply.body));
+    assert.equal(r.headers["x-agentcap-quota-remaining"], "3", JSON.stringify(reply.body));
   }
   assert.equal(r.headers["retry-after"], undefined);
   web.reply = () => ({ status: 409, body: { error: { code: "conversation_busy", message: "Busy", retry_after: 2 } }, headers: { "retry-after": "2" } });
@@ -187,7 +187,7 @@ test("an account pays, its plan lifts a spent quota, failures do not count, and 
   assert.equal(web.seen.length, forwarded, "a spent quota never reaches the runtime");
   const { error } = spent.json;
   assert.deepEqual(error, { code: "quota_exhausted", message: error.message, request_id: error.request_id, plan: "free", limit: 1000, used: 1000,
-    resets_at: new Date(anchor + PERIOD_MS).toISOString(), upgrade_url: "https://merrymen.dev/api#plans" });
+    resets_at: new Date(anchor + PERIOD_MS).toISOString(), upgrade_url: "https://agentcap.xyz/api#plans" });
   assert.match(error.request_id, /^req_[0-9a-f]{12}$/);
   assert.deepEqual(quota(spent.headers), ["1000", "0", "true"]);
   assert.ok(Number(spent.headers["retry-after"]) > 0);
@@ -268,7 +268,7 @@ test("an account pays, its plan lifts a spent quota, failures do not count, and 
 });
 
 test("requests in flight at SIGTERM are answered, and what they counted is what is saved", async () => {
-  const dir = await mkdtemp(path.join(tmpdir(), "merrymen-billing-drain-"));
+  const dir = await mkdtemp(path.join(tmpdir(), "agentcap-billing-drain-"));
   cleanup.push(() => rm(dir, { recursive: true, force: true }));
   const web = await startWeb();
   const owner = `0x${"d4".repeat(20)}`;
@@ -280,9 +280,9 @@ test("requests in flight at SIGTERM are answered, and what they counted is what 
     ? { status: 503, body: { error: { code: "runtime_unavailable", message: "Worker state unreadable" } } }
     : { status: 200, body: { agent: { id: "pa_answering" } } })));
   const gw = await startGateway({
-    MERRYMEN_DATA_DIR: dir, MERRYMEN_BILLING: "observe",
-    MERRYMEN_PARTNER_BRIDGE_SECRET: BRIDGE, MERRYMEN_PARTNER_APP_ORIGIN: web.origin,
-    MERRYMEN_PARTNER_KEYS: JSON.stringify([{ keyId, appId: "drain-production", owner, name: "Drain", hash: hashSecret(SECRET, secret),
+    AGENTCAP_DATA_DIR: dir, AGENTCAP_BILLING: "observe",
+    AGENTCAP_PARTNER_BRIDGE_SECRET: BRIDGE, AGENTCAP_PARTNER_APP_ORIGIN: web.origin,
+    AGENTCAP_PARTNER_KEYS: JSON.stringify([{ keyId, appId: "drain-production", owner, name: "Drain", hash: hashSecret(SECRET, secret),
       scopes: ["read:agents"], rpm: 30, status: "active", created_at: new Date().toISOString() }]),
   });
   const answering = partner(gw, key, "/agents/pa_answering");
@@ -304,7 +304,7 @@ test("requests in flight at SIGTERM are answered, and what they counted is what 
 });
 
 test("a request still running when the 3 s drain ends is cut off, gives its unit back, and the exit is not held", async () => {
-  const dir = await mkdtemp(path.join(tmpdir(), "merrymen-billing-cutoff-"));
+  const dir = await mkdtemp(path.join(tmpdir(), "agentcap-billing-cutoff-"));
   cleanup.push(() => rm(dir, { recursive: true, force: true }));
   const web = await startWeb();
   const owner = `0x${"e5".repeat(20)}`;
@@ -319,9 +319,9 @@ test("a request still running when the 3 s drain ends is cut off, gives its unit
     return { status: 200, body: { agent: { id: "pa_quick" } } };
   };
   const gw = await startGateway({
-    MERRYMEN_DATA_DIR: dir, MERRYMEN_BILLING: "observe",
-    MERRYMEN_PARTNER_BRIDGE_SECRET: BRIDGE, MERRYMEN_PARTNER_APP_ORIGIN: web.origin,
-    MERRYMEN_PARTNER_KEYS: JSON.stringify([{ keyId, appId: "cutoff-production", owner, name: "Cutoff", hash: hashSecret(SECRET, secret),
+    AGENTCAP_DATA_DIR: dir, AGENTCAP_BILLING: "observe",
+    AGENTCAP_PARTNER_BRIDGE_SECRET: BRIDGE, AGENTCAP_PARTNER_APP_ORIGIN: web.origin,
+    AGENTCAP_PARTNER_KEYS: JSON.stringify([{ keyId, appId: "cutoff-production", owner, name: "Cutoff", hash: hashSecret(SECRET, secret),
       scopes: ["read:agents"], rpm: 30, status: "active", created_at: new Date().toISOString() }]),
   });
   assert.equal((await partner(gw, key, "/agents/pa_quick")).status, 200);
@@ -346,7 +346,7 @@ test("a shutdown still going at the 10 s deadline exits 1 then, rather than wait
   // and the deadline have passed. Woken past the deadline, it must exit 1
   // then, not carry on saving into the host's SIGKILL. Removing the deadline
   // from server.mjs makes this exit 0 instead.
-  const dir = await mkdtemp(path.join(tmpdir(), "merrymen-billing-deadline-"));
+  const dir = await mkdtemp(path.join(tmpdir(), "agentcap-billing-deadline-"));
   cleanup.push(() => rm(dir, { recursive: true, force: true }));
   const web = await startWeb();
   let releaseSlow;
@@ -356,9 +356,9 @@ test("a shutdown still going at the 10 s deadline exits 1 then, rather than wait
   const owner = `0x${"f6".repeat(20)}`;
   const { key, keyId, secret } = makeKey();
   const gw = await startGateway({
-    MERRYMEN_DATA_DIR: dir, MERRYMEN_BILLING: "observe",
-    MERRYMEN_PARTNER_BRIDGE_SECRET: BRIDGE, MERRYMEN_PARTNER_APP_ORIGIN: web.origin,
-    MERRYMEN_PARTNER_KEYS: JSON.stringify([{ keyId, appId: "deadline-production", owner, name: "Deadline", hash: hashSecret(SECRET, secret),
+    AGENTCAP_DATA_DIR: dir, AGENTCAP_BILLING: "observe",
+    AGENTCAP_PARTNER_BRIDGE_SECRET: BRIDGE, AGENTCAP_PARTNER_APP_ORIGIN: web.origin,
+    AGENTCAP_PARTNER_KEYS: JSON.stringify([{ keyId, appId: "deadline-production", owner, name: "Deadline", hash: hashSecret(SECRET, secret),
       scopes: ["read:agents"], rpm: 30, status: "active", created_at: new Date().toISOString() }]),
   });
   const held = partner(gw, key, "/agents/pa_slow").catch(() => "cut off");
@@ -379,7 +379,7 @@ test("a shutdown still going at the 10 s deadline exits 1 then, rather than wait
 });
 
 test("every degraded billing mode is said at boot", async () => {
-  const dir = await mkdtemp(path.join(tmpdir(), "merrymen-billing-boot-"));
+  const dir = await mkdtemp(path.join(tmpdir(), "agentcap-billing-boot-"));
   cleanup.push(() => rm(dir, { recursive: true, force: true }));
   const wrongChain = await startFakeChain({ chainId: 1 });
   cleanup.push(wrongChain.close);
@@ -387,15 +387,15 @@ test("every degraded billing mode is said at boot", async () => {
   const blocker = path.join(dir, "not-a-directory");
   await writeFile(blocker, "");
   const cases = [
-    [{ MERRYMEN_DATA_DIR: dir }, { out: /partner billing: off, nothing is metered/ }],
-    [{ MERRYMEN_BILLING: "observe" }, { err: /MERRYMEN_DATA_DIR set explicitly.*billing is off[\s\S]*partner billing: off \(MERRYMEN_BILLING="observe"/ }],
-    [{ MERRYMEN_DATA_DIR: dir, MERRYMEN_BILLING: "enforce" }, { err: /running observe[\s\S]*partner billing: observe \(MERRYMEN_BILLING="enforce".*payments UNAVAILABLE/ }],
-    [{ MERRYMEN_DATA_DIR: dir, MERRYMEN_BILLING: "enforce", MERRYMEN_PAYMENTS_TREASURY: TREASURY }, { err: /needs MERRYMEN_PAYMENTS_START_BLOCK[\s\S]*partner billing: observe/ }],
-    [{ MERRYMEN_DATA_DIR: dir, MERRYMEN_BILLING: "enforce", MERRYMEN_PAYMENTS_TREASURY: TREASURY, MERRYMEN_PAYMENTS_START_BLOCK: "1", MERRYMEN_PAYMENTS_RPC: wrongChain.url },
+    [{ AGENTCAP_DATA_DIR: dir }, { out: /partner billing: off, nothing is metered/ }],
+    [{ AGENTCAP_BILLING: "observe" }, { err: /AGENTCAP_DATA_DIR set explicitly.*billing is off[\s\S]*partner billing: off \(AGENTCAP_BILLING="observe"/ }],
+    [{ AGENTCAP_DATA_DIR: dir, AGENTCAP_BILLING: "enforce" }, { err: /running observe[\s\S]*partner billing: observe \(AGENTCAP_BILLING="enforce".*payments UNAVAILABLE/ }],
+    [{ AGENTCAP_DATA_DIR: dir, AGENTCAP_BILLING: "enforce", AGENTCAP_PAYMENTS_TREASURY: TREASURY }, { err: /needs AGENTCAP_PAYMENTS_START_BLOCK[\s\S]*partner billing: observe/ }],
+    [{ AGENTCAP_DATA_DIR: dir, AGENTCAP_BILLING: "enforce", AGENTCAP_PAYMENTS_TREASURY: TREASURY, AGENTCAP_PAYMENTS_START_BLOCK: "1", AGENTCAP_PAYMENTS_RPC: wrongChain.url },
       { err: /PAYMENTS UNAVAILABLE: the payments RPC answers chain 1[\s\S]*partner billing: enforce, quotas enforced; payments UNAVAILABLE/ }],
-    [{ MERRYMEN_DATA_DIR: path.join(blocker, "data"), MERRYMEN_BILLING: "observe" }, { err: /cannot be read \(ENOTDIR\).*billing is off[\s\S]*partner billing: off/ }],
-    // MERRYMEN_DATA_DIR=/data copied onto a service whose volume is not attached: nothing is created there.
-    [{ MERRYMEN_DATA_DIR: path.join(dir, "no-volume"), MERRYMEN_BILLING: "observe" }, { err: /no-volume does not exist .*billing is off[\s\S]*partner billing: off/ }],
+    [{ AGENTCAP_DATA_DIR: path.join(blocker, "data"), AGENTCAP_BILLING: "observe" }, { err: /cannot be read \(ENOTDIR\).*billing is off[\s\S]*partner billing: off/ }],
+    // AGENTCAP_DATA_DIR=/data copied onto a service whose volume is not attached: nothing is created there.
+    [{ AGENTCAP_DATA_DIR: path.join(dir, "no-volume"), AGENTCAP_BILLING: "observe" }, { err: /no-volume does not exist .*billing is off[\s\S]*partner billing: off/ }],
   ];
   for (const [env, want] of cases) {
     const gw = await startGateway(env);

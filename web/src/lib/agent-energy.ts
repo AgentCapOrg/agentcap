@@ -3,7 +3,7 @@
  *
  * The worker is the one process that throttles, so it is the only one that
  * knows how many AI reviews and new trades it has let itself start today, and
- * whether it could read the $MERRYMEN balances it throttles on. It writes that
+ * whether it could read the $AGENTCAP balances it throttles on. It writes that
  * verdict to `agents.energy` (a JSON column, see packages/core/src/energy.ts
  * EnergyStatus) and this reads it back for /api/grants and /api/chat.
  *
@@ -21,7 +21,7 @@
  *
  * Server-only: it opens the ledger.
  */
-import { parseEnergyStatus, type EnergyStatus, type GrantPurpose } from "@merrymen/core";
+import { parseEnergyStatus, type EnergyStatus, type GrantPurpose } from "@agentcap/core";
 import type { Db } from "../../../worker/src/db";
 import { withReadDb } from "./ledger";
 

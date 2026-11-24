@@ -15,7 +15,7 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { WALL_CHANGED_AT } from "@merrymen/core";
+import { WALL_CHANGED_AT } from "@agentcap/core";
 import { resignPromptApplies, resignPromptState } from "./resign-prompt-state";
 
 const OLD = WALL_CHANGED_AT - 86_400;

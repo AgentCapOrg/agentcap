@@ -11,14 +11,14 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import path from "node:path";
 
-process.env.MERRYMEN_HOME = path.join(process.cwd(), ".test-orch-home");
-process.env.MERRYMEN_HOSTED = "1";
-process.env.MERRYMEN_BUNDLER_API_KEY = "house-bundler-key";
+process.env.AGENTCAP_HOME = path.join(process.cwd(), ".test-orch-home");
+process.env.AGENTCAP_HOSTED = "1";
+process.env.AGENTCAP_BUNDLER_API_KEY = "house-bundler-key";
 process.env.GROQ_API_KEY = "house-groq-key";
-process.env.MERRYMEN_STORE_DEK = "SECRET-dek-never-to-a-child";
-process.env.MERRYMEN_SESSION_SECRET = "SECRET-session-never-to-a-child";
+process.env.AGENTCAP_STORE_DEK = "SECRET-dek-never-to-a-child";
+process.env.AGENTCAP_SESSION_SECRET = "SECRET-session-never-to-a-child";
 process.env.DATABASE_URL = "postgres://SECRET-never-to-a-child";
-process.env.MERRYMEN_HOLDER_ADDRESS = "0x00000000000000000000000000000000000Wha1e";
+process.env.AGENTCAP_HOLDER_ADDRESS = "0x00000000000000000000000000000000000Wha1e";
 
 const { childHome, childEnv, fleetHaltFile, botWillPoll } = await import("./orchestrator");
 
@@ -26,25 +26,25 @@ const T = "0xABCDef0000000000000000000000000000000001" as const;
 
 describe("orchestrator env curation", () => {
   it("childHome is per-tenant, lowercased, under children/", () => {
-    assert.equal(childHome(T), path.join(process.env.MERRYMEN_HOME!, "children", T.toLowerCase()));
+    assert.equal(childHome(T), path.join(process.env.AGENTCAP_HOME!, "children", T.toLowerCase()));
   });
 
   it("childEnv injects the house keys but STRIPS the orchestrator-only secrets", () => {
     const env = childEnv(T);
     // house keys — injected on purpose (house-keys-server-only)
-    assert.equal(env.MERRYMEN_BUNDLER_API_KEY, "house-bundler-key");
+    assert.equal(env.AGENTCAP_BUNDLER_API_KEY, "house-bundler-key");
     assert.equal(env.GROQ_API_KEY, "house-groq-key");
     // per-child steering
-    assert.equal(env.MERRYMEN_HOSTED, "1");
-    assert.equal(env.MERRYMEN_HOME, childHome(T));
+    assert.equal(env.AGENTCAP_HOSTED, "1");
+    assert.equal(env.AGENTCAP_HOME, childHome(T));
     // the three a child must NEVER see
-    assert.equal(env.MERRYMEN_STORE_DEK, undefined, "the DEK decrypts every tenant's key");
-    assert.equal(env.MERRYMEN_SESSION_SECRET, undefined, "the secret forges any session");
+    assert.equal(env.AGENTCAP_STORE_DEK, undefined, "the DEK decrypts every tenant's key");
+    assert.equal(env.AGENTCAP_SESSION_SECRET, undefined, "the secret forges any session");
     assert.equal(env.DATABASE_URL, undefined, "the url reaches every tenant's grant");
     /**
      * And the one that is not a secret at all.
      *
-     * settings.ts reads `str(file.holderAddress, env.MERRYMEN_HOLDER_ADDRESS)`,
+     * settings.ts reads `str(file.holderAddress, env.AGENTCAP_HOLDER_ADDRESS)`,
      * so the orchestrator's per-tenant overwrite only holds for a child that
      * actually got a settings file. `writeChildSettings` returns early on
      * unreadable settings and again from its catch — and that child would then
@@ -55,42 +55,42 @@ describe("orchestrator env curation", () => {
      * already broken.
      */
     assert.equal(
-      env.MERRYMEN_HOLDER_ADDRESS,
+      env.AGENTCAP_HOLDER_ADDRESS,
       undefined,
       "a child with no settings file must inherit NO holder wallet, not the operator's",
     );
   });
 
   it("fleetHaltFile sits under the orchestrator home", () => {
-    assert.equal(fleetHaltFile(), path.join(process.env.MERRYMEN_HOME!, "FLEET_HALT"));
+    assert.equal(fleetHaltFile(), path.join(process.env.AGENTCAP_HOME!, "FLEET_HALT"));
   });
 
   it("childEnv strips an owner's private key", () => {
-    process.env.MERRYMEN_RECOVER_OWNER_KEY = "0x" + "11".repeat(32);
+    process.env.AGENTCAP_RECOVER_OWNER_KEY = "0x" + "11".repeat(32);
     try {
-      assert.equal(childEnv(T).MERRYMEN_RECOVER_OWNER_KEY, undefined, "an owner key is the root of both wallets");
+      assert.equal(childEnv(T).AGENTCAP_RECOVER_OWNER_KEY, undefined, "an owner key is the root of both wallets");
     } finally {
-      delete process.env.MERRYMEN_RECOVER_OWNER_KEY;
+      delete process.env.AGENTCAP_RECOVER_OWNER_KEY;
     }
   });
 
   /**
-   * WHICH WALLET, AND WHOSE FILES. MERRYMEN_WALLET_PURPOSE decides which
-   * grant a worker arms, and MERRYMEN_GRANT_FILE / MERRYMEN_SETTINGS_FILE
-   * outrank MERRYMEN_HOME: none of the three may be inherited.
+   * WHICH WALLET, AND WHOSE FILES. AGENTCAP_WALLET_PURPOSE decides which
+   * grant a worker arms, and AGENTCAP_GRANT_FILE / AGENTCAP_SETTINGS_FILE
+   * outrank AGENTCAP_HOME: none of the three may be inherited.
    */
   it("childEnv sets the wallet and pins the grant and settings files, whatever the orchestrator's env says", () => {
-    const saved = { p: process.env.MERRYMEN_WALLET_PURPOSE, g: process.env.MERRYMEN_GRANT_FILE, s: process.env.MERRYMEN_SETTINGS_FILE };
-    process.env.MERRYMEN_WALLET_PURPOSE = "perps";
-    process.env.MERRYMEN_GRANT_FILE = "/somewhere/else/grant.json";
-    process.env.MERRYMEN_SETTINGS_FILE = "/somewhere/else/settings.json";
+    const saved = { p: process.env.AGENTCAP_WALLET_PURPOSE, g: process.env.AGENTCAP_GRANT_FILE, s: process.env.AGENTCAP_SETTINGS_FILE };
+    process.env.AGENTCAP_WALLET_PURPOSE = "perps";
+    process.env.AGENTCAP_GRANT_FILE = "/somewhere/else/grant.json";
+    process.env.AGENTCAP_SETTINGS_FILE = "/somewhere/else/settings.json";
     try {
       const env = childEnv(T);
-      assert.equal(env.MERRYMEN_WALLET_PURPOSE, "spot");
-      assert.equal(env.MERRYMEN_GRANT_FILE, path.join(childHome(T), "grant.json"));
-      assert.equal(env.MERRYMEN_SETTINGS_FILE, path.join(childHome(T), "settings.json"));
+      assert.equal(env.AGENTCAP_WALLET_PURPOSE, "spot");
+      assert.equal(env.AGENTCAP_GRANT_FILE, path.join(childHome(T), "grant.json"));
+      assert.equal(env.AGENTCAP_SETTINGS_FILE, path.join(childHome(T), "settings.json"));
     } finally {
-      for (const [k, v] of [["MERRYMEN_WALLET_PURPOSE", saved.p], ["MERRYMEN_GRANT_FILE", saved.g], ["MERRYMEN_SETTINGS_FILE", saved.s]] as const) {
+      for (const [k, v] of [["AGENTCAP_WALLET_PURPOSE", saved.p], ["AGENTCAP_GRANT_FILE", saved.g], ["AGENTCAP_SETTINGS_FILE", saved.s]] as const) {
         if (v === undefined) delete process.env[k];
         else process.env[k] = v;
       }
@@ -102,38 +102,38 @@ describe("a login's Perps worker (worker-key.ts)", () => {
   const P = `${T.toLowerCase()}:perps`;
 
   it("lives under children-perps/<owner>, and the Spot home does not move", () => {
-    assert.equal(childHome(P), path.join(process.env.MERRYMEN_HOME!, "children-perps", T.toLowerCase()));
-    assert.equal(childHome(T), path.join(process.env.MERRYMEN_HOME!, "children", T.toLowerCase()));
+    assert.equal(childHome(P), path.join(process.env.AGENTCAP_HOME!, "children-perps", T.toLowerCase()));
+    assert.equal(childHome(T), path.join(process.env.AGENTCAP_HOME!, "children", T.toLowerCase()));
   });
 
   it("is told it is the Perps wallet's, in its own home, as its owner", () => {
     const env = childEnv(P);
-    assert.equal(env.MERRYMEN_WALLET_PURPOSE, "perps");
-    assert.equal(env.MERRYMEN_HOME, childHome(P));
-    assert.equal(env.MERRYMEN_GRANT_FILE, path.join(childHome(P), "grant.json"));
-    assert.equal(env.MERRYMEN_SETTINGS_FILE, path.join(childHome(P), "settings.json"));
-    assert.equal(env.MERRYMEN_TENANT, T.toLowerCase());
-    assert.equal(env.MERRYMEN_STORE_DEK, undefined);
+    assert.equal(env.AGENTCAP_WALLET_PURPOSE, "perps");
+    assert.equal(env.AGENTCAP_HOME, childHome(P));
+    assert.equal(env.AGENTCAP_GRANT_FILE, path.join(childHome(P), "grant.json"));
+    assert.equal(env.AGENTCAP_SETTINGS_FILE, path.join(childHome(P), "settings.json"));
+    assert.equal(env.AGENTCAP_TENANT, T.toLowerCase());
+    assert.equal(env.AGENTCAP_STORE_DEK, undefined);
     assert.equal(env.DATABASE_URL, undefined);
   });
 
   it("gets no Telegram groups, no Brain and no flow broker, whatever the fleet sets", () => {
-    const saved = { g: process.env.MERRYMEN_TG_GROUPS, l: process.env.MERRYMEN_BRAIN_LIVE, s: process.env.MERRYMEN_BRAIN_SHADOW };
-    process.env.MERRYMEN_TG_GROUPS = "1";
-    process.env.MERRYMEN_BRAIN_LIVE = "all";
-    process.env.MERRYMEN_BRAIN_SHADOW = "all";
+    const saved = { g: process.env.AGENTCAP_TG_GROUPS, l: process.env.AGENTCAP_BRAIN_LIVE, s: process.env.AGENTCAP_BRAIN_SHADOW };
+    process.env.AGENTCAP_TG_GROUPS = "1";
+    process.env.AGENTCAP_BRAIN_LIVE = "all";
+    process.env.AGENTCAP_BRAIN_SHADOW = "all";
     try {
       const env = childEnv(P, { flowBroker: true });
-      assert.equal(env.MERRYMEN_TG_GROUPS, "0");
-      assert.equal(env.MERRYMEN_BRAIN_LIVE, undefined);
-      assert.equal(env.MERRYMEN_BRAIN_SHADOW, undefined);
-      assert.equal(env.MERRYMEN_FLOW_BROKER, undefined);
+      assert.equal(env.AGENTCAP_TG_GROUPS, "0");
+      assert.equal(env.AGENTCAP_BRAIN_LIVE, undefined);
+      assert.equal(env.AGENTCAP_BRAIN_SHADOW, undefined);
+      assert.equal(env.AGENTCAP_FLOW_BROKER, undefined);
       // And the Spot worker beside it keeps what it always had.
       const spot = childEnv(T);
-      assert.equal(spot.MERRYMEN_TG_GROUPS, "1");
-      assert.equal(spot.MERRYMEN_BRAIN_LIVE, "all");
+      assert.equal(spot.AGENTCAP_TG_GROUPS, "1");
+      assert.equal(spot.AGENTCAP_BRAIN_LIVE, "all");
     } finally {
-      for (const [k, v] of [["MERRYMEN_TG_GROUPS", saved.g], ["MERRYMEN_BRAIN_LIVE", saved.l], ["MERRYMEN_BRAIN_SHADOW", saved.s]] as const) {
+      for (const [k, v] of [["AGENTCAP_TG_GROUPS", saved.g], ["AGENTCAP_BRAIN_LIVE", saved.l], ["AGENTCAP_BRAIN_SHADOW", saved.s]] as const) {
         if (v === undefined) delete process.env[k];
         else process.env[k] = v;
       }
@@ -149,19 +149,19 @@ describe("a login's Perps worker (worker-key.ts)", () => {
  */
 describe("telegram bot-token collision guard", () => {
   it("botWillPoll resolves telegramEnabled as the child does: the file, then the env, then off", () => {
-    const prev = process.env.MERRYMEN_TELEGRAM_ENABLED;
+    const prev = process.env.AGENTCAP_TELEGRAM_ENABLED;
     try {
-      delete process.env.MERRYMEN_TELEGRAM_ENABLED;
+      delete process.env.AGENTCAP_TELEGRAM_ENABLED;
       assert.equal(botWillPoll({ telegramBotToken: "111:A" } as any), false);
       assert.equal(botWillPoll({ telegramEnabled: true, telegramBotToken: "111:A" } as any), true);
       assert.equal(botWillPoll({ telegramEnabled: true, telegramBotToken: "  " } as any), false, "no token, nothing to poll");
       assert.equal(botWillPoll(null), false);
-      process.env.MERRYMEN_TELEGRAM_ENABLED = "true";
+      process.env.AGENTCAP_TELEGRAM_ENABLED = "true";
       assert.equal(botWillPoll({ telegramBotToken: "111:A" } as any), true, "an env the child inherits turns it on");
       assert.equal(botWillPoll({ telegramEnabled: false, telegramBotToken: "111:A" } as any), false, "and the file still wins");
     } finally {
-      if (prev === undefined) delete process.env.MERRYMEN_TELEGRAM_ENABLED;
-      else process.env.MERRYMEN_TELEGRAM_ENABLED = prev;
+      if (prev === undefined) delete process.env.AGENTCAP_TELEGRAM_ENABLED;
+      else process.env.AGENTCAP_TELEGRAM_ENABLED = prev;
     }
   });
 });

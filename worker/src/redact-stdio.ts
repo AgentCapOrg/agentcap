@@ -49,7 +49,7 @@ export function lineRedactor(maxHeld = 64 * 1024): { push(chunk: Buffer | string
 }
 
 type Write = NodeJS.WriteStream["write"];
-const GUARDED = Symbol.for("merrymen.redactUrls.guarded");
+const GUARDED = Symbol.for("agentcap.redactUrls.guarded");
 
 /**
  * Route everything this process writes to stdout and stderr through

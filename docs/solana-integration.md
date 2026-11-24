@@ -5,7 +5,7 @@ live Solana trading code**, an authenticated dashboard, bounded on-chain custody
 durable two-provider settlement, owner recovery without the server, operator
 tools and an opt-in autonomous strategy. **Nothing has been deployed, funded or
 traded on a public network by this work.** Production keeps Solana off: the web
-surface needs `MERRYMEN_SOLANA=1`, which is unset, and live execution needs a
+surface needs `AGENTCAP_SOLANA=1`, which is unset, and live execution needs a
 released immutable vault program that does not exist yet (see
 [Release gates](#release-gates)).
 
@@ -40,7 +40,7 @@ The 2026-10-18 internal audit (55 confirmed findings) was followed by fix rounds
 on 2026-10-19 and 2026-10-20, merged into this branch. In summary:
 
 - **Two RPC providers for anything booked.** Live trading refuses to run without
-  `MERRYMEN_SOLANA_RPC_MAINNET_FALLBACK` on a different hostname. Fills,
+  `AGENTCAP_SOLANA_RPC_MAINNET_FALLBACK` on a different hostname. Fills,
   failures, expiries, owner transactions, inflows, outside withdrawals and the
   vault deployment are booked only when both providers agree. Every live trade
   reads the vault's balances, sequence, session epoch and the Pyth price from
@@ -49,7 +49,7 @@ on 2026-10-19 and 2026-10-20, merged into this branch. In summary:
   them answered at, refused when one runs more than 150 slots ahead of
   another's fresh slot. See [RPC trust model](#rpc-trust-model).
 - **Pyth through both providers, and a generation setting.** The constants were
-  checked on mainnet on 2026-10-19. `MERRYMEN_SOLANA_PYTH_GENERATION` picks
+  checked on mainnet on 2026-10-19. `AGENTCAP_SOLANA_PYTH_GENERATION` picks
   Pyth's `current` (default) or `upgraded` deployment, all three addresses
   together. A trade uses the stricter of the two providers' bounds.
 - **Owner revoke slot.** A revocation can always be prepared and submitted, even
@@ -61,7 +61,7 @@ on 2026-10-19 and 2026-10-20, merged into this branch. In summary:
   compute-unit limit never below the runtime default. The browser decodes every
   owner transaction and shows its fee and the SOL it needs before the wallet
   opens.
-- **Withdrawals made outside Merrymen** are recorded by the owner from their
+- **Withdrawals made outside AgentCap** are recorded by the owner from their
   transaction signatures, read on both providers. Native SOL withdrawal
   (`withdraw-sol`) is in the app.
 - **A vault below its book** is a named state with a status blocker, an
@@ -93,7 +93,7 @@ on 2026-10-19 and 2026-10-20, merged into this branch. In summary:
 - **USDG mint fixture.** The mainnet USDG mint was read on 2026-10-20; the vault
   and the worker are tested against its bytes, and the worker now refuses any
   USDG mint state the vault's `check_mint` refuses.
-- **Owner recovery without the server.** `merrymen solana-recover`, with the
+- **Owner recovery without the server.** `agentcap solana-recover`, with the
   released-program pin, and an off-by-default owner key backup card.
 - **Re-bind after a Privy identity change**, signed by the same owner key.
 - **Fee payer levels and alerts**, the expired-attempt allowance setting, and
@@ -104,7 +104,7 @@ on 2026-10-19 and 2026-10-20, merged into this branch. In summary:
 | Capability | Current implementation |
 |---|---|
 | Identity and isolation | Case-sensitive Solana identifiers and `sol:<owner>` agent IDs; a separate wallet binding, mode, policy and book per existing tenant. EVM grants and the RH executor keep their boundaries. |
-| Authenticated app | `/solana` behind `MERRYMEN_SOLANA=1`: Privy embedded Solana wallet, wallet-ownership proof, per-chain consent and limits, previews, paper and live requests, pending receipts, owner controls (revoke, withdraw USDG/WSOL, withdraw native SOL, resume buys, record outside withdrawals), an optional owner key backup card and worker status. |
+| Authenticated app | `/solana` behind `AGENTCAP_SOLANA=1`: Privy embedded Solana wallet, wallet-ownership proof, per-chain consent and limits, previews, paper and live requests, pending receipts, owner controls (revoke, withdraw USDG/WSOL, withdraw native SOL, resume buys, record outside withdrawals), an optional owner key backup card and worker status. |
 | Paper | Real mint reads and Jupiter quotes, conservative simulated fills, exact integer accounting, drawdown checks, durable idempotency, dust prevention and write-off. App/API and a separate local-only CLI. |
 | Live custody | Anchor program with an owner-PDA vault, bounded sessions (at most 7 days on-chain), sequence and epoch checks, isolated Jupiter CPI, token and native recovery, owner revocation. Compiled and exercised locally as SBF, including against real Jupiter v6 bytes; undeployed. |
 | Live execution | Versioned transactions with distinct session and fee-payer signatures, strict instruction and ALT validation, every-provider simulation, durable admission before send, two-provider rebroadcast, two-provider settlement and restart reconciliation. |
@@ -158,7 +158,7 @@ activates the session only after the registration is finalized on both
 providers with matching on-chain limits, and only when the vault's session
 epoch is exactly one past the epoch the permission was prepared at. The owner
 private key never enters the server. The session seed is encrypted at rest with
-AES-256-GCM under `MERRYMEN_STORE_DEK`, bound to tenant, owner, program, vault,
+AES-256-GCM under `AGENTCAP_STORE_DEK`, bound to tenant, owner, program, vault,
 session and epoch.
 
 **A Privy identity change.** A wallet-signed sign-in under a new Privy DID
@@ -166,7 +166,7 @@ re-points the tenant at it (unchanged Robinhood behaviour), but the Solana
 binding still names the old DID, so the new sign-in gets
 "This account's Solana wallet was verified with a different sign-in. Sign in
 with the login you used when you verified it." There are two ways back: sign in
-again with the original login, or sign the distinct "Merrymen Solana wallet
+again with the original login, or sign the distinct "AgentCap Solana wallet
 re-bind v1" message with the same owner key under the new identity (it names
 both identities and what moves). A re-bind bumps the binding's revision, turns
 the autonomous strategy off and is recorded in `solana_wallet_binding_rebinds`.
@@ -239,7 +239,7 @@ exits. If a donation is waiting and the owner's account is closed or unsafe, the
 swap fails closed with program error 6010 (`RefundAccount`), the executor reports
 `owner-refund`, and status tells the owner what to do (reopen the account or
 withdraw a little of that token; revoke a delegate or close authority in the
-wallet; a frozen account cannot be fixed from Merrymen). The fee payer never
+wallet; a frozen account cannot be fixed from AgentCap). The fee payer never
 creates owner accounts. Plain lamports sent to a sell's temporary WSOL address
 while it is still a System account are a donation too: the swap opens the
 native account over them and everything above its rent-exempt reserve becomes
@@ -335,16 +335,16 @@ unsafe mint authorities or extensions.
 
 ### Live rollout: who may go live, and the platform's caps
 
-`MERRYMEN_SOLANA=1` turns Solana on for every bound tenant at once, and the
+`AGENTCAP_SOLANA=1` turns Solana on for every bound tenant at once, and the
 program alone lets an owner sign any limits up to 96 operations a day and 168
 hours. So live trading is also rolled out tenant by tenant, as Robinhood's is
-with `MERRYMEN_FLEET_ROLLOUT`, and its limits are capped by the platform as
+with `AGENTCAP_FLEET_ROLLOUT`, and its limits are capped by the platform as
 Robinhood's vault caps spending at 25 USDG a day
 ([`solana-live-rollout.ts`](../worker/src/solana-live-rollout.ts),
 [`solana-live-caps.ts`](../web/src/lib/solana-live-caps.ts)). The app runtime
 reads both from its own env, so the web and the Solana worker decide alike.
 
-- **`MERRYMEN_SOLANA_LIVE_TENANTS`** names the tenants that may go live: 0x
+- **`AGENTCAP_SOLANA_LIVE_TENANTS`** names the tenants that may go live: 0x
   tenant ids, comma-separated, spaces ignored, case-insensitive. Unset or empty,
   nobody may; paper stays open to every bound tenant. A tenant it does not name
   cannot save live mode, prepare, submit or activate a first permission,
@@ -354,7 +354,7 @@ reads both from its own env, so the web and the Solana worker decide alike.
 - **Exits-only.** A tenant taken off the list after going live (it has a
   registered permission or a live book) can still sell back to USDG within the
   permission it signed, revoke, withdraw USDG, wrapped SOL and native SOL,
-  record withdrawals made outside Merrymen, use paper and read status. Status
+  record withdrawals made outside AgentCap, use paper and read status. Status
   says "Live trading is paused for this account: exits, revoke and withdraw
   still work." as a blocker that leaves exits open, so the worker sells but never
   buys. Exits need a current permission, though: once the one it holds has
@@ -371,7 +371,7 @@ reads both from its own env, so the web and the Solana worker decide alike.
   already replaced the permission before it, so without it nothing could be
   sold. It grants no buys. A first permission that lands after the tenant left
   the list is not activated (the page keeps its session key, and Revoke ends it).
-- **Caps.** `MERRYMEN_SOLANA_LIVE_MAX_PER_TRADE_USDG` and `…_MAX_DAILY_USDG`
+- **Caps.** `AGENTCAP_SOLANA_LIVE_MAX_PER_TRADE_USDG` and `…_MAX_DAILY_USDG`
   (default 10 and 25 USDG), `…_MAX_PER_TRADE_WSOL` and `…_MAX_DAILY_WSOL`
   (default 0.1 and 0.25 SOL). Live limits above a cap are refused where they are
   saved, where a permission is prepared and again where its signed bytes are
@@ -392,7 +392,7 @@ reads both from its own env, so the web and the Solana worker decide alike.
 - **Buys keep room for exits.** The vault program charges a sale's USDG
   proceeds to the session's per-trade and daily USDG limits, as it charges a
   buy's spend, and the SOL it sells to the SOL sold limits (`swap` in
-  `contracts/solana/programs/merrymen-vault/src/lib.rs`); admission counts the
+  `contracts/solana/programs/agentcap-vault/src/lib.rs`); admission counts the
   same way (a sale at the higher of its quote and its reference value when it
   is admitted, raised to its actual proceeds when it lands above them, in the
   transaction that books it). So a buy is refused (`SOLANA_LIVE_EXIT_RESERVE`)
@@ -505,7 +505,7 @@ reference must be owned by the selected generation's receiver program, be the
 pinned account, fully verified, the SOL/USD feed
 (`ef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d`), at most
 120 seconds old and within 1% confidence. The signed minimum output may not be
-more than `MERRYMEN_SOLANA_REFERENCE_TOLERANCE_BPS` below the reference (default
+more than `AGENTCAP_SOLANA_REFERENCE_TOLERANCE_BPS` below the reference (default
 300, bounded 50 to 1000, and always above the trade's own slippage). Each
 provider's price is read at the prepared slot; a refusal from either refuses
 the trade, and the **stricter** bound applies (a buy is held to the lower SOL
@@ -521,7 +521,7 @@ daily SOL sell limits the owner saved, which the vault enforces again on-chain.
 Pyth recommends for new integrations. Both are pinned; the setting switches all
 three addresses together and never falls back from one to the other:
 
-| `MERRYMEN_SOLANA_PYTH_GENERATION` | Receiver | Price feed program | SOL/USD account (shard 0) |
+| `AGENTCAP_SOLANA_PYTH_GENERATION` | Receiver | Price feed program | SOL/USD account (shard 0) |
 |---|---|---|---|
 | `current` (default; unset or empty) | `rec5EKMGg6MxZYaMdyBfgwp4d5rB9T1VQH5pJv5LtFJ` | `pythWSnswVUd12oZpeFP8e9CVaEqJg25g1Vtc2biRsT` | `7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE` |
 | `upgraded` | `rec2HHDDnjLfj4kE7VyEtFA1HPGQLK33259532cRyHp` | `pyt2F414BA6dPttK6RddPZUdHfapoBN24GL5wbrPCou` | `7AviUf9nL62mcxNbQGKm4nKDQnPjswo6c5MX4D57HmyE` |
@@ -554,8 +554,8 @@ every live trade is refused until the generation is switched.
 
 ## RPC trust model
 
-Live trading needs two providers, `MERRYMEN_SOLANA_RPC_MAINNET` and
-`MERRYMEN_SOLANA_RPC_MAINNET_FALLBACK`, on different hostnames (case and a
+Live trading needs two providers, `AGENTCAP_SOLANA_RPC_MAINNET` and
+`AGENTCAP_SOLANA_RPC_MAINNET_FALLBACK`, on different hostnames (case and a
 trailing dot are ignored). Hostnames are the only independence check, so pick a
 different provider company. Each provider proves mainnet-beta (genesis hash) on
 every session. Paper may run on the primary alone. Without the fallback, owners
@@ -567,7 +567,7 @@ or delay these, never decide them):
 
 | Read | Rule |
 |---|---|
-| Vault deployment | On every provider: upgradeable loader, no upgrade authority, ProgramData region hash equals `MERRYMEN_SOLANA_VAULT_SHA256`, binary declares the configured id. A success is reused for 10 minutes per process and provider pair; failures are never reused. |
+| Vault deployment | On every provider: upgradeable loader, no upgrade authority, ProgramData region hash equals `AGENTCAP_SOLANA_VAULT_SHA256`, binary declares the configured id. A success is reused for 10 minutes per process and provider pair; failures are never reused. |
 | A live trade's pre-sign reads | Vault balances, vault sequence and session epoch, and the Pyth price, from every provider at the prepared slot. Balances, sequence and epoch must be equal; the stricter price bound applies. |
 | A live trade's simulation | The exact message to be signed is simulated on every provider at or after its blockhash's bank and must pass the same checks on each (sequence +1, input spent within the amount, output at least the minimum, fee payer cost within the cap). |
 | Fill, failure or expiry of a trade | Booked only when both derive the same outcome; disagreement or an unavailable provider leaves it pending and the vault blocked. |
@@ -587,7 +587,7 @@ below-book check). Jupiter quotes come from Jupiter.
 
 **Commitment.** Every read is `finalized`: accounts, slots, blockhashes, rent,
 simulations, fee quotes, Pyth, mints, the send's preflight, in the app, the
-operator tools and `merrymen solana-recover`. Since Alpenglow (mainnet epoch
+operator tools and `agentcap solana-recover`. Since Alpenglow (mainnet epoch
 1064, 2026-10-21; Votor from slot 459,653,000) `confirmed` and `finalized` are
 the same state, a block with a finalization certificate about 150 ms after it is
 produced, and Agave will remove `confirmed` in a later release. A provider may
@@ -634,10 +634,10 @@ as lapsed once they pass.
 
 **Swap priority fee.** The compute-unit price is the 75th percentile of recent
 fees on the swap's writable accounts, clamped between
-`MERRYMEN_SOLANA_COMPUTE_UNIT_PRICE_MICROLAMPORTS` (minimum, default 0) and
-`MERRYMEN_SOLANA_MAX_COMPUTE_UNIT_PRICE_MICROLAMPORTS` (default 1,000,000), and
+`AGENTCAP_SOLANA_COMPUTE_UNIT_PRICE_MICROLAMPORTS` (minimum, default 0) and
+`AGENTCAP_SOLANA_MAX_COMPUTE_UNIT_PRICE_MICROLAMPORTS` (default 1,000,000), and
 paid only from what the fee payer holds beyond one swap's needs (the temporary
-account's rent and two signatures), all within `MERRYMEN_SOLANA_MAX_FEE_LAMPORTS`
+account's rent and two signatures), all within `AGENTCAP_SOLANA_MAX_FEE_LAMPORTS`
 for fee plus rent. A low payer therefore lands exits at a lower price instead of
 refusing them. The reserved fee is never below the runtime's own charge.
 
@@ -648,9 +648,9 @@ carry the matching event, and truncated or missing logs need a finalized vault
 read after the receipt whose sequence has moved past the swap's. Failures never
 need logs.
 
-**Privy.** With `MERRYMEN_SOLANA=1` the web app registers Privy's
+**Privy.** With `AGENTCAP_SOLANA=1` the web app registers Privy's
 `defaultSolanaRpcsPlugin()`, so Privy's signing screen reads Solana through
-Privy-hosted endpoints keyed by the public Privy app id. Merrymen's own RPC URLs
+Privy-hosted endpoints keyed by the public Privy app id. AgentCap's own RPC URLs
 and keys never reach the browser. Privy can see those reads (owner address,
 transactions under review); it already holds the wallet.
 
@@ -700,13 +700,13 @@ attempt paid a fee. Such records keep `feeLamports: null`, an unresolved-fee
 count and a reserved fee allowance; the UI marks incomplete fee totals.
 Contradictory or insufficient evidence leaves the request pending and holds new
 exposure. A trade whose vault sequence moved for another reason (an owner
-withdrawal outside Merrymen) is never booked automatically; an operator books
+withdrawal outside AgentCap) is never booked automatically; an operator books
 it with `solana:resolve` on two providers' debit-log proof
 ([Operator runbooks](#operator-runbooks)).
 
 **Daily operations.** `maxOpsPerDay` counts pending, finalized and failed live
 attempts, and by default proven-expired attempts too
-(`MERRYMEN_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE`, default 0). At most
+(`AGENTCAP_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE`, default 0). At most
 `maxOpsPerDay + allowance` transactions are signed a day and at most
 `maxOpsPerDay` land. Once the day's operations are used, status shows a full
 blocker and trades and automated exits pause until operations leave the
@@ -767,7 +767,7 @@ sale.
   resume-buys. Quarantined WSOL leaves first and never moves the high-water mark.
 - **Withdrawal cap.** An in-app withdrawal offers at most the lower of the book
   and the vault's finalized balance (plus synced SOL for WSOL), and refuses more
-  with "Your vault holds less of this asset than Merrymen's records … Nothing
+  with "Your vault holds less of this asset than AgentCap's records … Nothing
   was prepared."
 - **One owner transaction at a time, revoke always.** While a submitted owner
   transaction is unresolved, the server prepares no other ("Refresh the pending
@@ -786,7 +786,7 @@ sale.
   revocation beside the pending record has landed, another one is refused
   unless a permission registered after it is live on Solana; then status shows
   "A trading permission that landed on Solana after your revocation is still
-  active there until it expires. Merrymen never uses it; revoke again under
+  active there until it expires. AgentCap never uses it; revoke again under
   Owner controls to end it." and Revoke works again. A finalized resume-buys
   with a revocation signed beside it leaves buying paused.
 - **Unknown outcomes.** A refusal before anything was saved carries
@@ -797,9 +797,9 @@ sale.
   decides from its own sends and the server's record, never from `notSaved`
   alone. 401, 403, 404, 408 and 429 never discard bytes.
 
-**Withdrawals made outside Merrymen.** After `solana-recover` or any wallet
+**Withdrawals made outside AgentCap.** After `solana-recover` or any wallet
 holding the owner key, the owner pastes up to 8 transaction signatures under
-Owner controls → "Withdrew outside Merrymen?" (`POST /api/solana/owner
+Owner controls → "Withdrew outside AgentCap?" (`POST /api/solana/owner
 { stage: "record", action: "external-withdrawals", signatures }`). Each is read
 on both providers and booked only as an owner-signed, top-level vault withdraw
 for this vault, by the vault token account's net decrease, once (evidence
@@ -818,17 +818,17 @@ when prepared and again when signed, so one that the book no longer covers is
 refused before it is saved or sent ("The withdrawal exceeds the recorded vault
 balance…"), and a withdrawal that lands can always be booked.
 
-**Owner recovery without Merrymen.** `merrymen solana-recover` (or `npm run
+**Owner recovery without AgentCap.** `agentcap solana-recover` (or `npm run
 solana:recover`) reads the owner key from a file or standard input, never the
-command line, and takes the RPC from `MERRYMEN_SOLANA_RECOVER_RPC` (set with
-`read -rs MERRYMEN_SOLANA_RECOVER_RPC; export MERRYMEN_SOLANA_RECOVER_RPC`, then
+command line, and takes the RPC from `AGENTCAP_SOLANA_RECOVER_RPC` (set with
+`read -rs AGENTCAP_SOLANA_RECOVER_RPC; export AGENTCAP_SOLANA_RECOVER_RPC`, then
 paste); `--rpc` is only for a keyless URL, and giving both is refused. It reads
 no other environment variable and does not load `.env.solana.local`.
 
-1. Preview: `merrymen solana-recover --program PROGRAM_ID --owner OWNER_PUBKEY`.
+1. Preview: `agentcap solana-recover --program PROGRAM_ID --owner OWNER_PUBKEY`.
    `--owner` must be a wallet address on the ed25519 curve; a pasted secret or a
    PDA is refused unread.
-2. Send: `pbpaste | merrymen solana-recover --program PROGRAM_ID --key-file - --send`.
+2. Send: `pbpaste | agentcap solana-recover --program PROGRAM_ID --key-file - --send`.
    Step 1 sends `revoke_all` alone and waits for finalization. Step 2 withdraws,
    from finalized balances, the vault's spare SOL, all USDG and all WSOL (it
    arrives wrapped), each in its own transaction; an asset whose owner account
@@ -842,13 +842,13 @@ no other environment variable and does not load `.env.solana.local`.
 (`packages/core/src/solana-live.ts`), after checking that its immutable binary
 hashes to the released value and declares its own id. For another program it
 needs both `--program-sha256 HEX` and `--unlisted-program`, warns and waits 15
-seconds; the help says Merrymen never asks for that flag (policy text awaiting
+seconds; the help says AgentCap never asks for that flag (policy text awaiting
 Milla's confirmation). The list is empty today, so `--send` refuses every
 program until the first release. About 0.0165 SOL of rent stays locked, because
 the program has no close instruction. Mainnet only.
 
 The web's **"Back up your owner key"** card is off unless the web build sets
-`NEXT_PUBLIC_MERRYMEN_SOLANA_OWNER_KEY_EXPORT=1`. It shows only to the bound
+`NEXT_PUBLIC_AGENTCAP_SOLANA_OWNER_KEY_EXPORT=1`. It shows only to the bound
 owner, only for a live binding whose vault the server has read, and opens
 Privy's own export window for that embedded wallet; the key never reaches the
 page. Step 2 names the read-only `--owner` plan for an unlisted program and the
@@ -862,11 +862,11 @@ release entry ships in the published CLI.
 
 **What it means.** The vault's finalized USDG or WSOL balance is below its book
 (cash; position plus quarantined WSOL) while no live trade is pending and no
-signed owner transaction is unresolved. Tokens left the vault outside Merrymen.
+signed owner transaction is unresolved. Tokens left the vault outside AgentCap.
 A trade or in-app withdrawal that has landed but not settled is not a shortfall.
 
 **What you see.** Status shows the full blocker "Vault balances are below
-recorded trades. If you withdrew from the vault outside Merrymen, with your owner
+recorded trades. If you withdrew from the vault outside AgentCap, with your owner
 key in another wallet or tool, record those withdrawals under Owner controls;
 until the records match the vault, trading and automated exits stay held." The
 Solana worker logs, at most every 10 minutes per account:
@@ -874,7 +874,7 @@ Solana worker logs, at most every 10 minutes per account:
     [alert] Solana vault below its book: … {"solana":"alert","kind":"vault-below-book","account":"<16-hex ref>"} — …
 
 The account reference is the first 16 hex characters of
-`sha256('merrymen-solana-account/v1 <tenant> <owner>')`; no tenant or owner is
+`sha256('agentcap-solana-account/v1 <tenant> <owner>')`; no tenant or owner is
 logged.
 
 **Effect.** Trading and automated exits are held and admission refuses every
@@ -882,16 +882,16 @@ trade. The owner can still revoke, and can withdraw at most what the vault holds
 
 **How it is reconciled.**
 
-1. Ask the owner whether they withdrew outside Merrymen (`solana-recover`, or
+1. Ask the owner whether they withdrew outside AgentCap (`solana-recover`, or
    another wallet holding the owner key). If so, it is not a loss: they record
-   the signatures under Owner controls ("Withdrew outside Merrymen?"), each is
+   the signatures under Owner controls ("Withdrew outside AgentCap?"), each is
    booked as capital out, and trading resumes.
 2. Otherwise find what moved the tokens (an issuer's action on a token account,
    a booking error). `npm run solana:resolve -- shortfall show <account-ref|tenant>`
    shows each provider's finalized balances, read at or after the book's slot,
    beside the book, and exactly what a write-off would book. It writes nothing.
    The configured primary and fallback must report the same balances; add
-   `--third-rpc` (URL from `MERRYMEN_SOLANA_RESOLVE_THIRD_RPC`) and set a dead or
+   `--third-rpc` (URL from `AGENTCAP_SOLANA_RESOLVE_THIRD_RPC`) and set a dead or
    lying provider aside with `--exclude primary|fallback|third`.
 3. Once the cause is known, `npm run solana:resolve -- shortfall book
    <account-ref|tenant> --operator NAME --reason "why"` writes it off as a
@@ -935,7 +935,7 @@ with no route at all (delisted) cannot be written off.
 
 The local CLI is a separate simulation tool. Its `--owner` is only a book label,
 not wallet proof or a funding address, and the CLI refuses hosted mode. Its
-SQLite file is `MERRYMEN_HOME/solana-paper.sqlite` (default `~/.merrymen`):
+SQLite file is `AGENTCAP_HOME/solana-paper.sqlite` (default `~/.agentcap`):
 
 ```sh
 npm run check:solana-rpc
@@ -978,17 +978,17 @@ unavailable}` only when a tick did more than wait.
 ```sh
 npm run start:solana
 # Equivalent CLI entry point with environment already supplied:
-merrymen solana-agent
+agentcap solana-agent
 ```
 
 This is a separate worker from the RH fleet. In the container the role is
-`MERRYMEN_START=start:solana`. Hosted operation uses the shared database; it
+`AGENTCAP_START=start:solana`. Hosted operation uses the shared database; it
 does not fall back to an ephemeral SQLite file. The hosted deploy guard requires
 the matching Solana service identity, `DATABASE_URL` and the expected Docker
 image marker, and rejects the RH fleet service. See
 [hosted deployment](hosted-deploy.md). No service has been deployed by this work.
 
-**Stopping `merrymen solana-agent`.** The first Ctrl+C, SIGTERM or SIGHUP stops
+**Stopping `agentcap solana-agent`.** The first Ctrl+C, SIGTERM or SIGHUP stops
 after the current tick. A second press more than 1.5 seconds later forces the
 stop (exit 128 + the signal number), and a wedged worker is SIGKILLed 3 seconds
 after that; presses within 1.5 seconds count once, because a terminal and an npm
@@ -999,7 +999,7 @@ like a crash: a paper fill is all-or-nothing and a live swap is saved before it
 is sent.
 
 **Kill switches.** "Kill all agents" on `/you` and Telegram `/kill` turn the
-tenant's Solana strategy off as well as removing the RH grant, `MERRYMEN_SOLANA`
+tenant's Solana strategy off as well as removing the RH grant, `AGENTCAP_SOLANA`
 on or off. Before touching the Solana store they look `solana_wallet_bindings`
 and its `strategy_json` column up read-only (`to_regclass` and `pg_attribute` on
 PostgreSQL; `sqlite_master` and `pragma_table_info` on SQLite). If either is
@@ -1013,7 +1013,7 @@ stored, and the strategy is stopped even when that removal throws; if the
 Solana write fails the kill is not reported done (web 503 "Kill incomplete",
 retry safe; Telegram keeps the request pending and sends one ✅ once both are
 done). Self-hosted, every kill (the web's, Telegram `/kill` in the worker and
-`merrymen kill`, through `worker/src/solana-kill-cli.ts`) stops every strategy
+`agentcap kill`, through `worker/src/solana-kill-cli.ts`) stops every strategy
 in the local accounts file FIRST, whatever then happens to the RH grant: an
 archive it cannot write keeps grant.json and pauses trading (web 409, which
 says whether the Solana strategy stopped), and a kill with no grant still stops
@@ -1024,7 +1024,7 @@ does not revoke the on-chain session; the owner's revoke does.
 ## Operator runbooks
 
 Every operator command loads `.env.solana.local` if present, uses `DATABASE_URL`
-for the hosted shared database (otherwise `MERRYMEN_HOME/solana-accounts.sqlite`),
+for the hosted shared database (otherwise `AGENTCAP_HOME/solana-accounts.sqlite`),
 never prints or records an endpoint URL (providers appear as labels and a short
 hostname hash), and never signs or sends a transaction.
 
@@ -1042,8 +1042,8 @@ npm run solana:hold -- release 0xTENANT                      # or: release all
 **Turning Solana off.** Hold trading first (`npm run solana:hold -- set all
 --reason "…"`): trades stop within a tick and owners keep revoke, withdraw and
 strategy-off in the app. Then stop the Solana worker service (or unset its
-`MERRYMEN_SOLANA`, which keeps it from starting again). Unset the web's
-`MERRYMEN_SOLANA` last, and only once no owner needs the app's owner controls:
+`AGENTCAP_SOLANA`, which keeps it from starting again). Unset the web's
+`AGENTCAP_SOLANA` last, and only once no owner needs the app's owner controls:
 with it unset every `/api/solana` route answers 404, so an owner's only in-app
 stop left would be "Kill all agents", which also deletes their Robinhood grant.
 
@@ -1070,7 +1070,7 @@ window ("sequence-consumed"); a debit inside the window refuses it however many
 providers agree, and the operator should look for the trade's fill. `show`
 explains a provider that cannot prove it (not-asked, behind, blockhash-live,
 debit-in-window). `--third-rpc` is a switch: the URL comes from
-`MERRYMEN_SOLANA_RESOLVE_THIRD_RPC`, never the command line (a URL argument is
+`AGENTCAP_SOLANA_RESOLVE_THIRD_RPC`, never the command line (a URL argument is
 refused without being echoed). `--exclude` sets aside one provider that reports
 a conflicting outcome or cannot be read; its view is still shown and recorded.
 Decisions go to `solana_operator_resolutions` and are marked booked in the same
@@ -1098,7 +1098,7 @@ id. Decisions go to `solana_operator_owner_resolutions`.
 **A vault below its book.** See [A vault below its book](#a-vault-below-its-book)
 (`shortfall show|book|history`).
 
-**Recording withdrawals made outside Merrymen.** This is the owner's action, not
+**Recording withdrawals made outside AgentCap.** This is the owner's action, not
 the operator's: the owner records signatures under Owner controls. An operator
 helps the owner find the signatures (an explorer search on the vault address)
 and never books a decrease by hand. An in-app withdrawal an operator booked as
@@ -1111,17 +1111,17 @@ interval shown while it persists.
 | Line (prefix) | From | Meaning | What to do |
 |---|---|---|---|
 | `[alert] Solana fee payer is low` / `cannot fund buys` / `cannot fund exits: every tenant's exits are blocked` (JSON `kind: fee-payer-<level>`); recovery `{"solana":"fee-payer-ok",…}` | web and worker (status), and the worker's own check every 10 min while any live permission is registered | The shared fee payer is below the low watermark, or below one buy's or one exit's needs | Fund the fee payer. Below the exit level every tenant's exits stop. Repeats every 10 min. |
-| `[alert] solana fee-payer-threshold misconfigured` | web and worker | `MERRYMEN_SOLANA_FEE_PAYER_LOW_LAMPORTS` is not a whole number above zero; the default (4 × fee cap) is used | Fix the setting. Trading continues. Every 10 min. |
-| `[alert] solana-reference-price refused: reason=<…> generation=<…> …` | web and worker | A Pyth read was refused (stale, missing, foreign, layout, unverified, …); no live trade is admitted, and no live permission is prepared, until a fresh, fully verified price is read (max age 120 s). Recovery: `[solana-reference-price] read again: …` on stdout | Check Pyth posting and both providers. `reason=config generation=invalid` means `MERRYMEN_SOLANA_PYTH_GENERATION` is wrong: fix the setting, it is not an outage. First refusal and new reasons at once, then at most every 60 s. RPC transport failures go to provider failover and are not alerted here. |
-| `[alert] solana-reference-tolerance misconfigured` | web and worker | `MERRYMEN_SOLANA_REFERENCE_TOLERANCE_BPS` unreadable; every live trade, exits included, is refused | Fix the setting (50 to 1000). At most once a minute. |
-| `[alert] solana-jupiter-key misconfigured` | web and worker | `MERRYMEN_JUPITER_API_KEY` is set but unusable; every quote and live route, exits included, is refused | Fix the key. Unset or empty is "not configured" (a status blocker, no alert). At most once a minute. |
-| `[alert] solana-live-rollout differs: …` | web and worker | The web and the Solana worker run different `MERRYMEN_SOLANA_LIVE_TENANTS` or `MERRYMEN_SOLANA_LIVE_MAX_*` settings (one was redeployed without the other), and every live buy is held on both, status saying so. From the web, also: the worker is running but has not published its settings for over 90 s (the web's buys are held). From the worker, also: the web's latest digest, whatever its age, differs (`the web last published different …`: the web runs other settings, or cannot publish its own, which its `[alert] solana-live-rollout unpublished` says), or there is none yet, as on a fresh deployment before the web has started (`the web has not published …`); the worker's buys are held | Deploy both with the same values, the worker first (hosted-deploy.md, "Turning Solana on", step 4): the web publishes its settings as it starts and every 30 s after, and the worker's buys resume at its next check. If both already run the same values, look for the web's `[alert] solana-live-rollout unpublished`. Exits, revoke and withdraw continue. At most once a minute per process. |
+| `[alert] solana fee-payer-threshold misconfigured` | web and worker | `AGENTCAP_SOLANA_FEE_PAYER_LOW_LAMPORTS` is not a whole number above zero; the default (4 × fee cap) is used | Fix the setting. Trading continues. Every 10 min. |
+| `[alert] solana-reference-price refused: reason=<…> generation=<…> …` | web and worker | A Pyth read was refused (stale, missing, foreign, layout, unverified, …); no live trade is admitted, and no live permission is prepared, until a fresh, fully verified price is read (max age 120 s). Recovery: `[solana-reference-price] read again: …` on stdout | Check Pyth posting and both providers. `reason=config generation=invalid` means `AGENTCAP_SOLANA_PYTH_GENERATION` is wrong: fix the setting, it is not an outage. First refusal and new reasons at once, then at most every 60 s. RPC transport failures go to provider failover and are not alerted here. |
+| `[alert] solana-reference-tolerance misconfigured` | web and worker | `AGENTCAP_SOLANA_REFERENCE_TOLERANCE_BPS` unreadable; every live trade, exits included, is refused | Fix the setting (50 to 1000). At most once a minute. |
+| `[alert] solana-jupiter-key misconfigured` | web and worker | `AGENTCAP_JUPITER_API_KEY` is set but unusable; every quote and live route, exits included, is refused | Fix the key. Unset or empty is "not configured" (a status blocker, no alert). At most once a minute. |
+| `[alert] solana-live-rollout differs: …` | web and worker | The web and the Solana worker run different `AGENTCAP_SOLANA_LIVE_TENANTS` or `AGENTCAP_SOLANA_LIVE_MAX_*` settings (one was redeployed without the other), and every live buy is held on both, status saying so. From the web, also: the worker is running but has not published its settings for over 90 s (the web's buys are held). From the worker, also: the web's latest digest, whatever its age, differs (`the web last published different …`: the web runs other settings, or cannot publish its own, which its `[alert] solana-live-rollout unpublished` says), or there is none yet, as on a fresh deployment before the web has started (`the web has not published …`); the worker's buys are held | Deploy both with the same values, the worker first (hosted-deploy.md, "Turning Solana on", step 4): the web publishes its settings as it starts and every 30 s after, and the worker's buys resume at its next check. If both already run the same values, look for the web's `[alert] solana-live-rollout unpublished`. Exits, revoke and withdraw continue. At most once a minute per process. |
 | `[alert] solana-live-rollout unchecked: …` | web and worker | Status could not write this service's live rollout digest or read the other's (`solana_runtime_live_rollout_seen`: SQLite busy past its timeout, a PostgreSQL write error or statement timeout); it counts as differing, so live buys are held (status says so as a buys-only blocker), while status itself still answers | Check the database the line's service uses (locks, disk, connection). Exits, revoke and withdraw continue. At most once a minute per process. |
 | `[alert] solana-live-rollout unpublished: …` | web and worker | From the worker: it wrote its heartbeat but could not publish its live rollout digest beside it; the web counts the worker as running settings it cannot check and holds every live buy (`[alert] solana-live-rollout differs` from the web). From the web: its publish as it started, or every 30 s after, failed; the worker judges the last digest written as the web's, which may be out of date: where that differs from the worker's settings its buys are held, and where it equals them (this web's settings before it was redeployed, say) the worker may buy under settings this web no longer runs | Check the database the line's service uses (`DATABASE_URL`, locks, disk, connection). Receipt recovery, the strategies' exits, revoke and withdraw continue. From the worker at most once every ten minutes while it persists, and at once again after it clears; from the web at most once a minute while it persists (it retries every 30 s, and at every Solana request). |
-| `[alert] solana-live-rollout misconfigured: <setting and entry position>` | web and worker | `MERRYMEN_SOLANA_LIVE_TENANTS` or a `MERRYMEN_SOLANA_LIVE_MAX_*` cap cannot be read; no new live permission or live buy is admitted, for any tenant | Fix the setting the line names (the value is never printed). Exits, revoke and withdraw continue. At most once a minute. |
+| `[alert] solana-live-rollout misconfigured: <setting and entry position>` | web and worker | `AGENTCAP_SOLANA_LIVE_TENANTS` or a `AGENTCAP_SOLANA_LIVE_MAX_*` cap cannot be read; no new live permission or live buy is admitted, for any tenant | Fix the setting the line names (the value is never printed). Exits, revoke and withdraw continue. At most once a minute. |
 | `[alert] Solana transactions stuck pending` (JSON counts and oldest age) | worker | A live trade or signed owner transaction has been pending over 3 minutes; each holds its account (no new trade, no owner transaction but a revoke) | Check both providers; `npm run solana:resolve -- pending`, then `show` / `owner show` and, with evidence, `book`. Every 10 min. |
-| `[alert] Solana vault below its book` (`kind: vault-below-book`, account ref) | worker | Tokens left a vault outside Merrymen | [A vault below its book](#a-vault-below-its-book). Every 10 min per account. |
-| `[alert] Solana autonomous strategy refused: proven-expired attempts used up an account's daily operations` (`kind: expired-attempts-exhausted`) | worker | Automated trades and exits of that account pause until the attempts leave the 24 h window | Check provider health and congestion. Raising `MERRYMEN_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE` is an owner decision. Every 10 min per account. |
+| `[alert] Solana vault below its book` (`kind: vault-below-book`, account ref) | worker | Tokens left a vault outside AgentCap | [A vault below its book](#a-vault-below-its-book). Every 10 min per account. |
+| `[alert] Solana autonomous strategy refused: proven-expired attempts used up an account's daily operations` (`kind: expired-attempts-exhausted`) | worker | Automated trades and exits of that account pause until the attempts leave the 24 h window | Check provider health and congestion. Raising `AGENTCAP_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE` is an owner decision. Every 10 min per account. |
 | `[warn] Solana proven-expired attempts use more than half of an account's daily operations` (`kind: expired-attempts-high`) | worker | Early warning for the line above | Watch; same remedies. |
 | `[warn] Solana autonomous rebalance below the live minimum` (`kind: below-live-minimum`, account ref, side, interval) | worker | Admission refused an account's strategy trade as worth under 1 USDG at the reference; the strategy tries again once per interval | Nothing for the operator. The owner's strategy size, USDG per trade and SOL sold per trade must each be worth at least 1 USDG; a small vault's rebalance stays below it until it grows. Every 10 min per account. |
 
@@ -1197,8 +1197,8 @@ instead of 60 to 130 ms. POST /api/grants is not paced per tenant.
 The Telegram agent's secret list holds the Solana server secrets
 (`SOLANA_SECRET_SETTINGS` in `worker/src/telegram/agent.ts`: the fee payer's
 seed, the store DEK, the Jupiter key and the RPC URLs) from its environment and
-from a `.env.solana.local` in the working tree or `MERRYMEN_HOME`; any
-`MERRYMEN_…SEED/DEK/KEY/RPC…=value` line is redacted by shape, tool output
+from a `.env.solana.local` in the working tree or `AGENTCAP_HOME`; any
+`AGENTCAP_…SEED/DEK/KEY/RPC…=value` line is redacted by shape, tool output
 passes through `redactUrls`, and the shell refuses a dotfile glob
 (`cat .e*.local`).
 
@@ -1213,37 +1213,37 @@ and Chainstack.
 [`.env.solana.example`](../.env.solana.example) lists every setting with its
 default, range and meaning, with placeholders only. Keep Solana RPC credentials
 server-side: never in `NEXT_PUBLIC_`, the browser chain registry or Robinhood's
-`MERRYMEN_RPC_MAINNET`. RPC attempts use deadlines, response bounds (256 KiB),
+`AGENTCAP_RPC_MAINNET`. RPC attempts use deadlines, response bounds (256 KiB),
 redacted errors and no redirects.
 
 | Setting | Where | Default and range | Effect of a bad value |
 |---|---|---|---|
-| `MERRYMEN_SOLANA` | web and Solana worker | unset (off); `1` on | — |
-| `NEXT_PUBLIC_MERRYMEN_SOLANA_OWNER_KEY_EXPORT` | web build ARG | empty (off); exactly `1` on | anything else is off |
-| `MERRYMEN_SOLANA_RPC_MAINNET` | web, worker | required; HTTPS | refused |
-| `MERRYMEN_SOLANA_RPC_MAINNET_FALLBACK` | web, worker | required for live; HTTPS, different hostname | live refused |
-| `MERRYMEN_JUPITER_API_KEY` | web, worker | required for quotes; 1 to 1024 printable ASCII, no spaces | blocker for trades and exits, `[alert]` |
-| `MERRYMEN_SOLANA_VAULT_PROGRAM`, `MERRYMEN_SOLANA_VAULT_SHA256` | web, worker | unset (no live) | live refused as configuration |
-| `MERRYMEN_STORE_DEK`, `MERRYMEN_SOLANA_FEE_PAYER_SEED` | web, worker | unset; base64 of 32 bytes | live refused |
-| `MERRYMEN_SOLANA_MAX_FEE_LAMPORTS` | web, worker | 5,000,000; whole number > 0 | blocker for trades and exits |
-| `MERRYMEN_SOLANA_COMPUTE_UNIT_PRICE_MICROLAMPORTS` | web, worker | 0 (minimum price) | blocker for trades and exits |
-| `MERRYMEN_SOLANA_MAX_COMPUTE_UNIT_PRICE_MICROLAMPORTS` | web, worker | max(1,000,000, minimum) | blocker (also when below the minimum) |
-| `MERRYMEN_SOLANA_FEE_PAYER_LOW_LAMPORTS` | web, worker | 4 × fee cap (0.02 SOL) | warning and `[alert]`, default used |
-| `MERRYMEN_SOLANA_REFERENCE_TOLERANCE_BPS` | web, worker | 300; 50 to 1000 | blocker for trades and exits, `[alert]` |
-| `MERRYMEN_SOLANA_PYTH_GENERATION` | web, worker | `current`; or `upgraded` | blocker for trades, exits and registering a permission, `[alert]` |
-| `MERRYMEN_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE` | web, worker | 0; 0 to 96 | blocker for trades and exits (the worker's alert counts use 0) |
-| `MERRYMEN_SOLANA_LIVE_TENANTS` | web, worker | unset: nobody may go live; comma-separated 0x tenant ids | new live permissions and buys refused for everyone (exits continue), `[alert]` |
-| `MERRYMEN_SOLANA_LIVE_MAX_PER_TRADE_USDG`, `…_MAX_DAILY_USDG` | web, worker | 10 and 25 USDG; exact decimals, per trade ≤ daily, per trade ≥ 1 | as above |
-| `MERRYMEN_SOLANA_LIVE_MAX_PER_TRADE_WSOL`, `…_MAX_DAILY_WSOL` | web, worker | 0.1 and 0.25 SOL; exact decimals, per trade ≤ daily | as above |
-| `MERRYMEN_SOLANA_RESOLVE_THIRD_RPC` | operator machine | unset; HTTPS, its own hostname | `--third-rpc` refused |
-| `MERRYMEN_SOLANA_RECOVER_RPC` | owner's computer | unset; HTTPS mainnet | `solana-recover` refused |
+| `AGENTCAP_SOLANA` | web and Solana worker | unset (off); `1` on | — |
+| `NEXT_PUBLIC_AGENTCAP_SOLANA_OWNER_KEY_EXPORT` | web build ARG | empty (off); exactly `1` on | anything else is off |
+| `AGENTCAP_SOLANA_RPC_MAINNET` | web, worker | required; HTTPS | refused |
+| `AGENTCAP_SOLANA_RPC_MAINNET_FALLBACK` | web, worker | required for live; HTTPS, different hostname | live refused |
+| `AGENTCAP_JUPITER_API_KEY` | web, worker | required for quotes; 1 to 1024 printable ASCII, no spaces | blocker for trades and exits, `[alert]` |
+| `AGENTCAP_SOLANA_VAULT_PROGRAM`, `AGENTCAP_SOLANA_VAULT_SHA256` | web, worker | unset (no live) | live refused as configuration |
+| `AGENTCAP_STORE_DEK`, `AGENTCAP_SOLANA_FEE_PAYER_SEED` | web, worker | unset; base64 of 32 bytes | live refused |
+| `AGENTCAP_SOLANA_MAX_FEE_LAMPORTS` | web, worker | 5,000,000; whole number > 0 | blocker for trades and exits |
+| `AGENTCAP_SOLANA_COMPUTE_UNIT_PRICE_MICROLAMPORTS` | web, worker | 0 (minimum price) | blocker for trades and exits |
+| `AGENTCAP_SOLANA_MAX_COMPUTE_UNIT_PRICE_MICROLAMPORTS` | web, worker | max(1,000,000, minimum) | blocker (also when below the minimum) |
+| `AGENTCAP_SOLANA_FEE_PAYER_LOW_LAMPORTS` | web, worker | 4 × fee cap (0.02 SOL) | warning and `[alert]`, default used |
+| `AGENTCAP_SOLANA_REFERENCE_TOLERANCE_BPS` | web, worker | 300; 50 to 1000 | blocker for trades and exits, `[alert]` |
+| `AGENTCAP_SOLANA_PYTH_GENERATION` | web, worker | `current`; or `upgraded` | blocker for trades, exits and registering a permission, `[alert]` |
+| `AGENTCAP_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE` | web, worker | 0; 0 to 96 | blocker for trades and exits (the worker's alert counts use 0) |
+| `AGENTCAP_SOLANA_LIVE_TENANTS` | web, worker | unset: nobody may go live; comma-separated 0x tenant ids | new live permissions and buys refused for everyone (exits continue), `[alert]` |
+| `AGENTCAP_SOLANA_LIVE_MAX_PER_TRADE_USDG`, `…_MAX_DAILY_USDG` | web, worker | 10 and 25 USDG; exact decimals, per trade ≤ daily, per trade ≥ 1 | as above |
+| `AGENTCAP_SOLANA_LIVE_MAX_PER_TRADE_WSOL`, `…_MAX_DAILY_WSOL` | web, worker | 0.1 and 0.25 SOL; exact decimals, per trade ≤ daily | as above |
+| `AGENTCAP_SOLANA_RESOLVE_THIRD_RPC` | operator machine | unset; HTTPS, its own hostname | `--third-rpc` refused |
+| `AGENTCAP_SOLANA_RECOVER_RPC` | owner's computer | unset; HTTPS mainnet | `solana-recover` refused |
 
 A full blocker from configuration still shows the vault, balances, fee payer,
 owner wallet and recoverable SOL in status. The fee payer's hard levels are not
 settings: below one exit's needs (rent for a 165-byte temporary account plus two
 signatures, about 0.00205 SOL) every tenant's exits stop; below one buy's needs
 (rent for the vault's USDG account size plus two signatures) buys stop.
-`MERRYMEN_SOLANA_WORKER_IPC` is internal (`merrymen solana-agent` sets it for
+`AGENTCAP_SOLANA_WORKER_IPC` is internal (`agentcap solana-agent` sets it for
 its worker); never set it.
 
 The local dashboard needs the same values in its server:
@@ -1252,9 +1252,9 @@ The local dashboard needs the same values in its server:
 node --env-file=.env.solana.local node_modules/next/dist/bin/next dev web -H 127.0.0.1 -p 3100
 ```
 
-The web surface is off unless the web server has `MERRYMEN_SOLANA=1`
+The web surface is off unless the web server has `AGENTCAP_SOLANA=1`
 ([`solana-enabled.ts`](../web/src/lib/solana-enabled.ts)), and the Solana
-worker (`start:solana`, `merrymen solana-agent`) refuses to start (exit 78,
+worker (`start:solana`, `agentcap solana-agent`) refuses to start (exit 78,
 before it opens any storage) unless its own service has it too
 (`solanaWorkerSwitchRefusal`), so the flag means "Solana on" wherever it is
 read. The operator CLIs and `solana:recover` run without it. Without it the
@@ -1262,7 +1262,7 @@ network switch, the `/solana` screen and Privy's Solana wallets are not
 rendered, `/solana` answers 404, and every `/api/solana` route answers 404
 before sign-in, body parsing or any database read. A page opened at
 `http://127.0.0.1:<port>` is accepted as same-origin for `/api/solana` when
-`MERRYMEN_PUBLIC_ORIGIN` is unset; production sets it. Errors about missing or
+`AGENTCAP_PUBLIC_ORIGIN` is unset; production sets it. Errors about missing or
 invalid Solana settings reach owners only as "Solana trading is not available."
 or a named blocker that never names a setting.
 
@@ -1276,7 +1276,7 @@ submits and activations (10, then one every 3 s). A paced request answers 429
 before anything runs; buckets are per web process.
 
 Storage: the app and Solana worker share `DATABASE_URL` in hosted mode. Local
-storage is `MERRYMEN_HOME/solana-accounts.sqlite` (WAL, full synchronization,
+storage is `AGENTCAP_HOME/solana-accounts.sqlite` (WAL, full synchronization,
 owner-only permissions), separate from the paper CLI book. PostgreSQL and SQLite
 enforce the same tenant, policy and admission boundaries. All Solana tables are
 created idempotently at first use, on both dialects; there are no migrations to
@@ -1284,7 +1284,7 @@ run. Backups must keep the durable journals and encrypted session records; the
 encryption key belongs in the secret environment, not the database.
 
 **Deployment verification.** The verifier rejects an upgrade authority and
-checks the executable bytes against `MERRYMEN_SOLANA_VAULT_SHA256` on both
+checks the executable bytes against `AGENTCAP_SOLANA_VAULT_SHA256` on both
 providers. The hash covers the **entire ProgramData region after the 45-byte
 loader header, including allocation padding**; an artifact's own hash equals it
 only when the deployment's max-len equals the artifact's size (the CLI default),
@@ -1294,7 +1294,7 @@ never the local test id `EUzYVniKtgNNgFweMtRA9vciTWtE8MDTRfh6ai6VvXoU`. Once
 `SOLANA_VAULT_RELEASES` lists a release, any program and hash pair it does not
 list refuses live trading, exits and every app owner action as configuration,
 before any RPC; status still names the program and vault so the recovery card
-can render, and the owner keeps `merrymen solana-recover`. Older releases stay
+can render, and the owner keeps `agentcap solana-recover`. Older releases stay
 listed so their vaults stay usable; a new pin must keep every program owners
 have funded. While the list is empty (today) only the deployment checks apply
 on the server. The page applies the pin itself, never the server's status
@@ -1319,7 +1319,7 @@ Full procedure: [contracts/solana/README.md](../contracts/solana/README.md).
   build paths). The committed `Darwin-arm64.json` (ce7d2544…, 410,472 bytes, the
   local test id; re-recorded after `withdraw` began forwarding transfer-hook
   accounts) is for local verification only. The release artifact and
-  `MERRYMEN_SOLANA_VAULT_SHA256` come from the pinned Linux CI build and its
+  `AGENTCAP_SOLANA_VAULT_SHA256` come from the pinned Linux CI build and its
   manifest. Earlier artifact hashes describe binaries that will never ship:
   `9bb352ad`, `53c9a7ba`, `ee04ea0e` and `dfb7617c` (before account layout
   version 2 and the `lto` removal) and `34b4fe22` (before the on-chain 7-day
@@ -1338,24 +1338,24 @@ Full procedure: [contracts/solana/README.md](../contracts/solana/README.md).
   (`scripts/ci/*.test.mjs`) are part of `npm test`. Docs-only pull requests in
   the Kaka lane skip the vault build but still wait for `app`.
 - **Release marking.** A release comes only from a CI run on `refs/heads/main` of
-  `millw14/merrymen` (a push to main, or a manual run on main) whose pinned Linux
+  `millw14/agentcap` (a push to main, or a manual run on main) whose pinned Linux
   build matched the committed `build-manifests/Linux-x86_64.json`, whose `app`
   check passed, and whose `lib.rs` does not declare the local test id. Its bytes
-  are in `merrymen-vault-sbf-candidate-unconfirmed-<commit>-run<id>.<attempt>`,
-  and `solana · release` uploads `merrymen-vault-release-<commit>-run<id>.<attempt>`
+  are in `agentcap-vault-sbf-candidate-unconfirmed-<commit>-run<id>.<attempt>`,
+  and `solana · release` uploads `agentcap-vault-release-<commit>-run<id>.<attempt>`
   naming that artifact and its SHA-256. Everything else is
-  `merrymen-vault-sbf-not-a-release-…`. Until a Linux manifest is committed,
+  `agentcap-vault-sbf-not-a-release-…`. Until a Linux manifest is committed,
   every artifact is not a release; until `declare_id` is the production key,
   every artifact is not a release.
 - **declare_id.** Before recording or deploying a release hash, run
-  `node contracts/solana/scripts/check-release-id.mjs $(solana-keygen pubkey <deploy keypair>) [--so target/deploy/merrymen_vault.so]`.
+  `node contracts/solana/scripts/check-release-id.mjs $(solana-keygen pubkey <deploy keypair>) [--so target/deploy/agentcap_vault.so]`.
   It checks that `declare_id!` equals the deploy key's public key and that the
   `.so` holds its 32 bytes, prints the `.so` SHA-256, and never echoes its
   argument. CI has no deploy keypair.
 - **Fixtures.** `runtime-tests/fixtures/ts-instructions.json` (from the TS ABI;
-  `MERRYMEN_WRITE_SOLANA_ABI_FIXTURE=1 npx tsx --test packages/core/src/solana-live.test.ts`)
+  `AGENTCAP_WRITE_SOLANA_ABI_FIXTURE=1 npx tsx --test packages/core/src/solana-live.test.ts`)
   and `recovery-transactions.txt` (from the recovery tool;
-  `MERRYMEN_WRITE_SOLANA_RECOVERY_FIXTURE=1 npx tsx --test worker/src/solana-recover.test.ts`)
+  `AGENTCAP_WRITE_SOLANA_RECOVERY_FIXTURE=1 npx tsx --test worker/src/solana-recover.test.ts`)
   are executed byte for byte against the compiled program. Both follow
   `lib.rs`'s `declare_id`. The Jupiter fork fixtures need no refresh for a new id.
 
@@ -1442,12 +1442,12 @@ says where to change it. Superseded choices are listed under the current one.
 
 | Decision | Default now | Alternatives | Change |
 |---|---|---|---|
-| Who may go live | Nobody until named in `MERRYMEN_SOLANA_LIVE_TENANTS` | Every bound tenant; Robinhood-style levels (observe, exits-only, trade) | `MERRYMEN_SOLANA_LIVE_TENANTS` |
+| Who may go live | Nobody until named in `AGENTCAP_SOLANA_LIVE_TENANTS` | Every bound tenant; Robinhood-style levels (observe, exits-only, trade) | `AGENTCAP_SOLANA_LIVE_TENANTS` |
 | Off the list after going live | Exits-only: sales back to USDG, revoke, withdrawals and outside withdrawals; live mode may be saved again so exits can be sold, each limit at most the larger of its cap and the registered permission's (a departure from the brief, which refuses live mode off the list: **needs Milla's sign-off before the canary**) | Refuse saving live mode too (the literal brief); or cap it at the caps alone (rejected: it could narrow sales below the permission the owner signed) | `checkLiveSettings` in `solana-app-runtime.ts` |
 | A permission that lands after the tenant left the list | A renewal of an account that already went live is activated for exits only (it replaced the old permission on Solana, so refusing it would leave nothing to sell under; buys stay refused). A first permission is not activated; the page keeps its session key, Revoke ends it. A departure from the brief, which refuses activation off the list: **needs Milla's sign-off before the canary** | Never activate off the list (rejected: a renewal landing after delisting would leave the account unable to sell until listed again) | `activateLive` (`requireLiveOpenOrWentLive`) |
 | Off the list, once its permission expired or was replaced | Withdraw-only: revoke and withdrawals (USDG, wrapped SOL and native SOL, to the owner's own accounts) always work, but nothing can be sold back to USDG in the app, since no new permission is registered off the list; status says so (`SOLANA_LIVE_PAUSED_NO_PERMISSION`). **Needs Milla's decision before the canary** | A sell-only renewal: such an account may prepare and submit a renewal within the caps whose owner-signed transaction also carries `set_breaker(paused = true)`. The program keeps the breaker across `create_session` and refuses every buy while it is paused (`execute_swap` in `lib.rs`), so the renewal could only sell, on chain as off chain (trade() still refuses buys). It changes the transaction the owner signs, so the page's permission review (`readPermissionTransaction` in `SolanaPermission.tsx`) must accept and show that instruction | `prepareLive`, `submitSetup` in `solana-app-runtime.ts` |
-| Live caps | 10 and 25 USDG, 0.1 and 0.25 SOL (25 USDG a day is the Robinhood vault's cap, which limits spending only) | Other values | `MERRYMEN_SOLANA_LIVE_MAX_*` |
-| Exits and the caps | Buys keep room for exits: a buy is refused when, after it, the whole position could not be sold inside the rolling 24-hour limits at the independent price plus the tolerance (`SOLANA_LIVE_EXIT_RESERVE`), counting what it brings 300 bps above the larger of its quote and its reference (the fill margin: the program does not bound an ExactIn buy's output). The signed limits stay within the caps, so a day's buys stop at about half the USDG cap and a position stays within what one day can sell. A fill beyond the margin is booked as it landed; status then holds buys and says the excess is sold as earlier trades leave the window, or over more than one window. Sales are never refused by it | Let the signed limits carry exit headroom beyond the caps (a separate `MERRYMEN_SOLANA_LIVE_MAX_EXIT_*`; rejected: it widens what a session key may do on chain); let the caps bound exits (rejected: an owner must always be able to exit); also reserve operations for the exit's sales (not done: the operation limit is the owner's own setting, not a platform cap) | `solanaBuyKeepsExitRoom` in `solana-trading-store.ts`, `assessRisk` in `solana-app-runtime.ts` |
+| Live caps | 10 and 25 USDG, 0.1 and 0.25 SOL (25 USDG a day is the Robinhood vault's cap, which limits spending only) | Other values | `AGENTCAP_SOLANA_LIVE_MAX_*` |
+| Exits and the caps | Buys keep room for exits: a buy is refused when, after it, the whole position could not be sold inside the rolling 24-hour limits at the independent price plus the tolerance (`SOLANA_LIVE_EXIT_RESERVE`), counting what it brings 300 bps above the larger of its quote and its reference (the fill margin: the program does not bound an ExactIn buy's output). The signed limits stay within the caps, so a day's buys stop at about half the USDG cap and a position stays within what one day can sell. A fill beyond the margin is booked as it landed; status then holds buys and says the excess is sold as earlier trades leave the window, or over more than one window. Sales are never refused by it | Let the signed limits carry exit headroom beyond the caps (a separate `AGENTCAP_SOLANA_LIVE_MAX_EXIT_*`; rejected: it widens what a session key may do on chain); let the caps bound exits (rejected: an owner must always be able to exit); also reserve operations for the exit's sales (not done: the operation limit is the owner's own setting, not a platform cap) | `solanaBuyKeepsExitRoom` in `solana-trading-store.ts`, `assessRisk` in `solana-app-runtime.ts` |
 | A session registered above caps lowered since | Buys refused before any quote (the limits kept in the session record) and again before signing (the limits every provider shows); exits keep the signed limits, and its live limits may be saved again up to them (each the larger of the cap and the permission's), on the list as off it, so a re-save never narrows its exits | Cap sales too (rejected: an owner must always be able to exit); hold a re-save on the list to the caps (rejected: admission bounds sales by the saved limits, so it narrowed exits below what the owner signed) | `assessRisk`, `checkLiveSettings` in `solana-app-runtime.ts` |
 | A malformed rollout setting | Configuration refusal of new permissions and buys, `[alert]` once a minute; exits continue | Refuse to start the worker | `rollout()` in `solana-app-runtime.ts` |
 | Web and worker run different list or caps | Every live buy held on both while they differ (one digest of all the settings, so a deploy that adds a tenant briefly holds everyone's buys), `[alert]` once a minute; exits continue. The worker compares the web's latest digest whatever its age and holds its buys while that is missing or differs; one restarted with the web's settings is never held. The web publishes its digest as its server starts (`register()` in `web/src/instrumentation.ts`), every 30 s after, and at a Solana request at once when the stored one is not its own, so the runbook deploys the worker first, then the web, with no hold or page visit. Not covered: while the web cannot publish (`[alert] solana-live-rollout unpublished`), or for up to 30 s after an old web container still draining wrote its own digest over the new one's, the stored digest is out of date, and where it equals the worker's settings the worker buys under settings the running web may no longer run (in the runbook's order the old web's digest never equals the new worker's, so that overlap holds buys) | Compare per tenant. Hold the worker's buys while the web's digest is older than a few publish intervals (not done: every live buy would stop whenever the web is down or cannot write, and it would not close the draining overlap). Order the digests by process start, so an old container cannot write over a newer one's (not done: a schema change that trusts container clocks; the periodic publish bounds the overlap to 30 s) | `rolloutDiffers` in `solana-app-runtime.ts`, `web/src/lib/solana-rollout-publisher.ts` |
@@ -1460,14 +1460,14 @@ says where to change it. Superseded choices are listed under the current one.
 |---|---|---|---|
 | External audit: firm, scope, timing | Not engaged | Audit now; after the program freezes | — |
 | Authorize the immutable deployment: keypair, `declare_id`, deployer key holder, about 2.5 SOL of rent | Not deployed | — | `lib.rs`, `Anchor.toml`, release procedure |
-| Second RPC provider | Not provisioned; live refuses without it | — | `MERRYMEN_SOLANA_RPC_MAINNET_FALLBACK` |
-| House fee payer and funding level, who refills and watches alerts | Not provisioned; low watermark 0.02 SOL | Other watermark | `MERRYMEN_SOLANA_FEE_PAYER_SEED`, `…_FEE_PAYER_LOW_LAMPORTS` |
-| Production Privy Solana wallets and the dev-mode user cap; key export | Off | Enable on the production app id in place | Privy dashboard; `MERRYMEN_SOLANA`, the build ARG |
+| Second RPC provider | Not provisioned; live refuses without it | — | `AGENTCAP_SOLANA_RPC_MAINNET_FALLBACK` |
+| House fee payer and funding level, who refills and watches alerts | Not provisioned; low watermark 0.02 SOL | Other watermark | `AGENTCAP_SOLANA_FEE_PAYER_SEED`, `…_FEE_PAYER_LOW_LAMPORTS` |
+| Production Privy Solana wallets and the dev-mode user cap; key export | Off | Enable on the production app id in place | Privy dashboard; `AGENTCAP_SOLANA`, the build ARG |
 | Canary go, funding and caps | No go | — | — |
 | How the work lands | One PR, merged with Solana off | Per-phase PRs | — |
 | `/api/grants` body limits on Robinhood code (256 KiB POST → 413, 8 KiB kill DELETE) and the chain-id refusal | In this PR | Split into its own PR; drop | `web/src/app/api/grants/route.ts` |
 | Hermes cross-check with a Pyth key | Not run | Skip; leave to the audit | — |
-| `--unlisted-program` policy text ("Merrymen never asks for it") | In the tool's help | Reword | `worker/src/solana-recover-command.ts` |
+| `--unlisted-program` policy text ("AgentCap never asks for it") | In the tool's help | Reword | `worker/src/solana-recover-command.ts` |
 | Production-RPC `jsonParsed` USDG read | Not made (needs Milla's OK) | CI regeneration of the offline fixture | `contracts/solana/scripts/usdg-rpc-jsonparsed.mjs` |
 
 **Custody program and CI**
@@ -1501,9 +1501,9 @@ says where to change it. Superseded choices are listed under the current one.
 
 | Decision | Default now | Alternatives | Change |
 |---|---|---|---|
-| Expired-attempt allowance | 0: every signed transaction counts | Small N; 96 (most permissive); a per-account mode | `MERRYMEN_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE` |
+| Expired-attempt allowance | 0: every signed transaction counts | Small N; 96 (most permissive); a per-account mode | `AGENTCAP_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE` |
 | Expired-attempt alerts | Opaque account ref, 10-min repeat, warn above half | Tenant address; other threshold or repeat | `solana-agent.ts` |
-| Pyth generation | `current` | `upgraded` | `MERRYMEN_SOLANA_PYTH_GENERATION` or `SOLANA_PYTH_DEFAULT_GENERATION` |
+| Pyth generation | `current` | `upgraded` | `AGENTCAP_SOLANA_PYTH_GENERATION` or `SOLANA_PYTH_DEFAULT_GENERATION` |
 | Invalid generation | Fail closed, exits included | Fall back to the default with a warning | `solana-reference-price.ts` |
 | Withdrawal valuation with a bad Pyth setting | Withdrawal prepares unvalued (HWM stays) | Refuse the withdrawal | `solana-app-runtime.ts` |
 | Bad tolerance | Blocker and `[alert]` (reversed the earlier no-alert choice) | Blocker only | `solana-app-runtime.ts` |
@@ -1584,7 +1584,7 @@ says where to change it. Superseded choices are listed under the current one.
 | `solana-recover` RPC given twice | Refused; a keyed `--rpc` warns | Refuse keyed `--rpc` | same |
 | Declared id for unlisted programs | Hash only | Also warn on a missing id | `solana-recover.ts` |
 | Release-id script scope | `lib.rs` and the `.so` only | Also Anchor.toml; padded hash | `check-release-id.mjs` |
-| Third provider URL | From `MERRYMEN_SOLANA_RESOLVE_THIRD_RPC` only | Standard input | `solana-resolve.ts` |
+| Third provider URL | From `AGENTCAP_SOLANA_RESOLVE_THIRD_RPC` only | Standard input | `solana-resolve.ts` |
 | Resolve rules | Two agreeing providers on distinct hosts, none dissenting, unreadable never counts, no override, auditable `--exclude` | Majority; all providers; fills and failures only; who may run it against production (Milla) | same |
 | Glued scan on X, social, theses | Glued, fail closed | Default scan (lets `CA<mint>` through) | the callers listed above |
 | Telegram signature redaction | Every Solana signature → `[signature]` | Keep standalone signatures; keep only the event's own | `worker/src/telegram/reads.ts` |
@@ -1636,12 +1636,12 @@ merged into this one; they are listed by round, and the counts overlap.
 **2026-10-20, integration and finishing rounds.** Worker, web, CLI, CI-script,
 Pyth and identity suites per track, PostgreSQL subsets on throwaway clusters,
 mutation checks for each behaviour change, and typechecks; see the round notes
-in Milla's local `~/.cache/merrymen/solana-notes/`.
+in Milla's local `~/.cache/agentcap/solana-notes/`.
 
 **On this branch's head (2026-10-20).** The full `npm test` on `5432da70` (the
 code this document describes; the docs pass changed no code): 24,562 tests,
 24,486 pass, 0 fail, 0 cancelled, 76 skipped (PostgreSQL-gated and optional
-suites, with no `MERRYMEN_TEST_PG_URL` set), in 4 min 49 s at a load average
+suites, with no `AGENTCAP_TEST_PG_URL` set), in 4 min 49 s at a load average
 of about 25. PostgreSQL suites, `test.sh` and the typechecks were not rerun on
 the head in this pass.
 
@@ -1694,7 +1694,7 @@ Remaining, in order:
 - [ ] **Mainnet deployment** of the release artifact with `--final`, authorized by
       Milla; check the ProgramData region hash on both providers; add
       `{ programId, sha256 }` to `SOLANA_VAULT_RELEASES`, publish the CLI, and set
-      `MERRYMEN_SOLANA_VAULT_PROGRAM` and `MERRYMEN_SOLANA_VAULT_SHA256`.
+      `AGENTCAP_SOLANA_VAULT_PROGRAM` and `AGENTCAP_SOLANA_VAULT_SHA256`.
 - [ ] **Read-only production-RPC `jsonParsed` USDG read**
       (`node contracts/solana/scripts/usdg-rpc-jsonparsed.mjs --provider NAME --rpc URL`,
       one `getAccountInfo`, needs Milla's OK), then commit
@@ -1710,11 +1710,11 @@ Remaining, in order:
 - [ ] **Production Privy**: Solana embedded wallets on the production app id
       (lift the dev-mode cap in place), wallet export enabled; only then, and
       after the release entry ships in the published CLI, set
-      `NEXT_PUBLIC_MERRYMEN_SOLANA_OWNER_KEY_EXPORT=1`.
+      `NEXT_PUBLIC_AGENTCAP_SOLANA_OWNER_KEY_EXPORT=1`.
 - [ ] **External audit** of custody, ABI, execution, authentication and accounting.
 - [ ] **Canary**: Milla's go, owner-authorized funding and the smallest caps
-      (`MERRYMEN_SOLANA_LIVE_MAX_*`), one tenant named in
-      `MERRYMEN_SOLANA_LIVE_TENANTS`; then restart and outage, full exit,
+      (`AGENTCAP_SOLANA_LIVE_MAX_*`), one tenant named in
+      `AGENTCAP_SOLANA_LIVE_TENANTS`; then restart and outage, full exit,
       withdraw and revoke, and expiry tests; then widen the list. The order of
       settings is in [`hosted-deploy.md`](hosted-deploy.md) ("Turning Solana on").
 - [ ] Measured quote-to-finality latency, fill rate, slippage, fees, rent and

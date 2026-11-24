@@ -42,7 +42,7 @@ const base = { transactionBase64: "dGVzdA==", messageBase64: "dGVzdA==", blockha
 async function fixture(t: TestContext, dialect: "sqlite" | "postgres" = "sqlite") {
   const clock = { value: NOW }; let db: Db;
   if (dialect === "postgres") {
-    const url = new URL(process.env.MERRYMEN_TEST_PG_URL!), schema = `solana_owner_${randomUUID().replaceAll("-", "")}`;
+    const url = new URL(process.env.AGENTCAP_TEST_PG_URL!), schema = `solana_owner_${randomUUID().replaceAll("-", "")}`;
     const admin = await makePgDb(url.toString()); await admin.exec(`CREATE SCHEMA ${schema}`);
     url.searchParams.set("options", `-c search_path=${schema}`); db = await makePgDb(url.toString());
     t.after(async () => { await admin.exec(`DROP SCHEMA ${schema} CASCADE`); });
@@ -79,7 +79,7 @@ const landed: SolanaOwnerView = { outcome: "finalized", slot: 1250, err: "null" 
 const decisions = async (db: Db) => (await db.prepare("SELECT * FROM solana_operator_owner_resolutions ORDER BY approved_at_ms").all()) as Array<Record<string, unknown>>;
 
 for (const dialect of ["sqlite", "postgres"] as const) {
-  const options = dialect === "postgres" && !process.env.MERRYMEN_TEST_PG_URL ? { skip: "Set MERRYMEN_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
+  const options = dialect === "postgres" && !process.env.AGENTCAP_TEST_PG_URL ? { skip: "Set AGENTCAP_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
   test(`${dialect}: a dropped withdrawal whose vault moved for another reason is booked never-run only when two providers agree on finalized no-receipt evidence, with the operator, reason and evidence recorded`, options, async t => {
     const f = await fixture(t, dialect), book = (await f.store.liveBook())!;
     const pair = providers({ primary: moved("1201", 1300), fallback: moved("1205", 1290) });
@@ -211,7 +211,7 @@ test("a revocation pending beside the withdrawal is shown and booked by its own 
 
 test("the owner command validates its input before reading anything, and never takes a URL", async t => {
   const f = await fixture(t);
-  const env = { MERRYMEN_SOLANA_RPC_MAINNET: "https://primary.example/key", MERRYMEN_SOLANA_RPC_MAINNET_FALLBACK: "https://fallback.example/key" };
+  const env = { AGENTCAP_SOLANA_RPC_MAINNET: "https://primary.example/key", AGENTCAP_SOLANA_RPC_MAINNET_FALLBACK: "https://fallback.example/key" };
   for (const argv of [["owner"], ["owner", "show"], ["owner", "book", TENANT, WITHDRAWAL], ["owner", "book", TENANT, WITHDRAWAL, "--operator", "milla"],
     ["owner", "show", TENANT, "--operator", "milla"], ["owner", "show", TENANT, "--exclude", "nobody"], ["owner", "history", TENANT, "extra"]]) {
     await assert.rejects(runSolanaResolveCommand(argv, { db: f.db, env }), (error: unknown) => error instanceof SolanaResolveError && /Usage:/.test(error.message), argv.join(" "));
@@ -248,7 +248,7 @@ function vaultAccount(seq: bigint, epoch: bigint) {
   return { owner: PROGRAM, executable: false, lamports: 3_000_000, data: [data.toString("base64"), "base64"], space: data.length };
 }
 test("the CLI's own observer (no injected view) reads each configured provider as the app does: a no-receipt booking and a receipt booking", async t => {
-  const env = { MERRYMEN_SOLANA_RPC_MAINNET: "https://primary.example/key", MERRYMEN_SOLANA_RPC_MAINNET_FALLBACK: "https://fallback.example/key" };
+  const env = { AGENTCAP_SOLANA_RPC_MAINNET: "https://primary.example/key", AGENTCAP_SOLANA_RPC_MAINNET_FALLBACK: "https://fallback.example/key" };
   // Two providers answering JSON-RPC: the withdrawal either landed at slot 1250, or was never seen and its blockhash expired
   // (finalized height 1205 past 1200) while the vault's sequence moved for another reason (2, prepared at 1).
   const chain = (landed: boolean) => {
@@ -308,5 +308,5 @@ test("a decision the app beat is recorded as superseded and fails the run, never
   assert.equal(row!.booked_at_ms, null); assert.equal(row!.refusal, SOLANA_OWNER_RESOLUTION_SUPERSEDED);
   assert.deepEqual((await f.db.prepare("SELECT evidence_id FROM solana_runtime_cashflows WHERE kind='withdraw'").all() as Array<{ evidence_id: string }>).map(r => r.evidence_id), [WITHDRAWAL], "booked once, by the app");
   await assert.rejects(runSolanaResolveCommand(["owner", "book", TENANT, WITHDRAWAL, "--operator", "milla", "--reason", "again"], { db: f.db, observeOwner: p.observe,
-    env: { MERRYMEN_SOLANA_RPC_MAINNET: "https://primary.example/key", MERRYMEN_SOLANA_RPC_MAINNET_FALLBACK: "https://fallback.example/key" } }), /already finalized; nothing is booked/);
+    env: { AGENTCAP_SOLANA_RPC_MAINNET: "https://primary.example/key", AGENTCAP_SOLANA_RPC_MAINNET_FALLBACK: "https://fallback.example/key" } }), /already finalized; nothing is booked/);
 });

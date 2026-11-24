@@ -16,8 +16,8 @@ import os from "node:os";
 import path from "node:path";
 import { after, before, describe, it } from "node:test";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-pnl-held-"));
-process.env.MERRYMEN_HOME = HOME;
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-pnl-held-"));
+process.env.AGENTCAP_HOME = HOME;
 
 const { closeStoreForTest, initStore } = await import("../store");
 const { readBrag, readPnl, readReport } = await import("./reads");

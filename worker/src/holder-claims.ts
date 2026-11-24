@@ -1,5 +1,5 @@
 /**
- * ONE $MERRYMEN WALLET POWERS ONE AGENT — the orchestrator's half.
+ * ONE $AGENTCAP WALLET POWERS ONE AGENT — the orchestrator's half.
  *
  * The rule is effectiveHolder (packages/core/src/holder-proof.ts) and the
  * record is the settings store's holder claims. This file is what the
@@ -22,7 +22,7 @@
  * is count a wallet for one account fewer or none, never one more.
  */
 import { readFileSync } from "node:fs";
-import { isHolderProof, type HolderProof, type MerrymenSettings } from "../../packages/core/src/index";
+import { isHolderProof, type HolderProof, type AgentCapSettings } from "../../packages/core/src/index";
 import type { SettingsStore } from "./settings-store";
 
 /**
@@ -33,11 +33,11 @@ import type { SettingsStore } from "./settings-store";
  * anybody's balance — so it is never a fallback. When effectiveHolder names a
  * wallet it is written; when it names none (every candidate is claimed by
  * another account) the key is simply absent. The child resolves file, then
- * env, then default, and MERRYMEN_HOLDER_ADDRESS is stripped from its env, so
+ * env, then default, and AGENTCAP_HOLDER_ADDRESS is stripped from its env, so
  * absent means no holder wallet: circle.ts then reads the agent's own account
  * alone. A self-declared value never survives into the child.
  */
-export function childSettingsFor(settings: MerrymenSettings | null, holder: `0x${string}` | null): MerrymenSettings {
+export function childSettingsFor(settings: AgentCapSettings | null, holder: `0x${string}` | null): AgentCapSettings {
   const { holderAddress: _typedIn, ...rest } = settings ?? {};
   return holder ? { ...rest, holderAddress: holder } : rest;
 }
@@ -57,7 +57,7 @@ export function childSettingsFor(settings: MerrymenSettings | null, holder: `0x$
  */
 export function lastWrittenHolder(settingsFile: string): `0x${string}` | null {
   try {
-    const prev = JSON.parse(readFileSync(settingsFile, "utf8")) as MerrymenSettings;
+    const prev = JSON.parse(readFileSync(settingsFile, "utf8")) as AgentCapSettings;
     const a = typeof prev.holderAddress === "string" ? prev.holderAddress.toLowerCase() : "";
     return /^0x[0-9a-f]{40}$/.test(a) ? (a as `0x${string}`) : null;
   } catch {
@@ -155,7 +155,7 @@ export async function backfillHolderClaims(
   const tenants = prior ? prior.pending : await store.listTenants();
   const rows: ProofRow[] = [];
   for (const tenant of tenants) {
-    let settings: MerrymenSettings | null;
+    let settings: AgentCapSettings | null;
     try {
       settings = await store.get(tenant);
     } catch (e) {

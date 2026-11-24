@@ -2,7 +2,7 @@
  * TELEGRAM GROUP MEMORY, CARRIED ACROSS A HOSTED REDEPLOY.
  *
  * docs/tg-groups.md "Storage and the ferry" is the contract. A child keeps its
- * Telegram groups in one JSON file, `<MERRYMEN_HOME>/tg-groups.json`: rooms,
+ * Telegram groups in one JSON file, `<AGENTCAP_HOME>/tg-groups.json`: rooms,
  * each chat's memory, the at-most-once coin claims and the daily allowances.
  * A hosted child home has no volume, so every redeploy (several a day) would
  * wipe it — the agent would forget every chat, re-answer coins it had already
@@ -86,7 +86,7 @@ import {
   type TgForgetOp,
 } from "./telegram/tg-groups/store";
 
-/** In the child's home, beside merrymen.db. The child's store writes it; this only reads it (and restores it before spawn). */
+/** In the child's home, beside agentcap.db. The child's store writes it; this only reads it (and restores it before spawn). */
 export const TG_GROUPS_FILE_NAME = "tg-groups.json";
 
 /**
@@ -861,7 +861,7 @@ async function exists(file: string, log: TgGroupsLog, tenant: string): Promise<b
 /**
  * MUST THIS CHILD RUN WITH ITS GROUPS HELD OFF? Decided at each spawn from the
  * restore's answer and whether the previous spawn held them off. While held,
- * the orchestrator spawns the child with MERRYMEN_TG_GROUPS=0 and publishes
+ * the orchestrator spawns the child with AGENTCAP_TG_GROUPS=0 and publishes
  * nothing for it, so the stored row stands until a spawn can put it back.
  *
  * FAILED: the home has no file and the row could not be brought down. A child

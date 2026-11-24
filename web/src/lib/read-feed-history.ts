@@ -23,4 +23,4 @@ export {
   segments,
   type FeedHistory,
   type FeedPoint,
-} from "@merrymen/feed-history";
+} from "@agentcap/feed-history";

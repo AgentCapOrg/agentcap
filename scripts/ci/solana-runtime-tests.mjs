@@ -51,10 +51,10 @@ export function countTests(source) {
 /**
  * Runtime targets test.sh may skip, each with the exact line it prints instead of
  * running it. jupiter_fork reads the Jupiter v6 and Whirlpool program copies from
- * MERRYMEN_JUPITER_FORK_PROGRAMS (runtime-tests/fixtures/jupiter/NOTICE.md).
+ * AGENTCAP_JUPITER_FORK_PROGRAMS (runtime-tests/fixtures/jupiter/NOTICE.md).
  */
 export const OPTIONAL_TARGETS = Object.freeze({
-  jupiter_fork: "jupiter_fork: skipped, set MERRYMEN_JUPITER_FORK_PROGRAMS (release gate)",
+  jupiter_fork: "jupiter_fork: skipped, set AGENTCAP_JUPITER_FORK_PROGRAMS (release gate)",
 });
 
 /** The optional targets whose skip line appears in the log, on a line of its own. */

@@ -1,7 +1,7 @@
 /**
  * Getting class positions OUT — the half of PonsClassVault nothing implemented.
  *
- * The contract says, at `sweep`, that it "is what `merrymen recover` uses to
+ * The contract says, at `sweep`, that it "is what `agentcap recover` uses to
  * pull class positions out of the vault, and what makes 'the tokens are in a
  * contract' recoverable rather than a one-way door". That was a claim about code
  * that did not exist: `recover.ts` sweeps ERC-20 balances of the smart account
@@ -418,7 +418,7 @@ export async function readClassHoldings(args: {
  * So: op 1 sweeps, then the account's balances are RE-READ, then op 2 is the
  * ordinary transfer batch it already builds. The window between them is safe
  * because the tokens land in an account the same key controls — if op 2 fails,
- * rerunning `merrymen recover` sweeps them as ordinary account balances. That
+ * rerunning `agentcap recover` sweeps them as ordinary account balances. That
  * property is what makes two ops safe and one op not.
  *
  * A helper contract would give one op and an exact amount. It would also

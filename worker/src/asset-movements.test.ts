@@ -37,7 +37,7 @@ const USDG = "0x5fc5360d0400a0fd4f2af552add042d716f1d168";
 const TSLA = "0x322f0929c4625ed5bad873c95208d54e1c003b2d";
 const PEPE = "0x0000000000000000000000000000000000000ee0";
 const VIRTUAL = "0xc6911796042b15d7fa4f6cde69e245ddcd3d9c31";
-const MERRYMEN = "0xa15cd06dd305269a0f48bebeb30aa3588fba7b32";
+const AGENTCAP = "0xa15cd06dd305269a0f48bebeb30aa3588fba7b32";
 const ECDSA_VALIDATOR = "0x845adb2c711129d4f3966735ed98a9f09fc4ce57";
 const ZERO = "0x0000000000000000000000000000000000000000";
 
@@ -198,7 +198,7 @@ const scan = async (
     usdgToken: USDG,
     fromBlock: 0n,
     toBlock: 10_000n,
-    reserveTokens: [MERRYMEN],
+    reserveTokens: [AGENTCAP],
     systemAddresses: [EP],
     includeReviewTimestamps: true,
     sleep: async () => {},
@@ -369,7 +369,7 @@ describe("the four shapes", () => {
     const { me } = await scan(
       [
         {
-          // The energy route: USDG → VIRTUAL → $MERRYMEN, the middle hop
+          // The energy route: USDG → VIRTUAL → $AGENTCAP, the middle hop
           // never touching the account.
           hash: "0xe4e1",
           block: 400,
@@ -378,7 +378,7 @@ describe("the four shapes", () => {
             beforeExecution(),
             transfer(USDG, ME, POOL, 42_000_000n),
             transfer(VIRTUAL, POOL, PAIR_B, 90n * 10n ** 18n),
-            transfer(MERRYMEN, PAIR_B, ME, 98_000n * 10n ** 18n),
+            transfer(AGENTCAP, PAIR_B, ME, 98_000n * 10n ** 18n),
             opEvent(ME, sessionNonce(11n)),
           ],
         },
@@ -396,7 +396,7 @@ describe("the four shapes", () => {
     assert.deepEqual(
       me.movements.map((m) => [m.asset, m.classification.kind]),
       [
-        [MERRYMEN, "reserve"],
+        [AGENTCAP, "reserve"],
         [PEPE, "custody"],
       ],
     );

@@ -4,7 +4,7 @@ import { afterEach, before, beforeEach, describe, it, mock } from "node:test";
 import { fileURLToPath } from "node:url";
 import { JSDOM } from "jsdom";
 import React, { act } from "react";
-import { LLM_PROVIDERS, SETTINGS_DEFAULTS, encodeProposalLink } from "@merrymen/core";
+import { LLM_PROVIDERS, SETTINGS_DEFAULTS, encodeProposalLink } from "@agentcap/core";
 import type { SettingsView } from "@/app/api/settings/route";
 
 // TELL YOUR AGENT, THEN APPROVE — the panel at the top of Settings. The Telegram agent answers "turn on
@@ -60,7 +60,7 @@ function view(): SettingsView {
     bundlerApiKey: secret, groqApiKey: secret, anthropicApiKey: secret,
     llmApiKey: secret, rialtoApiKey: secret, telegramBotToken: secret,
     telegramTranscribeKey: secret, virtualsApiKey: secret, bitqueryApiKey: secret,
-    merrymenToken: secret,
+    agentcapToken: secret,
     values: { ...stored },
     defaults: structuredClone(SETTINGS_DEFAULTS), knownSymbols: ["AAPL"],
     officialCoins: [], strategies: { builtin: ["steady-basket", "trencher"], custom: [] },

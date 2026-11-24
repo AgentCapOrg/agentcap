@@ -11,10 +11,10 @@ import { mintSession } from "./auth";
 import { GET as telegramStatus } from "../app/api/telegram/route";
 
 const A = `0x${"a".repeat(40)}` as const, B = `0x${"b".repeat(40)}` as const;
-const config = { token: "11111:manager_test_secret", username: "merrymen_manager_bot", webhookSecret: "h".repeat(32) };
-const OURS = "https://app.merrymen.test/api/telegram/manager/webhook";
+const config = { token: "11111:manager_test_secret", username: "agentcap_manager_bot", webhookSecret: "h".repeat(32) };
+const OURS = "https://app.agentcap.test/api/telegram/manager/webhook";
 const dek = Buffer.alloc(32, 9);
-const beforeDek = process.env.MERRYMEN_STORE_DEK;
+const beforeDek = process.env.AGENTCAP_STORE_DEK;
 let raw: DatabaseSync, db: Db;
 /** Every Bot API call, and whether it was made inside a tenant's settings lock. */
 let telegramCalls: { method: string; body: unknown; locked: boolean }[] = [];
@@ -30,7 +30,7 @@ let telegramAllowed: unknown;
 let canManage: boolean;
 let unchangedEdits = false;
 let logs: string[];
-let candidateUsername = "my_merrymen_bot";
+let candidateUsername = "my_agentcap_bot";
 let beforeTelegram: ((method: string, body: Record<string, unknown>) => Promise<void>) | null = null;
 /** When set, another environment's setWebhook lands right after ours. */
 let racingWebhook: string | null = null;
@@ -48,9 +48,9 @@ const fakeFetch = (async (input, init) => {
     method === "getWebhookInfo" ? { url: telegramWebhook, has_custom_certificate: false, pending_update_count: 0, ...(telegramAllowed ? { allowed_updates: telegramAllowed } : {}) } : true;
   return Response.json({ ok: true, result });
 }) as typeof fetch;
-before(() => { process.env.MERRYMEN_STORE_DEK = dek.toString("base64"); });
+before(() => { process.env.AGENTCAP_STORE_DEK = dek.toString("base64"); });
 after(() => {
-  if (beforeDek === undefined) delete process.env.MERRYMEN_STORE_DEK; else process.env.MERRYMEN_STORE_DEK = beforeDek;
+  if (beforeDek === undefined) delete process.env.AGENTCAP_STORE_DEK; else process.env.AGENTCAP_STORE_DEK = beforeDek;
   useBotClaimsDbForTest(null); raw?.close();
 });
 /** The real settings lock, watched: which tenant, and which Bot API calls happen while it is held. */
@@ -69,7 +69,7 @@ beforeEach(async () => {
   await db.exec("CREATE TABLE tenant_settings (tenant TEXT PRIMARY KEY, sealed TEXT NOT NULL, updated_at INTEGER NOT NULL)");
   await db.prepare("INSERT INTO tenant_settings VALUES (?, ?, ?)").run(A, sealSecret(JSON.stringify({ dailyBudgetUsdg: 14, telegramControl: false, telegramAllowlist: [-123] }), dek), 1);
   useBotClaimsDbForTest(db); telegramCalls = []; telegramWebhook = ""; telegramAllowed = undefined; canManage = true; logs = []; racingWebhook = null;
-  locks = []; lockDepth = 0; failing = new Set(); presses = 0; candidateUsername = "my_merrymen_bot"; beforeTelegram = null; unchangedEdits = false;
+  locks = []; lockDepth = 0; failing = new Set(); presses = 0; candidateUsername = "my_agentcap_bot"; beforeTelegram = null; unchangedEdits = false;
   service = handlers();
 });
 afterEach(() => { mock.timers.reset(); });
@@ -91,7 +91,7 @@ const webhook = (body: unknown, secret: string = config.webhookSecret, h = servi
 }));
 const date = () => Math.floor(Date.now() / 1000);
 const message = (extra: object = {}) => ({ date: date(), from: { id: 54321, is_bot: false }, chat: { id: 54321, type: "private" }, ...extra });
-const created = (bot = { id: 22222, is_bot: true, username: "my_merrymen_bot" }) => message({ managed_bot_created: { bot } });
+const created = (bot = { id: 22222, is_bot: true, username: "my_agentcap_bot" }) => message({ managed_bot_created: { bot } });
 /** A setup with its bot made: begun on the page, /start (update `first`) and the creation (`first + 1`) in Telegram. */
 async function readyCandidate(first = 10) {
   const begun = await begin(); const challenge = new URL(begun.telegramUrl).searchParams.get("start")!;
@@ -108,8 +108,8 @@ function buttons() {
   assert.ok(ready, "the manager offered the bot");
   return { connect: ready.reply_markup!.inline_keyboard![0]![0]!.callback_data!, cancel: ready.reply_markup!.inline_keyboard![1]![0]!.callback_data!, markup: ready.reply_markup };
 }
-const BACK = { inline_keyboard: [[{ text: "Back to Merrymen", url: "https://app.merrymen.test" }]] };
-const CONNECTED = "✅ Connected @my_merrymen_bot to your Merrymen agent.\n@my_merrymen_bot replies once your agent is running. Merrymen then shows \"Open my bot\" to link your chat with it. If your agent is paused for recovery, that waits until it resumes.";
+const BACK = { inline_keyboard: [[{ text: "Back to AgentCap", url: "https://app.agentcap.test" }]] };
+const CONNECTED = "✅ Connected @my_agentcap_bot to your AgentCap agent.\n@my_agentcap_bot replies once your agent is running. AgentCap then shows \"Open my bot\" to link your chat with it. If your agent is paused for recovery, that waits until it resumes.";
 let presses = 0;
 /** A press of a manager button, as Telegram delivers it: by default the bound user, in their private chat with the manager. */
 function pressOf(data: string, over: { from?: object; chat?: object; inline?: boolean } = {}) {
@@ -117,7 +117,7 @@ function pressOf(data: string, over: { from?: object; chat?: object; inline?: bo
   return { update_id: 1000 + presses, callback_query: {
     id: `cbq-${presses}`, chat_instance: "-42", data,
     from: { id: 54321, is_bot: false, first_name: "Owner", ...over.from },
-    ...(over.inline ? { inline_message_id: "AAAAAQ" } : { message: { message_id: 77, date: date(), chat: { id: 54321, type: "private", ...over.chat }, text: "✅ @my_merrymen_bot is ready." } }),
+    ...(over.inline ? { inline_message_id: "AAAAAQ" } : { message: { message_id: 77, date: date(), chat: { id: 54321, type: "private", ...over.chat }, text: "✅ @my_agentcap_bot is ready." } }),
   } };
 }
 /** Nothing the manager sends, answers, edits or logs carries a token, the webhook secret, the challenge or the tenant. */
@@ -129,8 +129,8 @@ function assertNothingSecret(challenge: string, more: string[] = []) {
 }
 describe("web bot creation account boundary", () => {
   it("uses the signed wallet cookie and rejects forged or stale-account cookies", async () => {
-    const saved = { hosted: process.env.MERRYMEN_HOSTED, secret: process.env.MERRYMEN_SESSION_SECRET };
-    process.env.MERRYMEN_HOSTED = "1"; process.env.MERRYMEN_SESSION_SECRET = "synthetic-local-auth-secret-32-plus-characters";
+    const saved = { hosted: process.env.AGENTCAP_HOSTED, secret: process.env.AGENTCAP_SESSION_SECRET };
+    process.env.AGENTCAP_HOSTED = "1"; process.env.AGENTCAP_SESSION_SECRET = "synthetic-local-auth-secret-32-plus-characters";
     try {
       // The real cookie auth; no public origin, so the probe stops before any database or Bot API call.
       const cookied = createTelegramHandlers({ config: () => config, webhookUrl: () => null, log: () => {} });
@@ -142,8 +142,8 @@ describe("web bot creation account boundary", () => {
       assert.equal((await telegramStatus(new Request(`http://localhost/api/telegram?owner=${A}`, { headers: { cookie: `mm_session=${encodeURIComponent(mintSession(B))}` } }))).status, 409);
       assert.equal(telegramCalls.length, 0);
     } finally {
-      if (saved.hosted === undefined) delete process.env.MERRYMEN_HOSTED; else process.env.MERRYMEN_HOSTED = saved.hosted;
-      if (saved.secret === undefined) delete process.env.MERRYMEN_SESSION_SECRET; else process.env.MERRYMEN_SESSION_SECRET = saved.secret;
+      if (saved.hosted === undefined) delete process.env.AGENTCAP_HOSTED; else process.env.AGENTCAP_HOSTED = saved.hosted;
+      if (saved.secret === undefined) delete process.env.AGENTCAP_SESSION_SECRET; else process.env.AGENTCAP_SESSION_SECRET = saved.secret;
     }
   });
   it("requires an authenticated tenant before any Bot API call or write", async () => {
@@ -156,22 +156,22 @@ describe("web bot creation account boundary", () => {
     assert.equal(telegramCalls.length, 0);
   });
   it("accepts the configured public origin behind a proxy and the actual loopback Host", async () => {
-    const saved = process.env.MERRYMEN_PUBLIC_ORIGIN;
+    const saved = process.env.AGENTCAP_PUBLIC_ORIGIN;
     const request = (url: string, origin: string, host: string) => new Request(url, {
       method: "POST", headers: { "Content-Type": "application/json", Origin: origin, Host: host, "x-test-tenant": A },
       body: JSON.stringify({ action: "begin", owner: A }),
     });
     try {
-      process.env.MERRYMEN_PUBLIC_ORIGIN = "https://app.merrymen.test";
-      assert.equal((await service.POST(request("http://internal:3000/api/telegram/create", "https://app.merrymen.test", "internal:3000"))).status, 200);
-      delete process.env.MERRYMEN_PUBLIC_ORIGIN;
+      process.env.AGENTCAP_PUBLIC_ORIGIN = "https://app.agentcap.test";
+      assert.equal((await service.POST(request("http://internal:3000/api/telegram/create", "https://app.agentcap.test", "internal:3000"))).status, 200);
+      delete process.env.AGENTCAP_PUBLIC_ORIGIN;
       assert.equal((await service.POST(request("http://localhost/api/telegram/create", "http://127.0.0.1", "127.0.0.1"))).status, 200);
-    } finally { if (saved === undefined) delete process.env.MERRYMEN_PUBLIC_ORIGIN; else process.env.MERRYMEN_PUBLIC_ORIGIN = saved; }
+    } finally { if (saved === undefined) delete process.env.AGENTCAP_PUBLIC_ORIGIN; else process.env.AGENTCAP_PUBLIC_ORIGIN = saved; }
   });
   it("keeps intent and candidate lookups scoped to their tenant", async () => {
     const { intent } = await readyCandidate();
     const res = await service.GET(new Request(`http://localhost/api/telegram/create?owner=${B}&intent=${intent.id}`, { headers: { "x-test-tenant": B } }));
-    assert.equal(res.status, 404); assert.ok(!(await res.text()).includes("my_merrymen_bot"));
+    assert.equal(res.status, 404); assert.ok(!(await res.text()).includes("my_agentcap_bot"));
     assert.equal((await service.POST(req({ action: "confirm", owner: B, intentId: intent.id, botId: "22222" }, B))).status, 404);
   });
   it("defaults to disabled without operator configuration", async () => {
@@ -225,7 +225,7 @@ describe("readiness: the button shows only when creation can work", () => {
     assert.equal((await availability()).available, true);
     assert.deepEqual(methods(), ["getMe", "getWebhookInfo"], "and not again while it has them");
     // Another environment's webhook is never touched, however few types it has.
-    const elsewhere = "https://staging.merrymen.test/api/telegram/manager/webhook";
+    const elsewhere = "https://staging.agentcap.test/api/telegram/manager/webhook";
     telegramWebhook = elsewhere; telegramAllowed = ["message"];
     mock.timers.tick(6 * 60_000); telegramCalls = [];
     assert.equal((await availability()).available, false);
@@ -243,7 +243,7 @@ describe("readiness: the button shows only when creation can work", () => {
   });
   it("never overwrites a webhook pointing at another environment: unavailable, one log line, no secret in it", async () => {
     mock.timers.enable({ apis: ["Date"], now: 1_800_000_000_000 });
-    const elsewhere = "https://staging.merrymen.test/api/telegram/manager/webhook";
+    const elsewhere = "https://staging.agentcap.test/api/telegram/manager/webhook";
     telegramWebhook = elsewhere;
     assert.deepEqual(await availability(), { available: false });
     assert.equal((await service.POST(req({ action: "begin", owner: A }))).status, 503);
@@ -262,7 +262,7 @@ describe("readiness: the button shows only when creation can work", () => {
     assert.match(logs.at(-1)!, /available$/);
   });
   it("refuses a webhook another environment took while ours was being set, and never sets it twice", async () => {
-    const elsewhere = "https://staging.merrymen.test/api/telegram/manager/webhook";
+    const elsewhere = "https://staging.agentcap.test/api/telegram/manager/webhook";
     racingWebhook = elsewhere;
     assert.deepEqual(await availability(), { available: false });
     assert.deepEqual(methods(), ["getMe", "getWebhookInfo", "setWebhook", "getWebhookInfo"]);
@@ -279,7 +279,7 @@ describe("readiness: the button shows only when creation can work", () => {
   it("is unavailable without an https public origin, before any Bot API call", async () => {
     assert.deepEqual(await availability(handlers({ webhookUrl: () => null })), { available: false });
     assert.deepEqual(telegramCalls, []);
-    assert.match(logs[0], /MERRYMEN_PUBLIC_ORIGIN/);
+    assert.match(logs[0], /AGENTCAP_PUBLIC_ORIGIN/);
   });
   it("is unavailable while the manager cannot manage bots, and sets no webhook for it", async () => {
     canManage = false;
@@ -294,7 +294,7 @@ describe("readiness: the button shows only when creation can work", () => {
   it("still reads a setup underway when creation is not ready, so a candidate can be confirmed", async () => {
     const { intent } = await readyCandidate();
     const notReady = handlers();
-    telegramWebhook = "https://staging.merrymen.test/api/telegram/manager/webhook";
+    telegramWebhook = "https://staging.agentcap.test/api/telegram/manager/webhook";
     const read = await availability(notReady, intent.id);
     assert.equal(read.available, false);
     assert.equal(read.intent?.status, "confirm");
@@ -309,7 +309,7 @@ describe("manager delivery and credential save", () => {
   });
   it("ignores a generic event without a privately bound setup", async () => {
     const { intent } = await begin();
-    await webhook({ update_id: 10, managed_bot: { user: { id: 54321 }, bot: { id: 22222, is_bot: true, username: "my_merrymen_bot" } } });
+    await webhook({ update_id: 10, managed_bot: { user: { id: 54321 }, bot: { id: 22222, is_bot: true, username: "my_agentcap_bot" } } });
     assert.equal((await service.POST(req({ action: "confirm", owner: A, intentId: intent.id, botId: "22222" }))).status, 409);
     assert.ok(!telegramCalls.some(c => c.method === "getManagedBotToken"));
   });
@@ -350,8 +350,8 @@ describe("the next step in Telegram, once the bot is made", () => {
     const creation = { update_id: 11, message: created() };
     assert.deepEqual(await (await webhook(creation)).json(), { ok: true });
     const offers = bodies("sendMessage").filter(m => m.reply_markup?.inline_keyboard && / is ready\./.test(m.text));
-    assert.deepEqual(offers, [{ chat_id: 54321, text: "✅ @my_merrymen_bot is ready.\nConnect it to your Merrymen agent?", reply_markup: { inline_keyboard: [
-      [{ text: "Connect @my_merrymen_bot", callback_data: `mc:${begun.intent.id}:22222` }],
+    assert.deepEqual(offers, [{ chat_id: 54321, text: "✅ @my_agentcap_bot is ready.\nConnect it to your AgentCap agent?", reply_markup: { inline_keyboard: [
+      [{ text: "Connect @my_agentcap_bot", callback_data: `mc:${begun.intent.id}:22222` }],
       [{ text: "Not this bot", callback_data: `mx:${begun.intent.id}:22222` }],
     ] } }]);
     for (const row of offers[0]!.reply_markup!.inline_keyboard!) for (const button of row) assert.ok(Buffer.byteLength(button.callback_data!) <= 64);
@@ -378,16 +378,16 @@ describe("the next step in Telegram, once the bot is made", () => {
     mock.timers.tick(31 * 60_000);
     const creation = { update_id: 11, message: created() };
     await webhook(creation);
-    const expired = "Your bot @my_merrymen_bot was created, but no Merrymen setup is waiting for it, so it wasn't connected. To connect a new bot, start again from Merrymen and create it within 30 minutes.";
+    const expired = "Your bot @my_agentcap_bot was created, but no AgentCap setup is waiting for it, so it wasn't connected. To connect a new bot, start again from AgentCap and create it within 30 minutes.";
     assert.deepEqual(bodies("sendMessage").filter(m => m.reply_markup?.inline_keyboard && m.text.startsWith("Your bot")), [{ chat_id: 54321, text: expired, reply_markup: BACK }]);
     const count = telegramCalls.length;
     assert.equal((await webhook(creation)).status, 200);
     assert.equal(telegramCalls.length, count, "Telegram's redelivery is not a second creation");
     // Somebody with no setup at all, using a creation button from an old chat.
-    const stranger = { ...created({ id: 33333, is_bot: true, username: "stray_merrymen_bot" }), from: { id: 77777, is_bot: false }, chat: { id: 77777, type: "private" } };
+    const stranger = { ...created({ id: 33333, is_bot: true, username: "stray_agentcap_bot" }), from: { id: 77777, is_bot: false }, chat: { id: 77777, type: "private" } };
     await webhook({ update_id: 12, message: stranger });
     await webhook({ update_id: 12, message: stranger });
-    assert.deepEqual(bodies("sendMessage").filter(m => m.chat_id === 77777).map(m => m.text), [expired.replace("my_merrymen_bot", "stray_merrymen_bot")]);
+    assert.deepEqual(bodies("sendMessage").filter(m => m.chat_id === 77777).map(m => m.text), [expired.replace("my_agentcap_bot", "stray_agentcap_bot")]);
     assert.ok(!methods().includes("getManagedBotToken"));
     assert.equal((await availability(service, begun.intent.id)).intent?.status, "expired");
     assertNothingSecret(challenge);
@@ -481,7 +481,7 @@ describe("the Connect and Not this bot buttons", () => {
     for (const update of refusals) assert.deepEqual(await (await webhook(update)).json(), { ok: true });
     assert.deepEqual(methods(), refusals.map(() => "answerCallbackQuery"), "each press answered, none acted on or edited");
     assert.ok(bodies("answerCallbackQuery").every(m => typeof (m as { text?: unknown }).text === "string"), "each with a short reason");
-    assert.equal(bodies("answerCallbackQuery")[0]!.text, "This setup isn't available. Start again from Merrymen.");
+    assert.equal(bodies("answerCallbackQuery")[0]!.text, "This setup isn't available. Start again from AgentCap.");
     assert.deepEqual(locks, [], "no settings lock taken, nothing completed or cancelled");
     assert.equal((await availability(service, begun.intent.id)).intent?.status, "confirm");
     const row = raw.prepare("SELECT sealed FROM tenant_settings WHERE tenant=?").get(A) as { sealed: string };
@@ -496,7 +496,7 @@ describe("the Connect and Not this bot buttons", () => {
     await webhook(pressOf(connect));
     assert.deepEqual(methods(), ["answerCallbackQuery", "editMessageText"]);
     assert.equal(bodies("answerCallbackQuery")[0]!.text, "This setup expired.");
-    assert.deepEqual(bodies("editMessageText")[0], { chat_id: 54321, message_id: 77, text: "This setup expired. Start again from Merrymen.", reply_markup: BACK });
+    assert.deepEqual(bodies("editMessageText")[0], { chat_id: 54321, message_id: 77, text: "This setup expired. Start again from AgentCap.", reply_markup: BACK });
     assert.equal((await availability(service, begun.intent.id)).intent?.status, "expired");
 
     // Cancelled on the page, then Connect pressed in Telegram.
@@ -505,7 +505,7 @@ describe("the Connect and Not this bot buttons", () => {
     telegramCalls = [];
     await webhook(pressOf(old.connect));
     assert.ok(!methods().includes("getManagedBotToken"));
-    assert.match(bodies("editMessageText")[0]!.text, /^Cancelled\. Start again from Merrymen when you're ready\./);
+    assert.match(bodies("editMessageText")[0]!.text, /^Cancelled\. Start again from AgentCap when you're ready\./);
 
     // Replaced: a new setup begun on the page, then the old message's Connect.
     const replaced = await readyCandidate(30); const stale = buttons();
@@ -526,7 +526,7 @@ describe("the Connect and Not this bot buttons", () => {
     assert.deepEqual(locks, [A], "under the settings lock, as the page's cancel");
     assert.deepEqual(methods(), ["answerCallbackQuery", "editMessageText"]);
     assert.deepEqual(bodies("editMessageText")[0], { chat_id: 54321, message_id: 77, reply_markup: BACK,
-      text: "Cancelled. Start again from Merrymen when you're ready.\nIf you don't need @my_merrymen_bot, you can delete it in @BotFather." });
+      text: "Cancelled. Start again from AgentCap when you're ready.\nIf you don't need @my_agentcap_bot, you can delete it in @BotFather." });
     assert.equal((await availability(service, begun.intent.id)).intent?.status, "cancelled");
     telegramCalls = [];
     await webhook(pressOf(connect));
@@ -553,7 +553,7 @@ describe("the Connect and Not this bot buttons", () => {
     await webhook(pressOf(connect));
     assert.equal(bodies("answerCallbackQuery")[0]!.text, "Connecting…");
     assert.deepEqual(bodies("sendMessage")[0], { chat_id: 54321, reply_markup: BACK,
-      text: "Your Merrymen agent already has a Telegram bot, so @my_merrymen_bot wasn't connected. To use @my_merrymen_bot instead, replace the bot in Settings on Merrymen." });
+      text: "Your AgentCap agent already has a Telegram bot, so @my_agentcap_bot wasn't connected. To use @my_agentcap_bot instead, replace the bot in Settings on AgentCap." });
     const row = raw.prepare("SELECT sealed FROM tenant_settings WHERE tenant=?").get(A) as { sealed: string };
     assert.deepEqual(JSON.parse(openSecret(row.sealed, dek)), existing);
     assert.equal((await availability(service, begun.intent.id)).intent?.status, "confirm");
@@ -565,7 +565,7 @@ describe("the Connect and Not this bot buttons", () => {
     telegramCalls = [];
     await webhook(pressOf(connect));
     assert.deepEqual(bodies("sendMessage")[0], { chat_id: 54321, reply_markup: BACK,
-      text: "@my_merrymen_bot is already connected to another Merrymen agent, so it wasn't connected to yours." });
+      text: "@my_agentcap_bot is already connected to another AgentCap agent, so it wasn't connected to yours." });
     assert.deepEqual({ ...raw.prepare("SELECT bot_id, tenant FROM telegram_bot_claims").get() as object }, { bot_id: "22222", tenant: B });
     assertNothingSecret(begun.challenge, [B, B.slice(2)]);
   });
@@ -575,14 +575,14 @@ describe("the Connect and Not this bot buttons", () => {
     telegramCalls = [];
     assert.equal((await webhook(pressOf(connect))).status, 200);
     assert.equal(bodies("answerCallbackQuery")[0]!.text, "Connecting…");
-    assert.deepEqual(bodies("sendMessage")[0], { chat_id: 54321, text: "Couldn't connect right now. Try again, or connect from Merrymen." });
+    assert.deepEqual(bodies("sendMessage")[0], { chat_id: 54321, text: "Couldn't connect right now. Try again, or connect from AgentCap." });
     assert.equal(bodies("editMessageText").length, 0, "a transient failure leaves the original buttons unchanged");
     assert.deepEqual(logs, ["a Connect button in Telegram failed (Bot API)"]);
     failing.clear();
     const held = handlers({ saveLock: (async () => SAVE_BUSY) as unknown as typeof withSettingsSaveLock });
     telegramCalls = [];
     await webhook(pressOf(connect), config.webhookSecret, held);
-    assert.equal(bodies("sendMessage")[0]!.text, "Couldn't connect right now. Try again, or connect from Merrymen.");
+    assert.equal(bodies("sendMessage")[0]!.text, "Couldn't connect right now. Try again, or connect from AgentCap.");
     assert.equal(logs.at(-1), "a Connect button in Telegram failed (busy)");
     assert.equal((await availability(service, begun.intent.id)).intent?.status, "confirm");
     telegramCalls = [];
@@ -748,10 +748,10 @@ describe("iPhone link and overlapping deliveries", () => {
     const begun = await readyCandidate();
     await webhook(pressOf(buttons().connect));
     telegramCalls = [];
-    await webhook({ update_id: 20, message: created({ id: 33333, is_bot: true, username: "second_merrymen_bot" }) });
+    await webhook({ update_id: 20, message: created({ id: 33333, is_bot: true, username: "second_agentcap_bot" }) });
     assert.equal((await availability(service, begun.intent.id)).intent?.status, "connected");
     const said = bodies("sendMessage").map(m => m.text).join("\n");
-    assert.match(said, /second_merrymen_bot/);
+    assert.match(said, /second_agentcap_bot/);
     assert.doesNotMatch(said, /expired/);
     assert.ok(!methods().includes("getManagedBotToken"));
   });

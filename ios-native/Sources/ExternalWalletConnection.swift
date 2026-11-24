@@ -22,7 +22,7 @@ final class ExternalWalletConnection: ObservableObject {
         let group = Bundle.main.object(forInfoDictionaryKey: "WalletConnectKeychainGroup") as? String ?? ""
         guard project.range(of: "^[0-9a-fA-F]{32}$", options: .regularExpression) != nil, !group.isEmpty, !group.contains("$(") else { return }
         do {
-            let metadata = AppMetadata(name: "merrymen", description: "Sign in to Merrymen and prove holder-wallet ownership.", url: API.origin.absoluteString, icons: [], redirect: try .init(native: "merrymen://walletconnect", universal: nil))
+            let metadata = AppMetadata(name: "agentcap", description: "Sign in to AgentCap and prove holder-wallet ownership.", url: API.origin.absoluteString, icons: [], redirect: try .init(native: "agentcap://walletconnect", universal: nil))
             Networking.configure(groupIdentifier: group, projectId: project, socketFactory: NativeRelaySocketFactory())
             let namespace = ProposalNamespace(chains: [Blockchain("eip155:1")!], methods: ["personal_sign"], events: ["accountsChanged", "chainChanged"])
             AppKit.configure(projectId: project, metadata: metadata, crypto: NativeProofCrypto(), sessionParams: SessionParams(namespaces: ["eip155": namespace]), authRequestParams: nil, includeWebWallets: false, coinbaseEnabled: false) { _ in }
@@ -56,7 +56,7 @@ final class ExternalWalletConnection: ObservableObject {
     }
     func present() { guard configured else { return }; error = nil; AppKit.present() }
     func handleURL(_ url: URL) -> Bool {
-        guard configured, url.scheme == "merrymen", url.host == "walletconnect" else { return false }
+        guard configured, url.scheme == "agentcap", url.host == "walletconnect" else { return false }
         _ = AppKit.instance.handleDeeplink(url); return true
     }
     func disconnect() async {

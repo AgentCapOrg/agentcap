@@ -1,9 +1,9 @@
 /**
- * "RE-SIGN TO COVER $MERRYMEN" IS ADVICE NOTHING CAN FOLLOW.
+ * "RE-SIGN TO COVER $AGENTCAP" IS ADVICE NOTHING CAN FOLLOW.
  *
  * Every signer drops the energy reserve from the sealed extras
  * (wall.ts usableExtraTokens), so no signature will ever cover it, and the
- * worker never watches it. An owner who listed $MERRYMEN as one of their
+ * worker never watches it. An owner who listed $AGENTCAP as one of their
  * tokens (they had to, before energy existed) would otherwise be told, by
  * every coverage check the product has, to re-sign — and re-sign, and re-sign.
  * It is energy, bought only by the agent's get-energy route in the app chat.
@@ -16,7 +16,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
-  MERRYMEN_TOKEN,
+  AGENTCAP_TOKEN,
   TRADEABLE_V2,
   tokenCoverage,
   uncoveredBasketSymbols,
@@ -27,14 +27,14 @@ import { preflight, type PreflightInput } from "./preflight";
 import { emptyGeckoBuckets, type GeckoPool } from "./venues/geckoterminal";
 import { applyVerdicts } from "./strategist/memecoin-scout";
 
-const MERRY: CustomToken = { symbol: "MERRYMEN", address: MERRYMEN_TOKEN.address, decimals: 18 };
-const MERRY_UPPER: CustomToken = { ...MERRY, address: `0x${MERRYMEN_TOKEN.address.slice(2).toUpperCase()}` };
+const MERRY: CustomToken = { symbol: "AGENTCAP", address: AGENTCAP_TOKEN.address, decimals: 18 };
+const MERRY_UPPER: CustomToken = { ...MERRY, address: `0x${AGENTCAP_TOKEN.address.slice(2).toUpperCase()}` };
 const CATE: CustomToken = { symbol: "CATE", address: "0x00000000000000000000000000000000000000c1", decimals: 18 };
-/** A current signer's grant: MERRYMEN is never sealed, however the owner listed it. */
+/** A current signer's grant: AGENTCAP is never sealed, however the owner listed it. */
 const grant = (...addrs: string[]) => ({ grantTokens: addrs, grantFeatures: ["transfer", TRADEABLE_V2] });
 
 describe("the core coverage helpers never ask a re-sign for the energy reserve", () => {
-  it("tokenCoverage: $MERRYMEN is neither covered nor uncovered, in any case", () => {
+  it("tokenCoverage: $AGENTCAP is neither covered nor uncovered, in any case", () => {
     for (const t of [MERRY, MERRY_UPPER]) {
       const { covered, uncovered } = tokenCoverage([t, CATE], grant());
       assert.deepEqual(uncovered.map((x) => x.symbol), ["CATE"], "only the real gap is reported");
@@ -52,9 +52,9 @@ describe("the core coverage helpers never ask a re-sign for the energy reserve",
     assert.deepEqual(tokenCoverage([CATE], grant(CATE.address)).covered.map((t) => t.symbol), ["CATE"]);
   });
 
-  it("uncoveredBasketSymbols: MERRYMEN in the basket is not a 'can't sell' banner", () => {
-    assert.deepEqual(uncoveredBasketSymbols(["MERRYMEN", "CATE"], grant(), [MERRY, CATE]), ["CATE"]);
-    assert.deepEqual(uncoveredBasketSymbols(["MERRYMEN"], grant(), [MERRY_UPPER]), []);
+  it("uncoveredBasketSymbols: AGENTCAP in the basket is not a 'can't sell' banner", () => {
+    assert.deepEqual(uncoveredBasketSymbols(["AGENTCAP", "CATE"], grant(), [MERRY, CATE]), ["CATE"]);
+    assert.deepEqual(uncoveredBasketSymbols(["AGENTCAP"], grant(), [MERRY_UPPER]), []);
   });
 });
 
@@ -79,15 +79,15 @@ describe("preflight: no blocker for a basket entry nothing could clear", () => {
   });
   const sellable = (i: PreflightInput) => preflight(i).find((c) => c.id === "sellable");
 
-  it("MERRYMEN alongside a covered stock: no 'cannot sell' blocker", () => {
-    const c = sellable(input(["QQQ", "MERRYMEN"], [MERRY]));
+  it("AGENTCAP alongside a covered stock: no 'cannot sell' blocker", () => {
+    const c = sellable(input(["QQQ", "AGENTCAP"], [MERRY]));
     assert.notEqual(c?.level, "blocker", JSON.stringify(c));
   });
 
   it("a genuinely uncovered custom token still is one", () => {
-    const c = sellable(input(["QQQ", "MERRYMEN", "CATE"], [MERRY, CATE]))!;
+    const c = sellable(input(["QQQ", "AGENTCAP", "CATE"], [MERRY, CATE]))!;
     assert.equal(c.level, "blocker");
-    assert.match(c.title, /cannot sell CATE$/, "CATE only — MERRYMEN is not in the list");
+    assert.match(c.title, /cannot sell CATE$/, "CATE only — AGENTCAP is not in the list");
   });
 });
 
@@ -96,7 +96,7 @@ describe("trending discovery never surfaces the energy reserve as a coin to trad
     poolId: `0x${"1".repeat(40)}`,
     poolAddress: null,
     tokenAddress,
-    name: "MERRYMEN / VIRTUAL",
+    name: "AGENTCAP / VIRTUAL",
     dex: "uniswap-v2-robinhood",
     priceUsd: 1,
     reserveUsd: 500_000,
@@ -124,8 +124,8 @@ describe("trending discovery never surfaces the energy reserve as a coin to trad
     nowSec: 1_000,
   });
 
-  it("a trending $MERRYMEN pool is dropped before the screen; a coin beside it is still picked", async () => {
-    const merry = MERRYMEN_TOKEN.address.toLowerCase() as `0x${string}`;
+  it("a trending $AGENTCAP pool is dropped before the screen; a coin beside it is still picked", async () => {
+    const merry = AGENTCAP_TOKEN.address.toLowerCase() as `0x${string}`;
     const other = `0x${"a".repeat(40)}` as `0x${string}`;
     const res = await discoverTrending(deps([pool(merry), pool(other)]) as never);
     assert.deepEqual(res.picks.map((p) => p.pool.tokenAddress), [other]);

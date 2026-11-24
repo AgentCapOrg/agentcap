@@ -7,10 +7,10 @@ import type { MessageKey } from "./en";
  * That is what makes a partial file safe to have here.
  */
 export const pt_BR: Partial<Record<MessageKey, string>> = {
-  "tour.stop01.title": "Boas-vindas ao merrymen.",
+  "tour.stop01.title": "Boas-vindas ao agentcap.",
   "tour.stop01.copy": "Dê uma estratégia ao seu agente, defina os limites dele e acompanhe as decisões que ele toma. Siga o tour completo ou use Tópicos para ir direto a um recurso. Você pode sair e repetir o tour quando quiser.",
   "tour.stop02.title": "Comece por um mercado que você conhece.",
-  "tour.stop02.copy": "O Início é o seu merryman e o seu dinheiro. O Explorar (Explore) reúne o ranking e os mercados: abra qualquer token para ver o histórico de preço e as operações que os agentes registraram nele.",
+  "tour.stop02.copy": "O Início é o seu agentcapavatar e o seu dinheiro. O Explorar (Explore) reúne o ranking e os mercados: abra qualquer token para ver o histórico de preço e as operações que os agentes registraram nele.",
   "tour.stop03.title": "Seu agente, seus limites.",
   "tour.stop03.copy": "Uma estratégia e dois limites — por operação e por dia — definem o que ele pode fazer. O modo simulado treina com dinheiro fictício até você mudar isso.",
   "tour.stop04.title": "Pergunte o porquê.",
@@ -56,7 +56,7 @@ export const pt_BR: Partial<Record<MessageKey, string>> = {
   "tour.stop24.title": "Configurações e visibilidade pública.",
   "tour.stop24.copy": "As Configurações controlam os ajustes do seu agente e o que você compartilha. Publicar o seu portfólio pode expor detalhes das posições e do tamanho das operações; mantê-lo privado ainda permite mostrar a atividade pública e os retornos percentuais elegíveis.",
   "tour.stop25.title": "Construa com a API.",
-  "tour.stop25.copy": "Quem desenvolve pode acessar merrymen.dev/api para configurar a chave de API, ver o SDK e os tutoriais de integração. Mantenha as chaves de API secretas no seu servidor. Use o fluxo de configuração e de chat documentado para conectar outro aplicativo.",
+  "tour.stop25.copy": "Quem desenvolve pode acessar agentcap.xyz/api para configurar a chave de API, ver o SDK e os tutoriais de integração. Mantenha as chaves de API secretas no seu servidor. Use o fluxo de configuração e de chat documentado para conectar outro aplicativo.",
   "tour.stop26.title": "Quando você quiser.",
   "tour.stop26.copy": "Volte ao chat para perguntar sobre a sua estratégia, os seus limites ou a última decisão. Se o agente estiver parado, confira a explicação dele, o modo, o saldo e as permissões. Repita este tour em Me mostre o app sempre que precisar.",
   "tour.skip": "Pular tour",
@@ -65,7 +65,7 @@ export const pt_BR: Partial<Record<MessageKey, string>> = {
   "tour.next": "Avançar",
   "tour.finish": "Concluir",
   "tour.relaunch": "Me mostre o app",
-  "tour.dialogLabel": "Um tour rápido pelo merrymen",
+  "tour.dialogLabel": "Um tour rápido pelo agentcap",
   "tour.stepOf": "{current} / {total}",
   "tour.savedLocally": "Salvo neste navegador.",
   "tour.retrySync": "Sincronizar com a conta",

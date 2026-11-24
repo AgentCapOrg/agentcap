@@ -42,12 +42,12 @@ export const SELF_HOSTED_TENANT = "self";
 
 /**
  * THE OPERATOR'S TAIL SWITCH (docs/fomo.md "Tailing a trader"), read the same
- * way by every process: `MERRYMEN_FOMO_TAILS=0` turns tails off. The
+ * way by every process: `AGENTCAP_FOMO_TAILS=0` turns tails off. The
  * orchestrator's pass (routing, the tails block), its service (fomo_tail_trader
  * refuses to store one) and each child's notices all ask this one function.
  */
 export function fomoTailsOn(env: Readonly<Record<string, string | undefined>> = process.env): boolean {
-  return env.MERRYMEN_FOMO_TAILS !== "0";
+  return env.AGENTCAP_FOMO_TAILS !== "0";
 }
 
 /** Per-tenant Fomo permissions, resolved from TRUSTED settings by the hosting process. */
@@ -213,7 +213,7 @@ export interface ChildFomoFile {
    * ended in the last 15 minutes, each with the tailed trader's recent buys,
    * sells and theses from the shared store, for the owner's DM notices
    * (tail-notices.ts). Written only while data access is on and tails are not
-   * switched off (MERRYMEN_FOMO_TAILS=0). Absent in files from older writers
+   * switched off (AGENTCAP_FOMO_TAILS=0). Absent in files from older writers
    * and for owners with no tail: read as none.
    */
   tails?: ChildTail[];
@@ -244,7 +244,7 @@ export interface ChildTailEvent {
   kind: "buy" | "sell" | "thesis";
   token: TokenIdentity | null;
   label: TokenLabel;
-  /** The provider's event time when it gave one, else when Merrymen observed it. */
+  /** The provider's event time when it gave one, else when AgentCap observed it. */
   at: number;
   observedAt: number;
   /** The trader's position mark after the event (never the buy's size); null when unknown. */
@@ -280,7 +280,7 @@ export interface ChildSignal {
    * with the tail. Absent: none (and in files from older writers).
    */
   tailTriggerKeys?: string[];
-  /** When Merrymen first saw cohort activity on this token. */
+  /** When AgentCap first saw cohort activity on this token. */
   firstSeenAt: number;
   /** The latest shared dossier for the token, when one has been built. */
   dossier: CoinDossier | null;

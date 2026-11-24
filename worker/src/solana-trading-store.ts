@@ -45,8 +45,8 @@ export interface SolanaLiveBook {
   /**
    * The slot of the last finalized balance snapshot the book was set from
    * (inflows booked): every vault change at or before it is in the book. A
-   * withdrawal made outside Merrymen is recorded only after it (OWNER
-   * WITHDRAWALS MADE OUTSIDE MERRYMEN). Absent: the book's creation is that point.
+   * withdrawal made outside AgentCap is recorded only after it (OWNER
+   * WITHDRAWALS MADE OUTSIDE AGENTCAP). Absent: the book's creation is that point.
    */
   balancesSlot?: number;
 }
@@ -139,7 +139,7 @@ export interface SolanaPreparedSetup {
  * (SOLANA_REVOKE_ALREADY_LANDED) while nothing is left to revoke, and prepared
  * once a session registered on Solana after that landing is live (the pending
  * registration itself, landing after the revocation while the providers keep
- * disagreeing about it, or one made outside Merrymen: solanaLiveAfterRevoke).
+ * disagreeing about it, or one made outside AgentCap: solanaLiveAfterRevoke).
  * The landed revocations then go with it as history (`landed`), still counted
  * by the proof (solanaOwnerEpochOffset) and still fencing the registration.
  *
@@ -159,9 +159,9 @@ export interface SolanaPreparedSetup {
  */
 /** Refused: a revocation beside a pending owner transaction once one beside it landed (REVOKE BESIDE...). */
 export const SOLANA_REVOKE_ALREADY_LANDED = "Your revocation already landed, and no trading permission has registered on Solana since, so nothing is left to revoke. If one registers later, Revoke works again.";
-/** Refused: signed bytes of an in-app withdrawal the owner already recorded as made outside Merrymen (OWNER WITHDRAWALS MADE OUTSIDE MERRYMEN). */
-export const SOLANA_WITHDRAWAL_RECORDED_OUTSIDE = "This withdrawal is already recorded as made outside Merrymen, so it is not submitted again. Nothing more to do.";
-/** The evidence ids a withdrawal made outside Merrymen is booked under, one per vault token. */
+/** Refused: signed bytes of an in-app withdrawal the owner already recorded as made outside AgentCap (OWNER WITHDRAWALS MADE OUTSIDE AGENTCAP). */
+export const SOLANA_WITHDRAWAL_RECORDED_OUTSIDE = "This withdrawal is already recorded as made outside AgentCap, so it is not submitted again. Nothing more to do.";
+/** The evidence ids a withdrawal made outside AgentCap is booked under, one per vault token. */
 function externalEvidence(signature: string): [string, string] { return [`external:${signature}:${SOLANA_USDG_MINT}`, `external:${signature}:${SOLANA_WRAPPED_SOL_MINT}`]; }
 /** Refused activation: an unsigned revocation prepared beside this registration can still be signed. */
 export const SOLANA_REVOKE_PREPARED_BESIDE = "A revocation of this permission was prepared and can still be signed in your wallet. Sign it to revoke, or let it lapse (about a minute) and finish registration then.";
@@ -398,14 +398,14 @@ export const OPERATOR_HOLD = "An operator hold stops Solana trading for this acc
  * permissive setting, not the old behaviour: with maxOpsPerDay 10 it lets
  * over 100 transactions be signed a day, against about 20 under the old rule.
  *
- * Set with MERRYMEN_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE: a whole number from 0 to 96.
+ * Set with AGENTCAP_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE: a whole number from 0 to 96.
  */
 export const SOLANA_DEFAULT_EXPIRED_ATTEMPT_ALLOWANCE = 0;
 /** Names no setting, like the other configuration refusals an owner may see. */
 export const SOLANA_EXPIRED_ATTEMPT_ALLOWANCE_MISCONFIGURED = "The Solana expired-attempt allowance setting is misconfigured: it must be a whole number from 0 to 96. Live trading and exits stay refused until an operator fixes it.";
 /** The configured allowance, or the default when it is unset. Anything else is refused (fail closed). */
 export function solanaExpiredAttemptAllowance(env: Readonly<Record<string, string | undefined>>): number {
-  const value = env.MERRYMEN_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE;
+  const value = env.AGENTCAP_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE;
   if (value === undefined) return SOLANA_DEFAULT_EXPIRED_ATTEMPT_ALLOWANCE;
   if (!/^(0|[1-9][0-9]?)$/.test(value) || Number(value) > SOLANA_MAX_OPS_PER_DAY) refuse(SOLANA_EXPIRED_ATTEMPT_ALLOWANCE_MISCONFIGURED);
   return Number(value);
@@ -666,7 +666,7 @@ export async function solanaPendingOwnerScopes(db: Db): Promise<SolanaAccountSco
 export class SolanaTradingStore implements SolanaLiveJournal {
   constructor(readonly db: Db, readonly scope: SolanaAccountScope, private readonly now: () => number = Date.now,
     private readonly admission?: { autonomousRevision: number; signal?: AbortSignal },
-    /** The Pyth generation stored reference bounds must come from: the app runtime's MERRYMEN_SOLANA_PYTH_GENERATION, read at each check. Default: SOLANA_PYTH_DEFAULT_GENERATION. */
+    /** The Pyth generation stored reference bounds must come from: the app runtime's AGENTCAP_SOLANA_PYTH_GENERATION, read at each check. Default: SOLANA_PYTH_DEFAULT_GENERATION. */
     private readonly pythGeneration?: () => SolanaPythGeneration) {
     if (!/^0x[0-9a-f]{40}$/.test(scope.tenant)) refuse("Invalid authenticated Solana tenant.");
     solanaPaperAgentId(scope.owner);
@@ -821,7 +821,7 @@ export class SolanaTradingStore implements SolanaLiveJournal {
    *
    * A vault below its book holds every trade and automated exit (status's
    * SOLANA_STATUS_BELOW_BOOK; admission refuses a shortfall too). A withdrawal
-   * the owner made outside Merrymen is recorded by the owner from its own
+   * the owner made outside AgentCap is recorded by the owner from its own
    * transaction, as capital out. Anything else (an issuer's action on a token
    * account, a booking error) stays held until an operator who found what moved
    * the tokens books it here as a loss (solanaShortfallWriteOff): never capital
@@ -920,7 +920,7 @@ export class SolanaTradingStore implements SolanaLiveJournal {
     });
   }
   /**
-   * OWNER WITHDRAWALS MADE OUTSIDE MERRYMEN (solana-recover, another wallet).
+   * OWNER WITHDRAWALS MADE OUTSIDE AGENTCAP (solana-recover, another wallet).
    *
    * The documented emergency path withdraws with the owner's own key, outside
    * the app, so the book kept the old balances: a vault below its book holds
@@ -992,9 +992,9 @@ export class SolanaTradingStore implements SolanaLiveJournal {
       const { tenant, owner } = this.scope, now = clock(this.now);
       const withdrawals = input?.withdrawals;
       if (!Array.isArray(withdrawals) || withdrawals.length < 1 || withdrawals.length > 16) refuse("Give between one and sixteen finalized withdrawals.");
-      if (await tx.prepare("SELECT 1 FROM solana_runtime_submissions WHERE vault IN (SELECT vault FROM solana_runtime_submissions WHERE tenant=? AND owner=?) AND status='pending'").get(tenant, owner)) refuse("Resolve pending Solana trades before recording withdrawals made outside Merrymen.");
+      if (await tx.prepare("SELECT 1 FROM solana_runtime_submissions WHERE vault IN (SELECT vault FROM solana_runtime_submissions WHERE tenant=? AND owner=?) AND status='pending'").get(tenant, owner)) refuse("Resolve pending Solana trades before recording withdrawals made outside AgentCap.");
       const main = rowJson<SolanaPreparedSetup>(await tx.prepare("SELECT setup_json FROM solana_runtime_setups WHERE tenant=? AND owner=?").get(tenant, owner), "setup_json");
-      if (ownerPending(main) || ownerPending(await this.revokeIn(tx))) refuse("Resolve the pending owner transaction before recording withdrawals made outside Merrymen.");
+      if (ownerPending(main) || ownerPending(await this.revokeIn(tx))) refuse("Resolve the pending owner transaction before recording withdrawals made outside AgentCap.");
       const book = rowJson<SolanaLiveBook>(await tx.prepare("SELECT book_json FROM solana_runtime_live_books WHERE tenant=? AND owner=?").get(tenant, owner), "book_json");
       if (!book) refuse("There is no live trading record to reconcile yet.");
       if (now < book.updatedAtMs) refuse("Solana portfolio evidence moved backwards.");
@@ -1114,7 +1114,7 @@ export class SolanaTradingStore implements SolanaLiveJournal {
   /**
    * `admission.expiredAttemptAllowance`: see SOLANA_DEFAULT_EXPIRED_ATTEMPT_ALLOWANCE (the default when omitted).
    * `admission.referenceToleranceBps`: the tolerance the persisted price bound must carry, the app runtime's
-   * MERRYMEN_SOLANA_REFERENCE_TOLERANCE_BPS (SOLANA_REFERENCE_DEFAULT_TOLERANCE_BPS when omitted); any other is refused.
+   * AGENTCAP_SOLANA_REFERENCE_TOLERANCE_BPS (SOLANA_REFERENCE_DEFAULT_TOLERANCE_BPS when omitted); any other is refused.
    */
   async recordSigned(s: SolanaSignedSubmission, admission: { expiredAttemptAllowance?: number; referenceToleranceBps?: number } = {}): Promise<boolean> {
     this.owner(s.intent.owner);
@@ -1371,7 +1371,7 @@ export class SolanaTradingStore implements SolanaLiveJournal {
       if (setup.signature) {
         if (!previous || previous.messageBase64 !== setup.messageBase64 || previous.preparedAtMs !== setup.preparedAtMs) refuse("The prepared owner transaction changed. Review and sign again.");
         if (clock(this.now) >= previous.expiresAtMs) refuse("The prepared owner transaction expired before submission.");
-        // The wallet broadcast these bytes itself and the owner recorded them as made outside Merrymen: booked once, there.
+        // The wallet broadcast these bytes itself and the owner recorded them as made outside AgentCap: booked once, there.
         if (await tx.prepare("SELECT 1 FROM solana_runtime_cashflows WHERE evidence_id IN (?,?)").get(...externalEvidence(setup.signature))) refuse(SOLANA_WITHDRAWAL_RECORDED_OUTSIDE);
         if ((setup.kind ?? "session") === "session" && (binding.requestedMode !== "live" || JSON.stringify(binding.limits) !== JSON.stringify(setup.limits))) refuse("The live permission settings changed. Review and sign again.");
       }
@@ -1384,14 +1384,14 @@ export class SolanaTradingStore implements SolanaLiveJournal {
         : solanaWithdrawValueUsdg(offered, setup.amountRaw, clock(this.now), this.pythGeneration) !== null ? offered : undefined;
       setup = valuation ? { ...plain, withdrawValuation: structuredClone(valuation) } : plain;
       // A session's limits become the on-chain permission: never more operations than
-      // the program allows, never a permission longer than Merrymen grants.
+      // the program allows, never a permission longer than AgentCap grants.
       if ((setup.kind ?? "session") === "session") validateSolanaAccountLimits(setup.limits, clock(this.now));
       if (setup.kind !== "revoke" && await tx.prepare("SELECT 1 FROM solana_runtime_submissions WHERE tenant=? AND owner=? AND status='pending'").get(this.scope.tenant, this.scope.owner)) refuse("Resolve the pending Solana trade before an owner transaction.");
       if (setup.kind === "withdraw" || setup.kind === "withdraw-sol") {
         if (setup.priorSequence === undefined) refuse("Prepare the withdrawal again.");
         // Under the lock, at both saves: never more than the book records (plus native SOL this
         // transaction syncs into WSOL), which finishSetup must be able to book once it lands. Recording a
-        // withdrawal made outside Merrymen may lower the book while this one is prepared (it may be this
+        // withdrawal made outside AgentCap may lower the book while this one is prepared (it may be this
         // very transaction, broadcast by the wallet itself); then its signed save is refused here, so it is
         // never saved pending with an amount its booking would refuse forever.
         if (setup.kind === "withdraw" && setup.mint && setup.amountRaw) {
@@ -1468,7 +1468,7 @@ export class SolanaTradingStore implements SolanaLiveJournal {
         if (!setup.mint || !setup.amountRaw || ![SOLANA_USDG_MINT, SOLANA_WRAPPED_SOL_MINT].includes(setup.mint)) refuse("Invalid finalized withdrawal accounting.");
         const amount = raw(setup.amountRaw, false), { tenant, owner } = this.scope;
         const book = rowJson<SolanaLiveBook>(await tx.prepare("SELECT book_json FROM solana_runtime_live_books WHERE tenant=? AND owner=?").get(tenant, owner), "book_json");
-        // Already booked from its own transaction as made outside Merrymen: finished, never booked a second time.
+        // Already booked from its own transaction as made outside AgentCap: finished, never booked a second time.
         const recordedOutside = await tx.prepare("SELECT 1 FROM solana_runtime_cashflows WHERE evidence_id IN (?,?)").get(...externalEvidence(signature));
         if (book && !recordedOutside) {
           // The book may already be past this withdrawal's slot. While a signed

@@ -87,7 +87,7 @@ if (!positional) {
   process.exit(2);
 }
 const FACTORY = getAddress(positional);
-const RPC = arg("rpc", process.env.MERRYMEN_RPC_MAINNET ?? robinhoodChain.rpcUrls.default.http[0])!;
+const RPC = arg("rpc", process.env.AGENTCAP_RPC_MAINNET ?? robinhoodChain.rpcUrls.default.http[0])!;
 const client = createPublicClient({ chain: robinhoodChain, transport: http(RPC) });
 
 const FACTORY_ABI = parseAbi([

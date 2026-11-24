@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { mintSlug, SLUG_RE } from "@merrymen/identity-store";
+import { mintSlug, SLUG_RE } from "@agentcap/identity-store";
 import { avatarGradient, faceSeed, initialsOf } from "./agent-avatar";
 
 describe("what a face is seeded on", () => {

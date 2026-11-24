@@ -20,8 +20,8 @@
  */
 import { CHAIN_ID, EXPLORER, RPC_URL } from "./chain";
 
-/** Mirrors MERRYMEN_TOKEN in packages/core/src/token.ts (the site does not import core). */
-export const TOKEN = { symbol: "MERRYMEN", address: "0xa15cd06dd305269a0f48bebeb30aa3588fba7b32", decimals: 18 } as const;
+/** Mirrors AGENTCAP_TOKEN in packages/core/src/token.ts (the site does not import core). */
+export const TOKEN = { symbol: "AGENTCAP", address: "0xa15cd06dd305269a0f48bebeb30aa3588fba7b32", decimals: 18 } as const;
 export const UNIT = 10n ** 18n;
 export const CHAIN_HEX = `0x${CHAIN_ID.toString(16)}`;
 /** wallet_addEthereumChain parameters, mirroring robinhoodChain in packages/core/src/chain.ts. */
@@ -121,7 +121,7 @@ export function stillPayable(answer: unknown, treasury: string): Freshness {
   const fresh = normalizePlans(answer);
   if (!fresh) return { ok: false, plans: null, message: "The payment details could not be confirmed just now, so nothing was sent. Try again shortly." };
   if (!paymentsReady(fresh)) return { ok: false, plans: fresh, message: "Payments are paused just now, so nothing was sent. Your selection waits." };
-  if (fresh.treasury !== treasury.toLowerCase()) return { ok: false, plans: fresh, message: "The Merrymen payments wallet changed since this page loaded, so nothing was sent. Check the new details and pay again." };
+  if (fresh.treasury !== treasury.toLowerCase()) return { ok: false, plans: fresh, message: "The AgentCap payments wallet changed since this page loaded, so nothing was sent. Check the new details and pay again." };
   return { ok: true, plans: fresh };
 }
 
@@ -265,7 +265,7 @@ export interface PreviewContext {
  */
 export function previewSentence(preview: PlanPreview, plan: Plan, current: string, selected?: string, context: PreviewContext = {}): string {
   const until = preview.ends_at ? ` until ${formatDate(preview.ends_at)}` : "";
-  const charge = BigInt(preview.charge_now_raw) > 0n ? `${formatTokens(preview.charge_now_raw)} MERRYMEN comes out of your credit` : "";
+  const charge = BigInt(preview.charge_now_raw) > 0n ? `${formatTokens(preview.charge_now_raw)} AGENTCAP comes out of your credit` : "";
   // The plan card says 30 days of the new plan; an upgrade buys the share of it that is left of this period.
   const share = (atMost: string) => preview.period_requests !== null && preview.period_requests < plan.requests
     ? ` An upgrade adds requests only for the time left: this period's quota becomes ${atMost}${group(preview.period_requests)} requests, and ${plan.name}'s full ${group(plan.requests)} starts with the next period.` : "";
@@ -286,14 +286,14 @@ export function previewSentence(preview: PlanPreview, plan: Plan, current: strin
     }
     case "cancel_renewal": {
       const credit = context.credit_raw && RAW.test(context.credit_raw) && BigInt(context.credit_raw) > 0n
-        ? ` Your ${formatTokens(context.credit_raw, { decimals: 2 })} MERRYMEN of credit stays on this account for later charges; it is not returned.` : "";
+        ? ` Your ${formatTokens(context.credit_raw, { decimals: 2 })} AGENTCAP of credit stays on this account for later charges; it is not returned.` : "";
       return `${current} runs to the end of its period${preview.starts_at ? ` (${formatDate(preview.starts_at)})` : ""}, then your account moves to ${plan.name}. Nothing is charged.${credit}`;
     }
     case "waiting_for_payment": {
       // The chosen plan cannot be paid from credit, but a lapsed period's plan can: confirming renews that one now.
       const renewed = preview.charge_now_tier ? context.plans?.find(p => p.id === preview.charge_now_tier)?.name ?? preview.charge_now_tier : null;
-      const renews = charge ? `${formatTokens(preview.charge_now_raw)} MERRYMEN of your credit renews ${renewed ? `${renewed} now, the plan your last period was on` : "your last paid plan now"}. ` : "";
-      const arrives = preview.due_raw ? `${formatTokens(preview.due_raw, { round: "up", decimals: 0 })} MERRYMEN arrives` : "your payment arrives";
+      const renews = charge ? `${formatTokens(preview.charge_now_raw)} AGENTCAP of your credit renews ${renewed ? `${renewed} now, the plan your last period was on` : "your last paid plan now"}. ` : "";
+      const arrives = preview.due_raw ? `${formatTokens(preview.due_raw, { round: "up", decimals: 0 })} AGENTCAP arrives` : "your payment arrives";
       // No treasury yet (billing observed, payments closed): there is no payment step below to point to.
       if (context.paymentsOpen === false) return `${renews}${plan.name} starts once payments open and ${arrives}.${share("at most ")} Your selection waits until then.`;
       // Paid later, an upgrade covers less of the period, so its quota is "at most" what it would be now.
@@ -340,7 +340,7 @@ export function amountToSend(due_raw: string | null): bigint | null {
   return due > 0n ? ceilToWholeToken(due) : null;
 }
 
-export const priceLabel = (plan: Plan) => plan.price_raw === "0" ? "Free" : `${formatTokens(plan.price_raw, { decimals: 0, round: "up" })} MERRYMEN`;
+export const priceLabel = (plan: Plan) => plan.price_raw === "0" ? "Free" : `${formatTokens(plan.price_raw, { decimals: 0, round: "up" })} AGENTCAP`;
 export const short = (address: string) => `${address.slice(0, 6)}…${address.slice(-4)}`;
 export const formatDate = (value: string) => new Date(value).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 export const formatDateTime = (value: string) => `${new Date(value).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" })} UTC`;
@@ -444,7 +444,7 @@ export async function switchToRobinhood(provider: Eip1193): Promise<void> {
 }
 
 /**
- * Send `amount` of MERRYMEN from the signed-in wallet to the treasury and
+ * Send `amount` of AGENTCAP from the signed-in wallet to the treasury and
  * return the transaction hash. The account and chain are read again right
  * before sending (the wallet can change after the button was drawn), the
  * sender is named explicitly, and a balance that cannot cover the payment is
@@ -459,7 +459,7 @@ export async function payWithWallet({ provider, wallet, treasury, amount }: { pr
     const answer = await provider.request({ method: "eth_call", params: [{ to: TOKEN.address, data: balanceOfCalldata(wallet) }, "latest"] });
     if (typeof answer === "string" && /^0x[0-9a-fA-F]{1,64}$/.test(answer)) balance = BigInt(answer);
   } catch { /* The wallet will refuse an unaffordable transfer itself; this check only saves a failed transaction's gas. */ }
-  if (balance !== null && balance < amount) throw new PaymentRefused(`This wallet holds ${formatTokens(balance, { decimals: 2 })} MERRYMEN; this payment needs ${formatTokens(amount, { decimals: 0, round: "up" })}.`);
+  if (balance !== null && balance < amount) throw new PaymentRefused(`This wallet holds ${formatTokens(balance, { decimals: 2 })} AGENTCAP; this payment needs ${formatTokens(amount, { decimals: 0, round: "up" })}.`);
   let hash: unknown;
   try { hash = await provider.request({ method: "eth_sendTransaction", params: [{ from: wallet, to: TOKEN.address, value: "0x0", data, chainId: CHAIN_HEX }] }); } catch (e) {
     if (NOT_SENT.has(codeOf(e))) throw e;
@@ -574,8 +574,8 @@ export function waitingMessage(outcome: Extract<PaymentOutcome, { kind: "pending
 
 const REASON_HINT: Record<string, (wallet: string) => string> = {
   wrong_sender: wallet => `Only transfers from ${short(wallet)} count for this account. If you sent it from another wallet, sign in with that wallet, create its account and submit this hash there.`,
-  wrong_recipient: () => "This transfer did not go to the Merrymen payments wallet shown here.",
-  wrong_token: () => "This transaction did not move MERRYMEN.",
+  wrong_recipient: () => "This transfer did not go to the AgentCap payments wallet shown here.",
+  wrong_token: () => "This transaction did not move AGENTCAP.",
   before_start_block: () => "This transfer was made before payments opened.",
 };
 /**
@@ -617,6 +617,6 @@ export function historyLabel(item: HistoryItem, plans: Plan[]): string {
   const tier = plans.find(p => p.id === item.tier)?.name ?? item.tier ?? "Plan";
   if (item.type === "payment") return "Payment received";
   if (item.type === "reversal") return "Payment reversed by the chain";
-  if (item.type === "adjustment") return "Adjustment by Merrymen";
-  return ({ activate: `${tier} started`, renew: `${tier} renewed`, upgrade: `Upgrade to ${tier}`, comp: `${tier} from Merrymen` } as Record<string, string>)[item.reason ?? ""] ?? `${tier} charge`;
+  if (item.type === "adjustment") return "Adjustment by AgentCap";
+  return ({ activate: `${tier} started`, renew: `${tier} renewed`, upgrade: `Upgrade to ${tier}`, comp: `${tier} from AgentCap` } as Record<string, string>)[item.reason ?? ""] ?? `${tier} charge`;
 }

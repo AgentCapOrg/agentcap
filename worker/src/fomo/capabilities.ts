@@ -13,7 +13,7 @@
  *                         vendor ignores, a capped answer, a feed that stopped
  *   ENTITLEMENT_BLOCKED   the key's plan (or its credits) does not reach it
  *   UNAVAILABLE           it did not answer usefully the last time we asked
- *   UNSUPPORTED           Merrymen will not use it, whatever the vendor offers
+ *   UNSUPPORTED           AgentCap will not use it, whatever the vendor offers
  *
  * THREE RULES THE MERGE HOLDS, because a report that forgets is worse than none:
  *
@@ -64,7 +64,7 @@ const STATUSES: ReadonlySet<CapabilityStatus> = new Set([
   "UNSUPPORTED",
 ]);
 
-/** Merrymen's capability name for each client route. */
+/** AgentCap's capability name for each client route. */
 export const CAPABILITY_FOR_ROUTE: Readonly<Record<RouteName, string>> = {
   me: "account",
   leaderboard: "leaderboard",
@@ -134,8 +134,8 @@ export const DOCUMENTED_CAPABILITIES: readonly CapabilityRecord[] = [
   doc("alerts-rest", T("alerts"), "DOCUMENTED", "openapi.json GET /v2/alerts: the app feed's LARGE events only (floor near $3,000 of position value), opaque cursor checkpointing, 125 credits"),
   doc("ws-alerts", "/ws/alerts", "DOCUMENTED", "openapi.json WSS /ws/alerts: app feed on every plan, zero credits; paid keys realtime, a free key delayed 15 s after 7 days"),
   doc("ws-trades", "/ws/trades", "DOCUMENTED", "openapi.json WSS /ws/trades: on-chain stream for Growth or Scale keys only; a lower plan is refused (403, or close 1008) and is ENTITLEMENT_BLOCKED once probed; a 1008 also closes a bad key, so it blocks only when its reason names the plan"),
-  doc("trading-account", "/v2/trading/*", "UNSUPPORTED", "the vendor's order-placing account product; Merrymen keeps its own execution system and the client refuses the path"),
-  doc("credit-top-up", "/pay/create", "UNSUPPORTED", "a payment flow; Merrymen never pays through a research adapter and the client refuses the path"),
+  doc("trading-account", "/v2/trading/*", "UNSUPPORTED", "the vendor's order-placing account product; AgentCap keeps its own execution system and the client refuses the path"),
+  doc("credit-top-up", "/pay/create", "UNSUPPORTED", "a payment flow; AgentCap never pays through a research adapter and the client refuses the path"),
 ];
 
 const BASELINE: ReadonlyMap<string, CapabilityRecord> = new Map(DOCUMENTED_CAPABILITIES.map((r) => [r.capability, r]));

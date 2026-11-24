@@ -5,7 +5,7 @@ import { join } from "node:path";
 import test, { after } from "node:test";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { getActionSelector } from "@zerodev/sdk";
-import { buildWallPolicies, derivationOf, PONS_CLASS_VAULT_FACTORY, type MerrymenSettings, type StoredGrant } from "@merrymen/core";
+import { buildWallPolicies, derivationOf, PONS_CLASS_VAULT_FACTORY, type AgentCapSettings, type StoredGrant } from "@agentcap/core";
 import { partnerGrantDigest } from "../../../packages/core/src/partner-enrollment";
 import { createPartnerEnrollmentService, PARTNER_ENROLLMENT_TTL_MS, type PartnerEnrollmentDependencies } from "./partner-enrollment";
 import { FilePartnerStore, PartnerStoreError, type PartnerConnection } from "./partner-store";
@@ -24,7 +24,7 @@ const errorCode = (code: string) => (error: unknown) => error instanceof Partner
 
 async function fixture(overrides: Partial<PartnerEnrollmentDependencies> = {}) {
   let now = 1_800_000_000_000;
-  const home = mkdtempSync(join(tmpdir(), "merrymen-enrollment-"));
+  const home = mkdtempSync(join(tmpdir(), "agentcap-enrollment-"));
   // Short lock waits: a contention test should not sit out the production bound.
   const store = new FilePartnerStore(home, () => Math.floor(now / 1000), () => SECRET, { conversation: 100, enrollment: 100 });
   fixtures.push({ store, home });
@@ -47,7 +47,7 @@ async function fixture(overrides: Partial<PartnerEnrollmentDependencies> = {}) {
   };
   const created = await store.create({ partnerId: principal.app_id, partnerName: principal.name, externalUserId: "external-user", name: "Robin", scopes: ["read:agents", "chat:agents"] });
   const savedGrants = new Map<string, StoredGrant>();
-  const savedSettings = new Map<string, MerrymenSettings>();
+  const savedSettings = new Map<string, AgentCapSettings>();
   const events: string[] = [];
   const deps: PartnerEnrollmentDependencies = {
     store, now: () => now, secret: () => SECRET,
@@ -301,7 +301,7 @@ test("a partner cannot seal its own adapter, vault, route or token, even inside 
   }
   assert.equal(spent, 0, "refused before the single-use nonce");
   assert.equal(f.events.length, 0);
-  // What prepareMerryman mints from owner, caps and chain alone still activates.
+  // What prepareAgentCapAvatar mints from owner, caps and chain alone still activates.
   const plain = await f.service.activate(principal, f.connection, await f.activationFor({ ...f.grant, grantTokens: [] }));
   assert.equal(plain.connection.status, "linked");
 });

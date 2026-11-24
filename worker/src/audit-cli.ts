@@ -1,14 +1,14 @@
 /**
- * `merrymen export` and `merrymen verify` — the two commands that make the
+ * `agentcap export` and `agentcap verify` — the two commands that make the
  * README's "verifiable, not claimed" true rather than aspirational.
  *
  * The pair is meant to be used by someone who does not trust the operator:
  *
- *   merrymen export > ledger.jsonl        # run by the operator
- *   merrymen verify ledger.jsonl          # run by anyone, anywhere
+ *   agentcap export > ledger.jsonl        # run by the operator
+ *   agentcap verify ledger.jsonl          # run by anyone, anywhere
  *
  * `verify` deliberately reads NOTHING but the file it is handed. It does not
- * open ~/.merrymen, does not consult settings, and does not care which machine
+ * open ~/.agentcap, does not consult settings, and does not care which machine
  * produced the export — otherwise it would only be checking the operator's
  * ledger against itself, which proves nothing.
  */
@@ -98,7 +98,7 @@ async function doExport(): Promise<void> {
   const { chainId, usdgToken } = await exportContext(agentId);
   process.stdout.write(
     JSON.stringify({
-      format: "merrymen-journal",
+      format: "agentcap-journal",
       version: 1,
       agentId,
       epoch,
@@ -132,7 +132,7 @@ function readExport(file: string): { header: Record<string, unknown>; entries: E
   } catch {
     return fail(`${file}: first line is not the export header`);
   }
-  if (header.format !== "merrymen-journal") fail(`${file}: not a merrymen journal export`);
+  if (header.format !== "agentcap-journal") fail(`${file}: not a agentcap journal export`);
   const entries: ExportedEntry[] = [];
   for (let i = 1; i < lines.length; i++) {
     try {
@@ -163,10 +163,10 @@ async function rpcCall(url: string, method: string, params: unknown[]): Promise<
 
 async function doVerify(): Promise<void> {
   const file = args[1];
-  if (!file) fail("usage: merrymen verify <ledger.jsonl> [--rpc <url>]");
+  if (!file) fail("usage: agentcap verify <ledger.jsonl> [--rpc <url>]");
   const { header, entries } = readExport(file);
 
-  console.log(`\n  merrymen ledger — agent ${header.agentId}, epoch ${header.epoch}`);
+  console.log(`\n  agentcap ledger — agent ${header.agentId}, epoch ${header.epoch}`);
   console.log(`  ${entries.length} record(s)\n`);
 
   // ── 1. tamper evidence ────────────────────────────────────────────────

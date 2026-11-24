@@ -1,12 +1,12 @@
 #!/bin/sh
 # The hosted image's start step: ONE image, FOUR roles, picked per Railway
-# service by MERRYMEN_START. The Dockerfile runs it as
+# service by AGENTCAP_START. The Dockerfile runs it as
 #
 #   /usr/bin/tini -- /bin/sh /app/scripts/container-start.sh
 #
 # WHY THIS FILE EXISTS INSTEAD OF `sh -c "npm run …"`.
 #
-# The image used to start with CMD ["sh", "-c", "npm run ${MERRYMEN_START…}"],
+# The image used to start with CMD ["sh", "-c", "npm run ${AGENTCAP_START…}"],
 # which put a shell, npm and npm's own `sh -c` between PID 1 and node. Railway
 # stops a deployment by sending SIGTERM to PID 1 — and PID 1 is the one process
 # the kernel gives no default signal action: a signal it has no handler for is
@@ -45,7 +45,7 @@ set -eu
 # supervisor about to come up as a dashboard: green, healthy-looking, and with
 # the fleet it should be running simply gone. `:-` would do exactly that, and
 # quietly. `-` lets the empty string fall through to the refusal below.
-role=${MERRYMEN_START-start:web}
+role=${AGENTCAP_START-start:web}
 
 # Which build this is, for the one line every start prints. Railway sets the
 # variable at runtime; anything that is not a hex SHA is reported as unknown
@@ -110,9 +110,9 @@ case $role in
     # loud failure instead of the wrong role running green. The value itself is
     # not printed: it is whatever was pasted into the variable.
     if [ -z "$role" ]; then
-      echo "[start] refused: MERRYMEN_START is set but empty — delete it for the web role, or name one of: start:web start:orchestrator start:recovery-replies start:solana" >&2
+      echo "[start] refused: AGENTCAP_START is set but empty — delete it for the web role, or name one of: start:web start:orchestrator start:recovery-replies start:solana" >&2
     else
-      echo "[start] refused: MERRYMEN_START is not one of: start:web start:orchestrator start:recovery-replies start:solana" >&2
+      echo "[start] refused: AGENTCAP_START is not one of: start:web start:orchestrator start:recovery-replies start:solana" >&2
     fi
     exit 64
     ;;

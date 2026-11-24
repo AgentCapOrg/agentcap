@@ -76,8 +76,8 @@ does not import or start the orchestrator, worker, web server or trading loop.
 
 ```sh
 node --import tsx --test worker/src/memory-safeguard.test.ts worker/src/ledger-safeguard.test.ts
-node_modules/.bin/esbuild worker/src/memory-safeguard-cli.ts --bundle --platform=node --format=esm --packages=external --outfile=/tmp/merrymen-memory-safeguard.mjs
-shasum -a 256 /tmp/merrymen-memory-safeguard.mjs
+node_modules/.bin/esbuild worker/src/memory-safeguard-cli.ts --bundle --platform=node --format=esm --packages=external --outfile=/tmp/agentcap-memory-safeguard.mjs
+shasum -a 256 /tmp/agentcap-memory-safeguard.mjs
 ```
 
 The opt-in `memory-safeguard.postgres.test.ts` uses an explicit loopback-only
@@ -106,9 +106,9 @@ the bundled CLI in that same repository-root layout against an encrypted fixture
 2. Optionally run `capture` without `--quiescent` for an encrypted live backup.
    Its bounded reads can span live writes across files; it cannot prove a
    lossless final handover and cannot be seeded. Use a unique output
-   filename. The home is resolved through the normal `merrymenHome()` fallback,
-   so `MERRYMEN_HOME` need not be configured.
-3. Create the existing `<merrymenHome()>/FLEET_HALT` marker after approval. Record
+   filename. The home is resolved through the normal `agentcapHome()` fallback,
+   so `AGENTCAP_HOME` need not be configured.
+3. Create the existing `<agentcapHome()>/FLEET_HALT` marker after approval. Record
    whether it already existed; never overwrite a pre-existing halt. Use a unique
    operation token if this procedure creates it, and record its inode and exact
    text for the approved rollback below. Let
@@ -179,15 +179,15 @@ another approval question; completed mirror batches remain safe to retry.
 ## One-shot original-book handover to persistent storage
 
 Ordinary deployments must reuse a verified Railway volume. The fleet's
-`MERRYMEN_HOME` must exactly equal `RAILWAY_VOLUME_MOUNT_PATH`, with
-`MERRYMEN_PERSISTENT_HOME_REQUIRED=1` and an operator-pinned provider UUID in
-`MERRYMEN_HOME_VOLUME_ID`. The code verifies the actual writable kernel mount,
+`AGENTCAP_HOME` must exactly equal `RAILWAY_VOLUME_MOUNT_PATH`, with
+`AGENTCAP_PERSISTENT_HOME_REQUIRED=1` and an operator-pinned provider UUID in
+`AGENTCAP_HOME_VOLUME_ID`. The code verifies the actual writable kernel mount,
 private plain directories, no nested mounts and a durable volume manifest.
 Provider UUID and inode identity persist across starts; device numbers are
 checked within each current mount namespace. No container-overlay fallback is
 accepted when this feature is required.
 
-A first **empty** volume additionally requires `MERRYMEN_INITIAL_HANDOVER`.
+A first **empty** volume additionally requires `AGENTCAP_INITIAL_HANDOVER`.
 Before any ordinary writer, the orchestrator creates and syncs its own
 `FLEET_HALT` and manifest. It never clears that hold automatically. Existing
 data without a manifest, a different volume, a replaced halt or a partial first
@@ -245,7 +245,7 @@ unchanged accounting; the tenant remains unable to bootstrap, mirror or trade
 until separate reviewed financial recovery. An existing rebuilt book with
 missing witnesses does **not** qualify as an absent-book gap.
 
-Run the one-shot tool with explicit `MERRYMEN_HOME` on the source, even when the
+Run the one-shot tool with explicit `AGENTCAP_HOME` on the source, even when the
 old service normally derives its home from the OS. All mutating/verification
 modes require `--quiescent --single-replica-confirmed`, the current
 `--expected-deployment`, `--expected-commit` and `--orchestrator-pid`.

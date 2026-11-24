@@ -1,11 +1,11 @@
 import path from "node:path";
 import { existsSync } from "node:fs";
 import { NextResponse } from "next/server";
-import { isHostedMode } from "@merrymen/core";
+import { isHostedMode } from "@agentcap/core";
 import { hostedAgentFor, diskAgent } from "@/lib/agent-for";
 import { withReadDb } from "@/lib/ledger";
 import { readTradePnl } from "@/lib/trade-pnl";
-import { renderPnlCard } from "@merrymen/pnl-card";
+import { renderPnlCard } from "@agentcap/pnl-card";
 import { walletNotSupported } from "@/lib/route-guard";
 
 /** Private PNG of an evidenced live sell, using the same house card as Telegram. */

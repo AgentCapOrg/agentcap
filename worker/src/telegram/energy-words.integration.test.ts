@@ -4,7 +4,7 @@
  * Both chat prompts (the narrator and the answer loop) carry one rule about
  * energy, and the answer loop's agent_status lookup carries the same line
  * /status does, from the worker's own report. And nothing on Telegram's
- * command side special-cases $MERRYMEN: a "buy merrymen" is the ordinary buy,
+ * command side special-cases $AGENTCAP: a "buy agentcap" is the ordinary buy,
  * which the worker's order path refuses with a pointer to the app chat — no
  * energy command, no buy button, no parked action (design D6).
  *
@@ -18,9 +18,9 @@ import { after, before, describe, it } from "node:test";
 
 import type { EnergyStatus } from "../../../packages/core/src/index";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-energy-words-"));
-process.env.MERRYMEN_HOME = HOME;
-process.env.MERRYMEN_HOSTED = "1";
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-energy-words-"));
+process.env.AGENTCAP_HOME = HOME;
+process.env.AGENTCAP_HOSTED = "1";
 
 const { closeStoreForTest, initStore } = await import("../store");
 const { toolByName } = await import("./chat-tools");
@@ -78,16 +78,16 @@ describe("the rule both chat prompts carry", () => {
     assert.match(ENERGY_WORDS, /never that selling in general is unaffected/);
     assert.doesNotMatch(ENERGY_WORDS, /Selling[^.]*NEVER limited/, "the old, false promise");
     assert.match(ENERGY_WORDS, /never that they hold nothing/);
-    assert.match(ENERGY_WORDS, /100,000 \$MERRYMEN/);
+    assert.match(ENERGY_WORDS, /100,000 \$AGENTCAP/);
   });
 
   it("ON ANOTHER NETWORK only their own wallet counts — never /wallet, never the app-chat buy", () => {
     assert.match(ENERGY_WORDS, /IF THE LINE SAYS YOUR ACCOUNT IS ON ANOTHER NETWORK, only their own wallet on Robinhood Chain counts/);
-    assert.match(ENERGY_WORDS, /never point them at \/wallet for \$MERRYMEN, never suggest sending anything to your account, and do not offer the app-chat buy/);
+    assert.match(ENERGY_WORDS, /never point them at \/wallet for \$AGENTCAP, never suggest sending anything to your account, and do not offer the app-chat buy/);
   });
 
   it("the buy is the app chat's, the address is /wallet's, and nothing is said about price", () => {
-    assert.match(ENERGY_WORDS, /Merrymen app chat/);
+    assert.match(ENERGY_WORDS, /AgentCap app chat/);
     assert.match(ENERGY_WORDS, /you never buy it from Telegram/);
     assert.match(ENERGY_WORDS, /NEVER TYPE AN ADDRESS/);
     assert.match(ENERGY_WORDS, /\/wallet/);
@@ -103,15 +103,15 @@ describe("the rule both chat prompts carry", () => {
   });
 });
 
-describe("Telegram never special-cases $MERRYMEN into a trade", () => {
+describe("Telegram never special-cases $AGENTCAP into a trade", () => {
   const read = (f: string) => readFileSync(new URL(`./${f}`, import.meta.url), "utf8");
-  // The TICKER (upper case — "merrymen" is also the band's name) and the word
-  // energy. MERRYMEN_HOSTED and friends are environment names, not the token.
-  const special = (s: string) => /\bMERRYMEN\b(?!_)/.test(s) || /\benergy\b/i.test(s);
+  // The TICKER (upper case — "agentcap" is also the band's name) and the word
+  // energy. AGENTCAP_HOSTED and friends are environment names, not the token.
+  const special = (s: string) => /\bAGENTCAP\b(?!_)/.test(s) || /\benergy\b/i.test(s);
 
   it("the executor, the poll service and the confirm buttons know nothing of it", () => {
     for (const f of ["executor.ts", "service.ts", "buttons.ts"]) {
-      assert.ok(!special(read(f)), `${f} must not route $MERRYMEN or energy anywhere`);
+      assert.ok(!special(read(f)), `${f} must not route $AGENTCAP or energy anywhere`);
     }
   });
 

@@ -31,9 +31,9 @@ test("one tenant looping owner requests is paced per bucket; other tenants and t
 const tenant = `0x${"d4".repeat(20)}` as const, owner = "So11111111111111111111111111111111111111112";
 const ran: string[] = [];
 const routes: Record<string, (req: Request) => Promise<Response>> = {};
-const flag = process.env.MERRYMEN_SOLANA;
+const flag = process.env.AGENTCAP_SOLANA;
 before(() => {
-  process.env.MERRYMEN_SOLANA = "1";
+  process.env.AGENTCAP_SOLANA = "1";
   const base = fileURLToPath(new URL("../", import.meta.url));
   const loader = Module as unknown as { _load: (id: string, parent: { filename?: string }, isMain: boolean) => unknown };
   const original = loader._load;
@@ -54,7 +54,7 @@ before(() => {
     for (const route of ["owner", "setup"]) routes[route] = (createRequire(import.meta.url)(`${base}${route}/route.ts`) as { POST: (req: Request) => Promise<Response> }).POST;
   } finally { interception.mock.restore(); }
 });
-after(() => { if (flag === undefined) delete process.env.MERRYMEN_SOLANA; else process.env.MERRYMEN_SOLANA = flag; });
+after(() => { if (flag === undefined) delete process.env.AGENTCAP_SOLANA; else process.env.AGENTCAP_SOLANA = flag; });
 beforeEach(() => { ran.length = 0; });
 const post = (route: string, body: unknown) => routes[route]!(new Request(`https://app.example.test/api/solana/${route}`, { method: "POST", body: JSON.stringify(body) }));
 const statuses = async (route: string, body: unknown, times: number) => { const codes: number[] = []; for (let i = 0; i < times; i++) codes.push((await post(route, body)).status); return codes; };

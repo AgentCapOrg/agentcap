@@ -13,7 +13,7 @@
  * claims kept in node:sqlite (setBotClaimsDbForTest): the same SQL the shared
  * Postgres runs.
  *
- * MERRYMEN_HOME is per process (node --test forks per file), so this never
+ * AGENTCAP_HOME is per process (node --test forks per file), so this never
  * leaks into another test file.
  */
 import assert from "node:assert/strict";
@@ -26,12 +26,12 @@ import { after, describe, it, mock } from "node:test";
 import type { ChildProcess, SpawnOptions } from "node:child_process";
 import type { StoredGrant } from "../../packages/core/src/index";
 
-const FLEET = mkdtempSync(path.join(os.tmpdir(), "merrymen-bot-claims-"));
-process.env.MERRYMEN_HOME = FLEET;
-process.env.MERRYMEN_HOSTED = "1";
+const FLEET = mkdtempSync(path.join(os.tmpdir(), "agentcap-bot-claims-"));
+process.env.AGENTCAP_HOME = FLEET;
+process.env.AGENTCAP_HOSTED = "1";
 delete process.env.DATABASE_URL;
-delete process.env.MERRYMEN_TELEGRAM_ENABLED;
-process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 5).toString("base64");
+delete process.env.AGENTCAP_TELEGRAM_ENABLED;
+process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 5).toString("base64");
 
 const { reconcile, childHome, setSpawnForTest, setBotClaimsDbForTest, setBotConfirmForTest } = await import("./orchestrator");
 const { getGrantStore } = await import("./grant-store");
@@ -85,7 +85,7 @@ class FakeProc extends EventEmitter {
 /** Each spawn, with the bot token its settings.json held at that moment. */
 const spawnedWith = new Map<string, string | undefined>();
 setSpawnForTest(((_cmd: string, _args: readonly string[], opts: SpawnOptions) => {
-  const home = String(opts.env?.MERRYMEN_HOME);
+  const home = String(opts.env?.AGENTCAP_HOME);
   const file = JSON.parse(readFileSync(path.join(home, "settings.json"), "utf8")) as { telegramBotToken?: string };
   spawnedWith.set(path.basename(home), file.telegramBotToken);
   return new FakeProc() as unknown as ChildProcess;

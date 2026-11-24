@@ -5,7 +5,7 @@
  * this browser's storage and the server. Each of these is a rule a slip would
  * break silently:
  *
- * - SPOT'S STORAGE SLOT IS `merrymen.grant.v1`, BYTE FOR BYTE. Every owner who
+ * - SPOT'S STORAGE SLOT IS `agentcap.grant.v1`, BYTE FOR BYTE. Every owner who
  *   signed before Perps has their grant there, and for a legacy owner it is the
  *   only copy of the owner key: a renamed slot is a wallet the page cannot find.
  *   Perps has a slot of its own, so neither wallet's mint overwrites, archives
@@ -31,7 +31,7 @@ import { privateKeyToAccount } from "viem/accounts";
 // FIRST, before ./session: the fixture pins the Trencher factory's trusted
 // bytecode hash in the environment, which trencher-permission.ts reads once.
 import { TEST_CAPS, withStubChain } from "./canonical-wall-fixture";
-import { GRANT_PERP_LIGHTER, LIGHTER_ROUTE_V1, type GrantPurpose, type StoredGrant } from "@merrymen/core";
+import { GRANT_PERP_LIGHTER, LIGHTER_ROUTE_V1, type GrantPurpose, type StoredGrant } from "@agentcap/core";
 import { issueChallengeNonce, verifyGrantBinding } from "./auth";
 import {
   clearGrant,
@@ -45,17 +45,17 @@ import {
   type MintOptions,
 } from "./session";
 
-const ORIGIN = "https://app.merrymen.dev";
+const ORIGIN = "https://app.agentcap.xyz";
 const SPOT_ACCOUNT = "0x000000000000000000000000000000000005b071" as const;
 const PERPS_ACCOUNT = "0x00000000000000000000000000000000000e1e1e" as const;
 const owner = privateKeyToAccount(`0x${"42".repeat(32)}`);
 const DID = "did:privy:two-wallets";
 
-const savedEnv = new Map(["MERRYMEN_HOME", "MERRYMEN_SESSION_SECRET", "MERRYMEN_HOSTED", "DATABASE_URL"].map((k) => [k, process.env[k]]));
-const home = mkdtempSync(join(tmpdir(), "merrymen-session-wallets-"));
-process.env.MERRYMEN_HOME = home;
-process.env.MERRYMEN_SESSION_SECRET = "disposable-session-wallets-test-secret-32-chars";
-delete process.env.MERRYMEN_HOSTED;
+const savedEnv = new Map(["AGENTCAP_HOME", "AGENTCAP_SESSION_SECRET", "AGENTCAP_HOSTED", "DATABASE_URL"].map((k) => [k, process.env[k]]));
+const home = mkdtempSync(join(tmpdir(), "agentcap-session-wallets-"));
+process.env.AGENTCAP_HOME = home;
+process.env.AGENTCAP_SESSION_SECRET = "disposable-session-wallets-test-secret-32-chars";
+delete process.env.AGENTCAP_HOSTED;
 delete process.env.DATABASE_URL;
 
 const originalFetch = globalThis.fetch;
@@ -75,30 +75,30 @@ after(() => {
   rmSync(home, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
 });
 
-/** A grant as a browser saved it before Perps existed: no purpose, under merrymen.grant.v1. */
+/** A grant as a browser saved it before Perps existed: no purpose, under agentcap.grant.v1. */
 const PRE_PERPS = JSON.stringify({
   smartAccount: `0x${"a".repeat(40)}`, owner: `0x${"b".repeat(40)}`, chainId: 4663, demoOwnerPrivateKey: `0x${"1".repeat(64)}`,
   caps: TEST_CAPS, grantedAt: 1, expiresAt: 2, grantFeatures: ["tradeable-v2"],
 });
 
 describe("the storage slots", () => {
-  it("SPOT'S SLOT IS merrymen.grant.v1: a grant saved before Perps is still the Spot wallet's, and never the Perps wallet's", () => {
-    localStorage.setItem("merrymen.grant.v1", PRE_PERPS);
+  it("SPOT'S SLOT IS agentcap.grant.v1: a grant saved before Perps is still the Spot wallet's, and never the Perps wallet's", () => {
+    localStorage.setItem("agentcap.grant.v1", PRE_PERPS);
     assert.deepEqual(loadGrant("spot"), JSON.parse(PRE_PERPS));
     assert.equal(loadGrant("perps"), null);
     assert.deepEqual(listSavedWallets("spot").map((w) => [w.smartAccount, w.current]), [[`0x${"a".repeat(40)}`, true]]);
     assert.deepEqual(listSavedWallets("perps"), []);
     assert.deepEqual(localGrantsSnapshot("spot"), { current: JSON.parse(PRE_PERPS), archived: [] });
     assert.deepEqual(localGrantsSnapshot("perps"), { current: undefined, archived: [] });
-    assert.equal(localStorage.getItem("merrymen.grant.v1"), PRE_PERPS, "reading never rewrites it");
+    assert.equal(localStorage.getItem("agentcap.grant.v1"), PRE_PERPS, "reading never rewrites it");
   });
 
   it("each wallet reads its own slot and its own archives; a Perps grant in Spot's slot is nobody's Spot grant", () => {
     const perps = { purpose: "perps", smartAccount: PERPS_ACCOUNT, owner: owner.address, chainId: 4663, caps: TEST_CAPS, grantFeatures: [] };
     const archivedPerps = { ...perps, smartAccount: `0x${"c".repeat(40)}` };
-    localStorage.setItem("merrymen.grant.v1", PRE_PERPS);
-    localStorage.setItem("merrymen.grant.perps.v1", JSON.stringify(perps));
-    localStorage.setItem(`merrymen.grant.archive.${archivedPerps.smartAccount}`, JSON.stringify(archivedPerps));
+    localStorage.setItem("agentcap.grant.v1", PRE_PERPS);
+    localStorage.setItem("agentcap.grant.perps.v1", JSON.stringify(perps));
+    localStorage.setItem(`agentcap.grant.archive.${archivedPerps.smartAccount}`, JSON.stringify(archivedPerps));
     assert.equal(loadGrant("perps")?.smartAccount, PERPS_ACCOUNT);
     assert.equal(loadGrant("spot")?.smartAccount, `0x${"a".repeat(40)}`);
     assert.deepEqual(listSavedWallets("perps").map((w) => [w.smartAccount, w.current]), [[PERPS_ACCOUNT, true], [archivedPerps.smartAccount, false]]);
@@ -106,7 +106,7 @@ describe("the storage slots", () => {
     assert.deepEqual(localGrantsSnapshot("perps").archived, [archivedPerps]);
     assert.deepEqual(localGrantsSnapshot("spot").archived, []);
     // The two slots are not interchangeable.
-    localStorage.setItem("merrymen.grant.v1", JSON.stringify(perps));
+    localStorage.setItem("agentcap.grant.v1", JSON.stringify(perps));
     assert.equal(loadGrant("spot"), null);
     assert.equal(localGrantsSnapshot("spot").current, undefined);
     // A wallet this build does not know reads nothing.
@@ -146,7 +146,7 @@ const verifyFor = (g: Grant, purpose: GrantPurpose) =>
   });
 
 describe("a mint for each wallet", () => {
-  it("SPOT: posts to /api/grants exactly, binds a Spot claim, and saves under merrymen.grant.v1", async () => {
+  it("SPOT: posts to /api/grants exactly, binds a Spot claim, and saves under agentcap.grant.v1", async () => {
     const { minted, posts } = await mint(undefined, SPOT_ACCOUNT);
     assert.deepEqual(posts.map((p) => p.url), ["/api/grants"]);
     const posted = posts[0]!.body;
@@ -155,12 +155,12 @@ describe("a mint for each wallet", () => {
     // first: a failed signature check spends no nonce.
     assert.equal((await verifyFor(posted, "perps")).ok, false, "a Spot claim replayed as Perps");
     assert.equal((await verifyFor(posted, "spot")).ok, true);
-    assert.equal(JSON.parse(localStorage.getItem("merrymen.grant.v1")!).smartAccount, minted.local.smartAccount);
-    assert.equal(localStorage.getItem("merrymen.grant.perps.v1"), null);
+    assert.equal(JSON.parse(localStorage.getItem("agentcap.grant.v1")!).smartAccount, minted.local.smartAccount);
+    assert.equal(localStorage.getItem("agentcap.grant.perps.v1"), null);
   });
 
   it("PERPS: derives index 1, binds a Perps claim, posts to ?wallet=perps, and saves in its own slot, leaving Spot's byte for byte", async () => {
-    localStorage.setItem("merrymen.grant.v1", PRE_PERPS);
+    localStorage.setItem("agentcap.grant.v1", PRE_PERPS);
     const { minted, posts } = await mint("perps", PERPS_ACCOUNT);
     assert.deepEqual(posts.map((p) => p.url), ["/api/grants?wallet=perps"]);
     const posted = posts[0]!.body as StoredGrant;
@@ -172,9 +172,9 @@ describe("a mint for each wallet", () => {
     // Bound to the Perps wallet: replayed as Spot it recovers to nobody.
     assert.equal((await verifyFor(posted, "spot")).ok, false, "a Perps claim replayed as Spot");
     assert.equal((await verifyFor(posted, "perps")).ok, true);
-    assert.equal(JSON.parse(localStorage.getItem("merrymen.grant.perps.v1")!).smartAccount, minted.local.smartAccount);
-    assert.equal(localStorage.getItem("merrymen.grant.v1"), PRE_PERPS, "the Spot wallet's grant is untouched");
-    assert.equal(localStorage.getItem(`merrymen.grant.archive.0x${"a".repeat(40)}`), null, "and not archived either: nothing replaced it");
+    assert.equal(JSON.parse(localStorage.getItem("agentcap.grant.perps.v1")!).smartAccount, minted.local.smartAccount);
+    assert.equal(localStorage.getItem("agentcap.grant.v1"), PRE_PERPS, "the Spot wallet's grant is untouched");
+    assert.equal(localStorage.getItem(`agentcap.grant.archive.0x${"a".repeat(40)}`), null, "and not archived either: nothing replaced it");
   });
 
   it("a Perps mint reads only the Perps wallet's grants: the Spot wallet's armed grant is not 'another account' to it", async () => {
@@ -182,7 +182,7 @@ describe("a mint for each wallet", () => {
     // perp block). Signing a NEW Spot account would replace it, so a Spot
     // mint refuses (perp-other-account); a Perps mint replaces nothing of
     // Spot's, and its snapshot (localGrantsSnapshot("perps")) never sees it.
-    localStorage.setItem("merrymen.grant.v1", JSON.stringify({
+    localStorage.setItem("agentcap.grant.v1", JSON.stringify({
       ...JSON.parse(PRE_PERPS),
       grantFeatures: ["tradeable-v2", GRANT_PERP_LIGHTER],
       perp: { route: GRANT_PERP_LIGHTER, apiKeyIndex: LIGHTER_ROUTE_V1.apiKeyIndex, apiPublicKey: `0x${"1a".repeat(40)}` },
@@ -235,7 +235,7 @@ describe("how the signer names a wallet in a URL", () => {
 
 it("a rejected post-approval authority check preserves both saved wallets and makes no grant POST", async () => {
   await mint("perps", PERPS_ACCOUNT);
-  localStorage.setItem("merrymen.grant.v1", PRE_PERPS);
+  localStorage.setItem("agentcap.grant.v1", PRE_PERPS);
   const snapshot = Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i)!).sort().map(key => [key, localStorage.getItem(key)]);
   let checked = false;
   await assert.rejects(mint("perps", PERPS_ACCOUNT, { beforeCommit: async () => { checked = true; throw new Error("screen closed after approval"); } }), /screen closed after approval/);

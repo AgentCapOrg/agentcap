@@ -32,7 +32,7 @@ import {
   riskWarning,
   understandSettingsText,
   type Proposal,
-} from "@merrymen/core";
+} from "@agentcap/core";
 
 export interface SettingsProposalProps {
   /** The saved values, as GET /api/settings returned them. */

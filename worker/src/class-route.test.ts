@@ -57,7 +57,7 @@ describe("the side is derived, then confirmed", () => {
 
   it("refuses when both or neither leg is enumerated", () => {
     // Both means it should have gone to the adapter; neither means checkPolicy
-    // should already have refused. A merrymen fault either way, and refused
+    // should already have refused. A agentcap fault either way, and refused
     // rather than guessed.
     assert.match(ARM, /class-side-ambiguous/);
   });

@@ -4,7 +4,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Governance — the Merry Circle",
   description:
-    "How $MERRYMEN holders steer the merrymen roadmap: tier-weighted signalling on which tokens join the basket, which strategies ship, and how fees are set.",
+    "How $AGENTCAP holders steer the agentcap roadmap: tier-weighted signalling on which tokens join the basket, which strategies ship, and how fees are set.",
 };
 
 const WEIGHTS = [
@@ -38,7 +38,7 @@ export default function GovernancePage() {
       <article className="doc-body">
         <h1>Governance</h1>
         <p className="doc-lead">
-          The band rides where the Circle points it. $MERRYMEN holders steer the roadmap; your tier is
+          The band rides where the Circle points it. $AGENTCAP holders steer the roadmap; your tier is
           your weight.
         </p>
 
@@ -76,7 +76,7 @@ export default function GovernancePage() {
           ))}
         </div>
         <p style={{ marginTop: 8 }}>
-          Weight is read from the $MERRYMEN balance at your holder wallet — verifiable, not
+          Weight is read from the $AGENTCAP balance at your holder wallet — verifiable, not
           self-reported. See the tiers in full on the{" "}
           <Link className="link" href="/token">
             token page
@@ -100,10 +100,10 @@ export default function GovernancePage() {
 
         <h2>How to take part</h2>
         <ol>
-          <li>Hold $MERRYMEN and set your holder wallet in the dashboard&apos;s Merry Circle panel.</li>
+          <li>Hold $AGENTCAP and set your holder wallet in the dashboard&apos;s Merry Circle panel.</li>
           <li>
             Join the discussion on{" "}
-            <a className="link" href="https://x.com/MerrymenAI" target="_blank" rel="noreferrer">
+            <a className="link" href="https://x.com/AgentCapAI" target="_blank" rel="noreferrer">
               X
             </a>{" "}
             and in the holders&apos; channel, and weigh in on the open round.

@@ -36,8 +36,8 @@
  */
 
 import { createPublicClient, erc20Abi, formatUnits, http, type Address, type Chain } from "viem";
-import { robinhoodChain, robinhoodTestnet } from "@merrymen/core";
-import { classifyBalance, ownerFromAddress, planRecovery, sweepList } from "@merrymen/recover";
+import { robinhoodChain, robinhoodTestnet } from "@agentcap/core";
+import { classifyBalance, ownerFromAddress, planRecovery, sweepList } from "@agentcap/recover";
 
 export interface Holding {
   symbol: string;

@@ -206,10 +206,10 @@ describe("docs/tg-groups.md Scenarios, through the group handler", () => {
   };
   const fakeModel = (reply: () => string | { status: number; body: string }): Array<{ system: string; prompt: string }> => {
     envVars = {
-      MERRYMEN_TG_GROUPS_LLM_KEY: "k-test",
-      MERRYMEN_TG_GROUPS_LLM_PROVIDER: "openai",
-      MERRYMEN_TG_GROUPS_LLM_BASE_URL: "https://llm.test/v1",
-      MERRYMEN_TG_GROUPS_MODEL: "fake",
+      AGENTCAP_TG_GROUPS_LLM_KEY: "k-test",
+      AGENTCAP_TG_GROUPS_LLM_PROVIDER: "openai",
+      AGENTCAP_TG_GROUPS_LLM_BASE_URL: "https://llm.test/v1",
+      AGENTCAP_TG_GROUPS_MODEL: "fake",
     };
     const seen: Array<{ system: string; prompt: string }> = [];
     globalThis.fetch = (async (_url: string, init: { body: string }) => {
@@ -601,7 +601,7 @@ describe("docs/tg-groups.md Scenarios, through the group handler", () => {
     assert.match(plain(t[1] ?? ""), /one at a time|still on the last|chewing|slow down|hold up/);
   });
 
-  it("Its own address / USDG / $MERRYMEN / a stock → casual one-liner, no look beyond the quick one", async () => {
+  it("Its own address / USDG / $AGENTCAP / a stock → casual one-liner, no look beyond the quick one", async () => {
     make();
     approve();
     // Different people: one person's fourth CA in two minutes is the flood (a 👀 at most).
@@ -857,7 +857,7 @@ describe("docs/tg-groups.md Scenarios, through the group handler", () => {
     const TITLE = "lust rage mode (the redemption)";
     const ROSE = 515151;
     const XFYT = 616161;
-    const WELCOME = "Hey there Merryman, and welcome to lust rage mode (the redemption)! How are you?";
+    const WELCOME = "Hey there AgentCapAvatar, and welcome to lust rage mode (the redemption)! How are you?";
     const inLive = (text: string, over: Partial<TgMessage>): TgMessage => msg(text, { chatId: LIVE, chatTitle: TITLE, ...over });
     make();
 
@@ -1336,7 +1336,7 @@ describe("docs/tg-groups.md Scenarios, through the group handler", () => {
 
   it("'when I sent a ca she stopped responding': the owner in a Pons group posts bonding-curve CA after CA, chatting and calling it by name between → every CA its curve line, every line its answer", async () => {
     const logs: string[] = [];
-    make({ self: () => ({ ...BOT, name: "Robin", aliases: ["Merryman"] }), log: (l) => logs.push(l) });
+    make({ self: () => ({ ...BOT, name: "Robin", aliases: ["AgentCapAvatar"] }), log: (l) => logs.push(l) });
     approve();
     const milla = (text: string): TgMessage => msg(text, { fromId: OWNER, fromFirstName: "Milla" });
     const names = ["AppShare", "Froggy", "Moonpie", "Rocket", "Pumpkin", "Zebra", "Lambo", "Kitten"];
@@ -1366,7 +1366,7 @@ describe("docs/tg-groups.md Scenarios, through the group handler", () => {
     ["Robin", ["Robin you there", "robin what do you think", "what do you think robin"], ["robin hood chain is pumping", "anyone bridged to robin yet"]],
   ] as const) {
     it(`'she should reply to chats mentioning their names': "${calls.join('", "')}" → answered, for an agent called ${name}; "${notCalls.join('", "')}" → not a call`, async () => {
-      make({ self: () => ({ ...BOT, name, aliases: ["Merryman"] }) });
+      make({ self: () => ({ ...BOT, name, aliases: ["AgentCapAvatar"] }) });
       approve();
       for (const [i, text] of calls.entries()) {
         const m = msg(text, i % 2 === 0 ? { fromId: OWNER, fromFirstName: "Milla" } : {});
@@ -1455,12 +1455,12 @@ describe("docs/tg-groups.md Scenarios, through the poll service", () => {
   });
 
   before(() => {
-    for (const k of ["MERRYMEN_HOME", "MERRYMEN_SETTINGS_FILE", "MERRYMEN_HOSTED", "MERRYMEN_TG_GROUPS_LLM_KEY"]) saved[k] = process.env[k];
+    for (const k of ["AGENTCAP_HOME", "AGENTCAP_SETTINGS_FILE", "AGENTCAP_HOSTED", "AGENTCAP_TG_GROUPS_LLM_KEY"]) saved[k] = process.env[k];
     home = mkdtempSync(path.join(tmpdir(), "tg-service-"));
-    process.env.MERRYMEN_HOME = home;
-    process.env.MERRYMEN_SETTINGS_FILE = path.join(home, "settings.json");
-    delete process.env.MERRYMEN_HOSTED;
-    delete process.env.MERRYMEN_TG_GROUPS_LLM_KEY;
+    process.env.AGENTCAP_HOME = home;
+    process.env.AGENTCAP_SETTINGS_FILE = path.join(home, "settings.json");
+    delete process.env.AGENTCAP_HOSTED;
+    delete process.env.AGENTCAP_TG_GROUPS_LLM_KEY;
     globalThis.fetch = tgFetch as never;
     clock = T0;
     store = new TgGroupsStore(path.join(home, "tg-groups.json"), emptyTgGroupsState(), { now: () => clock, debounceMs: 60_000 });
@@ -1703,7 +1703,7 @@ describe("docs/tg-groups.md Scenarios, through the poll service", () => {
   it("the owner's live group, joined before this feature: never refused or asked for a code, approved when the owner speaks, its welcome answered", async () => {
     const LIVE = -1003377889900;
     const chat = { id: LIVE, type: "supergroup", title: "lust rage mode (the redemption)" };
-    const WELCOME = "Hey there Merryman, and welcome to lust rage mode (the redemption)! How are you?";
+    const WELCOME = "Hey there AgentCapAvatar, and welcome to lust rage mode (the redemption)! How are you?";
     const line = (text: string, from: { id: number; first: string }, extra: Record<string, unknown> = {}) => {
       const mid = nextMid++;
       return {

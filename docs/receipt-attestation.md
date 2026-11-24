@@ -9,7 +9,7 @@ marks. It is deliberately narrower than general accounting reconstruction.
 A book that **has traded** uses its sibling under the same controls, hold,
 lease, audit table and source barrier: [one inferred deposit in a book that has
 traded](#one-inferred-deposit-in-a-book-that-has-traded), selected by
-`MERRYMEN_RECEIPT_ATTEST_FLOW`.
+`AGENTCAP_RECEIPT_ATTEST_FLOW`.
 
 Deposit receipts and the matching balance must be at least 64 blocks behind
 the observed chain head, matching the existing capital-booking policy. Any
@@ -58,7 +58,7 @@ Deploy the reviewed implementation through the normal deployment controls.
 Do not delete, recreate, import over, or reset the original tenant home.
 
 1. Keep the intended fleet rollout unchanged. Add the exact tenant to
-   `MERRYMEN_ACCOUNTING_HOLD_TENANTS`. Confirm previous processes have exited;
+   `AGENTCAP_ACCOUNTING_HOLD_TENANTS`. Confirm previous processes have exited;
    the supervisor also proves this from its own child, holder, spawn, restart,
    exit and retirement state and acquires the real PostgreSQL tenant lease.
 2. Set these controls for a preview, using complete addresses from the current
@@ -66,10 +66,10 @@ Do not delete, recreate, import over, or reset the original tenant home.
 
    | Variable | Preview value |
    | --- | --- |
-   | `MERRYMEN_RECEIPT_ATTEST_ACCOUNT` | The smart-account address |
-   | `MERRYMEN_RECEIPT_ATTEST_TENANT` | Its current tenant address |
-   | `MERRYMEN_RECEIPT_ATTEST_MODE` | `dry-run` |
-   | `MERRYMEN_RECEIPT_ATTEST_APPROVAL` | Absent |
+   | `AGENTCAP_RECEIPT_ATTEST_ACCOUNT` | The smart-account address |
+   | `AGENTCAP_RECEIPT_ATTEST_TENANT` | Its current tenant address |
+   | `AGENTCAP_RECEIPT_ATTEST_MODE` | `dry-run` |
+   | `AGENTCAP_RECEIPT_ATTEST_APPROVAL` | Absent |
 
 3. Start the normal orchestrator deployment and inspect its
    `receipt-attestation|` result. Preview does not modify the accounting file,
@@ -140,7 +140,7 @@ was booked by inference (`source = 'inferred'`, no transaction), the hosted
 anchor counts that row as unevidenced on every later spawn: contributions read
 unknown, the fee stops and the Brain opens nothing. This sibling
 (`worker/src/receipt-attestation-traded.ts`) attests that one row's receipt and
-nothing else. It is chosen by naming the row: `MERRYMEN_RECEIPT_ATTEST_FLOW` is
+nothing else. It is chosen by naming the row: `AGENTCAP_RECEIPT_ATTEST_FLOW` is
 the flow's id **in the shared database** (`flows.id`). Without that variable the
 untouched-book protocol runs, as before.
 
@@ -213,11 +213,11 @@ SELECT id, direction, amount_usdg, source, tx_hash, epoch, at
 
 | Variable | Preview value |
 | --- | --- |
-| `MERRYMEN_RECEIPT_ATTEST_ACCOUNT` | The smart-account address |
-| `MERRYMEN_RECEIPT_ATTEST_TENANT` | Its current tenant address |
-| `MERRYMEN_RECEIPT_ATTEST_FLOW` | The inferred row's shared `flows.id`, in decimal |
-| `MERRYMEN_RECEIPT_ATTEST_MODE` | `dry-run` |
-| `MERRYMEN_RECEIPT_ATTEST_APPROVAL` | Absent |
+| `AGENTCAP_RECEIPT_ATTEST_ACCOUNT` | The smart-account address |
+| `AGENTCAP_RECEIPT_ATTEST_TENANT` | Its current tenant address |
+| `AGENTCAP_RECEIPT_ATTEST_FLOW` | The inferred row's shared `flows.id`, in decimal |
+| `AGENTCAP_RECEIPT_ATTEST_MODE` | `dry-run` |
+| `AGENTCAP_RECEIPT_ATTEST_APPROVAL` | Absent |
 
 The deploy guard admits it during a staged rollout exactly as it admits the
 untouched-book protocol: all its controls counted, the tenant held, a digest
@@ -229,7 +229,7 @@ spawn's anchor will read once the row is amended, in the same micro-USDG as the
 `[anchor]` line. Approve only a preview whose receipt is the expected transfer
 and whose `evidenced` equals `contributions` with `unevidencedRows` 0, unless
 the book has other unevidenced rows you know of. Commit and cleanup are as
-above; keep `MERRYMEN_RECEIPT_ATTEST_FLOW` set through the commit and any retry.
+above; keep `AGENTCAP_RECEIPT_ATTEST_FLOW` set through the commit and any retry.
 
 **An expired grant is fine, and re-signing in the middle is not.** The stored
 permission is bound into the plan. Expiry retirement leaves the repair's lease

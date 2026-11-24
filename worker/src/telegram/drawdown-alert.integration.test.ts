@@ -6,10 +6,10 @@ import path from "node:path";
 import { after, afterEach, describe, it, mock } from "node:test";
 import type { TelegramState } from "./state";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-drawdown-alert-"));
-process.env.MERRYMEN_HOME = HOME;
-process.env.MERRYMEN_GRANT_FILE = path.join(HOME, "grant.json");
-process.env.MERRYMEN_DASHBOARD_URL = "https://app.merrymen.dev";
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-drawdown-alert-"));
+process.env.AGENTCAP_HOME = HOME;
+process.env.AGENTCAP_GRANT_FILE = path.join(HOME, "grant.json");
+process.env.AGENTCAP_DASHBOARD_URL = "https://app.agentcap.xyz";
 after(() => rmSync(HOME, { recursive: true, force: true }));
 afterEach(() => mock.restoreAll());
 

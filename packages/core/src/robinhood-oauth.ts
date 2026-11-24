@@ -12,7 +12,7 @@ import { sha256 } from "@noble/hashes/sha256";
  * authorization code BACK is host-specific and deliberately absent:
  *
  *   desktop worker — a loopback listener on 127.0.0.1 (node:http, worker-only)
- *   phone          — a `merrymen://` scheme or universal link via expo-auth-session
+ *   phone          — a `agentcap://` scheme or universal link via expo-auth-session
  *
  * So the caller supplies `redirectUri` and returns the code by whatever means
  * its platform allows. That is the whole seam.
@@ -37,7 +37,7 @@ export const RH_DISCOVERY_URL = "https://agent.robinhood.com/.well-known/oauth-a
  * The shared public client id every agent gets.
  *
  * Not a secret and not an identity: /register hands this exact string to
- * anyone, so it identifies "some MCP client", not merrymen. Pinned as a
+ * anyone, so it identifies "some MCP client", not agentcap. Pinned as a
  * constant because fetching it would imply it varies.
  */
 export const RH_CLIENT_ID = "LtLiNmbs9owbYfWgBlC68Z2VujIPuvGoAiSYr8xW";

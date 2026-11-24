@@ -10,10 +10,10 @@ import nextConfig from "../next.config.mjs";
 let middlewareConfig: typeof import("./middleware").config;
 let middleware: typeof import("./middleware").middleware;
 before(async () => {
-  delete process.env.MERRYMEN_HOSTED;
-  delete process.env.MERRYMEN_PUBLIC_ORIGIN;
-  delete process.env.MERRYMEN_OAUTH_ISSUER;
-  delete process.env.MERRYMEN_MCP_RESOURCE_URL;
+  delete process.env.AGENTCAP_HOSTED;
+  delete process.env.AGENTCAP_PUBLIC_ORIGIN;
+  delete process.env.AGENTCAP_OAUTH_ISSUER;
+  delete process.env.AGENTCAP_MCP_RESOURCE_URL;
   ({ middleware, config: middlewareConfig } = await import("./middleware"));
 });
 
@@ -48,7 +48,7 @@ test("legacy browser Referer fallback rejects foreign pages, and opaque unsafe b
 });
 
 test("non-browser clients still reach route authorization and DNS-rebinding hosts remain blocked", () => {
-  const clients: Record<string, string>[] = [{}, { authorization: "Bearer test-token" }, { "x-merrymen-partner-signature": "test-signature" }];
+  const clients: Record<string, string>[] = [{}, { authorization: "Bearer test-token" }, { "x-agentcap-partner-signature": "test-signature" }];
   for (const headers of clients) {
     assert.equal(middleware(request("http://localhost:3100/api/partner/agents", headers)).headers.get("x-middleware-next"), "1");
   }
@@ -112,7 +112,7 @@ test("dotted application paths and unknown documents match middleware and receiv
     assert.equal(unstable_doesMiddlewareMatch({ config: middlewareConfig, nextConfig, url }), true, pathname);
     assert.match(middleware(request(url, {}, "GET")).headers.get("content-security-policy") ?? "", /script-src [^;]*'nonce-/, pathname);
   }
-  for (const pathname of ["/sw.js", "/fonts/Inter-latin.woff2", "/sdk/merrymen-browser.js", "/offline.html"]) {
+  for (const pathname of ["/sw.js", "/fonts/Inter-latin.woff2", "/sdk/agentcap-browser.js", "/offline.html"]) {
     assert.equal(middleware(request(`http://localhost:3100${pathname}`, {}, "GET")).headers.get("content-security-policy"), null, pathname);
   }
 });
@@ -152,5 +152,5 @@ test("all routes receive anti-frame, MIME and referrer protections while browser
   assert.equal(headers.get("x-content-type-options"), "nosniff");
   assert.equal(headers.get("referrer-policy"), "no-referrer");
   assert.match(headers.get("content-security-policy") ?? "", /frame-ancestors 'none'/);
-  assert.ok(rules.find(r => r.source === "/sdk/merrymen-browser.js")?.headers.some(h => h.key === "Access-Control-Allow-Origin" && h.value === "*"));
+  assert.ok(rules.find(r => r.source === "/sdk/agentcap-browser.js")?.headers.some(h => h.key === "Access-Control-Allow-Origin" && h.value === "*"));
 });

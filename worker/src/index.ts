@@ -5,7 +5,7 @@ import { upsertRefusal, type RefusalRow } from "./venues/refusal-rows";
 import { errorText } from "./redact-urls";
 import { guardStdio } from "./redact-stdio";
 /**
- * merrymen worker — the 24/7 loop.
+ * agentcap worker — the 24/7 loop.
  *
  * tick: refresh settings → sync grant → snapshot → strategy intents → policy
  * check → simulate → execute via session key → record
@@ -20,7 +20,7 @@ import { guardStdio } from "./redact-stdio";
  *                          rebuild the strategy in place. Env vars remain the
  *                          fallback; precedence is file > env > default.
  *
- * Persistence: SQLite at .data/merrymen.db (node:sqlite) — no service, no keys.
+ * Persistence: SQLite at .data/agentcap.db (node:sqlite) — no service, no keys.
  *
  * `--selftest` sends one policy-legal no-op UserOp (approve 0.000001 USDG)
  * through the FULL pipeline to prove grant → policy → bundler → on-chain
@@ -239,7 +239,7 @@ import {
   type AnchorVerdict,
   type ContributionTruth,
 } from "./bootstrap-state";
-import { ensureHome, homePaths, liftKillPause, merrymenHome, pauseForKeptGrant } from "./home";
+import { ensureHome, homePaths, liftKillPause, agentcapHome, pauseForKeptGrant } from "./home";
 import { startupSlotMs } from "./stagger";
 import { llmText, resolveLlm } from "./llm";
 import { applyPaperIntent, paperBookPositions, type PaperPosition } from "./paper";
@@ -248,7 +248,7 @@ import { entryGateLatch, entryGatesOf } from "./entry-gates";
 // ── ENERGY: how much a low-energy agent may still do on its own today ──────
 // The contract is core energy.ts; the pure throttle is energy.ts; the owner's
 // sentence is energy-copy.ts. What is wired here is where the tick asks.
-import { ENERGY, MERRYMEN_TOKEN, grantEnergyRoute, isEnergyReserveToken } from "../../packages/core/src/index";
+import { ENERGY, AGENTCAP_TOKEN, grantEnergyRoute, isEnergyReserveToken } from "../../packages/core/src/index";
 import { isExitIntent } from "./policy";
 import {
   ENERGY_OFF,
@@ -278,7 +278,7 @@ import {
 import type { EnergyStatus } from "../../packages/core/src/index";
 import { energyNotice } from "./energy-copy";
 import { energyAmountInFor, energyMinOut, quoteEnergyOut, readEnergyTaxBps } from "./venues/uniswap-v2";
-// ── THE ENERGY BUY: the owner's own confirmed order for the agent's $MERRYMEN.
+// ── THE ENERGY BUY: the owner's own confirmed order for the agent's $AGENTCAP.
 // The planner and its sentences are energy-buy.ts; the two calls are
 // venues/uniswap-v2-energy.ts; the booking is energy-settle.ts. None of them is
 // the throttle above — the buy never passes through any of its forks.
@@ -812,7 +812,7 @@ async function main() {
    */
   let perpsCfgKey = perpsKey(cfg);
   // An operator who asked for more perps than this build gives is told once.
-  const perpsNote = perpsCeilingNote(process.env.MERRYMEN_PERPS);
+  const perpsNote = perpsCeilingNote(process.env.AGENTCAP_PERPS);
   if (perpsNote) console.log(`[perps] ${perpsNote}`);
 
   /**
@@ -855,7 +855,7 @@ async function main() {
    * real, each independently sufficient:
    *
    *  1. No signer. Nothing can be submitted.
-   *  2. Not a tradeable chain. Every token and router merrymen knows is a
+   *  2. Not a tradeable chain. Every token and router agentcap knows is a
    *     mainnet-4663 deployment, so on any other chain a swap has no venue to
    *     route through — preflight.ts calls this a hard blocker for the same
    *     reason.
@@ -955,13 +955,13 @@ async function main() {
     off: () => fomoOff,
     // Only the hosted orchestrator's fomo.json nominates follow or early entries.
     explores: () => isHostedMode(),
-    // Trusted process context only: MERRYMEN_TENANT hosted, "self" self-hosted.
+    // Trusted process context only: AGENTCAP_TENANT hosted, "self" self-hosted.
     ownTenant: () => childFomoTenant(process.env, isHostedMode()),
-    home: () => merrymenHome(),
+    home: () => agentcapHome(),
     live: () => fomoLiveFacts(),
     earlyBook: () => earlyCandidateBook(),
-    counters: childDurableFollowCounters(merrymenHome(), fomoDurable, (line) => console.log(line)),
-    ledgerStore: childExplorationStore(merrymenHome()),
+    counters: childDurableFollowCounters(agentcapHome(), fomoDurable, (line) => console.log(line)),
+    ledgerStore: childExplorationStore(agentcapHome()),
     durable: fomoDurable,
     funnel: {
       note: (a, s, c) => funnel.note(a, s ?? funnelSymbol(a), c),
@@ -989,7 +989,7 @@ async function main() {
    * the tails block of this tenant's fomo.json, the latest assessment of a
    * coin and what following would do (followReadiness). Each notice is
    * claimed in this tenant's durable store before it is sent. Off where Fomo
-   * is off here, or with the operator's MERRYMEN_FOMO_TAILS=0.
+   * is off here, or with the operator's AGENTCAP_FOMO_TAILS=0.
    */
   const fomoTailNotifier = createTailNotifier({
     durable: fomoDurable,
@@ -1304,7 +1304,7 @@ async function main() {
   // means a forgotten one is dropped, never replayed into a second buy.
   // Self-hosted there is no ferry, so the store clears its own forget file
   // (docs/tg-groups.md "Memory"); hosted, the orchestrator must see it first.
-  const tgGroupsStore = TgGroupsStore.open(merrymenHome(), { ownsForgets: !isHostedMode() });
+  const tgGroupsStore = TgGroupsStore.open(agentcapHome(), { ownsForgets: !isHostedMode() });
   const tgBook = new NominationBook(tgGroupsStore);
   /** Unresolved nominations whose own token page rides on the tape (lowercased). */
   const tgNominated = new Set<string>();
@@ -1376,14 +1376,14 @@ async function main() {
    * THE MARKET DESK for Telegram groups (docs/tg-groups.md "Market analysis"):
    * public index evidence, indicators and a chart for "how's the market" and
    * "check out X". Brain reasons over it only when the operator says group
-   * asks may spend Brain's key — MERRYMEN_TG_GROUPS_BRAIN=1 (rule 7) — and
+   * asks may spend Brain's key — AGENTCAP_TG_GROUPS_BRAIN=1 (rule 7) — and
    * otherwise the group's own model or the desk's code-written read answers.
    * Rebuilt only when that choice or Brain's address changes, so its one-minute
    * memo survives between asks.
    */
   let tgDeskBuilt: { key: string; port: TgDeskPort } | null = null;
   const tgDesk = (): TgDeskPort => {
-    const brain = (process.env.MERRYMEN_TG_GROUPS_BRAIN ?? "").trim() === "1" && cfg.brainUrl && cfg.brainToken
+    const brain = (process.env.AGENTCAP_TG_GROUPS_BRAIN ?? "").trim() === "1" && cfg.brainUrl && cfg.brainToken
       ? { url: cfg.brainUrl, token: cfg.brainToken, agentId: active?.agentId ?? "agent", timeoutMs: 18_000 }
       : null;
     const key = `${cfg.rpcMainnet}|${brain ? `${brain.url}|${brain.token}|${brain.agentId}` : ""}`;
@@ -2681,7 +2681,7 @@ async function main() {
           `found ${rec.recovered.length} token(s) in your class vault whose purchase I could not find in the ` +
             `last ~7 days of chain history, so I do not know what they cost. They are safe and they are ` +
             `yours — I just cannot tell you the profit on them, and I will not invent a number. ` +
-            `\`merrymen recover\` moves them out with your own key.`,
+            `\`agentcap recover\` moves them out with your own key.`,
         );
       }
     } catch (e) {
@@ -2941,7 +2941,7 @@ async function main() {
           active.agentId,
           "warn",
           `${p.symbol ?? short(p.token)} is in your vault with no curve on record, so I cannot sell it for you. ` +
-            `It is not lost — your own key can move it out with \`merrymen recover\`.`,
+            `It is not lost — your own key can move it out with \`agentcap recover\`.`,
         );
         continue;
       }
@@ -2980,7 +2980,7 @@ async function main() {
           active.agentId,
           "warn",
           `couldn't read ${p.symbol ?? short(p.token)}'s curve, so I am not selling it blind — a sell with no ` +
-            `floor is how a position leaves for nothing. Retrying each tick; \`merrymen recover\` is the way out if it stays dead.`,
+            `floor is how a position leaves for nothing. Retrying each tick; \`agentcap recover\` is the way out if it stays dead.`,
         );
         continue;
       }
@@ -3020,7 +3020,7 @@ async function main() {
           active.agentId,
           "warn",
           `${p.symbol ?? short(p.token)} is ready to leave but its curve will not quote a sell, so nothing was ` +
-            `sent. Retrying each tick; \`merrymen recover\` is the way out if it stays that way.`,
+            `sent. Retrying each tick; \`agentcap recover\` is the way out if it stays that way.`,
         );
         continue;
       }
@@ -3278,7 +3278,7 @@ async function main() {
    *
    * The first lens on this desk that is not a reading of the tape. The other
    * four — technical, liquidity, onchain, social — are price, depth, the float
-   * and what other Merrymen published, and none of them can answer the
+   * and what other AgentCap published, and none of them can answer the
    * question a human asks first.
    *
    * COSTS THIS PROCESS NO I/O AND NO CREDENTIAL. The orchestrator did the
@@ -3530,7 +3530,7 @@ async function main() {
           if (!active) return;
           const agentId = active.agentId;
           await addDecision({ ...d, agent_id: agentId, provenance: provenanceOf(d.source) });
-          if (verifyDecisionOwner(await decisionAgent(d.id), agentId).ok && publishableThesis({ ...d, name: cfg.agentName || "Merryman" })) {
+          if (verifyDecisionOwner(await decisionAgent(d.id), agentId).ok && publishableThesis({ ...d, name: cfg.agentName || "AgentCapAvatar" })) {
             reviewClock(agentId).noteDecision(Math.floor(Date.now() / 1000));
           }
         },
@@ -3764,7 +3764,7 @@ async function main() {
   /**
    * ONE LIGHTER FEED PER SELF-HOSTED PROCESS, started the first time the lane
    * is on (lane.ts createPerpFeedHost). A hosted child never starts one: it
-   * reads the fleet's `lighter-feed.json` from MERRYMEN_FLEET_HOME.
+   * reads the fleet's `lighter-feed.json` from AGENTCAP_FLEET_HOME.
    */
   const perpFeed = createPerpFeedHost({
     hostedChild: () => isHostedChildProcess(),
@@ -3776,10 +3776,10 @@ async function main() {
         // universe: a position's funding never stalls on a market the route
         // does not trade (feed.ts heldMarketIds).
         heldMarketIds: () => perpLane.heldMarketIds(),
-        outPath: lighterFeedPath(merrymenHome()),
-        home: merrymenHome(),
+        outPath: lighterFeedPath(agentcapHome()),
+        home: agentcapHome(),
         // THE PUBLIC CLIENT: market data never bills a tenant's L1 bucket.
-        api: createLighterApi({ home: merrymenHome(), budgetKey: "public" }),
+        api: createLighterApi({ home: agentcapHome(), budgetKey: "public" }),
         logger: (line) => console.log(`[perps feed] ${line}`),
       }),
     log: (line) => console.log(line),
@@ -3796,7 +3796,7 @@ async function main() {
         : null,
     config: () => cfg,
     execMode: () => execMode(),
-    readFeed: (nowMs) => readLighterFeed(lighterFeedPath(merrymenHome()), nowMs),
+    readFeed: (nowMs) => readLighterFeed(lighterFeedPath(agentcapHome()), nowMs),
     now: () => Date.now(),
     agentState: (equity) => perpAgentState(equity.equityUsdg, equity.equityKnown),
     budget: {
@@ -3922,7 +3922,7 @@ async function main() {
       const mine = stranded.filter((r) => r.epoch === currentEpoch);
       const skipped = stranded.length - mine.length;
       if (skipped > 0) {
-        console.log(`[reconcile] ${skipped} submitted row(s) from an earlier epoch — left for 'merrymen verify'`);
+        console.log(`[reconcile] ${skipped} submitted row(s) from an earlier epoch — left for 'agentcap verify'`);
       }
       const resolved = await resolveSubmittedOps({
         chain,
@@ -4196,7 +4196,7 @@ async function main() {
       // old path stays authoritative and this cannot change a ledger, a budget
       // or an orphan.
       //
-      // Off unless MERRYMEN_RECONCILE_SHADOW names this account, because it
+      // Off unless AGENTCAP_RECONCILE_SHADOW names this account, because it
       // costs one extra scan of the same range — which is the price of the
       // comparison, and the reason the canary is a small set.
       //
@@ -5250,7 +5250,7 @@ async function main() {
    * inference was correct there and stays. Hosted, the same directory is
    * discarded on every deploy, so emptiness means nothing at all and the only
    * durable record is the one the parent can see. Getting this boundary wrong
-   * in either direction is a money bug, so it is drawn on `MERRYMEN_HOSTED`,
+   * in either direction is a money bug, so it is drawn on `AGENTCAP_HOSTED`,
    * which `childEnv` sets and nothing else does.
    */
   function applyAccountingAnchor(agentId: string, verdict: AnchorVerdict): void {
@@ -5364,7 +5364,7 @@ async function main() {
    */
   function anchorOnce(agentId: string): AnchorVerdict {
     if (anchorVerdict === null) {
-      anchorVerdict = readAnchor(merrymenHome(), { tenantId: agentId });
+      anchorVerdict = readAnchor(agentcapHome(), { tenantId: agentId });
     }
     return anchorVerdict;
   }
@@ -5502,7 +5502,7 @@ async function main() {
   const processStartedSec = Math.floor(Date.now() / 1000);
   /** The last row recordTrade wrote — see the comment there for why this exists. */
   let lastTradeOutcome = null as LedgerFacts | null;
-  // Merry Circle — the holder's $MERRYMEN tier, refreshed each tick; drives the
+  // Merry Circle — the holder's $AGENTCAP tier, refreshed each tick; drives the
   // performance-fee discount. Starts as the outsider (no discount) until read.
   let holderTier: CircleTier = CIRCLE_TIERS[0]!;
   let lastTierId = holderTier.id;
@@ -5512,7 +5512,7 @@ async function main() {
   let breakerBrickNoted = false;
   // ── ENERGY: TODAY'S ALLOWANCE, DECIDED ONCE PER TICK ────────────────────
   //
-  // Decided right after the $MERRYMEN read (refreshEnergy) and read at every
+  // Decided right after the $AGENTCAP read (refreshEnergy) and read at every
   // fork of the tick that starts NEW autonomous work: the Brain wake guard,
   // each paid review (runShadow's admit, the strategist's window), the Brain
   // live BUY, and each entry the strategy or the class route proposes. Nothing
@@ -5657,7 +5657,7 @@ async function main() {
    * WHAT THE BUY WOULD ASK IN USDG RIGHT NOW, or null when unknown.
    *
    * Sized EXACTLY as the buy itself is (energy-buy.ts energyGrossFor and
-   * energyAskFor): the $MERRYMEN still missing plus its margin, grossed up for
+   * energyAskFor): the $AGENTCAP still missing plus its margin, grossed up for
    * the token's buy tax read fresh — at the expected rate, since the owner's
    * slippage tolerance is only the router's floor and never part of the size —
    * priced by getAmountsIn over the tick's metered mainnet client
@@ -5678,7 +5678,7 @@ async function main() {
   }
 
   /**
-   * THE $MERRYMEN STANDING THIS TICK — full, low or unread — from the one
+   * THE $AGENTCAP STANDING THIS TICK — full, low or unread — from the one
    * read and the durable last-good, IN EVERY MODE.
    *
    * Two readers: energy (observe / enforce, refreshEnergy) and the Circle
@@ -5708,7 +5708,7 @@ async function main() {
   }
 
   /**
-   * DECIDE TODAY'S ENERGY from this tick's $MERRYMEN read, and publish it.
+   * DECIDE TODAY'S ENERGY from this tick's $AGENTCAP read, and publish it.
    *
    * OFF: nothing is limited and nothing is counted, and the report's level is
    * this read alone — but a report is still published (gated false), so the
@@ -5764,7 +5764,7 @@ async function main() {
         entriesAllowed: entryAllowance(active?.limits.maxOpsPerDay ?? Number.NaN),
         nowSec: now,
       });
-      if (grant.chainId === MERRYMEN_TOKEN.chainId && level !== "full" && active) {
+      if (grant.chainId === AGENTCAP_TOKEN.chainId && level !== "full" && active) {
         const key = `${agentId}:${energyShortfallRaw(parts) ?? "unknown"}:${cfg.slippageBps}`;
         if (energyEstimate && energyEstimate.key === key && now - energyEstimate.at < ENERGY.estimateEverySec) {
           estimate = energyEstimate.value;
@@ -6669,12 +6669,12 @@ async function main() {
       // The standalone token first, then the LLM key when the brain IS the
       // gateway — never the house's brain key on a hosted child
       // (gatewayTokenForDiscovery).
-      merrymenToken: gatewayTokenForDiscovery({
-        merrymenToken: cfg.merrymenToken,
+      agentcapToken: gatewayTokenForDiscovery({
+        agentcapToken: cfg.agentcapToken,
         llmProvider: cfg.llmProvider,
         llmApiKey: cfg.llmApiKey,
         hosted: isHostedMode(),
-        houseLlmKey: process.env.MERRYMEN_LLM_API_KEY,
+        houseLlmKey: process.env.AGENTCAP_LLM_API_KEY,
       }),
     });
     if (!creds) return; // no key, no discovery — honest silence, not an error
@@ -6926,7 +6926,7 @@ async function main() {
   /**
    * RUN ONE COMMAND THE DASHBOARD ASKED FOR.
    *
-   * `merrymen selftest` is a CLI flag, and hosted spawns the worker without it
+   * `agentcap selftest` is a CLI flag, and hosted spawns the worker without it
    * (orchestrator.ts). So the one probe designed to answer "can this thing
    * actually transact" was unreachable for every hosted tenant — which is how a
    * fleet-wide arming failure stayed invisible for hours: the only way to find
@@ -6969,7 +6969,7 @@ async function main() {
         // different databases, and nothing would ever have been claimed. The
         // orchestrator ferries commands in as files, exactly as it already does
         // for grants and settings. See command-files.ts.
-        await runTickCommand(merrymenHome(), {
+        await runTickCommand(agentcapHome(), {
           now: Date.now,
           // A STOOD-DOWN PERPS WORKER CLAIMS NOTHING (settings.ts
           // perpsWorkerStoodDown, D19): no owner command runs on it, and every
@@ -6977,7 +6977,7 @@ async function main() {
           // run it or answer it expired. Commands only: what it holds keeps
           // its stops (its protective loop still runs). Positions are frozen
           // only hosted, where no Perps child runs at all.
-          mayRun: cmd => !!active && !perpsWorkerStoodDown(cfg) && !recoveryCommandRefused(merrymenHome(),
+          mayRun: cmd => !!active && !perpsWorkerStoodDown(cfg) && !recoveryCommandRefused(agentcapHome(),
             { smartAccount: active.grant.smartAccount, chainId: active.grant.chainId }, cmd),
           // A COMMAND BOUND TO AN ACCOUNT RUNS ONLY ON THAT ACCOUNT. Self-hosted,
           // a Perps exit or reset names the account the owner reviewed
@@ -7249,17 +7249,17 @@ async function main() {
           ...orderAsked(cmd.args, side, symbol, size),
           ...(typeof cmd.expiresAt === "number" ? { notAfterMs: cmd.expiresAt } : {}),
         };
-        // $MERRYMEN'S ENERGY BUY IS NOT AN ORDINARY ORDER, and this is the ONLY
+        // $AGENTCAP'S ENERGY BUY IS NOT AN ORDINARY ORDER, and this is the ONLY
         // place it is routed — on the explicit marker, never on the symbol
         // (order-gate.ts orderRoute). The app's get-energy card places kind
-        // 'trade' {side:'buy', symbol:'MERRYMEN', usdgAmount: the owner's most
+        // 'trade' {side:'buy', symbol:'AGENTCAP', usdgAmount: the owner's most
         // for this ask, purpose:'energy'}, and it arrives here from the command
         // drain — the owner's click, claimed once — after placeOrder's reads,
         // pause, shape and ceiling gates have all passed. submitEnergyBuy works
         // the size out from the chain; usdgAmount is only ever an upper bound.
         // A marked order naming any other token is refused: the card fixes the
         // symbol, so a mismatch means something upstream is wrong, and nothing
-        // is bought on it. An UNMARKED order for MERRYMEN — a buy card, a snipe,
+        // is bought on it. An UNMARKED order for AGENTCAP — a buy card, a snipe,
         // an MCP proposal — goes to submitChatTrade like any order, which
         // resolves it by address and refuses the reserve itself.
         if (route === "energy") {
@@ -7295,7 +7295,7 @@ async function main() {
       return {
         ok: false,
         line:
-          `grant is on chain ${a.grant.chainId}; every token and router merrymen knows is a chain ` +
+          `grant is on chain ${a.grant.chainId}; every token and router agentcap knows is a chain ` +
           `${TRADEABLE_CHAIN_ID} deployment, so an approve here calls an address with no code. ` +
           `That can prove the grant, the wall and the bundler — never a trade.`,
       };
@@ -8019,7 +8019,7 @@ async function main() {
 
     // HAS THIS ACCOUNT EVER EXISTED?
     //
-    // Nothing in merrymen has ever asked. Every `getCode` in the repo is aimed
+    // Nothing in agentcap has ever asked. Every `getCode` in the repo is aimed
     // at a policy contract, a breaker, an adapter or a token — never at the
     // account itself — so "is the wall deployed" was answerable and "is the
     // thing the wall protects deployed" was not.
@@ -8294,7 +8294,7 @@ async function main() {
     // a landed purchase must not let the next ask read a node still behind that
     // landing. Bounded and fail-soft (energy-settle.ts energyLandedBlockAtArm):
     // the pin is a freshness floor, never a gate. Only where the buy can run.
-    if (executor && grant.chainId === MERRYMEN_TOKEN.chainId) {
+    if (executor && grant.chainId === AGENTCAP_TOKEN.chainId) {
       noteEnergyLanded(
         await energyLandedBlockAtArm({
           newest: () => newestLandedEnergyBuy(agentId),
@@ -8432,7 +8432,7 @@ async function main() {
     // as one on any surface that groups decisions by action. The symbol is the
     // reserve's own, from the core registry — never a model's spelling.
     if (intent.kind === "energy-buy") {
-      return { action: "energy-buy", symbol: MERRYMEN_TOKEN.symbol, sizeUsdg: usdgNum(intent.notionalUsdg) };
+      return { action: "energy-buy", symbol: AGENTCAP_TOKEN.symbol, sizeUsdg: usdgNum(intent.notionalUsdg) };
     }
     if (intent.kind === "equity-order") {
       return { action: intent.side, symbol: intent.ticker, sizeUsdg: usdgNum(intent.notionalUsdg) };
@@ -8779,7 +8779,7 @@ async function main() {
     // addDecision is best-effort for observational producers. Execution needs
     // evidence that its new decision really reached the ledger before acting.
     const recorded = verifyDecisionOwner(await decisionAgent(id), active.agentId);
-    if (recorded.ok && publishableThesis({ name: cfg.agentName || "Merryman", source, action: row.action, symbol: row.symbol, reason })) {
+    if (recorded.ok && publishableThesis({ name: cfg.agentName || "AgentCapAvatar", source, action: row.action, symbol: row.symbol, reason })) {
       reviewClock(active.agentId).noteDecision(Math.floor(Date.now() / 1000));
     }
     return recorded;
@@ -9749,7 +9749,7 @@ async function main() {
     // deliberately no override (exec-mode.ts). So there is no per-purchase
     // exception: an agent that is not trading live does not buy its energy,
     // and the owner is told the two ways round it (turn on Live trading, or
-    // send $MERRYMEN to the account directly — it counts the moment it lands).
+    // send $AGENTCAP to the account directly — it counts the moment it lands).
     if (intent.kind === "energy-buy" && execRail.mode !== "live") {
       await recordTrade({
         agent_id: agentId,
@@ -10353,7 +10353,7 @@ async function main() {
             await addEvent(
               agentId,
               "err",
-              `refused to sign a ${intent.kind}: ${fence.detail}. Nothing was sent. This is a merrymen ` +
+              `refused to sign a ${intent.kind}: ${fence.detail}. Nothing was sent. This is a agentcap ` +
                 `fault — the calldata did not match the trade that was approved.`,
             );
             await recordTrade({
@@ -10702,11 +10702,11 @@ async function main() {
         if (inEnum === outEnum) {
           // Both enumerated means this should have gone to the adapter; neither
           // means checkPolicy should already have refused it. Either way it is a
-          // merrymen fault, not an owner's, and it is refused rather than guessed.
+          // agentcap fault, not an owner's, and it is refused rather than guessed.
           await refuse(
             "class-side-ambiguous",
             `refusing a class trade whose direction cannot be read: ${inEnum ? "both" : "neither"} ` +
-              `leg is in the signed grant. Nothing was sent. This is a merrymen fault.`,
+              `leg is in the signed grant. Nothing was sent. This is a agentcap fault.`,
           );
           releaseBudget();
           return;
@@ -11166,7 +11166,7 @@ async function main() {
       } else if (intent.kind === "energy-buy") {
         // ── THE ENERGY BUY ─────────────────────────────────────────────────
         //
-        // USDG → VIRTUAL → $MERRYMEN over the one route the GRANT sealed, into
+        // USDG → VIRTUAL → $AGENTCAP over the one route the GRANT sealed, into
         // the account itself. The plan that sized this was made minutes ago at
         // most, from reads the chain may have moved past, so NOTHING of its
         // pricing is trusted here: the tax is read again, the route re-quoted,
@@ -11239,7 +11239,7 @@ async function main() {
         const impactVerdict = judgeImpact({ bps: impact, maxBps: cfg.maxImpactBps, isExit: false });
         if (!impactVerdict.ok) {
           releaseBudget();
-          await addEvent(agentId, "warn", `${impactVerdict.detail} ($MERRYMEN energy)`);
+          await addEvent(agentId, "warn", `${impactVerdict.detail} ($AGENTCAP energy)`);
           await recordTrade({
             agent_id: agentId,
             kind: intent.kind,
@@ -11279,7 +11279,7 @@ async function main() {
           await addEvent(
             agentId,
             "err",
-            `refused to sign an energy buy: ${energyFence.detail}. Nothing was sent. This is a merrymen ` +
+            `refused to sign an energy buy: ${energyFence.detail}. Nothing was sent. This is a agentcap ` +
               `fault — the calldata did not match the buy that was approved.`,
           );
           await recordTrade({
@@ -11393,7 +11393,7 @@ async function main() {
             : // The energy buy delivers into the account itself — and the
               // reserve that arrives is the only thing that counts as energy.
               intent.kind === "energy-buy"
-              ? { token: intent.buyToken, label: `$${MERRYMEN_TOKEN.symbol} (energy)`, holder: executor.address }
+              ? { token: intent.buyToken, label: `$${AGENTCAP_TOKEN.symbol} (energy)`, holder: executor.address }
               : null;
       if (acquired) {
         const delivery = await checkDelivery({
@@ -11666,7 +11666,7 @@ async function main() {
           agentId,
           "err",
           `refused to broadcast a ${intent.kind}: the ledger would not accept the row that has to exist ` +
-            `before an operation goes out, so it was not sent. Nothing was spent. This is a merrymen ` +
+            `before an operation goes out, so it was not sent. Nothing was spent. This is a agentcap ` +
             `fault, not a configuration one.`,
         );
         await recordTrade({
@@ -12047,7 +12047,7 @@ async function main() {
     const sponsorGas = gasSponsored();
     beatFile(mode, sponsorGas, blockNumber);
     // AND ON A CHANNEL THE DASHBOARD CAN ACTUALLY READ. The file above lives in
-    // this worker's own MERRYMEN_HOME; hosted, that is a different directory in
+    // this worker's own AGENTCAP_HOME; hosted, that is a different directory in
     // a different container from the web service, which reads its own — so every
     // hosted tenant showed IDLE no matter what their agent was doing. `agents` is
     // already mirrored to the shared database, so the row carries it too.
@@ -13276,7 +13276,7 @@ async function main() {
       }
     }
 
-    // Merry Circle — refresh the holder's tier ($MERRYMEN on mainnet, read-only)
+    // Merry Circle — refresh the holder's tier ($AGENTCAP on mainnet, read-only)
     // and note tier changes. The tier discounts the performance fee below.
     /**
      * A BALANCE WE COULD NOT READ IS NOT A BALANCE OF ZERO.
@@ -13284,7 +13284,7 @@ async function main() {
      * This took `.tier` straight off a call that returned the outsider floor
      * for BOTH "holds nothing" and "the chain would not answer" — on a fleet
      * whose mainnet reads are refused routinely. Two things followed on the
-     * same tick: the owner was told there was no $MERRYMEN at their wallet, a
+     * same tick: the owner was told there was no $AGENTCAP at their wallet, a
      * confident claim about an address nobody had managed to read; and
      * `effectivePerfFeeBps` below took the undiscounted rate, so a tick that
      * also set a new high-water mark accrued the FULL performance fee to the
@@ -13298,12 +13298,12 @@ async function main() {
      */
     //
     // THE COMBINED BALANCE (core energy.ts, D1): the owner's holder wallet PLUS
-    // this agent's own account, where $MERRYMEN it buys or is sent lands. The
+    // this agent's own account, where $AGENTCAP it buys or is sent lands. The
     // account counts only on Robinhood Chain — on any other network the same
     // address here is not this agent's, and tokens sent to it would not be.
     // Still ONE read call and one metered client (circle.ts); `ok` only when
     // every part answered, so the tier stays exact and the rule above holds.
-    const energyAccount = grant.chainId === MERRYMEN_TOKEN.chainId ? (grant.smartAccount as `0x${string}`) : undefined;
+    const energyAccount = grant.chainId === AGENTCAP_TOKEN.chainId ? (grant.smartAccount as `0x${string}`) : undefined;
     const holderRead = await readHolderStatusResult(cfg.rpcMainnet, cfg.holderAddress, energyAccount);
     if (holderRead.ok) holderTier = holderRead.status.tier;
     if (holderRead.ok && holderTier.id !== lastTierId) {
@@ -13312,7 +13312,7 @@ async function main() {
         agentId,
         "ok",
         holderTier.id === "outsider"
-          ? "Merry Circle — no $MERRYMEN between your wallet and my account; standard platform fee applies"
+          ? "Merry Circle — no $AGENTCAP between your wallet and my account; standard platform fee applies"
           : `Merry Circle — ${holderTier.emoji} ${holderTier.name}: ${holderTier.feeDiscountBps / 100}% off the platform fee`,
       );
     }
@@ -13736,14 +13736,14 @@ async function main() {
 
     // ── SHADOW BRAIN ─────────────────────────────────────────────────────
     //
-    // A Merryman thinks. NOTHING HAPPENS. There is no path from here to
+    // A AgentCapAvatar thinks. NOTHING HAPPENS. There is no path from here to
     // proposalsToIntents, checkPolicy, simulate or the executor — brain-shadow
     // does not import them, so connecting execution later is an ADDED import
     // somebody has to review rather than a flag somebody can flip.
     //
     // Guarded three ways, each of which alone would be enough to keep it off:
     // the house must have configured a Brain, the agent must be named in
-    // MERRYMEN_BRAIN_SHADOW, and the trigger must say something changed. The
+    // AGENTCAP_BRAIN_SHADOW, and the trigger must say something changed. The
     // allowlist is what keeps this at ONE agent while we learn what it costs.
     //
     // Everything after the guard is best-effort. A Brain that is slow, refuses,
@@ -14069,7 +14069,7 @@ async function main() {
           // through the publication gate, into a file this child can read.
           // `readPeers` never throws: absent, unreadable and malformed all mean
           // "nothing this window", which is a correct state and not a fault.
-          const wire = readPeers(merrymenHome());
+          const wire = readPeers(agentcapHome());
 
           const focusView = {
             symbol: focus.symbol,
@@ -14103,7 +14103,7 @@ async function main() {
           const brainPeers = wire.theses;
           const brainOwn = wire.own ?? [];
           const enhancedResearch = fastTrencher && !paper && decisionResearchEnabledFor(active.grant.smartAccount);
-          const ownLearning = enhancedResearch ? readOwnOutcomeLearningFile(merrymenHome(), {
+          const ownLearning = enhancedResearch ? readOwnOutcomeLearningFile(agentcapHome(), {
             account: active.grant.smartAccount, chainId: active.grant.chainId, expiresAt: active.grant.expiresAt, epoch: epochNow,
           }, Math.floor(Date.now() / 1000)) : null;
           const learnedOutcomes = ownLearning ? outcomeLearningLines(ownLearning) : [];
@@ -14129,7 +14129,7 @@ async function main() {
           // `coverage` is the honesty field: "we asked and the tape was quiet"
           // and "nobody ever asked" are both no-data to an analyst and are
           // completely different facts about us.
-          const research = readResearch(merrymenHome());
+          const research = readResearch(agentcapHome());
           const desk = newsDesk({
             symbol: focus.symbol,
             asOf: Math.floor(Date.now() / 1000),
@@ -14183,7 +14183,7 @@ async function main() {
             vaultUsdg: Number(balances.vaultUsdg),
             quarantinedUsdg: Number(quarantine.totalCostUsdg),
             positions: positions.map((pp) => ({
-              instrumentId: `merrymen:${pp.symbol.toLowerCase()}`,
+              instrumentId: `agentcap:${pp.symbol.toLowerCase()}`,
               symbol: pp.symbol,
               qtyRaw: String(pp.rawBalance),
               valueUsdg: Number(pp.valueUsdg),
@@ -14278,7 +14278,7 @@ async function main() {
               assessedAt: Math.floor(Date.now() / 1000),
             },
             market: {
-              instrumentId: `merrymen:${focus.symbol.toLowerCase()}`,
+              instrumentId: `agentcap:${focus.symbol.toLowerCase()}`,
               symbol: focus.symbol,
               // FROM THE TOKEN, not from an assumption.
               //
@@ -14332,7 +14332,7 @@ async function main() {
                 // block says in its first line that it is not social sentiment.
                 ...(desk.newsSentiment ? { "news-sentiment": desk.newsSentiment } : {}),
                 // The only genuine sentiment this fleet has: what other
-                // Merrymen actually published — under whichever key THIS desk
+                // AgentCap actually published — under whichever key THIS desk
                 // reads it on, which is `social` for a memecoin. OMITTED
                 // ENTIRELY when nobody said anything — an empty section reads as
                 // "we looked and there was nothing", and the truth is that
@@ -14367,7 +14367,7 @@ async function main() {
                 // AND A FIFTH, which is not a reading of the tape at all.
                 //
                 // The four above are price, depth, the float and what other
-                // Merrymen published — four lenses on one market. This one
+                // AgentCap published — four lenses on one market. This one
                 // asks whether anybody is still building the thing the ticker
                 // is named after, which is the first question a human asks and
                 // the only one on this desk that is not downstream of price.
@@ -14382,7 +14382,7 @@ async function main() {
               },
             },
             expectedTradeGasUsdg: expectedTradeGasMicro === null ? null : Number(expectedTradeGasMicro),
-            persona: withAgentBrief(cfg.agentName ? `You are ${cfg.agentName}, a Merryman.` : "", cfg.agentBrief),
+            persona: withAgentBrief(cfg.agentName ? `You are ${cfg.agentName}, a AgentCapAvatar.` : "", cfg.agentBrief),
             // ITS OWN PUBLISHED THESES, and what came of them. Read from the
             // peer file rather than the child's `decisions` table because that
             // table is wiped by every redeploy — an agent reading memory from
@@ -14653,7 +14653,7 @@ async function main() {
           // bypass flag anywhere.
           //
           // GATED ON ITS OWN ALLOWLIST, DEFAULTING TO NOBODY. Reusing
-          // MERRYMEN_BRAIN_SHADOW would have turned every agent enrolled to be
+          // AGENTCAP_BRAIN_SHADOW would have turned every agent enrolled to be
           // WATCHED into one that SPENDS, retroactively, for owners who agreed
           // to the first thing and were never asked about the second.
           //
@@ -14678,7 +14678,7 @@ async function main() {
             const dd = outcome.result.decision;
             // The kind the ledger recorded, not the Brain's: a hold on a stale
             // mark is kept private, so it must not defer the public review.
-            if (publishesAView(dd, { name: cfg.agentName || "Merryman", source: inputs.decisionSource }, inputs.market)) {
+            if (publishesAView(dd, { name: cfg.agentName || "AgentCapAvatar", source: inputs.decisionSource }, inputs.market)) {
               reviewClock(agentId).noteDecision(Math.floor(Date.now() / 1000));
             }
             const answered = (dd.analyst_views ?? [])
@@ -14971,7 +14971,7 @@ async function main() {
 
     // Merry Circle strategies run only for holders (Merry Man+). A non-holder
     // may select one; it opens nothing new and leaves its basket as it is,
-    // with a one-time note, until they hold $MERRYMEN.
+    // with a one-time note, until they hold $AGENTCAP.
     //
     // NEVER A RETURN. This used to end the tick here, ahead of the class
     // route's exits too, so a class position with a deadline was never closed
@@ -14992,14 +14992,14 @@ async function main() {
     // ONCE PER CHANGE OF REASON (circle-gate.ts circleNoteStep): a first
     // read that failed and a later one that shows a real shortfall are two
     // different notes. AND WHICH KIND OF NO IT IS: telling a holder to go and
-    // hold $MERRYMEN because our own read failed is advice they cannot act on.
+    // hold $AGENTCAP because our own read failed is advice they cannot act on.
     const circleStep = circleNoteStep(circleNoted, { short: circleShort, readOk: circle.known });
     circleNoted = circleStep.noted;
     if (circleStep.say) {
       await addEvent(
         agentId,
         "warn",
-        circleNote(circleStep.say, { strategyName: strategy.name, accountCounts: grant.chainId === MERRYMEN_TOKEN.chainId }),
+        circleNote(circleStep.say, { strategyName: strategy.name, accountCounts: grant.chainId === AGENTCAP_TOKEN.chainId }),
       );
     }
 
@@ -15014,7 +15014,7 @@ async function main() {
     // readable now. `readPeers` never throws — absent, unreadable, malformed and
     // empty all mean the same thing here, which is that there is nothing from
     // peers this window, and the desk tool is simply not registered.
-    peerTheses = cfg.deskEnabled ? readPeers(merrymenHome()).theses : [];
+    peerTheses = cfg.deskEnabled ? readPeers(agentcapHome()).theses : [];
 
     // WHAT THE DESK MAY READ THIS WINDOW. Refreshed on its own slow clock and
     // wrapped whole: a metadata read that fails is a window with no pages to
@@ -15354,14 +15354,14 @@ async function main() {
   if (selftest) {
     const armed = await syncGrant();
     if (!armed || !active || !(active as ActiveAgent).executor) {
-      console.error("[selftest] needs a grant AND a bundler key (a Pimlico key in /settings, or MERRYMEN_BUNDLER_API_KEY / MERRYMEN_BUNDLER_URL)");
+      console.error("[selftest] needs a grant AND a bundler key (a Pimlico key in /settings, or AGENTCAP_BUNDLER_API_KEY / AGENTCAP_BUNDLER_URL)");
       process.exit(1);
     }
     // Say up front when the answer cannot mean what it looks like.
     if ((active as ActiveAgent).grant.chainId !== TRADEABLE_CHAIN_ID) {
       console.log(
         `[selftest] NOTE: this grant is on chain ${(active as ActiveAgent).grant.chainId}. ` +
-          `Every token and router address merrymen knows is a chain ${TRADEABLE_CHAIN_ID} deployment, so ` +
+          `Every token and router address agentcap knows is a chain ${TRADEABLE_CHAIN_ID} deployment, so ` +
           `an approve here calls an address with no code — it succeeds without approving anything. ` +
           `This can prove the grant, the wall and the bundler; it cannot prove a trade.`,
       );
@@ -15843,11 +15843,11 @@ async function main() {
       // reserve is refused whatever the book says.
       //
       // THE RESERVE IS REFUSED BY ADDRESS, never by name (energy-buy.ts
-      // resolveOrderToken). $MERRYMEN is the agent's energy, never a position:
+      // resolveOrderToken). $AGENTCAP is the agent's energy, never a position:
       // this path is reached by the Brain (model-decided orders), by Telegram
       // buys that run WITHOUT a confirmation, and by every app order that is
       // not get-energy's marked one — none may spend USDG on it. But a WATCHED
-      // coin at another address that merely calls itself MERRYMEN is an
+      // coin at another address that merely calls itself AGENTCAP is an
       // ordinary token its owner may buy and sell like any other; refusing it
       // by name left them no manual exit and told them "I never sell it" about
       // a coin they held. A fixed sentence for the reserve, never "add it in
@@ -16000,7 +16000,7 @@ async function main() {
     // Pause is the owner's stop button, whatever placed the order.
     if (isPaused()) return no("you have me paused, so I did not buy anything. Un-pause and ask again.");
     // Only on Robinhood Chain does the route exist and the account count.
-    if (grant.chainId !== MERRYMEN_TOKEN.chainId) return no(ENERGY_NOT_MAINNET);
+    if (grant.chainId !== AGENTCAP_TOKEN.chainId) return no(ENERGY_NOT_MAINNET);
     // The book the purchase is judged against — the latest tick's, as it
     // stated it: a tick that could not read, or a book that cannot be totalled,
     // cannot judge a buy (order-gate.ts).
@@ -16016,7 +16016,7 @@ async function main() {
 
     // ── THE READS, fresh and pinned ─────────────────────────────────────
     //
-    // Both $MERRYMEN halves at one block no earlier than the last energy
+    // Both $AGENTCAP halves at one block no earlier than the last energy
     // purchase's landing (circle.ts), the account's USDG likewise on the
     // grant's own client, and the ledger's in-flight guard. Every failure is
     // null, and the planner refuses on any null.
@@ -16165,7 +16165,7 @@ async function main() {
   // deliberately NOT gated on telegramEnabled. The poll loop used to be the only
   // minter and it returns early when Telegram is switched off, so the dashboard
   // could show a token as "connected" while the code stayed empty, with nothing
-  // the user could do about it. Now the code exists the moment merrymen runs, and
+  // the user could do about it. Now the code exists the moment agentcap runs, and
   // it's waiting the instant they flip the toggle on.
   //
   // The WORKER stays the single writer of telegram.json (state.ts documents that
@@ -16259,8 +16259,8 @@ async function main() {
   // Kept for the SIGTERM handler below, which stops the poll on the way out.
   const telegramPoll = startTelegram({
     ...(isHostedMode()
-      ? { perps: fileTelegramPerpsPort(merrymenHome()) }
-      : cfg.workerWallet === "spot" ? { perps: createLocalPerpsPort(merrymenHome()) } : {}),
+      ? { perps: fileTelegramPerpsPort(agentcapHome()) }
+      : cfg.workerWallet === "spot" ? { perps: createLocalPerpsPort(agentcapHome()) } : {}),
     walletPurpose: cfg.workerWallet,
     // Resolve FRESH on every read: /link writes the allowlist to settings.json
     // and the very next message must see it — the tick-refreshed `cfg` snapshot
@@ -16297,7 +16297,7 @@ async function main() {
     tgFacts: { tradesToday: () => readPublicTradesToday(buildStatusContext().agentId, Math.floor(Date.now() / 1000)) },
     // What the hold process kept about groups while this tenant's trading was
     // held (telegram/held-groups.ts), in this home: applied at the first poll.
-    heldGroupUpdates: () => takeHeldGroupUpdates(merrymenHome()),
+    heldGroupUpdates: () => takeHeldGroupUpdates(agentcapHome()),
     // Social-trading research (docs/fomo.md): the broker above for DMs, and the
     // groups' port over the same broker. Neither carries a tenant. With Fomo
     // off in this process (childFomoOff) there is no research lane at all.
@@ -16337,7 +16337,7 @@ async function main() {
           // killHosted leaves a request the orchestrator carries out against
           // the store. See kill-request.ts. The hold process makes the same
           // call (telegram/hold.ts), so a held tenant's owner can revoke too.
-          const r = hostedKillFromChat(merrymenHome(), grantFilePath(), grant, Math.floor(Date.now() / 1000));
+          const r = hostedKillFromChat(agentcapHome(), grantFilePath(), grant, Math.floor(Date.now() / 1000));
           if (!r.ok || !grant) return r;
           void addEvent(
             active?.agentId ?? grant.smartAccount,
@@ -16352,7 +16352,7 @@ async function main() {
         if (!grant) return { ok: false, reason: "no grant" };
         // ARCHIVE FIRST. grant.json is a single slot and, for a grant that has
         // never been replaced, the only on-disk copy of the owner key — the key
-        // `merrymen recover` needs to sweep the account. Deleting it without a
+        // `agentcap recover` needs to sweep the account. Deleting it without a
         // copy strands the funds permanently, and this path is reachable from a
         // Telegram message. The CLI and the web API have archived for months;
         // the worker was the one destructive route that did not.
@@ -16384,8 +16384,8 @@ async function main() {
           void addEvent(
             active?.agentId ?? archived,
             "warn",
-            `kill switch — grant destroyed. The owner key was archived to ~/.merrymen/grants/ first; ` +
-              `\`merrymen recover\` can still sweep the funds.`,
+            `kill switch — grant destroyed. The owner key was archived to ~/.agentcap/grants/ first; ` +
+              `\`agentcap recover\` can still sweep the funds.`,
           );
         }
         return { ok: true, archived };
@@ -16394,7 +16394,7 @@ async function main() {
       }
   }
 
-  // The merryman speaks first: trade pings, warnings, price alerts, the daily
+  // The agentcapavatar speaks first: trade pings, warnings, price alerts, the daily
   // campfire report — pushed to the owner chat, gated by telegramNotifyEnabled.
   notifierHandle = startNotifier({
     getCfg: () => resolveConfig(), // fresh for the same reason as the poller
@@ -16472,7 +16472,7 @@ async function main() {
   });
 
   console.log(
-    `merrymen worker starting — strategy ${strategy.name}, venue ${cfg.swapVenue}, ` +
+    `agentcap worker starting — strategy ${strategy.name}, venue ${cfg.swapVenue}, ` +
       `tick ${cfg.tickSeconds}s, settings+grant re-synced every tick` +
       (cfg.telegramEnabled ? ", telegram ON" : ""),
   );
@@ -16602,7 +16602,7 @@ async function main() {
     fallbackMs: tickIntervalMs(cfg.tickSeconds),
     orders: commandInFlight,
     trades: liveTrades,
-    pending: () => queuedCommandIds(merrymenHome()),
+    pending: () => queuedCommandIds(agentcapHome()),
     regular: runLoop,
     command: runCommandTick,
     nomination: runNominationTick,
@@ -16763,9 +16763,9 @@ async function main() {
   // neighbour's slot each time and a log is comparable across deploys. It is
   // also bounded by the tick itself: nobody waits longer for their first tick
   // than they will routinely wait for their second.
-  // MERRYMEN_HOME is …/children/<tenant> on a hosted child and a fixed path
+  // AGENTCAP_HOME is …/children/<tenant> on a hosted child and a fixed path
   // self-hosted, where a stagger is neither needed nor harmful.
-  const slot = startupSlotMs(merrymenHome(), tickIntervalMs(cfg.tickSeconds));
+  const slot = startupSlotMs(agentcapHome(), tickIntervalMs(cfg.tickSeconds));
   if (slot > 0) console.log(`[worker] first tick in ${Math.round(slot / 1000)}s — staggered so the fleet does not wake together`);
 
   /**

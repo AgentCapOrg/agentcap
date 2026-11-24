@@ -6,7 +6,7 @@
  * Every read goes through the same policy as a tool call: the capability is
  * checked, and an object that belongs to another owner (or is not shared with
  * this connection) reads as not found. A resource URI is a name, not a
- * capability: holding `merrymen://exports/exp_…` grants nothing by itself.
+ * capability: holding `agentcap://exports/exp_…` grants nothing by itself.
  */
 import { ProtocolError, ProtocolErrorCode, ResourceNotFoundError, ResourceTemplate, type McpServer } from "@modelcontextprotocol/server";
 import { mcpDb } from "./db";

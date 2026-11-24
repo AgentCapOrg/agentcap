@@ -64,7 +64,7 @@ export const FEED_BOOK_LEVELS = 10;
  * (self-hosted, where the feed runs in-process).
  */
 export function lighterFeedPath(home: string): string {
-  const fleet = process.env.MERRYMEN_FLEET_HOME?.trim();
+  const fleet = process.env.AGENTCAP_FLEET_HOME?.trim();
   return path.join(fleet && fleet.length > 0 ? fleet : home, LIGHTER_FEED_FILE);
 }
 

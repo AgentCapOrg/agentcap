@@ -31,12 +31,12 @@ import {
 } from "./chain-gap-booking-cli";
 import { auditExitCode, auditLines, auditReport, auditRpc, AuditRefused, DEFAULT_MAX_RECEIPTS, readAuditChain, readAuditSnapshot } from "./owner-op-audit";
 
-export const AUDIT_APPLICATION_NAME = "merrymen-owner-op-audit-readonly";
+export const AUDIT_APPLICATION_NAME = "agentcap-owner-op-audit-readonly";
 export const HELP = `Owner-operations audit — READ ONLY. docs/owner-operations.md is the runbook.
 
   node --import tsx worker/src/owner-op-audit-cli.ts --output /absolute/new-audit.json [--tenant 0xTENANT] [--max-receipts N]
 
-Required environment: DATABASE_URL. Optional: MERRYMEN_CHAIN_GAP_RPC (defaults to the public Robinhood Chain mainnet RPC).
+Required environment: DATABASE_URL. Optional: AGENTCAP_CHAIN_GAP_RPC (defaults to the public Robinhood Chain mainnet RPC).
 Lists every trades row whose operation the owner's own key (the root validator) signed, where each one counts, and the totals.
 Reads Postgres in one read-only snapshot, then one receipt per transaction (at most --max-receipts, default ${DEFAULT_MAX_RECEIPTS}).
 Writes nothing but its own report, created once with mode 0600. Neither DATABASE_URL nor the RPC URL is printed or saved.
@@ -87,7 +87,7 @@ export async function main(args: readonly string[] = process.argv.slice(2), env:
   if ("help" in options) { out(HELP); return 0; }
   if (!env.DATABASE_URL) throw new CliError("database-url-required");
   const target = targetDigest(env.DATABASE_URL);
-  const rpc = auditRpc(deps.rpc ?? createBookingRpc(env.MERRYMEN_CHAIN_GAP_RPC || DEFAULT_RPC));
+  const rpc = auditRpc(deps.rpc ?? createBookingRpc(env.AGENTCAP_CHAIN_GAP_RPC || DEFAULT_RPC));
   const connect = deps.connect ?? ((url: string) => connectBooking(url, true, undefined, AUDIT_APPLICATION_NAME));
   // THE REPORT FIRST, before any read: a run that cannot say where its report goes reads nothing.
   const fd = createReportFile(options.output);

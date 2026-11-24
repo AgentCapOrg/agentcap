@@ -985,7 +985,7 @@ describe("energy-buy", () => {
   it("no route on the grant → energy-not-granted, whatever else is true", () => {
     const v = checkPolicy(buy(), limits({ cashToken: USDG }), state());
     assert.equal(!v.ok && v.rule, "energy-not-granted");
-    assert.match(!v.ok ? v.detail : "", /Re-sign at \/grant, or send \$MERRYMEN to the account directly/);
+    assert.match(!v.ok ? v.detail : "", /Re-sign at \/grant, or send \$AGENTCAP to the account directly/);
   });
 
   it("any other target → target-allowlist, case-insensitively", () => {
@@ -1046,7 +1046,7 @@ describe("energy-buy", () => {
     assert.deepEqual(checkPolicy(buy(), energyLimits(), state(), scout), { ok: true });
   });
 
-  it("no-exit does NOT apply while $MERRYMEN is absent from sellableAssets, nor asset-allowlist from the watch set", () => {
+  it("no-exit does NOT apply while $AGENTCAP is absent from sellableAssets, nor asset-allowlist from the watch set", () => {
     const l = energyLimits({ sellableAssets: [USDG], allowedAssets: [USDG] });
     assert.ok(!l.sellableAssets!.includes(MERRY) && !l.allowedAssets.includes(MERRY));
     assert.deepEqual(checkPolicy(buy(), l, state()), { ok: true });

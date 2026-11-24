@@ -9,7 +9,7 @@
  *
  * It lives under /api, so the middleware's cross-site block applies: a link
  * clicked on another site is refused, while one pasted into the address bar
- * (Sec-Fetch-Site: none) or opened from Merrymen itself is served. The
+ * (Sec-Fetch-Site: none) or opened from AgentCap itself is served. The
  * response is an attachment the browser saves rather than renders. The link
  * the tools hand out is /connect/export/<id>, a page that asks `?info=1`
  * (the same checks, the file's details without its content) and then offers
@@ -32,7 +32,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const cfg = mcpConfig();
   if (!cfg.enabled) return jsonResponse({ error: "not_found" }, 404);
   const tenant = tenantOf(req);
-  if (!tenant) return jsonResponse({ error: "login_required", error_description: "Sign in to Merrymen in this browser, then open the link again." }, 401);
+  if (!tenant) return jsonResponse({ error: "login_required", error_description: "Sign in to AgentCap in this browser, then open the link again." }, 401);
   const { id } = await params;
   if (typeof id !== "string" || !EXPORT_ID.test(id)) return jsonResponse({ error: "not_found" }, 404);
   const infoOnly = new URL(req.url).searchParams.get("info") === "1";

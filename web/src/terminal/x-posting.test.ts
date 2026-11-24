@@ -6,7 +6,7 @@
  *
  *   - pressing the switch ON sends NOTHING; only the warning's own button
  *     writes, and it sends the X user id of the account the warning named;
- *   - the warning names the connected handle and says the Merryman posts from
+ *   - the warning names the connected handle and says the AgentCapAvatar posts from
  *     "whichever X account is connected";
  *   - the switch shows only what the server confirmed;
  *   - a status that could not be read — a 404, a 500, no network, a body of
@@ -153,7 +153,7 @@ describe("comment reply consent", () => {
     assert.match(text(), new RegExp(`reply as @${HANDLE} to selected comments on its coin posts\\.`));
     assert.match(text(), /same daily limit/);
     assert.match(text(), /at least ten minutes/);
-    assert.doesNotMatch(text(), /tag it|right away|60 answers|market figures|CoinGecko/, "an owner merrymen did not make active is told of comment replies only");
+    assert.doesNotMatch(text(), /tag it|right away|60 answers|market figures|CoinGecko/, "an owner agentcap did not make active is told of comment replies only");
     await press(buttons(`Let it reply as @${HANDLE}`)[0], "reply confirm");
     assert.deepEqual(writes()[0]?.body, { action: "enable-replies", owner: OWNER, xUserId: X_ID });
     assert.equal(replySwitch()?.getAttribute("aria-checked"), "true");
@@ -163,7 +163,7 @@ describe("comment reply consent", () => {
     routes["GET /api/x/account"] = () => json({ ...CONNECTED, postingEnabled: true, repliesAvailable: true, repliesActive: true });
     routes["POST /api/x/account"] = () => json({ ok: true, replyEnabled: true });
     await shown();
-    assert.match(text(), /Selected posts that tag your Merryman, reply to it or quote it, answered as @merry_poster right away/);
+    assert.match(text(), /Selected posts that tag your AgentCapAvatar, reply to it or quote it, answered as @merry_poster right away/);
     await press(replySwitch(), "reply switch");
     assert.equal(writes().length, 0);
     const dialog = ui.container.querySelector("dialog")?.textContent ?? "";
@@ -173,7 +173,7 @@ describe("comment reply consent", () => {
     assert.match(dialog, /Answers carry no opt-out line, and it never answers someone who asked it to stop\./);
     // No promise to anyone that they can reply stop (the owner's decision, 2026-10-12): replying or quoting is asking.
     assert.doesNotMatch(dialog, /Anyone can reply stop|can reply stop to opt out|after 30 days/);
-    assert.match(dialog, /Answers may include market figures from public data \(CoinGecko, GeckoTerminal, Fomo and Bitquery\), such as a coin’s price, market cap, volume or recent change\. Merrymen adds them as the data showed them; they are never advice\./);
+    assert.match(dialog, /Answers may include market figures from public data \(CoinGecko, GeckoTerminal, Fomo and Bitquery\), such as a coin’s price, market cap, volume or recent change\. AgentCap adds them as the data showed them; they are never advice\./);
     assert.doesNotMatch(dialog, /at least ten minutes|same daily limit/, "it keeps no ten-minute review, so it does not promise one");
     await press(buttons(`Let it reply as @${HANDLE}`)[0], "reply confirm");
     assert.deepEqual(writes()[0]?.body, { action: "enable-replies", owner: OWNER, xUserId: X_ID });
@@ -282,14 +282,14 @@ describe("the switch and the warning", () => {
     assert.match(said, /Posts go out on their own, up to 12 a day and at least an hour apart\./);
     assert.match(said, /at least ten minutes first/);
     assert.doesNotMatch(said, /a few a day at most|now and then/, "it does not understate an active agent's posting");
-    // Its answers may carry figures Merrymen builds from public data (2026-10-12): never "no prices or amounts".
+    // Its answers may carry figures AgentCap builds from public data (2026-10-12): never "no prices or amounts".
     assert.match(said, /It never posts trade alerts or error messages, and its market reads and answers may carry market figures built from public data\./);
     assert.doesNotMatch(said, /prices or amounts/);
     await press(buttons(`Let it post as @${HANDLE}`)[0], "the warning's confirm");
     assert.deepEqual(writes()[0]?.body, { action: "enable", xUserId: X_ID, owner: OWNER, tz: BROWSER_TZ });
   });
 
-  it("an agent merrymen did not make active is told a few a day at most", async () => {
+  it("an agent agentcap did not make active is told a few a day at most", async () => {
     routes["GET /api/x/account"] = () => json({ ...CONNECTED });
     await shown();
     assert.match(text(), /A short line in its own words, most days\./);
@@ -351,7 +351,7 @@ describe("the switch and the warning", () => {
     await press(theSwitch(), "the switch");
     await press(buttons("Let it post as @merry_poster")[0], "confirm");
     assert.equal(theSwitch()?.getAttribute("aria-checked"), "false");
-    assert.match(text(), /merrymen answered with an error \(500\)/);
+    assert.match(text(), /agentcap answered with an error \(500\)/);
     assert.doesNotMatch(text(), /nope/, "an unmarked 5xx body is not an owner-facing sentence");
   });
 
@@ -405,7 +405,7 @@ describe("what it posts: the owner's choices beside the switch", () => {
     await press(switchNamed("Coins it buys, and why"), "the buys switch");
     assert.deepEqual(writes(), [{ method: "POST", url: "/api/x/account", body: { action: "prefs", owner: OWNER, buys: false } }]);
     await until(() => switchNamed("Coins it buys, and why")?.getAttribute("aria-checked") === "false", "buys off");
-    assert.equal(theSwitch()?.getAttribute("aria-label"), "Let my Merryman post on X", "the posting switch is still the first one");
+    assert.equal(theSwitch()?.getAttribute("aria-label"), "Let my AgentCapAvatar post on X", "the posting switch is still the first one");
   });
 
   it("a save the server refused changes nothing on screen, and says why", async () => {
@@ -475,7 +475,7 @@ describe("an unread status is not 'not connected'", () => {
       else delete routes["GET /api/x/account"];
       await shown();
       assert.match(text(), /Couldn't check your X connection/);
-      assert.doesNotMatch(text(), /Connect X account|Let my Merryman post on X/);
+      assert.doesNotMatch(text(), /Connect X account|Let my AgentCapAvatar post on X/);
       assert.equal(theSwitch(), null);
       assert.deepEqual(writes(), []);
       routes["GET /api/x/account"] = () => json(CONNECTED);
@@ -519,7 +519,7 @@ describe("connecting", () => {
   it("a connection it cannot name is still a connection: no switch, no Connect, a way to disconnect", async () => {
     routes["GET /api/x/account"] = () => json({ ...CONNECTED, username: null });
     await shown();
-    assert.match(text(), /An X account is connected, but merrymen can't show which one/);
+    assert.match(text(), /An X account is connected, but agentcap can't show which one/);
     assert.equal(theSwitch(), null, "the warning must name the account, so there is nothing to turn on");
     assert.equal(buttons("Connect X account").length, 0);
     assert.equal(buttons("Disconnect").length, 1);
@@ -737,7 +737,7 @@ describe("disconnecting", () => {
     await shown();
     await press(buttons("Disconnect")[0], "Disconnect");
     assert.deepEqual(writes(), [], "asking is not doing");
-    assert.match(text(), /Disconnect @merry_poster\? Your Merryman stops posting and anything waiting to go out is cancelled\./);
+    assert.match(text(), /Disconnect @merry_poster\? Your AgentCapAvatar stops posting and anything waiting to go out is cancelled\./);
     await press(buttons("Keep it")[0], "Keep it");
     assert.deepEqual(writes(), []);
     await press(buttons("Disconnect")[0], "Disconnect");
@@ -781,7 +781,7 @@ describe("the warning keeps its words", () => {
   it("every sentence of the warning is in the source, verbatim", () => {
     for (const said of [
       "Post on X as ${handle}?",
-      "Your Merryman will post from whichever X account is connected — right now that's ${handle}.",
+      "Your AgentCapAvatar will post from whichever X account is connected — right now that's ${handle}.",
       "It writes its own posts: a hello first, then the odd casual thought and now and then a coin it bought and why. It never posts trade alerts, error messages, prices or amounts. Your saved options can add public wallet or token addresses and completed sale results.",
       "Posts go out on their own, a few a day at most. Each one waits under Coming up for at least ten minutes first, and you can skip it there. Turn this off or disconnect X at any time.",
       "X may label accounts that post automatically, and may ask an account to verify itself the first time it posts about crypto.",
@@ -802,18 +802,18 @@ describe("the warning keeps its words", () => {
   it("every sentence of both reply warnings is in the source, verbatim, as iOS says them", () => {
     for (const said of [
       "Reply to comments as ${handle}?",
-      "Your Merryman will reply as ${handle} to selected comments on its coin posts.",
+      "Your AgentCapAvatar will reply as ${handle} to selected comments on its coin posts.",
       "It chooses which comments to answer; it won’t reply to every comment. Replies share the same daily limit as posts.",
       "Each reply waits under Coming up for at least ten minutes first, with a link to the comment, and you can skip it there. Turn replies off at any time to cancel waiting replies.",
-      "Your Merryman will reply as ${handle} to selected posts that tag it, reply to it or quote it.",
+      "Your AgentCapAvatar will reply as ${handle} to selected posts that tag it, reply to it or quote it.",
       "It chooses which posts to answer; it won’t answer every one. Answers go out right away: they don’t wait under Coming up, so you can’t skip one first.",
       "It answers questions about the market, coins, how it trades and what it can do, and a hello, a thanks or a bit of chat in a short line of its own, from people who tag it, reply to it or quote it, a few times a day each: up to 60 answers a day on top of its posts, and at most six to one person a day. Answers carry no opt-out line, and it never answers someone who asked it to stop. Turn replies off at any time to stop answering.",
-      "Answers may include market figures from public data (CoinGecko, GeckoTerminal, Fomo and Bitquery), such as a coin’s price, market cap, volume or recent change. Merrymen adds them as the data showed them; they are never advice.",
+      "Answers may include market figures from public data (CoinGecko, GeckoTerminal, Fomo and Bitquery), such as a coin’s price, market cap, volume or recent change. AgentCap adds them as the data showed them; they are never advice.",
       "Let it reply as ${handle}",
     ]) {
       assert.ok(SRC.includes(said), `the reply warning lost: "${said}"`);
     }
-    assert.doesNotMatch(SRC, /if merrymen has made it an active poster/, "the warning says which it is, never 'if'");
+    assert.doesNotMatch(SRC, /if agentcap has made it an active poster/, "the warning says which it is, never 'if'");
     // The numbers it promises are the orchestrator's own lane limits.
     assert.equal(ANSWERS_PER_DAY, 60, "the warning says up to 60 answers a day");
     assert.equal(ANSWERS_PER_AUTHOR, 6, "the warning says at most six to one person a day");
@@ -840,7 +840,7 @@ describe("the warning keeps its words", () => {
   });
 
   it("the caption and the 'on' line both say whichever account is connected", () => {
-    assert.ok(SRC.includes("Your Merryman will post from whichever X account you approve there, so check which account you're signed into on X first."));
+    assert.ok(SRC.includes("Your AgentCapAvatar will post from whichever X account you approve there, so check which account you're signed into on X first."));
     assert.ok(SRC.includes("Posting from ${handle} — whichever X account is connected."));
     assert.ok(SRC.includes("No trade alerts, error messages or return promises."));
   });

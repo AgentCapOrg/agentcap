@@ -3,7 +3,7 @@ import { test } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { JSDOM } from "jsdom";
-import { autonomyOf } from "@merrymen/core";
+import { autonomyOf } from "@agentcap/core";
 import { loadLive, type LiveAgent, type LiveMine } from "./live";
 import { Board } from "./screens/Board";
 import { DesktopSidebar } from "./Desktop";

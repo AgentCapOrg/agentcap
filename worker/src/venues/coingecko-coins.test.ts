@@ -68,13 +68,13 @@ describe("a major is an exact match that ranks", () => {
 
 describe("read on the fleet's CoinGecko Pro lane, and only with its key", () => {
   const realFetch = globalThis.fetch;
-  const KNOBS = ["MERRYMEN_COINGECKO_PRO_API_KEY", "MERRYMEN_FLEET_HOME", "MERRYMEN_COINGECKO_PRO_SPACING_MS", "MERRYMEN_COINGECKO_MONTHLY_CREDITS"] as const;
+  const KNOBS = ["AGENTCAP_COINGECKO_PRO_API_KEY", "AGENTCAP_FLEET_HOME", "AGENTCAP_COINGECKO_PRO_SPACING_MS", "AGENTCAP_COINGECKO_MONTHLY_CREDITS"] as const;
   let saved: Record<string, string | undefined> = {};
   let now = 0;
   beforeEach(() => {
     saved = Object.fromEntries(KNOBS.map((k) => [k, process.env[k]]));
     for (const k of KNOBS) delete process.env[k];
-    process.env.MERRYMEN_COINGECKO_PRO_API_KEY = "private-pro-key";
+    process.env.AGENTCAP_COINGECKO_PRO_API_KEY = "private-pro-key";
     now = 1_000_000;
     resetGeckoFeedsForTest({ now: () => now, sleep: async (ms) => { now += ms; } });
   });
@@ -85,7 +85,7 @@ describe("read on the fleet's CoinGecko Pro lane, and only with its key", () => 
   });
 
   it("no key, nothing asked: the public source has no such endpoints and the key never goes anywhere else", async () => {
-    delete process.env.MERRYMEN_COINGECKO_PRO_API_KEY;
+    delete process.env.AGENTCAP_COINGECKO_PRO_API_KEY;
     let calls = 0;
     globalThis.fetch = (async () => { calls++; return Response.json(SEARCH); }) as typeof globalThis.fetch;
     assert.equal((await searchCoinList("btc", { timeoutMs: 4000 })).failure, "no-pro-key");
@@ -190,9 +190,9 @@ describe("read on the fleet's CoinGecko Pro lane, and only with its key", () => 
     ]);
     assert.deepEqual([...parseTokenCoinIds({ data: [{ id: `robinhood_${A}`, type: "token", attributes: { address: A, coingecko_coin_id: "../x" } }] }, [A])], [], "an id that is no lookup key");
     // No key: nothing asked. A refused read is a failure, never "not listed".
-    delete process.env.MERRYMEN_COINGECKO_PRO_API_KEY;
+    delete process.env.AGENTCAP_COINGECKO_PRO_API_KEY;
     assert.equal((await readChainListings([A], { timeoutMs: 4000 })).failure, "no-pro-key");
-    process.env.MERRYMEN_COINGECKO_PRO_API_KEY = "private-pro-key";
+    process.env.AGENTCAP_COINGECKO_PRO_API_KEY = "private-pro-key";
     resetGeckoFeedsForTest({ now: () => now, sleep: async (ms) => { now += ms; } });
     globalThis.fetch = (async () => new Response("nope", { status: 401 })) as typeof globalThis.fetch;
     const refused = await readChainListings([A], { timeoutMs: 4000 });
@@ -213,7 +213,7 @@ describe("read on the fleet's CoinGecko Pro lane, and only with its key", () => 
     resetGeckoFeedsForTest({ now: () => now, sleep: async (ms) => { now += ms; } });
     globalThis.fetch = (async () => Response.json([])) as typeof globalThis.fetch;
     assert.equal((await readTopCoins({ timeoutMs: 4000 })).failure, "invalid-shape");
-    delete process.env.MERRYMEN_COINGECKO_PRO_API_KEY;
+    delete process.env.AGENTCAP_COINGECKO_PRO_API_KEY;
     assert.equal((await readTopCoins({ timeoutMs: 4000 })).failure, "no-pro-key");
   });
 
@@ -251,7 +251,7 @@ describe("read on the fleet's CoinGecko Pro lane, and only with its key", () => 
     resetGeckoFeedsForTest({ now: () => now, sleep: async (ms) => { now += ms; } });
     globalThis.fetch = (async () => Response.json([{ id: "dogecoin", symbol: "doge", name: "Dogecoin", market_cap_rank: 8 }])) as typeof globalThis.fetch;
     assert.equal((await readCoinMarkets(["bitcoin"], { timeoutMs: 4000 })).failure, "invalid-shape");
-    delete process.env.MERRYMEN_COINGECKO_PRO_API_KEY;
+    delete process.env.AGENTCAP_COINGECKO_PRO_API_KEY;
     assert.equal((await readCoinMarkets(["bitcoin"], { timeoutMs: 4000 })).failure, "no-pro-key");
   });
 });

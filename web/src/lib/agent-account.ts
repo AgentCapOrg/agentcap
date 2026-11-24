@@ -1,19 +1,19 @@
 /**
  * THE AGENT'S OWN ACCOUNT, AND WHICH CHAIN IT LIVES ON — for the standing.
  *
- * $MERRYMEN counts toward the Merry Circle tier and toward an agent's energy
+ * $AGENTCAP counts toward the Merry Circle tier and toward an agent's energy
  * wherever the owner keeps it: in their own wallet, or in the agent's account
  * (packages/core/src/energy.ts). The second half is new, and it is the half
- * every "send $MERRYMEN to my account" and "ask me to get my $MERRYMEN" relies
+ * every "send $AGENTCAP to my account" and "ask me to get my $AGENTCAP" relies
  * on: tokens bought or received land in `grant.smartAccount`, which no web
  * route used to read. /api/tier, /api/circle and /api/alpha all ask this
  * module for it, so the three cannot disagree about whose tokens count.
  *
  * THE CHAIN TRAVELS WITH THE ADDRESS. The account is only counted when the
- * grant is on Robinhood Chain (the chain $MERRYMEN lives on): a grant for any
+ * grant is on Robinhood Chain (the chain $AGENTCAP lives on): a grant for any
  * other network has a counterfactual address there that the owner cannot
  * recover funds from through this app, so tokens sent to it must never be
- * reported as counting. Deciding that is the caller's (merrymen-standing.ts
+ * reported as counting. Deciding that is the caller's (agentcap-standing.ts
  * countedAgent); this only reports what the grant says.
  *
  * NO MODE SWITCH HERE, for the reason agent-for.ts gives: `isHostedMode()` is
@@ -27,8 +27,8 @@
  * their `unreadable` answer.
  */
 import { readFile } from "node:fs/promises";
-import { homePaths } from "@merrymen/home";
-import { getGrantStore } from "@merrymen/grant-store";
+import { homePaths } from "@agentcap/home";
+import { getGrantStore } from "@agentcap/grant-store";
 import { tenantOf } from "@/lib/auth";
 
 export interface AgentAccount {

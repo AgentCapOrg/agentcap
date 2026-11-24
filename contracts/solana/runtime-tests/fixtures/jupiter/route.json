@@ -3,7 +3,7 @@
   "note": "One read-only Jupiter quote (GET) and swap-instructions build (POST; nothing was signed or sent), written by refresh.mjs. userPublicKey is builtFor's seq-0 swap authority and destinationTokenAccount its WSOL account; the test moves these and the temporary USDG account (accounts 2, 6 and 3) to its own build's vault program. Parameters mirror worker/src/solana-live-market.ts plus onlyDirectRoutes=true; lite-api.jup.ag is the keyless host of the same /swap/v1 API.",
   "builtFor": {
    "vaultProgram": "EUzYVniKtgNNgFweMtRA9vciTWtE8MDTRfh6ai6VvXoU",
-   "ownerSeed": "merrymen jupiter fork test owner",
+   "ownerSeed": "agentcap jupiter fork test owner",
    "owner": "85TAwSpUieETWfU1pnnPsvbotqrSjHegLmrqdEXAEtmy",
    "vault": "unrRPs7GbtJKmdE7YLAVqCJHZvmhRL2t5Mcu39MnTCx",
    "seq": 0,

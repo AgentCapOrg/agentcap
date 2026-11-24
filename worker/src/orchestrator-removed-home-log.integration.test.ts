@@ -16,15 +16,15 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { after, beforeEach, it } from "node:test";
 
-const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-removed-home-log-")));
-process.env.MERRYMEN_HOME = fleet;
-process.env.MERRYMEN_HOSTED = "1";
+const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-removed-home-log-")));
+process.env.AGENTCAP_HOME = fleet;
+process.env.AGENTCAP_HOSTED = "1";
 delete process.env.DATABASE_URL;
-delete process.env.MERRYMEN_PERSISTENT_HOME_REQUIRED;
-delete process.env.MERRYMEN_FLEET_ROLLOUT;
-delete process.env.MERRYMEN_ROLLOUT_NEW_TENANTS;
+delete process.env.AGENTCAP_PERSISTENT_HOME_REQUIRED;
+delete process.env.AGENTCAP_FLEET_ROLLOUT;
+delete process.env.AGENTCAP_ROLLOUT_NEW_TENANTS;
 for (const key of Object.keys(process.env)) if (key.startsWith("RAILWAY_")) delete process.env[key];
-process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 93).toString("base64");
+process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 93).toString("base64");
 
 const { childHome, reconcile, setKillConfirmForTest, setSpawnForTest } = await import("./orchestrator");
 
@@ -57,7 +57,7 @@ function home(tenant: `0x${string}`): string {
 it("a retained book's home is said once when cleared, then not again until a pass clears something new", async () => {
   const tenant = address(0x5a1);
   const dir = home(tenant);
-  const book = new DatabaseSync(path.join(dir, "merrymen.db"));
+  const book = new DatabaseSync(path.join(dir, "agentcap.db"));
   book.exec("CREATE TABLE trades (id INTEGER PRIMARY KEY, note TEXT NOT NULL)");
   book.prepare("INSERT INTO trades (id, note) VALUES (1, 'original accounting')").run();
   book.close();
@@ -68,7 +68,7 @@ it("a retained book's home is said once when cleared, then not again until a pas
   assert.equal(saying(line).length, 1, said.join("\n"));
   for (const name of COPIES) assert.equal(existsSync(path.join(dir, name)), false, `${name} is cleared`);
   assert.equal(existsSync(path.join(dir, "soul", "OWNER.md")), false, "personal memory is cleared");
-  const kept = new DatabaseSync(path.join(dir, "merrymen.db"), { readOnly: true });
+  const kept = new DatabaseSync(path.join(dir, "agentcap.db"), { readOnly: true });
   try {
     assert.deepEqual(kept.prepare("SELECT id, note FROM trades").all().map((r) => ({ ...r })), [{ id: 1, note: "original accounting" }], "the book is retained untouched");
   } finally { kept.close(); }

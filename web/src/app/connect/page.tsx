@@ -5,8 +5,8 @@ import { DEFAULT_LOCALE } from "@/lib/locale";
 import "./connect.css";
 
 export const metadata: Metadata = {
-  title: "Connect your agent · merrymen",
-  description: "Choose what another app can access through your Merrymen agent.",
+  title: "Connect your agent · agentcap",
+  description: "Choose what another app can access through your AgentCap agent.",
   robots: { index: false, follow: false },
   referrer: "no-referrer",
 };

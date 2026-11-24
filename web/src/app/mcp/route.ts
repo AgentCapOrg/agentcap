@@ -1,5 +1,5 @@
 /**
- * The Merrymen MCP endpoint (Streamable HTTP). Outside /api on purpose: the
+ * The AgentCap MCP endpoint (Streamable HTTP). Outside /api on purpose: the
  * /api middleware refuses cross-site browser requests, and MCP clients are
  * not browsers. This route does its own Host, Origin and bearer checks
  * (web/src/mcp/http.ts) and answers 404 unless hosted MCP is enabled.

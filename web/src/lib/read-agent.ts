@@ -37,9 +37,9 @@ import { basisUsdg } from "@/lib/basis-usdg";
 import type { UnrankedWhy } from "@/lib/rank-pnl";
 import { growthIndex, drawdownBps } from "@/lib/growth-index";
 import { PUBLISHABLE_STRATEGIES } from "@/lib/thesis";
-import { getIdentityStore } from "@merrymen/identity-store";
-import { isEvidencedFlow } from "@merrymen/core";
-import { getSettingsStore } from "@merrymen/settings-store";
+import { getIdentityStore } from "@agentcap/identity-store";
+import { isEvidencedFlow } from "@agentcap/core";
+import { getSettingsStore } from "@agentcap/settings-store";
 
 export interface Holding {
   symbol: string;

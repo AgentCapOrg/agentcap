@@ -2,7 +2,7 @@
  * REAL POSTGRES: THE WEB'S ENERGY AND HOLDER READS, BEFORE AND AFTER THE
  * UPGRADE. Opt-in, like worker/src/pg-upgrade.postgres.test.ts (see its header):
  *
- *   MERRYMEN_TEST_PG_URL=postgres://merrymen@localhost:55432/merrymen_pgtest \
+ *   AGENTCAP_TEST_PG_URL=postgres://agentcap@localhost:55432/agentcap_pgtest \
  *     npx tsx --test web/src/lib/energy-holder.postgres.test.ts
  *
  * Skipped without it. A LOCAL Postgres only, in a schema of its own, dropped
@@ -30,7 +30,7 @@ import { createReadDb } from "./ledger";
 import { readAgentEnergy } from "./agent-energy";
 import { holderWalletFor } from "./holder-wallet";
 
-const url = process.env.MERRYMEN_TEST_PG_URL ?? process.env.MERRYMEN_TEST_POSTGRES_URL;
+const url = process.env.AGENTCAP_TEST_PG_URL ?? process.env.AGENTCAP_TEST_POSTGRES_URL;
 interface PgClient extends PgClientLike {
   connect(): Promise<void>;
   end(): Promise<void>;
@@ -62,10 +62,10 @@ test("Postgres: the web's energy and holder reads across the upgrade", { skip: !
   assert.match(schema, /^mm_web_upgrade_test_[a-f0-9]{16}$/);
   const scoped = new URL(target);
   scoped.searchParams.set("options", `-c search_path=${schema} -c statement_timeout=20000`);
-  const saved = { db: process.env.DATABASE_URL, dek: process.env.MERRYMEN_STORE_DEK, home: process.env.MERRYMEN_HOME };
+  const saved = { db: process.env.DATABASE_URL, dek: process.env.AGENTCAP_STORE_DEK, home: process.env.AGENTCAP_HOME };
   const home = mkdtempSync(path.join(os.tmpdir(), "mm-web-upgrade-"));
-  process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 9).toString("base64");
-  process.env.MERRYMEN_HOME = home;
+  process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 9).toString("base64");
+  process.env.AGENTCAP_HOME = home;
   // The web's read seam picks Postgres by DATABASE_URL: this run's schema only.
   process.env.DATABASE_URL = scoped.toString();
 
@@ -118,7 +118,7 @@ test("Postgres: the web's energy and holder reads across the upgrade", { skip: !
     await admin.query(`DROP SCHEMA ${schema} CASCADE`).catch(() => {});
     for (const c of clients) await c.end().catch(() => {});
     rmSync(home, { recursive: true, force: true });
-    for (const [k, v] of [["DATABASE_URL", saved.db], ["MERRYMEN_STORE_DEK", saved.dek], ["MERRYMEN_HOME", saved.home]] as const) {
+    for (const [k, v] of [["DATABASE_URL", saved.db], ["AGENTCAP_STORE_DEK", saved.dek], ["AGENTCAP_HOME", saved.home]] as const) {
       if (v === undefined) delete process.env[k];
       else process.env[k] = v;
     }

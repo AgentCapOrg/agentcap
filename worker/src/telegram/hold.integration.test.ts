@@ -7,7 +7,7 @@
  * (telegram/hold.ts). This drives the real one: its real poll loop over a
  * scripted globalThis.fetch and a mocked clock, the real settings.json,
  * telegram.json, restore-blocked.json and grant.json in a temporary
- * MERRYMEN_HOME, the real link.ts and the real hosted kill path. The harness
+ * AGENTCAP_HOME, the real link.ts and the real hosted kill path. The harness
  * pattern is energy-alert-redeploy.integration.test.ts's and backlog's.
  */
 import assert from "node:assert/strict";
@@ -16,11 +16,11 @@ import os from "node:os";
 import path from "node:path";
 import { after, beforeEach, describe, it, mock } from "node:test";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-hold-"));
-process.env.MERRYMEN_HOME = HOME;
-process.env.MERRYMEN_HOSTED = "1";
-delete process.env.MERRYMEN_SETTINGS_FILE;
-delete process.env.MERRYMEN_GRANT_FILE;
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-hold-"));
+process.env.AGENTCAP_HOME = HOME;
+process.env.AGENTCAP_HOSTED = "1";
+delete process.env.AGENTCAP_SETTINGS_FILE;
+delete process.env.AGENTCAP_GRANT_FILE;
 after(() => rmSync(HOME, { recursive: true, force: true }));
 
 const { startHoldTelegram } = await import("./hold");
@@ -409,7 +409,7 @@ describe("Telegram groups are not answered while trading is held", () => {
       await h.advance(600);
       const code = h.code();
       h.queue.push(
-        inGroup(1, STRANGER, "hey merryman"),
+        inGroup(1, STRANGER, "hey agentcapavatar"),
         inGroup(2, STRANGER, "/link WRONG1"),
         inGroup(3, STRANGER, "/start"),
         inGroup(4, OWNER, "/status"),
@@ -485,7 +485,7 @@ describe("Telegram groups are not answered while trading is held", () => {
         service(3, { left_chat_member: { id: 31337, is_bot: false, first_name: "Zed" } }),
         service(4, { migrate_to_chat_id: -1009999999999 }),
         service(5, { left_chat_member: { id: 111, is_bot: true, first_name: "held" } }),
-        inGroup(6, STRANGER, "hey merryman"),
+        inGroup(6, STRANGER, "hey agentcapavatar"),
       );
       await h.advance(1_000);
       assert.equal(existsSync(path.join(HOME, HELD_GROUPS_FILE)), true);

@@ -5,7 +5,7 @@
  * ceiling). They read that ceiling from /api/settings — the owner's value
  * over SETTINGS_DEFAULTS (25) — while the orders route falls back to
  * resolveConfig(): the web process's own settings file and its env,
- * MERRYMEN_TELEGRAM_MAX_ACTION_USDG. A house below 25 therefore offered a
+ * AGENTCAP_TELEGRAM_MAX_ACTION_USDG. A house below 25 therefore offered a
  * "(max)" chip the route refused, hosted as well as self-hosted.
  *
  * This route answers with the same resolution POST applies (lib/order-ceiling),
@@ -24,33 +24,33 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, afterEach, before, describe, it } from "node:test";
 
-import type { StoredGrant } from "@merrymen/core";
+import type { StoredGrant } from "@agentcap/core";
 import { mintSession } from "@/lib/auth";
-import { getGrantStore, resetGrantStoreForTest } from "@merrymen/grant-store";
-import { getSettingsStore, resetSettingsStoreForTest } from "@merrymen/settings-store";
+import { getGrantStore, resetGrantStoreForTest } from "@agentcap/grant-store";
+import { getSettingsStore, resetSettingsStoreForTest } from "@agentcap/settings-store";
 import { POST } from "../route";
 import { GET } from "./route";
 
 const TENANT = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const OTHER = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-const KEYS = ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_SESSION_SECRET", "MERRYMEN_SETTINGS_FILE", "MERRYMEN_TELEGRAM_MAX_ACTION_USDG", "DATABASE_URL"] as const;
+const KEYS = ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_SESSION_SECRET", "AGENTCAP_SETTINGS_FILE", "AGENTCAP_TELEGRAM_MAX_ACTION_USDG", "DATABASE_URL"] as const;
 const original = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
 let dir: string;
 
 before(() => {
-  dir = mkdtempSync(path.join(tmpdir(), "merrymen-ceiling-"));
-  process.env.MERRYMEN_HOME = dir;
+  dir = mkdtempSync(path.join(tmpdir(), "agentcap-ceiling-"));
+  process.env.AGENTCAP_HOME = dir;
   // No house settings file: the env and the defaults decide, as on a fresh box.
-  process.env.MERRYMEN_SETTINGS_FILE = path.join(dir, "no-such-settings.json");
-  process.env.MERRYMEN_SESSION_SECRET = randomBytes(32).toString("hex");
+  process.env.AGENTCAP_SETTINGS_FILE = path.join(dir, "no-such-settings.json");
+  process.env.AGENTCAP_SESSION_SECRET = randomBytes(32).toString("hex");
   delete process.env.DATABASE_URL;
   resetSettingsStoreForTest();
-  // The grant store reads MERRYMEN_HOME when it is made: made again, here.
+  // The grant store reads AGENTCAP_HOME when it is made: made again, here.
   resetGrantStoreForTest();
 });
 afterEach(() => {
-  delete process.env.MERRYMEN_HOSTED;
-  delete process.env.MERRYMEN_TELEGRAM_MAX_ACTION_USDG;
+  delete process.env.AGENTCAP_HOSTED;
+  delete process.env.AGENTCAP_TELEGRAM_MAX_ACTION_USDG;
 });
 after(() => {
   for (const k of KEYS) {
@@ -72,22 +72,22 @@ const ceiling = async (tenant: `0x${string}` | null) => {
 
 describe("the ceiling a chat order is held to", () => {
   it("SELF-HOSTED, A HOUSE ENV BELOW THE DEFAULT IS THE CEILING — not the 25 the settings screen shows", async () => {
-    process.env.MERRYMEN_TELEGRAM_MAX_ACTION_USDG = "10";
+    process.env.AGENTCAP_TELEGRAM_MAX_ACTION_USDG = "10";
     assert.equal(await ceiling(null), 10);
-    delete process.env.MERRYMEN_TELEGRAM_MAX_ACTION_USDG;
+    delete process.env.AGENTCAP_TELEGRAM_MAX_ACTION_USDG;
     assert.equal(await ceiling(null), 25, "and the default when nothing overrides it");
   });
 
   it("HOSTED, THE TENANT'S OWN VALUE, else the house's — env included", async () => {
-    process.env.MERRYMEN_HOSTED = "1";
-    process.env.MERRYMEN_TELEGRAM_MAX_ACTION_USDG = "10";
+    process.env.AGENTCAP_HOSTED = "1";
+    process.env.AGENTCAP_TELEGRAM_MAX_ACTION_USDG = "10";
     await getSettingsStore("spot").put(TENANT, { telegramMaxActionUsdg: 7 });
     assert.equal(await ceiling(TENANT), 7, "their own");
     assert.equal(await ceiling(OTHER), 10, "nothing stored: the house's, which the chips used to read as 25");
   });
 
   it("hosted and signed out, there is no ceiling to tell", async () => {
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOSTED = "1";
     assert.equal((await ask(null)).status, 401);
   });
 });
@@ -111,8 +111,8 @@ async function place(tenant: `0x${string}` | null, usdgAmount: number) {
 
 describe("POST refuses at the ceiling GET reports — one fixture, both readers", () => {
   it("HOSTED: the tenant's own 7 over the house's 10 — POST refuses 8 and GET says 7", async () => {
-    process.env.MERRYMEN_HOSTED = "1";
-    process.env.MERRYMEN_TELEGRAM_MAX_ACTION_USDG = "10";
+    process.env.AGENTCAP_HOSTED = "1";
+    process.env.AGENTCAP_TELEGRAM_MAX_ACTION_USDG = "10";
     await getGrantStore("spot").put(TENANT, grantOf(ACCOUNT[TENANT]));
     await getGrantStore("spot").put(OTHER, grantOf(ACCOUNT[OTHER]));
     await getSettingsStore("spot").put(TENANT, { telegramMaxActionUsdg: 7 });
@@ -136,7 +136,7 @@ describe("POST refuses at the ceiling GET reports — one fixture, both readers"
   });
 
   it("SELF-HOSTED: the house's env — POST refuses 11, queues 10, and GET says 10", async () => {
-    process.env.MERRYMEN_TELEGRAM_MAX_ACTION_USDG = "10";
+    process.env.AGENTCAP_TELEGRAM_MAX_ACTION_USDG = "10";
     // The one grant on this machine, where the self-hosted route finds its account.
     writeFileSync(path.join(dir, "grant.json"), JSON.stringify({ smartAccount: ACCOUNT[TENANT] }));
     assert.equal(await ceiling(null), 10);
@@ -148,7 +148,7 @@ describe("POST refuses at the ceiling GET reports — one fixture, both readers"
   });
 
   it("signed out, POST places nothing", async () => {
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOSTED = "1";
     assert.equal((await place(null, 1)).status, 401);
   });
 });

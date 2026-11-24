@@ -1,5 +1,5 @@
 /**
- * THE KILL MATRIX, SELF-HOSTED: the Telegram /kill and `merrymen kill`
+ * THE KILL MATRIX, SELF-HOSTED: the Telegram /kill and `agentcap kill`
  * against a Spot-only, a Perps-only and a two-wallet owner. The web rows are
  * in web/src/app/api/grants/kill-perps.test.ts, the hosted Telegram rows in
  * perps-kill-hosted.integration.test.ts.
@@ -13,7 +13,7 @@
  *
  * The Telegram row runs the Perps half and the answer it renders, and reads
  * index.ts for the order, as solana-kill.test.ts does for Solana: the kill
- * dependency lives inside the worker's start-up. `merrymen kill` is spawned
+ * dependency lives inside the worker's start-up. `agentcap kill` is spawned
  * for real.
  */
 import assert from "node:assert/strict";
@@ -38,11 +38,11 @@ const local = (account: string, extra: Record<string, unknown> = {}) =>
 
 /** A self-hosted home holding the wallets `owner` has. */
 function install(t: TestContext, owner: Owner): { dir: string; perpsHome: string } {
-  const saved = { home: process.env.MERRYMEN_HOME, hosted: process.env.MERRYMEN_HOSTED, db: process.env.DATABASE_URL };
+  const saved = { home: process.env.AGENTCAP_HOME, hosted: process.env.AGENTCAP_HOSTED, db: process.env.DATABASE_URL };
   const dir = mkdtempSync(path.join(tmpdir(), "perps-kill-home-"));
-  process.env.MERRYMEN_HOME = dir; delete process.env.MERRYMEN_HOSTED; delete process.env.DATABASE_URL;
+  process.env.AGENTCAP_HOME = dir; delete process.env.AGENTCAP_HOSTED; delete process.env.DATABASE_URL;
   t.after(() => {
-    for (const [k, v] of [["MERRYMEN_HOME", saved.home], ["MERRYMEN_HOSTED", saved.hosted], ["DATABASE_URL", saved.db]] as const) {
+    for (const [k, v] of [["AGENTCAP_HOME", saved.home], ["AGENTCAP_HOSTED", saved.hosted], ["DATABASE_URL", saved.db]] as const) {
       if (v === undefined) delete process.env[k]; else process.env[k] = v;
     }
     rmSync(dir, { recursive: true, force: true });
@@ -131,18 +131,18 @@ test("the hosted half answers from the store, and refuses to guess", async () =>
     stopPerpsForKill(T, { store: store("removed"), paper: async () => { throw new Error("connect ECONNREFUSED 10.0.0.7:5432"); } }),
     (e: unknown) => e instanceof PerpsPaperNotStopped && e.perpsRemoved && !/ECONNREFUSED|10\.0\.0\.7/.test(e.message) && /its settings could not be read or written just now/.test(e.message),
   );
-  const saved = process.env.MERRYMEN_HOSTED;
-  process.env.MERRYMEN_HOSTED = "1";
+  const saved = process.env.AGENTCAP_HOSTED;
+  process.env.AGENTCAP_HOSTED = "1";
   try { await assert.rejects(stopLocalPerpsForKill(), /hosted kill names its tenant/); }
-  finally { if (saved === undefined) delete process.env.MERRYMEN_HOSTED; else process.env.MERRYMEN_HOSTED = saved; }
+  finally { if (saved === undefined) delete process.env.AGENTCAP_HOSTED; else process.env.AGENTCAP_HOSTED = saved; }
 });
 
 const bin = fileURLToPath(new URL("../../cli/bin.mjs", import.meta.url));
 const cli = (dir: string, input: string) => spawnSync(process.execPath, [bin, "kill"], { input, encoding: "utf8", timeout: 100_000,
-  env: { ...process.env, MERRYMEN_HOME: dir, MERRYMEN_HOSTED: "", DATABASE_URL: "" } });
+  env: { ...process.env, AGENTCAP_HOME: dir, AGENTCAP_HOSTED: "", DATABASE_URL: "" } });
 
 for (const owner of OWNERS) {
-  test(`\`merrymen kill\`, ${owner}: every local wallet's grant is archived and removed`, { timeout: 120_000 }, (t) => {
+  test(`\`agentcap kill\`, ${owner}: every local wallet's grant is archived and removed`, { timeout: 120_000 }, (t) => {
     const { dir, perpsHome } = install(t, owner);
     const run = cli(dir, "y\n");
     const said = run.stdout + run.stderr;
@@ -163,7 +163,7 @@ for (const owner of OWNERS) {
   });
 }
 
-test("`merrymen kill` with a Perps grant it cannot archive removes Spot's, keeps the Perps one, and is incomplete", { timeout: 120_000 }, (t) => {
+test("`agentcap kill` with a Perps grant it cannot archive removes Spot's, keeps the Perps one, and is incomplete", { timeout: 120_000 }, (t) => {
   const { dir, perpsHome } = install(t, "two-wallet");
   writeFileSync(path.join(perpsHome, "grants"), "not a directory");
   const run = cli(dir, "y\n");
@@ -199,7 +199,7 @@ test("self-hosted Telegram /kill on a home it cannot read: Solana and Perps both
 });
 
 for (const owner of ["two-wallet", "perps-only"] as const) {
-  test(`\`merrymen kill\`, ${owner}, with a Perps home it cannot read: incomplete and exit 1, never done, and the grant is not lost`, { skip: asRoot, timeout: 120_000 }, (t) => {
+  test(`\`agentcap kill\`, ${owner}, with a Perps home it cannot read: incomplete and exit 1, never done, and the grant is not lost`, { skip: asRoot, timeout: 120_000 }, (t) => {
     const { dir, perpsHome } = install(t, owner);
     const restore = unreadable(perpsHome);
     let said: string;
@@ -219,7 +219,7 @@ for (const owner of ["two-wallet", "perps-only"] as const) {
   });
 }
 
-test("`merrymen kill` on a home it cannot read says nothing is done: Solana, Perps and the grant all incomplete", { skip: asRoot, timeout: 120_000 }, (t) => {
+test("`agentcap kill` on a home it cannot read says nothing is done: Solana, Perps and the grant all incomplete", { skip: asRoot, timeout: 120_000 }, (t) => {
   const { dir } = install(t, "two-wallet");
   const restore = unreadable(dir);
   let said: string;
@@ -238,7 +238,7 @@ test("`merrymen kill` on a home it cannot read says nothing is done: Solana, Per
   assert.match(said, /grant NOT destroyed — grant\.json could not be read \(EACCES\)/);
 });
 
-test("`merrymen kill` answered no touches neither wallet", { timeout: 120_000 }, (t) => {
+test("`agentcap kill` answered no touches neither wallet", { timeout: 120_000 }, (t) => {
   for (const owner of ["two-wallet", "perps-only"] as const) {
     const { dir, perpsHome } = install(t, owner);
     const run = cli(dir, "n\n");

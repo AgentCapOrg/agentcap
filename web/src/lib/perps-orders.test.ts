@@ -58,7 +58,7 @@ describe("owner perps exits and the two validation gates", () => {
   });
 
   it("EACH WALLET'S GATES REFUSE THE OTHER'S ORDERS: the Perps wallet takes only exits, the Spot wallet never takes one", () => {
-    for (const spot of [{ side: "buy", symbol: "TSLA", usdgAmount: 5 }, { side: "buy", symbol: "MERRYMEN", usdgAmount: 30, purpose: "energy" }]) {
+    for (const spot of [{ side: "buy", symbol: "TSLA", usdgAmount: 5 }, { side: "buy", symbol: "AGENTCAP", usdgAmount: 30, purpose: "energy" }]) {
       assert.deepEqual(readPerpsWalletOrder(spot), { error: PERPS_WALLET_EXITS_ONLY });
       assert.ok(walletOrderRefusal("perps", orderRoute(spot)), "and the Perps worker refuses it again");
       assert.equal(namesPerpExit(spot), false);

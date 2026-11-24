@@ -1,13 +1,13 @@
-# Distributing Merrymen for Grok
+# Distributing AgentCap for Grok
 
 Prepared on 2026-10-15. These are local submission materials, not a submitted
 or approved listing. See the [connection guide](grok.md) for setup.
 
 ## Connect today
 
-Send users to [Merrymen for Grok](https://merrymen.dev/grok). The documented
+Send users to [AgentCap for Grok](https://agentcap.xyz/grok). The documented
 Grok chat route is [Connectors](https://grok.com/connectors) → **New Connector
-→ Custom**, then enter `https://mcp.merrymen.dev/mcp` and authenticate.
+→ Custom**, then enter `https://mcp.agentcap.xyz/mcp` and authenticate.
 Business and Enterprise users need their admin to provision the connector.
 No official prefilled Grok custom-connector install URL has been verified.
 [Official connector instructions](https://docs.x.ai/grok/connectors)
@@ -15,7 +15,7 @@ No official prefilled Grok custom-connector install URL has been verified.
 For an internal team, a Team Bot can share a Remote HTTPS custom MCP
 configuration. Each teammate signs into their own account when OAuth is
 used. Owners/managers manage the Bot's **Setup → Plugins** card; this is
-team distribution, not a public catalog listing. Use each person's Merrymen
+team distribution, not a public catalog listing. Use each person's AgentCap
 OAuth grant, never a shared owner token or wallet session.
 [Official Team Bot documentation](https://docs.x.ai/grok-bot/team-bots)
 
@@ -38,15 +38,15 @@ remain. [Submission requirements](https://x.ai/bot/marketplace/submit-a-plugin)
 
 ## Candidate listing materials
 
-- **Name:** Merrymen
-- **Website:** `https://merrymen.dev/grok`
-- **MCP URL:** `https://mcp.merrymen.dev/mcp`
-- **Logo URL:** `https://mcp.merrymen.dev/mcp-icon-512.png`
-- **Package:** [merrymen-grok](../../plugins/merrymen-grok/README.md)
+- **Name:** AgentCap
+- **Website:** `https://agentcap.xyz/grok`
+- **MCP URL:** `https://mcp.agentcap.xyz/mcp`
+- **Logo URL:** `https://mcp.agentcap.xyz/mcp-icon-512.png`
+- **Package:** [agentcap-grok](../../plugins/agentcap-grok/README.md)
 
-**Description:** Connect Merrymen to inspect your Merryman's setup, status,
-portfolio and decisions, and prepare a new Merryman for owner review.
-Account approval and wallet signing stay in Merrymen on your own device.
+**Description:** Connect AgentCap to inspect your AgentCapAvatar's setup, status,
+portfolio and decisions, and prepare a new AgentCapAvatar for owner review.
+Account approval and wallet signing stay in AgentCap on your own device.
 The optional monitoring skill uses read-only tools and runs on a schedule
 only when requested.
 
@@ -69,10 +69,10 @@ results. Local package tests alone do not complete this procedure.
 2. Authenticate through OAuth on the owner's own device. Confirm the
    selected account, shared agent and scopes; do not use the Bot's cloud
    browser for owner login, approval or wallet signing.
-3. Ask for setup status. Confirm `get_merryman_setup` returns the correct
+3. Ask for setup status. Confirm `get_agentcapavatar_setup` returns the correct
    state and usable next steps; inspect the MCP App when available and the
    text fallback otherwise.
-4. Explicitly request a new test Merryman. Review the draft on the owner's
+4. Explicitly request a new test AgentCapAvatar. Review the draft on the owner's
    device, complete the intended wallet setup/signing, then return to the
    original chat. Refresh setup/status and verify actual worker state
    before claiming activation. An approved draft is not a running worker.
@@ -87,7 +87,7 @@ results. Local package tests alone do not complete this procedure.
 | Check | Evidence as of 2026-10-15 |
 |---|---|
 | Local package | Five package integrity tests passed, covering logo bytes/dimensions, production endpoint, current tools, the setup template's actual tool schema and the monitoring allowlist. All 17 targeted Grok prompt/package/HTTP onboarding tests passed. |
-| Native Grok chat | Authenticated `get_merryman_setup` succeeded and an interactive Merrymen MCP App rendered. |
+| Native Grok chat | Authenticated `get_agentcapavatar_setup` succeeded and an interactive AgentCap MCP App rendered. |
 | Native setup handoff | Fresh-account consent and Grok Scout drafting through the MCP App completed; the approved secure wallet page preserved the chosen configuration on the owner's device. |
 | Wallet signing and activation | The owner signed paper limits, returned to Grok and selected Check activation. Grok reported paper mode with a fresh worker report. The native practice flow passed; live trading was not tested. |
 | Grok Bot | Package installation, OAuth, tool execution and setup/monitoring skill behavior remain unverified in the native Bot client. Grok chat success does not verify Grok Bot. |

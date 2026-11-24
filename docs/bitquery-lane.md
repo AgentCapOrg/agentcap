@@ -52,17 +52,17 @@ meant as a later source for the early book and nothing calls it yet.
    If a shape is wrong, the lane logs the provider's reason once (scrubbed of
    addresses and keys) and answers `invalid-body` or `invalid-shape`. It never
    reports a wrong shape as no trades.
-2. **Set `MERRYMEN_BITQUERY_API_KEY` on the orchestrator only.** Do not set it
+2. **Set `AGENTCAP_BITQUERY_API_KEY` on the orchestrator only.** Do not set it
    on `web`, on the Brain service, or under the names `BITQUERY_API_KEY` or
-   `MERRYMEN_TOKEN`. `CHILD_SECRET_STRIP` removes all three names from every
+   `AGENTCAP_TOKEN`. `CHILD_SECRET_STRIP` removes all three names from every
    child. A copy on any other service is an extra credential for no purpose.
 3. **Know that the gateway now spends too, and set its cap.** The same change
    fixed the worker's gateway header (below), so holders' discovery polls now
-   reach the gateway's `MERRYMEN_GATEWAY_BITQUERY_KEY` instead of failing with
+   reach the gateway's `AGENTCAP_GATEWAY_BITQUERY_KEY` instead of failing with
    401 for free. Each holder costs roughly 720 points a day at the default
    10-minute interval, and up to ten times that at 1 minute. The gateway caps
    all of them, plus its public memescope, with
-   `MERRYMEN_GATEWAY_BITQUERY_POINTS_PER_DAY` (default `12500`), in two
+   `AGENTCAP_GATEWAY_BITQUERY_POINTS_PER_DAY` (default `12500`), in two
    purses: the public memescope spends only its own 80% (10,000 a day; it
    refreshes at most every 45 s, matching the Markets page's own 45 s poll,
    which is at most 9,605 points a day, so it never runs out; a failed
@@ -74,7 +74,7 @@ meant as a later source for the early book and nothing calls it yet.
    starve the rest). The holders' purse covers three holders at the default
    interval all day. A gateway cap below about 12,000 leaves the memescope
    short of its 45 s day, and the page then serves its last rows until
-   00:00 UTC. The gateway's cap and this lane's `MERRYMEN_BITQUERY_POINTS_PER_DAY`
+   00:00 UTC. The gateway's cap and this lane's `AGENTCAP_BITQUERY_POINTS_PER_DAY`
    (default 25,000) are separate counters, and neither sees the other's
    spend: if the gateway's key is on the same plan as this lane, the operator
    sizes both to the plan, or puts the gateway on a plan of its own. Deploy
@@ -83,7 +83,7 @@ meant as a later source for the early book and nothing calls it yet.
    - `bitquery lane: on — 25000 points/UTC day (20000 for child evidence), 60 requests/min, 3 at once`
    - `bitquery lane: off — …`, with the reason.
 5. **Turn on child evidence by account.** Children may ask only if their smart
-   account is listed in `MERRYMEN_DECISION_RESEARCH_ACCOUNTS`, the same
+   account is listed in `AGENTCAP_DECISION_RESEARCH_ACCOUNTS`, the same
    allowlist that decision research already uses (see
    [`decision-research.md`](decision-research.md)). Add an account to it in the
    orchestrator's deploy environment, never in this repository: which agent's
@@ -95,20 +95,20 @@ meant as a later source for the early book and nothing calls it yet.
    own counter (table `spend` in `<fleet home>/bitquery-lane/lane.sqlite`, with
    columns `points`, `calls` and `refused` per UTC day) plus the gateway's.
    If the real cost per call is higher than estimated, lower
-   `MERRYMEN_BITQUERY_POINTS_PER_DAY` or the gateway's cap. Do not raise the
+   `AGENTCAP_BITQUERY_POINTS_PER_DAY` or the gateway's cap. Do not raise the
    per-query estimates in place of that.
 
-To stop spending without removing the key, set `MERRYMEN_BITQUERY_LANE=0` and
+To stop spending without removing the key, set `AGENTCAP_BITQUERY_LANE=0` and
 redeploy. Every flow question then answers `unavailable`.
 
 ## Knobs (orchestrator)
 
 | Var | Default | Meaning |
 |---|---|---|
-| `MERRYMEN_BITQUERY_API_KEY` | unset (lane off) | The plan's key. An `ory_at_…` V2 token is sent as `Authorization: Bearer`; anything else is sent as `X-API-KEY`. **Orchestrator only.** |
-| `MERRYMEN_BITQUERY_LANE` | on when a key is set | `0` turns the lane off while keeping the key. |
-| `MERRYMEN_BITQUERY_POINTS_PER_DAY` | `25000` (ceiling `100000`) | Points reserved per UTC day across every caller of this lane. 25,000 × 30 = 750,000. The gateway counts its own spend separately under `MERRYMEN_GATEWAY_BITQUERY_POINTS_PER_DAY` (default 12,500 a day: 10,000 for the public memescope at its 45 s refresh, 2,500 for holders); when both keys are on one plan, the operator sizes both to it. Child evidence may use at most 80% of it, so X answers are never starved. |
-| `MERRYMEN_BITQUERY_RPM` | `60` (ceiling `90`) | Requests started per rolling minute. The plan allows 90. |
+| `AGENTCAP_BITQUERY_API_KEY` | unset (lane off) | The plan's key. An `ory_at_…` V2 token is sent as `Authorization: Bearer`; anything else is sent as `X-API-KEY`. **Orchestrator only.** |
+| `AGENTCAP_BITQUERY_LANE` | on when a key is set | `0` turns the lane off while keeping the key. |
+| `AGENTCAP_BITQUERY_POINTS_PER_DAY` | `25000` (ceiling `100000`) | Points reserved per UTC day across every caller of this lane. 25,000 × 30 = 750,000. The gateway counts its own spend separately under `AGENTCAP_GATEWAY_BITQUERY_POINTS_PER_DAY` (default 12,500 a day: 10,000 for the public memescope at its 45 s refresh, 2,500 for holders); when both keys are on one plan, the operator sizes both to it. Child evidence may use at most 80% of it, so X answers are never starved. |
+| `AGENTCAP_BITQUERY_RPM` | `60` (ceiling `90`) | Requests started per rolling minute. The plan allows 90. |
 
 A knob that is not a positive whole number is logged by its length, never
 echoed, and its default applies. A value above the ceiling is clamped, and the
@@ -195,7 +195,7 @@ for the gateway and the IDE.
   the orchestrator's work. It cannot choose a query, a window, a limit or a creator. It
   never names a tenant, and if it adds one, the field is ignored and logged.
   The broker shares Fomo's IPC channel. That channel exists only while
-  `MERRYMEN_FOMO_ENABLED=1`, and without it the client answers `unavailable`
+  `AGENTCAP_FOMO_ENABLED=1`, and without it the client answers `unavailable`
   immediately.
 - **The launcher is resolved on the orchestrator**, from the Pons factory's own
   launch event (`readLaunchCreator` in `worker/src/venues/pons.ts`), filtered
@@ -213,7 +213,7 @@ for the gateway and the IDE.
 - **Fast-Trencher entry reviews, research accounts only** (wired). The review
   in `worker/src/index.ts` asks through `worker/src/review-flow.ts` exactly
   where the momentum plan goes — an account on
-  `MERRYMEN_DECISION_RESEARCH_ACCOUNTS`, live rail, an unheld coin — and only
+  `AGENTCAP_DECISION_RESEARCH_ACCOUNTS`, live rail, an unheld coin — and only
   with a fresh tape row, since a review without one is never paid for. It asks
   when the review starts, beside the cost quotes and the candle and trade
   legs, with the same 5-second evidence budget as the request's deadline, so
@@ -242,13 +242,13 @@ for the gateway and the IDE.
     (`BrainCapabilityProbe` on `lens_keys`), so an older Brain never sees it.
     A decide that carried it and came back unreachable (how a 422 arrives)
     turns it off until `/health` says yes again.
-  - A child asks only when the orchestrator wrote `MERRYMEN_FLOW_BROKER=1` into
+  - A child asks only when the orchestrator wrote `AGENTCAP_FLOW_BROKER=1` into
     its environment, which it does when the lane is on and the child has the
     IPC channel. Without it no question is sent and nothing is waited for. The
     orchestrator never passes on a copy from its own environment.
   - Each review logs `[trencher] flow SYMBOL: lens`, `no-block` (read, nothing
     to render) or the failure word.
-- **X answers**, with research on (`MERRYMEN_XPOST_RESEARCH=1`, an active
+- **X answers**, with research on (`AGENTCAP_XPOST_RESEARCH=1`, an active
   owner's answers; [`x-posting.md`](x-posting.md) "Research for answers"):
   `orchestrator.ts` hands the research `flowFor` only while the lane is on,
   for a Robinhood Chain contract a tag carried or a coin resolved to. The
@@ -277,7 +277,7 @@ for the gateway and the IDE.
   cause: a 401 is the token, a 403 is the holdings, and a 503 is the gateway's
   own state. **This starts gateway spending**, so the gateway gained a
   fleet-wide daily cap in the same change (rollout step 3).
-- **No discovery fan-out.** `BITQUERY_API_KEY` and `MERRYMEN_TOKEN` are
+- **No discovery fan-out.** `BITQUERY_API_KEY` and `AGENTCAP_TOKEN` are
   stripped from children. In hosted mode both are house keys that a child can
   only read from the environment, and discovery defaults on, so either one on
   the orchestrator would have made every child poll Bitquery. A hosted child

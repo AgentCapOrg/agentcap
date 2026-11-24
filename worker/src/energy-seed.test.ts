@@ -35,13 +35,13 @@ import {
   seedEnergyDays,
 } from "./energy-seed";
 
-// The child's home, as childEnv sets MERRYMEN_HOME for it. No DATABASE_URL:
+// The child's home, as childEnv sets AGENTCAP_HOME for it. No DATABASE_URL:
 // a child never holds one; its store is its own sqlite.
-const scratch = mkdtempSync(path.join(os.tmpdir(), "merrymen-energy-seed-"));
+const scratch = mkdtempSync(path.join(os.tmpdir(), "agentcap-energy-seed-"));
 const HOME = path.join(scratch, "child");
 const isolatedCwd = path.join(scratch, "cwd");
 mkdirSync(isolatedCwd);
-process.env.MERRYMEN_HOME = HOME;
+process.env.AGENTCAP_HOME = HOME;
 delete process.env.DATABASE_URL;
 const originalCwd = process.cwd();
 const store = await import("./store");
@@ -53,7 +53,7 @@ try {
 }
 // The orchestrator's own handle on the child's ledger, opened the way
 // seedEnergyForChild opens it.
-const localRaw = new DatabaseSync(path.join(HOME, "merrymen.db"));
+const localRaw = new DatabaseSync(path.join(HOME, "agentcap.db"));
 localRaw.exec("PRAGMA busy_timeout = 250");
 const local = wrapSqlite(localRaw);
 

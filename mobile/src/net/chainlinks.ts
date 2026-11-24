@@ -1,4 +1,4 @@
-import { robinhoodChain } from "@merrymen/core";
+import { robinhoodChain } from "@agentcap/core";
 
 /**
  * Explorer + RPC endpoints, taken from the shared chain definition.

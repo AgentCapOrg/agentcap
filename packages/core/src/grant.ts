@@ -329,7 +329,7 @@ export interface GrantCaps {
  *   nonce   — server-issued, expiring, single-use; stops replay of this claim
  *   owner   — the key being vouched for
  *   account — the smart account claimed, i.e. which ledger partition is at stake
- *   chainId — merrymen runs testnet 46630 and mainnet 4663; without it one
+ *   chainId — agentcap runs testnet 46630 and mainnet 4663; without it one
  *             signature would bind on both
  */
 /**
@@ -410,9 +410,9 @@ export function bindingMessage(args: BindingClaim): string {
     // verify just as well when replayed under somebody else's login. Under the
     // legacy version the second signature carries that job; here the text does.
     return [
-      `${args.origin} wants you to authorize a merrymen agent account.`,
+      `${args.origin} wants you to authorize a agentcap agent account.`,
       "",
-      "You are linking the agent wallet below to your merrymen identity. It moves no funds.",
+      "You are linking the agent wallet below to your agentcap identity. It moves no funds.",
       "",
       `Agent account: ${args.smartAccount.toLowerCase()}`,
       `Owner key: ${args.owner.toLowerCase()}`,
@@ -427,7 +427,7 @@ export function bindingMessage(args: BindingClaim): string {
   // has not reloaded are still in flight, and a signature is over the exact
   // bytes — change a space here and every one of them stops verifying.
   return [
-    `${args.origin} wants you to authorize a merrymen agent account.`,
+    `${args.origin} wants you to authorize a agentcap agent account.`,
     "",
     "You are linking the agent wallet below to this login. It moves no funds.",
     "",
@@ -779,11 +779,11 @@ export function sellableAssets(grant: Pick<StoredGrant, "grantFeatures" | "grant
  * grant signed before extras existed genuinely has no extra approve permission
  * in its call policy, so "unknown" and "none" are the same fact here.
  *
- * THE ENERGY RESERVE IS IN NEITHER LIST. $MERRYMEN is energy, not a token the
+ * THE ENERGY RESERVE IS IN NEITHER LIST. $AGENTCAP is energy, not a token the
  * agent trades: every signer drops it from the sealed extras
  * (wall.ts usableExtraTokens), so no signature will ever "cover" it and the
  * worker never watches it. Reported as uncovered it would tell an owner who
- * listed it to "re-sign to cover MERRYMEN" — a signature that changes nothing,
+ * listed it to "re-sign to cover AGENTCAP" — a signature that changes nothing,
  * asked for again after every one. It is bought only by the agent's
  * get-energy route, and nothing here is advice about it.
  */

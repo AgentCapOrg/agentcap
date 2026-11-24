@@ -14,7 +14,7 @@
  * it and before the process is gone — the last of the worker's tick — which
  * only a final pass after the exit can carry.
  *
- * MERRYMEN_HOME is per process (node --test runs each file in its own), so
+ * AGENTCAP_HOME is per process (node --test runs each file in its own), so
  * this never leaks into another test file. A drain is once per process, so
  * each test forgets the last one first (resetDrainForTest).
  */
@@ -39,13 +39,13 @@ import {
 import { SHUTDOWN_RECEIPT_FILE, shutdownReceiptDir, takePreviousShutdown, type DrainLimits, type ShutdownReceipt } from "./fleet-drain";
 import { writeRestoreBlocked } from "./restore-block";
 
-const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-drain-")));
-process.env.MERRYMEN_HOME = fleet;
-process.env.MERRYMEN_HOSTED = "1";
+const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-drain-")));
+process.env.AGENTCAP_HOME = fleet;
+process.env.AGENTCAP_HOSTED = "1";
 delete process.env.DATABASE_URL;
-delete process.env.MERRYMEN_DRAIN_BUDGET_MS;
+delete process.env.AGENTCAP_DRAIN_BUDGET_MS;
 const dek = Buffer.alloc(32, 83);
-process.env.MERRYMEN_STORE_DEK = dek.toString("base64");
+process.env.AGENTCAP_STORE_DEK = dek.toString("base64");
 const {
   adoptChildForTest, adoptHolderForTest, childHome, drainFleetForTest, finalMirrorBeforeAnchor, hasLeaseForTest,
   mirrorLedgersForTest, onDrainBeforeChildren, resetDrainForTest, setKillConfirmForTest, setLiveMirrorStoreForTest,
@@ -147,7 +147,7 @@ async function agentRow(db: Db, tenant: string, account: string) {
 async function book(tenant: `0x${string}`, account: `0x${string}`) {
   const home = childHome(tenant);
   mkdirSync(home, { recursive: true });
-  const localRaw = new DatabaseSync(path.join(home, "merrymen.db"));
+  const localRaw = new DatabaseSync(path.join(home, "agentcap.db"));
   handles.push(localRaw);
   const local = wrapSqlite(localRaw);
   await applyLedgerSchema(local);
@@ -314,7 +314,7 @@ it("A HOLDER HOME GETS FORGET-ONLY MEMORY HANDLING, and its book is never copied
   writeFileSync(path.join(home, "soul", "OWNER.md"), "stale held owner memory must not win");
   appendForget(home, { chatId: -10083, userId: 42, atMs: Date.now() });
   recordPersonalMemoryForget({ kind: "owner" }, home);
-  const staleRaw = new DatabaseSync(path.join(home, "merrymen.db"));
+  const staleRaw = new DatabaseSync(path.join(home, "agentcap.db"));
   handles.push(staleRaw);
   await applyLedgerSchema(wrapSqlite(staleRaw));
   staleRaw.prepare(`INSERT INTO trades (id,agent_id,kind,target,amount_usdg,status,created_at)

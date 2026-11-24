@@ -1,4 +1,4 @@
-//! Owner recovery (`merrymen solana-recover`) against the compiled vault program and the
+//! Owner recovery (`agentcap solana-recover`) against the compiled vault program and the
 //! SPL Token, Token-2022 and ATA programs bundled with solana-program-test.
 //!
 //! The transactions (revoke_all, then one withdrawal per asset: SOL, USDG, WSOL) are read
@@ -24,7 +24,7 @@ use anchor_spl::token_2022::spl_token_2022::{
     state::{Account as TokenAccount, Mint as RawMint},
 };
 use base64::Engine;
-use merrymen_vault::{self as vault, Vault, USDG, WSOL};
+use agentcap_vault::{self as vault, Vault, USDG, WSOL};
 use solana_program_test::{BanksClientError, ProgramTest, ProgramTestContext};
 #[allow(deprecated)]
 // solana-system-interface is not a dependency here; the builder is the same.
@@ -367,7 +367,7 @@ fn atas(fx: &Fixture) -> (Pubkey, Pubkey, Pubkey, Pubkey) {
 /// USDG, synced and unsynced native SOL in the WSOL account, and spare vault SOL.
 async fn funded_chain(fx: &Fixture, issuer: &Keypair, freezable_usdg: bool) -> Chain {
     // The compiled program from BPF_OUT_DIR; Token, Token-2022 and ATA are ProgramTest's SBF builds.
-    let mut pt = ProgramTest::new("merrymen_vault", vault::ID, None);
+    let mut pt = ProgramTest::new("agentcap_vault", vault::ID, None);
     pt.add_account(
         fx.owner,
         Account::new(1_000_000_000, 0, &anchor_lang::system_program::ID),

@@ -34,7 +34,7 @@ import { researchCoins, scoutFieldsFor, type ScoutSiteFields } from "../../../wo
  * because the orchestrator strips DATABASE_URL from each worker child, so the
  * child writes sqlite in its own container while this service reads a Postgres
  * nothing ever created the schema in. A discoveries panel built the same way
- * would be blank on app.merrymen.dev for exactly that reason.
+ * would be blank on app.agentcap.xyz for exactly that reason.
  *
  * Fetching server-side instead means the panel shows the same thing to
  * everyone, hosted or not, with no database and no tenant scoping —
@@ -276,11 +276,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * distinction is already built; this just adds another producer of it.
  */
 const DISPLAY_SCOUT_ENABLED = ["1", "true", "yes"].includes(
-  (process.env.MERRYMEN_DISPLAY_SCOUT_ENABLED ?? "").trim().toLowerCase(),
+  (process.env.AGENTCAP_DISPLAY_SCOUT_ENABLED ?? "").trim().toLowerCase(),
 );
 
 /** Model calls a single web process may spend on display verdicts in a day. */
-const DISPLAY_SCOUT_DAILY_MAX = Number(process.env.MERRYMEN_DISPLAY_SCOUT_DAILY_MAX ?? "60") || 60;
+const DISPLAY_SCOUT_DAILY_MAX = Number(process.env.AGENTCAP_DISPLAY_SCOUT_DAILY_MAX ?? "60") || 60;
 
 /**
  * A VERDICT OUTLIVES A PAYLOAD, and used to be thrown away with it.
@@ -394,7 +394,7 @@ async function rankUncached(
 
     let research: ReadonlyMap<string, ReturnType<typeof scoutFieldsFor>> | undefined;
     if (cfg.browserUrl && cfg.browserToken) {
-      const client = createPublicClient({ transport: webChainRead(process.env.MERRYMEN_RPC_MAINNET) });
+      const client = createPublicClient({ transport: webChainRead(process.env.AGENTCAP_RPC_MAINNET) });
       const found = await researchCoins(kept, {
         client: client as never,
         browser: { baseUrl: cfg.browserUrl, token: cfg.browserToken },
@@ -416,7 +416,7 @@ async function readFresh(): Promise<{ rows: FreshRow[]; chain: ChainStatus }> {
   // falses rather than three optimistic trues.
   const chain: ChainStatus = { launchpad: false, meta: false, facts: false, clock: false };
   try {
-    const client = createPublicClient({ transport: webChainRead(process.env.MERRYMEN_RPC_MAINNET) });
+    const client = createPublicClient({ transport: webChainRead(process.env.AGENTCAP_RPC_MAINNET) });
     const W = MAX_ACTIVITY_BLOCKS;
     const [scan, activity] = await Promise.all([
       recentPonsLaunches(client as never, W),
@@ -810,7 +810,7 @@ export async function walkFeeds(
       }
       for (const p of r.pools) onPool(p);
       // Spaced, because the limit being respected here is somebody else's and
-      // this walk is the largest thing merrymen asks of them.
+      // this walk is the largest thing agentcap asks of them.
       const gap = opts.gapMs ?? PAGE_GAP_MS;
       if (gap > 0 && walking.size > 0) await new Promise((resolve) => setTimeout(resolve, gap));
     }
@@ -871,7 +871,7 @@ async function build(): Promise<Shared> {
   // DATABASE_URL (the orchestrator strips it), so it writes its ledger to sqlite
   // in its own container and NOTHING it decides can be read by this service.
   // A verdict panel fed from `decisions` would be permanently empty on
-  // app.merrymen.dev — the exact failure this route's header was written about.
+  // app.agentcap.xyz — the exact failure this route's header was written about.
   //
   // So the same model that ranks candidates in the worker ranks them again
   // here, on the same screened set, and the answer travels with the row. It is

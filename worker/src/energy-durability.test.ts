@@ -217,7 +217,7 @@ describe("writeSettingsForChild always writes settings.json", () => {
 
   it("and the saved-settings path writes through the same helper, by the same holder rule", () => {
     assert.match(fn, /writeChildSettings\(tenant, forChild\);/);
-    assert.match(fn, /const forChild: MerrymenSettings = childSettingsFor\(settings, holder\);/);
+    assert.match(fn, /const forChild: AgentCapSettings = childSettingsFor\(settings, holder\);/);
     const helper = src.slice(src.indexOf("function writeChildSettings("), src.indexOf("\n}\n", src.indexOf("function writeChildSettings(")));
     assert.match(helper, /const file = path\.join\(home, "settings\.json"\);/);
     assert.match(helper, /writeFileAtomicSync\(file, next, 0o600\);/, "owner-only, like the file it always was — and replaced whole (settings-atomic.test.ts)");

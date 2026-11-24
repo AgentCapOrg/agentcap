@@ -3,11 +3,11 @@
  * (perps slice 5b).
  *
  * A self-hosted Perps wallet is a complete home of its own,
- * $MERRYMEN_HOME/accounts/perps (purposeHome): its grant.json, its archive
+ * $AGENTCAP_HOME/accounts/perps (purposeHome): its grant.json, its archive
  * under grants/, its heartbeat and its ledger. The intake writes there and
  * nowhere else, and only after every check has passed:
  *
- * - MERRYMEN_PERPS is paper (D1), or nothing is written at all — and a
+ * - AGENTCAP_PERPS is paper (D1), or nothing is written at all — and a
  *   renewal's stop (DELETE ?wallet=perps, permission-replacement) is refused
  *   with the renewal, while the kill still stops the wallet;
  * - a renewal's stop keeps no record of the stopped key (no retired-key fence
@@ -20,7 +20,7 @@
  *   with a live eth_call — an index-0 account is refused 403, and a chain
  *   that cannot answer is a 503 with nothing written, never a pass.
  *
- * Driven through the real route in a temporary MERRYMEN_HOME, with grants
+ * Driven through the real route in a temporary AGENTCAP_HOME, with grants
  * sealed by the canonical-wall fixture and a stub chain whose EntryPoint
  * derives each Kernel account from its initCode. Adapted from the perps
  * branch's dual-purpose-local.test.ts (112dbeb6): `?wallet=`, main's renewal
@@ -36,11 +36,11 @@ import { DatabaseSync } from "node:sqlite";
 import { after, before, beforeEach, describe, it } from "node:test";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import type { LocalAccount } from "viem";
-import type { StoredGrant } from "@merrymen/core";
+import type { StoredGrant } from "@agentcap/core";
 import { RESTORE_PERPS_OWNER_DIFFERS, RESTORE_PERPS_UNREAD, restorePerpsRefusal } from "@/lib/restore-perps-owner";
 
 const ORIGIN = "http://localhost:3100";
-const ENV = ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "DATABASE_URL", "MERRYMEN_GRANT_FILE", "MERRYMEN_PERPS"] as const;
+const ENV = ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "DATABASE_URL", "AGENTCAP_GRANT_FILE", "AGENTCAP_PERPS"] as const;
 const saved = Object.fromEntries(ENV.map((k) => [k, process.env[k]]));
 let home = "";
 let route: typeof import("./route");
@@ -66,9 +66,9 @@ const perpsGrant = async (account = PERPS, signer = owner) => (await fixture.sig
 
 before(async () => {
   home = mkdtempSync(path.join(tmpdir(), "mm-grants-dual-local-"));
-  process.env.MERRYMEN_HOME = home;
-  for (const k of ["MERRYMEN_HOSTED", "DATABASE_URL", "MERRYMEN_GRANT_FILE"] as const) delete process.env[k];
-  process.env.MERRYMEN_PERPS = "paper";
+  process.env.AGENTCAP_HOME = home;
+  for (const k of ["AGENTCAP_HOSTED", "DATABASE_URL", "AGENTCAP_GRANT_FILE"] as const) delete process.env[k];
+  process.env.AGENTCAP_PERPS = "paper";
   fixture = await import("@/lib/canonical-wall-fixture");
   chain = fixture.derivingChain();
   chain.install();
@@ -88,7 +88,7 @@ after(() => {
   rmSync(home, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
 });
 beforeEach(() => {
-  process.env.MERRYMEN_PERPS = "paper";
+  process.env.AGENTCAP_PERPS = "paper";
   chain.state.down = false;
   for (const name of ["grant.json", "accounts", "grants"]) rmSync(path.join(home, name), { recursive: true, force: true });
   writeFileSync(spotFile(), spotOnDisk());
@@ -141,7 +141,7 @@ describe("self-hosted: the Perps wallet is written to its own home, and only the
     assert.deepEqual(JSON.parse(read(perpsFile())!), first, "the stopped session key is armed again");
     // What makes that harmless: the wall it was sealed over rebuilds to no
     // permission at all, so the key can call nothing on chain…
-    const { buildCallPermissions, grantWallOptions, GRANT_ENERGY } = await import("@merrymen/core");
+    const { buildCallPermissions, grantWallOptions, GRANT_ENERGY } = await import("@agentcap/core");
     const { renewalSkipsRevocation } = await import("@/lib/perps-renewal");
     assert.deepEqual(buildCallPermissions(first.caps, first.smartAccount as `0x${string}`, grantWallOptions(first)), []);
     assert.equal(renewalSkipsRevocation(first), true);
@@ -219,8 +219,8 @@ describe("self-hosted: every refusal lands before anything is written", () => {
     const before = read(spotFile());
     const grant = await perpsGrant();
     for (const ceiling of [undefined, "off", "live", "papr"]) {
-      if (ceiling === undefined) delete process.env.MERRYMEN_PERPS;
-      else process.env.MERRYMEN_PERPS = ceiling;
+      if (ceiling === undefined) delete process.env.AGENTCAP_PERPS;
+      else process.env.AGENTCAP_PERPS = ceiling;
       const res = await json(await post(grant));
       assert.equal(res.status, 403, String(ceiling));
       assert.equal(res.body.code, "perps-wallet-not-offered");
@@ -239,8 +239,8 @@ describe("self-hosted: every refusal lands before anything is written", () => {
       method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ purpose: "permission-replacement" }),
     }));
     for (const ceiling of [undefined, "off", "live", "papr"]) {
-      if (ceiling === undefined) delete process.env.MERRYMEN_PERPS;
-      else process.env.MERRYMEN_PERPS = ceiling;
+      if (ceiling === undefined) delete process.env.AGENTCAP_PERPS;
+      else process.env.AGENTCAP_PERPS = ceiling;
       const res = await json(await renewalStop());
       assert.equal(res.status, 403, String(ceiling));
       assert.equal(res.body.code, "perps-wallet-not-offered");
@@ -250,7 +250,7 @@ describe("self-hosted: every refusal lands before anything is written", () => {
       assert.equal(read(spotFile()), before.spot, "the Spot grant.json is untouched");
     }
     // The kill is not a renewal: it stops the Perps wallet whatever the lever says.
-    delete process.env.MERRYMEN_PERPS;
+    delete process.env.AGENTCAP_PERPS;
     const killed = await json(await route.DELETE(new Request(`${ORIGIN}/api/grants`, { method: "DELETE" })));
     assert.deepEqual(killed, { status: 200, body: { ok: true, perps: "stopped" } });
     assert.equal(existsSync(perpsFile()), false);
@@ -391,7 +391,7 @@ describe("self-hosted: GET ?wallet=perps reads the Perps home, never the Spot on
 
   it("perps off: still answered", async () => {
     assert.equal((await post(await perpsGrant())).status, 200);
-    delete process.env.MERRYMEN_PERPS;
+    delete process.env.AGENTCAP_PERPS;
     const body = (await (await get("?wallet=perps")).json()) as { exists?: boolean };
     assert.equal(body.exists, true);
   });
@@ -404,7 +404,7 @@ describe("self-hosted: GET ?wallet=perps reads the Perps home, never the Spot on
     const report = { v: 1, mode: "paper", blocker: null, venueReadAt: null, protectAt: null, accountIndex: null, positions: [],
       openNotionalMicro: "0", collateralMicro: "100000000", inTransitMicro: null, minLiqDistanceBps: null, stopsMissing: 0, incident: false };
     for (const [dir, perps] of [[perpsHome(), JSON.stringify(report)], [home, JSON.stringify({ ...report, collateralMicro: "999" })]] as const) {
-      const raw = new DatabaseSync(path.join(dir, "merrymen.db"));
+      const raw = new DatabaseSync(path.join(dir, "agentcap.db"));
       try {
         const db = wrapSqlite(raw);
         await applyLedgerSchema(db);

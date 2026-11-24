@@ -2,8 +2,8 @@
  * A PERPS-ONLY LOGIN THE ROLLOUT HOLDS IS SAID, NOT SILENT (orchestrator.ts
  * sayPerpsOnlyHeld and the perps roster line).
  *
- * Hosted, under the production rollout (an explicit MERRYMEN_FLEET_ROLLOUT
- * list, with MERRYMEN_ROLLOUT_NEW_TENANTS open) at MERRYMEN_PERPS=paper. The
+ * Hosted, under the production rollout (an explicit AGENTCAP_FLEET_ROLLOUT
+ * list, with AGENTCAP_ROLLOUT_NEW_TENANTS open) at AGENTCAP_PERPS=paper. The
  * new-tenant route proves a login new only through its Spot grant, so a new
  * Spot-only login runs at the route's level, and a login with both wallets
  * runs its Perps worker beside its Spot one, while a new Perps-only login
@@ -27,18 +27,18 @@ import { applyLedgerSchema } from "./store";
 import { MIRROR_STATE_DDL } from "./ledger-mirror";
 import { PAPER_CHECKPOINT_SCHEMA } from "./paper-checkpoint";
 
-const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-perps-only-held-")));
-process.env.MERRYMEN_HOME = fleet;
-process.env.MERRYMEN_HOSTED = "1";
+const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-perps-only-held-")));
+process.env.AGENTCAP_HOME = fleet;
+process.env.AGENTCAP_HOSTED = "1";
 delete process.env.DATABASE_URL;
-delete process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS;
-delete process.env.MERRYMEN_FLEET_RECOVERY_REPORT_ONLY;
-delete process.env.MERRYMEN_PERSISTENT_HOME_REQUIRED;
-delete process.env.MERRYMEN_FLEET_ROLLOUT;
-delete process.env.MERRYMEN_ROLLOUT_NEW_TENANTS;
+delete process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS;
+delete process.env.AGENTCAP_FLEET_RECOVERY_REPORT_ONLY;
+delete process.env.AGENTCAP_PERSISTENT_HOME_REQUIRED;
+delete process.env.AGENTCAP_FLEET_ROLLOUT;
+delete process.env.AGENTCAP_ROLLOUT_NEW_TENANTS;
 for (const key of Object.keys(process.env)) if (key.startsWith("RAILWAY_")) delete process.env[key];
 const dek = Buffer.alloc(32, 84);
-process.env.MERRYMEN_STORE_DEK = dek.toString("base64");
+process.env.AGENTCAP_STORE_DEK = dek.toString("base64");
 
 const { childHome, newTenantAdmissionsForTest, reconcile, setKillConfirmForTest, setLeaseAcquireForTest,
   setPaperRestoreForTest, setPerpsFeedStartForTest, setRetirementMemoryStoreForTest, setSpawnForTest } = await import("./orchestrator");
@@ -110,17 +110,17 @@ it("A LOGIN WITH NO UNEXPIRED SPOT GRANT THE ROLLOUT HOLDS IS NAMED ONCE AND COU
   await getGrantStore("perps").put(EXPIRED, grant(EXPIRED, address(0xa02), { purpose: "perps" }));
   // A Perps-only login the accounting hold holds: held like any other login it names, and not this line's to say.
   await getGrantStore("perps").put(ACCT, grant(ACCT, address(0xb01), { purpose: "perps" }));
-  process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS = ACCT;
-  process.env.MERRYMEN_FLEET_ROLLOUT = `${NAMED}:trade`;
-  process.env.MERRYMEN_ROLLOUT_NEW_TENANTS = "observe";
-  process.env.MERRYMEN_PERPS = "paper";
+  process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS = ACCT;
+  process.env.AGENTCAP_FLEET_ROLLOUT = `${NAMED}:trade`;
+  process.env.AGENTCAP_ROLLOUT_NEW_TENANTS = "observe";
+  process.env.AGENTCAP_PERPS = "paper";
   const rosterNow = () => said.filter((l) => l.startsWith("perps roster:")).at(-1);
   await reconcile(); await settle();
   // The pass that admits the two-wallet login counts its Perps worker as one that may run, not held: asked again after the spawn loop.
-  assert.equal(rosterNow(), "perps roster: 5 Perps wallets, 1 unexpired may run, 4 held as their owners are (MERRYMEN_PERPS=paper)");
+  assert.equal(rosterNow(), "perps roster: 5 Perps wallets, 1 unexpired may run, 4 held as their owners are (AGENTCAP_PERPS=paper)");
   for (let i = 0; i < 3; i++) { await reconcile(); await settle(); }
 
-  const homes = spawned.map((p) => p.env.MERRYMEN_HOME);
+  const homes = spawned.map((p) => p.env.AGENTCAP_HOME);
   const key = (owner: `0x${string}`) => `${owner}:perps` as `0x${string}`;
   const held = key(PERPS_ONLY);
   // The rule this build keeps: a login with no unexpired Spot grant is admitted only when named.
@@ -140,32 +140,32 @@ it("A LOGIN WITH NO UNEXPIRED SPOT GRANT THE ROLLOUT HOLDS IS NAMED ONCE AND COU
     const named = said.filter((l) => l.startsWith(`perps: ${key(owner)} is held`));
     assert.equal(named.length, 1, `${owner}: said once across four passes: ${JSON.stringify(named)}`);
     const line = named[0]!;
-    assert.match(line, /MERRYMEN_FLEET_ROLLOUT does not name its owner, and a login with no unexpired Spot grant is never admitted by MERRYMEN_ROLLOUT_NEW_TENANTS/);
+    assert.match(line, /AGENTCAP_FLEET_ROLLOUT does not name its owner, and a login with no unexpired Spot grant is never admitted by AGENTCAP_ROLLOUT_NEW_TENANTS/);
     // True whether or not its book has reported (perps-book-reported.ts).
     assert.match(line, /so no Close, Close all or practice reset is carried out: each is refused while its book has not reported, and queued and left to expire once it has\. Its owner's kill still stops the wallet, and settings and renewals are still saved\./);
     assert.doesNotMatch(line, /nothing its owner asks/, "a held login's kill is carried out (fleet-rollout.ts): the line never says otherwise");
-    assert.ok(line.includes(`name ${owner} in MERRYMEN_FLEET_ROLLOUT`), line);
+    assert.ok(line.includes(`name ${owner} in AGENTCAP_FLEET_ROLLOUT`), line);
   }
   for (const owner of [BOTH, OLD, ACCT]) {
     assert.equal(said.filter((l) => l.startsWith(`perps: ${key(owner)}`)).length, 0, `${owner}: not said here (an unexpired Spot grant, run or held; or the accounting hold)`);
   }
   const roster = said.filter((l) => l.startsWith("perps roster:"));
-  assert.equal(rosterNow(), "perps roster: 5 Perps wallets, 1 unexpired may run, 4 held as their owners are (MERRYMEN_PERPS=paper)");
+  assert.equal(rosterNow(), "perps roster: 5 Perps wallets, 1 unexpired may run, 4 held as their owners are (AGENTCAP_PERPS=paper)");
   assert.ok(roster.every((l) => !/ [2-5] unexpired may run/.test(l)), `a held wallet is never counted as one that may run: ${JSON.stringify(roster)}`);
 
   // Named, it runs, and the roster says so.
-  process.env.MERRYMEN_FLEET_ROLLOUT = `${NAMED}:trade,${PERPS_ONLY}:observe`;
+  process.env.AGENTCAP_FLEET_ROLLOUT = `${NAMED}:trade,${PERPS_ONLY}:observe`;
   for (let i = 0; i < 2; i++) { await reconcile(); await settle(); }
-  assert.ok(spawned.map((p) => p.env.MERRYMEN_HOME).includes(childHome(held)), "named, its Perps worker starts");
-  assert.equal(rosterNow(), "perps roster: 5 Perps wallets, 2 unexpired may run, 3 held as their owners are (MERRYMEN_PERPS=paper)");
+  assert.ok(spawned.map((p) => p.env.AGENTCAP_HOME).includes(childHome(held)), "named, its Perps worker starts");
+  assert.equal(rosterNow(), "perps roster: 5 Perps wallets, 2 unexpired may run, 3 held as their owners are (AGENTCAP_PERPS=paper)");
 
   // The route shut: an explicit list without it holds a new Perps-only login as it holds any login it does not name, and this line is not said.
   await getGrantStore("perps").put(LATE, grant(LATE, address(0xc01), { purpose: "perps" }));
-  delete process.env.MERRYMEN_ROLLOUT_NEW_TENANTS;
+  delete process.env.AGENTCAP_ROLLOUT_NEW_TENANTS;
   for (let i = 0; i < 2; i++) { await reconcile(); await settle(); }
-  assert.ok(!spawned.map((p) => p.env.MERRYMEN_HOME).includes(childHome(key(LATE))), "the route shut, it is not started");
+  assert.ok(!spawned.map((p) => p.env.AGENTCAP_HOME).includes(childHome(key(LATE))), "the route shut, it is not started");
   assert.equal(said.filter((l) => l.startsWith(`perps: ${key(LATE)}`)).length, 0, "and not said here: the route is shut");
   // Without the route its record admits no one, so the two-wallet login is held again too; only the named Perps-only login may run.
-  assert.equal(rosterNow(), "perps roster: 6 Perps wallets, 1 unexpired may run, 5 held as their owners are (MERRYMEN_PERPS=paper)", "counted with the held");
-  delete process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS;
+  assert.equal(rosterNow(), "perps roster: 6 Perps wallets, 1 unexpired may run, 5 held as their owners are (AGENTCAP_PERPS=paper)", "counted with the held");
+  delete process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS;
 });

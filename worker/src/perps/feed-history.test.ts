@@ -37,13 +37,13 @@ const FUNDINGS_2 = parseFundings(JSON.parse(fixture("fundings.2.json")))!;
 /** The capture moment, ms. */
 const CAPTURED = 1_790_718_587_000;
 
-const ROOT = mkdtempSync(path.join(os.tmpdir(), "merrymen-feed-history-"));
+const ROOT = mkdtempSync(path.join(os.tmpdir(), "agentcap-feed-history-"));
 const FLEET = path.join(ROOT, "fleet");
-const priorFleet = process.env.MERRYMEN_FLEET_HOME;
-process.env.MERRYMEN_FLEET_HOME = FLEET;
+const priorFleet = process.env.AGENTCAP_FLEET_HOME;
+process.env.AGENTCAP_FLEET_HOME = FLEET;
 after(() => {
-  if (priorFleet === undefined) delete process.env.MERRYMEN_FLEET_HOME;
-  else process.env.MERRYMEN_FLEET_HOME = priorFleet;
+  if (priorFleet === undefined) delete process.env.AGENTCAP_FLEET_HOME;
+  else process.env.AGENTCAP_FLEET_HOME = priorFleet;
   rmSync(ROOT, { recursive: true, force: true });
 });
 let RUN = 0;

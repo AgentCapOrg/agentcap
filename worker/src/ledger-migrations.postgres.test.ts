@@ -7,7 +7,7 @@ import { makePgDb, type Db } from "./db";
 import { PERP_EQUITY_ALTERS, PERP_LEDGER_ALTERS, applyLedgerSchema } from "./store";
 import { applyLedgerMigrations } from "./ledger-migrations";
 
-const url = process.env.MERRYMEN_TEST_PG_URL ?? process.env.MERRYMEN_TEST_POSTGRES_URL;
+const url = process.env.AGENTCAP_TEST_PG_URL ?? process.env.AGENTCAP_TEST_POSTGRES_URL;
 interface Client {
   connect(): Promise<void>;
   query(sql: string, params?: unknown[]): Promise<{ rows: Record<string, unknown>[] }>;

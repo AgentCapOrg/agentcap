@@ -24,13 +24,13 @@ import { after, before, beforeEach, describe, it } from "node:test";
 
 import { mintSession } from "@/lib/auth";
 import { BOT_CLAIMED_TEXT, NOT_A_BOT_TOKEN_TEXT, SETTINGS_SAVE_LOCK, settingsSaveLockKey, useBotClaimsDbForTest } from "@/lib/telegram-claims";
-import { getSettingsStore, resetSettingsStoreForTest, useSettingsStoreForTest } from "@merrymen/settings-store";
+import { getSettingsStore, resetSettingsStoreForTest, useSettingsStoreForTest } from "@agentcap/settings-store";
 import { advisoryLockWaitersForTest, wrapSqlite, type Db } from "../../../../../worker/src/db";
 import { readBotClaims } from "../../../../../worker/src/telegram-claims";
 
 const A = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as const;
 const B = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as const;
-const KEYS = ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_SESSION_SECRET", "DATABASE_URL"] as const;
+const KEYS = ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_SESSION_SECRET", "DATABASE_URL"] as const;
 const original = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
 const realFetch = globalThis.fetch;
 let dir: string;
@@ -41,10 +41,10 @@ let refused = new Set<string>();
 const getMeAsked: string[] = [];
 
 before(async () => {
-  dir = mkdtempSync(path.join(tmpdir(), "merrymen-settings-bot-claim-"));
-  process.env.MERRYMEN_HOME = dir;
-  process.env.MERRYMEN_HOSTED = "1";
-  process.env.MERRYMEN_SESSION_SECRET = randomBytes(32).toString("hex");
+  dir = mkdtempSync(path.join(tmpdir(), "agentcap-settings-bot-claim-"));
+  process.env.AGENTCAP_HOME = dir;
+  process.env.AGENTCAP_HOSTED = "1";
+  process.env.AGENTCAP_SESSION_SECRET = randomBytes(32).toString("hex");
   delete process.env.DATABASE_URL;
   resetSettingsStoreForTest();
   globalThis.fetch = (async (input: string | URL | Request) => {
@@ -118,7 +118,7 @@ describe("PUT /api/settings claims the bot", () => {
     // `111:x/../../bot<own>/getChat?chat_id=111&z=` read as bot 111, fetch
     // resolved it into a call on the sender's own bot, and that answer, id
     // 111, "confirmed" them as bot 111's owner: a 409 that told them the bot
-    // was a Merrymen agent's, and with moveBot, the bot.
+    // was a AgentCap agent's, and with moveBot, the bot.
     await put(A, { telegramBotToken: "111:AAA-first-secret", telegramAllowlist: [777] });
     getMeAsked.length = 0;
     for (const crafted of [

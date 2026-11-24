@@ -32,7 +32,7 @@
  * resetPaper), as a Spot worker clears its own book.
  *
  * A PERPS RESET ONLY WHERE A PERPS WORKER RUNS (perps-enabled.ts
- * perpsWorkersRun, D1 and D12). Under any other MERRYMEN_PERPS its worker
+ * perpsWorkersRun, D1 and D12). Under any other AGENTCAP_PERPS its worker
  * takes no command (hosted it is not running; self-hosted one started by hand
  * claims none, D19); a reset queued then would only wait, unclaimed, inside
  * its deadline (below), and be answered expired, the book untouched, unless
@@ -61,7 +61,7 @@
  * Spot grant, and the kill (which it is) already stops the Perps wallet.
  */
 import { NextResponse } from "next/server";
-import { isHostedMode, type GrantPurpose } from "@merrymen/core";
+import { isHostedMode, type GrantPurpose } from "@agentcap/core";
 import { hostedAgentFor, diskAgent } from "@/lib/agent-for";
 import { orderTtlFor } from "@/lib/order-ceiling";
 import { queuePaperReset } from "@/lib/start-over";
@@ -69,7 +69,7 @@ import { perpsStoodDownBook, perpsWalletRefused, perpsWorkersRun } from "@/lib/p
 import { walletUnknown } from "@/lib/route-guard";
 import { readWalletParam } from "@/lib/wallet-param";
 import { tenantOf } from "@/lib/auth";
-import { purposeHome } from "@merrymen/home";
+import { purposeHome } from "@agentcap/home";
 import { readCommandState } from "../../../../../worker/src/command-files";
 import { withReadDb } from "@/lib/ledger";
 import { LEDGER_UNREADABLE, readHostedOrder, selfHostedOrderReply } from "@/lib/order-state";

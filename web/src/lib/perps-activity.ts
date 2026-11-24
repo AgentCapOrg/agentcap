@@ -1,7 +1,7 @@
 import { isPerpsIdentity } from "./perps-account";
 import { readWalletParam } from "./wallet-param";
 /** Client-safe wire contract: amounts stay exact decimal strings. */
-import { perpMarketByKey } from "@merrymen/core";
+import { perpMarketByKey } from "@agentcap/core";
 export interface PerpsActivityQuery { market: string; book: "paper" }
 interface ActivityBase extends PerpsActivityQuery { id: string; timeMs: number }
 export type PerpsActivityItem = (ActivityBase & {

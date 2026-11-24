@@ -96,7 +96,7 @@
  * WHAT IS NOT MODELLED, said so it is not mistaken for modelled: the venue's
  * 300 ms taker latency (the paper IOC fills against the book as read); ADL of
  * profitable positions; the book a paper fill consumes (it is not depleted for
- * the next one); cross margin, which merrymen never uses; and THE TIME THE
+ * the next one); cross margin, which agentcap never uses; and THE TIME THE
  * WORKER WAS NOT RUNNING. Stops, take-profits and liquidation are judged only
  * on the mark a pass reads: a mark that crossed a stop or the liquidation
  * line while nothing was running, and came back, leaves the paper position

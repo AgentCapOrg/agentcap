@@ -3,7 +3,7 @@ import PhotosUI
 import CoreImage.CIFilterBuiltins
 import UIKit
 import ImageIO
-import MerrymenPolicy
+import AgentCapPolicy
 
 struct AccountScreen: View {
     @EnvironmentObject var store: AppStore
@@ -21,7 +21,7 @@ struct AccountScreen: View {
                     ResignNotice(status: status)
                     if status["exists"].bool == true {
                         Card {
-                            HStack { Text("Your Merryman").font(.title2.bold()); Spacer(); Pill(text: status["mode"].string ?? "Unknown", tint: status["mode"].string == "paper" ? .orange : Brand.accent) }
+                            HStack { Text("Your AgentCapAvatar").font(.title2.bold()); Spacer(); Pill(text: status["mode"].string ?? "Unknown", tint: status["mode"].string == "paper" ? .orange : Brand.accent) }
                             if let blocker = status["liveBlocker"].string { Label(blocker.replacingOccurrences(of: "-", with: " "), systemImage: "exclamationmark.circle").foregroundStyle(.orange) }
                             HStack(spacing: 12) {
                                 NavigationLink("Add funds", value: Route.deposit).buttonStyle(PrimaryButtonStyle(fill: true))
@@ -54,8 +54,8 @@ struct AccountScreen: View {
             }
             LanguagePicker()
             if store.owner != nil { Button("Sign out", role: .destructive) { signOut = true }.buttonStyle(SecondaryButtonStyle(fill: true)) }
-            Text("merrymen · native iOS preview").font(.custom(Brand.pixel, size: 12, relativeTo: .caption)).foregroundStyle(.secondary).frame(maxWidth: .infinity)
-        }.confirmationDialog("Sign out of Merrymen?", isPresented: $signOut, titleVisibility: .visible) {
+            Text("agentcap · native iOS preview").font(.custom(Brand.pixel, size: 12, relativeTo: .caption)).foregroundStyle(.secondary).frame(maxWidth: .infinity)
+        }.confirmationDialog("Sign out of AgentCap?", isPresented: $signOut, titleVisibility: .visible) {
             Button("Sign out", role: .destructive) { Task { await store.signOut() } }
         } message: { Text("Signing out does not stop an active agent. Use Wallet & permissions to stand it down.") }
     }
@@ -71,7 +71,7 @@ struct ProfileImages: View {
         Card {
             Text("Profile images").font(.headline)
             Picker("Image", selection: $kind) { Text("Avatar").tag("avatar"); Text("Banner").tag("banner") }.pickerStyle(.segmented)
-            AsyncImage(url: URL(string: "https://app.merrymen.dev/api/agent-image/\(escaped(slug))/\(kind)?v=\(store.imageRevision.uuidString)")) { image in image.resizable().scaledToFit().frame(maxHeight: 140) } placeholder: { Image(systemName: "photo").font(.largeTitle).foregroundStyle(.secondary) }
+            AsyncImage(url: URL(string: "https://app.agentcap.xyz/api/agent-image/\(escaped(slug))/\(kind)?v=\(store.imageRevision.uuidString)")) { image in image.resizable().scaledToFit().frame(maxHeight: 140) } placeholder: { Image(systemName: "photo").font(.largeTitle).foregroundStyle(.secondary) }
             PhotosPicker(selection: $item, matching: .images) { Label("Choose photo", systemImage: "photo") }.disabled(busy)
             if busy { ProgressView("Uploading…") }
             Button("Remove \(kind)", role: .destructive) {

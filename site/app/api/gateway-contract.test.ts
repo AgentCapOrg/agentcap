@@ -40,7 +40,7 @@ test('the console reads the gateway\'s billing answers as a developer must see t
   const { createBilling, createPaymentsClient } = await import(lib('billing.mjs').href);
   const { startFakeChain, transferLog } = await import(lib('fake-rpc.test-helper.mjs').href);
   const rpc = await startFakeChain({ head: 1_000, time: START / 1000 });
-  const dirs = [await mkdtemp(path.join(tmpdir(), 'merrymen-site-contract-')), await mkdtemp(path.join(tmpdir(), 'merrymen-site-contract-off-'))];
+  const dirs = [await mkdtemp(path.join(tmpdir(), 'agentcap-site-contract-')), await mkdtemp(path.join(tmpdir(), 'agentcap-site-contract-off-'))];
   const clock = { t: START }, oldFetch = globalThis.fetch, logs: string[] = [];
   const said = () => `gateway log: ${JSON.stringify(logs.slice(-3))}`;
   /** The console's GET /account, answered with what the gateway answered. */
@@ -73,7 +73,7 @@ test('the console reads the gateway\'s billing answers as a developer must see t
     // POST /plan without confirm is a preview the developer agrees to; with confirm the amount due appears.
     const preview = normalizePreview((await billing.choosePlan(OWNER, { tier: 'crumbs' })).json)!;
     assert.ok(preview !== null, 'the preview is readable');
-    assert.equal(previewSentence(preview, plans.plans[1], 'Free'), 'Crumbs starts as soon as 100,000 MERRYMEN arrives. Confirm, then pay below.');
+    assert.equal(previewSentence(preview, plans.plans[1], 'Free'), 'Crumbs starts as soon as 100,000 AGENTCAP arrives. Confirm, then pay below.');
     const chosen = normalizeAccount((await billing.choosePlan(OWNER, { tier: 'crumbs', confirm: true })).json)!;
     assert.equal(chosen.plan.selected, 'crumbs'); assert.equal(amountToSend(chosen.due_raw), 100_000n * UNIT);
     // Pay reads GET /account again at the click: with nothing in between, the payment goes ahead.

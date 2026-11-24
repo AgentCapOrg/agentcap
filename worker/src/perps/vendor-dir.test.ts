@@ -47,7 +47,7 @@ test("the module-relative path wins when it holds the WASM", () => {
   assert.equal(seen.length, 1, "the first candidate that holds the WASM ends the search");
 });
 
-test("MERRYMEN_LIGHTER_VENDOR_DIR wins, even over a candidate that exists — and even when it is wrong", () => {
+test("AGENTCAP_LIGHTER_VENDOR_DIR wins, even over a candidate that exists — and even when it is wrong", () => {
   assert.equal(resolveLighterVendorDir({ env: { [LIGHTER_VENDOR_DIR_ENV]: "/opt/lighter" }, cwd: REPO }), "/opt/lighter");
   assert.equal(resolveLighterVendorDir({ env: { [LIGHTER_VENDOR_DIR_ENV]: "vendor-here" }, cwd: "/srv/app" }), path.resolve("/srv/app", "vendor-here"));
   // Blank is not an override.

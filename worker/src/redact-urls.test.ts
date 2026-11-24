@@ -192,8 +192,8 @@ describe("redactUrls", () => {
     assert.equal(redactUrls(`https://me:p@ss@${HOST}/v2/${KEY}`), `https://${REDACTED}@${HOST}/${REDACTED}`);
     // A database driver's error carries its connection URL, password and all.
     assert.equal(
-      redactUrls("connect ECONNREFUSED 10.1.2.3:5432 (postgres://admin:hunter2@db.internal:5432/merrymen)"),
-      `connect ECONNREFUSED 10.1.2.3:5432 (postgres://${REDACTED}@db.internal:5432/merrymen)`,
+      redactUrls("connect ECONNREFUSED 10.1.2.3:5432 (postgres://admin:hunter2@db.internal:5432/agentcap)"),
+      `connect ECONNREFUSED 10.1.2.3:5432 (postgres://${REDACTED}@db.internal:5432/agentcap)`,
     );
     assert.equal(redactUrls("postgresql://u:p@h/d"), `postgresql://${REDACTED}@h/d`);
     assert.equal(redactUrls("rediss://default:s3cret@cache.internal:6380"), `rediss://${REDACTED}@cache.internal:6380`);
@@ -205,8 +205,8 @@ describe("redactUrls", () => {
       "https://rpc.mainnet.chain.robinhood.com/",
       `https://explorer.mainnet.chain.robinhood.com/tx/0x${"ab".repeat(32)}`,
       `https://explorer.mainnet.chain.robinhood.com/address/0x${"cd".repeat(20)}`,
-      "https://x.com/merrymen/status/1846123456789012345",
-      "https://merrymen.dev/agents/alan?tab=trades",
+      "https://x.com/agentcap/status/1846123456789012345",
+      "https://agentcap.xyz/agents/alan?tab=trades",
       "https://web.example.com/_next/static/chunks/a1b2c3d4e5f6a7b8c9d0e1f2.js",
       "https://dexscreener.com/robinhood/0x1111111111111111111111111111111111111111",
       `https://etherscan.io/tx/0x${"ef".repeat(32)}`,

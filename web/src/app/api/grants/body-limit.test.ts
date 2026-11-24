@@ -18,17 +18,17 @@ const LIMIT = 256 * 1024;
 
 let home = "";
 let POST: (req: Request) => Promise<Response>;
-const saved = { home: process.env.MERRYMEN_HOME, hosted: process.env.MERRYMEN_HOSTED, grant: process.env.MERRYMEN_GRANT_FILE };
+const saved = { home: process.env.AGENTCAP_HOME, hosted: process.env.AGENTCAP_HOSTED, grant: process.env.AGENTCAP_GRANT_FILE };
 
 before(async () => {
   home = mkdtempSync(path.join(tmpdir(), "mm-grants-body-"));
-  process.env.MERRYMEN_HOME = home;
-  delete process.env.MERRYMEN_HOSTED;
-  delete process.env.MERRYMEN_GRANT_FILE;
+  process.env.AGENTCAP_HOME = home;
+  delete process.env.AGENTCAP_HOSTED;
+  delete process.env.AGENTCAP_GRANT_FILE;
   ({ POST } = await import("./route"));
 });
 after(() => {
-  for (const [key, value] of [["MERRYMEN_HOME", saved.home], ["MERRYMEN_HOSTED", saved.hosted], ["MERRYMEN_GRANT_FILE", saved.grant]] as const) {
+  for (const [key, value] of [["AGENTCAP_HOME", saved.home], ["AGENTCAP_HOSTED", saved.hosted], ["AGENTCAP_GRANT_FILE", saved.grant]] as const) {
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
   }
@@ -38,7 +38,7 @@ after(() => {
 const grantFile = () => path.join(home, "grant.json");
 const LIVE = `{\n  "smartAccount": "${B}",\n  "serialized": "0xserialized",\n  "chainId": 4663\n}\n`;
 beforeEach(() => {
-  delete process.env.MERRYMEN_HOSTED;
+  delete process.env.AGENTCAP_HOSTED;
   writeFileSync(grantFile(), LIVE);
 });
 
@@ -99,7 +99,7 @@ describe("POST /api/grants — request size", { timeout: 20_000 }, () => {
   });
 
   it("hosted, an oversized body is refused before authentication or the owner-key scan", async () => {
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOSTED = "1";
     const res = await POST(request(padded(LIMIT + 1)));
     assert.equal(res.status, 413, "signed out would be 401; the size refusal comes first");
   });

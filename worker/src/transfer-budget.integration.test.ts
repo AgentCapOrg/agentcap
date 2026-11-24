@@ -6,10 +6,10 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { transferBudgetRefusal } from "./transfer-budget";
 
-const scratch = mkdtempSync(path.join(os.tmpdir(), "merrymen-transfer-budget-"));
+const scratch = mkdtempSync(path.join(os.tmpdir(), "agentcap-transfer-budget-"));
 const isolatedCwd = path.join(scratch, "cwd");
 mkdirSync(isolatedCwd);
-process.env.MERRYMEN_HOME = path.join(scratch, "home");
+process.env.AGENTCAP_HOME = path.join(scratch, "home");
 delete process.env.DATABASE_URL;
 const store = await import("./store");
 const previousCwd = process.cwd();
@@ -65,7 +65,7 @@ describe("the transfer sub-budget", () => {
   it("keeps old unresolved transfers reserved and charges late settlement for a fresh 24 hours", async () => {
     const pending = hash();
     await write(AGED, 50, "submitted", pending);
-    const raw = new DatabaseSync(path.join(scratch, "home", "merrymen.db"));
+    const raw = new DatabaseSync(path.join(scratch, "home", "agentcap.db"));
     try {
       raw.prepare("UPDATE trades SET created_at = unixepoch() - 172800 WHERE user_op_hash = ?").run(pending);
       const created = (raw.prepare("SELECT created_at FROM trades WHERE user_op_hash = ?").get(pending) as { created_at: number }).created_at;
@@ -87,7 +87,7 @@ describe("the transfer sub-budget", () => {
     const account = "0x00000000000000000000000000000000000000a4";
     const pending = hash();
     assert.equal(await write(account, 25, "submitted", pending), true);
-    const raw = new DatabaseSync(path.join(scratch, "home", "merrymen.db"));
+    const raw = new DatabaseSync(path.join(scratch, "home", "agentcap.db"));
     try {
       raw.prepare("UPDATE trades SET created_at = unixepoch() - 172800 WHERE user_op_hash = ?").run(pending);
       const before = raw.prepare("SELECT id, created_at FROM trades WHERE user_op_hash = ?").get(pending) as {id: number; created_at: number};

@@ -140,7 +140,7 @@ export interface TgRoom {
   claims: Record<string, number>;
 }
 
-/** The whole durable file, `<MERRYMEN_HOME>/tg-groups.json`. */
+/** The whole durable file, `<AGENTCAP_HOME>/tg-groups.json`. */
 export interface TgGroupsState {
   version: 1;
   /** Keyed by String(chatId). */
@@ -422,12 +422,12 @@ export interface TgDeskThinkRequest {
  *   null              not a research question, or research is unavailable
  *                     here: the line goes on to the desk and the persona
  *   deflect: true     a question about the owner's own research state, who
- *                     Merrymen watches, or a trader's own theses, which a
+ *                     AgentCap watches, or a trader's own theses, which a
  *                     group never hears; `text` says so
  *
  * One named trader's public Fomo data (who they are, what they hold, what
  * they traded, what they made or lost money on) IS answered in a room, for
- * anyone (Milla, 2026-10-07), and never says whether Merrymen watches them.
+ * anyone (Milla, 2026-10-07), and never says whether AgentCap watches them.
  */
 /**
  * A research question a model chose for an addressed group line (route.ts),
@@ -554,7 +554,7 @@ export type TgFomoCoinAspect = "theses" | "quotes" | "activity" | "research" | "
 
 /**
  * THE COLLAPSE PERMIT (docs/tg-groups.md "Rugged coins"; Milla, 2026-10-09):
- * the persona may say this coin "rugged", and add a playful Merrymen brag,
+ * the persona may say this coin "rugged", and add a playful AgentCap brag,
  * because a facts lookup measured its collapse ("measured") or someone in the
  * room said it rugged ("room"). A sayable name only: no figure, no address.
  * `brag`: false when a brag went out lately (none back to back).
@@ -663,7 +663,7 @@ export type TgOwnerOutcome = "sent" | "dm-first" | "busy" | "unavailable" | "gon
 
 /**
  * THE OWNER'S OWN ASKS THAT GO TO HER DM (service.ts builds it): a tail, the
- * one thing a room line can start that changes what Merrymen does, is carded
+ * one thing a room line can start that changes what AgentCap does, is carded
  * there. The room hears only where it went. Only the owner's own line, by the
  * trusted sender id, reaches here, and service.ts checks that id again. (One
  * trader's public data is answered in the room itself, for her as for anyone:

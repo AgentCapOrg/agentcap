@@ -167,12 +167,12 @@ describe("tooltips beside numbers", () => {
     assert.equal(conceptTooltip("not a term in the base"), "");
   });
 
-  it("the caps row says which limits the chain enforces and which merrymen does", () => {
+  it("the caps row says which limits the chain enforces and which agentcap does", () => {
     // Four numbers on one row read as four equally hard promises. Two of them
     // are counters in our own software. That is the single most important
     // thing an owner can learn from hovering.
     assert.match(conceptTooltip("Per trade limit"), /blockchain itself enforces/i);
-    assert.match(conceptTooltip("Per day limit"), /merrymen's own software/i);
+    assert.match(conceptTooltip("Per day limit"), /agentcap's own software/i);
   });
 });
 
@@ -181,10 +181,10 @@ describe("tooltips beside numbers", () => {
  *
  * It reaches the web chat and Telegram whenever an owner says "energy" or asks
  * "why are you limited" (agent-chat.ts appends conceptsFor(message); the
- * Telegram explainTerm tool returns the same text). MERRYMEN_ENERGY_GATE is
+ * Telegram explainTerm tool returns the same text). AGENTCAP_ENERGY_GATE is
  * off until an operator turns it on and a self-hosted install is never gated,
  * so a concept that stated "without it … about a tenth" as plain fact handed
- * the model a false reason to buy $MERRYMEN — the one the tier perks and
+ * the model a false reason to buy $AGENTCAP — the one the tier perks and
  * Settings already stopped giving.
  */
 describe("the Energy concept", () => {
@@ -201,7 +201,7 @@ describe("the Energy concept", () => {
     assert.ok(gate > 0 && tenth > gate, "the condition comes first");
     assert.match(plain, /an operator switch, off until it is turned on; a self-hosted install is never gated/);
     assert.match(plain, /While it is off, nothing is limited, whatever you hold\./);
-    assert.match(plain, /When it is on, with 100,000 \$MERRYMEN between your wallet and your agent's account it runs at full strength; without it, it still runs, but gets about a tenth/);
+    assert.match(plain, /When it is on, with 100,000 \$AGENTCAP between your wallet and your agent's account it runs at full strength; without it, it still runs, but gets about a tenth/);
   });
 
   it("and its rendered form, what the model actually reads, carries the condition too", () => {

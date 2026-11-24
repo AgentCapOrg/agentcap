@@ -211,16 +211,16 @@ describe("botIdOf — the bot a token belongs to, never the token", () => {
 });
 
 describe("telegram.json carries the bot id", () => {
-  /** Run `fn` against a throwaway home, so the real ~/.merrymen is never touched. */
+  /** Run `fn` against a throwaway home, so the real ~/.agentcap is never touched. */
   const inHome = (fn: (file: string) => void) => {
-    const home = mkdtempSync(path.join(os.tmpdir(), "merrymen-tg-state-"));
-    const prev = process.env.MERRYMEN_HOME;
-    process.env.MERRYMEN_HOME = home;
+    const home = mkdtempSync(path.join(os.tmpdir(), "agentcap-tg-state-"));
+    const prev = process.env.AGENTCAP_HOME;
+    process.env.AGENTCAP_HOME = home;
     try {
       fn(path.join(home, "telegram.json"));
     } finally {
-      if (prev === undefined) delete process.env.MERRYMEN_HOME;
-      else process.env.MERRYMEN_HOME = prev;
+      if (prev === undefined) delete process.env.AGENTCAP_HOME;
+      else process.env.AGENTCAP_HOME = prev;
       rmSync(home, { recursive: true, force: true });
     }
   };
@@ -398,9 +398,9 @@ describe("the poll record", () => {
   const T = 1_790_000_000;
 
   it("round-trips through save and load", () => {
-    const home = mkdtempSync(path.join(os.tmpdir(), "merrymen-tg-poll-"));
-    const prev = process.env.MERRYMEN_HOME;
-    process.env.MERRYMEN_HOME = home;
+    const home = mkdtempSync(path.join(os.tmpdir(), "agentcap-tg-poll-"));
+    const prev = process.env.AGENTCAP_HOME;
+    process.env.AGENTCAP_HOME = home;
     try {
       const poll = { okAt: T, err: "conflict: another program is reading this bot's updates (409)", errAt: T - 40, botId: "111" };
       saveTelegramState({ ...base, botId: "111", poll });
@@ -414,8 +414,8 @@ describe("the poll record", () => {
       writeFileSync(path.join(home, "telegram.json"), JSON.stringify({ poll: { okAt: T, botId: "111:secret" } }));
       assert.deepEqual(loadTelegramState().poll, { okAt: T, err: null, errAt: null, botId: null });
     } finally {
-      if (prev === undefined) delete process.env.MERRYMEN_HOME;
-      else process.env.MERRYMEN_HOME = prev;
+      if (prev === undefined) delete process.env.AGENTCAP_HOME;
+      else process.env.AGENTCAP_HOME = prev;
       rmSync(home, { recursive: true, force: true });
     }
   });

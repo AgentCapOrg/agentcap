@@ -8,7 +8,7 @@ import { POST } from "./route";
 function useTempHome(settings: unknown): void {
   const dir = mkdtempSync(path.join(tmpdir(), "mm-models-test-"));
   writeFileSync(path.join(dir, "settings.json"), JSON.stringify(settings));
-  process.env.MERRYMEN_HOME = dir;
+  process.env.AGENTCAP_HOME = dir;
 }
 
 function stubFetch(status: number, body: unknown) {
@@ -31,9 +31,9 @@ describe("POST /api/models error classification", () => {
   const savedEnv: Record<string, string | undefined> = {};
   const savedFetch = (globalThis as Record<string, unknown>).fetch;
   beforeEach(() => {
-    savedEnv.MERRYMEN_HOME = process.env.MERRYMEN_HOME;
+    savedEnv.AGENTCAP_HOME = process.env.AGENTCAP_HOME;
     savedEnv.GROQ_API_KEY = process.env.GROQ_API_KEY;
-    delete process.env.MERRYMEN_HOME;
+    delete process.env.AGENTCAP_HOME;
     delete process.env.GROQ_API_KEY;
   });
   afterEach(() => {

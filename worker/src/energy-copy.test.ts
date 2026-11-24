@@ -80,7 +80,7 @@ describe("every variant keeps the promises", () => {
       assert.equal(dollars.length, known && offersUsdg ? 1 : 0, text);
     });
     it(`${name}: never "hold 0"`, () => {
-      assert.doesNotMatch(text, /\b0 \$MERRYMEN|hold 0\b|holds 0\b/, text);
+      assert.doesNotMatch(text, /\b0 \$AGENTCAP|hold 0\b|holds 0\b/, text);
     });
   }
 });
@@ -90,13 +90,13 @@ describe("the arms", () => {
     const t = render({});
     assert.equal(
       t,
-      "Energy spent for 27 Sep (UTC): without 100,000 $MERRYMEN between your wallet and my account I get about a " +
+      "Energy spent for 27 Sep (UTC): without 100,000 $AGENTCAP between your wallet and my account I get about a " +
         "tenth of a standard day's AI reviews and new trades, and today's new trades are used up. Nothing is broken — stop-losses, " +
         "take-profits and your own orders still run, and I pick up again at 00:00 UTC. My own AI reviews — including " +
         "of my open positions — are paced along with everything else I start on my own. You and I hold 12,345 between " +
-        "us (87,655 short). For full strength, send $MERRYMEN on Robinhood Chain to my account " +
+        "us (87,655 short). For full strength, send $AGENTCAP on Robinhood Chain to my account " +
         `${ACCOUNT} (or keep it in your own wallet ${HOLDER} — both count), or send USDG to my account and ask me ` +
-        "in chat to get my $MERRYMEN — you confirm the amount first (about $37.12 of USDG at the pool's current " +
+        "in chat to get my $AGENTCAP — you confirm the amount first (about $37.12 of USDG at the pool's current " +
         "rate). Or change nothing and I carry on at this pace.",
     );
   });
@@ -124,7 +124,7 @@ describe("the arms", () => {
 
   it("NOT MAINNET: only their own wallet counts, and the account is never printed", () => {
     const t = render(VARIANTS["not-mainnet"]!);
-    assert.match(t, /keep 100,000 \$MERRYMEN on Robinhood Chain in your own wallet 0x1234/);
+    assert.match(t, /keep 100,000 \$AGENTCAP on Robinhood Chain in your own wallet 0x1234/);
     assert.match(t, /my account is on another network, so tokens sent to it would not count/);
     assert.doesNotMatch(t, /send USDG/);
     assert.match(t, /Your wallet holds 12,000 \(88,000 short\)/);
@@ -149,10 +149,10 @@ describe("the arms", () => {
   });
 
   it("TELEGRAM'S DRESSING: addresses in code, the ask pointed at the app", () => {
-    const t = energyNotice(BASE, { address: (a) => `<code>${a}</code>`, chatPlace: "in the Merrymen app chat (not here)" });
+    const t = energyNotice(BASE, { address: (a) => `<code>${a}</code>`, chatPlace: "in the AgentCap app chat (not here)" });
     assert.ok(t.includes(`<code>${ACCOUNT}</code>`));
     assert.ok(t.includes(`<code>${HOLDER}</code>`));
-    assert.match(t, /ask me in the Merrymen app chat \(not here\) to get my \$MERRYMEN/);
+    assert.match(t, /ask me in the AgentCap app chat \(not here\) to get my \$AGENTCAP/);
   });
 });
 

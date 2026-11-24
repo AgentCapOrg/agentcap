@@ -22,7 +22,7 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, it } from "node:test";
-import { CIRCLE_TIERS } from "@merrymen/core";
+import { CIRCLE_TIERS } from "@agentcap/core";
 
 const ROUTE = readFileSync(new URL("./route.ts", import.meta.url), "utf8");
 
@@ -93,7 +93,7 @@ describe("it fails closed, and it says which way", () => {
     // PINNED ON THE ORDER, NOT ON THE COMPARISON. This used to look for the
     // literal `tier.id === "outsider"`, which made it a test about which tier
     // the gate happens to ask for — so raising the bar to the 100,000-token
-    // Merryman tier broke a guard that is not about the bar at all. What must
+    // AgentCapAvatar tier broke a guard that is not about the bar at all. What must
     // hold is that the balance verdict is computed AFTER a successful read, and
     // that the unreachable verdict comes from the catch.
     const cat = CODE.indexOf("} catch {");
@@ -221,14 +221,14 @@ describe("no HTTP route may select the owner's balance sheet", () => {
  * WHICH TIER THE LOCK ASKS FOR — a product decision, pinned so it cannot drift
  * silently.
  *
- * It moved from the lowest holding tier to the 100,000-token Merryman tier in
+ * It moved from the lowest holding tier to the 100,000-token AgentCapAvatar tier in
  * the UI polish pass. That is a real change to who can read the desk, and it is
  * exactly the kind of number that gets edited in a restyle and noticed a month
  * later by someone who paid for access they no longer have.
  */
 describe("the bar it asks for", () => {
-  it("IS THE MERRYMAN TIER, and the comparison is by tokens rather than by id", () => {
-    assert.match(CODE, /const ENTRY_TIER = CIRCLE_TIERS\.find\(\(t\) => t\.id === "merryman"\)!/);
+  it("IS THE AGENTCAPAVATAR TIER, and the comparison is by tokens rather than by id", () => {
+    assert.match(CODE, /const ENTRY_TIER = CIRCLE_TIERS\.find\(\(t\) => t\.id === "agentcapavatar"\)!/);
     // Comparing minTokens rather than an id means a new tier inserted between
     // two existing ones cannot silently open the desk to it.
     assert.match(CODE, /tier\.minTokens < ENTRY_TIER\.minTokens/);
@@ -238,8 +238,8 @@ describe("the bar it asks for", () => {
     // `find(...)!` is a non-null assertion: a renamed tier id would compile,
     // throw at request time, and take the whole desk down for everyone.
     assert.ok(
-      CIRCLE_TIERS.some((t) => t.id === "merryman"),
-      "CIRCLE_TIERS must still carry a tier with id 'merryman'",
+      CIRCLE_TIERS.some((t) => t.id === "agentcapavatar"),
+      "CIRCLE_TIERS must still carry a tier with id 'agentcapavatar'",
     );
   });
 });

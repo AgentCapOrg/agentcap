@@ -264,7 +264,7 @@ export async function saveBook(next: boolean): Promise<{ ok: true } | { ok: fals
     if (Array.isArray(r.ignored) && r.ignored.includes("publicBook")) {
       return { ok: false, message: "This server can't publish a book yet, so nothing changed." };
     }
-    if (r.ok !== true) return { ok: false, message: "merrymen didn't confirm the change, so nothing changed." };
+    if (r.ok !== true) return { ok: false, message: "agentcap didn't confirm the change, so nothing changed." };
     return { ok: true };
   } catch (e) {
     return { ok: false, message: e instanceof Error && e.message ? e.message : UNREACHABLE };

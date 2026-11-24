@@ -1,5 +1,5 @@
 /**
- * AN OWNER'S X CONNECTION: what is connected, whether their Merryman may post
+ * AN OWNER'S X CONNECTION: what is connected, whether their AgentCapAvatar may post
  * from it, what is about to go out, and what went out.
  *
  *   GET     the connection as Settings draws it (lib/x-connect.ts accountBody):
@@ -47,7 +47,7 @@
  */
 import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
-import { isHostedMode } from "@merrymen/core";
+import { isHostedMode } from "@agentcap/core";
 import { tenantOf } from "@/lib/auth";
 import { OWNER_CHANGED_SETTING, ownerMismatch } from "@/lib/order-owner";
 import {
@@ -115,7 +115,7 @@ export async function GET(req: Request) {
     return json(body);
   } catch {
     // NOT "not connected". An owner told they have no connection while one is
-    // live would connect again, or believe their Merryman had stopped posting.
+    // live would connect again, or believe their AgentCapAvatar had stopped posting.
     console.warn("[x-account] could not read the connection");
     return refuse(503, X_COPY.storeDown);
   }

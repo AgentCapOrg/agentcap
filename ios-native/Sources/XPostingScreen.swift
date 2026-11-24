@@ -1,8 +1,8 @@
 import SwiftUI
 import AuthenticationServices
-import MerrymenPolicy
+import AgentCapPolicy
 
-/// POSTING ON X — the owner's switch for letting their Merryman post from an X
+/// POSTING ON X — the owner's switch for letting their AgentCapAvatar post from an X
 /// account they connect (docs/x-posting.md; web Settings "Posting on X").
 ///
 /// OPT-IN, AND BOUND TO THE ACCOUNT THE OWNER SAW. Connecting is not consent.
@@ -24,7 +24,7 @@ import MerrymenPolicy
 /// Safari's cookies, so the owner signs in to the X account they mean rather
 /// than whichever one Safari happened to hold. The server's URL must be X's
 /// own authorize page (NavigationPolicy.isXAuthorize) with an iOS state; the
-/// sheet's `merrymen://x-connect` answer is accepted only with that same state
+/// sheet's `agentcap://x-connect` answer is accepted only with that same state
 /// (xConnectAnswer). Closing the sheet or saying no on X (`access_denied`) is
 /// a choice, not a failure, and closes quietly; any other error X answers
 /// with is X failing, and the owner is told so. If the owner changed while X
@@ -83,7 +83,7 @@ struct XPostingScreen: View {
         } message: { consent in Text(verbatim: XPostingAccount.replyWarning(consent.identity.handle, active: consent.active)) }
         .confirmationDialog(Text(verbatim: account?.identity.map { "Disconnect @\($0.handle)?" } ?? "Disconnect X?"), isPresented: $confirmDisconnect, titleVisibility: .visible) {
             Button("Disconnect", role: .destructive) { write([:], method: "DELETE") }
-        } message: { Text("Your Merryman stops posting and anything waiting to go out is cancelled.") }
+        } message: { Text("Your AgentCapAvatar stops posting and anything waiting to go out is cancelled.") }
     }
 
     @ViewBuilder private func content(_ account: XPostingAccount) -> some View {
@@ -91,8 +91,8 @@ struct XPostingScreen: View {
             Card(hero: true) {
                 Text("Posting on X").font(.title2.bold())
                 Text(account.repliesActive
-                     ? "Let your Merryman post on X in its own words — a hello when it starts, a few reads on the market a day, and most coins it buys and why. No trade alerts, no error messages."
-                     : "Let your Merryman post on X in its own words — a hello when it starts, the odd casual thought, and now and then a coin it bought and why. No trade alerts, no error messages, no numbers.").foregroundStyle(.secondary)
+                     ? "Let your AgentCapAvatar post on X in its own words — a hello when it starts, a few reads on the market a day, and most coins it buys and why. No trade alerts, no error messages."
+                     : "Let your AgentCapAvatar post on X in its own words — a hello when it starts, the odd casual thought, and now and then a coin it bought and why. No trade alerts, no error messages, no numbers.").foregroundStyle(.secondary)
                 if account.available { connectButton("Connect X account") }
                 else { Label("Posting on X isn't available right now.", systemImage: "exclamationmark.circle").font(.subheadline).foregroundStyle(.secondary) }
             }
@@ -108,7 +108,7 @@ struct XPostingScreen: View {
                     Label("X stopped accepting this connection. Reconnect to keep posting.", systemImage: "exclamationmark.triangle.fill").font(.subheadline).foregroundStyle(.orange)
                     if account.available { connectButton("Reconnect X account") }
                 }
-                Toggle("Let my Merryman post on X", isOn: Binding(get: { account.postingEnabled }, set: { on in
+                Toggle("Let my AgentCapAvatar post on X", isOn: Binding(get: { account.postingEnabled }, set: { on in
                     guard !busy else { return }
                     // Never a write: turning it on only opens the warning.
                     if on { consent = account.identity.map { ($0, account.repliesActive) } } else { write(["action": .string("disable")]) }
@@ -129,7 +129,7 @@ struct XPostingScreen: View {
                     }
                 }
                 if !account.repliesAvailable { Text("Comment replies aren’t available yet.").font(.caption).foregroundStyle(.secondary) }
-                if paper { Text("While your Merryman trades on paper, its buy posts say so.").font(.caption).foregroundStyle(.secondary) }
+                if paper { Text("While your AgentCapAvatar trades on paper, its buy posts say so.").font(.caption).foregroundStyle(.secondary) }
                 Button("Disconnect", role: .destructive) { confirmDisconnect = true }.buttonStyle(SecondaryButtonStyle(fill: true)).disabled(busy)
             }
             SectionHeader(title: "Coming up")
@@ -171,7 +171,7 @@ struct XPostingScreen: View {
         VStack(alignment: .leading, spacing: 8) {
             Button { connect() } label: { if connecting { ProgressView().tint(.black) } else { Text(title) } }
                 .buttonStyle(XButtonStyle()).disabled(busy)
-            Text("You'll approve it on X. Your Merryman will post from whichever X account you approve there, so check which account you're signed into on X first.").font(.caption).foregroundStyle(.secondary)
+            Text("You'll approve it on X. Your AgentCapAvatar will post from whichever X account you approve there, so check which account you're signed into on X first.").font(.caption).foregroundStyle(.secondary)
         }
     }
 
@@ -202,7 +202,7 @@ struct XPostingScreen: View {
 
     // MARK: writing — every body names the owner who acted; the server refuses another session
 
-    /// CONSENT CARRIES THE DEVICE'S ZONE. The Merryman plans and sends nothing
+    /// CONSENT CARRIES THE DEVICE'S ZONE. The AgentCapAvatar plans and sends nothing
     /// while the owner is asleep, but only if it knows where the owner is; the
     /// room's zone is often unknown (an iOS-only owner who never opened its
     /// picker, a fleet with the room off). So the zone this phone is in goes
@@ -250,7 +250,7 @@ struct XPostingScreen: View {
             do {
                 let started = try await store.perform("/api/x/connect", body: .object(["action": .string("start"), "client": .string("ios"), "owner": .string(owner)]), expectedOwner: owner)
                 guard let raw = started["url"].string, let url = URL(string: raw), policy.isXAuthorize(url), let state = policy.xConnectState(url) else {
-                    throw APIError(status: 0, message: "Merrymen sent an X sign-in link this app does not recognise, so nothing was opened.")
+                    throw APIError(status: 0, message: "AgentCap sent an X sign-in link this app does not recognise, so nothing was opened.")
                 }
                 let callback: URL
                 do { callback = try await authorize(url) }
@@ -280,9 +280,9 @@ struct XPostingScreen: View {
     /// app's own scheme. The sheet's answer is returned, never routed.
     private func authorize(_ url: URL) async throws -> URL {
         if #available(iOS 17.4, *) {
-            return try await webAuthentication.authenticate(using: url, callback: .customScheme("merrymen"), preferredBrowserSession: .ephemeral, additionalHeaderFields: [:])
+            return try await webAuthentication.authenticate(using: url, callback: .customScheme("agentcap"), preferredBrowserSession: .ephemeral, additionalHeaderFields: [:])
         }
-        return try await webAuthentication.authenticate(using: url, callbackURLScheme: "merrymen", preferredBrowserSession: .ephemeral)
+        return try await webAuthentication.authenticate(using: url, callbackURLScheme: "agentcap", preferredBrowserSession: .ephemeral)
     }
 }
 
@@ -342,14 +342,14 @@ struct XPostingAccount: Equatable {
     /// RECONNECTING CAN TURN POSTING BACK ON, AND THE OWNER IS TOLD. When X
     /// stops accepting a connection and the owner reconnects the SAME X
     /// account, the server keeps the consent they gave for it, so the
-    /// Merryman posts again from the next pass — with no new warning. The
+    /// AgentCapAvatar posts again from the next pass — with no new warning. The
     /// finish answer says so (`postingEnabled`), and this is the sentence the
     /// owner sees then; nil when posting is off, or the answer does not say
     /// `true` in so many words. A handle that is not an X handle is not shown.
     static func postingBackOn(_ finished: J) -> String? {
         guard finished["postingEnabled"].bool == true else { return nil }
         let handle = finished["username"].string.flatMap { $0.wholeMatch(of: #/[A-Za-z0-9_]{1,15}/#) != nil ? "@\($0)" : nil }
-        return "Posting is back on — your Merryman posts from \(handle ?? "the X account you just connected") again. You can see what's coming up, skip it, or turn posting off here."
+        return "Posting is back on — your AgentCapAvatar posts from \(handle ?? "the X account you just connected") again. You can see what's coming up, skip it, or turn posting off here."
     }
 
     /// The confirmed enable, owner aside (every write adds it): the X user id
@@ -370,20 +370,20 @@ struct XPostingAccount: Equatable {
     /// in a lane of its own, so its warning promises no review window. Replying
     /// or quoting is asking (2026-10-12): its answers carry no opt-out line, and
     /// it never answers someone who asked it to stop. Its answers may carry
-    /// market figures Merrymen renders from public data (worker/src/xpost/
+    /// market figures AgentCap renders from public data (worker/src/xpost/
     /// figures.ts), and its warning says that too; every other owner's is
     /// unchanged.
     static func replyWarning(_ handle: String, active: Bool) -> String {
         if active {
             return [
-                "Your Merryman will reply as @\(handle) to selected posts that tag it, reply to it or quote it.",
+                "Your AgentCapAvatar will reply as @\(handle) to selected posts that tag it, reply to it or quote it.",
                 "It chooses which posts to answer; it won’t answer every one. Answers go out right away: they don’t wait under Coming up, so you can’t skip one first.",
                 "It answers questions about the market, coins, how it trades and what it can do, and a hello, a thanks or a bit of chat in a short line of its own, from people who tag it, reply to it or quote it, a few times a day each: up to 60 answers a day on top of its posts, and at most six to one person a day. Answers carry no opt-out line, and it never answers someone who asked it to stop. Turn replies off at any time to stop answering.",
-                "Answers may include market figures from public data (CoinGecko, GeckoTerminal, Fomo and Bitquery), such as a coin’s price, market cap, volume or recent change. Merrymen adds them as the data showed them; they are never advice."
+                "Answers may include market figures from public data (CoinGecko, GeckoTerminal, Fomo and Bitquery), such as a coin’s price, market cap, volume or recent change. AgentCap adds them as the data showed them; they are never advice."
             ].joined(separator: "\n\n")
         }
         return [
-            "Your Merryman will reply as @\(handle) to selected comments on its coin posts.",
+            "Your AgentCapAvatar will reply as @\(handle) to selected comments on its coin posts.",
             "It chooses which comments to answer; it won’t reply to every comment. Replies share the same daily limit as posts.",
             "Each reply waits under Coming up for at least ten minutes first, with a link to the comment, and you can skip it there. Turn replies off at any time to cancel waiting replies."
         ].joined(separator: "\n\n")
@@ -392,8 +392,8 @@ struct XPostingAccount: Equatable {
     /// The line under the reply switch, in the web's words.
     static func replyHint(_ handle: String, active: Bool) -> String {
         active
-            ? "Selected posts that tag your Merryman, reply to it or quote it, answered as @\(handle) right away, up to 60 a day on top of its posts."
-            : "Selected comments on your Merryman’s coin posts, answered as @\(handle). Replies share the post limit and ten-minute review window."
+            ? "Selected posts that tag your AgentCapAvatar, reply to it or quote it, answered as @\(handle) right away, up to 60 a day on top of its posts."
+            : "Selected comments on your AgentCapAvatar’s coin posts, answered as @\(handle). Replies share the post limit and ten-minute review window."
     }
 
     private static func post(_ row: J, time: String, link: URL?) -> Post? {
@@ -406,7 +406,7 @@ struct XPostingAccount: Equatable {
     }
 
     /// The warning the owner confirms, in the words the web uses. It names the
-    /// account because that account is what the Merryman will post from.
+    /// account because that account is what the AgentCapAvatar will post from.
     ///
     /// THE REVIEW WINDOW IT PROMISES IS THE PLANNER'S FLOOR. Every post is
     /// drafted at least ten minutes before it is due (worker/src/xpost/
@@ -421,7 +421,7 @@ struct XPostingAccount: Equatable {
     /// prices or amounts" (2026-10-12).
     static func warning(_ handle: String, active: Bool) -> String {
         [
-            "Your Merryman will post from whichever X account is connected — right now that's @\(handle).",
+            "Your AgentCapAvatar will post from whichever X account is connected — right now that's @\(handle).",
             active
                 ? "It writes its own posts: a hello first, then a few reads on the market a day and a post for most coins it buys, and why. It never posts trade alerts or error messages, and its market reads and answers may carry market figures built from public data."
                 : "It writes its own posts: a hello first, then the odd casual thought and now and then a coin it bought and why. It never posts trade alerts, error messages, prices or amounts.",

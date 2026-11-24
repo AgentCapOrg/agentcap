@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, it } from "node:test";
 import React from "react";
-import { mintSlug } from "@merrymen/identity-store";
+import { mintSlug } from "@agentcap/identity-store";
 import { Face } from "./ui";
 import { avatarGradient } from "@/lib/agent-avatar";
 import { testDom } from "./test-dom";

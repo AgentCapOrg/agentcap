@@ -83,7 +83,7 @@ export interface SolanaAgentOptions {
   db: Db; runtime: Runtime; market: SolanaPaperMarket; now?: () => number; postgres?: boolean; signal?: AbortSignal;
   /** Live sells are charged at up to this much above their quote by the reference price; size below the cap by it. */
   referenceToleranceBps?: number;
-  /** The runtime's MERRYMEN_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE, for the expired-attempt alerts only. Default SOLANA_DEFAULT_EXPIRED_ATTEMPT_ALLOWANCE. */
+  /** The runtime's AGENTCAP_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE, for the expired-attempt alerts only. Default SOLANA_DEFAULT_EXPIRED_ATTEMPT_ALLOWANCE. */
   expiredAttemptAllowance?: number;
   /** Operator log lines ([alert] and [warn]). Default: stderr. Never carries keys, signed bytes or tenant identities. */
   log?: (line: string) => void;
@@ -96,7 +96,7 @@ export const SOLANA_AGENT_ALERT_REPEAT_MS = 10 * 60_000;
  * knows the account can compute it.
  */
 export function solanaAccountRef(scope: SolanaAccountScope): string {
-  return createHash("sha256").update(`merrymen-solana-account/v1 ${scope.tenant} ${scope.owner}`).digest("hex").slice(0, 16);
+  return createHash("sha256").update(`agentcap-solana-account/v1 ${scope.tenant} ${scope.owner}`).digest("hex").slice(0, 16);
 }
 /**
  * A live trade, or a signed owner transaction, still pending this long after it was admitted or prepared is
@@ -141,7 +141,7 @@ export function createSolanaAgent(options: SolanaAgentOptions) {
     const account = solanaAccountRef(scope);
     const fields = JSON.stringify({ solana: refused ? "alert" : "warn", kind: refused ? "expired-attempts-exhausted" : "expired-attempts-high", account,
       expired: use.expired, counted: use.counted, allowance, operations: use.operations, maxOpsPerDay });
-    const remedy = "MERRYMEN_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE (a whole number from 0 to 96, default 0) sets how many a day do not count";
+    const remedy = "AGENTCAP_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE (a whole number from 0 to 96, default 0) sets how many a day do not count";
     if (refused) return say(`exhausted:${account}`, `[alert] Solana autonomous strategy refused: proven-expired attempts used up an account's daily operations, so its automated trades and exits pause until they leave the 24 h window: ${fields} — ${remedy}`);
     said.delete(`exhausted:${account}`);
     if (use.counted * 2 > maxOpsPerDay) say(`high:${account}`, `[warn] Solana proven-expired attempts use more than half of an account's daily operations; at the limit its automated trades and exits pause: ${fields} — ${remedy}`);
@@ -170,9 +170,9 @@ export function createSolanaAgent(options: SolanaAgentOptions) {
   };
   /**
    * A live account whose vault holds less than its book (SOLANA_STATUS_BELOW_BOOK) while nothing of its own is
-   * settling: tokens left it outside Merrymen, and its automated trades and exits stay held until the book
+   * settling: tokens left it outside AgentCap, and its automated trades and exits stay held until the book
    * matches the vault again. Nothing in the worker books a decrease. The owner records their own withdrawals
-   * made outside Merrymen under Owner controls; anything else an operator finds and, once explained, writes off
+   * made outside AgentCap under Owner controls; anything else an operator finds and, once explained, writes off
    * as a loss with `npm run solana:resolve -- shortfall` (solana-resolve-shortfall.ts), named by this alert's
    * account reference (docs/solana-integration.md, "A vault below its book"). Said as an [alert] at most once
    * per SOLANA_AGENT_ALERT_REPEAT_MS per account while it persists, and at once again after it clears.
@@ -181,7 +181,7 @@ export function createSolanaAgent(options: SolanaAgentOptions) {
     const account = solanaAccountRef(scope);
     if (!blockers?.includes(SOLANA_STATUS_BELOW_BOOK)) { said.delete(`below-book:${account}`); return; }
     say(`below-book:${account}`, `[alert] Solana vault below its book: an account's vault holds less USDG or SOL than its recorded trades, so its automated trades `
-      + `and exits are held: ${JSON.stringify({ solana: "alert", kind: "vault-below-book", account })} — tokens left the vault outside Merrymen. If the owner `
+      + `and exits are held: ${JSON.stringify({ solana: "alert", kind: "vault-below-book", account })} — tokens left the vault outside AgentCap. If the owner `
       + "withdrew with their own key (the recovery tool or another wallet), they record those withdrawals under Owner controls and trading resumes. Otherwise "
       + `find what moved the tokens: npm run solana:resolve -- shortfall show ${account} shows both providers' balances beside the book, and shortfall book `
       + "writes an explained shortfall off as a loss (docs/solana-integration.md, \"A vault below its book\"). Until then the owner can revoke, and withdraw "
@@ -280,8 +280,8 @@ export function createSolanaAgent(options: SolanaAgentOptions) {
         // publish that fails leaves a digest older than this heartbeat, which the web counts as differing and holds live buys
         // for (SETTINGS THAT MUST MATCH, CHECKED, in the app runtime). It never stops receipt recovery, exits or this tick.
         try { await options.runtime.publishLiveRollout?.(); said.delete("rollout-unpublished"); } catch {
-          say("rollout-unpublished", "[alert] solana-live-rollout unpublished: the Solana worker could not publish its MERRYMEN_SOLANA_LIVE_TENANTS and "
-            + "MERRYMEN_SOLANA_LIVE_MAX_* digest with its heartbeat (solana_runtime_live_rollout_seen), so the web holds every live Solana buy until it can; "
+          say("rollout-unpublished", "[alert] solana-live-rollout unpublished: the Solana worker could not publish its AGENTCAP_SOLANA_LIVE_TENANTS and "
+            + "AGENTCAP_SOLANA_LIVE_MAX_* digest with its heartbeat (solana_runtime_live_rollout_seen), so the web holds every live Solana buy until it can; "
             + "receipt recovery, exits, revoke and withdraw continue");
         }
       };

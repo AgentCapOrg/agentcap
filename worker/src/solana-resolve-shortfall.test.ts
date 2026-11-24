@@ -27,8 +27,8 @@ const limits = { perTradeUsdg: "10000000", dailyUsdg: "50000000", maxOpsPerDay: 
   perTradeWsol: "50000000", dailyWsol: "120000000" };
 const BOOK: SolanaLiveBook = { hwmRaw: "120000000", cashRaw: "90000000", wsolRaw: "50000000", costBasisUsdgRaw: "10000000", realizedPnlUsdgRaw: "0",
   networkFeesLamports: "0", slot: 1000, updatedAtMs: NOW - 1000 };
-const env = { MERRYMEN_SOLANA_VAULT_PROGRAM: PROGRAM, MERRYMEN_SOLANA_RPC_MAINNET: "https://primary.example/?api-key=one",
-  MERRYMEN_SOLANA_RPC_MAINNET_FALLBACK: "https://fallback.example/key-two" };
+const env = { AGENTCAP_SOLANA_VAULT_PROGRAM: PROGRAM, AGENTCAP_SOLANA_RPC_MAINNET: "https://primary.example/?api-key=one",
+  AGENTCAP_SOLANA_RPC_MAINNET_FALLBACK: "https://fallback.example/key-two" };
 
 function tokenAccount(mint: string, holder: string, amount: bigint) {
   const b = Buffer.alloc(165); Buffer.from(base58Decode(mint)).copy(b, 0); Buffer.from(base58Decode(holder)).copy(b, 32); b.writeBigUInt64LE(amount, 64); b[108] = 1;
@@ -39,7 +39,7 @@ const base58Decode = (value: string) => getBase58Encoder().encode(value);
 async function fixture(t: TestContext, dialect: "sqlite" | "postgres" = "sqlite") {
   const clock = { value: NOW }; let db: Db;
   if (dialect === "postgres") {
-    const url = new URL(process.env.MERRYMEN_TEST_PG_URL!), schema = `solana_test_${randomUUID().replaceAll("-", "")}`;
+    const url = new URL(process.env.AGENTCAP_TEST_PG_URL!), schema = `solana_test_${randomUUID().replaceAll("-", "")}`;
     const admin = await makePgDb(url.toString()); await admin.exec(`CREATE SCHEMA ${schema}`);
     url.searchParams.set("options", `-c search_path=${schema}`); db = await makePgDb(url.toString());
     t.after(async () => { await admin.exec(`DROP SCHEMA ${schema} CASCADE`); });
@@ -73,7 +73,7 @@ async function fixture(t: TestContext, dialect: "sqlite" | "postgres" = "sqlite"
 }
 
 for (const dialect of ["sqlite", "postgres"] as const) {
-  const options = dialect === "postgres" && !process.env.MERRYMEN_TEST_PG_URL ? { skip: "Set MERRYMEN_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
+  const options = dialect === "postgres" && !process.env.AGENTCAP_TEST_PG_URL ? { skip: "Set AGENTCAP_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
   test(`${dialect}: show writes nothing; book writes the shortfall off as a loss once, recorded first, on two providers' agreement at the lower slot`, options, async t => {
     const f = await fixture(t, dialect);
     // 20 USDG left the vault: an issuer's action, say. Both providers see it, one a slot later.
@@ -90,7 +90,7 @@ for (const dialect of ["sqlite", "postgres"] as const) {
       "primary and fallback agree at slot 1005.",
       "Short 20 USDG: cash falls to 70 USDG, and realized P&L by 20 USDG.",
       "A write-off is a loss, never capital out: the high-water mark stays at 120 USDG, and buying pauses until the owner resumes it.",
-      "Ask the owner first whether they withdrew outside Merrymen (the recovery tool or their own wallet): that is capital out, which they record under Owner controls, and nothing is written off here.",
+      "Ask the owner first whether they withdrew outside AgentCap (the recovery tool or their own wallet): that is capital out, which they record under Owner controls, and nothing is written off here.",
       "Nothing was written. To write it off, run shortfall book with --operator and --reason.",
     ]);
     assert.deepEqual(await f.decisions(), []); assert.deepEqual(await f.store.liveBook(), BOOK);
@@ -164,9 +164,9 @@ test("an account is named by tenant or by the alert's account reference, its own
   assert.deepEqual(asked, [], "refused before any provider is asked");
   await f.db.prepare("DELETE FROM solana_runtime_setups").run();
   // A program setting that derives another vault than the account's permission and trades name.
-  await assert.rejects(resolveSolanaShortfall({ db: f.db, account: TENANT, providers: list(), env: { ...env, MERRYMEN_SOLANA_VAULT_PROGRAM: key(77) }, now: () => f.clock.value }),
+  await assert.rejects(resolveSolanaShortfall({ db: f.db, account: TENANT, providers: list(), env: { ...env, AGENTCAP_SOLANA_VAULT_PROGRAM: key(77) }, now: () => f.clock.value }),
     /does not derive the vault this account's permission or trades name/);
-  await assert.rejects(resolveSolanaShortfall({ db: f.db, account: TENANT, providers: list(), env: {}, now: () => f.clock.value }), /Set MERRYMEN_SOLANA_VAULT_PROGRAM/);
+  await assert.rejects(resolveSolanaShortfall({ db: f.db, account: TENANT, providers: list(), env: {}, now: () => f.clock.value }), /Set AGENTCAP_SOLANA_VAULT_PROGRAM/);
   assert.deepEqual(asked, []);
 });
 

@@ -23,8 +23,8 @@ const NVDA = "0x3333333333333333333333333333333333333333" as const;
 const ROUTER = "0x4444444444444444444444444444444444444444" as const;
 
 test("five-minute Brain decisions buy, sell and hold on the real paper ledger, then reach another agent", async () => {
-  const scratch = mkdtempSync(path.join(os.tmpdir(), "merrymen-trading-loop-"));
-  process.env.MERRYMEN_HOME = path.join(scratch, "home");
+  const scratch = mkdtempSync(path.join(os.tmpdir(), "agentcap-trading-loop-"));
+  process.env.AGENTCAP_HOME = path.join(scratch, "home");
   delete process.env.DATABASE_URL;
   const cwd = process.cwd();
   const empty = path.join(scratch, "empty");
@@ -32,12 +32,12 @@ test("five-minute Brain decisions buy, sell and hold on the real paper ledger, t
   try { process.chdir(empty); await store.initStore(); } finally { process.chdir(cwd); }
   await store.ensureAgent({ smartAccount: AGENT, owner: AGENT, sessionKeyAddress: AGENT, serialized: "test", caps: {}, grantedAt: 1, expiresAt: 2_000_000_000, chainId: 4663 } as never);
   await store.setAgentMode(AGENT, "paper", 1, false);
-  const raw = new DatabaseSync(path.join(process.env.MERRYMEN_HOME, "merrymen.db"));
+  const raw = new DatabaseSync(path.join(process.env.AGENTCAP_HOME, "agentcap.db"));
   const seen: Record<string, unknown>[] = [];
   const now = Math.floor(Date.now() / 1000);
   const decisions: BrainDecision[] = (["buy", "sell", "hold"] as const).map((action, i) => ({
     schema_version: "1", decision_id: `dec_cycle_${i}`, agent_id: AGENT, created_at: now + i * 300, trigger_id: null,
-    action, instrument_id: "merrymen:nvda", symbol: "NVDA", confidence: .65,
+    action, instrument_id: "agentcap:nvda", symbol: "NVDA", confidence: .65,
     suggested_delta_usdg: action === "buy" ? 10e6 : action === "sell" ? -11e6 : 0,
     target_position_usdg: null,
     thesis: action === "buy" ? "NVDA is holding above support. I would reconsider if the next quote loses that level."
@@ -70,9 +70,9 @@ test("five-minute Brain decisions buy, sell and hold on the real paper ledger, t
         agentId: AGENT, decisionSource: "brain", now: now + i * 300, epoch: 2,
         cashUsdg: Math.round(book.cashUsdg * 1e6), vaultUsdg: 0, quarantinedUsdg: 0,
         netContributionsUsdg: 100_000_000, grossContributionsUsdg: 100_000_000, grossWithdrawalsUsdg: 0, gasUsdg: 0,
-        positions: Object.entries(book.shares).map(([symbol, p]) => ({ instrumentId: "merrymen:nvda", symbol, qtyRaw: String(BigInt(Math.round(p.shares * 1e18))), valueUsdg: Math.round(p.shares * price * 1e6), costBasisUsdg: 10_000_000, priceSource: "chainlink", quarantined: false })),
+        positions: Object.entries(book.shares).map(([symbol, p]) => ({ instrumentId: "agentcap:nvda", symbol, qtyRaw: String(BigInt(Math.round(p.shares * 1e18))), valueUsdg: Math.round(p.shares * price * 1e6), costBasisUsdg: 10_000_000, priceSource: "chainlink", quarantined: false })),
         quality: { auditPassed: true, epoch: 2, currentAccountingHistoryAuditable: true, contributionsKnown: true, equityComplete: true, gasBasis: "net", positionHistoryAvailable: true, quarantinedAssetsPresent: false, assessedAt: now + i * 300 },
-        market: { instrumentId: "merrymen:nvda", symbol: "NVDA", instrumentClass: "equity-token", priceUsd: String(price), priceStale: false, signals: {} },
+        market: { instrumentId: "agentcap:nvda", symbol: "NVDA", instrumentClass: "equity-token", priceUsd: String(price), priceStale: false, signals: {} },
         expectedTradeGasUsdg: 0, memory: memoryLines(peers, now + i * 300),
       };
       const outcome = await runShadow({ url: `http://127.0.0.1:${port}`, token: "fixture", timeoutMs: 2000 }, inputs, () => {});

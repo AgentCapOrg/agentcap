@@ -74,7 +74,7 @@ function originAllowed(cfg: McpConfig, request: Request): boolean {
 export const MCP_EXPOSED_HEADERS = "WWW-Authenticate, Mcp-Session-Id, X-Trace-Id, Retry-After";
 
 /**
- * CORS for a configured browser origin (MERRYMEN_MCP_ALLOWED_ORIGINS), on every
+ * CORS for a configured browser origin (AGENTCAP_MCP_ALLOWED_ORIGINS), on every
  * answer after the Origin check: a browser discards any response without
  * Access-Control-Allow-Origin, the 401 challenge and the 429 included. No
  * credentials are allowed (the bearer token is an explicit header, never a
@@ -126,10 +126,10 @@ function releasing(body: ReadableStream<Uint8Array>, release: () => void): Reada
  * What an assistant shows (and a person reads) when no token came with the
  * request. Signing in to the website does not help here, which the old text
  * implied: the assistant has to be given the server first, and it opens the
- * Merrymen sign-in itself.
+ * AgentCap sign-in itself.
  */
 function noTokenHelp(cfg: McpConfig): string {
-  return `Add this server to your assistant as a connector, then sign in to Merrymen when it asks. Help: ${connectHelpUrl(cfg.issuer)}`;
+  return `Add this server to your assistant as a connector, then sign in to AgentCap when it asks. Help: ${connectHelpUrl(cfg.issuer)}`;
 }
 
 function unauthorized(cfg: McpConfig, presented: boolean, trace: string, profile: McpProfile): Response {
@@ -144,7 +144,7 @@ export async function handleMcpRequest(request: Request, deps: EndpointDeps = {}
   const cfg = deps.cfg ?? mcpConfig();
   const trace = traceId();
   if (!cfg.enabled) return new Response("Not found", { status: 404 });
-  // The directory profile switched off (MERRYMEN_MCP_DIRECTORY=0): no such endpoint.
+  // The directory profile switched off (AGENTCAP_MCP_DIRECTORY=0): no such endpoint.
   if (!resourceFor(cfg, deps.profile ?? "full")) return new Response("Not found", { status: 404 });
   if (!hostAllowed(cfg, request)) return jsonResponse({ error: "misdirected_request" }, 421, { "X-Trace-Id": trace });
   if (!originAllowed(cfg, request)) {

@@ -1,28 +1,28 @@
-# Connect Merrymen to your AI assistant
+# Connect AgentCap to your AI assistant
 
-Merrymen has a **Model Context Protocol (MCP) server**, so you can use your
-Merryman from whichever AI assistant you already use: Claude (web, desktop,
+AgentCap has a **Model Context Protocol (MCP) server**, so you can use your
+AgentCapAvatar from whichever AI assistant you already use: Claude (web, desktop,
 mobile, Claude Code), Codex, ChatGPT's developer mode, Grok, or any other client that
 speaks MCP over Streamable HTTP with OAuth.
 
-**Connect in one click:** <https://app.merrymen.dev/connect/mcp>
+**Connect in one click:** <https://app.agentcap.xyz/connect/mcp>
 
-**Or just tell Claude** “set up merrymen mcp”. The setup instructions written
-for AI assistants are at <https://merrymen.dev/llms.txt> (give Claude that
+**Or just tell Claude** “set up agentcap mcp”. The setup instructions written
+for AI assistants are at <https://agentcap.xyz/llms.txt> (give Claude that
 address if it does not find them); the same steps for people are at
-<https://merrymen.dev/claude>.
+<https://agentcap.xyz/claude>.
 
-**In Claude Code:** `/plugin marketplace add https://github.com/millw14/merrymen.git`, then
-`/plugin install merrymen@merrymen` (run one at a time), for the server plus
-`/merrymen:brief`, `/merrymen:status`, `/merrymen:why`, `/merrymen:portfolio` and more. See
+**In Claude Code:** `/plugin marketplace add https://github.com/millw14/agentcap.git`, then
+`/plugin install agentcap@agentcap` (run one at a time), for the server plus
+`/agentcap:brief`, `/agentcap:status`, `/agentcap:why`, `/agentcap:portfolio` and more. See
 [Claude Code](clients.md#claude-code).
 
-**Server address:** `https://mcp.merrymen.dev/mcp`
+**Server address:** `https://mcp.agentcap.xyz/mcp`
 
 **Grok and Grok Bot:** see the [Grok setup guide](grok.md) for the custom
 connector, packaged setup/monitoring skills, and native-client testing status.
 
-Merrymen stays the source of truth for your identity, your agent, your limits,
+AgentCap stays the source of truth for your identity, your agent, your limits,
 your accounting and every trade. The assistant is a window onto it, with only
 the access you grant, and your agent keeps trading and protecting its
 positions whether or not an assistant is connected.
@@ -41,7 +41,7 @@ positions whether or not an assistant is connected.
   external). Messages can't change settings or place trades.
 - **Prepare actions for your approval**: quotes, exact trade proposals, setting
   changes, a new agent setup, group-chat posts. Each comes with a link to a
-  Merrymen page where *you* approve or decline it.
+  AgentCap page where *you* approve or decline it.
 - **Backtest** strategies on real oracle history or synthetic data, as
   background jobs.
 - **Alerts** to your linked Telegram: confirmed trades (swaps and launchpad
@@ -56,22 +56,22 @@ positions whether or not an assistant is connected.
 
 Move your funds, see your keys or tokens, sign transactions, turn on live
 trading, loosen your signed limits, or act on another owner's agent. Trades and
-setting changes only happen after you approve them in Merrymen, and your
+setting changes only happen after you approve them in AgentCap, and your
 agent's own limits and on-chain permission still apply after that.
 
 ## Connect
 
 See [clients.md](clients.md) for step-by-step setup for each client.
 
-In short: open [the connect page](https://app.merrymen.dev/connect/mcp) and
+In short: open [the connect page](https://app.agentcap.xyz/connect/mcp) and
 click **Add to Claude** (or your assistant's link or command), or add the server
 address as a custom connector (Claude) or MCP server (Claude Code, Codex,
-others) by hand. The first time, your browser opens Merrymen; sign
+others) by hand. The first time, your browser opens AgentCap; sign
 in as usual, choose which agent the assistant may see and what it may do, and
 approve. Manage or disconnect assistants any time at
-[Connected apps](https://app.merrymen.dev/connect/apps).
+[Connected apps](https://app.agentcap.xyz/connect/apps).
 
-Links an assistant gives you open Merrymen pages, where you act signed in as
+Links an assistant gives you open AgentCap pages, where you act signed in as
 yourself: `/connect/approve/<id>` to approve or decline a proposal, and
 `/connect/export/<id>` to download an export (the page checks the file and
 offers a Download button; the file itself is only ever sent to your own
@@ -113,6 +113,6 @@ before/after on the approval page.
 - [errors.md](errors.md) — error codes and retries
 - [examples.md](examples.md) — example conversations
 - [operations.md](operations.md) — deployment, monitoring, limits, rollback,
-  and the emergency switch (`MERRYMEN_MCP_ENABLED=0`, which must be set on
+  and the emergency switch (`AGENTCAP_MCP_ENABLED=0`, which must be set on
   both the web and the orchestrator service)
 - [capability-matrix.md](capability-matrix.md) — what is built, on which services

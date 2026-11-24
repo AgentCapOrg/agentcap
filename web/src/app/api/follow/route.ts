@@ -27,9 +27,9 @@
  * for everyone who read it.
  */
 import { NextResponse } from "next/server";
-import { isHostedMode } from "@merrymen/core";
-import { getFollowStore, isSelfFollow, MAX_FOLLOWS, SLUG_SHAPE } from "@merrymen/follow-store";
-import { getIdentityStore } from "@merrymen/identity-store";
+import { isHostedMode } from "@agentcap/core";
+import { getFollowStore, isSelfFollow, MAX_FOLLOWS, SLUG_SHAPE } from "@agentcap/follow-store";
+import { getIdentityStore } from "@agentcap/identity-store";
 import { tenantOf } from "@/lib/auth";
 import { walletNotSupported } from "@/lib/route-guard";
 

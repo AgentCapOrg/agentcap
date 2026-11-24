@@ -6,7 +6,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { isHostedMode, sameBookAsLatest } from "@merrymen/core";
+import { isHostedMode, sameBookAsLatest } from "@agentcap/core";
 import { tenantOf } from "@/lib/auth";
 import { withReadDb, fmtEpoch } from "@/lib/ledger";
 import { hostedAgentFor } from "@/lib/agent-for";

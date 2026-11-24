@@ -1,7 +1,7 @@
 /**
  * THE ESCAPE HATCH FOR ASSETS THAT LIVE IN A CONTRACT.
  *
- * `PonsClassVault.sweep` says it "is what `merrymen recover` uses". Until this
+ * `PonsClassVault.sweep` says it "is what `agentcap recover` uses". Until this
  * module that was a claim about code which did not exist. These tests are the
  * three ways that claim can quietly stay false: the vault is not found, the
  * contents are not found, or a failed read is reported as an empty account.
@@ -71,7 +71,7 @@ describe("finding the vault", () => {
   it("uses the deployed factory on a chain that HAS one, rather than saying none", async () => {
     // The other side of the switch above, and the reason it is safe to make.
     // With a factory constant present, a grant carrying no class marker must
-    // still resolve through the factory — that is what lets `merrymen recover`
+    // still resolve through the factory — that is what lets `agentcap recover`
     // reach a vault when the grant is archived or absent. Saying "none" here
     // would strand a real position.
     const v = await findClassVault({

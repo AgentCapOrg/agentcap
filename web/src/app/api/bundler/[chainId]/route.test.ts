@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import { encodeCallDataEpV07 } from "@zerodev/sdk";
 import { encodeFunctionData, type Address, type Hex } from "viem";
-import { ENTRYPOINT } from "@merrymen/core";
+import { ENTRYPOINT } from "@agentcap/core";
 import { mintTicket } from "@/lib/recovery-ticket";
 import { KERNEL_REVOCATION_ABI } from "@/lib/permission-revocation";
 import { sdkRevocationCall } from "@/lib/permission-revocation-fixture";
@@ -20,12 +20,12 @@ let previousGloam: string | undefined;
 let forwarded: Array<{ method: string; params: unknown[] }>;
 
 beforeEach(() => {
-  previousSecret = process.env.MERRYMEN_SESSION_SECRET;
-  previousBundler = process.env.MERRYMEN_BUNDLER_API_KEY;
-  previousGloam = process.env.MERRYMEN_GLOAM_WITHDRAWALS_ENABLED;
-  process.env.MERRYMEN_SESSION_SECRET = "relay-test-only-secret-never-production";
-  process.env.MERRYMEN_BUNDLER_API_KEY = "relay-test-only-bundler";
-  delete process.env.MERRYMEN_GLOAM_WITHDRAWALS_ENABLED;
+  previousSecret = process.env.AGENTCAP_SESSION_SECRET;
+  previousBundler = process.env.AGENTCAP_BUNDLER_API_KEY;
+  previousGloam = process.env.AGENTCAP_GLOAM_WITHDRAWALS_ENABLED;
+  process.env.AGENTCAP_SESSION_SECRET = "relay-test-only-secret-never-production";
+  process.env.AGENTCAP_BUNDLER_API_KEY = "relay-test-only-bundler";
+  delete process.env.AGENTCAP_GLOAM_WITHDRAWALS_ENABLED;
   forwarded = [];
   globalThis.fetch = async (_url, init) => {
     const rpc = JSON.parse(String(init?.body));
@@ -35,12 +35,12 @@ beforeEach(() => {
 });
 afterEach(() => {
   globalThis.fetch = originalFetch;
-  if (previousSecret === undefined) delete process.env.MERRYMEN_SESSION_SECRET;
-  else process.env.MERRYMEN_SESSION_SECRET = previousSecret;
-  if (previousBundler === undefined) delete process.env.MERRYMEN_BUNDLER_API_KEY;
-  else process.env.MERRYMEN_BUNDLER_API_KEY = previousBundler;
-  if (previousGloam === undefined) delete process.env.MERRYMEN_GLOAM_WITHDRAWALS_ENABLED;
-  else process.env.MERRYMEN_GLOAM_WITHDRAWALS_ENABLED = previousGloam;
+  if (previousSecret === undefined) delete process.env.AGENTCAP_SESSION_SECRET;
+  else process.env.AGENTCAP_SESSION_SECRET = previousSecret;
+  if (previousBundler === undefined) delete process.env.AGENTCAP_BUNDLER_API_KEY;
+  else process.env.AGENTCAP_BUNDLER_API_KEY = previousBundler;
+  if (previousGloam === undefined) delete process.env.AGENTCAP_GLOAM_WITHDRAWALS_ENABLED;
+  else process.env.AGENTCAP_GLOAM_WITHDRAWALS_ENABLED = previousGloam;
 });
 
 const ticket = (account: Address = ACCOUNT, chainId = 4663) => mintTicket({ smartAccount: account, chainId, classVaults: [] });
@@ -49,8 +49,8 @@ async function request(method: string, callData: Hex, opts: {
 } = {}) {
   const chainId = opts.chainId ?? 4663;
   const cookie = opts.cookie === undefined ? ticket(ACCOUNT, chainId) : opts.cookie;
-  return POST(new Request(`https://merrymen.test/api/bundler/${chainId}${opts.wallet ? `?wallet=${opts.wallet}` : ""}`, {
-    method: "POST", headers: { "content-type": "application/json", ...(cookie ? { cookie: `merrymen_recovery=${cookie}` } : {}) },
+  return POST(new Request(`https://agentcap.test/api/bundler/${chainId}${opts.wallet ? `?wallet=${opts.wallet}` : ""}`, {
+    method: "POST", headers: { "content-type": "application/json", ...(cookie ? { cookie: `agentcap_recovery=${cookie}` } : {}) },
     body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params: [{
       sender: opts.sender ?? ACCOUNT, nonce: "0x0", callData,
       callGasLimit: "0x0", verificationGasLimit: "0x0", preVerificationGas: "0x0",
@@ -128,15 +128,15 @@ describe("owner Gloam withdrawal through the real relay handler", () => {
   it("is disabled by default and accepts only the exact enabled value", async () => {
     const cd = await fixtureGloamBatch();
     for (const flag of [undefined, "0", "true", "yes"]) {
-      if (flag === undefined) delete process.env.MERRYMEN_GLOAM_WITHDRAWALS_ENABLED;
-      else process.env.MERRYMEN_GLOAM_WITHDRAWALS_ENABLED = flag;
+      if (flag === undefined) delete process.env.AGENTCAP_GLOAM_WITHDRAWALS_ENABLED;
+      else process.env.AGENTCAP_GLOAM_WITHDRAWALS_ENABLED = flag;
       for (const method of methods) assert.ok((await (await request(method, cd)).json()).error);
     }
     assert.equal(forwarded.length, 0);
   });
 
   it("forwards the atomic owner batch for estimation and submission when explicitly enabled", async () => {
-    process.env.MERRYMEN_GLOAM_WITHDRAWALS_ENABLED = "1";
+    process.env.AGENTCAP_GLOAM_WITHDRAWALS_ENABLED = "1";
     const cd = await fixtureGloamBatch();
     for (const method of methods) {
       assert.equal((await (await request(method, cd)).json()).result.acceptedByFixture, true);
@@ -146,7 +146,7 @@ describe("owner Gloam withdrawal through the real relay handler", () => {
   });
 
   it("retains account, chain, EntryPoint, unsponsored and root-validator restrictions", async () => {
-    process.env.MERRYMEN_GLOAM_WITHDRAWALS_ENABLED = "1";
+    process.env.AGENTCAP_GLOAM_WITHDRAWALS_ENABLED = "1";
     const cd = await fixtureGloamBatch();
     for (const opts of [
       { cookie: null }, { cookie: `${ticket()}tampered` }, { cookie: ticket(OTHER) }, { sender: OTHER },
@@ -160,7 +160,7 @@ describe("owner Gloam withdrawal through the real relay handler", () => {
   });
 
   it("keeps Gloam withdrawals scoped to Spot even with a valid Perps ticket", async () => {
-    process.env.MERRYMEN_GLOAM_WITHDRAWALS_ENABLED = "1";
+    process.env.AGENTCAP_GLOAM_WITHDRAWALS_ENABLED = "1";
     const cd = await fixtureGloamBatch();
     const perps = mintTicket({ smartAccount: ACCOUNT, chainId: 4663, classVaults: [], purpose: "perps" });
     for (const method of methods) {
@@ -179,7 +179,7 @@ describe("owner Gloam withdrawal through the real relay handler", () => {
   });
 
   it("does not turn the feature flag into an approval or arbitrary-call relay", async () => {
-    process.env.MERRYMEN_GLOAM_WITHDRAWALS_ENABLED = "1";
+    process.env.AGENTCAP_GLOAM_WITHDRAWALS_ENABLED = "1";
     const calls = fixtureGloamCalls();
     for (const batch of [calls.slice(0, 1), calls.slice(0, 2), calls.slice(0, 3), [...calls, calls[0]!], [...calls.slice(0, 3), { ...calls[3]!, to: OTHER }]]) {
       const cd = await fixtureGloamBatch(batch);

@@ -8,7 +8,7 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { DatabaseSync } from "node:sqlite";
-import type { PerpsReport } from "@merrymen/core";
+import type { PerpsReport } from "@agentcap/core";
 import { wrapSqlite, type Db } from "../../../worker/src/db";
 import { readAgentPerps, readAgentPerpsFrom, readAgentPerpsRead, type ReadDb } from "./agent-perps";
 

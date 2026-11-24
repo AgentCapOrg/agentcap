@@ -18,7 +18,7 @@
 export const RESIGN_ANCHOR = "resign";
 
 /** Fired by a completed sign-in, so a screen that loaded signed-out can load again. */
-export const SIGNED_IN_EVENT = "merrymen:signed-in";
+export const SIGNED_IN_EVENT = "agentcap:signed-in";
 
 /** Should the page scroll to the re-sign section now? */
 export function shouldJumpToResign(hash: string, alreadyJumped: boolean, sectionPresent: boolean): boolean {
@@ -26,7 +26,7 @@ export function shouldJumpToResign(hash: string, alreadyJumped: boolean, section
 }
 
 /** sessionStorage key holding when the grant page last reloaded for a sign-in. */
-export const SIGNED_IN_RELOAD_KEY = "merrymen.grant.signinReloadAt";
+export const SIGNED_IN_RELOAD_KEY = "agentcap.grant.signinReloadAt";
 /** At most one such reload in this window. */
 export const SIGNED_IN_RELOAD_GAP_MS = 60_000;
 

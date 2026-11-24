@@ -5,10 +5,10 @@ import os from "node:os";
 import path from "node:path";
 import { after, test } from "node:test";
 
-const fleet = mkdtempSync(path.join(os.tmpdir(), "merrymen-condition-restore-"));
-process.env.MERRYMEN_HOME = fleet;
-process.env.MERRYMEN_HOSTED = "1";
-process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
+const fleet = mkdtempSync(path.join(os.tmpdir(), "agentcap-condition-restore-"));
+process.env.AGENTCAP_HOME = fleet;
+process.env.AGENTCAP_HOSTED = "1";
+process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
 delete process.env.DATABASE_URL;
 after(() => rmSync(fleet, { recursive: true, force: true }));
 

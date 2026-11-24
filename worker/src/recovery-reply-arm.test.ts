@@ -30,7 +30,7 @@ const JOURNAL = `CREATE TABLE IF NOT EXISTS recovery_reply_controls (
  kind TEXT NOT NULL, request_update_id BIGINT, message_at_sec BIGINT NOT NULL, recorded_at_ms BIGINT NOT NULL, expires_at_ms BIGINT,
  PRIMARY KEY(bot_id,update_id))`;
 
-const root = mkdtempSync(path.join(os.tmpdir(), "merrymen-arm-controls-"));
+const root = mkdtempSync(path.join(os.tmpdir(), "agentcap-arm-controls-"));
 const handles: DatabaseSync[] = [];
 after(() => { for (const h of handles) h.close(); rmSync(root, { recursive: true, force: true }); });
 

@@ -5,8 +5,8 @@ import os from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { after, before, mock, test } from "node:test";
-import type { StoredGrant } from "@merrymen/core";
-import { getGrantStore, resetGrantStoreForTest } from "@merrymen/grant-store";
+import type { StoredGrant } from "@agentcap/core";
+import { getGrantStore, resetGrantStoreForTest } from "@agentcap/grant-store";
 import { mintSession, SESSION_COOKIE } from "@/lib/auth";
 import { FLEET_RECOVERY_SCHEMA } from "../../../../../worker/src/fleet-recovery";
 import { POST } from "./route";
@@ -16,24 +16,24 @@ const TENANT_B = `0x${"b".repeat(40)}` as `0x${string}`;
 const ACCOUNT_A = `0x${"c".repeat(40)}`;
 const ACCOUNT_B = `0x${"d".repeat(40)}`;
 const NOW = Date.parse("2026-10-04T12:00:00Z") / 1000;
-const home = mkdtempSync(path.join(os.tmpdir(), "merrymen-chat-recovery-"));
-const keys = ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_SESSION_SECRET", "DATABASE_URL", "MERRYMEN_LLM_PROVIDER",
-  "MERRYMEN_LLM_API_KEY", "MERRYMEN_LLM_PROVIDER_MODEL", "ANTHROPIC_API_KEY", "GROQ_API_KEY"] as const;
+const home = mkdtempSync(path.join(os.tmpdir(), "agentcap-chat-recovery-"));
+const keys = ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_SESSION_SECRET", "DATABASE_URL", "AGENTCAP_LLM_PROVIDER",
+  "AGENTCAP_LLM_API_KEY", "AGENTCAP_LLM_PROVIDER_MODEL", "ANTHROPIC_API_KEY", "GROQ_API_KEY"] as const;
 const saved = new Map(keys.map(key => [key, process.env[key]]));
 let db: DatabaseSync;
 let seen: { system: string; prompt: string }[] = [];
 let grantReads: string[] = [];
 
 before(() => {
-  process.env.MERRYMEN_HOME = home;
-  process.env.MERRYMEN_HOSTED = "1";
-  process.env.MERRYMEN_SESSION_SECRET = "test-chat-recovery-session-secret-32-characters";
+  process.env.AGENTCAP_HOME = home;
+  process.env.AGENTCAP_HOSTED = "1";
+  process.env.AGENTCAP_SESSION_SECRET = "test-chat-recovery-session-secret-32-characters";
   delete process.env.DATABASE_URL;
   delete process.env.ANTHROPIC_API_KEY;
-  process.env.MERRYMEN_LLM_PROVIDER = "groq";
-  process.env.MERRYMEN_LLM_API_KEY = "test-recovery-model-key";
+  process.env.AGENTCAP_LLM_PROVIDER = "groq";
+  process.env.AGENTCAP_LLM_API_KEY = "test-recovery-model-key";
   process.env.GROQ_API_KEY = "test-recovery-model-key";
-  process.env.MERRYMEN_LLM_PROVIDER_MODEL = "test-model";
+  process.env.AGENTCAP_LLM_PROVIDER_MODEL = "test-model";
   resetGrantStoreForTest();
   mock.method(Date, "now", () => NOW * 1000);
   mock.method(getGrantStore("spot"), "get", async (tenant: string) => {
@@ -49,7 +49,7 @@ before(() => {
     return new Response(JSON.stringify({ choices: [{ finish_reason: "stop", message: { content: "I can explain the records." } }] }),
       { status: 200, headers: { "content-type": "application/json" } });
   });
-  db = new DatabaseSync(path.join(home, "merrymen.db"));
+  db = new DatabaseSync(path.join(home, "agentcap.db"));
   db.exec(`${FLEET_RECOVERY_SCHEMA}
     CREATE TABLE trades (id INTEGER PRIMARY KEY, agent_id TEXT, epoch INTEGER, kind TEXT, target TEXT,
       buy_token TEXT, sell_token TEXT, amount_usdg REAL, user_op_hash TEXT, tx_hash TEXT, status TEXT,
@@ -87,7 +87,7 @@ after(() => {
 });
 
 async function ask(tenant: `0x${string}`, expected = tenant, message = "why are you quiet after I renewed?") {
-  return POST(new Request("https://app.merrymen.dev/api/chat", { method: "POST",
+  return POST(new Request("https://app.agentcap.xyz/api/chat", { method: "POST",
     headers: { "content-type": "application/json", cookie: `${SESSION_COOKIE}=${mintSession(tenant)}` },
     body: JSON.stringify({ expectedTenant: expected, message,
       state: JSON.stringify({ smartAccount: ACCOUNT_A, chainId: 1, name: "Example Robin", workerStatus: "LIVE",
@@ -162,7 +162,7 @@ test("unreadable recovery health fails without a normal-running narration; missi
 });
 
 test("a hosted grant without an available ledger driver cannot fall back to stale live narration", async () => {
-  const database = path.join(home, "merrymen.db"), heldAside = path.join(home, "unavailable-test.db");
+  const database = path.join(home, "agentcap.db"), heldAside = path.join(home, "unavailable-test.db");
   renameSync(database, heldAside);
   try {
     const beforeModels = seen.length;

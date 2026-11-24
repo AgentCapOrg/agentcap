@@ -8,7 +8,7 @@
  */
 import assert from "node:assert/strict";
 import { after, afterEach, before, test } from "node:test";
-import { STOCK_TOKENS } from "@merrymen/core";
+import { STOCK_TOKENS } from "@agentcap/core";
 import { runTool, type ToolDef } from "../tool";
 import { NOTIFICATIONS_TOOLS } from "./notifications";
 import { encodeCursor } from "./shared";

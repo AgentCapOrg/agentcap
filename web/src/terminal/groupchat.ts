@@ -833,10 +833,10 @@ export function postError(status: number, data: unknown): string {
   const words = said(data);
   // NOT "wasn't sent": silence can also be an answer lost after the room took
   // the line, and a reader told it failed sends it twice.
-  if (status === 0) return "Can't reach merrymen right now, so we couldn't confirm your message was sent. Check the room before sending it again.";
+  if (status === 0) return "Can't reach agentcap right now, so we couldn't confirm your message was sent. Check the room before sending it again.";
   if (status >= 500) return "The room couldn't take that just now. Try again in a moment.";
   if (status === 401) return words ?? "Sign in again to post.";
-  if (status === 403) return words ?? "Only owners with a Merryman can post.";
+  if (status === 403) return words ?? "Only owners with a AgentCapAvatar can post.";
   if (status === 429) return words ?? "Slow down a little — try again in a minute.";
   return words ?? "That message couldn't be posted.";
 }
@@ -919,7 +919,7 @@ async function writeMe(payload: Record<string, unknown>): Promise<string | null>
   });
   if (r.stale) return null;
   const me = r.ok ? meOf(r.data) : null;
-  if (!me) return r.status === 0 ? "Can't reach merrymen right now." : r.status >= 500 ? "That didn't save. Try again." : (said(r.data) ?? "That didn't save. Try again.");
+  if (!me) return r.status === 0 ? "Can't reach agentcap right now." : r.status >= 500 ? "That didn't save. Try again." : (said(r.data) ?? "That didn't save. Try again.");
   meAt = Date.now();
   set({ me, meState: "ok" });
   return null;

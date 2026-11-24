@@ -250,7 +250,7 @@ export class SqlSolanaBindingStore implements SolanaBindingStore {
    * THE KILL PATHS' DATABASE, or null when Solana was never used here.
    *
    * Robinhood's "kill all agents" and Telegram /kill call the two methods
-   * below for every tenant, MERRYMEN_SOLANA on or off. database() writes the
+   * below for every tenant, AGENTCAP_SOLANA on or off. database() writes the
    * schema (under an advisory lock on Postgres), so a kill would create Solana
    * tables in a production database that never ran Solana, and a fault there
    * would report a Robinhood kill incomplete. So the table and its

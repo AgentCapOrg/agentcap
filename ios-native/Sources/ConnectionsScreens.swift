@@ -1,9 +1,9 @@
 import SwiftUI
 import UIKit
-import MerrymenPolicy
+import AgentCapPolicy
 
 /// Connected AI apps: every assistant connection and access token that can
-/// reach this owner's Merrymen, what each may do and did recently, and a
+/// reach this owner's AgentCap, what each may do and did recently, and a
 /// Disconnect that ends its access on its next request (web /connect/apps).
 struct ConnectionsScreen: View {
     @EnvironmentObject var store: AppStore
@@ -33,8 +33,8 @@ struct ConnectionsScreen: View {
     private func connectCard(_ endpoint: String) -> some View {
         Card {
             Text("Connect an assistant").font(.headline)
-            Text("Add Merrymen as a connector in your assistant, then sign in here when it asks. You choose what it may do.").font(.subheadline).foregroundStyle(.secondary)
-            if let claude = URL(string: "https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=Merrymen&connectorUrl=\(escaped(endpoint))") {
+            Text("Add AgentCap as a connector in your assistant, then sign in here when it asks. You choose what it may do.").font(.subheadline).foregroundStyle(.secondary)
+            if let claude = URL(string: "https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=AgentCap&connectorUrl=\(escaped(endpoint))") {
                 Link(destination: claude) { Label("Add to Claude", systemImage: "arrow.up.right.square") }.buttonStyle(.plain).font(.subheadline.weight(.semibold)).foregroundStyle(Brand.accent)
             }
             if let chatgpt = URL(string: "https://chatgpt.com/plugins") {
@@ -56,7 +56,7 @@ struct ConnectionsScreen: View {
             TextField("Paste the approval link", text: $link).textInputAutocapitalization(.never).autocorrectionDisabled().font(.callout)
                 .padding(12).background(Brand.raised, in: RoundedRectangle(cornerRadius: 12))
             Button("Open request") {
-                guard let id = ApprovalScreen.proposalID(in: link) else { store.notice = "That is not a Merrymen approval link."; return }
+                guard let id = ApprovalScreen.proposalID(in: link) else { store.notice = "That is not a AgentCap approval link."; return }
                 link = ""; store.path.append(.approval(id))
             }.buttonStyle(SecondaryButtonStyle(fill: true)).disabled(link.isEmpty)
         }
@@ -159,7 +159,7 @@ struct ApprovalScreen: View {
         .confirmationDialog(confirm == "approve" ? "Approve this request?" : "Decline this request?", isPresented: Binding(get: { confirm != nil }, set: { if !$0 { confirm = nil } }), titleVisibility: .visible, presenting: confirm) { decision in
             Button(decision == "approve" ? "Yes, approve" : "Yes, decline", role: decision == "approve" ? nil : .destructive) { decide(decision) }
         } message: { decision in
-            Text(decision == "approve" ? "Merrymen checks it again against your limits and current state before acting." : "Nothing will be sent.")
+            Text(decision == "approve" ? "AgentCap checks it again against your limits and current state before acting." : "Nothing will be sent.")
         }
     }
 

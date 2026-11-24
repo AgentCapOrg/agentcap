@@ -1,14 +1,14 @@
 # Google Play submission record
 
 Prepared on 2026-10-09 for the native Android client, package
-`dev.merrymen.app`. This is a draft submission pack, not a statement that the
+`dev.agentcap.app`. This is a draft submission pack, not a statement that the
 app is approved or publicly available. See [../RELEASING.md](../RELEASING.md)
 for build, signing and device validation.
 
 ## Console status
 
-The Play account is a Personal account. The Merrymen app entry
-(`4972707436414086495`) uses package `dev.merrymen.app`, English (US), App,
+The Play account is a Personal account. The AgentCap app entry
+(`4972707436414086495`) uses package `dev.agentcap.app`, English (US), App,
 and Free. On 2026-10-16, internal-testing draft release `1` on track
 `4701451895307323530` was updated to **0.4.0 (code 4)**. Google accepted the
 signed AAB with its embedded ReTrace mapping, minimum API 26 and target API 36.
@@ -49,7 +49,7 @@ registered address before organization conversion can continue. The owner suppli
 location. Use Nigeria for the company country; obtain the full registered street
 address/postal code if the D-U-N-S lookup does not populate it. Website ownership
 verification has not been confirmed. The owner supplied the first internal tester
-address privately; it is saved in the selected `Merrymen internal testers` list
+address privately; it is saved in the selected `AgentCap internal testers` list
 and Console marks **Select testers** complete. Additional testers will follow.
 Tester addresses belong in Console, not in source control.
 
@@ -155,7 +155,7 @@ separate sharing questions. Do not declare that no data is collected.
 Financial features are present. The
 [crypto-wallet policy](https://support.google.com/googleplay/android-developer/answer/16329703)
 excludes non-custodial wallets from that particular policy; that statement
-alone does not classify Merrymen's hosted trading service or determine its
+alone does not classify AgentCap's hosted trading service or determine its
 permitted distribution countries.
 
 ## Official references

@@ -1,5 +1,5 @@
 /**
- * Payments: read-only verification of a $MERRYMEN transfer, against a fake
+ * Payments: read-only verification of a $AGENTCAP transfer, against a fake
  * JSON-RPC chain over HTTP through a real viem client. Nothing here reaches a
  * real chain or holds a key; the gateway never sends a transaction.
  *
@@ -26,7 +26,7 @@ after(() => Promise.all(cleanup.map((fn) => fn())));
 
 async function fixture({ minConfirmations = 3, minAgeSec = 60, chainId = TOKEN.chainId, startBlock = 100, writeLine, readTimeoutMs = 10_000, ...rest } = {}) {
   const rpc = await startFakeChain({ chainId, head: 1_000, time: START / 1000 });
-  const dir = await mkdtemp(path.join(tmpdir(), "merrymen-payments-"));
+  const dir = await mkdtemp(path.join(tmpdir(), "agentcap-payments-"));
   cleanup.push(rpc.close, () => rm(dir, { recursive: true, force: true }));
   const clock = { t: START };
   const logs = [];

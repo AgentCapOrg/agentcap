@@ -279,7 +279,7 @@ const BARS_LIMIT = 1_000;
  *
  * `lane`: the fleet Gecko lane, named explicitly by a reader that runs in the
  * orchestrator (an X answer's coin facts), whose own environment does not
- * carry the children's MERRYMEN_FLEET_HOME (geckoterminal.ts GeckoLane).
+ * carry the children's AGENTCAP_FLEET_HOME (geckoterminal.ts GeckoLane).
  */
 export function createCoinFactsReader(o: { fetchJson?: FactsFetch; now?: () => number; limiter?: FactsLimiter; lane?: GeckoLane } = {}): CoinFactsReader {
   const now = o.now ?? Date.now;

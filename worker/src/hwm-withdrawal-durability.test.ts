@@ -28,7 +28,7 @@
  * against a mirror that had been reverted, which is the one thing it must not
  * do.
  *
- * MERRYMEN_HOME is set before any store import runs getDb(); node's --test runs
+ * AGENTCAP_HOME is set before any store import runs getDb(); node's --test runs
  * each file in its own process, so the override never leaks.
  */
 import assert from "node:assert/strict";
@@ -37,8 +37,8 @@ import { mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-hwm-"));
-process.env.MERRYMEN_HOME = HOME;
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-hwm-"));
+process.env.AGENTCAP_HOME = HOME;
 
 const {
   closeStoreForTest, initStore, ensureAgent, adjustAgentHwm, getAgentFinancials, restoreAgentHwmParts } =

@@ -20,7 +20,7 @@ interface Client {
   query(sql: string, params?: unknown[]): Promise<{ rows: Record<string, unknown>[]; rowCount: number | null }>;
   on(event: "error" | "end", listener: () => void): void;
 }
-const url = process.env.MERRYMEN_TEST_PG_URL ?? process.env.MERRYMEN_TEST_POSTGRES_URL;
+const url = process.env.AGENTCAP_TEST_PG_URL ?? process.env.AGENTCAP_TEST_POSTGRES_URL;
 const pg = url ? createRequire(import.meta.url)("pg") as {
   Client: new (options: { connectionString: string }) => Client;
   types: { setTypeParser(id: number, parse: (value: string) => unknown): void };
@@ -31,12 +31,12 @@ test("Postgres: original receipt attestation, durable interruptions and actual t
   const target = new URL(url!);
   assert.ok(["localhost", "127.0.0.1", "[::1]"].includes(target.hostname), "only disposable LOCAL PostgreSQL is allowed");
   pg!.types.setTypeParser(20, Number);
-  const savedUrl = process.env.DATABASE_URL, savedHolds = process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS;
+  const savedUrl = process.env.DATABASE_URL, savedHolds = process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS;
   const admin = new pg!.Client({ connectionString: target.toString() }); await admin.connect();
   t.after(async () => {
     await admin.end();
     if (savedUrl === undefined) delete process.env.DATABASE_URL; else process.env.DATABASE_URL = savedUrl;
-    if (savedHolds === undefined) delete process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS; else process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS = savedHolds;
+    if (savedHolds === undefined) delete process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS; else process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS = savedHolds;
   });
   async function fixture() {
     const schema = `mm_receipt_${randomBytes(8).toString("hex")}`, application = `${schema}_lease`;
@@ -65,7 +65,7 @@ test("Postgres: original receipt attestation, durable interruptions and actual t
     await shared.exec("CREATE TABLE grants(tenant TEXT PRIMARY KEY, grant_json JSONB NOT NULL, updated_at BIGINT NOT NULL, row_version BIGINT NOT NULL)");
     const leaseUrl = new URL(scoped); leaseUrl.searchParams.set("application_name", application);
     process.env.DATABASE_URL = leaseUrl.toString();
-    process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS = TEST_TENANT;
+    process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS = TEST_TENANT;
     const lease = await acquireTenantLease(TEST_TENANT);
     assert.ok(lease); assert.equal(lease.backend, "postgres"); assert.equal(lease.healthy(), true);
     const f = await receiptFixture(shared, lease);

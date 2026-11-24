@@ -11,12 +11,12 @@ export const SOLANA_OTHER_SIGN_IN = "This account's Solana wallet was verified w
 /**
  * WHY A SOLANA ROUTE REFUSED THE SIGN-IN ITSELF, BY CODE (authenticateSolana).
  *
- * Every Solana route needs two sign-ins that agree: the Merrymen session (the
+ * Every Solana route needs two sign-ins that agree: the AgentCap session (the
  * cookie) and the wallet sign-in (a Privy token), whose login must map to the
  * same account. The refusal is the server's and stays exactly as it is. The
  * code only lets the page offer the way out, where it used to print the
  * refusal with nothing to press:
- * - signed-out: this browser has no Merrymen session, while its wallet
+ * - signed-out: this browser has no AgentCap session, while its wallet
  *   sign-in is live (a session cookie lasts a week; a Privy login longer). The
  *   page finishes the sign-in, as PrivySignIn does anywhere: the session it
  *   mints is for that login's own account, and no session is replaced.
@@ -29,7 +29,7 @@ export const SOLANA_OTHER_SIGN_IN = "This account's Solana wallet was verified w
  */
 export type SolanaSignInProblem = "signed-out" | "expired" | "mismatch";
 
-/** How the signed-in Merrymen account signs in, as the identity store records it. Display only, never authorization. */
+/** How the signed-in AgentCap account signs in, as the identity store records it. Display only, never authorization. */
 export interface SolanaAccountLogin {
   provider: "twitter" | "google" | "email" | "wallet";
   /** The X username, for an X login only. Never an email address. */
@@ -38,14 +38,14 @@ export interface SolanaAccountLogin {
 
 export interface SolanaSignInRefusal {
   problem: SolanaSignInProblem;
-  /** A mismatch only: the login of the account the Merrymen session is for, when the store knows it. */
+  /** A mismatch only: the login of the account the AgentCap session is for, when the store knows it. */
   account: SolanaAccountLogin | null;
-  /** A mismatch only: whether the wallet sign-in's own login has a Merrymen account of its own. */
+  /** A mismatch only: whether the wallet sign-in's own login has a AgentCap account of its own. */
   loginHasAccount: boolean;
 }
 
 /** The mismatch in words that stand alone, for a page that predates the code. */
-export const SOLANA_SIGN_IN_MISMATCH = "Your Merrymen sign-in and your wallet sign-in are different logins. Sign in again with the login you use for this account.";
+export const SOLANA_SIGN_IN_MISMATCH = "Your AgentCap sign-in and your wallet sign-in are different logins. Sign in again with the login you use for this account.";
 
 const PROBLEMS: ReadonlySet<string> = new Set<SolanaSignInProblem>(["signed-out", "expired", "mismatch"]);
 const PROVIDERS: ReadonlySet<string> = new Set<SolanaAccountLogin["provider"]>(["twitter", "google", "email", "wallet"]);

@@ -405,7 +405,7 @@ decision, not this tool's.
    it was settled, and on every tape. That over-counts, which is the safe
    direction. The audit below finds them.
 
-**Check before deploying: a peak `MERRYMEN_REPAIR_HWM=apply` already
+**Check before deploying: a peak `AGENTCAP_REPAIR_HWM=apply` already
 lowered.** The repair derives a peak from every capital leg on chain, trades'
 transactions included, and lowers it by raising `hwm_withdrawn_usdg`. It
 writes no flow. So an owner withdrawal in a trade's transaction that an apply
@@ -487,7 +487,7 @@ cat "$OUT"
 ```
 
 - `DATABASE_URL` is already in the container's environment. Never paste it.
-  `MERRYMEN_CHAIN_GAP_RPC` optionally selects the RPC; the default is the
+  `AGENTCAP_CHAIN_GAP_RPC` optionally selects the RPC; the default is the
   public one.
 - `--tenant 0x…` audits one tenant.
 - `--max-receipts N` bounds the receipts read (default 5000). Past it the run
@@ -497,7 +497,7 @@ cat "$OUT"
 
 - Postgres, in one `REPEATABLE READ READ ONLY` snapshot, always rolled back, on
   a connection the server holds read only (`application_name`
-  `merrymen-owner-op-audit-readonly`).
+  `agentcap-owner-op-audit-readonly`).
 - From grants, the account, chain and custody fields only. Never the whole
   `grant_json`, and never `sealed_session_key`.
 - Then one receipt and block per transaction, over an RPC that admits

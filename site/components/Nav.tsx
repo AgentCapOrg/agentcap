@@ -9,7 +9,7 @@ import { Icon } from "./Icon";
 const links = [
   ["/#features", "Features"], ["/memescope", "Markets"], ["/dashboard", "Agents"],
   ["/watch", "Activity"], ["/claude", "Claude"], ["/grok", "Grok"], ["/api", "Developers"], ["/docs", "Docs"],
-  ["https://app.merrymen.dev/perps/join", "Pilot access"],
+  ["https://app.agentcap.xyz/perps/join", "Pilot access"],
 ];
 function ThemeToggle() {
   const [theme, setTheme] = useState<"light" | "dark">("dark");
@@ -25,7 +25,7 @@ function ThemeToggle() {
       aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
       onClick={() => {
         document.documentElement.dataset.theme = next;
-        try { localStorage.setItem("merrymen-theme", next); } catch { /* private browsing */ }
+        try { localStorage.setItem("agentcap-theme", next); } catch { /* private browsing */ }
         setTheme(next);
       }}
     >
@@ -47,14 +47,14 @@ export function Nav() {
   return <header className="nav">
     <a className="skip-link" href="#main-content">Skip to content</a>
     <div className="wrap nav-inner">
-      <Link href="/" className="brand" aria-label="Merrymen home" onClick={() => setOpen(false)}><Logo size={25} /><span>merrymen</span></Link>
+      <Link href="/" className="brand" aria-label="AgentCap home" onClick={() => setOpen(false)}><Logo size={25} /><span>agentcap</span></Link>
       <nav className="nav-links" aria-label="Main navigation">
         {links.map(([href, title]) => <Link key={href} href={href} aria-current={pathname === href ? "page" : undefined}>{title}</Link>)}
       </nav>
-      <div className="nav-right"><ThemeToggle /><a href="https://app.merrymen.dev" className="btn btn-primary">Open app <Icon name="arrow" size={16} /></a><button ref={toggle} className="nav-menu-toggle" aria-expanded={open} aria-controls="mobile-navigation" aria-label={open ? "Close menu" : "Open menu"} onClick={() => setOpen(!open)}>{open ? "✕" : <span aria-hidden>☰</span>}</button></div>
+      <div className="nav-right"><ThemeToggle /><a href="https://app.agentcap.xyz" className="btn btn-primary">Open app <Icon name="arrow" size={16} /></a><button ref={toggle} className="nav-menu-toggle" aria-expanded={open} aria-controls="mobile-navigation" aria-label={open ? "Close menu" : "Open menu"} onClick={() => setOpen(!open)}>{open ? "✕" : <span aria-hidden>☰</span>}</button></div>
     </div>
     <nav className="mobile-navigation" id="mobile-navigation" aria-label="Mobile navigation" hidden={!open}>
-      {[...links, ["/app", "Mobile app"], ["/token", "$MERRYMEN"], ["/#telegram", "Telegram"]].map(([href, title]) => <Link key={href} href={href} onClick={() => setOpen(false)} aria-current={pathname === href ? "page" : undefined}>{title}<span aria-hidden>↗</span></Link>)}
+      {[...links, ["/app", "Mobile app"], ["/token", "$AGENTCAP"], ["/#telegram", "Telegram"]].map(([href, title]) => <Link key={href} href={href} onClick={() => setOpen(false)} aria-current={pathname === href ? "page" : undefined}>{title}<span aria-hidden>↗</span></Link>)}
     </nav>
   </header>;
 }

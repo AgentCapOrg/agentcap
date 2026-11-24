@@ -14,12 +14,12 @@
  * Driven through the real PUT and the real kill, the kill placed exactly
  * between the save's read and its write:
  *   - hosted, on the file store and on the Postgres store's own SQL (run on
- *     sqlite, as holder/route.test.ts runs it), at MERRYMEN_PERPS=paper;
+ *     sqlite, as holder/route.test.ts runs it), at AGENTCAP_PERPS=paper;
  *   - hosted, where Perps are not offered, for a save that only turns
  *     something off (the one save allowed there, D1);
  *   - self-hosted, the kill written to settings.json right after the save
  *     read it and before its look-and-write, as another process's kill lands
- *     there (`merrymen kill`, a Telegram /kill), and the kill run at the one
+ *     there (`agentcap kill`, a Telegram /kill), and the kill run at the one
  *     await between the two, as one in this process would.
  * A save that names `perpsEnabled: true` over an off that landed under it is
  * refused; one that never names it keeps the kill's off.
@@ -47,7 +47,7 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { after, afterEach, before, beforeEach, describe, it, mock } from "node:test";
 
-import type { MerrymenSettings } from "@merrymen/core";
+import type { AgentCapSettings } from "@agentcap/core";
 import { mintSession } from "@/lib/auth";
 import {
   PgSettingsStore,
@@ -57,13 +57,13 @@ import {
   useSettingsStoreForTest,
   type FileSettingsStore,
   type VersionedSettings,
-} from "@merrymen/settings-store";
-import { purposeHome } from "@merrymen/home";
+} from "@agentcap/settings-store";
+import { purposeHome } from "@agentcap/home";
 import { turnOffLocalPaperPerps } from "../../../../../worker/src/perps-kill";
 import { mergeSettings } from "../../../../../worker/src/settings";
 
 const OWNER = `0x${"ab".repeat(20)}` as const;
-const KEYS = ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_SESSION_SECRET", "DATABASE_URL", "MERRYMEN_PERPS", "MERRYMEN_STORE_DEK", "MERRYMEN_PERPS_PAPER_TENANTS"] as const;
+const KEYS = ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_SESSION_SECRET", "DATABASE_URL", "AGENTCAP_PERPS", "AGENTCAP_STORE_DEK", "AGENTCAP_PERPS_PAPER_TENANTS"] as const;
 const saved = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
 let home: string;
 let GET: (r: Request) => Promise<Response>;
@@ -71,18 +71,18 @@ let PUT: (r: Request) => Promise<Response>;
 
 before(async () => {
   home = mkdtempSync(path.join(tmpdir(), "mm-perps-kill-race-"));
-  process.env.MERRYMEN_HOME = home;
-  process.env.MERRYMEN_SESSION_SECRET = randomBytes(32).toString("hex");
-  process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 5).toString("base64");
+  process.env.AGENTCAP_HOME = home;
+  process.env.AGENTCAP_SESSION_SECRET = randomBytes(32).toString("hex");
+  process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 5).toString("base64");
   delete process.env.DATABASE_URL;
   ({ GET, PUT } = await import("./route"));
 });
 beforeEach(() => {
   pilot?.close();
   pilot = pilotFixture([OWNER]);
-  process.env.MERRYMEN_HOSTED = "1";
-  process.env.MERRYMEN_PERPS = "paper";
-  process.env.MERRYMEN_PERPS_PAPER_TENANTS = OWNER;
+  process.env.AGENTCAP_HOSTED = "1";
+  process.env.AGENTCAP_PERPS = "paper";
+  process.env.AGENTCAP_PERPS_PAPER_TENANTS = OWNER;
   resetSettingsStoreForTest();
   for (const d of ["tenant-settings-perps", "accounts"]) rmSync(path.join(home, d), { recursive: true, force: true });
 });
@@ -111,13 +111,13 @@ async function currentVersion(hosted = true): Promise<string> {
   assert.equal(response.status,200);
   const view=await response.json();assert.match(view.version,/^[a-f0-9]{64}$/);return view.version;
 }
-function withoutNonce(s: MerrymenSettings) {
+function withoutNonce(s: AgentCapSettings) {
   const {perpsControlNonce,...rest}=s;
   assert.equal(typeof perpsControlNonce,"string");assert.ok(perpsControlNonce!.length>0);
   return rest;
 }
 /** What a Perps worker resolves from a stored blob (worker settings.ts). */
-const worker = (s: MerrymenSettings) => mergeSettings(s, { MERRYMEN_WALLET_PURPOSE: "perps", MERRYMEN_PERPS: "paper" });
+const worker = (s: AgentCapSettings) => mergeSettings(s, { AGENTCAP_WALLET_PURPOSE: "perps", AGENTCAP_PERPS: "paper" });
 
 type Versioned = { getVersioned(tenant: `0x${string}`): Promise<VersionedSettings> };
 /**
@@ -199,7 +199,7 @@ for (const backend of ["file store", "Postgres store"] as const) {
     });
 
     it("WHERE PERPS ARE NOT OFFERED, an off-only save racing the kill keeps both offs", async () => {
-      delete process.env.MERRYMEN_PERPS;
+      delete process.env.AGENTCAP_PERPS;
       await store.put(OWNER, { strategy: "perps-only", perpsEnabled: true, liveTradingEnabled: true });
       const killed = killAfterTheSavesRead(store);
       const r = await save({ liveTradingEnabled: false });
@@ -238,7 +238,7 @@ for (const backend of ["file store", "Postgres store"] as const) {
 
 describe("self-hosted: the kill at any point of the save", () => {
   const file = () => path.join(purposeHome("perps"), "settings.json");
-  const stored = () => JSON.parse(readFileSync(file(), "utf8")) as MerrymenSettings;
+  const stored = () => JSON.parse(readFileSync(file(), "utf8")) as AgentCapSettings;
   const unmock = () => {
     mock.restoreAll();
     syncBuiltinESMExports();
@@ -252,7 +252,7 @@ describe("self-hosted: the kill at any point of the save", () => {
    * readSettingsFileWithText, and its write writeSettingsFileIfUnchanged looks
    * at the file again first; this runs the kill right after that first read
    * returns. "another process": synchronously, inside the read, as a
-   * `merrymen kill` or Telegram /kill from another process writes the file
+   * `agentcap kill` or Telegram /kill from another process writes the file
    * there — the bytes on disk change under the save. "this process": queued
    * for the one await between the read and the write (readPerpsStoredStrict
    * is async), the only place a kill in this process could land. Every read
@@ -278,7 +278,7 @@ describe("self-hosted: the kill at any point of the save", () => {
 
   for (const place of ["another process", "this process"] as const) {
     it(`A KILL BETWEEN THE SAVE'S READ AND ITS WRITE (${place}): the write misses, the body is judged again, and the kill's off stands`, async () => {
-      delete process.env.MERRYMEN_HOSTED;
+      delete process.env.AGENTCAP_HOSTED;
       for (const body of [{ perpsMaxLeverage: 3 }, { perpsEnabled: true, perpsMaxLeverage: 3 }] as Record<string, unknown>[]) {
         const label = `${place}, ${JSON.stringify(body)}`;
         mkdirSync(purposeHome("perps"), { recursive: true });
@@ -305,7 +305,7 @@ describe("self-hosted: the kill at any point of the save", () => {
   }
 
   it("WHEREVER THE KILL LANDS, practice perps end off and the owner's change is saved", async () => {
-    delete process.env.MERRYMEN_HOSTED;
+    delete process.env.AGENTCAP_HOSTED;
     for (let turns = 0; turns <= 24; turns++) {
       mkdirSync(purposeHome("perps"), { recursive: true });
       writeFileSync(file(), JSON.stringify({ strategy: "perps-only", perpsEnabled: true, perpsMaxLeverage: 2 }));
@@ -324,10 +324,10 @@ describe("self-hosted: the kill at any point of the save", () => {
 describe("a kill completed before the delayed enable reaches the server", () => {
   for(const where of ["hosted","self-hosted"] as const) for(const enabled of [true,false]) {
     it(`${where}, entries initially ${enabled}: stale enable refused and explicit fresh enable accepted`,async()=>{
-      if(where==="self-hosted")delete process.env.MERRYMEN_HOSTED;
+      if(where==="self-hosted")delete process.env.AGENTCAP_HOSTED;
       const file=path.join(purposeHome("perps"),"settings.json"),store=where==="hosted"?getSettingsStore("perps"):null;
-      const before:MerrymenSettings={strategy:"perps-only",perpsEnabled:enabled,perpsMaxLeverage:2};
-      const read=async()=>store?await store.get(OWNER):JSON.parse(readFileSync(file,"utf8")) as MerrymenSettings;
+      const before:AgentCapSettings={strategy:"perps-only",perpsEnabled:enabled,perpsMaxLeverage:2};
+      const read=async()=>store?await store.get(OWNER):JSON.parse(readFileSync(file,"utf8")) as AgentCapSettings;
       if(store)await store.put(OWNER,before);else{mkdirSync(path.dirname(file),{recursive:true});writeFileSync(file,JSON.stringify(before));}
       const expectedVersion=await currentVersion(where==="hosted");
       const killed=store?await disablePaperPerpsForKill(OWNER,store):turnOffLocalPaperPerps(purposeHome("perps"));

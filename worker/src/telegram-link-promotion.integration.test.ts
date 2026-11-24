@@ -12,7 +12,7 @@
  *
  * Driven through the real publish, run as the mirror pass runs it, over the
  * file settings store (no DATABASE_URL) and a node:sqlite shared database.
- * MERRYMEN_HOME is per process (node --test forks per file).
+ * AGENTCAP_HOME is per process (node --test forks per file).
  */
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
@@ -22,10 +22,10 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { after, afterEach, beforeEach, describe, it, mock } from "node:test";
 
-const FLEET = mkdtempSync(path.join(os.tmpdir(), "merrymen-link-promotion-"));
-process.env.MERRYMEN_HOME = FLEET;
-process.env.MERRYMEN_HOSTED = "1";
-process.env.MERRYMEN_SESSION_SECRET ??= randomBytes(32).toString("hex");
+const FLEET = mkdtempSync(path.join(os.tmpdir(), "agentcap-link-promotion-"));
+process.env.AGENTCAP_HOME = FLEET;
+process.env.AGENTCAP_HOSTED = "1";
+process.env.AGENTCAP_SESSION_SECRET ??= randomBytes(32).toString("hex");
 delete process.env.DATABASE_URL;
 after(() => rmSync(FLEET, { recursive: true, force: true }));
 

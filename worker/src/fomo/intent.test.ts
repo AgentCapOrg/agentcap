@@ -115,7 +115,7 @@ const CORPUS: Row[] = [
   { text: "top fomo moment lol" },
   { text: "who's the best" },
   { text: "fomo status?", intent: "health", calls: [["fomo_get_research_status", {}]] },
-  { text: "@MerrymenBot is fomo down?", intent: "health", calls: [["fomo_get_research_status", {}]] },
+  { text: "@AgentCapBot is fomo down?", intent: "health", calls: [["fomo_get_research_status", {}]] },
   { text: "research status on fomo", intent: "research-status", calls: [["fomo_get_research_status", {}]] },
   { text: "what are the theses on $PEPE on solana", intent: "token-theses", calls: [["fomo_get_token_theses", { token: "PEPE", chain: "solana" }]] },
   { text: `theses for ${MINT}`, intent: "token-theses", calls: [["fomo_get_token_theses", { token: MINT }]] },
@@ -204,7 +204,7 @@ const CORPUS: Row[] = [
   { text: "did you sell PEPE?" },
   { text: "why did you buy WIF?" },
   { text: "what are you holding right now?" },
-  { text: "@MerrymenBot what did you buy today" },
+  { text: "@AgentCapBot what did you buy today" },
   { text: "I have fomo lol" },
   { text: "fomo is real today" },
   { text: "don't fomo into $PEPE" },
@@ -818,9 +818,9 @@ describe("a chain's coins, a row of the trader board, and what a trader made mon
   it("the live compound: one row of the leaderboard, with what about it, and no 'which trader?'", () => {
     for (const q of [
       "who's the best trader on fomo today and what did he make money on",
-      "@Merrymanme_bot who's the best trader on fomo today and what did he make money on",
+      "@AgentCapAvatarme_bot who's the best trader on fomo today and what did he make money on",
     ]) {
-      const p = plan(q, null, ["@Merrymanme_bot", "Shogun"])!;
+      const p = plan(q, null, ["@AgentCapAvatarme_bot", "Shogun"])!;
       assert.equal(p.intent, "rankings-traders", q);
       assert.equal(p.clarification, null, q);
       assert.deepEqual(p.rowAsk, { rank: 1, about: "earnings" }, q);

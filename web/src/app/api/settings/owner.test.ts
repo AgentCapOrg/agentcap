@@ -17,26 +17,26 @@ import path from "node:path";
 import { after, afterEach, before, describe, it } from "node:test";
 
 import { mintSession } from "@/lib/auth";
-import { getSettingsStore, resetSettingsStoreForTest } from "@merrymen/settings-store";
+import { getSettingsStore, resetSettingsStoreForTest } from "@agentcap/settings-store";
 
 const TENANT = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const OTHER = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-const KEYS = ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_SESSION_SECRET", "DATABASE_URL"] as const;
+const KEYS = ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_SESSION_SECRET", "DATABASE_URL"] as const;
 const original = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
 let dir: string;
 let PUT: (req: Request) => Promise<Response>;
 
 before(async () => {
-  dir = mkdtempSync(path.join(tmpdir(), "merrymen-settings-owner-"));
-  process.env.MERRYMEN_HOME = dir;
-  process.env.MERRYMEN_SESSION_SECRET = randomBytes(32).toString("hex");
+  dir = mkdtempSync(path.join(tmpdir(), "agentcap-settings-owner-"));
+  process.env.AGENTCAP_HOME = dir;
+  process.env.AGENTCAP_SESSION_SECRET = randomBytes(32).toString("hex");
   delete process.env.DATABASE_URL;
   resetSettingsStoreForTest();
   // After the env: the route resolves its settings path when it loads.
   ({ PUT } = await import("./route"));
 });
 afterEach(() => {
-  delete process.env.MERRYMEN_HOSTED;
+  delete process.env.AGENTCAP_HOSTED;
 });
 after(() => {
   for (const k of KEYS) {
@@ -61,7 +61,7 @@ async function put(session: `0x${string}` | null, body: Record<string, unknown>)
 
 describe("PUT /api/settings from a chat card", () => {
   it("HOSTED, A SESSION THAT IS NOT THE OWNER WHO CONFIRMED CHANGES NOTHING — and says why", async () => {
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOSTED = "1";
     const other = await put(OTHER, { liveTradingEnabled: true, owner: TENANT });
     assert.equal(other.status, 409);
     assert.match(other.body.errors?.join(" ") ?? "", /different wallet now than the one that confirmed this, so nothing was changed/);
@@ -74,7 +74,7 @@ describe("PUT /api/settings from a chat card", () => {
   });
 
   it("the owner who confirmed is saved as before, however the address is cased — and `owner` is not a setting", async () => {
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOSTED = "1";
     for (const owner of [TENANT, TENANT.toUpperCase().replace("0X", "0x")]) {
       const own = await put(TENANT, { liveTradingEnabled: true, owner });
       assert.equal(own.status, 200, JSON.stringify(own.body));
@@ -86,7 +86,7 @@ describe("PUT /api/settings from a chat card", () => {
   });
 
   it("a save that names nobody is judged by its session, as before", async () => {
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOSTED = "1";
     const own = await put(TENANT, { liveTradingEnabled: false });
     assert.equal(own.status, 200, JSON.stringify(own.body));
     assert.equal((await getSettingsStore("spot").get(TENANT))?.liveTradingEnabled, false);
@@ -127,7 +127,7 @@ describe("the Settings form, read by GET and saved by PUT", () => {
     view.owner !== null ? { ...edits, owner: view.owner } : edits;
 
   it("READ FOR ONE WALLET, SAVED UNDER ANOTHER: refused, and nothing is written", async () => {
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOSTED = "1";
     const view = await read(TENANT);
     assert.equal(view.owner?.toLowerCase(), TENANT);
     const saved = await put(OTHER, formBody(view, { liveTradingEnabled: true }));
@@ -139,7 +139,7 @@ describe("the Settings form, read by GET and saved by PUT", () => {
     // A 7-day session can lapse with the page open, and the Settings screen
     // renders for a signed-out visitor with the defaults. Its save used to
     // name nobody, and so land on whoever signed in before it went out.
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOSTED = "1";
     const view = await read(null);
     assert.equal(view.owner, "", "hosted and signed out names an owner no session is");
     const saved = await put(OTHER, formBody(view, { liveTradingEnabled: true }));

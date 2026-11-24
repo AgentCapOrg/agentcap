@@ -9,7 +9,7 @@ import type { TradeRow } from "./store";
 import { distinctTrades } from "./distinct-trades";
 
 const home = mkdtempSync(path.join(tmpdir(), "mm-trade-fee-settlement-"));
-process.env.MERRYMEN_HOME = home;
+process.env.AGENTCAP_HOME = home;
 const { addTrade, closeStoreForTest, initStore } = await import("./store");
 const { homePaths } = await import("./home");
 const account = (n: number) => `0x${n.toString(16).padStart(40, "0")}`;

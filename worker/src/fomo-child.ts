@@ -34,7 +34,7 @@
  * child's home does not survive a redeploy; until they have been read, every
  * exploration figure is unknown and no follow entry sizes above zero.
  *
- * TRUST. The tenant comes from the process (MERRYMEN_TENANT, set by the
+ * TRUST. The tenant comes from the process (AGENTCAP_TENANT, set by the
  * orchestrator for the child it spawned; "self" self-hosted), never from the
  * file — the reader refuses a file written for anyone else. The file's access
  * flags can only NARROW the owner's own settings. Thesis, comment, handle and
@@ -185,7 +185,7 @@ export type ChildBrokerKind = "ipc" | "unavailable" | "direct" | "failed";
  * WHETHER THIS PROCESS HAS NO FOMO AT ALL, decided once from the process.
  *
  *   hosted        on only with BOTH the IPC channel and the opt-in the
- *                 orchestrator spawned it under (MERRYMEN_FOMO_ENABLED=1,
+ *                 orchestrator spawned it under (AGENTCAP_FOMO_ENABLED=1,
  *                 inherited through childEnv): the orchestrator adds the
  *                 channel exactly when its pass is on, and a channel some
  *                 other launcher happened to give is not a pass.
@@ -205,8 +205,8 @@ export function childFomoOff(
   env: Record<string, string | undefined> = process.env,
   selfHostedKey: string | null | undefined = null,
 ): boolean {
-  if (hosted) return port === null || env.MERRYMEN_FOMO_ENABLED !== "1";
-  return env.MERRYMEN_FOMO_ENABLED === "0" || !(typeof selfHostedKey === "string" && selfHostedKey.trim() !== "");
+  if (hosted) return port === null || env.AGENTCAP_FOMO_ENABLED !== "1";
+  return env.AGENTCAP_FOMO_ENABLED === "0" || !(typeof selfHostedKey === "string" && selfHostedKey.trim() !== "");
 }
 
 /**
@@ -252,7 +252,7 @@ export async function chooseChildFomoBroker(c: {
 }
 
 /**
- * THE SELF-HOSTED RUNTIME: fomo.sqlite in MERRYMEN_HOME, the install's own key
+ * THE SELF-HOSTED RUNTIME: fomo.sqlite in AGENTCAP_HOME, the install's own key
  * (resolved by settings.ts and passed in), and permissions read from the
  * owner's live settings. Only the fixed tenant "self" is ever served.
  *
@@ -371,22 +371,22 @@ export function startSelfHostedJobs(o: {
 
 /**
  * THIS CHILD'S TENANT, from trusted process context only. Hosted: the
- * orchestrator's MERRYMEN_TENANT for the child it spawned (absent ⇒ null, and
+ * orchestrator's AGENTCAP_TENANT for the child it spawned (absent ⇒ null, and
  * the file is treated as unreadable). Self-hosted: "self".
  */
 export function childFomoTenant(env: NodeJS.ProcessEnv, hosted: boolean): string | null {
   if (!hosted) return SELF_HOSTED_TENANT;
-  const t = (env.MERRYMEN_TENANT ?? "").trim().toLowerCase();
+  const t = (env.AGENTCAP_TENANT ?? "").trim().toLowerCase();
   return /^[a-z0-9:_.-]{1,128}$/.test(t) ? t : null;
 }
 
 /**
  * LIVE FOLLOW ENTRIES ARE A SEPARATE CONSENT, and an operator's: named agents
- * in MERRYMEN_FOMO_FOLLOW_LIVE (prefix match, or `all`). DEFAULT EMPTY — nobody.
+ * in AGENTCAP_FOMO_FOLLOW_LIVE (prefix match, or `all`). DEFAULT EMPTY — nobody.
  * The same shape as brainLiveEnabledFor. Paper follow needs no entry here.
  */
 export function fomoFollowLiveEnabledFor(agentId: string | null | undefined, env: NodeJS.ProcessEnv = process.env): boolean {
-  const raw = (env.MERRYMEN_FOMO_FOLLOW_LIVE ?? "").trim();
+  const raw = (env.AGENTCAP_FOMO_FOLLOW_LIVE ?? "").trim();
   if (!raw) return false;
   const want = (agentId ?? "").trim().toLowerCase();
   if (!want) return false;
@@ -2889,7 +2889,7 @@ export class FomoChild {
    * buys counted in the review while she asked, and a 14-day dependency
    * would keep them triggering her follow review, and route their every
    * event to every monitoring owner, long after Stop, the tail's end or
-   * MERRYMEN_FOMO_TAILS=0.
+   * AGENTCAP_FOMO_TAILS=0.
    */
   private reportDependencies(token: string, tracked: Tracked | null, now: number): void {
     const broker = this.deps.broker();

@@ -442,7 +442,7 @@ const ROW_PROFILE = /\b(?:tell me (?:more )?about (?:him|her|them)|who (?:is|'s)
 const ROW_CROWD = /\b(?:people|traders|everyone|everybody|whales|wallets|others)\b/u;
 
 /**
- * The trader(s) Merrymen watches ("the best trader we follow", "a watched
+ * The trader(s) AgentCap watches ("the best trader we follow", "a watched
  * trader", "your traders"): a watch-list question, never a row of the public
  * board, the whole feed's crowd or one trader's profile (parseRoute).
  */

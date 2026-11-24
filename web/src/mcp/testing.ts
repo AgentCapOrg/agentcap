@@ -195,7 +195,7 @@ export function mcpRequest(token: string | null, method: string, params: Record<
     body = { jsonrpc: "2.0", id: ++rpcId, method, params: { ...params, _meta: {
       "io.modelcontextprotocol/protocolVersion": "2026-07-28",
       "io.modelcontextprotocol/clientCapabilities": {},
-      "io.modelcontextprotocol/clientInfo": { name: "merrymen-test", version: "1" },
+      "io.modelcontextprotocol/clientInfo": { name: "agentcap-test", version: "1" },
     } } };
   } else {
     if (method !== "initialize") headers["mcp-protocol-version"] = "2025-06-18";
@@ -225,7 +225,7 @@ export interface ToolErrorEnvelope {
 }
 export function errorOf(r: unknown): ToolErrorEnvelope {
   const meta = (r as { _meta?: Record<string, unknown> | null } | null | undefined)?._meta;
-  const e = meta?.["dev.merrymen/error"] as ToolErrorEnvelope | undefined;
+  const e = meta?.["dev.agentcap/error"] as ToolErrorEnvelope | undefined;
   if (!e) throw new Error(`not an error result: ${JSON.stringify(r)?.slice(0, 300)}`);
   return e;
 }

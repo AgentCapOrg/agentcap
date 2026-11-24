@@ -19,7 +19,7 @@ export const ERROR_CODES = {
   quota_exceeded: { http: 429, retryable: true, what: "A daily budget is used up. Retry after the given delay." },
   timeout: { http: 504, retryable: true, what: "The work did not finish in time. Retry shortly." },
   upstream_unavailable: { http: 503, retryable: true, what: "A data source or dependency is unavailable. Retry shortly." },
-  unsupported: { http: 422, retryable: false, what: "Merrymen does not support this yet." },
+  unsupported: { http: 422, retryable: false, what: "AgentCap does not support this yet." },
   internal: { http: 500, retryable: true, what: "Unexpected server error." },
 } as const;
 
@@ -82,7 +82,7 @@ function sqlState(error: unknown): string | null {
 /**
  * Anything thrown that is not an McpError becomes `internal`, with no text
  * from the original error — except a timeout, and Postgres refusing a
- * character it cannot store, which is `invalid_input` with Merrymen's own words.
+ * character it cannot store, which is `invalid_input` with AgentCap's own words.
  */
 export function asMcpError(error: unknown): McpError {
   if (error instanceof McpError) return error;
@@ -91,7 +91,7 @@ export function asMcpError(error: unknown): McpError {
   }
   const state = sqlState(error);
   if (state !== null && PG_UNSTORABLE_TEXT.has(state)) {
-    return new McpError("invalid_input", "An argument holds a character Merrymen cannot store (such as NUL). Remove it and try again.");
+    return new McpError("invalid_input", "An argument holds a character AgentCap cannot store (such as NUL). Remove it and try again.");
   }
   return new McpError("internal");
 }

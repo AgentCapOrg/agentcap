@@ -259,7 +259,7 @@ export interface LighterFeedOptions {
   heldMarketIds?: () => readonly number[];
   /** Where the file goes: lighterFeedPath(fleetHome). */
   outPath: string;
-  /** The home whose fleet cooldown file applies (api.ts lighterCooldownFile: MERRYMEN_FLEET_HOME when set, else this). */
+  /** The home whose fleet cooldown file applies (api.ts lighterCooldownFile: AGENTCAP_FLEET_HOME when set, else this). */
   home: string;
   /** The public (budgetKey "public") client; never an address-keyed one. */
   api: LighterFeedApi;

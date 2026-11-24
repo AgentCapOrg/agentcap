@@ -1,4 +1,4 @@
-import { isHostedMode } from "@merrymen/core";
+import { isHostedMode } from "@agentcap/core";
 import { tenantOf } from "@/lib/auth";
 import { getPartnerStore } from "@/lib/partner-store";
 import { PartnerError, objectBody, onlyFields, partnerAppOrigin, readPartnerBody } from "@/lib/partner-bridge";
@@ -17,12 +17,12 @@ export async function POST(req: Request) {
   if (!isHostedMode()) return Response.json({ error: { code: "not_found", message: "Hosted API only" } }, { status: 404 });
   try {
     const origin = req.headers.get("origin");
-    if (origin && origin !== partnerAppOrigin()) throw new PartnerError(403, "forbidden", "Open this page on Merrymen to connect your agent");
+    if (origin && origin !== partnerAppOrigin()) throw new PartnerError(403, "forbidden", "Open this page on AgentCap to connect your agent");
     const body = objectBody(await readPartnerBody(req, 4096));
     onlyFields(body, ["action", "token", "id", "expectedTenant"]);
     const tenant = tenantOf(req);
     if (body.action === "connect") {
-      if (!tenant) throw new PartnerError(401, "unauthorized", "Sign in before connecting your Merryman");
+      if (!tenant) throw new PartnerError(401, "unauthorized", "Sign in before connecting your AgentCapAvatar");
       if (typeof body.expectedTenant !== "string" || !/^0x[0-9a-fA-F]{40}$/.test(body.expectedTenant) ||
           body.expectedTenant.toLowerCase() !== tenant.toLowerCase()) {
         throw new PartnerError(409, "session_changed", "Your sign-in changed. Reload your account before connecting this app.");
@@ -42,8 +42,8 @@ export async function POST(req: Request) {
     if (body.action === "inspect") return json({ id: connection.id, partner_name: connection.partnerName,
       name: connection.name, scopes: connection.scopes, status: connection.status,
       signed_in: !!tenant, has_agent: active });
-    if (!tenant) throw new PartnerError(401, "unauthorized", "Sign in before connecting your Merryman");
-    if (!grant || !active) throw new PartnerError(409, "grant_required", "Create or renew your Merryman's trading permission first");
+    if (!tenant) throw new PartnerError(401, "unauthorized", "Sign in before connecting your AgentCapAvatar");
+    if (!grant || !active) throw new PartnerError(409, "grant_required", "Create or renew your AgentCapAvatar's trading permission first");
     await getIdentityStore().ensure(tenant, grant.smartAccount);
     await store.bind(body.token, tenant, connection.scopes);
     return json({ connected: true, id: connection.id });

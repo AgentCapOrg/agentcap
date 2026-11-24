@@ -5,9 +5,9 @@
  * + expiry + tamper), and atomic replay protection via the store. No network, no
  * real keys. Run: node selftest.mjs
  */
-process.env.MERRYMEN_GATEWAY_UPSTREAM_KEY ||= "test-upstream-key";
-process.env.MERRYMEN_GATEWAY_SECRET ||= "test-secret-at-least-32-bytes-long-for-hmac!!";
-process.env.MERRYMEN_GATEWAY_RPC ||= "https://example.invalid";
+process.env.AGENTCAP_GATEWAY_UPSTREAM_KEY ||= "test-upstream-key";
+process.env.AGENTCAP_GATEWAY_SECRET ||= "test-secret-at-least-32-bytes-long-for-hmac!!";
+process.env.AGENTCAP_GATEWAY_RPC ||= "https://example.invalid";
 
 import assert from "node:assert/strict";
 import { bitqueryAuthHeaders, createGateway, DEFAULTS, parseInitializeEvent, sanitizeSymbol } from "./lib/core.mjs";
@@ -15,12 +15,12 @@ import { createStore } from "./lib/store.mjs";
 import { PLANS } from "./lib/billing-plans.mjs";
 import { PARTNER_TUNABLES } from "./lib/partner-api.mjs";
 
-const SECRET = process.env.MERRYMEN_GATEWAY_SECRET;
+const SECRET = process.env.AGENTCAP_GATEWAY_SECRET;
 const baseCfg = {
   upstreamUrl: "https://example.invalid",
   upstreamKey: "x",
   model: "test-model",
-  domain: "merrymen.dev",
+  domain: "agentcap.xyz",
   minTokens: 10000n,
   tokenAddress: "0x0000000000000000000000000000000000000000",
   publicClient: { readContract: async () => 0n }, // isHolder isn't exercised here
@@ -66,7 +66,7 @@ assert.equal(await store.spendNonce(n, 300), false, "a spent nonce cannot be spe
 
 // message is domain- + nonce-bound (no reusable date-stamped template)
 const message = claimMessage(ADDR, n);
-assert.ok(message.includes(`Nonce: ${n}`) && message.includes("Domain: merrymen.dev"), "the signed message binds a fresh nonce + the domain");
+assert.ok(message.includes(`Nonce: ${n}`) && message.includes("Domain: agentcap.xyz"), "the signed message binds a fresh nonce + the domain");
 
 console.log("[gateway] selftest OK — shared core: token scheme + single-use nonce + replay protection verified");
 
@@ -255,7 +255,7 @@ console.log("[gateway] selftest OK — /memescope: public, one shared query per 
   const list = gw.models();
   assert.equal(list.status, 200, "the models route answers");
   assert.equal(list.json.data.length, 1, "one model, because the gateway forces it");
-  assert.equal(list.json.data[0].id, DEFAULTS.BRAND_MODEL ?? "merrymen-fast", "the list names the BRAND, never the upstream");
+  assert.equal(list.json.data[0].id, DEFAULTS.BRAND_MODEL ?? "agentcap-fast", "the list names the BRAND, never the upstream");
 
   const realFetch2 = globalThis.fetch;
   const holder = createGateway({

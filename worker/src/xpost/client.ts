@@ -1,5 +1,5 @@
 /**
- * THE X API, AS MERRYMEN USES IT: OAuth 2.0 (authorization code + PKCE) as a
+ * THE X API, AS AGENTCAP USES IT: OAuth 2.0 (authorization code + PKCE) as a
  * CONFIDENTIAL client, "who is this token", post, revoke. Plain fetch and
  * node:crypto — no SDK, so no dependency and nothing new in package-lock.json
  * (which ios-native/Signing hashes).
@@ -77,7 +77,7 @@ const MENTION_CLOCK_SKEW_MS = 30_000;
 export interface XApp {
   clientId: string;
   clientSecret: string;
-  /** The registered callback, `${MERRYMEN_PUBLIC_ORIGIN}/connect/x`, or null when it cannot be built. */
+  /** The registered callback, `${AGENTCAP_PUBLIC_ORIGIN}/connect/x`, or null when it cannot be built. */
   redirectUri: string | null;
 }
 
@@ -85,17 +85,17 @@ export interface XApp {
  * The house X app, or null when it is not configured (the feature is then
  * unavailable, not broken). THE ONE PLACE the client secret is read.
  *
- * The redirect URI is explicit or built from MERRYMEN_PUBLIC_ORIGIN — never from
+ * The redirect URI is explicit or built from AGENTCAP_PUBLIC_ORIGIN — never from
  * a request's Host, which a client chooses, and never from `req.url`, which
  * Next rewrites (127.0.0.1 → localhost). It must match the one registered on
  * the X app byte for byte.
  */
 export function xAppFromEnv(env: Record<string, string | undefined> = process.env): XApp | null {
-  const clientId = env.MERRYMEN_X_CLIENT_ID?.trim();
-  const clientSecret = env.MERRYMEN_X_CLIENT_SECRET?.trim();
+  const clientId = env.AGENTCAP_X_CLIENT_ID?.trim();
+  const clientSecret = env.AGENTCAP_X_CLIENT_SECRET?.trim();
   if (!clientId || !clientSecret) return null;
-  const explicit = env.MERRYMEN_X_REDIRECT_URI?.trim();
-  const origin = env.MERRYMEN_PUBLIC_ORIGIN?.trim().replace(/\/+$/, "");
+  const explicit = env.AGENTCAP_X_REDIRECT_URI?.trim();
+  const origin = env.AGENTCAP_PUBLIC_ORIGIN?.trim().replace(/\/+$/, "");
   const candidate = explicit || (origin ? `${origin}/connect/x` : "");
   return { clientId, clientSecret, redirectUri: redirectOk(candidate) ? candidate : null };
 }

@@ -73,12 +73,12 @@ describe("the Solana entry points guard their own output", () => {
     // time, until the entry has started and guarded both streams, then writes.
     // If no guard ever appears it writes anyway after 20 s, unredacted, and the
     // assertions below fail.
-    writeFileSync(probe, `const G = Symbol.for("merrymen.redactUrls.guarded"); const until = Date.now() + 20000;\n`
+    writeFileSync(probe, `const G = Symbol.for("agentcap.redactUrls.guarded"); const until = Date.now() + 20000;\n`
       + `const write = () => { process.stderr.write("probe https://mainnet.helius-rpc.com/?api-key=${key}\\n"); `
       + `process.stdout.write("probe https://acme.mainnet.rpcpool.com/plainlowercasetokenvalue0123\\n"); };\n`
       + `const wait = () => (process.stdout[G] && process.stderr[G]) || Date.now() > until ? write() : setImmediate(wait);\n`
       + `setImmediate(wait);\n`);
-    const env: Record<string, string> = { MERRYMEN_HOME: path.join(directory, "home"), NO_COLOR: "1" };
+    const env: Record<string, string> = { AGENTCAP_HOME: path.join(directory, "home"), NO_COLOR: "1" };
     for (const name of ["PATH", "TMPDIR", "TEMP", "TMP", "SystemRoot"]) if (process.env[name] !== undefined) env[name] = process.env[name]!;
     const tsx = import.meta.resolve("tsx");
     const run = (entry: string) => new Promise<{ entry: string; out: string }>((resolve, reject) => {

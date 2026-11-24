@@ -7,7 +7,7 @@ import { JSDOM } from "jsdom";
 import { sameGrantPermission, type Grant, type GrantRetryProof } from "@/lib/session";
 import type { AccountState } from "./HostedControls";
 import { markPermissionForReplacement } from "@/lib/permission-replacement";
-import { RISK_PROFILES } from "@merrymen/core";
+import { RISK_PROFILES } from "@agentcap/core";
 
 const tenant = `0x${"a".repeat(40)}`;
 const grant = { smartAccount: `0x${"b".repeat(40)}`, owner: tenant, sessionKeyAddress: `0x${"c".repeat(40)}`, chainId: 4663, grantedAt: 1, expiresAt: 2592001, binding: { version: "privy-did-owner-v1" }, caps: { perTradeUsdg: 10, dailyUsdg: 50, expiryDays: 30, maxDrawdownPct: 5, maxOpsPerDay: 24 } } as Grant;
@@ -306,7 +306,7 @@ it("the compact handoff carries the approved setup straight to explicit signing 
   assert.equal(settingsWrite?.agentName,"Little Robin");assert.equal(settingsWrite?.strategy,"weekend-gap");
   assert.equal(settingsWrite?.liveTradingEnabled,false);
   assert.match(ui.container.textContent!,/Wallet connected/);
-  assert.match(ui.container.textContent!,/refresh Merryman to check activation/);
+  assert.match(ui.container.textContent!,/refresh AgentCapAvatar to check activation/);
   assert.match(ui.container.textContent!,/Copy a status-check message/);
   assert.doesNotMatch(ui.container.textContent!,/Done — return to chat/);
   assert.equal(returned,0,"the complete return-to-chat instructions need no second completion click");
@@ -478,7 +478,7 @@ it("a different binding hash after review is refused before approval",async()=>{
 });
 
 it("a refused approval shows the bounded owner-facing remedy without continuing",async()=>{
-  const description="You already have a Merryman. Open your agent instead. "+"x".repeat(700);
+  const description="You already have a AgentCapAvatar. Open your agent instead. "+"x".repeat(700);
   setupResponse=pendingSetup();approvalResponse=async()=>Response.json({error:"refused",error_description:description},{status:409});
   await ui.render(combinedScreen());await ui.click("Approve and create practice agent");
   assert.equal(ui.container.querySelector('[role="alert"]')?.textContent,description.slice(0,600));

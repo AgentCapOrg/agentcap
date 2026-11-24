@@ -26,12 +26,12 @@ afterEach(() => resetGeckoFeedsForTest());
 
 describe("authenticated CoinGecko market source", () => {
   it("uses the public feed with no configured credential", () => {
-    const source = geckoSource({ MERRYMEN_COINGECKO_PRO_API_KEY: "  " });
+    const source = geckoSource({ AGENTCAP_COINGECKO_PRO_API_KEY: "  " });
     assert.equal(source.base, "https://api.geckoterminal.com/api/v2");
     assert.deepEqual(source.headers, { accept: "application/json" });
   });
   it("uses the Pro onchain endpoint and a header rather than a key in the URL", () => {
-    const source = geckoSource({ MERRYMEN_COINGECKO_PRO_API_KEY: " test-private-key " });
+    const source = geckoSource({ AGENTCAP_COINGECKO_PRO_API_KEY: " test-private-key " });
     assert.equal(source.id, "coingecko-pro");
     assert.equal(source.base, "https://pro-api.coingecko.com/api/v3/onchain");
     assert.equal(source.headers["x-cg-pro-api-key"], "test-private-key");
@@ -314,10 +314,10 @@ describe("fetchGeckoPoolsResult separates a refusal from an empty market", () =>
   });
 
   it("sends Pro credentials only in headers and does not fall back when they are refused", async () => {
-    const oldKey = process.env.MERRYMEN_COINGECKO_PRO_API_KEY;
-    const oldHome = process.env.MERRYMEN_FLEET_HOME;
-    process.env.MERRYMEN_COINGECKO_PRO_API_KEY = "test-private-key";
-    delete process.env.MERRYMEN_FLEET_HOME;
+    const oldKey = process.env.AGENTCAP_COINGECKO_PRO_API_KEY;
+    const oldHome = process.env.AGENTCAP_FLEET_HOME;
+    process.env.AGENTCAP_COINGECKO_PRO_API_KEY = "test-private-key";
+    delete process.env.AGENTCAP_FLEET_HOME;
     let calls = 0;
     try {
       await withFetch((async (url, init) => {
@@ -334,8 +334,8 @@ describe("fetchGeckoPoolsResult separates a refusal from an empty market", () =>
       });
       assert.equal(calls, 1);
     } finally {
-      if (oldKey === undefined) delete process.env.MERRYMEN_COINGECKO_PRO_API_KEY; else process.env.MERRYMEN_COINGECKO_PRO_API_KEY = oldKey;
-      if (oldHome === undefined) delete process.env.MERRYMEN_FLEET_HOME; else process.env.MERRYMEN_FLEET_HOME = oldHome;
+      if (oldKey === undefined) delete process.env.AGENTCAP_COINGECKO_PRO_API_KEY; else process.env.AGENTCAP_COINGECKO_PRO_API_KEY = oldKey;
+      if (oldHome === undefined) delete process.env.AGENTCAP_FLEET_HOME; else process.env.AGENTCAP_FLEET_HOME = oldHome;
     }
   });
 
@@ -436,14 +436,14 @@ describe("the size floor — the cap in high cap", () => {
 describe("readTokenPools", () => {
   const realFetch = globalThis.fetch;
   const withFetch = async (impl: typeof globalThis.fetch, run: () => Promise<void>) => {
-    const oldHome = process.env.MERRYMEN_FLEET_HOME;
-    delete process.env.MERRYMEN_FLEET_HOME;
+    const oldHome = process.env.AGENTCAP_FLEET_HOME;
+    delete process.env.AGENTCAP_FLEET_HOME;
     globalThis.fetch = impl;
     try {
       await run();
     } finally {
       globalThis.fetch = realFetch;
-      if (oldHome === undefined) delete process.env.MERRYMEN_FLEET_HOME; else process.env.MERRYMEN_FLEET_HOME = oldHome;
+      if (oldHome === undefined) delete process.env.AGENTCAP_FLEET_HOME; else process.env.AGENTCAP_FLEET_HOME = oldHome;
     }
   };
   // Each case its own address: the in-process memo is keyed by it.
@@ -506,15 +506,15 @@ describe("bounded public fallback", () => {
   const realFetch = globalThis.fetch;
   let oldKey: string | undefined, oldHome: string | undefined;
   beforeEach(() => {
-    oldKey = process.env.MERRYMEN_COINGECKO_PRO_API_KEY;
-    oldHome = process.env.MERRYMEN_FLEET_HOME;
-    process.env.MERRYMEN_COINGECKO_PRO_API_KEY = "private-pro-key";
-    delete process.env.MERRYMEN_FLEET_HOME;
+    oldKey = process.env.AGENTCAP_COINGECKO_PRO_API_KEY;
+    oldHome = process.env.AGENTCAP_FLEET_HOME;
+    process.env.AGENTCAP_COINGECKO_PRO_API_KEY = "private-pro-key";
+    delete process.env.AGENTCAP_FLEET_HOME;
   });
   afterEach(() => {
     globalThis.fetch = realFetch;
-    if (oldKey === undefined) delete process.env.MERRYMEN_COINGECKO_PRO_API_KEY; else process.env.MERRYMEN_COINGECKO_PRO_API_KEY = oldKey;
-    if (oldHome === undefined) delete process.env.MERRYMEN_FLEET_HOME; else process.env.MERRYMEN_FLEET_HOME = oldHome;
+    if (oldKey === undefined) delete process.env.AGENTCAP_COINGECKO_PRO_API_KEY; else process.env.AGENTCAP_COINGECKO_PRO_API_KEY = oldKey;
+    if (oldHome === undefined) delete process.env.AGENTCAP_FLEET_HOME; else process.env.AGENTCAP_FLEET_HOME = oldHome;
   });
 
   it("keeps Pro refusal and public success separate, coalesces cached reads, and never sends the key publicly", async () => {
@@ -598,12 +598,12 @@ describe("bounded public fallback", () => {
       return String(input).includes("pro-api") ? Response.json({ data: [CHUMP] }) : new Response("limited", { status: 429 });
     };
     try {
-      process.env.MERRYMEN_FLEET_HOME = path.join(home, "first");
-      delete process.env.MERRYMEN_COINGECKO_PRO_API_KEY;
+      process.env.AGENTCAP_FLEET_HOME = path.join(home, "first");
+      delete process.env.AGENTCAP_COINGECKO_PRO_API_KEY;
       assert.equal((await fetchGeckoPoolsResult("pools")).failure, "http-429");
-      process.env.MERRYMEN_COINGECKO_PRO_API_KEY = "private-pro-key";
+      process.env.AGENTCAP_COINGECKO_PRO_API_KEY = "private-pro-key";
       assert.equal((await fetchGeckoPoolsResult("pools")).failed, false, "public cooldown does not suppress Pro");
-      process.env.MERRYMEN_FLEET_HOME = path.join(home, "second");
+      process.env.AGENTCAP_FLEET_HOME = path.join(home, "second");
       assert.equal((await fetchGeckoPoolsResult("pools")).failed, false);
       assert.equal(calls, 3, "another home has its own coordination store");
     } finally { resetGeckoFeedsForTest(); rmSync(home, { recursive: true, force: true }); }
@@ -612,13 +612,13 @@ describe("bounded public fallback", () => {
 
 describe("the Pro lane's pace, priority and plan latch", () => {
   const realFetch = globalThis.fetch;
-  const KNOBS = ["MERRYMEN_COINGECKO_PRO_API_KEY", "MERRYMEN_FLEET_HOME", "MERRYMEN_COINGECKO_PRO_SPACING_MS", "MERRYMEN_COINGECKO_MONTHLY_CREDITS"] as const;
+  const KNOBS = ["AGENTCAP_COINGECKO_PRO_API_KEY", "AGENTCAP_FLEET_HOME", "AGENTCAP_COINGECKO_PRO_SPACING_MS", "AGENTCAP_COINGECKO_MONTHLY_CREDITS"] as const;
   let saved: Record<string, string | undefined> = {};
   let now = 0;
   beforeEach(() => {
     saved = Object.fromEntries(KNOBS.map(k => [k, process.env[k]]));
     for (const k of KNOBS) delete process.env[k];
-    process.env.MERRYMEN_COINGECKO_PRO_API_KEY = "private-pro-key";
+    process.env.AGENTCAP_COINGECKO_PRO_API_KEY = "private-pro-key";
     now = 1_000_000;
     resetGeckoFeedsForTest({ now: () => now, sleep: async ms => { now += ms; } });
   });
@@ -644,7 +644,7 @@ describe("the Pro lane's pace, priority and plan latch", () => {
   it("the spacing knob sets the pace, and the credit ceiling clamps it fleet-wide", async () => {
     const starts: number[] = [];
     recordStarts(starts);
-    process.env.MERRYMEN_COINGECKO_PRO_SPACING_MS = "800";
+    process.env.AGENTCAP_COINGECKO_PRO_SPACING_MS = "800";
     await fetchGeckoPoolsResult("pools");
     await fetchGeckoPoolsResult("new_pools");
     assert.equal(starts[1]! - starts[0]!, 800);
@@ -652,9 +652,9 @@ describe("the Pro lane's pace, priority and plan latch", () => {
     const home = mkdtempSync(path.join(tmpdir(), "gecko-pace-"));
     try {
       resetGeckoFeedsForTest({ now: () => now, sleep: async ms => { now += ms; } });
-      process.env.MERRYMEN_FLEET_HOME = home;
-      process.env.MERRYMEN_COINGECKO_PRO_SPACING_MS = "300";
-      process.env.MERRYMEN_COINGECKO_MONTHLY_CREDITS = "5000000";
+      process.env.AGENTCAP_FLEET_HOME = home;
+      process.env.AGENTCAP_COINGECKO_PRO_SPACING_MS = "300";
+      process.env.AGENTCAP_COINGECKO_MONTHLY_CREDITS = "5000000";
       starts.length = 0;
       await fetchGeckoPoolsResult("pools");
       await fetchGeckoPoolsResult("new_pools");
@@ -718,7 +718,7 @@ describe("the Pro lane's pace, priority and plan latch", () => {
   };
 
   it("WITHOUT A KEY there is no evidence row: every public request stays 6.5 s from the last", async () => {
-    delete process.env.MERRYMEN_COINGECKO_PRO_API_KEY;
+    delete process.env.AGENTCAP_COINGECKO_PRO_API_KEY;
     const starts: number[] = [];
     globalThis.fetch = (async (input: string | URL | Request) => {
       assert.ok(String(input).startsWith("https://api.geckoterminal.com/"));
@@ -759,20 +759,20 @@ describe("the Pro lane's pace, priority and plan latch", () => {
         : Response.json({ data: [CHUMP] });
     }) as typeof globalThis.fetch;
     try {
-      process.env.MERRYMEN_FLEET_HOME = home;
-      process.env.MERRYMEN_COINGECKO_PRO_API_KEY = "mistyped-pro-key";
+      process.env.AGENTCAP_FLEET_HOME = home;
+      process.env.AGENTCAP_COINGECKO_PRO_API_KEY = "mistyped-pro-key";
       assert.equal((await fetchGeckoPoolsResult("trending_pools")).failure, "http-401");
       // The operator fixes the key and restarts: same persistent fleet home.
       now += 10_000;
       resetGeckoFeedsForTest(clock());
-      process.env.MERRYMEN_COINGECKO_PRO_API_KEY = "fixed-pro-key";
+      process.env.AGENTCAP_COINGECKO_PRO_API_KEY = "fixed-pro-key";
       const fixed = await fetchGeckoPoolsResult("trending_pools", { page: 2 });
       assert.equal(fixed.failed, false, "not an hour of plan-restricted after the fix");
       assert.equal(asked, 2);
       // The refused key, back inside the hour, is still latched and asks nothing.
       now += 10_000;
       resetGeckoFeedsForTest(clock());
-      process.env.MERRYMEN_COINGECKO_PRO_API_KEY = "mistyped-pro-key";
+      process.env.AGENTCAP_COINGECKO_PRO_API_KEY = "mistyped-pro-key";
       assert.equal((await fetchGeckoPoolsResult("trending_pools", { page: 3 })).failure, "plan-restricted");
       assert.equal(asked, 2);
     } finally { console.warn = warn; resetGeckoFeedsForTest(); rmSync(home, { recursive: true, force: true }); }

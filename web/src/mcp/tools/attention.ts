@@ -45,9 +45,9 @@ const ITEM = z.object({
   agent_name: z.string().nullable().describe("The agent's name (owner-chosen text)"),
   title: z.string(),
   detail: z.string(),
-  owner_can_fix: z.boolean().describe("False when only Merrymen can fix it, or when it is a signed limit doing its job"),
+  owner_can_fix: z.boolean().describe("False when only AgentCap can fix it, or when it is a signed limit doing its job"),
   what_to_do: z.string().nullable(),
-  link: z.string().nullable().describe("The Merrymen page where the owner does it; acting there needs the owner's own sign-in, and their wallet for a permission"),
+  link: z.string().nullable().describe("The AgentCap page where the owner does it; acting there needs the owner's own sign-in, and their wallet for a permission"),
   started_at: z.string().nullable().describe("When the condition began or reached this severity; null when no record says"),
   ends_at: z.string().nullable().describe("When it lapses by itself, such as a proposal's or a permission's expiry"),
   new: z.boolean().describe("False when its key was among seen_keys"),
@@ -56,7 +56,7 @@ const ITEM = z.object({
 const getAttention = defineTool({
   name: "get_attention",
   title: "What needs the owner",
-  description: "Everything that needs the owner across the agents shared with this connection, in one read: a trading permission that has expired or expires soon, a live-trading blocker (no ETH for fees, no USDG, a permission that cannot reach the chain), a tripped drawdown breaker, a worker that stopped reporting, the kill switch, a reached daily cap, failing data or model providers, proposals waiting for approval and undelivered Telegram alerts. Each item has a severity (act_now, today or fyi) with a fixed meaning, a stable key, what the owner can do and a link to the Merrymen page that does it. Given the keys from an earlier answer, it marks which items are new and lists the ones that have resolved. Read-only: nothing here trades, approves, renews or changes anything.",
+  description: "Everything that needs the owner across the agents shared with this connection, in one read: a trading permission that has expired or expires soon, a live-trading blocker (no ETH for fees, no USDG, a permission that cannot reach the chain), a tripped drawdown breaker, a worker that stopped reporting, the kill switch, a reached daily cap, failing data or model providers, proposals waiting for approval and undelivered Telegram alerts. Each item has a severity (act_now, today or fyi) with a fixed meaning, a stable key, what the owner can do and a link to the AgentCap page that does it. Given the keys from an earlier answer, it marks which items are new and lists the ones that have resolved. Read-only: nothing here trades, approves, renews or changes anything.",
   capability: "agents.read",
   input: z.object({
     agent: AGENT_ARG.describe("Limit the check to one agent shared with this connection. Without it, every shared agent is checked."),
@@ -126,7 +126,7 @@ const getAttention = defineTool({
       const rows = await liveAwaitingRows(d.db, ctx.principal.tenant, now, PROPOSALS_MAX);
       // A full page may have left an open proposal unread: none of its seen keys can resolve.
       proposalsCut = rows.length >= PROPOSALS_MAX;
-      if (proposalsCut) notChecked.push({ part: "older waiting proposals", why: `More proposals are waiting than one read takes (${PROPOSALS_MAX}); only the newest were read, and Merrymen lists them all.`, scope: null });
+      if (proposalsCut) notChecked.push({ part: "older waiting proposals", why: `More proposals are waiting than one read takes (${PROPOSALS_MAX}); only the newest were read, and AgentCap lists them all.`, scope: null });
       const waiting = [];
       for (const r of rows) {
         if (!kindChecked(r.kind)) continue;
@@ -137,7 +137,7 @@ const getAttention = defineTool({
       items.push(...proposalItems(waiting));
     }
     if ((ctx.principal.profile ?? "full") === "directory") {
-      notChecked.push({ part: "proposals", why: "The connector-directory listing never sees proposals; they are listed in Merrymen.", scope: null });
+      notChecked.push({ part: "proposals", why: "The connector-directory listing never sees proposals; they are listed in AgentCap.", scope: null });
     } else {
       for (const s of PROPOSAL_SCOPES) {
         if (!hasCapability(ctx.principal, s.capability)) notChecked.push({ part: s.what, why: `Seeing them needs the ${scopeFor(s.capability)} scope.`, scope: scopeFor(s.capability) });

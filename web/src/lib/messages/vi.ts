@@ -7,10 +7,10 @@ import type { MessageKey } from "./en";
  * That is what makes a partial file safe to have here.
  */
 export const vi: Partial<Record<MessageKey, string>> = {
-  "tour.stop01.title": "Chào mừng bạn đến với merrymen.",
+  "tour.stop01.title": "Chào mừng bạn đến với agentcap.",
   "tour.stop01.copy": "Giao cho tác nhân AI một chiến lược, đặt hạn mức cho nó và theo dõi những quyết định nó đưa ra. Bạn có thể xem hết phần hướng dẫn hoặc dùng Chủ đề để nhảy tới một tính năng. Bạn có thể thoát ra và xem lại bất cứ lúc nào.",
   "tour.stop02.title": "Bắt đầu từ thị trường bạn đã biết.",
-  "tour.stop02.copy": "Trang chủ là merryman và tiền của bạn. Khám phá (Explore) có bảng xếp hạng và các thị trường: mở một token bất kỳ để xem lịch sử giá và những giao dịch mà các tác nhân đã ghi nhận với token đó.",
+  "tour.stop02.copy": "Trang chủ là agentcapavatar và tiền của bạn. Khám phá (Explore) có bảng xếp hạng và các thị trường: mở một token bất kỳ để xem lịch sử giá và những giao dịch mà các tác nhân đã ghi nhận với token đó.",
   "tour.stop03.title": "Tác nhân của bạn, giới hạn do bạn đặt.",
   "tour.stop03.copy": "Một chiến lược và hai hạn mức — mỗi lệnh và mỗi ngày — quyết định nó được phép làm gì. Chế độ mô phỏng cho bạn tập giao dịch bằng tiền mô phỏng, không phải tiền thật, cho tới khi bạn quyết định khác.",
   "tour.stop04.title": "Hỏi nó vì sao.",
@@ -56,7 +56,7 @@ export const vi: Partial<Record<MessageKey, string>> = {
   "tour.stop24.title": "Cài đặt và mức độ công khai.",
   "tour.stop24.copy": "Cài đặt quản lý cấu hình tác nhân và những gì bạn chia sẻ. Công khai sổ lệnh có thể để lộ chi tiết vị thế và quy mô từng lệnh; nếu giữ riêng tư thì hoạt động công khai và tỷ lệ phần trăm lợi nhuận đủ điều kiện vẫn được hiển thị.",
   "tour.stop25.title": "Phát triển với API.",
-  "tour.stop25.copy": "Nhà phát triển có thể vào merrymen.dev/api để xem cách tạo khóa API, SDK và các hướng dẫn tích hợp. Hãy giữ khóa API bí mật trên máy chủ của bạn. Dùng đúng quy trình thiết lập và luồng chat có trong tài liệu để kết nối một ứng dụng khác.",
+  "tour.stop25.copy": "Nhà phát triển có thể vào agentcap.xyz/api để xem cách tạo khóa API, SDK và các hướng dẫn tích hợp. Hãy giữ khóa API bí mật trên máy chủ của bạn. Dùng đúng quy trình thiết lập và luồng chat có trong tài liệu để kết nối một ứng dụng khác.",
   "tour.stop26.title": "Sẵn sàng khi bạn muốn bắt đầu.",
   "tour.stop26.copy": "Quay lại phần chat để hỏi về chiến lược, hạn mức hay quyết định mới nhất. Nếu tác nhân đang chờ, hãy kiểm tra phần giải thích, chế độ, tiền đã nạp và các quyền của nó. Mở lại phần hướng dẫn này bằng Dẫn tôi đi một vòng bất cứ khi nào bạn cần.",
   "tour.skip": "Bỏ qua",
@@ -65,7 +65,7 @@ export const vi: Partial<Record<MessageKey, string>> = {
   "tour.next": "Tiếp",
   "tour.finish": "Xong",
   "tour.relaunch": "Dẫn tôi đi một vòng",
-  "tour.dialogLabel": "Dạo nhanh một vòng merrymen",
+  "tour.dialogLabel": "Dạo nhanh một vòng agentcap",
   "tour.stepOf": "{current} / {total}",
   "tour.savedLocally": "Đã lưu trên trình duyệt này.",
   "tour.retrySync": "Thử đồng bộ lại tài khoản",

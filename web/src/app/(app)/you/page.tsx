@@ -1,2 +1,2 @@
-export const metadata = {title:"Your profile — merrymen"};
+export const metadata = {title:"Your profile — agentcap"};
 export default function ProfileRoute() {return null;}

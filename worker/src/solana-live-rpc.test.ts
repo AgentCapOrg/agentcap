@@ -8,8 +8,8 @@ import { verifySolanaVaultDeployment } from "./solana-executor";
 import { getBase58Decoder, getBase58Encoder } from "@solana/kit";
 import { createHash } from "node:crypto";
 import { SOLANA_MAINNET_GENESIS_HASH, SolanaRpcError } from "./solana-rpc";
-const env = { MERRYMEN_SOLANA_RPC_MAINNET: "https://primary.example/?api-key=secret-primary",
-  MERRYMEN_SOLANA_RPC_MAINNET_FALLBACK: "https://fallback.example/?api-key=secret-fallback" };
+const env = { AGENTCAP_SOLANA_RPC_MAINNET: "https://primary.example/?api-key=secret-primary",
+  AGENTCAP_SOLANA_RPC_MAINNET_FALLBACK: "https://fallback.example/?api-key=secret-fallback" };
 const BLOCKHASH = "11111111111111111111111111111111";
 const key32 = (n: number) => getBase58Decoder().decode(new Uint8Array(32).fill(n));
 /** An immutable upgradeable-loader deployment whose binary declares its own program id. */
@@ -45,10 +45,10 @@ function clock() {
 
 test("live trading refuses to start without an independent fallback on a different hostname (audit G3-6)", () => {
   for (const fallback of [undefined, "", "https://primary.example/other?api-key=x", "https://PRIMARY.example/", "https://primary.example./"]) {
-    assert.throws(() => createSolanaLiveRpc({ env: { MERRYMEN_SOLANA_RPC_MAINNET: env.MERRYMEN_SOLANA_RPC_MAINNET, MERRYMEN_SOLANA_RPC_MAINNET_FALLBACK: fallback } }),
+    assert.throws(() => createSolanaLiveRpc({ env: { AGENTCAP_SOLANA_RPC_MAINNET: env.AGENTCAP_SOLANA_RPC_MAINNET, AGENTCAP_SOLANA_RPC_MAINNET_FALLBACK: fallback } }),
       error => error instanceof SolanaRpcError && error.code === "invalid-fallback" && !error.message.includes("secret"), String(fallback));
   }
-  assert.throws(() => createSolanaLiveRpc({ env: { ...env, MERRYMEN_SOLANA_RPC_MAINNET_FALLBACK: "http://fallback.example/" } }), /HTTPS/);
+  assert.throws(() => createSolanaLiveRpc({ env: { ...env, AGENTCAP_SOLANA_RPC_MAINNET_FALLBACK: "http://fallback.example/" } }), /HTTPS/);
   assert.ok(createSolanaLiveRpc({ env }).providerKey);
 });
 test("an owner-run single endpoint talks only to that provider and never borrows a fallback", async () => {
@@ -64,7 +64,7 @@ test("an owner-run single endpoint talks only to that provider and never borrows
   assert.ok(seen.every(value => value.startsWith("primary.example:")), seen.join());
   assert.equal(rpc.providerKey, undefined, "an owner-run check is never served from the process cache");
   assert.equal(rpc.singleEndpoint, true); assert.equal(createSolanaLiveRpc({ env }).singleEndpoint, undefined);
-  const down = createSolanaLiveRpc({ env: { MERRYMEN_SOLANA_RPC_MAINNET: env.MERRYMEN_SOLANA_RPC_MAINNET }, singleEndpoint: true,
+  const down = createSolanaLiveRpc({ env: { AGENTCAP_SOLANA_RPC_MAINNET: env.AGENTCAP_SOLANA_RPC_MAINNET }, singleEndpoint: true,
     fetch: async () => { throw new Error("offline"); } });
   await assert.rejects(down.read(read => read("getSlot")), error => error instanceof SolanaRpcError && error.code === "network");
 });
@@ -239,7 +239,7 @@ test("a JSON-RPC error answer, such as a refused preflight, is the provider's re
   await assert.rejects(rpc.read(read => read("getSlot")), error => error instanceof SolanaRpcError && error.code === "rpc");
   // An answer with neither a result nor an error, or for another request, is still malformed.
   for (const bad of [(id: unknown) => ({ jsonrpc: "2.0", id }), (id: unknown) => ({ jsonrpc: "2.0", id: Number(id) + 1, error: { code: 1 } })]) {
-    const odd = createSolanaLiveRpc({ env: { MERRYMEN_SOLANA_RPC_MAINNET: env.MERRYMEN_SOLANA_RPC_MAINNET }, singleEndpoint: true, fetch: async (_url, init) => {
+    const odd = createSolanaLiveRpc({ env: { AGENTCAP_SOLANA_RPC_MAINNET: env.AGENTCAP_SOLANA_RPC_MAINNET }, singleEndpoint: true, fetch: async (_url, init) => {
       const body = JSON.parse(init!.body as string);
       return Response.json(body.method === "getGenesisHash" ? { jsonrpc: "2.0", id: body.id, result: SOLANA_MAINNET_GENESIS_HASH } : bad(body.id));
     } });

@@ -19,7 +19,7 @@ const realFetch = globalThis.fetch;
 
 const line = (messageId: number, name: string, text: string, over: Partial<TgLine> = {}): TgLine => ({ messageId, fromId: 1_000 + messageId, name, text, atMs: T0 + messageId, ...over });
 const roomWith = (lines: TgLine[]): TgRoom => ({ chatId: CHAT, lines }) as unknown as TgRoom;
-const ctxOf = (text: string, over: Partial<RouteCtx> = {}): RouteCtx => ({ line: text, replied: null, selfNames: ["merrymanme_bot", "shogun"], fomo: true, desk: true, coins: true, ...over });
+const ctxOf = (text: string, over: Partial<RouteCtx> = {}): RouteCtx => ({ line: text, replied: null, selfNames: ["agentcapavatarme_bot", "shogun"], fomo: true, desk: true, coins: true, ...over });
 
 describe("ROUTE_SPEC", () => {
   it("requires only the action, and the menu has nothing that trades", () => {
@@ -79,7 +79,7 @@ describe("parseRoute", () => {
 
   it("the bot's own names, stop words and numbers are never a subject", () => {
     assert.equal(parseRoute({ action: "fomo_trader", trader: "shogun" }, ctxOf("shogun who are you on fomo")), null);
-    assert.equal(parseRoute({ action: "fomo_trader", trader: "@merrymanme_bot" }, ctxOf("@merrymanme_bot what about trader stuff")), null);
+    assert.equal(parseRoute({ action: "fomo_trader", trader: "@agentcapavatarme_bot" }, ctxOf("@agentcapavatarme_bot what about trader stuff")), null);
     assert.equal(parseRoute({ action: "fomo_trader", trader: "top" }, ctxOf("who's top on fomo")), null);
     assert.equal(parseRoute({ action: "fomo_coin", coin: "fomo" }, ctxOf("what's up with fomo")), null);
     assert.equal(parseRoute({ action: "coin_read", coin: "market" }, ctxOf("how's the market")), null);
@@ -202,7 +202,7 @@ describe("a row of the leaderboard, and ordinals that are never names", () => {
     assert.deepEqual(rowIn("who's the best trader on fomo today and what did he make money on"), { rank: 1, about: "earnings" });
     assert.deepEqual(rowIn("who's #1 on fomo and what's he buying"), { rank: 1, about: "trades", side: "buy" });
     assert.deepEqual(rowIn("what's the second best trader holding"), { rank: 2, about: "holdings" });
-    // The trader Merrymen watches is a watch-list question, never a row of the public board.
+    // The trader AgentCap watches is a watch-list question, never a row of the public board.
     assert.equal(rowIn("who's the best trader we follow and what is he holding"), undefined);
     assert.equal(rowIn("who's the top trader you watch on fomo and what did he buy"), undefined);
     assert.equal(rowIn("who's the best watched trader and what did he make money on"), undefined);
@@ -498,7 +498,7 @@ describe("the router's fixes (review, 2026-10-07)", () => {
 
   it("names the desk never reads are never a coin, whoever picks them", () => {
     const lines: Array<[string, string]> = [
-      ["merrymen", "is merrymen legit or what"],
+      ["agentcap", "is agentcap legit or what"],
       ["robinhood", "how is robinhood looking"],
       ["eth", "how's eth doing today"],
       ["price", "what's the price doing"],

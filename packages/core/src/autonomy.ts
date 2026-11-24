@@ -225,7 +225,7 @@ function ownerRemedy(rule: RefuseRule | "expired"): {
   switch (rule) {
     case "wrong-chain":
       return {
-        headline: "Your Merryman's permission is for a different network.",
+        headline: "Your AgentCapAvatar's permission is for a different network.",
         // Names the network, because the fix is to CHANGE one and the screen
         // opens on the one being replaced.
         //
@@ -240,17 +240,17 @@ function ownerRemedy(rule: RefuseRule | "expired"): {
       };
     case "grant-too-wide":
       return {
-        headline: "Your Merryman's permission covers too much to be installed.",
+        headline: "Your AgentCapAvatar's permission covers too much to be installed.",
         action: { label: "Sign a smaller permission", kind: "renew-grant" },
       };
     case "expired":
       return {
-        headline: "Your Merryman's trading permission has expired.",
+        headline: "Your AgentCapAvatar's trading permission has expired.",
         action: { label: "Renew permission", kind: "renew-grant" },
       };
     default:
       return {
-        headline: "Your Merryman needs permission renewal to trade autonomously. Revocation requires network fees.",
+        headline: "Your AgentCapAvatar needs permission renewal to trade autonomously. Revocation requires network fees.",
         action: { label: "Renew permission", kind: "renew-grant" },
       };
   }
@@ -343,7 +343,7 @@ export interface Autonomy {
    * The headline sentence for the blocked banner.
    *
    * HERE RATHER THAN IN THE SURFACE, because the surface printed ONE sentence —
-   * "Your Merryman needs a free permission renewal to trade autonomously" — for
+   * "Your AgentCapAvatar needs a free permission renewal to trade autonomously" — for
    * every rule in OWNER_ACTION, and it is false for two of them.
    *
    * A tester hit exactly that: his key was signed for another network, the

@@ -7,10 +7,10 @@ import {resetMetricsForTest} from "../observe";
 const NOW=1_800_000_000, ACCOUNT="0x1111111111111111111111111111111111111111";
 const report={v:1,mode:"paper",blocker:null,venueReadAt:NOW*1000,protectAt:NOW*1000,accountIndex:null,positions:[{market:"BTC-PERP",side:"long",baseAmount:"0.1",entryPrice:"60000",markPrice:"61000",leverage:2,marginMicro:"3000000000",liqPrice:"30000",unrealizedMicro:"100000000",stopTrigger:"55000",fundingMicro:"-123"}],openNotionalMicro:"6100000000",collateralMicro:"10000000000",inTransitMicro:"0",minLiqDistanceBps:5000,stopsMissing:0,incident:false};
 let d:TestDb, restore:(()=>void)|undefined;
-const previous=process.env.MERRYMEN_PERPS;
-afterEach(()=>{restore?.();restore=undefined;d?.raw.close();resetMetricsForTest();if(previous===undefined)delete process.env.MERRYMEN_PERPS;else process.env.MERRYMEN_PERPS=previous;});
+const previous=process.env.AGENTCAP_PERPS;
+afterEach(()=>{restore?.();restore=undefined;d?.raw.close();resetMetricsForTest();if(previous===undefined)delete process.env.AGENTCAP_PERPS;else process.env.AGENTCAP_PERPS=previous;});
 async function setup(scopes=["portfolio:read"],shared=[SLUG_A]) {
- process.env.MERRYMEN_PERPS="paper";d=await makeTestDb();restore=installFixtures(d);
+ process.env.AGENTCAP_PERPS="paper";d=await makeTestDb();restore=installFixtures(d);
  d.raw.exec("CREATE TABLE perps_grants (tenant TEXT PRIMARY KEY, grant_json TEXT NOT NULL)");
  d.raw.prepare("INSERT INTO perps_grants VALUES (?,?)").run(OWNER_A,JSON.stringify({purpose:"perps",owner:OWNER_A,smartAccount:ACCOUNT,expiresAt:NOW+1000,serialized:"SECRET",demoSessionPrivateKey:"SECRET"}));
  d.raw.prepare("INSERT INTO agents (smart_account,owner_address,chain_id,caps,granted_at,expires_at,session_key_address,mode,perps) VALUES (?,?,?,?,?,?,?,?,?)").run(ACCOUNT,OWNER_A,4663,"{}",NOW-100,NOW+1000,"0x00","paper",JSON.stringify({...report,privateKey:"REPORT_SECRET"}));
@@ -47,5 +47,5 @@ test("absent report, expired permission, stale feed and missing stop are explici
  d.raw.prepare("UPDATE agents SET perps=? WHERE smart_account=?").run(JSON.stringify({...report,venueReadAt:(NOW-200)*1000,stopsMissing:1,positions:[{...report.positions[0],stopTrigger:null}]}),ACCOUNT);
  d.raw.prepare("UPDATE perps_grants SET grant_json=?").run(JSON.stringify({purpose:"perps",owner:OWNER_A,smartAccount:ACCOUNT,expiresAt:NOW-1}));
  out=(await call()).structuredContent!;assert.equal(out.fresh,false);assert.match(JSON.stringify(out.attention),/expired/);assert.match(JSON.stringify(out.attention),/protective stop/);
- process.env.MERRYMEN_PERPS="off";assert.equal((await call()).isError,true);
+ process.env.AGENTCAP_PERPS="off";assert.equal((await call()).isError,true);
 });

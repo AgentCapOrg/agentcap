@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import { createHmac, randomBytes } from "node:crypto";
 import { describe, it } from "node:test";
 import { ed25519 } from "@noble/curves/ed25519";
-import { assertNoOwnerKeysAtRest, base58Encode, carriesOwnerKey, solanaSecretIn, type StoredGrant } from "@merrymen/core";
+import { assertNoOwnerKeysAtRest, base58Encode, carriesOwnerKey, solanaSecretIn, type StoredGrant } from "@agentcap/core";
 import { signerGrant, type SignerOptions } from "./canonical-wall-fixture";
 
 /**
@@ -38,7 +38,7 @@ async function realGrants(): Promise<StoredGrant[]> {
   const out: StoredGrant[] = [];
   for (let i = 0; i < COUNT; i++) {
     const { grant, owner } = await signerGrant(SHAPES[i % SHAPES.length]!);
-    const body = `${randomBytes(16).toString("base64url")}.${Date.now() + 300_000}.${Buffer.from("https://app.merrymen.dev").toString("base64url")}`;
+    const body = `${randomBytes(16).toString("base64url")}.${Date.now() + 300_000}.${Buffer.from("https://app.agentcap.xyz").toString("base64url")}`;
     const nonce = `${body}.${createHmac("sha256", "test-secret").update(body).digest("base64url")}`;
     const did = `did:privy:${randomBytes(12).toString("hex")}`;
     out.push({ ...grant, binding: { version: "privy-did-owner-v1", nonce, ownerSignature: await owner.signMessage({ message: nonce }), did } });
@@ -55,7 +55,7 @@ const reserialized = (g: StoredGrant, extra: Record<string, unknown>) =>
 function solanaKeypair(seedByte: number) {
   const seed = new Uint8Array(32).fill(seedByte);
   const pub = ed25519.getPublicKey(seed);
-  const sig = ed25519.sign(new TextEncoder().encode("merrymen"), seed);
+  const sig = ed25519.sign(new TextEncoder().encode("agentcap"), seed);
   return { b58: base58Encode(new Uint8Array([...seed, ...pub])), bytes: [...seed, ...pub], pub: base58Encode(pub), sig: base58Encode(sig) };
 }
 const SOL = solanaKeypair(23);
@@ -81,11 +81,11 @@ describe("grants from the real signer are clean", () => {
   it("carriesOwnerKey passes every one, and the hosted boot starts over all of them", async () => {
     const grants = await minted;
     for (const g of grants) assert.equal(carriesOwnerKey(g), false, g.serialized.slice(0, 40));
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOSTED = "1";
     try {
       assert.doesNotThrow(() => assertNoOwnerKeysAtRest(grants));
     } finally {
-      delete process.env.MERRYMEN_HOSTED;
+      delete process.env.AGENTCAP_HOSTED;
     }
   });
 
@@ -194,11 +194,11 @@ describe("a real grant carrying a Solana secret key is refused", () => {
 
   it("and halts the hosted boot", async () => {
     const grants = await minted;
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOSTED = "1";
     try {
       assert.throws(() => assertNoOwnerKeysAtRest([...grants, { ...grants[3]!, solana: SOL.bytes }]), /refuses to start: 1 stored grant/);
     } finally {
-      delete process.env.MERRYMEN_HOSTED;
+      delete process.env.AGENTCAP_HOSTED;
     }
   });
 });

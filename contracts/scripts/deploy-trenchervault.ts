@@ -15,7 +15,7 @@ async function main() {
   const chainId=await client.getChainId();
   if (chainId!==4663) throw new Error("This deployment manifest targets Robinhood mainnet 4663 only");
   const [deployer]=await hre.viem.getWalletClients();
-  if (!deployer) throw new Error("Set MERRYMEN_DEPLOYER_PRIVATE_KEY in the operator environment; never use a tenant session key");
+  if (!deployer) throw new Error("Set AGENTCAP_DEPLOYER_PRIVATE_KEY in the operator environment; never use a tenant session key");
   for (const address of infrastructure) {
     const code=await client.getCode({address});
     if (!code||code==="0x") throw new Error(`Infrastructure is absent at ${address}`);

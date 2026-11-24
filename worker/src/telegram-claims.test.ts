@@ -66,7 +66,7 @@ describe("the claim store", () => {
   });
 
   it("THE FIRST CLAIM WINS, across two connections racing for one bot", async () => {
-    const dir = mkdtempSync(path.join(tmpdir(), "merrymen-bot-claims-"));
+    const dir = mkdtempSync(path.join(tmpdir(), "agentcap-bot-claims-"));
     const file = path.join(dir, "claims.sqlite");
     const one = new DatabaseSync(file);
     const two = new DatabaseSync(file);
@@ -266,8 +266,8 @@ describe("claimGate — who may poll the bot", () => {
   });
 
   it("ONLY A TENANT THAT WILL POLL CLAIMS: a token saved with Telegram off takes nothing and loses nothing", () => {
-    const prev = process.env.MERRYMEN_TELEGRAM_ENABLED;
-    delete process.env.MERRYMEN_TELEGRAM_ENABLED;
+    const prev = process.env.AGENTCAP_TELEGRAM_ENABLED;
+    delete process.env.AGENTCAP_TELEGRAM_ENABLED;
     try {
       const claims = new Map([["111", A]]);
       for (const off of [{ telegramEnabled: false, telegramBotToken: TOKEN_B }, { telegramBotToken: TOKEN_B }]) {
@@ -277,7 +277,7 @@ describe("claimGate — who may poll the bot", () => {
       }
       assert.deepEqual(claimGate({ strategy: "steady-basket" }, B, claims).verdict, { kind: "idle" }, "no token is a no-op");
     } finally {
-      if (prev !== undefined) process.env.MERRYMEN_TELEGRAM_ENABLED = prev;
+      if (prev !== undefined) process.env.AGENTCAP_TELEGRAM_ENABLED = prev;
     }
   });
 

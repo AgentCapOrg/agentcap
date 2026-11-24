@@ -5,7 +5,7 @@
  * refused, and a grant store that cannot be read refuses too, rather than
  * assume the account is free. That refusal is a 503, and the shell shows a 5xx
  * body only when the route marked it `ownerFacing` (terminal/request-json.ts).
- * Unmarked, the owner who just signed a grant is told "merrymen answered with
+ * Unmarked, the owner who just signed a grant is told "agentcap answered with
  * an error (503)" and nothing about trying again.
  *
  * Driven through POST in hosted mode with real signatures, so the claim
@@ -21,16 +21,16 @@ import path from "node:path";
 import { after, before, it, mock } from "node:test";
 import { encodeErrorResult, toFunctionSelector } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-import { bindingMessage } from "@merrymen/core";
+import { bindingMessage } from "@agentcap/core";
 import { signerGrant } from "@/lib/canonical-wall-fixture";
 
-const ORIGIN = "https://app.merrymen.dev";
+const ORIGIN = "https://app.agentcap.xyz";
 const SMART = "0x00000000000000000000000000000000000000a1" as const;
 const CHAIN = 4663;
 const OWNERSHIP_UNREADABLE = "couldn't check this account's ownership — please try again";
 
 const saved = Object.fromEntries(
-  ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_SESSION_SECRET", "DATABASE_URL", "MERRYMEN_PUBLIC_ORIGIN", "MERRYMEN_STORE_DEK"].map((k) => [k, process.env[k]]),
+  ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_SESSION_SECRET", "DATABASE_URL", "AGENTCAP_PUBLIC_ORIGIN", "AGENTCAP_STORE_DEK"].map((k) => [k, process.env[k]]),
 );
 let home: string;
 let POST: (req: Request) => Promise<Response>;
@@ -38,14 +38,14 @@ let auth: typeof import("@/lib/auth");
 
 before(async () => {
   home = mkdtempSync(path.join(tmpdir(), "mm-grants-owner-facing-"));
-  process.env.MERRYMEN_HOME = home;
-  process.env.MERRYMEN_HOSTED = "1";
-  process.env.MERRYMEN_SESSION_SECRET = "test-secret-at-least-thirty-two-characters-long";
+  process.env.AGENTCAP_HOME = home;
+  process.env.AGENTCAP_HOSTED = "1";
+  process.env.AGENTCAP_SESSION_SECRET = "test-secret-at-least-thirty-two-characters-long";
   // Hosted stores refuse to hold secrets in the clear.
-  process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
+  process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
   // Never connected to: both stores that would use it are stood in for below.
   process.env.DATABASE_URL = "postgres://127.0.0.1:1/never-connected";
-  delete process.env.MERRYMEN_PUBLIC_ORIGIN;
+  delete process.env.AGENTCAP_PUBLIC_ORIGIN;
   auth = await import("@/lib/auth");
   // THROUGH require, ON PURPOSE. The route reaches these worker modules by
   // require, and the ESM loader keeps a second instance of the same file: a

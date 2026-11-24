@@ -5,11 +5,11 @@
  * HOW TO RUN — against a disposable LOCAL Postgres only (the test refuses any
  * other host, and never reads DATABASE_URL):
  *
- *   createdb -h localhost -p 55432 -U merrymen merrymen_pgtest
- *   MERRYMEN_TEST_PG_URL=postgres://merrymen@localhost:55432/merrymen_pgtest \
+ *   createdb -h localhost -p 55432 -U agentcap agentcap_pgtest
+ *   AGENTCAP_TEST_PG_URL=postgres://agentcap@localhost:55432/agentcap_pgtest \
  *     npx tsx --test worker/src/pg-upgrade.postgres.test.ts
  *
- * (MERRYMEN_TEST_POSTGRES_URL, the partner-store test's variable, works too.)
+ * (AGENTCAP_TEST_POSTGRES_URL, the partner-store test's variable, works too.)
  * With neither set every case is skipped, so `npm test` and CI need no
  * database. Each run works in a schema of its own, `mm_upgrade_test_<hex>`,
  * dropped at the end; nothing outside it is touched.
@@ -63,7 +63,7 @@ import { sealSecret } from "./store-crypto";
 import { repairAccount } from "./accounting-repair";
 import { FLOW_SNAPSHOT_COLUMNS, flowFingerprintOf, type AccountPlan } from "./accounting-reconstruction";
 
-const url = process.env.MERRYMEN_TEST_PG_URL ?? process.env.MERRYMEN_TEST_POSTGRES_URL;
+const url = process.env.AGENTCAP_TEST_PG_URL ?? process.env.AGENTCAP_TEST_POSTGRES_URL;
 
 interface PgClient extends PgClientLike {
   connect(): Promise<void>;
@@ -104,15 +104,15 @@ test("Postgres: the energy release over production's schema", { skip: !url, time
   const scoped = (who: string) => {
     const u = new URL(target);
     u.searchParams.set("options", `-c search_path=${schema} -c statement_timeout=20000 -c lock_timeout=10000`);
-    u.searchParams.set("application_name", `merrymen-upgrade-test-${who}`);
+    u.searchParams.set("application_name", `agentcap-upgrade-test-${who}`);
     return u.toString();
   };
 
   // The process environment the stores read, pointed at this run and put back after.
-  const saved = { db: process.env.DATABASE_URL, dek: process.env.MERRYMEN_STORE_DEK, home: process.env.MERRYMEN_HOME };
+  const saved = { db: process.env.DATABASE_URL, dek: process.env.AGENTCAP_STORE_DEK, home: process.env.AGENTCAP_HOME };
   const home = mkdtempSync(path.join(os.tmpdir(), "mm-upgrade-"));
-  process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
-  process.env.MERRYMEN_HOME = home;
+  process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
+  process.env.AGENTCAP_HOME = home;
   delete process.env.DATABASE_URL;
 
   const clients: PgClient[] = [];
@@ -135,7 +135,7 @@ test("Postgres: the energy release over production's schema", { skip: !url, time
       // Loaded verbatim — not through Db.exec, whose sqlite-to-Postgres
       // translation must not touch production's own DDL.
       await (await connect(scoped("fixture"))).query(readFileSync(FIXTURE, "utf8"));
-      const seal = (s: unknown) => sealSecret(JSON.stringify(s), Buffer.from(process.env.MERRYMEN_STORE_DEK!, "base64"));
+      const seal = (s: unknown) => sealSecret(JSON.stringify(s), Buffer.from(process.env.AGENTCAP_STORE_DEK!, "base64"));
       for (const [tenant, settings] of [
         [T1, { holderProof: { address: W1, at: now - DAY_MS }, telegramBotToken: "111:AAA", telegramEnabled: true, telegramAllowlist: [424242] }],
         [T2, { telegramBotToken: "222:BBB", telegramEnabled: true, telegramAllowlist: [515151] }],
@@ -627,7 +627,7 @@ test("Postgres: the energy release over production's schema", { skip: !url, time
     await admin.query(`DROP SCHEMA ${schema} CASCADE`).catch(() => {});
     for (const c of clients) await c.end().catch(() => {});
     rmSync(home, { recursive: true, force: true });
-    for (const [k, v] of [["DATABASE_URL", saved.db], ["MERRYMEN_STORE_DEK", saved.dek], ["MERRYMEN_HOME", saved.home]] as const) {
+    for (const [k, v] of [["DATABASE_URL", saved.db], ["AGENTCAP_STORE_DEK", saved.dek], ["AGENTCAP_HOME", saved.home]] as const) {
       if (v === undefined) delete process.env[k];
       else process.env[k] = v;
     }

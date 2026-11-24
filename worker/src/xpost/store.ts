@@ -283,7 +283,7 @@ export type AccountStatus = "ok" | "revoked";
 /**
  * The most posts a day an owner may choose (the planner's own default,
  * planner.ts DEFAULT_PER_DAY). With no choice, the server's number applies
- * (MERRYMEN_XPOST_PER_DAY, which may be higher or lower); with one, whichever
+ * (AGENTCAP_XPOST_PER_DAY, which may be higher or lower); with one, whichever
  * of the two is smaller. An owner can post less, never more.
  */
 export const OWNER_PER_DAY_MAX = 3;
@@ -450,7 +450,7 @@ export function repliesOffKey(tenant: string): string {
  * THE OWNER'S OFF IS REMEMBERED. Turning replies off also writes
  * repliesOffKey(tenant), and only the owner's own on (the web or the app,
  * after the reply warning) clears it. `house` is the orchestrator recording
- * consent for one of the operator's own agents (MERRYMEN_XPOST_ACTIVE_TENANTS,
+ * consent for one of the operator's own agents (AGENTCAP_XPOST_ACTIVE_TENANTS,
  * docs/x-posting.md "Active owners"): it changes nothing — false — while
  * that mark exists or consent is already recorded, and it leaves the mark
  * alone. It is decided under the same account row lock as the owner's off,
@@ -1369,7 +1369,7 @@ export async function ownRootTweetIds(db: Db, xUserId: string, limit = 2000): Pr
  * of 1ed46625, 2026-10-12). Under its own sherwood-1 model line ("the new
  * sherwood-1 is what they've got in the oven"), "can i buy it yet?", "should
  * i buy some before it's done?" and "wen moon" got code's decline or mood
- * line, "mum's the word on the rest" reading as Merrymen confirming a
+ * line, "mum's the word on the rest" reading as AgentCap confirming a
  * sherwood-1 token. A posted tweet whose body `shut` refuses (the caller's
  * screen: orchestrator-xpost.ts passes sherwood in any form) is in none of
  * the three: a reply or a quote under it, or under the tag it answered, is

@@ -16,9 +16,9 @@ import { resumeFrom } from "./deposit-log";
 
 type Fixture = Awaited<ReturnType<typeof tradedFixture>>;
 type Row = Record<string, unknown>;
-const holds = process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS;
-afterEach(() => { if (holds === undefined) delete process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS; else process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS = holds; });
-async function fixture(opts?: Parameters<typeof tradedFixture>[2]) { process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS = TEST_TENANT; return tradedFixture(undefined, undefined, opts); }
+const holds = process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS;
+afterEach(() => { if (holds === undefined) delete process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS; else process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS = holds; });
+async function fixture(opts?: Parameters<typeof tradedFixture>[2]) { process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS = TEST_TENANT; return tradedFixture(undefined, undefined, opts); }
 const marker = (f: Fixture) => path.join(f.options.home, "ledger-source-blocked.json");
 const commit = (f: Fixture, approvedDigest: string, more: Partial<Fixture["options"]> = {}) => attestTradedReceipt({ ...f.options, mode: "commit", approvedDigest, ...more });
 /** Recompute every link after a test edits the original journal: an intact chain that says something else. */
@@ -328,9 +328,9 @@ test("hold, live process, lease and approval refusals cannot write", async () =>
   const f = await fixture();
   try {
     const preview = await attestTradedReceipt(f.options);
-    delete process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS;
+    delete process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS;
     await refusesWithoutWriting(f, /explicitly held/);
-    process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS = TEST_TENANT;
+    process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS = TEST_TENANT;
     f.setQuiet(false); await refusesWithoutWriting(f, /process/); f.setQuiet(true);
     f.setHealthy(false); await refusesWithoutWriting(f, /lease/); f.setHealthy(true);
     await refusesWithoutWriting(f, /approval/, { ...f.options, mode: "commit", approvedDigest: "0".repeat(64) });
@@ -403,29 +403,29 @@ test("one attestation per tenant: another flow, or the other protocol, refuses b
     await commit(f, preview.approvalDigest);
     await assert.rejects(attestTradedReceipt({ ...f.options, sharedFlowId: 501 }), /names another flow/);
     const { sharedFlowId: _flow, ...untouched } = f.options;
-    await assert.rejects(attestReceipt(untouched), /set MERRYMEN_RECEIPT_ATTEST_FLOW/);
+    await assert.rejects(attestReceipt(untouched), /set AGENTCAP_RECEIPT_ATTEST_FLOW/);
   } finally { f.close(); }
   const g = await receiptFixture();
-  process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS = TEST_TENANT;
+  process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS = TEST_TENANT;
   try {
     const preview = await attestOriginalReceipt(g.options);
     await attestOriginalReceipt({ ...g.options, mode: "commit", approvedDigest: preview.approvalDigest });
-    await assert.rejects(attestReceipt({ ...g.options, sharedFlowId: 428 }), /untouched-book protocol; remove MERRYMEN_RECEIPT_ATTEST_FLOW/);
+    await assert.rejects(attestReceipt({ ...g.options, sharedFlowId: 428 }), /untouched-book protocol; remove AGENTCAP_RECEIPT_ATTEST_FLOW/);
     assert.equal((await attestReceipt(g.options)).state, "applied");
   } finally { g.close(); }
 });
 
 test("operator flow selection is one decimal shared id, admitted by the staged-rollout exemption only with the rest of the scope", () => {
-  const base = { MERRYMEN_RECEIPT_ATTEST_ACCOUNT: TEST_ACCOUNT, MERRYMEN_RECEIPT_ATTEST_TENANT: TEST_TENANT, MERRYMEN_RECEIPT_ATTEST_MODE: "dry-run" };
-  assert.equal(receiptAttestationRequest({ ...base, MERRYMEN_RECEIPT_ATTEST_FLOW: "428" })!.flowId, 428);
+  const base = { AGENTCAP_RECEIPT_ATTEST_ACCOUNT: TEST_ACCOUNT, AGENTCAP_RECEIPT_ATTEST_TENANT: TEST_TENANT, AGENTCAP_RECEIPT_ATTEST_MODE: "dry-run" };
+  assert.equal(receiptAttestationRequest({ ...base, AGENTCAP_RECEIPT_ATTEST_FLOW: "428" })!.flowId, 428);
   assert.equal(receiptAttestationRequest(base)!.flowId, undefined);
   for (const flow of ["", "0", "-1", "0428", "4e2", "abc", "428,429", String(Number.MAX_SAFE_INTEGER + 2)]) {
-    assert.throws(() => receiptAttestationRequest({ ...base, MERRYMEN_RECEIPT_ATTEST_FLOW: flow }), /shared flow id/, flow);
+    assert.throws(() => receiptAttestationRequest({ ...base, AGENTCAP_RECEIPT_ATTEST_FLOW: flow }), /shared flow id/, flow);
   }
-  assert.throws(() => receiptAttestationRequest({ MERRYMEN_RECEIPT_ATTEST_FLOW: "428" }));
-  const env = { ...base, MERRYMEN_RECEIPT_ATTEST_FLOW: "428", MERRYMEN_ACCOUNTING_HOLD_TENANTS: TEST_TENANT };
-  assert.equal(scopedReceiptAttestationAllowed(env, Object.keys(env).filter(k => k.startsWith("MERRYMEN_RECEIPT"))), true);
-  assert.equal(scopedReceiptAttestationAllowed({ ...env, MERRYMEN_RECEIPT_ATTEST_FLOW: "x" }, Object.keys(env).filter(k => k.startsWith("MERRYMEN_RECEIPT"))), false);
+  assert.throws(() => receiptAttestationRequest({ AGENTCAP_RECEIPT_ATTEST_FLOW: "428" }));
+  const env = { ...base, AGENTCAP_RECEIPT_ATTEST_FLOW: "428", AGENTCAP_ACCOUNTING_HOLD_TENANTS: TEST_TENANT };
+  assert.equal(scopedReceiptAttestationAllowed(env, Object.keys(env).filter(k => k.startsWith("AGENTCAP_RECEIPT"))), true);
+  assert.equal(scopedReceiptAttestationAllowed({ ...env, AGENTCAP_RECEIPT_ATTEST_FLOW: "x" }, Object.keys(env).filter(k => k.startsWith("AGENTCAP_RECEIPT"))), false);
 });
 
 test("rows far apart in the key space are all bound: a change several key windows up still refuses the approval", async () => {

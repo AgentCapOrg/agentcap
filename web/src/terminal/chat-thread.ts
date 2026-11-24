@@ -11,7 +11,7 @@
  * fill line are templated from ledger fields, and a field nobody read prints
  * nothing — never "$0.00", never a guessed coin.
  */
-import { rejectRuleLabel } from "@merrymen/thesis";
+import { rejectRuleLabel } from "@agentcap/thesis";
 import { usd } from "@/lib/format";
 import type { OrderReceipt } from "@/lib/order-state";
 import type { LlmFailureKind } from "../../../worker/src/llm-failure";

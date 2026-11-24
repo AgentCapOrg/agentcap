@@ -10,11 +10,11 @@ import type { ChildProcess } from "node:child_process";
 import type { StoredGrant } from "../../packages/core/src/index";
 import type { TenantLease } from "./tenant-lease";
 
-const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-replacement-")));
-process.env.MERRYMEN_HOME = fleet;
-process.env.MERRYMEN_HOSTED = "1";
+const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-replacement-")));
+process.env.AGENTCAP_HOME = fleet;
+process.env.AGENTCAP_HOSTED = "1";
 delete process.env.DATABASE_URL;
-process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 23).toString("base64");
+process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 23).toString("base64");
 
 const {
   adoptChildForTest, childHome, hasLeaseForTest, isRetiringExpiredForTest,
@@ -75,7 +75,7 @@ function seedMemory(tenant: `0x${string}`): () => void {
   mkdirSync(path.join(home, "soul"), { recursive: true });
   const soul = "# What I know about my owner\n- (2026-10-03) Their project is Sherwood.\n";
   writeFileSync(path.join(home, "soul", "OWNER.md"), soul);
-  const dbFile = path.join(home, "merrymen.db");
+  const dbFile = path.join(home, "agentcap.db");
   const db = new DatabaseSync(dbFile);
   db.exec("CREATE TABLE chat_turns (chat_id INTEGER, content TEXT); INSERT INTO chat_turns VALUES (424242, 'We discussed Sherwood.');");
   db.close();
@@ -147,7 +147,7 @@ it("retains soul, DM and group history through a replacement stop, exit, failed 
   assert.ok(existsSync(childHome(tenant)), "explicit deletion waits for the old writer to exit");
   spawned.at(-1)!.exit();
   await reconcile();
-  assert.ok(existsSync(path.join(childHome(tenant), "merrymen.db")), "the original accounting source survives explicit removal");
+  assert.ok(existsSync(path.join(childHome(tenant), "agentcap.db")), "the original accounting source survives explicit removal");
   assert.equal(existsSync(path.join(childHome(tenant), "soul", "OWNER.md")), false, "explicit removal still forgets personal memory");
   assert.equal(existsSync(path.join(childHome(tenant), "tg-groups.json")), false);
   assert.equal(existsSync(path.join(childHome(tenant), "grant.json")), false, "the stopped hosted signing-key cache is removed after exit");
@@ -249,7 +249,7 @@ it("an explicit kill with no running process clears local personal memory before
   const tenant = address(0xd51), store = getGrantStore("spot"), original = grantFor();
   await store.put(tenant, original);
   seedMemory(tenant);
-  const home = childHome(tenant), file = path.join(home, "merrymen.db");
+  const home = childHome(tenant), file = path.join(home, "agentcap.db");
   const book = new DatabaseSync(file);
   book.exec("CREATE TABLE finance_sentinel (amount INTEGER); INSERT INTO finance_sentinel VALUES (39)");
   book.close();

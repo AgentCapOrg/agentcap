@@ -17,7 +17,7 @@
  *
  * ── AND NOT THE SETTINGS STORE, WHICH IS THE TEMPTING WRONG ANSWER ───────
  *
- * `PgSettingsStore` seals its whole JSON blob under `MERRYMEN_STORE_DEK` — the
+ * `PgSettingsStore` seals its whole JSON blob under `AGENTCAP_STORE_DEK` — the
  * same key that protects grants — and `put` REPLACES the blob. Putting an
  * avatar there would mean a public page cannot render a face without the key
  * that decrypts money, base64 would inflate the blob the orchestrator hands
@@ -37,7 +37,7 @@
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { createHash } from "node:crypto";
-import { merrymenHome } from "./home";
+import { agentcapHome } from "./home";
 
 /**
  * The two kinds, closed.
@@ -95,7 +95,7 @@ const now = () => Math.floor(Date.now() / 1000);
  * and an incomplete record reads as absent rather than as a guess.
  */
 export class FileImageStore implements ImageStore {
-  private dir = path.join(merrymenHome(), "agent-image");
+  private dir = path.join(agentcapHome(), "agent-image");
   private base(tenant: string, kind: ImageKind) {
     return path.join(this.dir, `${tenant.toLowerCase()}.${kind}`);
   }

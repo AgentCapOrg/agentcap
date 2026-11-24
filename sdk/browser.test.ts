@@ -7,13 +7,13 @@ import { after, describe, it } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { generatePrivateKey, privateKeyToAccount, toAccount } from "viem/accounts";
 import { verifyMessage, type Hex } from "viem";
-import { derivationOf, type MerrymenSettings } from "@merrymen/core";
+import { derivationOf, type AgentCapSettings } from "@agentcap/core";
 // FIRST, before ./browser: the fixture trusts its stub Trencher bytecode by
 // setting the env var trencher-permission.ts reads once, when session.ts loads.
 import { CLASS_FACTORY, CLASS_VAULT, TRENCHER_FACTORY, withStubChain, type KernelState } from "../web/src/lib/canonical-wall-fixture";
 import {
-  prepareMerryman, signMerrymanAuthorization, partnerGrantDigest, PARTNER_API_VERSION, SDK_VERSION,
-  type LocalAccount, type PrepareMerrymanOptions, type StoredGrant, type PartnerEnrollmentClaim,
+  prepareAgentCapAvatar, signAgentCapAvatarAuthorization, partnerGrantDigest, PARTNER_API_VERSION, SDK_VERSION,
+  type LocalAccount, type PrepareAgentCapAvatarOptions, type StoredGrant, type PartnerEnrollmentClaim,
 } from "./browser";
 import { partnerEnrollmentMessage } from "../packages/core/src/partner-enrollment";
 import { carriesOwnerKey } from "../packages/core/src/hosted";
@@ -54,7 +54,7 @@ function fixture() {
 describe("browser partner authorization", () => {
   it("signs the canonical challenge with the existing owner wallet", async () => {
     const input = fixture();
-    const signed = await signMerrymanAuthorization(input);
+    const signed = await signAgentCapAvatarAuthorization(input);
     assert.equal(await verifyMessage({ address: owner.address, message: input.challenge.message, signature: signed.signature }), true);
     assert.equal(signed.grant, grant);
     assert.equal(signed.challenge_token, "signed-challenge-token");
@@ -80,7 +80,7 @@ describe("browser partner authorization", () => {
       input.challenge.message = partnerEnrollmentMessage(input.challenge.claim);
       let signed = false;
       input.owner = { ...owner, signMessage: async () => { signed = true; return "0x00"; } };
-      await assert.rejects(signMerrymanAuthorization(input));
+      await assert.rejects(signAgentCapAvatarAuthorization(input));
       assert.equal(signed, false, "refuse before asking the owner to sign");
     }
   });
@@ -88,24 +88,24 @@ describe("browser partner authorization", () => {
   it("compares capabilities as exact normalized sets", async () => {
     const input = fixture();
     input.expectedScopes = ["chat:agents", "read:agents", "read:agents"];
-    await assert.doesNotReject(signMerrymanAuthorization(input));
+    await assert.doesNotReject(signAgentCapAvatarAuthorization(input));
   });
 
   it("refuses expired challenges, edited messages and owner-key-bearing grants", async () => {
     const expired = fixture();
     expired.challenge.claim.expires_at = Date.now() - 1;
-    await assert.rejects(signMerrymanAuthorization(expired), /expired/);
+    await assert.rejects(signAgentCapAvatarAuthorization(expired), /expired/);
     const message = fixture();
     message.challenge.message += "\nAuthorize another wallet.";
-    await assert.rejects(signMerrymanAuthorization(message), /message does not match/);
+    await assert.rejects(signAgentCapAvatarAuthorization(message), /message does not match/);
     const key = fixture();
     key.grant = { ...grant, demoOwnerPrivateKey: `0x${"11".repeat(32)}` };
-    await assert.rejects(signMerrymanAuthorization(key), /owner private key/);
+    await assert.rejects(signAgentCapAvatarAuthorization(key), /owner private key/);
   });
 });
 
 /**
- * ── prepareMerryman, over a stub chain and the REAL partner activation ───────
+ * ── prepareAgentCapAvatar, over a stub chain and the REAL partner activation ───────
  *
  * The chain is canonical-wall-fixture's stub, which answers exactly the reads
  * the signer makes and refuses anything else. Activation is
@@ -136,13 +136,13 @@ function wallet() {
   return { owner, key, log };
 }
 
-/** prepareMerryman on the stub chain; statuses and signatures share one log, in order. */
+/** prepareAgentCapAvatar on the stub chain; statuses and signatures share one log, in order. */
 function attempt(options: Record<string, unknown> = {}) {
   const w = wallet();
   const reads: NonNullable<KernelState["reads"]> = [];
-  const grant = withStubChain(ACCOUNT, () => prepareMerryman({
+  const grant = withStubChain(ACCOUNT, () => prepareAgentCapAvatar({
     owner: w.owner, caps: CAPS, onStatus: (status: string) => { w.log.push(`status:${status}`); }, ...options,
-  } as PrepareMerrymanOptions), { currentNonce: 0, undeployed: true, reads });
+  } as PrepareAgentCapAvatarOptions), { currentNonce: 0, undeployed: true, reads });
   return { ...w, reads, grant };
 }
 
@@ -164,7 +164,7 @@ after(() => {
 
 /** Challenge, owner authorization and activation, exactly as a partner backend forwards them. */
 async function activate(grant: StoredGrant, owner: LocalAccount) {
-  const home = mkdtempSync(join(tmpdir(), "merrymen-sdk-"));
+  const home = mkdtempSync(join(tmpdir(), "agentcap-sdk-"));
   const store = new FilePartnerStore(home, undefined, () => SECRET);
   stores.push({ store, home });
   const saved = new Map<string, StoredGrant>();
@@ -185,7 +185,7 @@ async function activate(grant: StoredGrant, owner: LocalAccount) {
   const challenge = await service.challenge(APP, connection, {
     owner: grant.owner, smart_account: grant.smartAccount, chain_id: grant.chainId, grant_hash: partnerGrantDigest(grant), settings: SETTINGS,
   });
-  const authorization = await signMerrymanAuthorization({
+  const authorization = await signAgentCapAvatarAuthorization({
     owner, grant, challenge, settings: SETTINGS,
     expectedAppId: APP.app_id, expectedAgentId: connection.id, expectedExternalUserId: "usr_123", expectedScopes: SCOPES,
   });
@@ -194,14 +194,14 @@ async function activate(grant: StoredGrant, owner: LocalAccount) {
 }
 const partnerCode = (code: string) => (error: unknown) => error instanceof PartnerError && error.code === code;
 
-describe("prepareMerryman", () => {
+describe("prepareAgentCapAvatar", () => {
   it("refuses a Trencher factory before any chain read or signature", async () => {
     await refusedUpFront({ trencherFactory: TRENCHER_FACTORY }, /does not grant Trencher permissions: remove trencherFactory/);
   });
 
   it("offers only owner, caps, chainId and onStatus in its option type", () => {
     const { owner } = wallet();
-    const options: PrepareMerrymanOptions[] = [
+    const options: PrepareAgentCapAvatarOptions[] = [
       { owner, caps: CAPS, chainId: 46630, onStatus: () => {} },
       // @ts-expect-error Partner enrollment grants no Trencher permission.
       { owner, caps: CAPS, trencherFactory: TRENCHER_FACTORY },
@@ -380,7 +380,7 @@ describe("prepareMerryman", () => {
     assert.ok(a.log.every((entry) => entry !== "status:"), "every status has text");
     // onStatus is optional.
     const quiet = wallet();
-    await withStubChain(ACCOUNT, () => prepareMerryman({ owner: quiet.owner, caps: CAPS }));
+    await withStubChain(ACCOUNT, () => prepareAgentCapAvatar({ owner: quiet.owner, caps: CAPS }));
     assert.deepEqual(quiet.log, ["sign:typed-data"]);
   });
 
@@ -431,14 +431,14 @@ describe("SDK version", () => {
   });
 
   it("is stamped into the built bundle as a fingerprint of its contents, and printed", () => {
-    const home = mkdtempSync(join(tmpdir(), "merrymen-sdk-build-"));
+    const home = mkdtempSync(join(tmpdir(), "agentcap-sdk-build-"));
     try {
       const out = join(home, "browser.mjs");
       const printed = buildTo(out);
       const version = new RegExp(`${PARTNER_API_VERSION}\\+[0-9a-f]{12}`).exec(printed)?.[0];
       assert.ok(version, `the build prints its version: ${printed}`);
       const code = readFileSync(out, "utf8");
-      assert.ok(code.startsWith(`/* merrymen-browser ${version} */\n`), "the file names its version on its first line");
+      assert.ok(code.startsWith(`/* agentcap-browser ${version} */\n`), "the file names its version on its first line");
       assert.ok(!code.includes("placeholder"));
       assert.equal(importLikeABrowser(out).SDK_VERSION, version, "and the module exports it");
       assert.match(buildTo(out), new RegExp(`${version.replace("+", "\\+")}\\b`), "the same sources build the same version");
@@ -450,7 +450,7 @@ describe("SDK version", () => {
 
 describe("built bundle", () => {
   it("loads in a page with no Node globals and exports the documented API", () => {
-    const home = mkdtempSync(join(tmpdir(), "merrymen-sdk-build-"));
+    const home = mkdtempSync(join(tmpdir(), "agentcap-sdk-build-"));
     try {
       const out = join(home, "browser.mjs");
       buildTo(out);
@@ -459,7 +459,7 @@ describe("built bundle", () => {
       assert.match(String(sdk.SDK_VERSION), new RegExp(`^${PARTNER_API_VERSION}\\+[0-9a-f]{12}$`));
       assert.deepEqual(sdk, {
         PARTNER_API_VERSION, SDK_VERSION: sdk.SDK_VERSION,
-        partnerGrantDigest: "function", prepareMerryman: "function", signMerrymanAuthorization: "function",
+        partnerGrantDigest: "function", prepareAgentCapAvatar: "function", signAgentCapAvatarAuthorization: "function",
       });
     } finally {
       rmSync(home, { recursive: true, force: true });
@@ -470,7 +470,7 @@ describe("built bundle", () => {
     // build.mjs bundles the browser.ts beside it, so a copy of it next to an
     // entry that reads a new setting stands in for a dashboard module that
     // starts to.
-    const home = mkdtempSync(join(tmpdir(), "merrymen-sdk-build-"));
+    const home = mkdtempSync(join(tmpdir(), "agentcap-sdk-build-"));
     try {
       mkdirSync(join(home, "sdk"));
       copyFileSync(BUILD, join(home, "sdk", "build.mjs"));
@@ -478,8 +478,8 @@ describe("built bundle", () => {
       writeFileSync(join(home, "tsconfig.json"), "{}");
       writeFileSync(join(home, "sdk", "browser.ts"), [
         `export const PARTNER_API_VERSION = "${PARTNER_API_VERSION}";`,
-        "declare const __MERRYMEN_SDK_BUILD__: string;",
-        "export const SDK_VERSION = __MERRYMEN_SDK_BUILD__;",
+        "declare const __AGENTCAP_SDK_BUILD__: string;",
+        "export const SDK_VERSION = __AGENTCAP_SDK_BUILD__;",
         "export const venue = process.env.NEXT_PUBLIC_SOMETHING_NEW;",
       ].join("\n"));
       const out = join(home, "browser.mjs");

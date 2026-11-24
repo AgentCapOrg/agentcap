@@ -2,7 +2,7 @@ import SwiftUI
 import PrivySDK
 import AuthenticationServices
 
-/// X is the primary way into Merrymen, matching the web sign-in order.
+/// X is the primary way into AgentCap, matching the web sign-in order.
 struct XSignInButton: View {
     @EnvironmentObject var store: AppStore
     var onSignedIn: () -> Void = {}
@@ -23,7 +23,7 @@ struct XSignInButton: View {
         Task {
             defer { busy = false }
             do {
-                let user = try await privy.oAuth.login(with: .twitter, appUrlScheme: "merrymen")
+                let user = try await privy.oAuth.login(with: .twitter, appUrlScheme: "agentcap")
                 try await store.establishSession(user, provider: "twitter"); onSignedIn()
             } catch let failure as NSError where failure.domain == ASWebAuthenticationSessionError.errorDomain && failure.code == ASWebAuthenticationSessionError.canceledLogin.rawValue {
                 // Closing the X sheet is a choice, not a failure.
@@ -36,7 +36,7 @@ struct SignInCard: View {
     @EnvironmentObject var store: AppStore
     var body: some View {
         Card(hero: true) {
-            Pill(text: "Merrymen")
+            Pill(text: "AgentCap")
             Text("Your agent. Your rules.").font(.custom(Brand.pixel, size: 30, relativeTo: .largeTitle)).fixedSize(horizontal: false, vertical: true)
             Text("Sign in to manage your agent, follow its decisions, and take part in the band.").foregroundStyle(.secondary)
             XSignInButton().padding(.top, 4)
@@ -59,7 +59,7 @@ struct SignInScreen: View {
             VStack(alignment: .leading, spacing: 10) {
                 Image("Brand").resizable().scaledToFit().frame(width: 64, height: 64).accessibilityHidden(true)
                 Text("Welcome to the band.").font(.largeTitle.bold())
-                Text("Use the same sign-in method as your Merrymen account.").foregroundStyle(.secondary)
+                Text("Use the same sign-in method as your AgentCap account.").foregroundStyle(.secondary)
             }.padding(.top, 12)
             XSignInButton { dismiss() }
             if store.privy != nil {

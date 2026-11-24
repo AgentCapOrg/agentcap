@@ -146,12 +146,12 @@ describe("docs/tg-groups.md Commands in groups, through the poll service", () =>
   };
 
   before(async () => {
-    for (const k of ["MERRYMEN_HOME", "MERRYMEN_SETTINGS_FILE", "MERRYMEN_HOSTED", "MERRYMEN_TG_GROUPS_LLM_KEY"]) saved[k] = process.env[k];
+    for (const k of ["AGENTCAP_HOME", "AGENTCAP_SETTINGS_FILE", "AGENTCAP_HOSTED", "AGENTCAP_TG_GROUPS_LLM_KEY"]) saved[k] = process.env[k];
     home = mkdtempSync(path.join(tmpdir(), "tg-commands-"));
-    process.env.MERRYMEN_HOME = home;
-    process.env.MERRYMEN_SETTINGS_FILE = path.join(home, "settings.json");
-    delete process.env.MERRYMEN_HOSTED;
-    delete process.env.MERRYMEN_TG_GROUPS_LLM_KEY;
+    process.env.AGENTCAP_HOME = home;
+    process.env.AGENTCAP_SETTINGS_FILE = path.join(home, "settings.json");
+    delete process.env.AGENTCAP_HOSTED;
+    delete process.env.AGENTCAP_TG_GROUPS_LLM_KEY;
     globalThis.fetch = tgFetch as never;
     clock = T0;
     store = new TgGroupsStore(path.join(home, "tg-groups.json"), emptyTgGroupsState(), { now: () => clock, debounceMs: 60_000 });

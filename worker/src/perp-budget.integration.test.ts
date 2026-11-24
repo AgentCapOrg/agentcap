@@ -29,10 +29,10 @@ import { after, describe, it } from "node:test";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const INDEX = readFileSync(path.join(HERE, "index.ts"), "utf8");
 
-const scratch = mkdtempSync(path.join(os.tmpdir(), "merrymen-perp-budget-"));
+const scratch = mkdtempSync(path.join(os.tmpdir(), "agentcap-perp-budget-"));
 const isolatedCwd = path.join(scratch, "cwd");
 mkdirSync(isolatedCwd);
-process.env.MERRYMEN_HOME = path.join(scratch, "home");
+process.env.AGENTCAP_HOME = path.join(scratch, "home");
 delete process.env.DATABASE_URL;
 const originalCwd = process.cwd();
 const store = await import("./store");

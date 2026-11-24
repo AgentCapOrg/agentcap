@@ -7,7 +7,7 @@
 import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, it } from "node:test";
-import type { MerrymenSettings } from "@merrymen/core";
+import type { AgentCapSettings } from "@agentcap/core";
 import { wrapSqlite, type Db } from "../../../worker/src/db";
 import { botIdOf, claimBot, ensureBotClaims, readBotClaims, settleBotClaims } from "../../../worker/src/telegram-claims";
 import {
@@ -35,7 +35,7 @@ const live = async (token: string) => botIdOf(token);
 const refused = async () => null;
 const claims = async (d: Db) => [...(await readBotClaims(d))].sort();
 /** The settings store, per tenant: what settle and undo read back after a write. */
-let stored = new Map<string, MerrymenSettings>();
+let stored = new Map<string, AgentCapSettings>();
 beforeEach(() => {
   stored = new Map();
 });
@@ -70,7 +70,7 @@ describe("decideBotClaim", () => {
 
   it("A TOKEN TELEGRAM REFUSES CLAIMS NOTHING, AND IS ANSWERED THE SAME WHETHER OR NOT THE BOT IS HELD", async () => {
     // A bot id is public. `<id>:anything` must neither take the bot from its
-    // owner nor tell a stranger that the bot belongs to a Merrymen agent.
+    // owner nor tell a stranger that the bot belongs to a AgentCap agent.
     const free = await db();
     const held = await db();
     await claimBot(held, "111", A, "111", 1);

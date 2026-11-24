@@ -4,13 +4,13 @@
  *
  * Nothing here executes anything. Each proposal tool validates the request
  * against the agent's current permission and settings, stores an exact,
- * hashed binding, and returns an approval_url: a Merrymen page where the owner,
+ * hashed binding, and returns an approval_url: a AgentCap page where the owner,
  * signed in with their own session, sees exactly what will happen and
  * approves or declines. The state machine and the approval rules live in
  * web/src/lib/services/proposals.ts.
  */
 import * as z from "zod";
-import { STOCK_TOKENS, RISK_PROFILES, sellableAssets, normalizeAgentName, AGENT_NAME_RE, isEnergyReserveToken } from "@merrymen/core";
+import { STOCK_TOKENS, RISK_PROFILES, sellableAssets, normalizeAgentName, AGENT_NAME_RE, isEnergyReserveToken } from "@agentcap/core";
 import { ENERGY_RESERVE_WHY } from "@/lib/energy-reserve";
 import { settingsReader, type SettingsView } from "@/lib/services/settings-view";
 import { quoteTrade, type TradeQuote } from "@/lib/services/trade-quote";
@@ -48,7 +48,7 @@ const NOTE = z.string().max(280).refine(noControls, NO_CONTROLS);
 const IDEMPOTENCY = z.string().regex(/^[A-Za-z0-9_-]{8,128}$/, "8-128 letters, digits, _ or -")
   .describe("A key you choose for this request. Resending the same key returns the same proposal instead of creating another.");
 
-/** The Merrymen page where the owner approves or declines one proposal. */
+/** The AgentCap page where the owner approves or declines one proposal. */
 export function approvalUrl(id: string): string {
   return `${mcpConfig().issuer}/connect/approve/${id}`;
 }
@@ -82,7 +82,7 @@ export function addressableSymbol(token: string, settings: SettingsView | null, 
   const t = token.toLowerCase();
   // FIRST, whatever the settings say: every answer below ends in "add it / re-sign",
   // and for the energy reserve no signature ever covers it. A trade proposal can
-  // neither buy nor sell it; that happens only in the Merrymen app chat.
+  // neither buy nor sell it; that happens only in the AgentCap app chat.
   if (isEnergyReserveToken(t)) return { why: `${ENERGY_RESERVE_WHY} A trade proposal cannot buy or sell it.` };
   const watch = watchSetFor(settings, chainId);
   const officialOff = o.officialCoinsEnabled === false;
@@ -98,7 +98,7 @@ export function addressableSymbol(token: string, settings: SettingsView | null, 
       // check_token_eligibility's wording (services/eligibility.ts, watched_by_agent).
       return { why: "It is a registry stock token, but not in the agent's basket, so the worker does not watch it and cannot trade it. The owner can add it to the basket in Settings." };
     }
-    return { why: "This token is not one of the agent's tokens: the worker only trades the tokens it watches (basket stock tokens, official coins and tokens the owner added in Settings). The owner can add it by address in Merrymen Settings first; the agent may still trade launchpad coins on its own." };
+    return { why: "This token is not one of the agent's tokens: the worker only trades the tokens it watches (basket stock tokens, official coins and tokens the owner added in Settings). The owner can add it by address in AgentCap Settings first; the agent may still trade launchpad coins on its own." };
   }
   const symbol = mine.symbol;
   if (!/^[A-Z0-9]{1,12}$/.test(symbol)) {
@@ -158,7 +158,7 @@ const QUOTE_OUT = z.object({
   route: z.object({ venue: z.string(), fee_tier_bps: z.number().nullable(), hops: z.array(z.string()) }).nullable(),
   routes_considered: z.object({ direct_v3: z.boolean(), via_weth: z.boolean(), v4: z.boolean(), hooked_v4_pools: z.boolean(), launchpad_curve: z.boolean() }),
   gas: z.object({ units_estimate: z.string().nullable(), swap_leg_units: z.string().nullable(), expected_usdg: z.number().nullable(), note: z.string() }),
-  merrymen_trade_fee: z.object({ bps: z.number(), usdg: z.number(), note: z.string() }),
+  agentcap_trade_fee: z.object({ bps: z.number(), usdg: z.number(), note: z.string() }),
   block_number: z.string().nullable(),
   quoted_at: z.string(),
   source: z.string(),
@@ -237,7 +237,7 @@ function proposalOut(row: ProposalRow, created: boolean, next: string) {
 const proposeTrade = defineTool({
   name: "propose_trade",
   title: "Propose a trade for approval",
-  description: "Prepare an exact buy or sell for the owner to approve in Merrymen. Nothing is traded until the owner opens approval_url, signs in and approves; the agent's own limits, policy and on-chain permission still apply after that. Approval re-quotes a buy and refuses if the price moved past the quoted minimum or the agent's practice/live mode changed; after approval the agent re-prices at execution with its own slippage limit, so the fill can differ from the quote. Proposals expire after 15 minutes.",
+  description: "Prepare an exact buy or sell for the owner to approve in AgentCap. Nothing is traded until the owner opens approval_url, signs in and approves; the agent's own limits, policy and on-chain permission still apply after that. Approval re-quotes a buy and refuses if the price moved past the quoted minimum or the agent's practice/live mode changed; after approval the agent re-prices at execution with its own slippage limit, so the fill can differ from the quote. Proposals expire after 15 minutes.",
   capability: "trade.propose",
   input: TRADE_IN.extend({
     idempotency_key: IDEMPOTENCY,
@@ -251,7 +251,7 @@ const proposeTrade = defineTool({
     const agent = await ctx.agent(args.agent);
     const now = ctx.now();
     if (!agent.account || !agent.orderAgentId) throw new McpError("conflict", "This agent has no signed trading permission yet, so it cannot trade.");
-    if (agent.expiresAt !== null && now >= agent.expiresAt) throw new McpError("conflict", "The agent's trading permission has expired. The owner must re-sign it in Merrymen before any trade.");
+    if (agent.expiresAt !== null && now >= agent.expiresAt) throw new McpError("conflict", "The agent's trading permission has expired. The owner must re-sign it in AgentCap before any trade.");
     const settings = await settingsReader().settingsFor(ctx.principal.tenant);
     const addressable = await orderSymbol(ctx.principal.tenant, args.token, settings, agent.chainId ?? 4663);
     if ("why" in addressable) throw new McpError("unsupported", addressable.why);
@@ -325,7 +325,7 @@ const proposeTrade = defineTool({
 const proposeSettings = defineTool({
   name: "propose_settings_change",
   title: "Propose setting changes for approval",
-  description: `Prepare changes to the agent's trading settings for the owner to approve in Merrymen, with a before/after comparison. Allowed keys: ${SETTING_SPECS.map((s) => s.key).join(", ")}. Switches that start spending real money, safety floors, custom tokens, Telegram controls and the limits sealed in the signed permission cannot be proposed here.`,
+  description: `Prepare changes to the agent's trading settings for the owner to approve in AgentCap, with a before/after comparison. Allowed keys: ${SETTING_SPECS.map((s) => s.key).join(", ")}. Switches that start spending real money, safety floors, custom tokens, Telegram controls and the limits sealed in the signed permission cannot be proposed here.`,
   capability: "drafts.write",
   input: z.object({
     agent: AGENT_ARG,
@@ -399,11 +399,11 @@ function profileSettings(level: keyof typeof RISK_PROFILES): { settings: Record<
 }
 
 function agentDraftTool(creationOnly: boolean) { return defineTool({
-  name: creationOnly ? "create_merryman" : "create_agent_draft",
-  title: creationOnly ? "Set up a new Merryman" : "Draft an agent setup",
+  name: creationOnly ? "create_agentcapavatar" : "create_agent_draft",
+  title: creationOnly ? "Set up a new AgentCapAvatar" : "Draft an agent setup",
   description: creationOnly
-    ? "Prepare a new Merryman for the owner to review and create through one Merrymen setup link. Accepts a name, strategy, basket, asset mode and risk level; defaults to a Trencher named My Merryman. Crypto-only mode with another strategy requires an explicit basket containing a coin the owner added in Settings; stock-only baskets cannot trade in that mode. This only creates a setup proposal: approval does not change any existing agent or settings. The owner continues to choose limits, choose practice or live, and sign the trading permission with their own wallet. No keys, funding, trades or live-trading consent are accepted here. An existing agent must be managed instead."
-    : "Draft a name, strategy, basket, asset mode and risk level for the owner's agent. The owner reviews it in Merrymen and approving saves it to their settings. If they already run an agent, the approval page shows a before/after comparison and the changes apply to that running agent immediately; if not, they still choose limits and sign the trading permission themselves, and a draft never creates trading authority. A risk level carries only settings that can be changed by conversation (stop loss, take profit, amount per buy, max per AI trade, slippage); the price-impact safety floor is left out and stays a dashboard setting. Basket symbols beyond the stock tokens are checked against the owner's added tokens here only when an agent is shared with this connection; otherwise they are checked when the owner approves.",
+    ? "Prepare a new AgentCapAvatar for the owner to review and create through one AgentCap setup link. Accepts a name, strategy, basket, asset mode and risk level; defaults to a Trencher named My AgentCapAvatar. Crypto-only mode with another strategy requires an explicit basket containing a coin the owner added in Settings; stock-only baskets cannot trade in that mode. This only creates a setup proposal: approval does not change any existing agent or settings. The owner continues to choose limits, choose practice or live, and sign the trading permission with their own wallet. No keys, funding, trades or live-trading consent are accepted here. An existing agent must be managed instead."
+    : "Draft a name, strategy, basket, asset mode and risk level for the owner's agent. The owner reviews it in AgentCap and approving saves it to their settings. If they already run an agent, the approval page shows a before/after comparison and the changes apply to that running agent immediately; if not, they still choose limits and sign the trading permission themselves, and a draft never creates trading authority. A risk level carries only settings that can be changed by conversation (stop loss, take profit, amount per buy, max per AI trade, slippage); the price-impact safety floor is left out and stays a dashboard setting. Basket symbols beyond the stock tokens are checked against the owner's added tokens here only when an agent is shared with this connection; otherwise they are checked when the owner approves.",
   capability: "drafts.write",
   input: z.object({
     name: z.string().max(24).refine(noControls, NO_CONTROLS).optional(),
@@ -430,7 +430,7 @@ function agentDraftTool(creationOnly: boolean) { return defineTool({
     // still undergo the existing owner-side approval validation.
     if (creationOnly && (args.strategy ?? "trencher") !== "trencher" && args.asset_mode === "crypto"
       && !args.basket?.some(symbol => !STOCK_TOKENS.some(token => token.symbol.toLowerCase() === symbol.toLowerCase()))) {
-      throw new McpError("invalid_input", "Crypto-only setup needs a basket containing at least one coin you added in Merrymen Settings. Choose Trencher for automatic coin discovery, or choose Stocks only or Stocks and crypto for a stock basket.");
+      throw new McpError("invalid_input", "Crypto-only setup needs a basket containing at least one coin you added in AgentCap Settings. Choose Trencher for automatic coin discovery, or choose Stocks only or Stocks and crypto for a stock basket.");
     }
     // A connection the owner shared no agent with may draft, but may not learn
     // the owner's settings — not their added tokens, not their current values.
@@ -438,10 +438,10 @@ function agentDraftTool(creationOnly: boolean) { return defineTool({
     // Only inspect agents this connection may already see. The owner's own
     // approval page checks unshared accounts without revealing them here.
     if (creationOnly && agents.some((a) => a.account !== null)) {
-      throw new McpError("conflict", "A Merryman is already shared with this connection. Manage that agent instead of creating another.");
+      throw new McpError("conflict", "A AgentCapAvatar is already shared with this connection. Manage that agent instead of creating another.");
     }
     const shared = agents.length > 0;
-    const settings: Record<string, unknown> = creationOnly ? { agentName: "My Merryman", strategy: "trencher" } : {};
+    const settings: Record<string, unknown> = creationOnly ? { agentName: "My AgentCapAvatar", strategy: "trencher" } : {};
     if (args.name !== undefined) {
       const name = normalizeAgentName(args.name);
       if (!AGENT_NAME_RE.test(name)) throw new McpError("invalid_input", "name: 1-24 characters, starting with a letter or number and containing at least one letter.");
@@ -486,13 +486,13 @@ function agentDraftTool(creationOnly: boolean) { return defineTool({
     // only the owner's approval page reads).
     const summary = {
       purpose: creationOnly ? "create" : "settings",
-      action: creationOnly ? "Create a new Merryman" : "Set up the agent",
+      action: creationOnly ? "Create a new AgentCapAvatar" : "Set up the agent",
       settings,
       risk_level: args.risk_level ?? null,
       left_out: leftOut,
       after_approval: creationOnly
-        ? "Approving records this setup for the owner to finish in Merrymen. It does not change settings or create an agent. The owner reviews the setup and limits, chooses practice or live, and signs with their own wallet."
-        : "Approving saves these settings. If the owner already runs an agent, they apply to it immediately; the approval page shows each one before and after. If not, the owner then chooses the agent's limits and signs its trading permission in Merrymen, and until then it cannot trade.",
+        ? "Approving records this setup for the owner to finish in AgentCap. It does not change settings or create an agent. The owner reviews the setup and limits, chooses practice or live, and signs with their own wallet."
+        : "Approving saves these settings. If the owner already runs an agent, they apply to it immediately; the approval page shows each one before and after. If not, the owner then chooses the agent's limits and signs its trading permission in AgentCap, and until then it cannot trade.",
       requested_by: ctx.principal.clientName ?? "an AI assistant",
     };
     const d = await ctx.mcp();
@@ -516,12 +516,12 @@ function agentDraftTool(creationOnly: boolean) { return defineTool({
 }); }
 
 const createDraft = agentDraftTool(false);
-const createMerryman = agentDraftTool(true);
+const createAgentCapAvatar = agentDraftTool(true);
 
 const draftPost = defineTool({
   name: "draft_post",
   title: "Draft a post for approval",
-  description: "Draft a line for the Merrymen group chat, posted under the owner's agent only after the owner approves it in Merrymen. Lines with addresses, links or secrets are refused.",
+  description: "Draft a line for the AgentCap group chat, posted under the owner's agent only after the owner approves it in AgentCap. Lines with addresses, links or secrets are refused.",
   capability: "social.write",
   input: z.object({ agent: AGENT_ARG, text: z.string().min(1).max(500).refine(noControls, NO_CONTROLS), idempotency_key: IDEMPOTENCY }).strict(),
   output: PROPOSAL_OUT,
@@ -562,7 +562,7 @@ const VIEW = z.object({
 });
 
 const EXPLAIN: Record<string, string> = {
-  awaiting_approval: "Waiting for the owner to approve it in Merrymen.",
+  awaiting_approval: "Waiting for the owner to approve it in AgentCap.",
   approved: "Approved; being handed to the agent.",
   submitted: "Queued for the agent; it has not picked it up yet.",
   executing: "The agent picked it up and is executing, is waiting for the chain, or has finished and its trade record has not reached the ledger yet. Not an outcome: poll again.",
@@ -594,11 +594,11 @@ async function viewOf(ctx: ToolContext, row: ProposalRow) {
     kind: r.kind,
     status: r.status,
     status_explained: creation && r.status === "applied"
-      ? "Setup approved only. The owner still needs to review limits and sign in Merrymen; no agent or trading permission was created by this approval."
+      ? "Setup approved only. The owner still needs to review limits and sign in AgentCap; no agent or trading permission was created by this approval."
       : creation && r.status === "approved"
         ? "The owner's setup review was recorded; the continuation is being prepared. No agent has been created."
       : r.status === "applied" && result?.partial === true
-      ? "Approved, but only some of the changes were applied: see result.not_applied for the ones Merrymen did not accept."
+      ? "Approved, but only some of the changes were applied: see result.not_applied for the ones AgentCap did not accept."
       : r.status === "cancelled" && result?.requester_withdrawn === true && typeof result.why === "string" ? `Cancelled because ${result.why}. Nothing was sent.` : EXPLAIN[r.status] ?? r.status,
     terminal: TERMINAL.has(r.status),
     approval_url: r.status === "awaiting_approval" ? approvalUrl(r.id) : null,
@@ -695,4 +695,4 @@ const cancel = defineTool({
   },
 });
 
-export const PROPOSAL_TOOLS = [quoteTradeTool, proposeTrade, proposeSettings, createDraft, createMerryman, draftPost, getProposal, listProposals, cancel];
+export const PROPOSAL_TOOLS = [quoteTradeTool, proposeTrade, proposeSettings, createDraft, createAgentCapAvatar, draftPost, getProposal, listProposals, cancel];

@@ -2,13 +2,13 @@
  * PARTNER KEYS — a second credential system, deliberately separate from `mmk_`.
  *
  * `mmk_` tokens (lib/core.mjs) identify a PERSON by wallet and re-check an
- * on-chain $MERRYMEN balance on every request. That is right for a holder perk
+ * on-chain $AGENTCAP balance on every request. That is right for a holder perk
  * and wrong for a business: Prism is not a token holder and must not be made
  * into one to read public data. Three concrete mismatches:
  *
  *   - it is an address. `chat()` and `bitquery()` 403 the moment a balance dips.
  *   - it cannot be revoked. Stateless HMAC + 7-day TTL means a leaked token is
- *     live for a week, and the only remedy — rotating MERRYMEN_GATEWAY_SECRET —
+ *     live for a week, and the only remedy — rotating AGENTCAP_GATEWAY_SECRET —
  *     invalidates every holder's token at the same time.
  *   - it has no scopes. A token is a binary "holder or not".
  *
@@ -36,7 +36,7 @@ import { appendFile, mkdir, open, readFile, rm, stat, utimes } from "node:fs/pro
 import path from "node:path";
 
 /** Where the Railway volume is mounted. Same variable lib/signups.mjs uses. */
-const DIR = () => process.env.MERRYMEN_DATA_DIR || "/data";
+const DIR = () => process.env.AGENTCAP_DATA_DIR || "/data";
 const FILE = () => path.join(DIR(), "partners.jsonl");
 
 /**
@@ -183,7 +183,7 @@ async function readFileRecords() {
  */
 export async function loadRegistry() {
   const byId = new Map();
-  for (const rec of parseEnvKeys(process.env.MERRYMEN_PARTNER_KEYS)) {
+  for (const rec of parseEnvKeys(process.env.AGENTCAP_PARTNER_KEYS)) {
     const n = normalize(rec);
     if (n) byId.set(n.keyId, n);
   }

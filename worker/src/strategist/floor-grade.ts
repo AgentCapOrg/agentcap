@@ -39,7 +39,7 @@
 
 /** What the grader may look at. Deliberately does NOT include any confidence. */
 export interface FloorInputs {
-  /** Merrymen's own classification, never the model's. */
+  /** AgentCap's own classification, never the model's. */
   instrumentClass: "equity-token" | "crypto-native" | "memecoin" | "stablecoin";
   /**
    * How far the price would fall if every prior buyer sold, bps — exact, from

@@ -39,7 +39,7 @@ import { MAX_MESSAGES, turnsToMessages } from "./chat-thread";
 /** Storage may be absent (SSR) or throw on access; both are handled. */
 type Store = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
-const PREFIX = "merrymen.chat.";
+const PREFIX = "agentcap.chat.";
 
 /** An order still being followed, and when to stop asking — on this browser's clock. */
 export interface KeptOrder {

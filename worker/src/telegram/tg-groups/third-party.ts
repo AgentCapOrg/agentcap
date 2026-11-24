@@ -12,7 +12,7 @@
  * her DM only, never a room).
  *
  * MOVED, NOT CHANGED. The clauses from tg-fomo-port.ts (INJECTION_SHAPED,
- * AT_THE_READER, LURE, SPELLED_DOMAIN, ABOUT_MERRYMEN, NON_LATIN) and from
+ * AT_THE_READER, LURE, SPELLED_DOMAIN, ABOUT_AGENTCAP, NON_LATIN) and from
  * theses.ts (OUT_LURE, SECOND_PERSON, OUT_ACCUSE, OUT_HANDOUT) are here
  * byte for byte as they were, and their old callers import them from here,
  * so the sample and the paraphrase behave exactly as before. The gate reads
@@ -71,8 +71,8 @@ export const LURE =
   /\b(?:air\s*-?\s*drops?|claim(?:ing|s|able)?|pre\s*-?\s*sales?|whitelist(?:s|ed)?|seed\s*phrase|private\s*key|connect\s+(?:your\s+)?wallet|free\s+tokens?|dm\s+me)\b|\bfollow\s+(?:the\s+|their\s+|its\s+|his\s+|her\s+)?\S+\s+on\s+(?:x|twitter|telegram|tg)\b|\b(?:contact|reach\s+out\s+to|ping|write\s+to|message|dm)\s+(?:the\s+|an?\s+)?(?:dev|devs|admins?|team|mods?|moderators?|support)\b|\b(?:verify|validate|sync|revoke|link)\s+(?:your\s+|their\s+|a\s+|the\s+)?wallets?\b|\bmigrate\s+(?:your\s+|their\s+|the\s+)?tokens?\b|\bmigration\s+(?:portal|site|page|link)\b|\bportal\b|\bsign\s+(?:the\s+|an?\s+)?(?:approval|transaction|message|permit)\b|\beligible\s+wallets?\b|\ballocations?\s+(?:for|to)\s+(?:eligible|holders|wallets)\b/i;
 /** A site's name spelled out ("ponsfi dot bet", "pons dot vip"): a link the model could rebuild, never a view. */
 export const SPELLED_DOMAIN = /[\p{L}\p{N}_-]\s+dot\s+\p{L}{2,}(?![\p{L}\p{N}])/iu;
-/** A row about Merrymen itself ("the merrymen bot picked it") is about the agent, not the coin. */
-export const ABOUT_MERRYMEN = /\bmerrym[ae]n\b/i;
+/** A row about AgentCap itself ("the agentcap bot picked it") is about the agent, not the coin. */
+export const ABOUT_AGENTCAP = /\bmerrym[ae]n\b/i;
 /**
  * A letter of another script than Latin (Chinese, Cyrillic, Greek, a
  * lookalike): every check here and in theses.ts is English, and a sentence
@@ -214,30 +214,30 @@ export const RUG_CONTEXT_ACCUSE = U(
 );
 
 /**
- * MERRYMEN AS A PLAY. The persona's brag about a rugged coin ("rugged cause
- * it wasn't merrymen 😤") is a joke about where the coin did not come from,
- * never an invitation: Merrymen (or "one of ours") within forty characters of
- * a buy, a hold, a switch, a promise or a pump ("rugged, buy merrymen
- * instead", "merrymen is the play", "merrymen coins never rug", "stick to
- * merrymen coins"; and "swap to", "get", "pick", "choose", "try", "need",
+ * AGENTCAP AS A PLAY. The persona's brag about a rugged coin ("rugged cause
+ * it wasn't agentcap 😤") is a joke about where the coin did not come from,
+ * never an invitation: AgentCap (or "one of ours") within forty characters of
+ * a buy, a hold, a switch, a promise or a pump ("rugged, buy agentcap
+ * instead", "agentcap is the play", "agentcap coins never rug", "stick to
+ * agentcap coins"; and "swap to", "get", "pick", "choose", "try", "need",
  * "park it in", "put it in", "go with": review, 2026-10-09) is advice, and
  * never said (WP3; HARD EXCLUSION: nothing about buying or holding
- * Merrymen's own coin). "Ours" and "our coin" are Merrymen too, and its
+ * AgentCap's own coin). "Ours" and "our coin" are AgentCap too, and its
  * holders, tokens that unlock, joining, a wallet, a payment, a vip room or
- * "only go up" are a play (review r2: "merrymen tokens unlock the vip room",
- * "ours only go up", "merrymen holders are fine tho").
+ * "only go up" are a play (review r2: "agentcap tokens unlock the vip room",
+ * "ours only go up", "agentcap holders are fine tho").
  */
 const MERRY = String.raw`(?:merry\s?m[ae]n|one\s+of\s+ours|ours|our\s+(?:own\s+)?(?:coins?|tokens?))`;
 const SHILL = String.raw`(?:buy|buys|buying|bought|ape|aped|aping|grab|grabbed|get|gets|getting|swap|swaps|swapped|swapping|pick|choose|try|need|park|put|go\s+with|load|loaded|loading|stick|switch|rotate|hold|holding|hodl|bag|bags|invest|investing|play|move|only|moon|mooning|pump|pumping|send|sending|next|safe|safer|never\s+rugs?|can'?t\s+rug|won'?t\s+rug|don'?t\s+rug|doesn'?t\s+rug|never\s+dumps?|can'?t\s+dump|won'?t\s+dump|guarantee\w*|instead|holders?|unlock\w*|join|go(?:es)?\s+up|up\s+only|wallets?|pay(?:s|ing|ment|ments)?|vip)`;
 export const MERRY_SHILL = U(new RegExp(String.raw`\b${MERRY}\b[^.!?\n]{0,40}\b${SHILL}\b|\b${SHILL}\b[^.!?\n]{0,40}\b${MERRY}\b`, "i"));
 
-/** A Merrymen brag already said: what makes the next one wait (no brag back to back). */
+/** A AgentCap brag already said: what makes the next one wait (no brag back to back). */
 export const MERRY_BRAG = U(/\bmerry\s?m[ae]n\b|\bone of ours\b/i);
 /**
  * A BRAG IN ANY WORDS THE PROMPT INVITES ("wasn't ours", "should've been
  * ours", "not one of us", Sherwood), for the persona's own lines under a
  * permit and its own recent lines: a paraphrase is as spent as the word
- * "merrymen". A false match ("ours is better") only holds a brag back
+ * "agentcap". A false match ("ours is better") only holds a brag back
  * (review, 2026-10-09). A stranger's quote is still read by MERRY_BRAG.
  */
 export const SPENT_BRAG = U(/\bmerry\s?m[ae]n\b|\b(?:one\s+of\s+)?ours\b|\bone\s+of\s+us\b|\bsherwood\b/i);

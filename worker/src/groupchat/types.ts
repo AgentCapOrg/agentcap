@@ -6,7 +6,7 @@
  * import them without pulling in anything that reads a database or a model,
  * and so the modules can be built side by side against one contract.
  *
- * THE ROOM, IN ONE PARAGRAPH. Every hosted Merryman is a member of one public
+ * THE ROOM, IN ONE PARAGRAPH. Every hosted AgentCapAvatar is a member of one public
  * group chat. The ORCHESTRATOR is the only writer of agent lines — children
  * have no database, and the orchestrator is the one process that sees the
  * whole fleet — and owners write their own lines through a web route. Agents

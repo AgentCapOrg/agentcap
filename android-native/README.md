@@ -1,6 +1,6 @@
-# merrymen for Android — native Kotlin client
+# agentcap for Android — native Kotlin client
 
-Jetpack Compose, Material 3, Kotlin 2.2. A native client for the merrymen API.
+Jetpack Compose, Material 3, Kotlin 2.2. A native client for the agentcap API.
 
 The hosted Android app is here, not in the older Expo project at `mobile/`.
 Google Play packaging, signing and device checks are in [RELEASING.md](RELEASING.md).
@@ -19,7 +19,7 @@ export ANDROID_HOME="$HOME/Library/Android/sdk"
 # From android-native/; both locations must actually exist.
 ./gradlew --no-daemon --max-workers=2 assembleDebug testDebugUnitTest
 # point it somewhere else at build time:
-./gradlew --no-daemon --max-workers=2 assembleDebug -Pmerrymen.origin=http://10.0.2.2:3100
+./gradlew --no-daemon --max-workers=2 assembleDebug -Pagentcap.origin=http://10.0.2.2:3100
 ```
 
 `--no-daemon --max-workers=2` because this machine is shared: several Gradle
@@ -30,7 +30,7 @@ about a minute a build.
 user-agent derives its version from `BuildConfig.VERSION_NAME`.
 
 **Tests are JVM unit tests** under `app/src/test/`, run by
-`testDebugUnitTest`. They drive the real `MerrymenApi` against a
+`testDebugUnitTest`. They drive the real `AgentCapApi` against a
 `MockWebServer` (`apiFor(server)` in `net/TestKit.kt`) and decode production
 answers captured on 2026-09-24 and 25 (`src/test/resources/fixtures/probe-*.json`,
 read with `Fixtures.text(name)`). `DecodeFixturesTest` refuses a fixture that
@@ -41,9 +41,9 @@ with `MemoryStore` and `MemoryCookies` (also in `TestKit.kt`) standing in for
 DataStore and the WebView's `CookieManager`. The Android GitHub workflow runs
 the tests, release lint, debug assembly and release guards for Android changes.
 
-**Adding an endpoint** does not touch `MerrymenApi.kt`: write it as an
+**Adding an endpoint** does not touch `AgentCapApi.kt`: write it as an
 extension in your own `net/<Area>Wire.kt` over the shared plumbing,
-`suspend fun MerrymenApi.ceiling(): ApiResult<Ceiling> = getJson("/api/orders/ceiling")`,
+`suspend fun AgentCapApi.ceiling(): ApiResult<Ceiling> = getJson("/api/orders/ceiling")`,
 and it gets the same three-state result, refusal wording and decode-failure
 handling as everything else. A raw body or an extra header goes through
 `callAt(path) { … }`, never `Request.Builder().url(String)`, which throws on
@@ -69,8 +69,8 @@ stream deadlines are unchanged.
 the clear — and only the server's address: a page such as `/home`, a query, a
 fragment or a user name is refused. Anything else is refused with a sentence
 and not saved. An address 0.1.0 already stored with a page after it (a pasted
-`https://app.merrymen.dev/home`) is read as the server it names, because every
-merrymen route lives at the root of its origin; one it stored with no scheme
+`https://app.agentcap.xyz/home`) is read as the server it names, because every
+agentcap route lives at the root of its origin; one it stored with no scheme
 says so on every screen ("fix it there") and sends nothing. Moving to another
 host ends the wallet's turn: per-wallet state is forgotten, and the session
 cookie stays with the host that set it. One exception, because nothing
@@ -158,7 +158,7 @@ ceremonies. They belong where the key is.
 Nothing calls `/api/auth/challenge`, `/api/auth/verify`, `/api/holder`,
 `/api/selftest`, `/api/models`, `/api/scoreboard`, `/api/wall` or
 `/api/wall-tape`: sign-in and holder proof are the WebView's, and the rest
-have no screen here, so `MerrymenApi` no longer declares them.
+have no screen here, so `AgentCapApi` no longer declares them.
 
 ## Three rules carried across from the server
 
@@ -262,20 +262,20 @@ current release.
 ### The one thing that will waste your afternoon
 
 **`applicationIdSuffix = ".debug"` moves the PACKAGE but not the CLASS.** The
-debug build installs as `dev.merrymen.app.debug`; `namespace` stays
-`dev.merrymen.app`, so the activity is still `dev.merrymen.app.MainActivity`.
+debug build installs as `dev.agentcap.app.debug`; `namespace` stays
+`dev.agentcap.app`, so the activity is still `dev.agentcap.app.MainActivity`.
 Only one component string resolves:
 
 ```bash
-adb shell am start -n 'dev.merrymen.app.debug/dev.merrymen.app.MainActivity'
+adb shell am start -n 'dev.agentcap.app.debug/dev.agentcap.app.MainActivity'
 ```
 
 Both of the obvious things to type fail, and fail identically:
 
-- `dev.merrymen.app/.MainActivity` — that package is not installed.
-- `dev.merrymen.app.debug/.MainActivity` — `ComponentName.unflattenFromString`
+- `dev.agentcap.app/.MainActivity` — that package is not installed.
+- `dev.agentcap.app.debug/.MainActivity` — `ComponentName.unflattenFromString`
   expands a leading dot against the **package**, giving
-  `dev.merrymen.app.debug.MainActivity`, which does not exist.
+  `dev.agentcap.app.debug.MainActivity`, which does not exist.
 
 Both answer `START_CLASS_NOT_FOUND`, which is **-92**
 (`FIRST_START_FATAL_ERROR_CODE = -100`, `+ 8`). That code comes from a
@@ -297,14 +297,14 @@ The `shadow`/`shadow35` AVDs belong to a different project. Make your own:
 export ANDROID_HOME="$LOCALAPPDATA/Android/Sdk"
 export JAVA_HOME="/c/Program Files/Android/Android Studio/jbr"
 echo no | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager.bat" create avd \
-  -n merrymen35 -k "system-images;android-35;google_apis;x86_64" -d pixel_6 --force
+  -n agentcap35 -k "system-images;android-35;google_apis;x86_64" -d pixel_6 --force
 ```
 
 `avdmanager` writes `avd.id = <build>` and `disk.dataPartition.path = <temp>`
 into config.ini. Those literal-looking placeholders are **normal** — the
 emulator resolves them at launch (check `hardware-qemu.ini` after a boot if you
 doubt it). What it also writes is the pixel_6 profile's RAM, which is too low
-for API 35, so raise these in `~/.android/avd/merrymen35.avd/config.ini`:
+for API 35, so raise these in `~/.android/avd/agentcap35.avd/config.ini`:
 
 ```
 hw.ramSize=4096M
@@ -324,12 +324,12 @@ behavior changes.
 ```bash
 export ANDROID_HOME="$LOCALAPPDATA/Android/Sdk"
 ADB="$ANDROID_HOME/platform-tools/adb.exe"
-"$ANDROID_HOME/emulator/emulator.exe" -avd merrymen35 \
+"$ANDROID_HOME/emulator/emulator.exe" -avd agentcap35 \
   -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect &
 "$ADB" wait-for-device
 "$ADB" shell 'while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 2; done'
 "$ADB" install -r -t app/build/outputs/apk/debug/app-debug.apk
-MSYS2_ARG_CONV_EXCL='*' "$ADB" shell am start -n 'dev.merrymen.app.debug/dev.merrymen.app.MainActivity'
+MSYS2_ARG_CONV_EXCL='*' "$ADB" shell am start -n 'dev.agentcap.app.debug/dev.agentcap.app.MainActivity'
 ```
 
 One AVD and one `.debug` package serve every branch, so install one build at a
@@ -347,8 +347,8 @@ can prove a call happened, or did not:
 
 ```bash
 "$ADB" logcat -c && "$ADB" logcat -s OkHttp
-# --> GET https://app.merrymen.dev/api/version
-# <-- 200 https://app.merrymen.dev/api/version (212ms, 20-byte body)
+# --> GET https://app.agentcap.xyz/api/version
+# <-- 200 https://app.agentcap.xyz/api/version (212ms, 20-byte body)
 ```
 
 Driving it blind by pixel coordinates drifts. Read the real ones:

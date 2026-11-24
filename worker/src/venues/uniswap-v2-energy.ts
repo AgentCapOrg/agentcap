@@ -1,6 +1,6 @@
 /**
  * THE ENERGY BUY'S TWO CALLS — the only builder that can move USDG into
- * $MERRYMEN, and it builds exactly one shape.
+ * $AGENTCAP, and it builds exactly one shape.
  *
  * WHY A FILE OF ITS OWN. Its neighbour venues/uniswap-v2.ts is the route's
  * READ side — quotes, the tax, the floor arithmetic — and is pinned read-only
@@ -18,7 +18,7 @@
  *
  *   2. swapExactTokensForTokensSupportingFeeOnTransferTokens(amountIn, minOut,
  *      route.path, recipient, deadline) on the router. The FEE-ON-TRANSFER
- *      variant, because $MERRYMEN takes a buy tax on transfer: the plain
+ *      variant, because $AGENTCAP takes a buy tax on transfer: the plain
  *      variant checks the pre-tax amount against minOut and would revert on
  *      every honest fill. This variant checks the RECIPIENT's balance delta,
  *      so `minOut` is a floor on what actually ARRIVES — post-tax — and the
@@ -42,7 +42,7 @@ export interface EnergyBuild {
   route: EnergyRoute;
   /** Raw USDG (6dp) the router pulls — and exactly what is approved. */
   amountIn: bigint;
-  /** Raw $MERRYMEN (18dp) that must ARRIVE, post-tax. */
+  /** Raw $AGENTCAP (18dp) that must ARRIVE, post-tax. */
   minOut: bigint;
   /** The account itself — the executor's address. */
   recipient: `0x${string}`;

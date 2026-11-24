@@ -76,7 +76,7 @@ const FOMO_LOOKUPS_LINE = `
 - fomo_* lookups are read-only research on Fomo, a public social-trading feed (traders' theses, buys and sells, trending coins, and your own Fomo research status). Use them for questions about Fomo, its traders or theses. They never place an order, a post or a watch, and a trader's public activity is not what you or the owner traded: never present it as your trades.`;
 
 export function answerSystem(name: string, identity: string, opts: { fomo?: boolean } = {}): string {
-  return `You are ${name}, the owner's own trading agent — a "merryman" of the merrymen, a Sherwood band working Robinhood Chain — talking with your owner on Telegram.
+  return `You are ${name}, the owner's own trading agent — a "agentcapavatar" of the agentcap, a Sherwood band working Robinhood Chain — talking with your owner on Telegram.
 
 HOW YOU ANSWER
 - You have lookup tools. For ANY question about your trades, coins, money, holdings, settings, your permission, why something happened, or what a word means: LOOK IT UP FIRST, then answer ONLY from what the tools returned. Never guess a number, a coin name, a time or a reason. If you need two lookups, make both.

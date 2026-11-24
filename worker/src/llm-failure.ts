@@ -89,16 +89,16 @@ const PROVIDER_LINE = /^(\w[\w-]*)\s+(\d{3})(?:\s*[—:]\s*(.*))?$/s;
 const BILLING_HOLD = /organization_delinquent|overdue payment|insufficient_quota|credit balance is too low|insufficient[_ ]credits|requires more credits/i;
 
 /**
- * THE HOLDER GATEWAY'S UPSTREAM IS THE HOUSE'S. The "merrymen" provider is our
+ * THE HOLDER GATEWAY'S UPSTREAM IS THE HOUSE'S. The "agentcap" provider is our
  * own gateway (gateway/lib/core.mjs chat), which forces the model and relays
  * the upstream's status and body as they came. So on 2026-10-09 the house
  * Groq account's organization_delinquent reached every holder as
- * "merrymen 400 — organization_delinquent", and they were told to settle a
- * bill with Merrymen — for a perk that has no bill. A held account or a missing
+ * "agentcap 400 — organization_delinquent", and they were told to settle a
+ * bill with AgentCap — for a perk that has no bill. A held account or a missing
  * model there is ours, whoever's holder token asked; a refused token is not
  * (the gateway's own 401 is an expired claim), so that one keeps its words.
  */
-export const HOUSE_GATEWAY = "merrymen";
+export const HOUSE_GATEWAY = "agentcap";
 
 /**
  * Did this error come back from a model provider?
@@ -147,7 +147,7 @@ export function describeLlmFailure(message: string): LlmFailure {
       // business, not a holder's (terminal/chat-thread.ts llmLine).
       return {
         kind: "billing",
-        text: "Merrymen AI's own provider has paused the account it runs on, so I can't answer in my own words right now. That's ours to fix, not yours — your holder token is fine.",
+        text: "AgentCap AI's own provider has paused the account it runs on, so I can't answer in my own words right now. That's ours to fix, not yours — your holder token is fine.",
       };
     }
     return {
@@ -178,7 +178,7 @@ export function describeLlmFailure(message: string): LlmFailure {
     if (provider === HOUSE_GATEWAY) {
       return {
         kind: "model-missing",
-        text: "Merrymen AI says the model it runs me on isn't available right now. That's ours to fix, not yours — your holder token is fine, and no model in Settings changes it.",
+        text: "AgentCap AI says the model it runs me on isn't available right now. That's ours to fix, not yours — your holder token is fine, and no model in Settings changes it.",
       };
     }
     return {

@@ -1,7 +1,7 @@
 /**
  * Is this install actually able to make a real trade?
  *
- * `merrymen doctor` answers "is the software installed and configured" — node,
+ * `agentcap doctor` answers "is the software installed and configured" — node,
  * npm, PATH, keys present, RPCs reachable, the grant not expired. It is good at
  * that and says nothing about the thing an owner is about to bet money on:
  * whether the account can trade at all.
@@ -174,7 +174,7 @@ export function preflight(input: PreflightInput): Check[] {
       level: "blocker",
       title: `grant is on chain ${g.chainId} — it cannot trade`,
       detail:
-        "Testnet cannot trade. Every token and router address merrymen knows is a MAINNET " +
+        "Testnet cannot trade. Every token and router address agentcap knows is a MAINNET " +
         `deployment, so a funded testnet balance reads as 0 and swaps only simulate. Re-sign at ` +
         `/grant and pick mainnet ${TRADEABLE_CHAIN_ID} (it asks you to confirm, deliberately).`,
     });
@@ -215,7 +215,7 @@ export function preflight(input: PreflightInput): Check[] {
       title: `the wall depends on contracts with no code on chain ${g.chainId}`,
       detail:
         `${input.missingPolicyContracts.join(", ")} — every UserOp this grant signs is validated ` +
-        "against them, so nothing can land until this is resolved. This is a merrymen bug, not " +
+        "against them, so nothing can land until this is resolved. This is a agentcap bug, not " +
         "something you configured: report it rather than working around it.",
     });
   } else {
@@ -304,7 +304,7 @@ export function preflight(input: PreflightInput): Check[] {
   ]);
   const uncovered = basket.filter((sym) => {
     const address = known.get(sym);
-    // $MERRYMEN is energy, never a basket leg: no signature covers it (every
+    // $AGENTCAP is energy, never a basket leg: no signature covers it (every
     // signer drops it from the sealed extras) and the worker never watches it,
     // so "re-sign to cover it" would be a blocker nothing can clear.
     if (address && isEnergyReserveToken(address)) return false;

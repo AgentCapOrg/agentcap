@@ -11,7 +11,7 @@ import { gloamFundingEnabled, gloamFundingLink } from "@/lib/gloam-funding";
  * no session, grant or wallet, signs nothing and posts nothing: the one thing
  * it does is offer copying and opening Gloam as separate actions. A failed
  * clipboard write must not send someone away to paste a stale destination.
- * `noreferrer` keeps the referring Merrymen page out of the navigation.
+ * `noreferrer` keeps the referring AgentCap page out of the navigation.
  *
  * Where the link would not reach the agent (any chain but Robinhood Chain
  * mainnet) it renders nothing. See lib/gloam-funding.ts.

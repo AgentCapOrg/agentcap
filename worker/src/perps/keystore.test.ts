@@ -6,7 +6,7 @@ import { after, test } from "node:test";
 import { hostedPerpKeyFile, loadPerpPrivateKey, perpKeyFileFor, perpKeySecretForms, perpKeysDir, PerpKeystoreError, writePerpKeyFile, type PerpKeyPair } from "./keystore";
 import { redactSecrets } from "../telegram/agent";
 
-const ROOT = mkdtempSync(path.join(os.tmpdir(), "merrymen-perp-keystore-"));
+const ROOT = mkdtempSync(path.join(os.tmpdir(), "agentcap-perp-keystore-"));
 after(() => rmSync(ROOT, { recursive: true, force: true }));
 let n = 0;
 const home = () => {

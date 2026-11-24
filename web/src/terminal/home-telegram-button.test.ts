@@ -24,7 +24,7 @@ let respond: (call: Call) => Promise<Response>;
 
 const intent = (status = "waiting_telegram") => ({
   id: ID, status, expiresAt: Date.now() + 60_000,
-  botUsername: status === "confirm" || status === "connected" ? "merrymen_testbot" : null,
+  botUsername: status === "confirm" || status === "connected" ? "agentcap_testbot" : null,
   botId: status === "confirm" || status === "connected" ? "1234567" : null,
 });
 const drain = () => act(async () => { for (let i = 0; i < 30; i++) await Promise.resolve(); });
@@ -34,7 +34,7 @@ const primary = () => { const all = primaries(); assert.equal(all.length, 1, `ex
 const path = (call: Call) => new URL(call.url, "https://app.example.test").pathname;
 
 const tgStatus = (over: Record<string, unknown> = {}) => ({
-  enabled: true, hasToken: true, connected: true, botUsername: "merrymen_testbot", ownerId: null, allowlist: [],
+  enabled: true, hasToken: true, connected: true, botUsername: "agentcap_testbot", ownerId: null, allowlist: [],
   linkCode: null, linkPending: false, botElsewhere: false, listening: null, tradingHeld: null, ...over,
 });
 
@@ -56,7 +56,7 @@ describe("TelegramCreateBot compact: the create steps as one button", () => {
     respond = async call => {
       if (call.init?.method === "POST") {
         const action = (JSON.parse(String(call.init.body)) as { action: string }).action;
-        if (action === "begin") return json({ intent: server, telegramUrl: "https://t.me/MerrymenManagerBot?start=server_nonce" });
+        if (action === "begin") return json({ intent: server, telegramUrl: "https://t.me/AgentCapManagerBot?start=server_nonce" });
         if (action === "confirm") { server = intent("connected"); return json({ intent: server }); }
       }
       return json({ available: true, intent: server });
@@ -71,16 +71,16 @@ describe("TelegramCreateBot compact: the create steps as one button", () => {
     await drain();
     const open = primary() as HTMLAnchorElement;
     assert.equal(open.textContent, "Open Telegram");
-    assert.equal(open.href, "https://t.me/MerrymenManagerBot?start=server_nonce");
+    assert.equal(open.href, "https://t.me/AgentCapManagerBot?start=server_nonce");
     assert.ok([...ui.container.querySelectorAll("button")].some(b => b.textContent === "Cancel"), "cancel is there, quietly");
 
     // Telegram made the bot: the same button now connects it, by name.
     server = intent("confirm");
     await advance(3000);
-    assert.equal(primary().textContent, "Connect @merrymen_testbot");
-    await ui.click("Connect @merrymen_testbot");
+    assert.equal(primary().textContent, "Connect @agentcap_testbot");
+    await ui.click("Connect @agentcap_testbot");
     await drain();
-    assert.deepEqual(connected, ["merrymen_testbot"], "the row is told to re-read once the bot is saved");
+    assert.deepEqual(connected, ["agentcap_testbot"], "the row is told to re-read once the bot is saved");
   });
 
   it("when creation can't start here, the button goes to the manual path in Settings", async () => {
@@ -141,12 +141,12 @@ describe("AgentStrip: the Telegram row carries the next step", () => {
     await advance(4000);
     const open = primary() as HTMLAnchorElement;
     assert.equal(open.textContent, "Open my bot");
-    assert.equal(open.href, "https://t.me/merrymen_testbot?start=code_456");
+    assert.equal(open.href, "https://t.me/agentcap_testbot?start=code_456");
   });
 
   it("linked: opens the verified bot directly without carrying a link code or sending anything", async () => {
     respond = async call => {
-      if (path(call) === "/api/telegram") return json(tgStatus({ ownerId: 42, botUsername: "Merrymen_TestBot", linkCode: "old_code_123" }));
+      if (path(call) === "/api/telegram") return json(tgStatus({ ownerId: 42, botUsername: "AgentCap_TestBot", linkCode: "old_code_123" }));
       if (path(call) === "/api/settings") return settingsFor(OWNER);
       return json({});
     };
@@ -156,7 +156,7 @@ describe("AgentStrip: the Telegram row carries the next step", () => {
     assert.equal(open.tagName, "A");
     assert.ok(open.classList.contains("agent-strip-open-bot"));
     assert.equal(open.textContent, "Open my bot");
-    assert.equal(open.href, "https://t.me/Merrymen_TestBot");
+    assert.equal(open.href, "https://t.me/AgentCap_TestBot");
     assert.equal(new URL(open.href).search, "");
     assert.equal(new URL(open.href).hash, "");
     assert.equal(open.target, "_blank");
@@ -168,7 +168,7 @@ describe("AgentStrip: the Telegram row carries the next step", () => {
     assert.equal(calls.filter(c => path(c) === "/api/telegram").length, reads, "nothing to wait for, so no polling");
   });
 
-  for (const botUsername of [null, "", "not_a_bot_name", "@merrymen_testbot", "https://t.me/otherbot", "otherbot?start=payload", "otherbot/path", "a".repeat(30) + "bot"]) {
+  for (const botUsername of [null, "", "not_a_bot_name", "@agentcap_testbot", "https://t.me/otherbot", "otherbot?start=payload", "otherbot/path", "a".repeat(30) + "bot"]) {
     it(`linked with invalid username ${JSON.stringify(botUsername)}: keeps Manage without an external bot link`, async () => {
       respond = async call => {
         if (path(call) === "/api/telegram") return json(tgStatus({ ownerId: 42, botUsername }));
@@ -275,7 +275,7 @@ describe("AgentStrip under a recovery hold: setting up a bot is not trading", ()
         await ui.render(React.createElement(AgentStrip, { hasAgent: true, recovery: held, agentDown }));
         await drain();
         const text = ui.container.textContent ?? "";
-        assert.match(text, /Saved\. @merrymen_testbot answers once your agent resumes\./);
+        assert.match(text, /Saved\. @agentcap_testbot answers once your agent resumes\./);
         assert.doesNotMatch(text, /check back|shortly|next pass|Starting your bot/i);
         assert.equal(primaries().length, 0);
         const reads = calls.filter(c => path(c) === "/api/telegram").length;
@@ -312,7 +312,7 @@ describe("AgentStrip: a saved bot whose agent isn't running", () => {
   for (const linkPending of [false, true]) {
     it(`stopped worker, no code (${linkPending ? "a stale row" : "no row"}): says it isn't running, promises no pass, and does not poll`, async () => {
       await mount("stopped", { linkPending });
-      assert.match(text(), /@merrymen_testbot answers once your agent is running; it isn't running right now\./);
+      assert.match(text(), /@agentcap_testbot answers once your agent is running; it isn't running right now\./);
       assert.doesNotMatch(text(), /check back|shortly|next pass|picked up/i);
       assert.ok(![...ui.container.querySelectorAll("button")].some(b => b.textContent === "Starting your bot…"), "no step that claims the bot is starting");
       assert.equal(primaries().length, 0);

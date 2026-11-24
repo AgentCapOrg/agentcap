@@ -27,24 +27,24 @@ import path from "node:path";
 import { after, before, describe, it } from "node:test";
 
 import { mintSession } from "@/lib/auth";
-import { getSettingsStore, resetSettingsStoreForTest } from "@merrymen/settings-store";
-import { PERPS_NUM_BOUNDS, SETTINGS_DEFAULTS, type MerrymenSettings, type PerpsNumKey } from "@merrymen/core";
+import { getSettingsStore, resetSettingsStoreForTest } from "@agentcap/settings-store";
+import { PERPS_NUM_BOUNDS, SETTINGS_DEFAULTS, type AgentCapSettings, type PerpsNumKey } from "@agentcap/core";
 import { SETTING_SPECS, validStoredSetting, type SettingSpec } from "../../../../../worker/src/telegram/setting-spec";
 import { mergeSettings } from "../../../../../worker/src/settings";
 
 const TENANT = "0xcccccccccccccccccccccccccccccccccccccccc";
-const KEYS = ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_SESSION_SECRET", "DATABASE_URL", "MERRYMEN_PERPS"] as const;
+const KEYS = ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_SESSION_SECRET", "DATABASE_URL", "AGENTCAP_PERPS"] as const;
 const original = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
 let dir: string;
 let PUT: (req: Request) => Promise<Response>;
 
 before(async () => {
-  dir = mkdtempSync(path.join(tmpdir(), "merrymen-settings-spec-"));
-  process.env.MERRYMEN_HOME = dir;
-  process.env.MERRYMEN_HOSTED = "1";
-  process.env.MERRYMEN_SESSION_SECRET = randomBytes(32).toString("hex");
+  dir = mkdtempSync(path.join(tmpdir(), "agentcap-settings-spec-"));
+  process.env.AGENTCAP_HOME = dir;
+  process.env.AGENTCAP_HOSTED = "1";
+  process.env.AGENTCAP_SESSION_SECRET = randomBytes(32).toString("hex");
   // The Perps wallet's settings are written only where Perps are offered (D1).
-  process.env.MERRYMEN_PERPS = "paper";
+  process.env.AGENTCAP_PERPS = "paper";
   delete process.env.DATABASE_URL;
   resetSettingsStoreForTest();
   // After the env: the route resolves its paths when it loads.
@@ -118,7 +118,7 @@ describe("every perps number against PUT /api/settings?wallet=perps, and a Perps
   const perps = (body: Record<string, unknown>) => put(body, "?wallet=perps");
   const stored = async () => ((await getSettingsStore("perps").get(TENANT)) ?? {}) as Record<string, unknown>;
   /** A Perps wallet's worker resolving a settings file (worker settings.ts mergeSettings). */
-  const resolve = (s: Record<string, unknown>) => mergeSettings(s as MerrymenSettings, { MERRYMEN_WALLET_PURPOSE: "perps", MERRYMEN_PERPS: "paper" });
+  const resolve = (s: Record<string, unknown>) => mergeSettings(s as AgentCapSettings, { AGENTCAP_WALLET_PURPOSE: "perps", AGENTCAP_PERPS: "paper" });
 
   for (const key of Object.keys(PERPS_NUM_BOUNDS) as PerpsNumKey[]) {
     const { min, max, decimals } = PERPS_NUM_BOUNDS[key];

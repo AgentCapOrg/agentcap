@@ -45,7 +45,7 @@ const SECOND_SEED = new Uint8Array(32).fill(8), SECOND = base58Encode(ed25519.ge
 const limits = { perTradeUsdg: "10000000", dailyUsdg: "50000000", maxOpsPerDay: 20, maxDrawdownBps: 2000, expiresAtMs: Date.now() + 3_600_000 };
 
 const saved: Record<string, string | undefined> = {};
-const env = { MERRYMEN_SOLANA: "1", MERRYMEN_SESSION_SECRET: "identity-guard-fixture-secret-0123456789", MERRYMEN_HOSTED: undefined, MERRYMEN_PUBLIC_ORIGIN: undefined, DATABASE_URL: undefined } as Record<string, string | undefined>;
+const env = { AGENTCAP_SOLANA: "1", AGENTCAP_SESSION_SECRET: "identity-guard-fixture-secret-0123456789", AGENTCAP_HOSTED: undefined, AGENTCAP_PUBLIC_ORIGIN: undefined, DATABASE_URL: undefined } as Record<string, string | undefined>;
 let home = "";
 /** Privy access token -> verified DID, and DID -> tenant in the identity store. */
 let tokens: Record<string, string> = {}, identities: Record<string, `0x${string}`> = {};
@@ -57,8 +57,8 @@ const routes: Record<string, Record<string, (req: Request) => Promise<Response>>
 
 before(() => {
   for (const [key, value] of Object.entries(env)) { saved[key] = process.env[key]; if (value === undefined) delete process.env[key]; else process.env[key] = value; }
-  home = mkdtempSync(join(tmpdir(), "merrymen-solana-guard-"));
-  saved.MERRYMEN_HOME = process.env.MERRYMEN_HOME; process.env.MERRYMEN_HOME = home;
+  home = mkdtempSync(join(tmpdir(), "agentcap-solana-guard-"));
+  saved.AGENTCAP_HOME = process.env.AGENTCAP_HOME; process.env.AGENTCAP_HOME = home;
   const load = createRequire(import.meta.url);
   const loader = Module as unknown as { _load: (id: string, parent: { filename?: string }, isMain: boolean) => unknown };
   const original = loader._load;

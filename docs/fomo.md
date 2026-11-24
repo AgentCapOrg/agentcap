@@ -1,6 +1,6 @@
 # Fomo research, discovery and selective following
 
-Merrymen can look up Fomo trader and coin information when an owner asks. It can watch a
+AgentCap can look up Fomo trader and coin information when an owner asks. It can watch a
 maintained cohort of traders, research coins those traders touch, including small ones
 the old discovery screen deleted, and turn that research into bounded entry nominations
 inside the owner's existing limits. It is not copy trading. A trader buying a coin is a
@@ -9,18 +9,18 @@ evaluate, not a fact.
 
 **Provider.** The data comes from **FOMO API (fomoapi.io)**, an independent, read-only
 data service for fomo.family social-trading activity. It states it is *not affiliated with,
-endorsed by, or in partnership with fomo.family*, and Merrymen claims no partnership with
-either. Fomo supplies information; Merrymen keeps its own execution system. The provider's
+endorsed by, or in partnership with fomo.family*, and AgentCap claims no partnership with
+either. Fomo supplies information; AgentCap keeps its own execution system. The provider's
 trading-account and payment products (`/v2/trading/*`, `/pay/create`) are refused by the
 client's GET-only path allowlist.
 
 **Status of this change** (labels defined at the end):
 
 **Hosted Fomo is opt-in.** Nothing here runs on a hosted deployment until
-`MERRYMEN_FOMO_ENABLED=1` is set on the orchestrator and the web (see Operations). Off,
+`AGENTCAP_FOMO_ENABLED=1` is set on the orchestrator and the web (see Operations). Off,
 there is no Fomo pool, DDL, IPC channel, child file, Telegram research lane, chat
 interception, Settings section, MCP tool or scout-budget charge. Self-hosted Fomo runs
-only with the install's own key and unless it sets `MERRYMEN_FOMO_ENABLED=0`. Without a
+only with the install's own key and unless it sets `AGENTCAP_FOMO_ENABLED=0`. Without a
 key it behaves as before Fomo: no runtime, no `fomo.sqlite`, no interception. Adding a
 key takes a worker restart.
 
@@ -53,7 +53,7 @@ next deploy of each service:
   - The regular Trencher candidate list is built by `regularEntryPools`. It is identical
     while no early or verify-only pool exists, which is always the case with Fomo off.
 - **Orchestrator:**
-  - children and hold processes receive `MERRYMEN_TENANT` (read only by Fomo code);
+  - children and hold processes receive `AGENTCAP_TENANT` (read only by Fomo code);
   - both Fomo key names are stripped from children;
   - the `fomo/*` modules are loaded at boot (imports only; nothing runs);
   - one boot line, printed at boot even under `FLEET_HALT`, says Fomo is off. An
@@ -85,7 +85,7 @@ next deploy of each service:
 | Early-opportunity discovery path | IMPLEMENTED, FIXTURE_TESTED |
 | Selective-following assessments into the Trencher review | IMPLEMENTED, FIXTURE_TESTED. PAPER_TESTED only at module level (no live paper agent was run). |
 | Publication drafts | IMPLEMENTED, FIXTURE_TESTED. Delivery to X is disabled pending policy review. |
-| X answers (`x-answer` surface) | IMPLEMENTED, FIXTURE_TESTED. Off by default (`MERRYMEN_XPOST_FOMO=1` inside `MERRYMEN_XPOST_RESEARCH=1`); not run against the live API. |
+| X answers (`x-answer` surface) | IMPLEMENTED, FIXTURE_TESTED. Off by default (`AGENTCAP_XPOST_FOMO=1` inside `AGENTCAP_XPOST_RESEARCH=1`); not run against the live API. |
 | Live canary (Stage E) and fleet expansion (Stage F) | NOT part of this change. Needs explicit owner approval. |
 
 ## The operating loop
@@ -112,7 +112,7 @@ disposes. Execution is the existing intent → policy → executor path.
 | Rendering and chat | none shared | `worker/src/fomo/render.ts` (answer-first text, model evidence block, runtime rules) and `chat.ts` (the one pipeline every chat surface calls) |
 | Key custody and processes | vendor keys orchestrator-only (`CHILD_SECRET_STRIP`) | Key held by the orchestrator, the web process and the self-hosted worker. Stripped from hosted children under both names. Hosted children ask the orchestrator over a new IPC channel (`fomo/broker.ts`), and the orchestrator stamps the tenant from which child asked. |
 | App chat | `web/src/app/api/chat/route.ts`, `web/src/lib/agent-chat.ts` | `web/src/lib/fomo-chat.ts` and `fomo-runtime.ts`. Factual questions are answered by code from tool results; analytical ones get a fenced evidence block and runtime rules. |
-| Telegram | `telegram/service.ts`, `answer.ts`, `chat-tools.ts`, `tg-groups/*` | DM: the planner runs first, and read tools are registered in the model loop. Groups: `TgFomoPort` (`worker/src/tg-fomo-port.ts`) returns coin-level aggregates, Fomo's public leaderboard and one named trader's public data, and deflects the owner's own research state and who Merrymen watches to DMs. |
+| Telegram | `telegram/service.ts`, `answer.ts`, `chat-tools.ts`, `tg-groups/*` | DM: the planner runs first, and read tools are registered in the model loop. Groups: `TgFomoPort` (`worker/src/tg-fomo-port.ts`) returns coin-level aggregates, Fomo's public leaderboard and one named trader's public data, and deflects the owner's own research state and who AgentCap watches to DMs. |
 | MCP | `web/src/mcp/tools/*` | `web/src/mcp/tools/fomo.ts` |
 | Fleet ingestion | orchestrator passes | `worker/src/orchestrator-fomo.ts`: one singleton-lease leader runs the alerts stream, cohort refresh, research queue, jobs, publication drafts and retention. Every replica writes `fomo.json` for its own children (`fomo/child-file.ts`). |
 | Discovery funnel | `trencher-brain.ts` `TRENCH_VOLUME_MIN = 100_000`, `trencher-discovery.ts` `DISCOVERY_SLICE = 20` | `worker/src/early-candidates.ts`: an early path ahead of both, with every execution guard kept. `worker/src/decision-funnel.ts` instruments every stage. |
@@ -128,9 +128,9 @@ disposes. Execution is the existing intent → policy → executor path.
 | `fomoDataAccess` | on | answer Fomo questions, read-only | Settings → Fomo research |
 | `fomoMonitoringEnabled` | off | let the cohort and watched coins route research to this agent (hosted only) | Settings → Fomo research |
 | `fomoFollowEnabled` | off | let research **nominate** coins into the existing memecoin review, sized inside the scout budget (hosted only) | Settings → Fomo research |
-| live follow | nobody | live execution of follow nominations | operator allowlist `MERRYMEN_FOMO_FOLLOW_LIVE`. Also requires `liveTradingEnabled`, `trencherLiveEnabled`, a signed grant and the vault. |
+| live follow | nobody | live execution of follow nominations | operator allowlist `AGENTCAP_FOMO_FOLLOW_LIVE`. Also requires `liveTradingEnabled`, `trencherLiveEnabled`, a signed grant and the vault. |
 | X posting | existing | publication of confirmed fills only, through the existing pipeline | Settings → Posting on X |
-| X answers | off | an active agent's answers to tags may use Fomo's token activity and quick theses, paraphrased and attributed (the `x-answer` surface) | operator switches `MERRYMEN_XPOST_RESEARCH=1` and `MERRYMEN_XPOST_FOMO=1`; the owner's `fomoDataAccess` still applies |
+| X answers | off | an active agent's answers to tags may use Fomo's token activity and quick theses, paraphrased and attributed (the `x-answer` surface) | operator switches `AGENTCAP_XPOST_RESEARCH=1` and `AGENTCAP_XPOST_FOMO=1`; the owner's `fomoDataAccess` still applies |
 
 Revoked data access is enforced in the service before any cache read or provider call, on
 every surface, even while monitoring is off, the watchlist is empty or trading is paused.
@@ -187,7 +187,7 @@ most 30 days. "Should we follow this?" is analysis, not permission.
   ask again ("Ask me again in a couple of minutes.", how long the empty copy is held); a
   room never is, since its allowance (a page is 1,250 of its 2,500 credits
   an hour) may refuse the retry and "used up" would follow the promise. Rows
-  Merrymen filtered off (another chain's) are "none" as before, and a trader's read never
+  AgentCap filtered off (another chain's) are "none" as before, and a trader's read never
   quotes the coin's count. Research on such a page ("research $AUTON on fomo") builds and
   stores no revision from it: the previous revision stands, labelled as stored, or the
   answer is "Fomo didn't return the theses on X just now, so no research was built from
@@ -212,7 +212,7 @@ most 30 days. "Should we follow this?" is analysis, not permission.
   never collapsed. "No matching records returned" is not "nobody traded".
 - **Answers:** the subject comes first, then the answer, then attribution ("Source: Fomo
   via FOMO API (independent; not affiliated with fomo.family)"), then material freshness
-  and coverage limits. Provider-reported, independently verified and Merrymen
+  and coverage limits. Provider-reported, independently verified and AgentCap
   interpretation are labelled differently. No Fomo permalink is ever invented.
 - **Chains and rows (planner, `fomo/intent.ts`):** a chain word right before a list noun
   ("robinhood coins", "hood tokens", "base memes", "only robinhood ones") asks for that
@@ -254,7 +254,7 @@ kept, so a rename does not break history. Duplicate leaderboard rows merge.
 - consistency across 24h/7d/30d/all
 - relevant-chain share
 - early discovery
-- holding period against Merrymen's latency
+- holding period against AgentCap's latency
 - exit behaviour
 - concentration
 - execution capacity
@@ -271,7 +271,7 @@ Every addition and removal records its reason. Versions persist with inclusion t
 **No padding.** When evidence is insufficient the cohort is smaller and carries a
 `shortfallReason`.
 
-**Narrative-only traders.** A trader whose holds are shorter than Merrymen can act on stays
+**Narrative-only traders.** A trader whose holds are shorter than AgentCap can act on stays
 useful for narrative discovery but is `followable:false`.
 
 **Position dependencies.** Traders an open position depends on are tracked separately: at
@@ -386,7 +386,7 @@ chat, background research and triggered reviews.
   thin, and never "all theses". Token-thesis requests explicitly ask for recent order
   and set the response limit alongside the requested page count (about 25 rows per
   page, bounded by the provider's 200-row limit); extra pages must not silently hit
-  the provider's separate default limit of 50. Copies collapse into evidence families. Merrymen's own
+  the provider's separate default limit of 50. Copies collapse into evidence families. AgentCap's own
   posts and echoes are excluded from independent confirmation. One well-supported
   objection outranks ten copies of one bullish post.
 - **Contents.** Source statements, observed actions, verified facts and inference are
@@ -452,7 +452,7 @@ those coins, and the next review of each coin carries its dossier and lens.
 **Who.** Three conditions must all hold. The child checks all three before it sends
 anything:
 
-- The agent's smart account is listed in `MERRYMEN_DECISION_RESEARCH_ACCOUNTS`
+- The agent's smart account is listed in `AGENTCAP_DECISION_RESEARCH_ACCOUNTS`
   (`decision-research.ts decisionResearchEnabledFor`). This is the same operator opt-in
   as the review's cost evidence, and it lists nobody by default.
 - The agent runs a fast Trencher on the live rail.
@@ -551,7 +551,7 @@ failed", not "not configured". So for an agent that logs the "not configured" li
   real-money exploration buys (quarantine), so it is the owner's call, not a research
   switch.
 - **What this change needs instead.** Fomo research for the Trencher's own candidates
-  needs `MERRYMEN_DECISION_RESEARCH_ACCOUNTS` to list the agent's smart account, plus
+  needs `AGENTCAP_DECISION_RESEARCH_ACCOUNTS` to list the agent's smart account, plus
   `fomoMonitoringEnabled` (or follow) on for the owner.
 - **The two are separate.** Turning on Fomo monitoring does not silence the `[trending]`
   line, and turning on `scoutEnabled` does not route Fomo research.
@@ -564,7 +564,7 @@ failed", not "not configured". So for an agent that logs the "not configured" li
 `HOLD_POSITION`, `REDUCE_CANDIDATE`, `EXIT_CANDIDATE`, `REJECT_SETUP`, `RESEARCH_ONLY`.
 
 **Judged at our own price and time.** Signal delay, research delay and price movement are
-measured against Merrymen's own quote. A trader's dollar size is never copied, and their
+measured against AgentCap's own quote. A trader's dollar size is never copied, and their
 entry is never assumed to still be available.
 
 **Hard constraints versus ordinary uncertainty.**
@@ -631,9 +631,9 @@ stop concurrent signals from overspending.
 
 ## Tailing a trader
 
-An owner can ask Merrymen to **tail** one Fomo trader for a few hours: to be told, in
+An owner can ask AgentCap to **tail** one Fomo trader for a few hours: to be told, in
 their own Telegram DM, about that trader's buys, sells and theses that Fomo's live feed
-records, with Merrymen's own read of each coin where research runs for that owner
+records, with AgentCap's own read of each coin where research runs for that owner
 (monitoring or follow on; with both off, the default, there is no read, and the card,
 the answer and each notice say so). It is not copy trading. The backend is
 `worker/src/fomo/store.ts`, `tools.ts`, `service.ts`, `ingest.ts`,
@@ -649,11 +649,11 @@ group line, `tg-groups/handler.ts` (below, "Asking for a tail").
   one (`store.ts extendTail`; `fomo_tail_trader` with a shorter span would cut a
   longer tail). Owner-only mutations: never offered to a model loop (the DM
   classifier's enum, `toolSpecs`, the chat loop's Fomo tools) or over MCP, and refused
-  by the service for any audience but the owner. Resolving the trader is free when Merrymen already knows
+  by the service for any audience but the owner. Resolving the trader is free when AgentCap already knows
   the handle, otherwise one 250-credit search, never the 2,500-credit profile route.
   Stopping makes no provider call. An install without the hosted live feed
   (self-hosted, `liveFeed` false) refuses with `tail-needs-live-feed`, and with the
-  switch off (`MERRYMEN_FOMO_TAILS=0`) the service refuses with `tails-disabled`; both
+  switch off (`AGENTCAP_FOMO_TAILS=0`) the service refuses with `tails-disabled`; both
   are status `unavailable`, store nothing, read nothing, and are said to the owner as
   they are (never "Tailing X until…", never as a failed read).
 - **Permissions.** Data access is all a tail needs to be stored and to notify: the
@@ -707,7 +707,7 @@ group line, `tg-groups/handler.ts` (below, "Asking for a tail").
   neither in the cohort nor one of her position dependencies), and an entry they led
   to never reports that trader as a position dependency (`fomo-child.ts
   reportDependencies`) or keeps them on the position: a tail's influence ends with the
-  tail (Stop, its end, `MERRYMEN_FOMO_TAILS=0`), and its trader never becomes a 14-day
+  tail (Stop, its end, `AGENTCAP_FOMO_TAILS=0`), and its trader never becomes a 14-day
   dependency fanned out to every monitoring owner. A nomination only a tail stood behind
   is withdrawn as soon as that tail stops, ends, turns tell-only or tails are switched
   off: the child checks the file's tails block each tick and again at the entry gate
@@ -717,9 +717,9 @@ group line, `tg-groups/handler.ts` (below, "Asking for a tail").
   review, `take()` and policy are untouched: one buyer is at most a probe (≤ 2.5 USDG),
   and a considered tail's buy counts as a buyer like a cohort trader's, so beside
   another buyer (a cohort trader, or a second considered tail) it is breadth for a
-  normal follow entry within the same ceiling. All of it only if Merrymen's own checks
+  normal follow entry within the same ceiling. All of it only if AgentCap's own checks
   and the Brain agree, inside the scout budget, on paper unless
-  `MERRYMEN_FOMO_FOLLOW_LIVE` allows live, and nothing at all with following off. The
+  `AGENTCAP_FOMO_FOLLOW_LIVE` allows live, and nothing at all with following off. The
   card's live line says exactly this (a probe on its own, a normal entry beside
   another buyer), never that every entry would be a small probe.
   A sell is a reason for an independent re-check, never an exit to copy.
@@ -727,7 +727,7 @@ group line, `tg-groups/handler.ts` (below, "Asking for a tail").
   (Telegram on, notifications on, a linked owner), link previews off, with Stop and +1h
   buttons (`ftl:stop:<userId>`, `ftl:ext:<userId>`). One per trader, coin and kind per 5
   minutes, and at most 4 per notifier pass (oldest first; the rest stay unclaimed and
-  go on the next pass, 15 seconds later); a buy waits up to 3 minutes for Merrymen's
+  go on the next pass, 15 seconds later); a buy waits up to 3 minutes for AgentCap's
   assessment of the coin, except where her coins are not researched at all (monitoring
   and follow off: `FomoChild.tailsResearched`), when it goes at once and "my read"
   says "none; with monitoring and following off I don't research their coins". A buy
@@ -735,7 +735,7 @@ group line, `tg-groups/handler.ts` (below, "Asking for a tail").
   "their words, unverified" (stream text when there is some, otherwise one
   `fomo_get_token_theses` read of that trader on that coin, 1,250 credits; without one,
   the reason in plain words: no reader, no chain on the alert, the tail's two reads
-  spent, or no time left), Merrymen's
+  spent, or no time left), AgentCap's
   read from its assessment, what following would do (tell only; one signal into the
   normal review, which a thesis notice words as "a thesis alone is never a signal; only
   their buys go into my normal review", since only buys are ever triggers; or, when it
@@ -761,7 +761,7 @@ group line, `tg-groups/handler.ts` (below, "Asking for a tail").
   trigger.
 - **Privacy.** A tail is the owner's private state: research status lists it for the
   owner, and a group is never told about one.
-- **Kill switch.** `MERRYMEN_FOMO_TAILS=0` (orchestrator and children, read by one
+- **Kill switch.** `AGENTCAP_FOMO_TAILS=0` (orchestrator and children, read by one
   function, `contract.ts fomoTailsOn`) stops tail routing, the tails block and the
   notices, and the service refuses new tails and extensions (`tails-disabled`). Stored
   tails stay stored and expire; the owner can still stop them, and research status says
@@ -807,7 +807,7 @@ DM or a group, is told "Only my owner can set up a tail." and nothing is called.
   (`fomo_get_research_status`) decides, never a provider call.
 - **Where a tail cannot work.** Telegram asks first (`fomoTailsState` in
   `worker/src/index.ts`: the switch and the hosted live feed). With
-  `MERRYMEN_FOMO_TAILS=0`, or self-hosted (no live feed), `/tail` answers the service's
+  `AGENTCAP_FOMO_TAILS=0`, or self-hosted (no live feed), `/tail` answers the service's
   own refusal straight away ("Tailing is switched off on this service right now…" /
   "Tailing needs Fomo's live feed…"): no search is spent, no card is shown, nothing is
   parked. Her words asking for a tail, in her DM or her group line, go on to research
@@ -893,16 +893,16 @@ DM or a group, is told "Only my owner can set up a tail." and nothing is called.
 - **X answers are the one exception, a narrow one.** An active agent's answers to people who tagged it on X can carry code-built,
   paraphrased and attributed facts ("fomo traders mostly argue it's still early", "on fomo,
   more traders have been buying in than heading out lately"), never a handle, a quote, a like
-  count, P&L or a wallet list, behind `MERRYMEN_XPOST_FOMO=1` (default off) on top of
-  `MERRYMEN_XPOST_RESEARCH=1`. That republishes provider-derived data, which the provider's
+  count, P&L or a wallet list, behind `AGENTCAP_XPOST_FOMO=1` (default off) on top of
+  `AGENTCAP_XPOST_RESEARCH=1`. That republishes provider-derived data, which the provider's
   terms reserve for an Enterprise plan. **Enterprise rights confirmed by the owner on
-  2026-10-12: Merrymen holds the Enterprise plan, and it covers paraphrased, attributed facts
-  in X answers (`MERRYMEN_XPOST_FOMO=1`).** Every other Fomo publication draft stays
+  2026-10-12: AgentCap holds the Enterprise plan, and it covers paraphrased, attributed facts
+  in X answers (`AGENTCAP_XPOST_FOMO=1`).** Every other Fomo publication draft stays
   policy-blocked, as above. The
   orchestrator asks its own service (`createDirectBroker`) on the `x-answer` surface: a public
   audience (never the owner's), never a child's surface (a child claiming it is refused), read
   the way a room reads (no forced refresh), token activity and quick theses only (no trader
-  lanes), under `MERRYMEN_FOMO_X_HOURLY_CREDITS` per X account per hour and at most a quarter
+  lanes), under `AGENTCAP_FOMO_X_HOURLY_CREDITS` per X account per hour and at most a quarter
   of the owner's daily cap per day across her X accounts (`X_DAILY_SHARE_OF_TENANT`, refused
   as `x-daily`), so strangers tagging her agent can never use up her own day. Fomo is
   advertised and asked only for an owner whose data access is on. The publication outbox
@@ -989,20 +989,20 @@ answers use one call on the existing house model.
 
 | Variable | Process | Meaning |
 |---|---|---|
-| `MERRYMEN_FOMO_API_KEY` (alias `FOMO_API_KEY`) | web, orchestrator; self-hosted worker or settings `fomoApiKey` | provider key, stripped from hosted children |
-| `MERRYMEN_FOMO_PLAN_CREDITS` | web and orchestrator, same value | monthly credits; sizes the shared budget. A self-hosted worker reads it too, so its budget matches the install's web |
-| `MERRYMEN_FOMO_GROUP_HOURLY_CREDITS` | web and orchestrator, same value; redeploy both | credits per Telegram group per clock hour. Default 2,500. `0` turns group research off (a room hears "Fomo research isn't available here right now."); a nonzero cap below 1,250 (one coin's thesis page, the dearest read a room needs: a room never reads the 2,500-credit profile route) can never answer a thesis ask, while trader and board asks still answer (250 per read), and the boot log says so. A cap below 2,500 or 3,750 only drops the optional wider thesis read; the room keeps page one. An owner cap whose own share (three quarters) falls below 2,500 (her deep trader read) is said at boot too |
-| `MERRYMEN_FOMO_TENANT_HOURLY_CREDITS` | web and orchestrator, same value; redeploy both | credits per owner per clock hour, the owner's groups included. Default 6,000 |
-| `MERRYMEN_FOMO_TENANT_DAILY_CREDITS` | web and orchestrator, same value; redeploy both | credits per owner per UTC day. Default 20,000. The three caps are whole numbers only (`budget.ts fomoBudgetFrom`, the one reader for orchestrator, web and a self-hosted worker); a bad value is logged by name, never echoed, and its default applies; each cap is held under the shared pool, and the boot line states the limits in force. Research-credit caps only, never a trading limit. Keep a group's cap at most three quarters of the owner's hourly one |
-| `MERRYMEN_FOMO_X_HOURLY_CREDITS` | orchestrator (the web reads it harmlessly) | credits per X account per clock hour on the `x-answer` surface, in place of a room's hour. Default 3,000 (about one coin answered with token activity and a quick thesis page an hour). The owner's own caps and the fleet's pools still apply on top. Answers from all of one owner's X accounts together also spend at most a quarter of her daily cap (5,000 of the default 20,000), so her own research is never rationed by strangers' tags. `0` = no Fomo in X answers at all: the orchestrator hands them no broker and the service refuses the `x-answer` surface (`x-answers-off`) before any cache read, so not even a copy a room or an owner paid for reaches X; a nonzero cap below 1,250 is said at boot. Used only with `MERRYMEN_XPOST_RESEARCH=1` and `MERRYMEN_XPOST_FOMO=1` (docs/x-posting.md "Research for answers") |
-| `MERRYMEN_TG_THESES_MODEL=1` | worker children | turns ON the group model's paraphrase of a coin's theses (off by default, Milla 2026-10-08); unset, rooms hear the code-written digest only |
-| `MERRYMEN_FOMO_ENABLED=1` | web and orchestrator, same value | **hosted Fomo is opt-in: off unless exactly `1`.** Off, the orchestrator opens no Fomo pool, runs no `fomo_*` DDL, writes no `fomo.json` and spawns children without IPC; a hosted child is Fomo-on only with both the channel and this value, and off it runs no Fomo code (no Telegram research lane or classifier entries, nothing charged to the scout budget). The web builds no runtime, its chat answers as before, Settings shows no Fomo section and MCP lists no Fomo tool. Self-hosted: on unless `0` (worker and web alike); a self-hosted install never owes the scout budget anything for Fomo |
-| `MERRYMEN_FOMO_FOLLOW_LIVE` | worker children | allowlist of agents whose follow nominations may execute live (default nobody) |
-| `MERRYMEN_DECISION_RESEARCH_ACCOUNTS` | orchestrator (children inherit it) | smart accounts whose live fast-Trencher review gets extra research (docs/decision-research.md); for Fomo, the accounts whose review candidates are researched (default nobody). Research inputs only: never a cap, a grant or an execution permission |
-| `MERRYMEN_TG_GROUPS_FOMO=0` | worker children | turns off the Telegram group research lane |
-| `MERRYMEN_TG_GROUPS_ROUTER=0` | worker children | turns off the group router (docs/tg-groups.md "What a line wants"): lines no rule knew go to the persona |
-| `MERRYMEN_FOMO_TAILS=0` | orchestrator and worker children | turns tails off: `fomo_tail_trader` refuses (`tails-disabled`), no tail routing, no tails block in child files, no tail notices. Stored tails stay stored, can be stopped, and expire on their own |
-| `MERRYMEN_TENANT` | set by the orchestrator in each child | not a secret; the child checks `fomo.json` belongs to it. IPC never trusts it: the orchestrator stamps the tenant itself. |
+| `AGENTCAP_FOMO_API_KEY` (alias `FOMO_API_KEY`) | web, orchestrator; self-hosted worker or settings `fomoApiKey` | provider key, stripped from hosted children |
+| `AGENTCAP_FOMO_PLAN_CREDITS` | web and orchestrator, same value | monthly credits; sizes the shared budget. A self-hosted worker reads it too, so its budget matches the install's web |
+| `AGENTCAP_FOMO_GROUP_HOURLY_CREDITS` | web and orchestrator, same value; redeploy both | credits per Telegram group per clock hour. Default 2,500. `0` turns group research off (a room hears "Fomo research isn't available here right now."); a nonzero cap below 1,250 (one coin's thesis page, the dearest read a room needs: a room never reads the 2,500-credit profile route) can never answer a thesis ask, while trader and board asks still answer (250 per read), and the boot log says so. A cap below 2,500 or 3,750 only drops the optional wider thesis read; the room keeps page one. An owner cap whose own share (three quarters) falls below 2,500 (her deep trader read) is said at boot too |
+| `AGENTCAP_FOMO_TENANT_HOURLY_CREDITS` | web and orchestrator, same value; redeploy both | credits per owner per clock hour, the owner's groups included. Default 6,000 |
+| `AGENTCAP_FOMO_TENANT_DAILY_CREDITS` | web and orchestrator, same value; redeploy both | credits per owner per UTC day. Default 20,000. The three caps are whole numbers only (`budget.ts fomoBudgetFrom`, the one reader for orchestrator, web and a self-hosted worker); a bad value is logged by name, never echoed, and its default applies; each cap is held under the shared pool, and the boot line states the limits in force. Research-credit caps only, never a trading limit. Keep a group's cap at most three quarters of the owner's hourly one |
+| `AGENTCAP_FOMO_X_HOURLY_CREDITS` | orchestrator (the web reads it harmlessly) | credits per X account per clock hour on the `x-answer` surface, in place of a room's hour. Default 3,000 (about one coin answered with token activity and a quick thesis page an hour). The owner's own caps and the fleet's pools still apply on top. Answers from all of one owner's X accounts together also spend at most a quarter of her daily cap (5,000 of the default 20,000), so her own research is never rationed by strangers' tags. `0` = no Fomo in X answers at all: the orchestrator hands them no broker and the service refuses the `x-answer` surface (`x-answers-off`) before any cache read, so not even a copy a room or an owner paid for reaches X; a nonzero cap below 1,250 is said at boot. Used only with `AGENTCAP_XPOST_RESEARCH=1` and `AGENTCAP_XPOST_FOMO=1` (docs/x-posting.md "Research for answers") |
+| `AGENTCAP_TG_THESES_MODEL=1` | worker children | turns ON the group model's paraphrase of a coin's theses (off by default, Milla 2026-10-08); unset, rooms hear the code-written digest only |
+| `AGENTCAP_FOMO_ENABLED=1` | web and orchestrator, same value | **hosted Fomo is opt-in: off unless exactly `1`.** Off, the orchestrator opens no Fomo pool, runs no `fomo_*` DDL, writes no `fomo.json` and spawns children without IPC; a hosted child is Fomo-on only with both the channel and this value, and off it runs no Fomo code (no Telegram research lane or classifier entries, nothing charged to the scout budget). The web builds no runtime, its chat answers as before, Settings shows no Fomo section and MCP lists no Fomo tool. Self-hosted: on unless `0` (worker and web alike); a self-hosted install never owes the scout budget anything for Fomo |
+| `AGENTCAP_FOMO_FOLLOW_LIVE` | worker children | allowlist of agents whose follow nominations may execute live (default nobody) |
+| `AGENTCAP_DECISION_RESEARCH_ACCOUNTS` | orchestrator (children inherit it) | smart accounts whose live fast-Trencher review gets extra research (docs/decision-research.md); for Fomo, the accounts whose review candidates are researched (default nobody). Research inputs only: never a cap, a grant or an execution permission |
+| `AGENTCAP_TG_GROUPS_FOMO=0` | worker children | turns off the Telegram group research lane |
+| `AGENTCAP_TG_GROUPS_ROUTER=0` | worker children | turns off the group router (docs/tg-groups.md "What a line wants"): lines no rule knew go to the persona |
+| `AGENTCAP_FOMO_TAILS=0` | orchestrator and worker children | turns tails off: `fomo_tail_trader` refuses (`tails-disabled`), no tail routing, no tails block in child files, no tail notices. Stored tails stay stored, can be stopped, and expire on their own |
+| `AGENTCAP_TENANT` | set by the orchestrator in each child | not a secret; the child checks `fomo.json` belongs to it. IPC never trusts it: the orchestrator stamps the tenant itself. |
 
 Surface limits:
 - **Telegram DM:** 25 s for the whole Fomo answer, 15 s per lookup, and 3 research lookups
@@ -1030,12 +1030,12 @@ Surface limits:
   earlier question would decide whose book another member hears (`looseTrader`).
   Answers are coin-level, with no addresses, links or @handles, plus Fomo's public
   leaderboard (Milla's call, 2026-10-07): its handles and their provider-reported money
-  made on closed trades, never who Merrymen follows. Milla, 2026-10-07: a named trader's
+  made on closed trades, never who AgentCap follows. Milla, 2026-10-07: a named trader's
   public Fomo data may be answered in a group, for anyone who asks, the owner included:
   who they are, what they hold (count, value, the largest three), what they traded in
   the window (buys and sells, fills and positions), and what they made or lost money on
   (below). By public handle without the `@`, money in short form, and never whether
-  Merrymen watches or follows them: the room's render leaves out the watched-cohort line,
+  AgentCap watches or follows them: the room's render leaves out the watched-cohort line,
   any note about that record, and the profile P&L figures (they are read from that record
   when it has one, so whether a room saw them would say who it watches). Nor does a
   room's coin answer carry a figure read from the watch list, since with these one-trader
@@ -1113,7 +1113,7 @@ Surface limits:
   gate as an `answer` line, dropped and never repaired; the digest is said whenever that
   cannot be. One call per coin, copy and theses read (a window cut from the same copy is
   other theses and gets its own wording), from the half of the room's model allowance kept
-  for what is nice to have, kept 30 minutes; off unless `MERRYMEN_TG_THESES_MODEL=1`.
+  for what is nice to have, kept 30 minutes; off unless `AGENTCAP_TG_THESES_MODEL=1`.
   The owner's own thesis answers keep the counts, with "no clear lean" for "neutral", and
   her quoted excerpts. A read that failed, could not be reached or was refused is said
   plainly in the room ("couldn't reach fomo just now, try again in a bit.", or the room's
@@ -1168,17 +1168,17 @@ To verify with a key: run the read-only probe below. It reports per-capability e
 and touches no trading route.
 
 ```bash
-MERRYMEN_FOMO_API_KEY=… npx tsx scripts/fomo-probe.mts [--theses] [--trader] [--stream]
+AGENTCAP_FOMO_API_KEY=… npx tsx scripts/fomo-probe.mts [--theses] [--trader] [--stream]
 ```
 
 ## Rollback
 
-1. Unset `MERRYMEN_FOMO_ENABLED` (or set anything but `1`) on the orchestrator and the
+1. Unset `AGENTCAP_FOMO_ENABLED` (or set anything but `1`) on the orchestrator and the
    web. The stream, cohort, research and child files stop, children respawn without IPC
    and run no Fomo code, and the web chat answers as it did before Fomo.
    Turning the pass off also stops charging Fomo exploration to the scout budget, so
    close any follow or early positions first. Follow is paper-only until Stage E.
-2. Or, to keep the switch on but spend nothing: unset `MERRYMEN_FOMO_API_KEY` on the web
+2. Or, to keep the switch on but spend nothing: unset `AGENTCAP_FOMO_API_KEY` on the web
    and orchestrator. Lookups answer "not configured".
 
 **Turning it on, the first time.** With Fomo on, every hosted agent's scout gate counts
@@ -1201,7 +1201,7 @@ every open Trencher position's cost instead, which errs toward refusing. So:
 
 - **One trader in a room.** A named trader's public Fomo data may be answered in a group,
   for anyone who asks, the owner included: profile, holdings, recent trades, and what they
-  made or lost money on (provider-reported). Still never in a room: who Merrymen follows or
+  made or lost money on (provider-reported). Still never in a room: who AgentCap follows or
   watches, the owner's own research state or watch list, a trader's own theses, anything
   from her DM.
 - **Chains.** Boards cover every chain by default and are cut to one on request ("robinhood
@@ -1213,7 +1213,7 @@ every open Trencher position's cost instead, which errs toward refusing. So:
 - **Theses.** A room hears a code digest of what they argue, and the group model's
   paraphrase of cleaned, fenced thesis texts, never a verbatim quote (2026-10-09: the theses
   themselves, quoted, go to the owner's DM on her explicit ask only; below); the paraphrase is
-  off unless `MERRYMEN_TG_THESES_MODEL=1` (Milla, 2026-10-08). Group answers carry no stance
+  off unless `AGENTCAP_TG_THESES_MODEL=1` (Milla, 2026-10-08). Group answers carry no stance
   counts and no "evidence families".
 
 ## Decided (Milla, 2026-10-09: the AUTON night)
@@ -1225,9 +1225,9 @@ every open Trencher position's cost instead, which errs toward refusing. So:
   facts"; the room hears "sent them to your DMs". Anyone else's such ask gets the digest: a
   stranger's words never land in the group (amended the same day, after review showed quotes
   in a room kept needing new blocklists). The digest stays the default answer.
-- **Rug banter.** The persona may say a coin rugged and make a playful Merrymen brag, only when
+- **Rug banter.** The persona may say a coin rugged and make a playful AgentCap brag, only when
   a facts lookup measured a collapse or the room itself said the coin rugged; never a person,
-  never scam or honeypot as fact, never advice, never Merrymen as a play, no brag back to back.
+  never scam or honeypot as fact, never advice, never AgentCap as a play, no brag back to back.
 - **Facts when asked.** "What happened to auton", "why did it rug", "facts", "show me the
   data", "did the dev dump" are answered with measured facts only (GeckoTerminal's public
   index: FDV now and at its highest hourly close, the biggest drop, liquidity, 24h buyers and
@@ -1241,7 +1241,7 @@ every open Trencher position's cost instead, which errs toward refusing. So:
   positions, never with a verb that accuses a person.
 - **F11**: a DexScreener "now" fallback for non-Robinhood chains in `desk/facts.ts` with its own
   quota, without touching `venues/dexscreener.ts` (trading machinery).
-- **F12**: close the shared gate's gaps for unflagged persona lines ("buy merrymen", "pepe is
+- **F12**: close the shared gate's gaps for unflagged persona lines ("buy agentcap", "pepe is
   the play", "kaleo dumped on everyone", "the dev stole everything" pass banter today without a
   collapse permit); needs the full voice pool proof.
 - The owner's DM parity: her thesis answer shows four quoted excerpts; on a quote ask it could
@@ -1252,9 +1252,9 @@ every open Trencher position's cost instead, which errs toward refusing. So:
 1. **Terms.** The provider licenses use "within your own applications and internal
    operations" and reserves redistribution for Enterprise. fomo.family's own terms forbid
    automated harvesting. Decide on LLM processing and on any public republication before
-   commercial deployment. *Decided, 2026-10-12:* the owner confirmed Merrymen holds Fomo
+   commercial deployment. *Decided, 2026-10-12:* the owner confirmed AgentCap holds Fomo
    Enterprise rights, which cover paraphrased, attributed Fomo facts in X answers behind
-   `MERRYMEN_XPOST_FOMO=1` (default off; see "Publication"). Other Fomo publication drafts
+   `AGENTCAP_XPOST_FOMO=1` (default off; see "Publication"). Other Fomo publication drafts
    stay policy-blocked.
 2. **X publication** of research, watching or considering posts conflicts with X rule 3.
    Keep it off, or change the rule and collect a separate research-post consent. (Answers to
@@ -1263,9 +1263,9 @@ every open Trencher position's cost instead, which errs toward refusing. So:
    three-caveat Brain gate rule: left unchanged here. The diagnosis above says which ones
    look like accidental permanent holds.
 4. **Plan.** Credits for the fleet (Builder or higher recommended) and the
-   `MERRYMEN_FOMO_PLAN_CREDITS` value. Whether to raise the group and owner caps
-   (`MERRYMEN_FOMO_GROUP_HOURLY_CREDITS`, `MERRYMEN_FOMO_TENANT_HOURLY_CREDITS`,
-   `MERRYMEN_FOMO_TENANT_DAILY_CREDITS`, on web and orchestrator alike) is a later call; the
+   `AGENTCAP_FOMO_PLAN_CREDITS` value. Whether to raise the group and owner caps
+   (`AGENTCAP_FOMO_GROUP_HOURLY_CREDITS`, `AGENTCAP_FOMO_TENANT_HOURLY_CREDITS`,
+   `AGENTCAP_FOMO_TENANT_DAILY_CREDITS`, on web and orchestrator alike) is a later call; the
    defaults stand until then (2026-10-07).
 5. **Stage E canary.** Name the agent, its scout budget and the live allowlist entry.
 6. **Verification asks.** Coins with cohort buying may be verified on chain beyond the
@@ -1390,5 +1390,5 @@ reason, or one naming neither, is recorded as "policy close (1008): key or plan"
 | alerts-rest | `/v2/alerts` | DOCUMENTED | documented: openapi.json GET /v2/alerts: the app feed's LARGE events only (floor near $3,000 of position value), opaque cursor checkpointing, 125 credits; fetched 2026-10-04T16:05Z | 2026-10-04T16:05Z |
 | ws-alerts | `/ws/alerts` | DOCUMENTED | documented: openapi.json WSS /ws/alerts: app feed on every plan, zero credits; paid keys realtime, a free key delayed 15 s after 7 days; fetched 2026-10-04T16:05Z | 2026-10-04T16:05Z |
 | ws-trades | `/ws/trades` | DOCUMENTED | documented: openapi.json WSS /ws/trades: on-chain stream for Growth or Scale keys only; a lower plan is refused (403, or close 1008) and is ENTITLEMENT_BLOCKED once probed; a 1008 also closes a bad key, so it blocks only when its reason names the plan; fetched 2026-10-04T16:05Z | 2026-10-04T16:05Z |
-| trading-account | `/v2/trading/*` | UNSUPPORTED | policy: the vendor's order-placing account product; Merrymen keeps its own execution system and the client refuses the path; fetched 2026-10-04T16:05Z | 2026-10-04T16:05Z |
-| credit-top-up | `/pay/create` | UNSUPPORTED | policy: a payment flow; Merrymen never pays through a research adapter and the client refuses the path; fetched 2026-10-04T16:05Z | 2026-10-04T16:05Z |
+| trading-account | `/v2/trading/*` | UNSUPPORTED | policy: the vendor's order-placing account product; AgentCap keeps its own execution system and the client refuses the path; fetched 2026-10-04T16:05Z | 2026-10-04T16:05Z |
+| credit-top-up | `/pay/create` | UNSUPPORTED | policy: a payment flow; AgentCap never pays through a research adapter and the client refuses the path; fetched 2026-10-04T16:05Z | 2026-10-04T16:05Z |

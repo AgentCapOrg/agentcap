@@ -1,6 +1,6 @@
-import type { MerrymenSettings } from "@merrymen/core";
+import type { AgentCapSettings } from "@agentcap/core";
 
-type ModelSettings = Pick<MerrymenSettings, "llmProvider" | "llmProviderModel" | "llmModel" | "groqModel">;
+type ModelSettings = Pick<AgentCapSettings, "llmProvider" | "llmProviderModel" | "llmModel" | "groqModel">;
 type ModelField = "llmProviderModel" | "llmModel" | "groqModel";
 
 export function providerModelField(provider: string): ModelField {

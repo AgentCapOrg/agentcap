@@ -6,8 +6,8 @@ import "../connect.css";
 import "../mcp-connect.css";
 
 export const metadata: Metadata = {
-  title: "Connected apps · merrymen",
-  description: "See and revoke the AI assistants and tokens that can reach your Merrymen agent.",
+  title: "Connected apps · agentcap",
+  description: "See and revoke the AI assistants and tokens that can reach your AgentCap agent.",
   robots: { index: false, follow: false },
   referrer: "no-referrer",
 };

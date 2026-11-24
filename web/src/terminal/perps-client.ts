@@ -1,4 +1,4 @@
-import { parsePerpsReport, type PerpsReport } from "@merrymen/core";
+import { parsePerpsReport, type PerpsReport } from "@agentcap/core";
 import type { AccountState } from "./HostedControls";
 import { RequestError, requestJson } from "./request-json";
 import { walletUrl } from "../lib/wallet-param";

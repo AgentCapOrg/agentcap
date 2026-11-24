@@ -1,6 +1,6 @@
 # Examples
 
-These show what a connected assistant does with Merrymen's tools. Tool names
+These show what a connected assistant does with AgentCap's tools. Tool names
 are exact; responses are abbreviated. Every example works with the default
 (read + chat) permissions unless it says otherwise.
 
@@ -55,9 +55,9 @@ Follow up with `list_decisions` (stored explanations and gate outcomes) and
 ## Talk with your agent
 
 `send_message {message: "What's your plan for today?", request_id: "…"}` (needs
-`chat:write`). The agent answers from Merrymen's own view of its state. It
+`chat:write`). The agent answers from AgentCap's own view of its state. It
 cannot change settings or trade from a message; if it would suggest an action,
-the reply says to do it in Merrymen (`proposal_stripped: true`). If your client
+the reply says to do it in AgentCap (`proposal_stripped: true`). If your client
 times out, `get_conversation` returns the reply when it lands.
 
 `submit_research {title, body, sources: [urls]}` shares a note your agent will
@@ -67,7 +67,7 @@ trading rules.
 ## Backtest a strategy
 
 `run_backtest {strategy: "steady-basket", symbols: ["NVDA","AAPL"], data: "oracle", days: 30, initial_usdg: 1000, variants: [{label: "default"}, {label: "smaller buys", buy_per_tick_usdg: 10}]}`
-(needs `jobs:run`) returns a `job_id` immediately. The job runs in Merrymen's
+(needs `jobs:run`) returns a `job_id` immediately. The job runs in AgentCap's
 background worker, so it survives your client disconnecting. `get_job {job_id}`
 returns progress and then, per variant: return, max drawdown, trades,
 turnover, the execution-cost assumption, data coverage and limitations. It is
@@ -105,7 +105,7 @@ What `result` carries, by outcome:
 
 **`outcome_unknown: true` means "check your trades", not "it did not
 happen".** The agent finished the order, but no trade record that is clearly
-this order's reached the ledger in time, so Merrymen will not say either way.
+this order's reached the ledger in time, so AgentCap will not say either way.
 Look at `get_trades` before proposing the same trade again.
 
 Your agent re-checks its limits, the market and its permission before it
@@ -152,7 +152,7 @@ the draft was made.
 
 `list_notification_channels`, then `subscribe {kind: "trade_confirmed"}` or
 `{kind: "summary", params: {period: "day", hour_utc: 18}}` (needs
-`notifications:manage`). Alerts go to your linked Telegram from Merrymen's
+`notifications:manage`). Alerts go to your linked Telegram from AgentCap's
 background worker, deduplicated and retried; `list_deliveries` shows what was
 sent.
 
@@ -171,7 +171,7 @@ receipts — which is not a claim that anything was estimated.
 
 `get_summary {period: "week"}` for a structured summary; `create_export {kind:
 "trades", format: "csv"}` for a file that expires in 24 hours, readable as the
-resource `merrymen://exports/{id}`. Its `download_url` opens
-`/connect/export/<id>` in Merrymen: sign in as the owner and press Download
+resource `agentcap://exports/{id}`. Its `download_url` opens
+`/connect/export/<id>` in AgentCap: sign in as the owner and press Download
 (the file is served only to your own signed-in session, never to the link
 itself).

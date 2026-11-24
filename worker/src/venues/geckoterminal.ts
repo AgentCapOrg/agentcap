@@ -2,7 +2,7 @@
  * GeckoTerminal — what is actually trading on this chain, including tokens the
  * agent would otherwise never hear about.
  *
- * WHAT THIS ADDS. merrymen only ever saw tokens at the moment a pool was
+ * WHAT THIS ADDS. agentcap only ever saw tokens at the moment a pool was
  * created: discovery watches Initialize events, so a coin that launched last
  * week and is up 40% today is invisible to it. The owner's ask was to consider
  * trending and established coins too, not only fresh launches. This is that
@@ -37,11 +37,11 @@ const GECKO_BASE = "https://api.geckoterminal.com/api/v2";
 
 /** Credentials go only to CoinGecko's fixed server-side origin, in headers. */
 export function geckoSource(
-  env: { MERRYMEN_COINGECKO_PRO_API_KEY?: string } = {
-    MERRYMEN_COINGECKO_PRO_API_KEY: process.env.MERRYMEN_COINGECKO_PRO_API_KEY,
+  env: { AGENTCAP_COINGECKO_PRO_API_KEY?: string } = {
+    AGENTCAP_COINGECKO_PRO_API_KEY: process.env.AGENTCAP_COINGECKO_PRO_API_KEY,
   },
 ): { id: NonNullable<FeedResult["provider"]>; base: string; headers: Record<string, string> } {
-  const key = env.MERRYMEN_COINGECKO_PRO_API_KEY?.trim();
+  const key = env.AGENTCAP_COINGECKO_PRO_API_KEY?.trim();
   return key
     ? { id: "coingecko-pro", base: "https://pro-api.coingecko.com/api/v3/onchain", headers: { accept: "application/json", "x-cg-pro-api-key": key } as Record<string, string> }
     : { id: "geckoterminal-public", base: GECKO_BASE, headers: { accept: "application/json" } as Record<string, string> };
@@ -85,7 +85,7 @@ export function laneSpacingMs(source: GeckoSource, fleet: boolean, env: Paramete
 
 /**
  * WHICH LANE A READ SPENDS: the fleet's, named explicitly. A child inherits
- * MERRYMEN_FLEET_HOME from the orchestrator, which never sets it on itself
+ * AGENTCAP_FLEET_HOME from the orchestrator, which never sets it on itself
  * (the variable is the children's). So a read made IN the orchestrator — an
  * X answer's coin facts — passes the fleet home here and shares the
  * children's spacing slot, cooldowns and plan latch, instead of a private
@@ -96,7 +96,7 @@ export interface GeckoLane {
 }
 
 function cacheFor(source: GeckoSource, lane?: GeckoLane): FeedCache {
-  const home = (lane?.fleetHome ?? process.env.MERRYMEN_FLEET_HOME)?.trim();
+  const home = (lane?.fleetHome ?? process.env.AGENTCAP_FLEET_HOME)?.trim();
   const pro = source.id === "coingecko-pro";
   // Which key this lane sends, as a fingerprint only (never the key): a plan
   // latch belongs to the credential that was refused, so a fixed or rotated

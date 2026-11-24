@@ -4,7 +4,7 @@ import { afterEach, before, beforeEach, describe, it, mock } from "node:test";
 import { fileURLToPath } from "node:url";
 import { JSDOM } from "jsdom";
 import React, { act } from "react";
-import { LLM_PROVIDERS, SETTINGS_DEFAULTS } from "@merrymen/core";
+import { LLM_PROVIDERS, SETTINGS_DEFAULTS } from "@agentcap/core";
 import type { SettingsView } from "@/app/api/settings/route";
 
 const OWNER = `0x${"a".repeat(40)}`;
@@ -59,7 +59,7 @@ function fixture(): SettingsView {
     bundlerApiKey: secret, groqApiKey: secret, anthropicApiKey: secret,
     llmApiKey: secret, rialtoApiKey: secret, telegramBotToken: secret,
     telegramTranscribeKey: secret, virtualsApiKey: secret, bitqueryApiKey: secret,
-    merrymenToken: secret,
+    agentcapToken: secret,
     values: {
       strategy: "steady-basket", tickSeconds: 60, assetMode: "stocks",
       liveTradingEnabled: false, trencherLiveEnabled: false, trencherFastEnabled: false,

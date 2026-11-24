@@ -23,7 +23,7 @@
  *
  * WHAT IT CANNOT TELL YOU, and this is the honest half: the wall is only part of
  * a grant. `caps`, `grantTokens`, `expiresAt` and the session key live in the
- * grant store, which needs DATABASE_URL and MERRYMEN_STORE_DEK. Those are not
+ * grant store, which needs DATABASE_URL and AGENTCAP_STORE_DEK. Those are not
  * readable from a developer machine and should not be. The caps are a PARAMETER
  * here, and the diff below is independent of them — see the note printed at the
  * end. What the owner must confirm on their own screen is listed there too.
@@ -233,7 +233,7 @@ async function main() {
   console.log("");
   console.log("  WHAT THIS SCRIPT CANNOT SEE, and you must confirm on your own screen before signing:");
   console.log("    - caps (perTradeUsdg, dailyUsdg, expiryDays, maxDrawdownPct, maxOpsPerDay). They live");
-  console.log("      in the grant store, which needs DATABASE_URL and MERRYMEN_STORE_DEK. The re-sign");
+  console.log("      in the grant store, which needs DATABASE_URL and AGENTCAP_STORE_DEK. The re-sign");
   console.log("      screen pre-fills them from your CURRENT grant, so they carry over if you do not");
   console.log("      touch a preset button or a slider. Read them off the screen and check.");
   console.log("    - the session key. A re-sign ALWAYS mints a new one; that is structural.");

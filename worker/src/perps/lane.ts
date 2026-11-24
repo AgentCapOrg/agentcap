@@ -499,7 +499,7 @@ const PRACTICE_BOOK_FROZEN =
  * that do not say a Close all was pressed: "unread" comes as readily to an
  * owner who never pressed one. Its condition is the owner's own Close all,
  * never what the report shows: the operator's entry halt
- * (MERRYMEN_HALT_PERP_ENTRIES) shows the same pause, and no reset lifts it.
+ * (AGENTCAP_HALT_PERP_ENTRIES) shows the same pause, and no reset lifts it.
  */
 export function resetHaltSentence(haltKept: boolean | "unread"): string {
   if (haltKept === "unread") {
@@ -2007,5 +2007,5 @@ export function createPerpFeedHost(o: {
  * orchestrator gave a fleet home (the file lives there, and so does its writer).
  */
 export function isHostedChildProcess(env: NodeJS.ProcessEnv = process.env): boolean {
-  return isHostedMode() || (env.MERRYMEN_FLEET_HOME ?? "").trim().length > 0;
+  return isHostedMode() || (env.AGENTCAP_FLEET_HOME ?? "").trim().length > 0;
 }

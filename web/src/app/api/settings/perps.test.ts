@@ -5,7 +5,7 @@
  * No perps key is chat-settable, so `PUT /api/settings?wallet=perps` is the
  * one door (rule 1). What it must hold, driven through the real PUT, hosted,
  * against the Perps wallet's own sealed store, the way spec-coverage.test.ts
- * drives Spot's, with MERRYMEN_PERPS=paper (perps-off is dual-purpose.test.ts):
+ * drives Spot's, with AGENTCAP_PERPS=paper (perps-off is dual-purpose.test.ts):
  *   - `perpsMarkets` refuses an unknown key rather than dropping it;
  *   - `perpsDriver` takes perp-trend or manual: the strategist (a Perps worker
  *     builds none) and Brain (no Brain service ships) are refused by name (D9);
@@ -29,24 +29,24 @@ import path from "node:path";
 import { after, before, beforeEach, describe, it } from "node:test";
 
 import { mintSession } from "@/lib/auth";
-import { getSettingsStore, resetSettingsStoreForTest, useSettingsStoreForTest } from "@merrymen/settings-store";
-import { PERPS_LIVE_CONSENT_VERSION, SETTINGS_DEFAULTS, type MerrymenSettings } from "@merrymen/core";
+import { getSettingsStore, resetSettingsStoreForTest, useSettingsStoreForTest } from "@agentcap/settings-store";
+import { PERPS_LIVE_CONSENT_VERSION, SETTINGS_DEFAULTS, type AgentCapSettings } from "@agentcap/core";
 import { mergeSettings } from "../../../../../worker/src/settings";
 
 const TENANT = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
-const KEYS = ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_SESSION_SECRET", "DATABASE_URL", "MERRYMEN_PERPS", "MERRYMEN_PERPS_PAPER_TENANTS"] as const;
+const KEYS = ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_SESSION_SECRET", "DATABASE_URL", "AGENTCAP_PERPS", "AGENTCAP_PERPS_PAPER_TENANTS"] as const;
 const original = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
 let dir: string;
 let PUT: (req: Request) => Promise<Response>;
 let GET: (req: Request) => Promise<Response>;
 
 before(async () => {
-  dir = mkdtempSync(path.join(tmpdir(), "merrymen-settings-perps-"));
-  process.env.MERRYMEN_HOME = dir;
-  process.env.MERRYMEN_HOSTED = "1";
-  process.env.MERRYMEN_SESSION_SECRET = randomBytes(32).toString("hex");
-  process.env.MERRYMEN_PERPS = "paper";
-  process.env.MERRYMEN_PERPS_PAPER_TENANTS = TENANT;
+  dir = mkdtempSync(path.join(tmpdir(), "agentcap-settings-perps-"));
+  process.env.AGENTCAP_HOME = dir;
+  process.env.AGENTCAP_HOSTED = "1";
+  process.env.AGENTCAP_SESSION_SECRET = randomBytes(32).toString("hex");
+  process.env.AGENTCAP_PERPS = "paper";
+  process.env.AGENTCAP_PERPS_PAPER_TENANTS = TENANT;
   pilot = pilotFixture([TENANT]);
   delete process.env.DATABASE_URL;
   resetSettingsStoreForTest();
@@ -86,10 +86,10 @@ async function put(body: Record<string, unknown>) {
   }));
   return { status: res.status, body: (await res.json()) as { ok?: boolean; errors?: string[]; ignored?: string[]; saved?: string[]; note?: string } };
 }
-const stored = async () => ((await getSettingsStore("perps").get(TENANT)) ?? {}) as MerrymenSettings & Record<string, unknown>;
+const stored = async () => ((await getSettingsStore("perps").get(TENANT)) ?? {}) as AgentCapSettings & Record<string, unknown>;
 const errorsOf = (r: { body: { errors?: string[] } }) => r.body.errors?.join(" ") ?? "";
 /** What a Perps wallet's worker resolves from what is stored (worker settings.ts). */
-const worker = (s: MerrymenSettings) => mergeSettings(s, { MERRYMEN_WALLET_PURPOSE: "perps", MERRYMEN_PERPS: "paper" });
+const worker = (s: AgentCapSettings) => mergeSettings(s, { AGENTCAP_WALLET_PURPOSE: "perps", AGENTCAP_PERPS: "paper" });
 
 /** What a Settings page would send to consent: the switch, the version it showed, the attestation. */
 const CONSENT = { perpsLiveEnabled: true, perpsLiveConsentVersion: PERPS_LIVE_CONSENT_VERSION, perpsRegionAttested: true };
@@ -533,7 +533,7 @@ describe("a Perps save whose write fails says so in a fixed sentence, never the 
    * is a fixed sentence, as the grants route's storeRefused and this route's
    * own Perps read already give (grants/dual-purpose.test.ts holds theirs).
    */
-  const LEAK = 'connect ECONNREFUSED 10.1.2.3:5432 (postgres://admin:hunter2@db.internal:5432/merrymen); relation "perps_tenant_settings" does not exist';
+  const LEAK = 'connect ECONNREFUSED 10.1.2.3:5432 (postgres://admin:hunter2@db.internal:5432/agentcap); relation "perps_tenant_settings" does not exist';
   const NOT_SAVED = "Your Perps wallet's settings could not be saved. Nothing was changed; try again.";
 
   /** The real Perps store's reads, and a write that throws LEAK. */
@@ -560,7 +560,7 @@ describe("a Perps save whose write fails says so in a fixed sentence, never the 
       const logged: string[] = [];
       t.mock.method(console, "error", (...a: unknown[]) => void logged.push(a.map(String).join(" ")));
       const puts = failingWrites();
-      if (lever === undefined) delete process.env.MERRYMEN_PERPS;
+      if (lever === undefined) delete process.env.AGENTCAP_PERPS;
       try {
         const r = await put(body);
         assert.equal(r.status, 503, JSON.stringify(r.body));
@@ -573,7 +573,7 @@ describe("a Perps save whose write fails says so in a fixed sentence, never the 
         assert.ok(logged.some((l) => l.includes("ECONNREFUSED 10.1.2.3:5432")), "the operator still has it, in the server's log");
         assert.equal(logged.some((l) => l.includes("hunter2")), false, "…less the database password (redact-urls.ts)");
       } finally {
-        process.env.MERRYMEN_PERPS = "paper";
+        process.env.AGENTCAP_PERPS = "paper";
         resetSettingsStoreForTest();
       }
     });

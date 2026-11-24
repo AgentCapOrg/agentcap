@@ -7,9 +7,9 @@
  * to overdo, and the house Groq key has a daily allowance trading shares (the
  * in-app room exhausted it once). So a group line is written, in order, with:
  *
- *   1. MERRYMEN_TG_GROUPS_LLM_KEY, the operator's dedicated key — refused when
+ *   1. AGENTCAP_TG_GROUPS_LLM_KEY, the operator's dedicated key — refused when
  *      it IS one of the fleet's keys, unless the operator says in so many words
- *      that it may share one (MERRYMEN_TG_GROUPS_SHARE_HOUSE_KEY=1);
+ *      that it may share one (AGENTCAP_TG_GROUPS_SHARE_HOUSE_KEY=1);
  *   2. the owner's own key: self-hosted, whatever `resolveLlm` picks (the owner
  *      is the operator there); hosted, only a key the owner saved themselves,
  *      told apart from the house default by not being equal to any fleet key;
@@ -59,7 +59,7 @@ export const TG_GROUPS_GROQ_DEFAULT_MODEL = "qwen/qwen3.8-27b";
 export const TG_GROUPS_ANTHROPIC_DEFAULT_MODEL = "claude-opus-5";
 
 /** Keys trading spends. A group line never spends one unless the operator says it may. */
-const FLEET_KEYS = ["GROQ_API_KEY", "MERRYMEN_LLM_API_KEY", "ANTHROPIC_API_KEY"] as const;
+const FLEET_KEYS = ["GROQ_API_KEY", "AGENTCAP_LLM_API_KEY", "ANTHROPIC_API_KEY"] as const;
 
 function fleetKeyMatching(key: string, env: Env): string | null {
   const k = key.trim();
@@ -72,7 +72,7 @@ function fleetKeyMatching(key: string, env: Env): string | null {
 }
 
 function shareHouseKey(env: Env): boolean {
-  return env.MERRYMEN_TG_GROUPS_SHARE_HOUSE_KEY?.trim() === "1";
+  return env.AGENTCAP_TG_GROUPS_SHARE_HOUSE_KEY?.trim() === "1";
 }
 
 /** An OpenAI-compatible base: https, or http on loopback for a local runtime. No credentials in it. */
@@ -98,17 +98,17 @@ function labelOf(creds: LlmCreds): string {
  * variables and the fleet key's NAME only — never a value.
  */
 function dedicated(env: Env): { creds: LlmCreds | null; problem: string | null } {
-  const key = env.MERRYMEN_TG_GROUPS_LLM_KEY?.trim() ?? "";
+  const key = env.AGENTCAP_TG_GROUPS_LLM_KEY?.trim() ?? "";
   if (!key) return { creds: null, problem: null };
   const fleet = fleetKeyMatching(key, env);
   if (fleet && !shareHouseKey(env)) {
     return {
       creds: null,
-      problem: `MERRYMEN_TG_GROUPS_LLM_KEY is the fleet's ${fleet}, and group lines never spend a fleet key (MERRYMEN_TG_GROUPS_SHARE_HOUSE_KEY=1 allows it)`,
+      problem: `AGENTCAP_TG_GROUPS_LLM_KEY is the fleet's ${fleet}, and group lines never spend a fleet key (AGENTCAP_TG_GROUPS_SHARE_HOUSE_KEY=1 allows it)`,
     };
   }
-  const provider = env.MERRYMEN_TG_GROUPS_LLM_PROVIDER?.trim().toLowerCase() || "groq";
-  const model = env.MERRYMEN_TG_GROUPS_MODEL?.trim() ?? "";
+  const provider = env.AGENTCAP_TG_GROUPS_LLM_PROVIDER?.trim().toLowerCase() || "groq";
+  const model = env.AGENTCAP_TG_GROUPS_MODEL?.trim() ?? "";
   if (provider === "groq") {
     return {
       creds: { provider: "groq", transport: "openai", baseUrl: TG_GROUPS_GROQ_BASE_URL, apiKey: key, model: model || TG_GROUPS_GROQ_DEFAULT_MODEL, vision: false },
@@ -122,18 +122,18 @@ function dedicated(env: Env): { creds: LlmCreds | null; problem: string | null }
     };
   }
   if (provider === "openai") {
-    const base = env.MERRYMEN_TG_GROUPS_LLM_BASE_URL?.trim().replace(/\/+$/, "") ?? "";
+    const base = env.AGENTCAP_TG_GROUPS_LLM_BASE_URL?.trim().replace(/\/+$/, "") ?? "";
     // No default model for an arbitrary endpoint: guessing one would spend
     // the first calls of every day on a 404 and a pause.
     if (!base || !baseOk(base) || !model) {
       return {
         creds: null,
-        problem: "MERRYMEN_TG_GROUPS_LLM_PROVIDER=openai needs an https MERRYMEN_TG_GROUPS_LLM_BASE_URL and a MERRYMEN_TG_GROUPS_MODEL",
+        problem: "AGENTCAP_TG_GROUPS_LLM_PROVIDER=openai needs an https AGENTCAP_TG_GROUPS_LLM_BASE_URL and a AGENTCAP_TG_GROUPS_MODEL",
       };
     }
     return { creds: { provider: "openai", transport: "openai", baseUrl: base, apiKey: key, model, vision: false }, problem: null };
   }
-  return { creds: null, problem: "MERRYMEN_TG_GROUPS_LLM_PROVIDER is not groq, anthropic or openai" };
+  return { creds: null, problem: "AGENTCAP_TG_GROUPS_LLM_PROVIDER is not groq, anthropic or openai" };
 }
 
 /**
@@ -195,17 +195,17 @@ export function describeTgGroupsModel(m: TgModel | null): string {
   }
   const on =
     m.source === "dedicated"
-      ? "its own key (MERRYMEN_TG_GROUPS_LLM_KEY)"
+      ? "its own key (AGENTCAP_TG_GROUPS_LLM_KEY)"
       : m.source === "owner"
         ? "the owner's own key"
-        : "the house key (MERRYMEN_TG_GROUPS_SHARE_HOUSE_KEY=1)";
+        : "the house key (AGENTCAP_TG_GROUPS_SHARE_HOUSE_KEY=1)";
   return `telegram groups: model ${m.label} on ${on}`;
 }
 
-/** MERRYMEN_TG_GROUPS_LLM_PER_DAY: model calls per agent per UTC day. Default 300 hosted, 1000 self-hosted; clamped to [0, 20000]. */
+/** AGENTCAP_TG_GROUPS_LLM_PER_DAY: model calls per agent per UTC day. Default 300 hosted, 1000 self-hosted; clamped to [0, 20000]. */
 export function tgGroupsPerDay(env: Env, hosted: boolean): number {
   const fallback = hosted ? 300 : 1000;
-  const raw = env.MERRYMEN_TG_GROUPS_LLM_PER_DAY?.trim() ?? "";
+  const raw = env.AGENTCAP_TG_GROUPS_LLM_PER_DAY?.trim() ?? "";
   if (raw === "") return fallback;
   const n = Number(raw);
   if (!Number.isFinite(n)) return fallback;

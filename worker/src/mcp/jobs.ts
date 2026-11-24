@@ -169,7 +169,7 @@ export function validateBacktestParams(raw: unknown): { ok: true; params: Backte
     // The kind check is belt and braces: the registry holds only stocks and
     // ETFs today, and a memecoin added to it later must not become backtestable
     // by accident — a curve has no history and no fill model here.
-    if (!token || token.kind === "memecoin") return fail(`${s} is not one of Merrymen's stock or ETF tokens (memecoins and launchpad coins cannot be backtested: they have no price history to replay)`);
+    if (!token || token.kind === "memecoin") return fail(`${s} is not one of AgentCap's stock or ETF tokens (memecoins and launchpad coins cannot be backtested: they have no price history to replay)`);
     if (symbols.includes(token.symbol)) return fail(`${token.symbol} is listed twice`);
     if (data === "oracle" && !token.chainlinkFeed) return fail(`${token.symbol} has no Chainlink feed, so there is no oracle history for it; use data 'synthetic' or another symbol`);
     symbols.push(token.symbol);
@@ -213,7 +213,7 @@ export function validateBacktestParams(raw: unknown): { ok: true; params: Backte
 }
 
 /**
- * Settings a variant leaves unset: `merrymen strategy backtest`'s defaults
+ * Settings a variant leaves unset: `agentcap strategy backtest`'s defaults
  * (25 / 50 / 100 / 500 / 500 on 1,000 USDG, 30 bps, 20% drawdown), scaled to
  * the run's starting cash so a 100,000 USDG run is not a 1,000 USDG run with
  * idle money.
@@ -704,7 +704,7 @@ function assumptions(): BacktestJobResult["assumptions"] {
     vault_apy_bps: 0,
     vault_apy_note: "Cash steady-basket parks in the savings vault earns nothing here: there is no vault rate history to replay.",
     limits: "Per-trade, daily and drawdown limits come from each variant's settings; at most 500 operations a day; the permission never expires inside the run.",
-    defaults: "Unset settings take `merrymen strategy backtest`'s defaults scaled to initial_usdg: buy per tick 2.5%, idle floor 5%, gap budget 10%, per trade 50%, daily 50%, drawdown 20%, cost 30 bps.",
+    defaults: "Unset settings take `agentcap strategy backtest`'s defaults scaled to initial_usdg: buy per tick 2.5%, idle floor 5%, gap budget 10%, per trade 50%, daily 50%, drawdown 20%, cost 30 bps.",
   };
 }
 
@@ -714,7 +714,7 @@ export interface McpJobsPassDeps {
   /** Logical clock, unix seconds (timestamps, leases, deadlines). */
   now?: () => number;
   /**
-   * Oracle history for one feed: `oracleFeedReader(process.env.MERRYMEN_RPC_MAINNET)`
+   * Oracle history for one feed: `oracleFeedReader(process.env.AGENTCAP_RPC_MAINNET)`
    * in the orchestrator, built once per process (read-feed-history.ts says why
    * the caller supplies the client). Absent, oracle jobs fail with
    * upstream_unavailable rather than reach for a client of their own.

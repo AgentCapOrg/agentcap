@@ -33,23 +33,23 @@ describe("every orchestrator one-shot is counted from the commit that adds it", 
   const ONE_SHOT_FN = /^(?:export )?(?:async )?function (run\w+(?:IfAsked|OnBoot|Once))\(/gm;
   const oneShots = [...src.matchAll(ONE_SHOT_FN)].map((m) => ({ fn: m[1]!, body: bodyAt(src, m.index!) }));
   /** Standing configuration a one-shot may read beside its gate — never an action of its own. */
-  const STANDING_READS = new Set(["MERRYMEN_RPC_MAINNET", "MERRYMEN_RPC_TESTNET", "MERRYMEN_CHAIN_ID", "MERRYMEN_STORE_DEK"]);
+  const STANDING_READS = new Set(["AGENTCAP_RPC_MAINNET", "AGENTCAP_RPC_TESTNET", "AGENTCAP_CHAIN_ID", "AGENTCAP_STORE_DEK"]);
   /** One-shots whose gate a helper in another module reads: function → [module, helper, gate]. */
   const HELPER_GATES: Record<string, [string, string, string]> = {
-    runRepairIfAsked: ["worker/src/accounting-repair.ts", "parseRepairOptions", "MERRYMEN_REPAIR"],
-    runReceiptAttestationIfAsked: ["worker/src/receipt-attestation-controls.ts", "receiptAttestationRequest", "MERRYMEN_RECEIPT_ATTEST_ACCOUNT"],
+    runRepairIfAsked: ["worker/src/accounting-repair.ts", "parseRepairOptions", "AGENTCAP_REPAIR"],
+    runReceiptAttestationIfAsked: ["worker/src/receipt-attestation-controls.ts", "receiptAttestationRequest", "AGENTCAP_RECEIPT_ATTEST_ACCOUNT"],
   };
   /** What runOrchestrator runs that is NOT a one-shot, each for a reason. */
   const STANDING_PASSES = new Set([
     "runOrchestrator",
-    "runRecoveryReportOnly", // MERRYMEN_FLEET_RECOVERY_REPORT_ONLY: a recovery mode, not an action
+    "runRecoveryReportOnly", // AGENTCAP_FLEET_RECOVERY_REPORT_ONLY: a recovery mode, not an action
     "runAccountingReconstructionAtStartup", // runs runReconstructionDryRunIfAsked, which is held here
     "runHolderClaimsBackfill", "startHistoryRepair", // every boot or pass, on no variable
     "runBuilderPass", "runNewsPass", "startGroupChatPass", "startXPostPass", // every pass, standing features
     "startFleetHeartbeat", // every pass, halted or not, on no variable: the fleet_heartbeat row (fleet-heartbeat.ts)
-    "startFomoPass", // every pass, a standing feature behind its own opt-in (MERRYMEN_FOMO_ENABLED, docs/fomo.md): research only, it places no order
-    // MERRYMEN_RESUME_PREVIEW / _APPROVE / _REVOKE: the staged rollout's own admission controls (ledger-resume.ts,
-    // docs/fleet-resume.md), idempotent per (tenant, evidence digest) and read every boot like MERRYMEN_FLEET_ROLLOUT.
+    "startFomoPass", // every pass, a standing feature behind its own opt-in (AGENTCAP_FOMO_ENABLED, docs/fomo.md): research only, it places no order
+    // AGENTCAP_RESUME_PREVIEW / _APPROVE / _REVOKE: the staged rollout's own admission controls (ledger-resume.ts,
+    // docs/fleet-resume.md), idempotent per (tenant, evidence digest) and read every boot like AGENTCAP_FLEET_ROLLOUT.
     // Counted as one-shots, the guard would refuse the very boot that approves the first tenant.
     "runResumeAdmissionControls",
   ]);
@@ -60,7 +60,7 @@ describe("every orchestrator one-shot is counted from the commit that adds it", 
 
   it("each names, in its own body, only counted one-shots and listed standing configuration", () => {
     for (const { fn, body } of oneShots) {
-      const names = [...new Set(body.match(/MERRYMEN_[A-Z0-9_]+/g) ?? [])];
+      const names = [...new Set(body.match(/AGENTCAP_[A-Z0-9_]+/g) ?? [])];
       const unclassified = names.filter((n) => !isOneShotVariable(n) && !STANDING_READS.has(n));
       assert.deepEqual(unclassified, [], `${fn} reads ${unclassified.join(" ")}: count it in the census, or list it here as standing`);
       if (HELPER_GATES[fn]) continue;

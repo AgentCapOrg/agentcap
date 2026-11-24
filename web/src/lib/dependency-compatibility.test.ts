@@ -65,7 +65,7 @@ function accepts(schema: Schema, value: unknown, message?: string) {
 it("SDKs that pin zod 3 accept and reject these sample payloads on the patched zod 4 the overrides give them", async () => {
   // GHSA-mrhx-c7xc-m3w5 (zod < 4.6.6) has no zod 3 fix. package.json points
   // the zod of x402, @coinbase/cdp-sdk and @reown/appkit-wallet, all reached
-  // only through @privy-io/react-auth, at Merrymen's own patched zod. Each
+  // only through @privy-io/react-auth, at AgentCap's own patched zod. Each
   // override names the package that imports zod: npm 10 (CI's npm ci) does not
   // carry an override on x402 down to the copies npm hoists out of its tree.
   // These samples are spot checks of the paths below, not proof that every

@@ -79,7 +79,7 @@ struct FeedBeatCard: View {
                 }.disabled(store.owner == nil).accessibilityLabel(store.likes.contains(id) ? "Unlike thesis" : "Like thesis")
             }
             Spacer()
-            if let slug = beat["actor"]["slug"].string, let url = URL(string: "https://app.merrymen.dev/a/\(escaped(slug))") { ShareLink(item: url).labelStyle(.iconOnly) }
+            if let slug = beat["actor"]["slug"].string, let url = URL(string: "https://app.agentcap.xyz/a/\(escaped(slug))") { ShareLink(item: url).labelStyle(.iconOnly) }
         }
     }.sheet(item: $members) { selected in NavigationStack { Page { Rows(values: selected.value.array) { FeedBeatCard(beat: $0) } }.navigationTitle("Agent views").toolbar { Button("Done") { members = nil } } } } }
 }

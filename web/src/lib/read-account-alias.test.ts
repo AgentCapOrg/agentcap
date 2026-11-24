@@ -5,7 +5,7 @@ import { wrapSqlite, type Db } from "../../../worker/src/db";
 import { applyLedgerSchema } from "../../../worker/src/store";
 import { profileOf } from "./read-agent";
 import { readLeaderboard } from "./read-leaderboard";
-import type { PublicIdentity } from "@merrymen/identity-store";
+import type { PublicIdentity } from "@agentcap/identity-store";
 
 const ACCOUNT = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const ALIAS = "0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";

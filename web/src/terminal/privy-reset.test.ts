@@ -7,13 +7,13 @@ import { clearPrivySignIn } from "./privy-reset";
 // touch this shape of record, whatever else it clears.
 const grant = JSON.stringify({ smartAccount: `0x${"a".repeat(40)}`, demoOwnerPrivateKey: `0x${"b".repeat(64)}` });
 const ours: Record<string, string> = {
-  "merrymen.grant.v1": grant,
-  "merrymen.grant.perps.v1": grant,
-  [`merrymen.grant.archive.0x${"a".repeat(40)}`]: grant,
-  [`merrymen.backup.0x${"a".repeat(40)}`]: "backed-up",
-  "merrymen.grant.backedup.v1": "1",
-  "merrymen:trencher-fast:v2:dismissed": "1",
-  "merryman.outfit.v1:dddddddddddddddd": "{}",
+  "agentcap.grant.v1": grant,
+  "agentcap.grant.perps.v1": grant,
+  [`agentcap.grant.archive.0x${"a".repeat(40)}`]: grant,
+  [`agentcap.backup.0x${"a".repeat(40)}`]: "backed-up",
+  "agentcap.grant.backedup.v1": "1",
+  "agentcap:trencher-fast:v2:dismissed": "1",
+  "agentcapavatar.outfit.v1:dddddddddddddddd": "{}",
   // Near misses that are not Privy's.
   privy: "x",
   "Privy:token": "x",
@@ -50,25 +50,25 @@ afterEach(() => {
 });
 
 describe("clearPrivySignIn", () => {
-  it("removes Privy's saved sign-in and leaves every Merrymen key and grant byte-for-byte", () => {
+  it("removes Privy's saved sign-in and leaves every AgentCap key and grant byte-for-byte", () => {
     const { localStorage, sessionStorage, document } = dom.window;
     for (const [key, value] of Object.entries(ours)) localStorage.setItem(key, value);
     for (const key of privys) localStorage.setItem(key, JSON.stringify("secret"));
     sessionStorage.setItem("privy:headless_oauth", "true");
-    sessionStorage.setItem("merrymen.chat.draft", "keep");
+    sessionStorage.setItem("agentcap.chat.draft", "keep");
     // How js-cookie writes Privy's cookies: host-only, path /, Secure, Strict.
     for (const name of ["privy-token", "privy-refresh-token", "privy-id-token", "privy-session", "privy-did%3Aprivy%3Aowner-session"]) {
       document.cookie = `${name}=t; Path=/; Secure; SameSite=Strict`;
     }
-    document.cookie = "merrymen-theme=dark; Path=/";
+    document.cookie = "agentcap-theme=dark; Path=/";
     document.cookie = "privycookie=keep; Path=/";
 
     const cleared = clearPrivySignIn(scope());
 
     assert.deepEqual(Object.keys(localStorage).sort(), Object.keys(ours).sort());
     for (const [key, value] of Object.entries(ours)) assert.equal(localStorage.getItem(key), value, key);
-    assert.deepEqual(Object.keys(sessionStorage), ["merrymen.chat.draft"]);
-    assert.deepEqual(cookieNames(), ["merrymen-theme", "privycookie"]);
+    assert.deepEqual(Object.keys(sessionStorage), ["agentcap.chat.draft"]);
+    assert.deepEqual(cookieNames(), ["agentcap-theme", "privycookie"]);
     assert.deepEqual(cleared.storage.sort(), [
       ...privys.map((key) => `localStorage:${key}`),
       "sessionStorage:privy:headless_oauth",

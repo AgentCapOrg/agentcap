@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import { MAX_LOOKBACK_BLOCKS, PONS_LAUNCH_TOPIC, PONS_V2_FACTORY, parseLaunchLogs, readLaunchCreator } from "./pons";
 
 /**
- * Reading the launchpad merrymen could not see.
+ * Reading the launchpad agentcap could not see.
  *
  * Every constant here came off mainnet 4663, not documentation — Pons publishes
  * none — so these tests pin the shape that was actually observed. If Pons

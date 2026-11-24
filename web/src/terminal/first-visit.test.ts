@@ -8,7 +8,7 @@ import { EN } from "@/lib/messages/en";
 
 let ui: ReturnType<typeof testDom>;
 const originalFetch = globalThis.fetch;
-const KEY = "merrymen.tour.v3";
+const KEY = "agentcap.tour.v3";
 const A = "0xaaaa", B = "0xbbbb";
 let requests: { url: string; method: string; body: Record<string, unknown> | null }[];
 let response: (url: string, init?: RequestInit) => Promise<Response>;
@@ -161,7 +161,7 @@ it("contains keyboard focus, closes with Escape and restores previous focus", as
 it("without auto-start a newcomer lands on the page, records nothing, and can still open the tour", async () => {
   const quiet = (tenant: string | null = null) => React.createElement(FirstVisit, { tenant, autoStart: false, onScreen: () => {}, onQuestion: () => {} });
   await ui.render(quiet());
-  assert.equal(ui.container.querySelector('[role="dialog"]'), null, "no modal over the merryman");
+  assert.equal(ui.container.querySelector('[role="dialog"]'), null, "no modal over the agentcapavatar");
   assert.equal(localStorage.getItem(KEY), null, "a tour nobody was shown is not a dismissal");
   await ui.render(quiet(A));
   assert.equal(requests.filter((r) => r.method === "POST").length, 0, "and nothing is claimed for the account on sign-in");

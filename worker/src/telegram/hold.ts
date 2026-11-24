@@ -44,7 +44,7 @@
  * book and no group memory (restore-hold.test.ts pins the imports): the two
  * group files it writes are notes for whoever holds that memory, not the
  * memory. The orchestrator is retrying the restore against this home's
- * merrymen.db while this runs, and a held tenant must never look like a
+ * agentcap.db while this runs, and a held tenant must never look like a
  * running one to anything that trades or mirrors. It has no DATABASE_URL
  * anyway (childEnv).
  */
@@ -86,7 +86,7 @@ import {
   telegramLog,
 } from "./poll-rules";
 import { patchSettingsFile, type ResolvedConfig } from "../settings";
-import { homePaths, merrymenHome } from "../home";
+import { homePaths, agentcapHome } from "../home";
 import { loadGrantFile } from "../grant";
 import { hostedKillFromChat } from "../kill-request";
 import { startPerpsNotifier } from "./perps-notifier";
@@ -143,8 +143,8 @@ export function startHoldTelegram(deps: HoldDeps): { stop: () => void } {
   const perpsNotifier = deps.perps ? startPerpsNotifier({perps: deps.perps, getCfg: deps.getCfg, stateRef, now: deps.now}) : null;
   const now = deps.now ?? (() => Math.floor(Date.now() / 1000));
   const note = deps.note ?? telegramLog;
-  const blocker = deps.blocker ?? (() => readRestoreBlocked(merrymenHome()));
-  const kill = deps.kill ?? (() => hostedKillFromChat(merrymenHome(), homePaths.grant(), loadGrantFile(), now()));
+  const blocker = deps.blocker ?? (() => readRestoreBlocked(agentcapHome()));
+  const kill = deps.kill ?? (() => hostedKillFromChat(agentcapHome(), homePaths.grant(), loadGrantFile(), now()));
   // Counted and logged as the child does (poll-rules.ts makeChatTally), and
   // every reply through the same check for one Telegram would not take. On
   // `note`, which here is the fleet's log and nothing else, as the child's
@@ -210,7 +210,7 @@ export function startHoldTelegram(deps: HoldDeps): { stop: () => void } {
     const r = linkReply(outcome, now());
     // Linked, and told at once why nothing trades: /status would only say it again.
     return r.ok
-      ? `🏹 you're linked — you now command this merryman.\n\n${holdReply()}`
+      ? `🏹 you're linked — you now command this agentcapavatar.\n\n${holdReply()}`
       : `couldn't link: ${r.reason ?? "bad or expired code"}`;
   };
 
@@ -366,7 +366,7 @@ export function startHoldTelegram(deps: HoldDeps): { stop: () => void } {
     const op = cleanForget({ chatId, userId, atMs: now() * 1000 });
     if (!op) return false;
     try {
-      appendForget(merrymenHome(), op);
+      appendForget(agentcapHome(), op);
       return true;
     } catch (e) {
       note("warn", `Telegram: a group forget request could not be saved while trading is held (${(e as NodeJS.ErrnoException).code ?? "error"})`);
@@ -403,7 +403,7 @@ export function startHoldTelegram(deps: HoldDeps): { stop: () => void } {
 
   /** Kept for the child that ends the hold (held-groups.ts). */
   const keep = (entry: HeldGroupEntry): boolean => {
-    const ok = keepHeldGroupUpdate(merrymenHome(), entry);
+    const ok = keepHeldGroupUpdate(agentcapHome(), entry);
     if (ok) keepWarned = false;
     else if (!keepWarned) {
       keepWarned = true;

@@ -89,7 +89,7 @@ const SIDE = z.enum(["buy", "sell"]);
 const FRESHNESS = z.enum(FRESHNESS_MODES as unknown as [string, ...string[]])
   .describe("cached-ok accepts a fresh-enough stored copy; prefer-fresh (the default) refreshes when the copy is older than its data class allows; force-refresh attempts an upstream read now.");
 const DEPTH = z.enum(DEPTHS).describe("How much to read: quick is one page; standard and deep read further and cost more credits.");
-const COHORT_ONLY = z.boolean().describe("Only Merrymen's watched traders.");
+const COHORT_ONLY = z.boolean().describe("Only AgentCap's watched traders.");
 const LIMIT = (max: number) => z.number().int().min(1).max(max);
 
 const INPUTS = {
@@ -189,7 +189,7 @@ const envelopeOut = z.object({
   status: z.enum(STATUSES).describe("ok, empty (a successful read with no matching records — not proof nobody traded), partial, capped (a row or page limit was reached), stale (an older copy, labelled with its age), failed, unavailable (not configured or provider down), not-authorized (the owner's Fomo data access is off), budget-limited, needs-clarification or not-found."),
   reason: z.string().nullable().describe("A stable machine reason when status is not ok."),
   message: z.string().nullable(),
-  answer: z.string().describe("Merrymen's plain-text rendering of this result: the answer first, then its freshness and coverage limits and the attribution."),
+  answer: z.string().describe("AgentCap's plain-text rendering of this result: the answer first, then its freshness and coverage limits and the attribution."),
   subject: bounded(PART_MAX_CHARS).nullable().describe("The resolved subject (a coin, a trader or the market), or null."),
   candidates: z.array(bounded(PART_MAX_CHARS)).max(CANDIDATES_MAX).describe("For needs-clarification: the choices, none picked."),
   data: bounded(DATA_MAX_CHARS).nullable().describe("The tool's payload (worker/src/fomo/tools.ts). Null means unknown, never zero; provider figures are display and research data only."),
@@ -198,7 +198,7 @@ const envelopeOut = z.object({
   freshness: z.object({
     policy: z.enum(FRESHNESS_CLASSES),
     mode: z.enum(FRESHNESS_MODES as unknown as [string, ...string[]]),
-    retrievedAt: ms.describe("Unix milliseconds: when Merrymen fetched it."),
+    retrievedAt: ms.describe("Unix milliseconds: when AgentCap fetched it."),
     providerAsOf: ms,
     sourceEventAt: z.object({ oldest: ms, newest: ms }),
     lastRefreshAttemptAt: ms,
@@ -287,11 +287,11 @@ export function shapeEnvelope(env: FomoEnvelope, nowMs: number): FomoToolOutput 
 
 /** Every provider-reading Fomo tool shares one bucket: they spend the same credits. */
 const PROVIDER_BUDGET: Budget = { bucket: "fomo-provider", perMinute: 10, perHour: 120 };
-/** The owner's research status reads only Merrymen's own store. */
+/** The owner's research status reads only AgentCap's own store. */
 const STATUS_BUDGET: Budget = { bucket: "fomo-status", perMinute: 30, perHour: 600 };
 const TIMEOUT_MS = 25_000;
 /** The refusal for a connection whose owner has no agent (no grant): the research credits are the fleet's owners'. */
-const NEEDS_AGENT = "Fomo research is for Merrymen owners, and this account has no agent yet.";
+const NEEDS_AGENT = "Fomo research is for AgentCap owners, and this account has no agent yet.";
 
 const TITLES: Record<FomoReadToolName, string> = {
   fomo_resolve_subject: "Resolve a Fomo coin or trader",
@@ -312,9 +312,9 @@ async function invokeFor(name: FomoReadToolName, args: Record<string, unknown>, 
   if (!checked.ok) throw new McpError("invalid_input", `That request could not be read as a Fomo lookup (${checked.reason}).`);
   // Opt-in (fomo-runtime.ts hostedFomoEnabled): not enabled, nothing is read or built.
   if (!hostedFomoEnabled()) throw new McpError("unsupported", FOMO_NOT_ENABLED);
-  // MCP runs on hosted Merrymen only (mcp/config.ts refuses to enable it otherwise), so the mode is hosted.
+  // MCP runs on hosted AgentCap only (mcp/config.ts refuses to enable it otherwise), so the mode is hosted.
   const tenant = fomoTenantFor(ctx.principal.tenant, true);
-  if (!tenant) throw new McpError("forbidden", "This connection has no owner Merrymen can vouch for.");
+  if (!tenant) throw new McpError("forbidden", "This connection has no owner AgentCap can vouch for.");
   // ONLY AN OWNER WITH AN AGENT. market:read needs no agent, and sign-in is
   // open, so without this any fresh wallet's connection spent the fleet's one
   // shared credit pool under caps of its own. The access reader refuses such
@@ -358,12 +358,12 @@ function fomoTool<N extends FomoReadToolName>(name: N, capability: Capability) {
   return defineTool({
     name,
     title: TITLES[name],
-    // Public reads carry the provider's attribution; the owner's own status is Merrymen's record.
+    // Public reads carry the provider's attribution; the owner's own status is AgentCap's record.
     description: isStatus ? FOMO_TOOL_DEFS[name].description : `${FOMO_TOOL_DEFS[name].description} ${FOMO_ATTRIBUTION}.`,
     capability,
     input: INPUTS[name] as (typeof INPUTS)[N],
     output: envelopeOut,
-    // Reads only. The provider is outside Merrymen; the owner's status is not.
+    // Reads only. The provider is outside AgentCap; the owner's status is not.
     annotations: { readOnlyHint: true, openWorldHint: !isStatus },
     budget: isStatus ? STATUS_BUDGET : PROVIDER_BUDGET,
     timeoutMs: TIMEOUT_MS,

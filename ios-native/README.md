@@ -1,6 +1,6 @@
-# Merrymen native iOS — development preview
+# AgentCap native iOS — development preview
 
-Native SwiftUI screens for iPhone and iPad, iOS 17+. The app shares Merrymen's live API, artwork, fonts, published copy and core presentation rules. There is no WebView shell. This is a **development preview, not a release with verified full parity**. The exact boundary is recorded in [PARITY.md](PARITY.md).
+Native SwiftUI screens for iPhone and iPad, iOS 17+. The app shares AgentCap's live API, artwork, fonts, published copy and core presentation rules. There is no WebView shell. This is a **development preview, not a release with verified full parity**. The exact boundary is recorded in [PARITY.md](PARITY.md).
 
 ## Build and test
 
@@ -10,14 +10,14 @@ Use Xcode 26.2 and XcodeGen on a Mac. The pinned Privy 2.16.2 binary requires th
 cd ios-native
 swift test --package-path Policy
 xcodegen generate
-xcodebuild test -project Merrymen.xcodeproj -scheme Merrymen \
+xcodebuild test -project AgentCap.xcodeproj -scheme AgentCap \
   -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' \
   CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=
 ```
 
 Simulator ad-hoc signing enables Keychain tests without an Apple account.
 
-To try it on your own iPhone before the paid Apple team is active, add your Apple ID in Xcode (Settings → Accounts), connect the phone with Developer Mode on, and run `./run-on-device.sh <TEAM_ID>`. It builds as `dev.merrymen.app.dev` (also allowed on the `merrymen-ios` Privy client) so the real `dev.merrymen.app` stays free for the paid team, and it commits nothing. Free-team installs expire after 7 days and cannot use Associated Domains. `.github/workflows/ios-native.yml` records build, test and screenshot evidence. Generated projects, build products and downloaded review evidence are ignored.
+To try it on your own iPhone before the paid Apple team is active, add your Apple ID in Xcode (Settings → Accounts), connect the phone with Developer Mode on, and run `./run-on-device.sh <TEAM_ID>`. It builds as `dev.agentcap.app.dev` (also allowed on the `agentcap-ios` Privy client) so the real `dev.agentcap.app` stays free for the paid team, and it commits nothing. Free-team installs expire after 7 days and cannot use Associated Domains. `.github/workflows/ios-native.yml` records build, test and screenshot evidence. Generated projects, build products and downloaded review evidence are ignored.
 
 From the repository root, verify the shared bundles:
 
@@ -38,8 +38,8 @@ After shared-source changes, regenerate with `node ios-native/Signing/build.mjs`
 ## Configuration still needed
 
 - Public Privy App ID: `cmtnun9wn00rg0dl5txyoxpju` (configured).
-- Public **iOS Client ID** (configured): Privy client `merrymen-ios`, allowing bundle **`dev.merrymen.app`** and URL scheme **`merrymen`**, set as `PRIVY_CLIENT_ID` in `project.yml`. X is the primary sign-in, as on the web.
-- Public **Reown Project ID** (configured): `WALLETCONNECT_PROJECT_ID` in `project.yml` enables native wallet-app connections (callback `merrymen://walletconnect`); only ownership-message signing is requested. Its session Keychain group uses the Apple Team prefix, so device builds need `DEVELOPMENT_TEAM`.
+- Public **iOS Client ID** (configured): Privy client `agentcap-ios`, allowing bundle **`dev.agentcap.app`** and URL scheme **`agentcap`**, set as `PRIVY_CLIENT_ID` in `project.yml`. X is the primary sign-in, as on the web.
+- Public **Reown Project ID** (configured): `WALLETCONNECT_PROJECT_ID` in `project.yml` enables native wallet-app connections (callback `agentcap://walletconnect`); only ownership-message signing is requested. Its session Keychain group uses the Apple Team prefix, so device builds need `DEVELOPMENT_TEAM`.
 - Apple Developer Team: set `DEVELOPMENT_TEAM` for device builds and configure provisioning for this bundle ID.
 
 Do not add app secrets, server keys, wallet private keys, signing certificates or production database credentials. Missing client configuration explicitly disables Privy sign-in. Email/X callbacks and returning identities still need acceptance once the client exists.

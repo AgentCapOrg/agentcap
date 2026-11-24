@@ -1,7 +1,7 @@
 /**
  * /api/mcp/health reports both addresses the server answers on, so an
  * operator sees a directory profile that a bad
- * MERRYMEN_MCP_DIRECTORY_RESOURCE_URL (or the kill switch) turned off.
+ * AGENTCAP_MCP_DIRECTORY_RESOURCE_URL (or the kill switch) turned off.
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
@@ -10,7 +10,7 @@ import { directoryHealth, mcpHealth } from "./health";
 import { makeTestDb, testConfig } from "./testing";
 
 const envOf = (vars: Record<string, string>) => vars as unknown as NodeJS.ProcessEnv;
-const BASE = { MERRYMEN_HOSTED: "1", DATABASE_URL: "postgres://x", MERRYMEN_OAUTH_ISSUER: "https://mcp.test" };
+const BASE = { AGENTCAP_HOSTED: "1", DATABASE_URL: "postgres://x", AGENTCAP_OAUTH_ISSUER: "https://mcp.test" };
 
 test("health reports the canonical and the directory endpoint", async () => {
   const d = await makeTestDb();
@@ -24,39 +24,39 @@ test("health reports the canonical and the directory endpoint", async () => {
 
 test("health says the directory is off, and why, without echoing the bad value", async () => {
   const d = await makeTestDb();
-  const off = await mcpHealth({ cfg: testConfig({ directoryResource: "" }), env: envOf({ MERRYMEN_MCP_DIRECTORY: "0" }), mcp: async () => d });
+  const off = await mcpHealth({ cfg: testConfig({ directoryResource: "" }), env: envOf({ AGENTCAP_MCP_DIRECTORY: "0" }), mcp: async () => d });
   assert.equal(off.status, 200, "the directory being off does not make the server unready");
   const body = await off.json() as { directory: { endpoint: string | null; why: string } };
   assert.equal(body.directory.endpoint, null);
-  assert.match(body.directory.why, /MERRYMEN_MCP_DIRECTORY=0/);
+  assert.match(body.directory.why, /AGENTCAP_MCP_DIRECTORY=0/);
 
   const bad = "http://evil.test/listing?x=1";
-  const env = envOf({ ...BASE, MERRYMEN_MCP_DIRECTORY_RESOURCE_URL: bad });
+  const env = envOf({ ...BASE, AGENTCAP_MCP_DIRECTORY_RESOURCE_URL: bad });
   const cfg = mcpConfig(env);
   assert.equal(cfg.directoryResource, "", "config turned the bad URL off");
   const h = directoryHealth(cfg, env);
   assert.equal(h.endpoint, null);
-  assert.match(h.why ?? "", /MERRYMEN_MCP_DIRECTORY_RESOURCE_URL is not usable/);
+  assert.match(h.why ?? "", /AGENTCAP_MCP_DIRECTORY_RESOURCE_URL is not usable/);
   assert.ok(!(h.why ?? "").includes(bad));
   // One on the canonical path is refused too, and reported the same way.
-  const same = envOf({ ...BASE, MERRYMEN_MCP_DIRECTORY_RESOURCE_URL: "https://mcp.test/mcp/" });
+  const same = envOf({ ...BASE, AGENTCAP_MCP_DIRECTORY_RESOURCE_URL: "https://mcp.test/mcp/" });
   assert.match(directoryHealth(mcpConfig(same), same).why ?? "", /not usable/);
   // So is one on a path the directory is not served at, and the reason names the path it must have.
-  const elsewhere = envOf({ ...BASE, MERRYMEN_MCP_DIRECTORY_RESOURCE_URL: "https://mcp.test/listing" });
+  const elsewhere = envOf({ ...BASE, AGENTCAP_MCP_DIRECTORY_RESOURCE_URL: "https://mcp.test/listing" });
   assert.equal(mcpConfig(elsewhere).directoryResource, "");
   assert.match(directoryHealth(mcpConfig(elsewhere), elsewhere).why ?? "", /not usable.*whose path is \/mcp\/directory/);
   // A canonical endpoint at any path but /mcp (the directory's own included)
   // is no endpoint at all: MCP is off, and the directory blames that variable.
-  const taken = envOf({ ...BASE, MERRYMEN_MCP_RESOURCE_URL: "https://mcp.test/mcp/directory" });
+  const taken = envOf({ ...BASE, AGENTCAP_MCP_RESOURCE_URL: "https://mcp.test/mcp/directory" });
   assert.equal(mcpConfig(taken).resource, "");
   assert.equal(mcpConfig(taken).directoryResource, "");
-  assert.match(directoryHealth(mcpConfig(taken), taken).why ?? "", /no canonical endpoint.*\(MERRYMEN_MCP_RESOURCE_URL\)/);
+  assert.match(directoryHealth(mcpConfig(taken), taken).why ?? "", /no canonical endpoint.*\(AGENTCAP_MCP_RESOURCE_URL\)/);
   // Even beside a valid override: no override can fix that, so it is not the one blamed.
-  const takenOver = envOf({ ...BASE, MERRYMEN_MCP_RESOURCE_URL: "https://mcp.test/v2/mcp", MERRYMEN_MCP_DIRECTORY_RESOURCE_URL: "https://dir.test/mcp/directory" });
+  const takenOver = envOf({ ...BASE, AGENTCAP_MCP_RESOURCE_URL: "https://mcp.test/v2/mcp", AGENTCAP_MCP_DIRECTORY_RESOURCE_URL: "https://dir.test/mcp/directory" });
   assert.equal(mcpConfig(takenOver).directoryResource, "");
-  assert.match(directoryHealth(mcpConfig(takenOver), takenOver).why ?? "", /no canonical endpoint.*\(MERRYMEN_MCP_RESOURCE_URL\)/);
+  assert.match(directoryHealth(mcpConfig(takenOver), takenOver).why ?? "", /no canonical endpoint.*\(AGENTCAP_MCP_RESOURCE_URL\)/);
   // A usable override (another origin, the served path) is reported as the endpoint.
-  const good = envOf({ ...BASE, MERRYMEN_MCP_DIRECTORY_RESOURCE_URL: "https://dir.test/mcp/directory" });
+  const good = envOf({ ...BASE, AGENTCAP_MCP_DIRECTORY_RESOURCE_URL: "https://dir.test/mcp/directory" });
   assert.deepEqual(directoryHealth(mcpConfig(good), good), { endpoint: "https://dir.test/mcp/directory", why: null });
 });
 

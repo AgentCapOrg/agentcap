@@ -3,7 +3,7 @@
  *
  * pickAcquiredLeg refuses the energy reserve on purpose (it must never get a
  * fill or a basis), which left every place that NAMES a trade with nothing to
- * call a $MERRYMEN buy: a restart copy read "a coin I can't name", and a live
+ * call a $AGENTCAP buy: a restart copy read "a coin I can't name", and a live
  * one would have been announced under a ticker read off the chain like any
  * launchpad coin. It is capacity, not a position, and the owner should read it
  * as that. Executed against an in-memory ledger and a fake chain.
@@ -13,7 +13,7 @@ import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { beforeEach, describe, it } from "node:test";
 
-import { CASH, MERRYMEN_TOKEN } from "../../../packages/core/src/index";
+import { CASH, AGENTCAP_TOKEN } from "../../../packages/core/src/index";
 import { pickAcquiredLeg } from "../inflight-reconcile";
 import { netTokenDeltas } from "../fills";
 import { clearTokenLabelCacheForTest, receiptFacts } from "../token-label";
@@ -21,7 +21,7 @@ import { tradeLine } from "./notifier";
 import { ENERGY_LABEL, isEnergyRow, loadTradeViews, renderTradeList, tradeViewLine } from "./trade-rows";
 
 const USDG = CASH.USDG.toLowerCase();
-const MERRY = MERRYMEN_TOKEN.address.toLowerCase();
+const MERRY = AGENTCAP_TOKEN.address.toLowerCase();
 const AGENT = "0x05a198a677fbcd8f5c168d397fa7ef5eb6d65487";
 const PAIR = "0x00000000000000000000000000000000000beef1";
 
@@ -45,7 +45,7 @@ const transfer = (token: string, from: string, to: string, value: bigint) => ({
   topics: [TRANSFER, pad(from), pad(to)],
   data: `0x${value.toString(16)}`,
 });
-/** USDG → (VIRTUAL, between the pairs) → $MERRYMEN into the account: what the energy route leaves on a receipt. */
+/** USDG → (VIRTUAL, between the pairs) → $AGENTCAP into the account: what the energy route leaves on a receipt. */
 const ENERGY_LOGS = [
   transfer(USDG, AGENT, PAIR, 5_000_000n),
   transfer(MERRY, PAIR, AGENT, 10_000n * 10n ** 18n),
@@ -67,16 +67,16 @@ function fakeChain() {
 beforeEach(() => clearTokenLabelCacheForTest());
 
 describe("/trades and the chat's lookups", () => {
-  it("the worker's energy-buy row is 'energy ($MERRYMEN)', bought", async () => {
+  it("the worker's energy-buy row is 'energy ($AGENTCAP)', bought", async () => {
     const db = ledger();
     db.prepare(
       "INSERT INTO trades (agent_id, kind, target, sell_token, buy_token, amount_usdg, status, tx_hash, created_at) VALUES (?, 'energy-buy', ?, ?, ?, 5, 'landed', '0xe1', 100)",
-    ).run(AGENT, "0x89e5db8b5aa49aa85ac63f691524311aeb649eba", CASH.USDG, MERRYMEN_TOKEN.address);
+    ).run(AGENT, "0x89e5db8b5aa49aa85ac63f691524311aeb649eba", CASH.USDG, AGENTCAP_TOKEN.address);
     const [v] = await loadTradeViews(db, AGENT, { client: fakeChain() });
     assert.equal(v!.label, ENERGY_LABEL);
     assert.equal(v!.side, "buy");
     assert.equal(v!.trusted, true);
-    assert.match(tradeViewLine(v!, false), /^✅ bought energy \(\$MERRYMEN\) for an unknown amount · /);
+    assert.match(tradeViewLine(v!, false), /^✅ bought energy \(\$AGENTCAP\) for an unknown amount · /);
   });
 
   it("a leg-less energy-buy row is still named, and still a buy", async () => {
@@ -92,9 +92,9 @@ describe("/trades and the chat's lookups", () => {
     const db = ledger();
     db.prepare(
       "INSERT INTO trades (agent_id, kind, target, sell_token, buy_token, amount_usdg, status, reject_rule, created_at) VALUES (?, 'energy-buy', ?, ?, ?, 5, 'rejected', 'daily-cap', 100)",
-    ).run(AGENT, AGENT, CASH.USDG, MERRYMEN_TOKEN.address);
+    ).run(AGENT, AGENT, CASH.USDG, AGENTCAP_TOKEN.address);
     const [v] = await loadTradeViews(db, AGENT, {});
-    assert.match(tradeViewLine(v!, false), /blocked: buy of energy \(\$MERRYMEN\)/);
+    assert.match(tradeViewLine(v!, false), /blocked: buy of energy \(\$AGENTCAP\)/);
   });
 
   it("a restart copy of an energy buy is named from its receipt, not 'a coin I can't name'", async () => {
@@ -108,12 +108,12 @@ describe("/trades and the chat's lookups", () => {
     assert.doesNotMatch(renderTradeList([v!]), /can't name/);
   });
 
-  it("asked for $MERRYMEN or energy, the energy rows answer", async () => {
+  it("asked for $AGENTCAP or energy, the energy rows answer", async () => {
     const db = ledger();
     db.prepare(
       "INSERT INTO trades (agent_id, kind, target, sell_token, buy_token, amount_usdg, status, created_at) VALUES (?, 'energy-buy', ?, ?, ?, 5, 'landed', 100)",
-    ).run(AGENT, AGENT, CASH.USDG, MERRYMEN_TOKEN.address);
-    for (const token of ["MERRYMEN", "$MERRYMEN", "energy"]) {
+    ).run(AGENT, AGENT, CASH.USDG, AGENTCAP_TOKEN.address);
+    for (const token of ["AGENTCAP", "$AGENTCAP", "energy"]) {
       assert.equal((await loadTradeViews(db, AGENT, { token })).length, 1, token);
     }
   });
@@ -134,13 +134,13 @@ describe("the receipt reads it for a NAME only — never as a fill", () => {
 describe("the trade ping", () => {
   it("names it energy, with or without a coin handed in", () => {
     const row = { id: 1, kind: "energy-buy", amount_usdg: 5, status: "landed", reject_rule: null, tx_hash: null };
-    assert.match(tradeLine(row, null, false, { label: ENERGY_LABEL, side: "buy" }), /✅ Bought energy \(\$MERRYMEN\) for \$5\.00/);
-    assert.match(tradeLine(row, null), /A top-up of energy \(\$MERRYMEN\) went through — \$5\.00/);
+    assert.match(tradeLine(row, null, false, { label: ENERGY_LABEL, side: "buy" }), /✅ Bought energy \(\$AGENTCAP\) for \$5\.00/);
+    assert.match(tradeLine(row, null), /A top-up of energy \(\$AGENTCAP\) went through — \$5\.00/);
   });
 
   it("isEnergyRow: the worker's kind, or a reserve-token leg", () => {
     assert.ok(isEnergyRow({ kind: "energy-buy" }));
-    assert.ok(isEnergyRow({ kind: "swap", sell_token: CASH.USDG, buy_token: MERRYMEN_TOKEN.address.toUpperCase() }));
+    assert.ok(isEnergyRow({ kind: "swap", sell_token: CASH.USDG, buy_token: AGENTCAP_TOKEN.address.toUpperCase() }));
     assert.ok(!isEnergyRow({ kind: "swap", sell_token: CASH.USDG, buy_token: "0x0000000000000000000000000000000000000001" }));
   });
 
@@ -163,7 +163,7 @@ describe("a DROPPED op on /trades", () => {
     const [v] = await loadTradeViews(db, AGENT);
     assert.ok(v);
     const line = tradeViewLine(v!, false);
-    assert.match(line, /^↩️ dropped: buy of energy \(\$MERRYMEN\), \$5\.00 — it never reached the chain, and nothing moved · /);
+    assert.match(line, /^↩️ dropped: buy of energy \(\$AGENTCAP\), \$5\.00 — it never reached the chain, and nothing moved · /);
     assert.doesNotMatch(line, /bought|⏳/);
     assert.equal((await loadTradeViews(db, AGENT, { filter: "refused" })).length, 1);
     assert.equal((await loadTradeViews(db, AGENT, { filter: "filled" })).length, 0);

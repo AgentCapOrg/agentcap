@@ -9,7 +9,7 @@ import { translateQuery, translateSchema, type Db } from "../../../worker/src/db
 import { readPeerTheses } from "../../../worker/src/peer-theses";
 import { readTheses } from "./read-theses";
 
-const url = process.env.MERRYMEN_TEST_PG_URL ?? process.env.MERRYMEN_TEST_POSTGRES_URL;
+const url = process.env.AGENTCAP_TEST_PG_URL ?? process.env.AGENTCAP_TEST_POSTGRES_URL;
 interface Client {
   connect(): Promise<void>;
   end(): Promise<void>;

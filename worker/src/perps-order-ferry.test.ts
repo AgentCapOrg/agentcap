@@ -10,7 +10,7 @@
  * never the Spot one, and a Spot row the reverse: not by a rule about perps,
  * but by the same account join every order already crosses on.
  *
- * And a Perps worker the operator has stood down (MERRYMEN_PERPS not paper,
+ * And a Perps worker the operator has stood down (AGENTCAP_PERPS not paper,
  * D19) is not a child at all: its rows wait, unclaimed and unclosed, and are
  * answered — never run late — when it is started again.
  *
@@ -32,7 +32,7 @@ import { COMMAND_RECEIPT_DDL, childHome, ferryForChild, ferryOrders } from "./or
 import { workerKey } from "./worker-key";
 
 const fleet = mkdtempSync(path.join(tmpdir(), "merry-perps-ferry-"));
-process.env.MERRYMEN_HOME = fleet;
+process.env.AGENTCAP_HOME = fleet;
 after(() => rmSync(fleet, { recursive: true, force: true }));
 
 const OWNER = "0x1111111111111111111111111111111111111111";
@@ -122,7 +122,7 @@ describe("a login's two workers each get their own wallet's orders", () => {
     const created = Date.now() - 60 * 60_000;
     insert(raw, { id: "frozen-close", agent_id: PERPS, args: { ...CLOSE, expiresAt: created + 30 * 60_000 }, created_at: created });
     insert(raw, { id: "spot-buy-beside", agent_id: SPOT, args: BUY });
-    // MERRYMEN_PERPS is not paper: the orchestrator never starts the Perps child (perpsSpawnable).
+    // AGENTCAP_PERPS is not paper: the orchestrator never starts the Perps child (perpsSpawnable).
     const spotOnly = targetsOf(new Map([[SPOT_KEY, { smartAccount: SPOT }]]));
     await ferryOrders(db, spotOnly);
     for (const t of spotOnly) await ferryForChild(db, t);
@@ -280,8 +280,8 @@ describe("an owner's exit that did not run, or was never answered, in an exit's 
 
 /**
  * SELF-HOSTED THERE IS NO FERRY: the web writes the file into the wallet's own
- * home, and each worker drains only its own (`MERRYMEN_HOME` is
- * `accounts/perps` for the Perps worker, as `merrymen recover` already runs it).
+ * home, and each worker drains only its own (`AGENTCAP_HOME` is
+ * `accounts/perps` for the Perps worker, as `agentcap recover` already runs it).
  */
 describe("self-hosted, each wallet's worker drains its own home", () => {
   it("an exit filed in accounts/perps/commands is never seen by the Spot worker's drain", async () => {

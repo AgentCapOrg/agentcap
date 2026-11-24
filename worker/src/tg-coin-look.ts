@@ -198,7 +198,7 @@ const addressSymbol = (address: string) => `T${address.slice(-11).toUpperCase()}
  * Such a coin is "this one".
  */
 const TRUSTED_NAMES = new Set(
-  [...STOCK_TOKENS.map((t) => t.symbol), "USDG", "WETH", "ETH", "MERRYMEN"].map((s) => s.toUpperCase()),
+  [...STOCK_TOKENS.map((t) => t.symbol), "USDG", "WETH", "ETH", "AGENTCAP"].map((s) => s.toUpperCase()),
 );
 
 function displayName(address: string, pools: readonly GeckoPool[]): string | undefined {

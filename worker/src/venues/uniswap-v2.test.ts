@@ -1,7 +1,7 @@
 /**
  * THE ENERGY ROUTE'S ARITHMETIC, AND ITS SILENCES.
  *
- * The pool quotes $MERRYMEN before the token's buy tax; what ARRIVES is after
+ * The pool quotes $AGENTCAP before the token's buy tax; what ARRIVES is after
  * it. Two helpers turn one into the other and must be exact inverses in the
  * safe direction: asking for grossNeededFor(x) and flooring it back through
  * energyMinOut must never come out below x, or the estimate an owner is shown
@@ -12,7 +12,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
-import { ENERGY_ROUTE_V1, MERRYMEN_TOKEN } from "../../../packages/core/src/index";
+import { ENERGY_ROUTE_V1, AGENTCAP_TOKEN } from "../../../packages/core/src/index";
 import {
   energyAmountInFor,
   energyMinOut,
@@ -99,7 +99,7 @@ describe("the reads say 'no answer' as null", () => {
   it("the tax is read from the token itself; a failed or absurd read is null", async () => {
     const ok = fake(() => 100n);
     assert.equal(await readEnergyTaxBps(ok.client), 100);
-    assert.equal(ok.calls[0]!.address.toLowerCase(), MERRYMEN_TOKEN.address.toLowerCase());
+    assert.equal(ok.calls[0]!.address.toLowerCase(), AGENTCAP_TOKEN.address.toLowerCase());
     assert.equal(ok.calls[0]!.functionName, "totalBuyTaxBasisPoints");
     assert.equal(await readEnergyTaxBps(fake(() => new Error("no")).client), null);
     assert.equal(await readEnergyTaxBps(fake(() => 10_000n).client), null);

@@ -28,7 +28,7 @@ struct ChatScreen: View {
             loadedGeneration = store.generation
             voice.stop(); messages = []; proposal = nil; partial = ""; error = nil
             if let owner = store.owner {
-                do { if let data = try SecureStore.read("dev.merrymen.chat", owner.lowercased()) { messages = try JSONDecoder().decode([J].self, from: data) } }
+                do { if let data = try SecureStore.read("dev.agentcap.chat", owner.lowercased()) { messages = try JSONDecoder().decode([J].self, from: data) } }
                 catch { self.error = "Saved conversation could not be read." }
             }
         }
@@ -48,7 +48,7 @@ struct ChatScreen: View {
         .toolbar { ToolbarItem(placement: .secondaryAction) { Button("Clear conversation", role: .destructive) { clearHistory = true }.disabled(busy) } }
         .confirmationDialog("Clear the saved conversation on this device?", isPresented: $clearHistory, titleVisibility: .visible) {
             Button("Clear conversation", role: .destructive) {
-                do { if let owner = store.owner { try SecureStore.remove("dev.merrymen.chat", owner.lowercased()) }; messages = []; proposal = nil }
+                do { if let owner = store.owner { try SecureStore.remove("dev.agentcap.chat", owner.lowercased()) }; messages = []; proposal = nil }
                 catch { self.error = error.localizedDescription }
             }
         }
@@ -59,7 +59,7 @@ struct ChatScreen: View {
                     if store.owner == nil { SignInCard() }
                     else if messages.isEmpty {
                         Image("Brand").resizable().scaledToFit().frame(width: 56, height: 56).accessibilityHidden(true)
-                        Text("Ask your Merryman").font(.custom(Brand.pixel, size: 30, relativeTo: .largeTitle))
+                        Text("Ask your AgentCapAvatar").font(.custom(Brand.pixel, size: 30, relativeTo: .largeTitle))
                         Text("Discuss its thesis, portfolio, or next decision.").foregroundStyle(.secondary)
                     }
                     ForEach(Array(messages.enumerated()), id: \.offset) { index, message in
@@ -110,7 +110,7 @@ struct ChatScreen: View {
             // again when this conversation is restored.
             if let owner {
                 let transcript = messages.suffix(100).map { J.object(["role": $0["role"], "content": $0["content"]]) }
-                try SecureStore.write("dev.merrymen.chat", owner.lowercased(), JSONEncoder().encode(transcript))
+                try SecureStore.write("dev.agentcap.chat", owner.lowercased(), JSONEncoder().encode(transcript))
             }
         } catch { if generation == store.generation { self.error = error.localizedDescription } } }
     }
@@ -504,7 +504,7 @@ private struct BubbleShape: Shape {
     }
 }
 
-/// A dark Merrymen wallpaper: the accent glow and a faint tiled logo mark.
+/// A dark AgentCap wallpaper: the accent glow and a faint tiled logo mark.
 private struct ChatWallpaper: View {
     var body: some View {
         ZStack {

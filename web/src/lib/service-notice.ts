@@ -1,6 +1,6 @@
 /**
  * THE OPERATOR'S SERVICE NOTICE — one fleet-wide banner, written by a person,
- * set from the web env var `MERRYMEN_SERVICE_NOTICE`.
+ * set from the web env var `AGENTCAP_SERVICE_NOTICE`.
  *
  * ── WHY AN ENV VAR AND NOT A TABLE ───────────────────────────────────────
  *
@@ -24,7 +24,7 @@
  *     rendered line read differently from the text the operator reviewed.
  *   - A link is `https:` on an exact host from SERVICE_NOTICE_LINK_HOSTS, with
  *     no userinfo and no port. `http:`, `javascript:`, `data:`, a look-alike
- *     suffix (`app.merrymen.dev.example`) and a trailing-dot host are all
+ *     suffix (`app.agentcap.xyz.example`) and a trailing-dot host are all
  *     refused. Adding a host is a reviewed code change, deliberately: the env
  *     var is the notice, so it cannot also be the policy about the notice.
  *
@@ -51,7 +51,7 @@
  * First-party only. A notice is read by owners whose money is held, during an
  * incident; a link out of the product is a link we cannot vouch for.
  */
-export const SERVICE_NOTICE_LINK_HOSTS: readonly string[] = ["merrymen.dev", "app.merrymen.dev"];
+export const SERVICE_NOTICE_LINK_HOSTS: readonly string[] = ["agentcap.xyz", "app.agentcap.xyz"];
 
 /**
  * Sizes, in UTF-16 units. A banner is a few sentences; anything larger is a

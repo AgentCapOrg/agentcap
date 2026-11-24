@@ -28,7 +28,7 @@ const FIGURES_NOTE =
   "size_usdg is the size the decision PROPOSED, not a fill. What actually happened, and on which book (paper = simulated, live = real funds), is under outcome. A refusal carries no book in the ledger. Missing figures are null, never zero.";
 
 const DATA_SOURCE =
-  "Merrymen's shared ledger, copied from the agent's own worker about every 15 s; it lags the worker by about one tick.";
+  "AgentCap's shared ledger, copied from the agent's own worker about every 15 s; it lags the worker by about one tick.";
 /** A page with evidence reads two JSON columns per row, so it is kept small. */
 const EVIDENCE_PAGE_MAX = 10;
 
@@ -521,7 +521,7 @@ const explainInactivity = defineTool({
         market_unreadable: e.market_unreadable.count, provider_failure: e.provider_failure.count, brain_failure: e.brain_failure.count, brain_refused: e.brain_refused.count,
         execution_failure: e.execution_failure.count, policy_notice: e.policy_notice.count, arm_failure: e.arm_failure.count,
         funding_notice: e.funding_notice.count, consent_notice: e.consent_notice.count, other_not_relayed: e.other.count,
-        note: "Warnings and errors from the agent's event log, counted by kind. Their text is not relayed here because it can carry raw provider errors, chat ids and addresses; Merrymen's activity log shows it. brain_failure events are the same failed Brain runs (live and shadow) as the brain_unreachable, brain_malformed and brain_shadow_failures decision counts, not further failures.",
+        note: "Warnings and errors from the agent's event log, counted by kind. Their text is not relayed here because it can carry raw provider errors, chat ids and addresses; AgentCap's activity log shows it. brain_failure events are the same failed Brain runs (live and shadow) as the brain_unreachable, brain_malformed and brain_shadow_failures decision counts, not further failures.",
       },
       fills_in_window: dx.fills_in_window,
       last_successful_cycle: dx.last_successful_cycle
@@ -555,7 +555,7 @@ export const DECISIONS_RESOURCES: ResourceDef[] = [
     description: "One of your agent's decisions with every trade that attached to it.",
     mimeType: "application/json",
     capability: "decisions.read",
-    uri: "merrymen://agents/{agent}/decisions/{decision_id}",
+    uri: "agentcap://agents/{agent}/decisions/{decision_id}",
     async list(ctx) {
       const agents = await ctx.agents();
       const out: Array<{ uri: string; name: string; title: string; mimeType: string }> = [];
@@ -565,7 +565,7 @@ export const DECISIONS_RESOURCES: ResourceDef[] = [
           // Only ids the read below would accept become URIs.
           if (!DECISION_ID_RE.test(r.id)) continue;
           // Titles carry only our own words: a symbol is third-party text.
-          out.push({ uri: `merrymen://agents/${a.slug}/decisions/${r.id}`, name: `decision-${r.id}`, title: `${action(r.action) ?? "view"} decision at ${isoOrNull(r.at) ?? "unknown time"}`, mimeType: "application/json" });
+          out.push({ uri: `agentcap://agents/${a.slug}/decisions/${r.id}`, name: `decision-${r.id}`, title: `${action(r.action) ?? "view"} decision at ${isoOrNull(r.at) ?? "unknown time"}`, mimeType: "application/json" });
         }
       }
       return out;

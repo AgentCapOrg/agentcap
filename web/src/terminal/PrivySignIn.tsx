@@ -310,7 +310,7 @@ export function PrivySignIn({ onDone, directX = false }: { onDone: () => void; d
       </button>}
       <div role="status" aria-live="polite">
         {phase === "authorising" && <p className="hosted-auth-note">Complete verification in the sign-in dialog to continue.</p>}
-        {phase === "provisioning" && <p className="hosted-auth-note">Connecting your account’s wallet. If you’re new, Merrymen creates it once.</p>}
+        {phase === "provisioning" && <p className="hosted-auth-note">Connecting your account’s wallet. If you’re new, AgentCap creates it once.</p>}
         {phase === "proving" && <p className="hosted-auth-note">Approve the sign-in signature if prompted. It proves you own this account and does not allow trading.</p>}
       </div>
       {error && <p role="alert" className="flow-error">{error}</p>}

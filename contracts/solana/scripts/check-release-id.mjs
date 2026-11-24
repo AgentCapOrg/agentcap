@@ -9,8 +9,8 @@
 // contents: this script refuses anything that looks like one and reads no key
 // material. It checks, and exits non-zero unless both hold:
 //   1. declare_id!("...") in the program source (default
-//      programs/merrymen-vault/src/lib.rs) is exactly that public key, and
-//   2. the built program (default target/deploy/merrymen_vault.so, from
+//      programs/agentcap-vault/src/lib.rs) is exactly that public key, and
+//   2. the built program (default target/deploy/agentcap_vault.so, from
 //      build.sh) holds that key's 32 bytes, as declare_id! embeds them.
 // A binary built for any other id fails every instruction once deployed at
 // that address, and an immutable deployment can never be fixed. CI has no
@@ -24,8 +24,8 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-export const DEFAULT_SOURCE = path.join(HERE, "..", "programs", "merrymen-vault", "src", "lib.rs");
-export const DEFAULT_SO = path.join(HERE, "..", "target", "deploy", "merrymen_vault.so");
+export const DEFAULT_SOURCE = path.join(HERE, "..", "programs", "agentcap-vault", "src", "lib.rs");
+export const DEFAULT_SO = path.join(HERE, "..", "target", "deploy", "agentcap_vault.so");
 const ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
 export class ReleaseIdError extends Error {
@@ -100,7 +100,7 @@ function parseArgs(argv) {
       if (i + 1 >= argv.length) throw new ReleaseIdError(`${arg} needs a path.`, 2);
       options[arg.slice(2)] = argv[++i];
     } else if (arg === "--help" || arg === "-h") {
-      throw new ReleaseIdError("Usage: check-release-id.mjs <program public key> [--so <merrymen_vault.so>] [--source <lib.rs>]", 2);
+      throw new ReleaseIdError("Usage: check-release-id.mjs <program public key> [--so <agentcap_vault.so>] [--source <lib.rs>]", 2);
     } else if (arg.startsWith("--")) {
       throw new ReleaseIdError(`Unknown option ${arg.split("=")[0]}.`, 2);
     } else positional.push(arg);

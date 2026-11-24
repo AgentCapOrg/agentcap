@@ -87,7 +87,7 @@ describe("renderEnvelope", () => {
   it("answers first, labels the reading as ours and the words as theirs, and attributes once", () => {
     const text = renderEnvelope(env("fomo_get_token_theses", "ok", theses()), O);
     const lines = text.split("\n");
-    assert.match(lines[0]!, /^\$PONS on robinhood \(0x39db…0c0d\): 3 theses from 3 authors in 2 evidence families — Merrymen's reading: 1 supporting/);
+    assert.match(lines[0]!, /^\$PONS on robinhood \(0x39db…0c0d\): 3 theses from 3 authors in 2 evidence families — AgentCap's reading: 1 supporting/);
     assert.ok(text.includes("(their words)"));
     assert.equal(lines[lines.length - 1], FOMO_ATTRIBUTION);
     assert.equal(text.split(FOMO_ATTRIBUTION).length, 2);
@@ -105,14 +105,14 @@ describe("renderEnvelope", () => {
     const text = renderEnvelope(env("fomo_get_token_theses", "ok", theses(INJECTION)), G);
     // What they argue in fixed words, never their words or counts (plan WP9, D6).
     assert.ok(text.startsWith("What traders on Fomo are saying about PONS on Robinhood Chain (1 thesis read from 1 trader):"), text);
-    assert.doesNotMatch(text, /ignore|instructions|evidence famil|Merrymen's reading|supporting|opposing|neutral/);
+    assert.doesNotMatch(text, /ignore|instructions|evidence famil|AgentCap's reading|supporting|opposing|neutral/);
     assert.ok(!/frankdegods|0x[0-9a-f]{6}|https?:|\$PONS|their words/.test(text), text);
     // The attribution is the owner's; a group has had its post about the source (Milla, 2026-10-07).
     assert.ok(!text.includes(FOMO_ATTRIBUTION));
     assert.ok(renderEnvelope(env("fomo_get_token_theses", "ok", theses(INJECTION)), O).endsWith(FOMO_ATTRIBUTION));
   });
 
-  it("gives a group one trader's holdings by their public handle, never whether Merrymen watches them or their P&L (Milla, 2026-10-07)", () => {
+  it("gives a group one trader's holdings by their public handle, never whether AgentCap watches them or their P&L (Milla, 2026-10-07)", () => {
     const ctx: TraderContextData = {
       trader: { userId: FRANK, handle: "frankdegods", displayName: null, verified: null },
       formerHandle: false,
@@ -137,7 +137,7 @@ describe("renderEnvelope", () => {
     // The owner keeps all of it.
     const owner = renderEnvelope(e, O);
     assert.match(owner, /frankdegods on Fomo holds 1 coin worth \$3,120/);
-    assert.match(owner, /In Merrymen's watched-trader cohort: yes/);
+    assert.match(owner, /In AgentCap's watched-trader cohort: yes/);
     assert.match(owner, /realised P&L/);
     // A trader's own theses are still a direct message's.
     const own = env("fomo_get_token_theses", "ok", { ...theses(), trader: ctx.trader }, { subject: { kind: "trader", trader: ctx.trader } });
@@ -241,7 +241,7 @@ describe("renderEnvelope", () => {
     for (const l of g.split("\n").filter(Boolean)) assert.ok(admitTgLine(l, { agentName: "Shogun", kind: "research", recentOwn: [] }).ok, l);
   });
 
-  it("gives a group Fomo's public leaderboard: handles and short P&L, a few rows, never who Merrymen follows", () => {
+  it("gives a group Fomo's public leaderboard: handles and short P&L, a few rows, never who AgentCap follows", () => {
     const row = (rank: number, handle: string, pnlUsd: number, inCohort: boolean) =>
       ({ rank, trader: { userId: `${rank}dcf7c78-2537-522a-8307-3f9970c081be`, handle, displayName: null, verified: null }, pnlUsd, volumeUsd: null, trades: null, inCohort });
     const board: RankingsData = {
@@ -264,7 +264,7 @@ describe("renderEnvelope", () => {
     const anon = renderEnvelope(env("fomo_get_rankings", "ok", unnamed, { subject: { kind: "market" } }), G);
     assert.match(anon, /\n1\. an unnamed trader \+\$151\.4k\n2\. an unnamed trader -\$4\.2k$/);
     assert.doesNotMatch(anon, /1dcf7c78|2dcf7c78|trader [0-9a-f]{8}/);
-    // Cut to Merrymen's watched traders, the board is the watch list: a group is sent to a DM.
+    // Cut to AgentCap's watched traders, the board is the watch list: a group is sent to a DM.
     const watched = env("fomo_get_rankings", "ok", board, { subject: { kind: "market" }, coverage: { ...e.coverage, requested: { board: "traders", cohortOnly: true } } });
     assert.equal(renderEnvelope(watched, G), GROUP_DM_DEFLECTION);
     assert.match(renderEnvelope(watched, O), /frankdegods/);
@@ -391,8 +391,8 @@ describe("renderEnvelope", () => {
       job: null, executionAvailability: "unsupported-venue",
     };
     const text = renderEnvelope(env("fomo_research_coin", "ok", d), O);
-    assert.match(text.split("\n")[0]!, /^\$PONS on robinhood \(0x39db…0c0d\) — Merrymen's research \(revision 3\)/);
-    assert.match(text, /Support \(Merrymen's reading\)/);
+    assert.match(text.split("\n")[0]!, /^\$PONS on robinhood \(0x39db…0c0d\) — AgentCap's research \(revision 3\)/);
+    assert.match(text, /Support \(AgentCap's reading\)/);
     assert.match(text, /\(their words\)/);
     assert.match(text, /"no change" is not claimed/);
     assert.match(text, /an inconsistency, not proof of bad faith/);
@@ -880,7 +880,7 @@ describe("a coin's theses in a room: what they argue, not counts (plan WP9 P1, D
     return { token: T, label: { symbol: "PONS", name: null }, trader: null, theses, stance: { supporting: 5, opposing: 4, neutral: rows.length - 9 }, families: 23, uniqueAuthors: 20, chainFilterHonoured: true };
   }
   const RICH = env("fomo_get_token_theses", "capped", richData(rich.theses), { coverage: { requested: {}, achieved: {}, pagesRequested: 1, pagesReturned: 1, itemsReturned: 25, duplicatesRemoved: 0, providerTotal: rich.totalAvailable, capped: true, missing: [], notes: [] } });
-  const FORBIDDEN = /evidence famil|Merrymen's reading|supporting|opposing|neutral|their words|IGNORE|pons-claim|ponsarmy|t\.me|\$PONS|@|0x[0-9a-fA-F]{6}|https?:|10m|200k|50m|40%/i;
+  const FORBIDDEN = /evidence famil|AgentCap's reading|supporting|opposing|neutral|their words|IGNORE|pons-claim|ponsarmy|t\.me|\$PONS|@|0x[0-9a-fA-F]{6}|https?:|10m|200k|50m|40%/i;
 
   it("the rich fixture: for, against, what it is about, how much was read; every line through the gate as research", () => {
     const text = renderEnvelope(RICH, G);
@@ -1002,7 +1002,7 @@ describe("a coin's theses in a room: what they argue, not counts (plan WP9 P1, D
 
   it("the owner keeps the counts and her excerpts, with 'no clear lean' for what matched no cue", () => {
     const text = renderEnvelope(env("fomo_get_token_theses", "ok", theses()), O);
-    assert.match(text, /Merrymen's reading: 1 supporting, 1 opposing, 1 no clear lean\./);
+    assert.match(text, /AgentCap's reading: 1 supporting, 1 opposing, 1 no clear lean\./);
     assert.doesNotMatch(text, /neutral/);
     assert.match(text, /\(supporting, /);
   });

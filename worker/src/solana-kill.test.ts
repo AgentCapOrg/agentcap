@@ -1,8 +1,8 @@
 /**
  * SELF-HOSTED KILLS STOP THE LOCAL SOLANA STRATEGY (review finalise).
  *
- * Telegram /kill on a self-hosted worker and `merrymen kill` deleted or kept
- * grant.json and nothing else, so the `merrymen solana-agent` worker kept
+ * Telegram /kill on a self-hosted worker and `agentcap kill` deleted or kept
+ * grant.json and nothing else, so the `agentcap solana-agent` worker kept
  * running the owner's autonomous strategy. Both now stop every local strategy
  * first (selfHostedSolanaKill; the CLI through solana-kill-cli.ts), whatever
  * happens to the grant, and say when they could not.
@@ -28,13 +28,13 @@ const strategy = { enabled: true, targetSolBps: 5000, rebalanceBps: 500, tradeUs
 
 /** A self-hosted home whose local accounts file holds an enabled strategy. */
 async function home(t: TestContext): Promise<{ dir: string; store: SqlSolanaBindingStore; revision: number }> {
-  const saved = { home: process.env.MERRYMEN_HOME, hosted: process.env.MERRYMEN_HOSTED, db: process.env.DATABASE_URL };
+  const saved = { home: process.env.AGENTCAP_HOME, hosted: process.env.AGENTCAP_HOSTED, db: process.env.DATABASE_URL };
   const dir = mkdtempSync(path.join(tmpdir(), "solana-kill-home-"));
-  process.env.MERRYMEN_HOME = dir; delete process.env.MERRYMEN_HOSTED; delete process.env.DATABASE_URL;
+  process.env.AGENTCAP_HOME = dir; delete process.env.AGENTCAP_HOSTED; delete process.env.DATABASE_URL;
   const raw = new DatabaseSync(path.join(dir, "solana-accounts.sqlite"));
   t.after(() => {
     raw.close();
-    for (const [key, value] of [["MERRYMEN_HOME", saved.home], ["MERRYMEN_HOSTED", saved.hosted], ["DATABASE_URL", saved.db]] as const) {
+    for (const [key, value] of [["AGENTCAP_HOME", saved.home], ["AGENTCAP_HOSTED", saved.hosted], ["DATABASE_URL", saved.db]] as const) {
       if (value === undefined) delete process.env[key]; else process.env[key] = value;
     }
     rmSync(dir, { recursive: true, force: true });
@@ -72,12 +72,12 @@ test("the worker's self-hosted Telegram kill runs the Solana half before it touc
   assert.match(body, /const solana = isHostedMode\(\) \? null : await selfHostedSolanaKill\(\);[\s\S]*const result = robinhoodKill\(\);/);
 });
 
-test("`merrymen kill` stops the local Solana strategy before the grant, and with no grant at all", { timeout: 120_000 }, async (t) => {
+test("`agentcap kill` stops the local Solana strategy before the grant, and with no grant at all", { timeout: 120_000 }, async (t) => {
   const { dir, store, revision } = await home(t);
   const bin = fileURLToPath(new URL("../../cli/bin.mjs", import.meta.url));
   writeFileSync(path.join(dir, "grant.json"), JSON.stringify({ smartAccount: "0x1111111111111111111111111111111111111111", serialized: "0xserialized", chainId: 4663 }));
   const run = () => spawnSync(process.execPath, [bin, "kill"], { input: "y\n", encoding: "utf8", timeout: 100_000,
-    env: { ...process.env, MERRYMEN_HOME: dir, MERRYMEN_HOSTED: "", DATABASE_URL: "" } });
+    env: { ...process.env, AGENTCAP_HOME: dir, AGENTCAP_HOSTED: "", DATABASE_URL: "" } });
   const first = run();
   assert.equal(first.status, 0, first.stdout + first.stderr);
   assert.match(first.stdout, /Solana strategy stopped/);
@@ -93,14 +93,14 @@ test("`merrymen kill` stops the local Solana strategy before the grant, and with
   assert.equal((await store.get(T))!.strategy?.enabled, false);
 });
 
-test("`merrymen kill` with a Solana stop that fails removes the grant but never reports a stand-down", { timeout: 120_000 }, async (t) => {
+test("`agentcap kill` with a Solana stop that fails removes the grant but never reports a stand-down", { timeout: 120_000 }, async (t) => {
   const { dir } = await home(t);
   const bin = fileURLToPath(new URL("../../cli/bin.mjs", import.meta.url));
   writeFileSync(path.join(dir, "grant.json"), JSON.stringify({ smartAccount: "0x1111111111111111111111111111111111111111", serialized: "0xserialized", chainId: 4663 }));
   // A Solana store the kill cannot open: its stop fails.
   writeFileSync(path.join(dir, "solana-accounts.sqlite"), "not a database");
   const run = spawnSync(process.execPath, [bin, "kill"], { input: "y\n", encoding: "utf8", timeout: 100_000,
-    env: { ...process.env, MERRYMEN_HOME: dir, MERRYMEN_HOSTED: "", DATABASE_URL: "" } });
+    env: { ...process.env, AGENTCAP_HOME: dir, AGENTCAP_HOSTED: "", DATABASE_URL: "" } });
   const said = run.stdout + run.stderr;
   assert.equal(run.status, 1, said);
   assert.match(said, /Kill incomplete: your Solana strategy could not be stopped/);

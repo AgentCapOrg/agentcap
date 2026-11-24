@@ -32,7 +32,7 @@ def test_pulse_decides_within_four_calls_without_committee_escalation(action):
         persona="Trencher: short-horizon memecoin trading. Hold if evidence is insufficient.",
         portfolio=PortfolioState(snapshot_id="book", as_of=1, cash_usdg=100_000_000, equity_usdg=100_000_000, net_contributions_usdg=100_000_000,
             quality=PortfolioQuality(audit_passed=True, epoch=1, current_accounting_history_auditable=True, contributions_known=True, equity_complete=True, gas_basis="net", position_history_available=True)),
-        market=MarketState(snapshot_id="market", as_of=1, instrument_id="merrymen:meme", symbol="MEME", instrument_class="memecoin",
+        market=MarketState(snapshot_id="market", as_of=1, instrument_id="agentcap:meme", symbol="MEME", instrument_class="memecoin",
             signals={"technical": "24h volume: $200000", "social": "50 distinct buyers", "liquidity": "$100000 pool reserves"}))
     result = asyncio.run(BrainGraph(Model()).run(req))
     assert isinstance(result, BrainDecision), result

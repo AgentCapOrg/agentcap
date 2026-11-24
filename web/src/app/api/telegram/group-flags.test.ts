@@ -24,7 +24,7 @@ import { after, before, beforeEach, describe, it } from "node:test";
 import type { TelegramStatus } from "./route";
 
 const TOKEN = "123456:TEST-token-for-a-stub-only";
-const saved = { home: process.env.MERRYMEN_HOME, hosted: process.env.MERRYMEN_HOSTED, envToken: process.env.MERRYMEN_TELEGRAM_BOT_TOKEN };
+const saved = { home: process.env.AGENTCAP_HOME, hosted: process.env.AGENTCAP_HOSTED, envToken: process.env.AGENTCAP_TELEGRAM_BOT_TOKEN };
 const realFetch = globalThis.fetch;
 let home: string;
 let GET: (req: Request) => Promise<Response>;
@@ -35,10 +35,10 @@ let calls: string[] = [];
 
 before(async () => {
   home = mkdtempSync(path.join(tmpdir(), "mm-telegram-group-flags-"));
-  process.env.MERRYMEN_HOME = home;
-  delete process.env.MERRYMEN_HOSTED;
+  process.env.AGENTCAP_HOME = home;
+  delete process.env.AGENTCAP_HOSTED;
   // Self-hosted, the route falls back to this as the worker does (env-token.test.ts).
-  delete process.env.MERRYMEN_TELEGRAM_BOT_TOKEN;
+  delete process.env.AGENTCAP_TELEGRAM_BOT_TOKEN;
   globalThis.fetch = (async (input: string | URL | Request) => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     calls.push(url);
@@ -50,7 +50,7 @@ before(async () => {
 });
 after(() => {
   globalThis.fetch = realFetch;
-  for (const [key, value] of [["MERRYMEN_HOME", saved.home], ["MERRYMEN_HOSTED", saved.hosted], ["MERRYMEN_TELEGRAM_BOT_TOKEN", saved.envToken]] as const) {
+  for (const [key, value] of [["AGENTCAP_HOME", saved.home], ["AGENTCAP_HOSTED", saved.hosted], ["AGENTCAP_TELEGRAM_BOT_TOKEN", saved.envToken]] as const) {
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
   }

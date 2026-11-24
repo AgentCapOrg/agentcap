@@ -7,7 +7,7 @@
  * telegramLiveness() is run at chosen times. What it logs is read off
  * console.log; what it must never do is touch the process.
  *
- * MERRYMEN_HOME is per process (node --test forks per file).
+ * AGENTCAP_HOME is per process (node --test forks per file).
  */
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
@@ -17,11 +17,11 @@ import path from "node:path";
 import { after, afterEach, beforeEach, describe, it, mock } from "node:test";
 import type { ChildProcess } from "node:child_process";
 
-const FLEET = mkdtempSync(path.join(os.tmpdir(), "merrymen-liveness-"));
-process.env.MERRYMEN_HOME = FLEET;
-process.env.MERRYMEN_HOSTED = "1";
+const FLEET = mkdtempSync(path.join(os.tmpdir(), "agentcap-liveness-"));
+process.env.AGENTCAP_HOME = FLEET;
+process.env.AGENTCAP_HOSTED = "1";
 delete process.env.DATABASE_URL;
-delete process.env.MERRYMEN_TELEGRAM_ENABLED;
+delete process.env.AGENTCAP_TELEGRAM_ENABLED;
 after(() => rmSync(FLEET, { recursive: true, force: true }));
 
 const { adoptHolderForTest, childHome, telegramLiveness } = await import("./orchestrator");

@@ -130,7 +130,7 @@ describe("Ledger, the terminal's look", () => {
     const GROUPS = [["background", "background-color"], ["color"], ["border-color", "border"]];
     const shares = (a: Set<string>, b: Set<string>) => GROUPS.some((group) => group.some((prop) => a.has(prop)) && group.some((prop) => b.has(prop)));
     const mine = rules(read("ledger.css")), restated = new Set(mine.map((rule) => rule.selector));
-    const others = [new URL("./", import.meta.url), new URL("../merryman/", import.meta.url)].flatMap((dir) =>
+    const others = [new URL("./", import.meta.url), new URL("../agentcapavatar/", import.meta.url)].flatMap((dir) =>
       readdirSync(dir).filter((name) => name.endsWith(".css") && name !== "ledger.css").flatMap((name) => rules(readFileSync(new URL(name, dir), "utf8"))));
     assert.ok(others.length > 2000 && mine.length > 100, `rules read: ${others.length} and ${mine.length}`);
     const STATE = /^(?::(?!:)[a-z-]+(?:\([^()]*\))?|\[[^\]]+\]|\.[\w-]+)$/;

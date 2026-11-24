@@ -12,7 +12,7 @@
  * Each pin is the one a plausible refactor would silently undo, and each would
  * leave every pure test green:
  *
- *   - a model or a Telegram message spending USDG on $MERRYMEN with no click;
+ *   - a model or a Telegram message spending USDG on $AGENTCAP with no click;
  *   - a real buy judged on the paper book, or simulated onto the tape;
  *   - calldata signed without the byte-for-byte fence;
  *   - a landed purchase settled before it was booked (a crash between the two
@@ -74,7 +74,7 @@ describe("WHO CAN REACH THE BUY", () => {
       const at = trade.indexOf(later);
       assert.ok(at > refuse, `${later} must come after the reserve refusal`);
     }
-    // NEVER BY NAME: a watched lookalike called MERRYMEN is an ordinary token
+    // NEVER BY NAME: a watched lookalike called AGENTCAP is an ordinary token
     // (resolveOrderToken is run in energy-buy.test.ts).
     assert.doesNotMatch(trade, /isEnergySymbol\(|watchTokens\.find\(/);
     assert.match(trade, /const token = resolved\.address;/);
@@ -90,10 +90,10 @@ describe("WHO CAN REACH THE BUY", () => {
   it("the sentence points to the app chat and never to /settings", async () => {
     const { ENERGY_NOT_AN_ORDER, isEnergySymbol } = await import("./energy-buy");
     assert.match(ENERGY_NOT_AN_ORDER, /get my energy/);
-    assert.match(ENERGY_NOT_AN_ORDER, /Merrymen app chat/);
+    assert.match(ENERGY_NOT_AN_ORDER, /AgentCap app chat/);
     assert.doesNotMatch(ENERGY_NOT_AN_ORDER, /\/settings|Add it in/i);
-    for (const s of ["MERRYMEN", "merrymen", " $MERRYMEN ", "$merrymen"]) assert.equal(isEnergySymbol(s), true, s);
-    for (const s of ["MERRY", "MERRYMENX", "", "TSLA"]) assert.equal(isEnergySymbol(s), false, s);
+    for (const s of ["AGENTCAP", "agentcap", " $AGENTCAP ", "$agentcap"]) assert.equal(isEnergySymbol(s), true, s);
+    for (const s of ["MERRY", "AGENTCAPX", "", "TSLA"]) assert.equal(isEnergySymbol(s), false, s);
   });
 
   it("submitEnergyBuy is called from runOrderCommand's submit closure and NOWHERE else", () => {
@@ -101,10 +101,10 @@ describe("WHO CAN REACH THE BUY", () => {
     const order = body("runOrderCommand");
     // ROUTED ON THE MARKER placeOrder decided (order-gate.ts orderRoute, run in
     // order-gate.test.ts), never on the symbol: a buy card, a snipe or an MCP
-    // proposal naming MERRYMEN reaches submitChatTrade like any order.
+    // proposal naming AGENTCAP reaches submitChatTrade like any order.
     assert.match(order, /\(side, symbol, size, route\) => \{/);
     assert.match(order, /if \(route === "energy"\) \{\s*if \(!isEnergySymbol\(symbol\)\) \{[\s\S]*?\}\s*return submitEnergyBuy\(side, size, asked\);/);
-    assert.doesNotMatch(order, /symbol === MERRYMEN_TOKEN\.symbol|isEnergyReserveToken/, "no symbol decides the route");
+    assert.doesNotMatch(order, /symbol === AGENTCAP_TOKEN\.symbol|isEnergyReserveToken/, "no symbol decides the route");
     assert.match(order, /return submitChatTrade\(side, symbol, size, asked\);/, "every unmarked order is an ordinary one");
     assert.match(order, /\.\.\.orderAsked\(cmd\.args, side, symbol, size\),/, "filed under the order's own source and reason");
     // Routed BEFORE the ordinary submitter, inside placeOrder's submit closure
@@ -154,7 +154,7 @@ describe("THE ASK'S OWN REFUSALS, in order, before anything is read", () => {
     const order = [
       'if (side !== "buy") return no(ENERGY_NO_SELL);',
       "if (isPaused())",
-      "if (grant.chainId !== MERRYMEN_TOKEN.chainId) return no(ENERGY_NOT_MAINNET);",
+      "if (grant.chainId !== AGENTCAP_TOKEN.chainId) return no(ENERGY_NOT_MAINNET);",
       'const judged = tickBook.judge("buy");',
       'if (rail.mode !== "live") return no(energyNeedsLiveLine(liveBlockerText(rail.rule)));',
       "if (!route || !limits.energy) return no(ENERGY_RESIGN);",
@@ -283,7 +283,7 @@ describe("THE EXECUTOR", () => {
     // maybePost builds an agent post only for action buy/sell; the energy buy
     // is not a trade view and must never become one in the agent's voice.
     const describe_ = body("describeIntent", "function");
-    assert.match(describe_, /if \(intent\.kind === "energy-buy"\) \{\s*return \{ action: "energy-buy", symbol: MERRYMEN_TOKEN\.symbol,/);
+    assert.match(describe_, /if \(intent\.kind === "energy-buy"\) \{\s*return \{ action: "energy-buy", symbol: AGENTCAP_TOKEN\.symbol,/);
     assert.match(CODE, /const act = d\?\.action === "buy" \? "enter" : d\?\.action === "sell" \? "exit" : null;/);
   });
 

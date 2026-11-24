@@ -1,9 +1,9 @@
 {
-  "name": "merrymen-desktop",
+  "name": "agentcap-desktop",
   "version": "0.1.7",
   "private": true,
-  "description": "merrymen — the one-click desktop app. Bundles Node, boots the agent worker + dashboard, opens it in a native window. No terminal, no npm.",
-  "author": "merrymen",
+  "description": "agentcap — the one-click desktop app. Bundles Node, boots the agent worker + dashboard, opens it in a native window. No terminal, no npm.",
+  "author": "agentcap",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -17,7 +17,7 @@
     "check:runtime": "node check-runtime.mjs"
   },
   "dependencies": {
-    "merrymen": "file:.."
+    "agentcap": "file:.."
   },
   "devDependencies": {
     "electron": "^44.4.2",

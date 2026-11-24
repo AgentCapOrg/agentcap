@@ -26,7 +26,7 @@ enumerated. The vault has one owner, set at construction, immutable; no
 recipient argument anywhere; no admin, no pause, no upgrade, no rescue. What an
 attacker with your session key gets is the same exposure the other curve venues
 already carry — they can convert capped USDG into a worthless token — plus the
-fact that the junk sits in the vault rather than your account. `merrymen recover`
+fact that the junk sits in the vault rather than your account. `agentcap recover`
 sweeps it back out with your owner key.
 
 **A round trip costs 199 bps in curve fees alone**, before gas. That number is
@@ -79,7 +79,7 @@ Node's ESM loader, which has no TypeScript handler, and dies with
 loader in the command rather than in an environment variable, because the
 `VAR=x cmd` prefix form is bash-only and does nothing in PowerShell.
 
-The deployer key comes from `MERRYMEN_DEPLOYER_PRIVATE_KEY` in the shell that
+The deployer key comes from `AGENTCAP_DEPLOYER_PRIVATE_KEY` in the shell that
 runs it, is never logged, and should be unset afterwards. The script refuses any
 chain that is not 46630 or 4663, refuses to run with no balance, and post-verifies
 that `vaultFor` answers a real address — the property the wall depends on, since

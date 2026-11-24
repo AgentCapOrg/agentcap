@@ -7,10 +7,10 @@ import type { MessageKey } from "./en";
  * That is what makes a partial file safe to have here.
  */
 export const tr: Partial<Record<MessageKey, string>> = {
-  "tour.stop01.title": "merrymen'e hoş geldiniz.",
+  "tour.stop01.title": "agentcap'e hoş geldiniz.",
   "tour.stop01.copy": "Bir ajana strateji verin, limitlerini belirleyin ve verdiği kararları izleyin. Turun tamamını takip edebilir ya da Konular ile doğrudan bir özelliğe geçebilirsiniz. İstediğiniz zaman çıkabilir, turu daha sonra yeniden izleyebilirsiniz.",
   "tour.stop02.title": "Bildiğiniz bir piyasayla başlayın.",
-  "tour.stop02.copy": "Ana sayfa, merryman'iniz ve paranızdır. Keşfet (Explore) bölümünde liderlik tablosu ve piyasalar yer alır: fiyat geçmişini ve ajanların o token üzerinde kaydettiği işlemleri görmek için herhangi bir token'ı açın.",
+  "tour.stop02.copy": "Ana sayfa, agentcapavatar'iniz ve paranızdır. Keşfet (Explore) bölümünde liderlik tablosu ve piyasalar yer alır: fiyat geçmişini ve ajanların o token üzerinde kaydettiği işlemleri görmek için herhangi bir token'ı açın.",
   "tour.stop03.title": "Ajanınız, sizin sınırlarınız.",
   "tour.stop03.copy": "Ajanın ne yapabileceğini bir strateji ve iki limit belirler: işlem başına limit ve günlük limit. Demo modunda ajan, siz aksini söyleyene kadar gerçek para yerine simüle edilmiş parayla alıştırma yapar.",
   "tour.stop04.title": "Nedenini sorun.",
@@ -56,7 +56,7 @@ export const tr: Partial<Record<MessageKey, string>> = {
   "tour.stop24.title": "Ayarlar ve herkese açık görünürlük.",
   "tour.stop24.copy": "Ayarlar, ajanınızın yapılandırmasını ve nelerin paylaşılacağını belirler. İşlem defterinizi herkese açmanız, pozisyonlarınıza ve işlem büyüklüğünüze dair ayrıntıları görünür kılabilir. Defterinizi gizli tutsanız bile faaliyetleriniz ve koşulları sağlayan yüzde getiriler herkese açık olarak görünmeye devam eder.",
   "tour.stop25.title": "API ile geliştirin.",
-  "tour.stop25.copy": "Geliştiriciler API anahtarı kurulumu, SDK ve entegrasyon eğitimleri için merrymen.dev/api adresine gidebilir. Gizli API anahtarlarını kendi sunucunuzda tutun. Başka bir uygulamayı bağlamak için belgelerde anlatılan kurulumu ve sohbet akışını kullanın.",
+  "tour.stop25.copy": "Geliştiriciler API anahtarı kurulumu, SDK ve entegrasyon eğitimleri için agentcap.xyz/api adresine gidebilir. Gizli API anahtarlarını kendi sunucunuzda tutun. Başka bir uygulamayı bağlamak için belgelerde anlatılan kurulumu ve sohbet akışını kullanın.",
   "tour.stop26.title": "Siz hazır olduğunuzda.",
   "tour.stop26.copy": "Stratejinizi, limitlerinizi veya son kararı sormak için sohbete dönün. Ajan bekliyorsa açıklamasını, modunu, bakiyesini ve izinlerini kontrol edin. Bu turu istediğiniz zaman Etrafı gezdir ile yeniden izleyebilirsiniz.",
   "tour.skip": "Turu atla",
@@ -65,7 +65,7 @@ export const tr: Partial<Record<MessageKey, string>> = {
   "tour.next": "İleri",
   "tour.finish": "Bitir",
   "tour.relaunch": "Etrafı gezdir",
-  "tour.dialogLabel": "merrymen'e hızlı bir bakış",
+  "tour.dialogLabel": "agentcap'e hızlı bir bakış",
   "tour.stepOf": "{current} / {total}",
   "tour.savedLocally": "Bu tarayıcıya kaydedildi.",
   "tour.retrySync": "Hesap eşitlemesini yeniden dene",

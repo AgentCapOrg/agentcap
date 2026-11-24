@@ -7,12 +7,12 @@ const key = { appId: "partner_app_123", keyId: "abcdefghjkmn", name: "Test App",
 const secret = "partner-test-secret-with-at-least-32-characters";
 test("bridge forwards only signed context to a fixed origin and refuses redirects", async () => {
   const forward = createPartnerBridge({ secret, fetchImpl: async (url, options) => {
-    assert.equal(url, "https://app.merrymen.dev/api/partner/agents");
+    assert.equal(url, "https://app.agentcap.xyz/api/partner/agents");
     assert.equal(options.redirect, "error");
     assert.equal(options.headers.authorization, undefined);
     assert.equal(options.headers.cookie, undefined);
     assert.equal(options.body, '{"external_user_id":"one"}');
-    const context = JSON.parse(Buffer.from(options.headers["x-merrymen-partner-context"], "base64url"));
+    const context = JSON.parse(Buffer.from(options.headers["x-agentcap-partner-context"], "base64url"));
     assert.equal(context.app_id, key.appId);
     assert.equal(context.key_id, key.keyId);
     assert.ok(!JSON.stringify(options).includes("mmp_"));
@@ -45,7 +45,7 @@ test("an upstream that answers without its JSON is told apart from one that neve
   assert.ok(!JSON.stringify(answer).includes("Forbidden"), "an upstream body is never relayed");
   assert.equal(refused.lines.length, 1);
   for (const fact of ["POST /agents", "req_0123456789ab", key.keyId, "HTTP 403", "text/plain"]) assert.ok(refused.lines[0].includes(fact), fact);
-  for (const kept of [secret, "Forbidden", "x-merrymen-partner-signature"]) assert.ok(!refused.lines[0].includes(kept), kept);
+  for (const kept of [secret, "Forbidden", "x-agentcap-partner-signature"]) assert.ok(!refused.lines[0].includes(kept), kept);
 
   const offline = bridge(() => { throw new TypeError("fetch failed", { cause: Object.assign(new Error("connect ECONNREFUSED 10.0.0.5:3000"), { code: "ECONNREFUSED" }) }); });
   const none = await offline.forward({ key, method: "GET", path: "/agents" });
@@ -74,7 +74,7 @@ test("the runtime's own JSON is relayed untouched; its 5xx is logged; a missing 
   const unset = bridge(() => { sent = true; return Response.json({}); }, { secret: "short" });
   assert.equal((await unset.forward({ key, method: "GET", path: "/agents" })).json.error.code, "upstream_unavailable");
   assert.equal(sent, false);
-  assert.match(unset.lines[0], /MERRYMEN_PARTNER_BRIDGE_SECRET/);
+  assert.match(unset.lines[0], /AGENTCAP_PARTNER_BRIDGE_SECRET/);
 });
 test("the request_id a partner reports is the one in the operator's log", async () => {
   const refused = bridge(() => new Response("Forbidden", { status: 403, headers: { "content-type": "text/plain" } }));
@@ -109,7 +109,7 @@ test("the runtime refusing the gateway is not relayed as the partner's own refus
     const b = bridge(() => Response.json({ error }, { status }));
     const answer = await b.forward({ key, method: "POST", path: "/agents", body: "{}" });
     assert.equal(answer.status, 503); assert.equal(answer.json.error.code, "upstream_unavailable");
-    assert.match(b.lines[0], /refused this gateway, not the partner.*MERRYMEN_PARTNER_BRIDGE_SECRET/);
+    assert.match(b.lines[0], /refused this gateway, not the partner.*AGENTCAP_PARTNER_BRIDGE_SECRET/);
   }
   // The runtime's refusals of the partner's own input pass through, and are logged.
   for (const [status, error] of [[401, { code: "invalid_signature", message: "The owner signature could not be verified" }], [404, { code: "not_found", message: "No such agent" }]]) {

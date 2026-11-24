@@ -17,7 +17,7 @@ import {
   parseEnergyStatus,
   type EnergyStatus,
 } from "./energy";
-import { CIRCLE_TIERS, MERRYMEN_TOKEN } from "./token";
+import { CIRCLE_TIERS, AGENTCAP_TOKEN } from "./token";
 import { CASH } from "./tokens";
 import { UNISWAP } from "./protocols";
 import { UNISWAP_V2_ENERGY_ABI } from "./abis";
@@ -30,10 +30,10 @@ import { UNISWAP_V2_ENERGY_ABI } from "./abis";
  */
 describe("energy thresholds come from the tier table, never a literal", () => {
   it("FULL ENERGY IS THE MERRY MAN TIER", () => {
-    const merryman = CIRCLE_TIERS.find((t) => t.id === "merryman")!;
-    assert.equal(ENERGY.fullTokens, merryman.minTokens);
+    const agentcapavatar = CIRCLE_TIERS.find((t) => t.id === "agentcapavatar")!;
+    assert.equal(ENERGY.fullTokens, agentcapavatar.minTokens);
     assert.equal(ENERGY.fullTokens, 100_000);
-    assert.equal(ENERGY_FULL_RAW, BigInt(merryman.minTokens) * 10n ** 18n);
+    assert.equal(ENERGY_FULL_RAW, BigInt(agentcapavatar.minTokens) * 10n ** 18n);
   });
 
   it("a low day is about a tenth", () => {
@@ -42,10 +42,10 @@ describe("energy thresholds come from the tier table, never a literal", () => {
 
   it("THE TIER TABLE CLAIMS NO THROTTLE — every client renders its perks whether or not the gate is on", () => {
     // /api/circle sends these to the web, iOS and Android unconditionally, and
-    // MERRYMEN_ENERGY_GATE is off until an operator turns it on. A perk saying
+    // AGENTCAP_ENERGY_GATE is off until an operator turns it on. A perk saying
     // outsiders run on a tenth told non-holders they were throttled when nothing was.
     const outsider = CIRCLE_TIERS.find((t) => t.id === "outsider")!;
-    assert.deepEqual(outsider.perks, ["merrymen is free and open to everyone — hold $MERRYMEN to join the Circle"]);
+    assert.deepEqual(outsider.perks, ["agentcap is free and open to everyone — hold $AGENTCAP to join the Circle"]);
     for (const t of CIRCLE_TIERS) {
       for (const p of t.perks) assert.doesNotMatch(p, /tenth|energy|throttl/i, `${t.id}: ${p}`);
     }
@@ -63,10 +63,10 @@ describe("energy thresholds come from the tier table, never a literal", () => {
 });
 
 describe("the reserve token", () => {
-  it("IS $MERRYMEN ON ROBINHOOD CHAIN, CASE-INSENSITIVELY", () => {
-    assert.deepEqual(energyReserveTokens(4663), [MERRYMEN_TOKEN.address.toLowerCase()]);
-    assert.ok(isEnergyReserveToken(MERRYMEN_TOKEN.address));
-    assert.ok(isEnergyReserveToken(MERRYMEN_TOKEN.address.toUpperCase().replace("0X", "0x")));
+  it("IS $AGENTCAP ON ROBINHOOD CHAIN, CASE-INSENSITIVELY", () => {
+    assert.deepEqual(energyReserveTokens(4663), [AGENTCAP_TOKEN.address.toLowerCase()]);
+    assert.ok(isEnergyReserveToken(AGENTCAP_TOKEN.address));
+    assert.ok(isEnergyReserveToken(AGENTCAP_TOKEN.address.toUpperCase().replace("0X", "0x")));
   });
 
   it("nothing else is, and no chain but mainnet has one", () => {
@@ -86,13 +86,13 @@ describe("ENERGY_ROUTE_V1 — frozen literals that still equal the registry", ()
    */
   it("ROUTER IS THE v2 ROUTER02 THE REGISTRY NAMES", () => {
     assert.equal(ENERGY_ROUTE_V1.router, UNISWAP.v2Router02.toLowerCase());
-    assert.equal(ENERGY_ROUTE_V1.chainId, MERRYMEN_TOKEN.chainId);
+    assert.equal(ENERGY_ROUTE_V1.chainId, AGENTCAP_TOKEN.chainId);
   });
 
-  it("PATH IS USDG → VIRTUAL → $MERRYMEN, lowercase", () => {
+  it("PATH IS USDG → VIRTUAL → $AGENTCAP, lowercase", () => {
     assert.deepEqual(
       [...ENERGY_ROUTE_V1.path],
-      [CASH.USDG.toLowerCase(), VIRTUAL_TOKEN, MERRYMEN_TOKEN.address.toLowerCase()],
+      [CASH.USDG.toLowerCase(), VIRTUAL_TOKEN, AGENTCAP_TOKEN.address.toLowerCase()],
     );
     for (const a of ENERGY_ROUTE_V1.path) assert.equal(a, a.toLowerCase());
   });

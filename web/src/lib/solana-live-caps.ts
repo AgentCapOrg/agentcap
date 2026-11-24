@@ -2,8 +2,8 @@
  * THE SOLANA LIVE ROLLOUT, IN THE OWNER'S WORDS: the platform's caps on live
  * limits and what the page and the app runtime say about them and about the
  * live list. Pure and client-safe, so the page and the runtime share one text.
- * The settings themselves (MERRYMEN_SOLANA_LIVE_TENANTS and the
- * MERRYMEN_SOLANA_LIVE_MAX_* caps) are read on the server only, by
+ * The settings themselves (AGENTCAP_SOLANA_LIVE_TENANTS and the
+ * AGENTCAP_SOLANA_LIVE_MAX_* caps) are read on the server only, by
  * worker/src/solana-live-rollout.ts; the page learns the caps in force from
  * status (liveAccess), never the list.
  */

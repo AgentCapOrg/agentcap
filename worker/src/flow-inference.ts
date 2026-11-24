@@ -81,7 +81,7 @@ export const STRANDED_RESOLVE_WINDOW_SEC = 26 * 3600;
  * WHY BOUNDED, and not "any submitted row". A dropped op nothing proves dead —
  * no later op spent its nonce, or its row predates the recorded nonce — is
  * never found and its row stays 'submitted' for ever, as does a row from an
- * earlier epoch (left for `merrymen verify`). Holding inference on those would
+ * earlier epoch (left for `agentcap verify`). Holding inference on those would
  * switch it off for good — every later deposit booked as profit and charged a
  * fee. Past the resolver's window an op that ever landed did so long before the
  * cash baseline this process holds, so it cannot be inside the interval.

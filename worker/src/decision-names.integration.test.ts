@@ -13,10 +13,10 @@ import os from "node:os";
 import path from "node:path";
 import { after, test } from "node:test";
 
-const scratch = mkdtempSync(path.join(os.tmpdir(), "merrymen-decision-names-"));
+const scratch = mkdtempSync(path.join(os.tmpdir(), "agentcap-decision-names-"));
 const isolatedCwd = path.join(scratch, "cwd");
 mkdirSync(isolatedCwd);
-process.env.MERRYMEN_HOME = path.join(scratch, "home");
+process.env.AGENTCAP_HOME = path.join(scratch, "home");
 delete process.env.DATABASE_URL;
 const originalCwd = process.cwd();
 const store = await import("./store");
@@ -64,7 +64,7 @@ test("TWO NAMES IN ONE SECOND: the same answer whichever row was written first",
   // neither promises the same row twice — so the name an exit was written with
   // could differ between two identical runs. The tie is broken on the name.
   const { DatabaseSync } = await import("node:sqlite");
-  const raw = new DatabaseSync(path.join(process.env.MERRYMEN_HOME!, "merrymen.db"));
+  const raw = new DatabaseSync(path.join(process.env.AGENTCAP_HOME!, "agentcap.db"));
   try {
     const AT = 1_800_000_000;
     for (const [coin, first, second] of [
@@ -84,7 +84,7 @@ test("TWO NAMES IN ONE SECOND: the same answer whichever row was written first",
 
 test("a newer name still wins over an older one — the tiebreak is only for a tie", async () => {
   const { DatabaseSync } = await import("node:sqlite");
-  const raw = new DatabaseSync(path.join(process.env.MERRYMEN_HOME!, "merrymen.db"));
+  const raw = new DatabaseSync(path.join(process.env.AGENTCAP_HOME!, "agentcap.db"));
   try {
     await store.addDecision({ id: "renamed-old", agent_id: AGENT, source: "brain", symbol: "TD0D0D0D0D0D", action: "buy", display_name: "ALPHACAT" });
     await store.addDecision({ id: "renamed-new", agent_id: AGENT, source: "brain", symbol: "TD0D0D0D0D0D", action: "hold", display_name: "ZEDCOIN" });

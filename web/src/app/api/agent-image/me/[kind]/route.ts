@@ -34,8 +34,8 @@
  * claim. The bundler proxy makes the same two-step argument about its 32KB cap.
  */
 import { NextResponse } from "next/server";
-import { isHostedMode } from "@merrymen/core";
-import { getImageStore, isImageKind, sha256Of } from "@merrymen/image-store";
+import { isHostedMode } from "@agentcap/core";
+import { getImageStore, isImageKind, sha256Of } from "@agentcap/image-store";
 import { IMAGE_LIMITS, normaliseImage, refusalResponse } from "@/lib/agent-image";
 import { tenantOf } from "@/lib/auth";
 import { walletNotSupported } from "@/lib/route-guard";

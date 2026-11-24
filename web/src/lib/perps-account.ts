@@ -1,5 +1,5 @@
 /** Client-safe, identity-bound paper account read. No signing material. */
-import { parsePerpsReport } from "@merrymen/core";
+import { parsePerpsReport } from "@agentcap/core";
 import type { PerpsReportRead } from "./agent-perps";
 export interface PerpsIdentity { owner: string | null; account: { smartAccount: string; chainId: number } | null }
 export interface PerpsAccountResponse extends PerpsIdentity {

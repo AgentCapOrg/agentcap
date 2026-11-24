@@ -8,13 +8,13 @@ import { FileSettingsStore, useSettingsStoreForTest, resetSettingsStoreForTest }
 import { stopLocalPerpsWallet, stopPerpsForKill } from "./perps-kill";
 const OWNER = "0x1111111111111111111111111111111111111111" as const;
 function fixture(t: import("node:test").TestContext) {
-    const keys = ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "DATABASE_URL", "MERRYMEN_STORE_DEK"] as const;
+    const keys = ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "DATABASE_URL", "AGENTCAP_STORE_DEK"] as const;
     const before = Object.fromEntries(keys.map(k => [k, process.env[k]]));
     const home = mkdtempSync(join(tmpdir(), "perps-kill-revision-"));
-    process.env.MERRYMEN_HOME = home;
-    delete process.env.MERRYMEN_HOSTED;
+    process.env.AGENTCAP_HOME = home;
+    delete process.env.AGENTCAP_HOSTED;
     delete process.env.DATABASE_URL;
-    process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 13).toString("base64");
+    process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 13).toString("base64");
     t.after(() => { resetSettingsStoreForTest(); for (const k of keys) {
         if (before[k] === undefined)
             delete process.env[k];

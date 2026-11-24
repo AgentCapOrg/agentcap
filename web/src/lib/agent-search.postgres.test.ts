@@ -2,7 +2,7 @@
  * REAL POSTGRES: PUBLIC SEARCH'S WINDOW WITH THE HOSTED FLEET'S PERPS ROWS.
  * Opt-in, like the other web Postgres suites:
  *
- *   MERRYMEN_TEST_PG_URL=postgres://postgres@127.0.0.1:54329/merrymen_pgtest \
+ *   AGENTCAP_TEST_PG_URL=postgres://postgres@127.0.0.1:54329/agentcap_pgtest \
  *     npx tsx --test web/src/lib/agent-search.postgres.test.ts
  *
  * Skipped without it. A LOCAL Postgres only, in a schema of its own, dropped
@@ -19,7 +19,7 @@ import { recordPerpsWallet } from "../../../worker/src/perps-wallets";
 import { applyLedgerSchema } from "../../../worker/src/store";
 import { AGENT_SEARCH_WINDOW, readAgentSearchWindow } from "./agent-search";
 
-const url = process.env.MERRYMEN_TEST_PG_URL ?? process.env.MERRYMEN_TEST_POSTGRES_URL;
+const url = process.env.AGENTCAP_TEST_PG_URL ?? process.env.AGENTCAP_TEST_POSTGRES_URL;
 interface PgClient {
   connect(): Promise<void>;
   query(sql: string): Promise<unknown>;

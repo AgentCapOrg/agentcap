@@ -10,8 +10,8 @@ import { installKeyRecorded, settleKeyInstall } from "./key-install-accounting";
 import { resolveSubmittedOps, type ReconcileChain } from "./inflight-reconcile";
 import { KEY_INSTALL_KIND } from "./telegram/trade-rows";
 
-const home = mkdtempSync(path.join(tmpdir(), "merrymen-key-install-accounting-"));
-process.env.MERRYMEN_HOME = home;
+const home = mkdtempSync(path.join(tmpdir(), "agentcap-key-install-accounting-"));
+process.env.AGENTCAP_HOME = home;
 const { addTrade, closeStoreForTest, initStore, listSubmittedOps, getOpsToday, getGasPaidUsdg, readJournal } = await import("./store");
 const { homePaths } = await import("./home");
 const ACCOUNT = "0x1111111111111111111111111111111111111111" as const;

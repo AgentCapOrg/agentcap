@@ -158,7 +158,7 @@ export function freezeModeScene(source: HTMLElement): FrozenModeScene {
   });
   const style = doc.createElement("style");
   // All other presentation remains in the existing class-based theme rules;
-  // Merrymen's terminal CSS has no ID selectors. Pseudo-elements cannot keep a
+  // AgentCap's terminal CSS has no ID selectors. Pseudo-elements cannot keep a
   // shimmer running behind the tear.
   style.textContent = `[data-mode-snapshot="${prefix}"] *::before,[data-mode-snapshot="${prefix}"] *::after{animation:none!important;transition:none!important;pointer-events:none!important}`;
   element.append(style, frozen);

@@ -273,7 +273,7 @@ export function createTickBook(): TickBook {
  * resolved against the watch set by address like any order.
  *
  * WHY NOT THE SYMBOL. This used to route every order whose symbol read
- * MERRYMEN to the energy buy: a plain buy card the model wrote for it, a snipe
+ * AGENTCAP to the energy buy: a plain buy card the model wrote for it, a snipe
  * that resolved to a coin with that name, an approved MCP proposal for a
  * watched LOOKALIKE at another address. None of those cards showed the energy
  * disclosure, and the lookalike's owner asked for one asset and would have got

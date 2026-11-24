@@ -19,7 +19,7 @@ for (const withReceipt of [false, true]) {
   for (const loop of ["reconcile", "short"] as const) {
     it(`${loop} ferry binds child results to their account (${withReceipt ? "with" : "without"} receipt column)`, async () => {
       const raw = new DatabaseSync(":memory:");
-      const home = mkdtempSync(path.join(tmpdir(), "merrymen-result-isolation-"));
+      const home = mkdtempSync(path.join(tmpdir(), "agentcap-result-isolation-"));
       try {
         raw.exec(`CREATE TABLE agent_commands (
           id TEXT PRIMARY KEY, agent_id TEXT NOT NULL, kind TEXT NOT NULL, args TEXT,

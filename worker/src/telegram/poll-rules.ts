@@ -49,7 +49,7 @@ export const refusalText = (chatId: number): string =>
  * about the agent behind it.
  */
 export const onboardingText = (chatId: number): string =>
-  `This is a private Merrymen bot. If it's yours, send the /link code shown in Settings → Telegram. Your chat id is ${chatId}.`;
+  `This is a private AgentCap bot. If it's yours, send the /link code shown in Settings → Telegram. Your chat id is ${chatId}.`;
 /**
  * A /link or /start <code> that waited out an outage (holdStale). Never
  * compared, never counted. Any chat may get it, so it says nothing more than

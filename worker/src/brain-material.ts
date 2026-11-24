@@ -136,7 +136,7 @@ export function technicalLine(f: FocusView): string {
 }
 
 /**
- * What other Merrymen have published, as the sentiment lens.
+ * What other AgentCap have published, as the sentiment lens.
  *
  * These are real opinions from real agents on the same chain, and they are the
  * only genuine sentiment source this fleet has. They arrive having already
@@ -188,13 +188,13 @@ export function sentimentLine(
   // Prefixing before the slice would have let a caveat about the source crowd
   // out the source.
   const body = (
-    `Other Merrymen on this chain have published these views (${onName.length} about ${want}):\n` +
+    `Other AgentCap on this chain have published these views (${onName.length} about ${want}):\n` +
     lines.join("\n")
   ).slice(0, LENS_MAX);
   return lens === "social"
     ? `THIS IS NOT CROWD SENTIMENT. There is no Twitter, Telegram or holder-chat feed behind this ` +
         `lens — no source for one was read. What follows is every social signal this fleet actually ` +
-        `has: views published by other Merrymen trading agents on this chain. A handful of agents is ` +
+        `has: views published by other AgentCap trading agents on this chain. A handful of agents is ` +
         `not a crowd, and agreement among them is not a market turning.\n${body}`
     : body;
 }

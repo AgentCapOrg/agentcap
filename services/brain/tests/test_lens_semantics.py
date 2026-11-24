@@ -35,7 +35,7 @@ def _request(signals):
                 contributions_known=True, equity_complete=True, gas_basis="net",
                 position_history_available=True)),
         market=MarketState(
-            snapshot_id="market", as_of=1, instrument_id="merrymen:meme", symbol="MEME",
+            snapshot_id="market", as_of=1, instrument_id="agentcap:meme", symbol="MEME",
             instrument_class="memecoin", signals=signals))
 
 

@@ -22,12 +22,12 @@ import { scopedReceiptAttestationAllowed } from "./receipt-attestation-controls"
  *                       replaces the live one, so a refusal here leaves the
  *                       previous deployment serving. The deploy must come
  *                       from `main`, at a full 40-hex commit, and — only when
- *                       MERRYMEN_DEPLOY_ANCESTRY_REPO names the repository —
+ *                       AGENTCAP_DEPLOY_ANCESTRY_REPO names the repository —
  *                       GitHub's public compare API must show that commit
  *                       inside main's history. That check FAILS CLOSED:
  *                       unreachable, rate-limited, private or ambiguous all
  *                       refuse; unset the variable to stop asking. When
- *                       MERRYMEN_START names a fleet role, that role's start
+ *                       AGENTCAP_START names a fleet role, that role's start
  *                       checks (below) run here as well, for the same reason.
  *                       Production is wherever this command is configured —
  *                       the guard does not read the environment's name.
@@ -37,12 +37,12 @@ import { scopedReceiptAttestationAllowed } from "./receipt-attestation-controls"
  *                       role's branch, after the [start] line and before the
  *                       role execs. The web role gets the allowlist check only.
  *                       The fleet roles (orchestrator, recovery-replies) must be
- *                       on the one service MERRYMEN_FLEET_SERVICE_ID names, with
- *                       MERRYMEN_PERSISTENT_HOME_REQUIRED=1 and this image's
- *                       MERRYMEN_IMAGE. Then a census prints the NAMES (never
+ *                       on the one service AGENTCAP_FLEET_SERVICE_ID names, with
+ *                       AGENTCAP_PERSISTENT_HOME_REQUIRED=1 and this image's
+ *                       AGENTCAP_IMAGE. Then a census prints the NAMES (never
  *                       the values) of the one-shot operator variables that are
  *                       set, and the orchestrator role is refused while any is
- *                       set and MERRYMEN_FLEET_ROLLOUT is not exactly `all`,
+ *                       set and AGENTCAP_FLEET_ROLLOUT is not exactly `all`,
  *                       except the complete, held, single-tenant receipt
  *                       attestation protocol described below.
  *                       runOrchestrator() runs the orchestrator's checks again
@@ -62,14 +62,14 @@ import { scopedReceiptAttestationAllowed } from "./receipt-attestation-controls"
  * image older than this file, fails the pre-deploy step for the same reason:
  * clear the service's pre-deploy command first, on purpose.
  *
- * WHAT `MERRYMEN_FLEET_ROLLOUT=all` DOES AND DOES NOT MEAN HERE. It lets the
+ * WHAT `AGENTCAP_FLEET_ROLLOUT=all` DOES AND DOES NOT MEAN HERE. It lets the
  * orchestrator start with ordinary one-shots set, because it is
  * the rollout's declared end state: the whole fleet admitted, nothing held for
  * review by the rollout. It is not proof of that. Until the staged rollout
  * itself ships, that variable does nothing else, so setting it purely to quiet
  * this guard is possible — the operator runbook keeps start:orchestrator off
  * until the rollout exists, which is a procedure, not a check. And `all` says
- * nothing about MERRYMEN_ACCOUNTING_HOLD_TENANTS: this guard never reads the
+ * nothing about AGENTCAP_ACCOUNTING_HOLD_TENANTS: this guard never reads the
  * hold list, and never checks a rollout's tenants against it. Confirming that
  * no admitted tenant is still held is the operator's step (or the rollout's
  * own parser's), not this file's.
@@ -87,7 +87,7 @@ import { scopedReceiptAttestationAllowed } from "./receipt-attestation-controls"
 export const EX_USAGE = 64;
 export const EX_CONFIG = 78;
 
-/** The Dockerfile's `ENV MERRYMEN_IMAGE=…`: the image whose start path is tini → script → exec. */
+/** The Dockerfile's `ENV AGENTCAP_IMAGE=…`: the image whose start path is tini → script → exec. */
 export const DEPLOY_GUARD_IMAGE = "dockerfile-v1";
 
 /** scripts/container-start.sh's allowlist, which is package.json's start:* scripts. */
@@ -125,10 +125,10 @@ export function onRailway(env: NodeJS.ProcessEnv): boolean {
  *
  * Families, as operators name them: REPAIR_*, ANNOUNCE_*, TG_RECOVERY_*,
  * ENABLE/HALT/RESUME_CLASS_*. NOT counted, because they are standing
- * configuration rather than an action: MERRYMEN_ACCOUNTING_HOLD_TENANTS,
- * MERRYMEN_CLASS_* (the class-vault knobs), MERRYMEN_LIVE_INTENT_STAND_DOWN,
+ * configuration rather than an action: AGENTCAP_ACCOUNTING_HOLD_TENANTS,
+ * AGENTCAP_CLASS_* (the class-vault knobs), AGENTCAP_LIVE_INTENT_STAND_DOWN,
  * and the rollout's own controls. orchestrator-one-shots.test.ts reads every
- * orchestrator `run…IfAsked` body: each MERRYMEN_ name there must be counted
+ * orchestrator `run…IfAsked` body: each AGENTCAP_ name there must be counted
  * here or listed in the test as standing, a gate read by a helper module is
  * listed with it, and anything else runOrchestrator runs is named as a
  * standing pass — so a new one-shot is counted from the commit that adds it.
@@ -140,11 +140,11 @@ export function onRailway(env: NodeJS.ProcessEnv): boolean {
  * trading or allows another one-shot through a staged rollout.
  */
 const ONE_SHOT_EXACT: ReadonlySet<string> = new Set([
-  "MERRYMEN_ACCOUNTING_RECONSTRUCT", "MERRYMEN_ACCOUNTING_DIAGNOSE", "MERRYMEN_GAS_AUDIT",
-  "MERRYMEN_INSPECT_TENANT", "MERRYMEN_COHORT_VET", "MERRYMEN_IDENTITY_AUDIT", "MERRYMEN_BRAIN_DATASET",
-  "MERRYMEN_RECONCILE_SHADOW", "MERRYMEN_BACKFILL_LIVE_INTENT",
+  "AGENTCAP_ACCOUNTING_RECONSTRUCT", "AGENTCAP_ACCOUNTING_DIAGNOSE", "AGENTCAP_GAS_AUDIT",
+  "AGENTCAP_INSPECT_TENANT", "AGENTCAP_COHORT_VET", "AGENTCAP_IDENTITY_AUDIT", "AGENTCAP_BRAIN_DATASET",
+  "AGENTCAP_RECONCILE_SHADOW", "AGENTCAP_BACKFILL_LIVE_INTENT",
 ]);
-const ONE_SHOT_FAMILY = /^MERRYMEN_(?:REPAIR(?:_[A-Z0-9_]+)?|RECEIPT_ATTEST_[A-Z0-9_]+|ANNOUNCE_[A-Z0-9_]+|TG_RECOVERY_[A-Z0-9_]+|(?:ENABLE|HALT|RESUME)_CLASS_[A-Z0-9_]+)$/;
+const ONE_SHOT_FAMILY = /^AGENTCAP_(?:REPAIR(?:_[A-Z0-9_]+)?|RECEIPT_ATTEST_[A-Z0-9_]+|ANNOUNCE_[A-Z0-9_]+|TG_RECOVERY_[A-Z0-9_]+|(?:ENABLE|HALT|RESUME)_CLASS_[A-Z0-9_]+)$/;
 
 export function isOneShotVariable(name: string): boolean {
   return ONE_SHOT_EXACT.has(name) || ONE_SHOT_FAMILY.test(name);
@@ -165,26 +165,26 @@ export function oneShotCensus(env: NodeJS.ProcessEnv): string[] {
  * A FLEET ROLE'S START CHECKS: the one-shot census, and every reason to refuse
  * — without printing, and without asking whether this is Railway (each caller
  * does). Three callers hold the same list: the start phase, the pre-deploy
- * phase when MERRYMEN_START names a fleet role, and runOrchestrator() itself.
+ * phase when AGENTCAP_START names a fleet role, and runOrchestrator() itself.
  *
  * A FLEET HOME ON RAILWAY IS A PROVEN VOLUME. persistent-home.ts proves the
  * mount, the volume UUID and the manifest — but only when
- * MERRYMEN_PERSISTENT_HOME_REQUIRED=1 asks it to; unset or 0, it steps aside,
- * and the fleet would run in whatever MERRYMEN_HOME names.
+ * AGENTCAP_PERSISTENT_HOME_REQUIRED=1 asks it to; unset or 0, it steps aside,
+ * and the fleet would run in whatever AGENTCAP_HOME names.
  */
 export function fleetStartChecks(env: NodeJS.ProcessEnv, role: FleetRole): { census: string[]; reasons: string[] } {
   const reasons: string[] = [];
-  const fleet = env.MERRYMEN_FLEET_SERVICE_ID ?? "", service = env.RAILWAY_SERVICE_ID ?? "";
+  const fleet = env.AGENTCAP_FLEET_SERVICE_ID ?? "", service = env.RAILWAY_SERVICE_ID ?? "";
   if (!fleet) {
-    reasons.push("MERRYMEN_FLEET_SERVICE_ID is not set — a fleet role runs only on the one Railway service that variable names");
+    reasons.push("AGENTCAP_FLEET_SERVICE_ID is not set — a fleet role runs only on the one Railway service that variable names");
   } else if (service !== fleet) {
-    reasons.push("this is not the fleet's service: RAILWAY_SERVICE_ID differs from MERRYMEN_FLEET_SERVICE_ID — a second fleet would race the first for every tenant");
+    reasons.push("this is not the fleet's service: RAILWAY_SERVICE_ID differs from AGENTCAP_FLEET_SERVICE_ID — a second fleet would race the first for every tenant");
   }
-  if (env.MERRYMEN_PERSISTENT_HOME_REQUIRED !== "1") {
-    reasons.push("MERRYMEN_PERSISTENT_HOME_REQUIRED is not 1 — a fleet role runs only on a home proven to be the mounted volume, never on the container's own disk, which the next deploy discards");
+  if (env.AGENTCAP_PERSISTENT_HOME_REQUIRED !== "1") {
+    reasons.push("AGENTCAP_PERSISTENT_HOME_REQUIRED is not 1 — a fleet role runs only on a home proven to be the mounted volume, never on the container's own disk, which the next deploy discards");
   }
-  if (env.MERRYMEN_IMAGE !== DEPLOY_GUARD_IMAGE) {
-    reasons.push(`MERRYMEN_IMAGE is not ${DEPLOY_GUARD_IMAGE} — this is not the image whose start path delivers SIGTERM to node`);
+  if (env.AGENTCAP_IMAGE !== DEPLOY_GUARD_IMAGE) {
+    reasons.push(`AGENTCAP_IMAGE is not ${DEPLOY_GUARD_IMAGE} — this is not the image whose start path delivers SIGTERM to node`);
   }
   const census = oneShotCensus(env);
   // Exactly `all`, as written: a value the rollout parser might also read as
@@ -192,9 +192,9 @@ export function fleetStartChecks(env: NodeJS.ProcessEnv, role: FleetRole): { cen
   // This one protocol has a complete, typed, single-tenant scope and explicit
   // maintenance hold. Its runtime also proves the roster, lease and no-child
   // state. No other one-shot can accompany it through a staged rollout.
-  if (role === "start:orchestrator" && census.length && env.MERRYMEN_FLEET_ROLLOUT !== "all"
+  if (role === "start:orchestrator" && census.length && env.AGENTCAP_FLEET_ROLLOUT !== "all"
       && !scopedReceiptAttestationAllowed(env, census)) {
-    reasons.push(`one-shot operator variables are set (${census.join(" ")}) while MERRYMEN_FLEET_ROLLOUT is not all — delete them before the orchestrator starts over a partly held fleet`);
+    reasons.push(`one-shot operator variables are set (${census.join(" ")}) while AGENTCAP_FLEET_ROLLOUT is not all — delete them before the orchestrator starts over a partly held fleet`);
   }
   return { census, reasons };
 }
@@ -217,12 +217,12 @@ export function hostedOrchestratorRefusals(env: NodeJS.ProcessEnv): string[] {
 export function hostedSolanaRefusals(env: NodeJS.ProcessEnv): string[] {
   if (!onRailway(env)) return [];
   const reasons: string[] = [];
-  const expected = env.MERRYMEN_SOLANA_SERVICE_ID ?? "", service = env.RAILWAY_SERVICE_ID ?? "";
-  if (!expected) reasons.push("MERRYMEN_SOLANA_SERVICE_ID is not set — the Solana worker requires its own explicitly selected Railway service");
-  else if (service !== expected) reasons.push("this is not the Solana service: RAILWAY_SERVICE_ID differs from MERRYMEN_SOLANA_SERVICE_ID");
-  if (service && service === env.MERRYMEN_FLEET_SERVICE_ID) reasons.push("the Solana worker cannot replace the RH fleet service — select a separate Solana service");
+  const expected = env.AGENTCAP_SOLANA_SERVICE_ID ?? "", service = env.RAILWAY_SERVICE_ID ?? "";
+  if (!expected) reasons.push("AGENTCAP_SOLANA_SERVICE_ID is not set — the Solana worker requires its own explicitly selected Railway service");
+  else if (service !== expected) reasons.push("this is not the Solana service: RAILWAY_SERVICE_ID differs from AGENTCAP_SOLANA_SERVICE_ID");
+  if (service && service === env.AGENTCAP_FLEET_SERVICE_ID) reasons.push("the Solana worker cannot replace the RH fleet service — select a separate Solana service");
   if (!env.DATABASE_URL?.trim()) reasons.push("DATABASE_URL is not set — hosted Solana authority and accounting require the shared database");
-  if (env.MERRYMEN_IMAGE !== DEPLOY_GUARD_IMAGE) reasons.push(`MERRYMEN_IMAGE is not ${DEPLOY_GUARD_IMAGE} — this is not the image whose start path delivers SIGTERM to node`);
+  if (env.AGENTCAP_IMAGE !== DEPLOY_GUARD_IMAGE) reasons.push(`AGENTCAP_IMAGE is not ${DEPLOY_GUARD_IMAGE} — this is not the image whose start path delivers SIGTERM to node`);
   return reasons;
 }
 
@@ -259,11 +259,11 @@ const skipped = (why: string): GuardResult => ({ code: 0, out: [line(`skipped: $
  * and unproven refuses.
  */
 async function ancestryRefusal(repo: string, sha: string, fetchImpl: typeof fetch): Promise<string | null> {
-  if (!REPO.test(repo)) return "MERRYMEN_DEPLOY_ANCESTRY_REPO must be owner/name";
+  if (!REPO.test(repo)) return "AGENTCAP_DEPLOY_ANCESTRY_REPO must be owner/name";
   let res: Response;
   try {
     res = await fetchImpl(`https://api.github.com/repos/${repo}/compare/main...${sha}?per_page=1`, {
-      headers: { Accept: "application/vnd.github+json", "User-Agent": "merrymen-deploy-guard", "X-GitHub-Api-Version": "2022-11-28" },
+      headers: { Accept: "application/vnd.github+json", "User-Agent": "agentcap-deploy-guard", "X-GitHub-Api-Version": "2022-11-28" },
       signal: AbortSignal.timeout(ANCESTRY_TIMEOUT_MS),
     });
   } catch {
@@ -301,15 +301,15 @@ async function predeploy(env: NodeJS.ProcessEnv, deps: GuardDeps): Promise<Guard
   // THE ROLE THIS DEPLOYMENT WILL START, read as container-start.sh reads it:
   // `-`, not `:-` — unset is web, empty is refused. A fleet role's start checks
   // need nothing but the environment, which this container shares with the
-  // deployment it guards (this image's MERRYMEN_IMAGE included), so they run
+  // deployment it guards (this image's AGENTCAP_IMAGE included), so they run
   // here too. Here, a refusal leaves the previous deployment serving. The same
   // refusal at start comes after Railway has already replaced it — with no
   // healthcheck, an outage of the fleet or the reply listener until somebody
   // fixes the variables. The start phase still runs them: it is the backstop.
-  const role = env.MERRYMEN_START ?? "start:web";
+  const role = env.AGENTCAP_START ?? "start:web";
   const out: string[] = [];
   if (!isStartRole(role)) {
-    reasons.push(`MERRYMEN_START is not one of: ${START_ROLES.join(" ")} (unset means start:web) — the start script would refuse it once this deploy had replaced the live one`);
+    reasons.push(`AGENTCAP_START is not one of: ${START_ROLES.join(" ")} (unset means start:web) — the start script would refuse it once this deploy had replaced the live one`);
   } else if (isFleetRole(role)) {
     const fleet = fleetStartChecks(env, role);
     out.push(censusLine(fleet.census));
@@ -318,7 +318,7 @@ async function predeploy(env: NodeJS.ProcessEnv, deps: GuardDeps): Promise<Guard
     reasons.push(...hostedSolanaRefusals(env));
   }
   if (reasons.length) return refused(out, reasons);
-  const repo = env.MERRYMEN_DEPLOY_ANCESTRY_REPO;
+  const repo = env.AGENTCAP_DEPLOY_ANCESTRY_REPO;
   if (repo !== undefined) {
     const why = await ancestryRefusal(repo, sha, deps.fetch ?? fetch);
     if (why) return refused(out, [why]);

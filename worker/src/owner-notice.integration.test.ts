@@ -17,10 +17,10 @@ import { after, describe, it } from "node:test";
 
 import type { Why } from "./strategies/reasons";
 
-const scratch = mkdtempSync(path.join(os.tmpdir(), "merrymen-owner-notice-"));
+const scratch = mkdtempSync(path.join(os.tmpdir(), "agentcap-owner-notice-"));
 const isolatedCwd = path.join(scratch, "cwd");
 mkdirSync(isolatedCwd);
-process.env.MERRYMEN_HOME = path.join(scratch, "home");
+process.env.AGENTCAP_HOME = path.join(scratch, "home");
 delete process.env.DATABASE_URL;
 const originalCwd = process.cwd();
 const store = await import("./store");
@@ -30,7 +30,7 @@ try {
 } finally {
   process.chdir(originalCwd);
 }
-const raw = new DatabaseSync(path.join(process.env.MERRYMEN_HOME, "merrymen.db"));
+const raw = new DatabaseSync(path.join(process.env.AGENTCAP_HOME, "agentcap.db"));
 const { breakerResetLine, idleChannelOnStore, RESTATE_AFTER_MS, withEarlier } = await import("./idle-notice");
 const { drawdownOf } = await import("./strategies/types");
 const { renderWhy } = await import("./strategies/reasons");

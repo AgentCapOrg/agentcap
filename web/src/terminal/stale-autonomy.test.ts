@@ -18,7 +18,7 @@ import { describe, it } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { JSDOM } from "jsdom";
-import { autonomyOf, type AutonomyInput } from "@merrymen/core";
+import { autonomyOf, type AutonomyInput } from "@agentcap/core";
 import { freshWithin } from "@/lib/services/agent-status";
 import { ORDER_IN_FLIGHT_MS } from "@/lib/order-state";
 import type { FleetRecoveryView } from "../../../worker/src/fleet-recovery";

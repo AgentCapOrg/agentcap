@@ -124,7 +124,7 @@ export interface SubjectMemory {
   /**
    * THE TRADER BOARD THIS CONVERSATION WAS LAST SHOWN, so "the second one",
    * "#3" and "that guy" mean its rows (intent.ts rowRefOf). Only Fomo's
-   * public board, never one cut to Merrymen's watched traders. Absent when
+   * public board, never one cut to AgentCap's watched traders. Absent when
    * none; dropped by any question that is not about the board or one trader.
    */
   board?: BoardMemory;

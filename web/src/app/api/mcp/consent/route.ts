@@ -1,7 +1,7 @@
 /**
  * The consent page's server half. `describe` works signed out (it shows who is
  * asking, never anything about an owner); `decide` requires the owner's own
- * Merrymen session and a same-origin request, so another site cannot approve a
+ * AgentCap session and a same-origin request, so another site cannot approve a
  * connection on an owner's behalf (the /api middleware also refuses
  * cross-site Sec-Fetch-Site, and the consent request id is a single-use
  * 256-bit secret that only ever travelled in a URL fragment).
@@ -43,7 +43,7 @@ export async function POST(req: Request): Promise<Response> {
       return jsonResponse(await describeRequest(deps, body.request, tenant));
     }
     if (body.action === "decide") {
-      if (!tenant) return jsonResponse({ error: "login_required", error_description: "Sign in to Merrymen first." }, 401);
+      if (!tenant) return jsonResponse({ error: "login_required", error_description: "Sign in to AgentCap first." }, 401);
       if (origin !== cfg.issuer) return jsonResponse({ error: "forbidden", error_description: "cross-site request" }, 403);
       const out = await decideRequest(deps, body.request, tenant, { approve: body.approve === true, scopes: body.scopes, agentSlugs: body.agents });
       return jsonResponse({ redirect: out.location });

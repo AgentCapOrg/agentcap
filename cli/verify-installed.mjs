@@ -12,8 +12,8 @@ const readJson = (file) => JSON.parse(readFileSync(file, "utf8"));
 export function physicalLock(installedRoot) {
   const root = realpathSync(installedRoot);
   const installed = readJson(path.join(root, "package.json"));
-  assert.equal(installed.name, "merrymen", "Expected an installed Merrymen package");
-  const manifest = { name: "merrymen-installed-verification", version: "1.0.0", private: true, dependencies: { merrymen: installed.version } };
+  assert.equal(installed.name, "agentcap", "Expected an installed AgentCap package");
+  const manifest = { name: "agentcap-installed-verification", version: "1.0.0", private: true, dependencies: { agentcap: installed.version } };
   const packages = { "": manifest };
   const fields = ["name", "version", "dependencies", "optionalDependencies", "peerDependencies", "peerDependenciesMeta", "engines", "os", "cpu"];
   function visit(directory, location) {
@@ -40,11 +40,11 @@ export function physicalLock(installedRoot) {
       } else visit(path.join(modules, entry.name), `${location}/node_modules/${entry.name}`);
     }
   }
-  visit(root, "node_modules/merrymen");
+  visit(root, "node_modules/agentcap");
   function resolves(from, name) {
     for (let ancestor = from; ; ) {
       if (packages[`${ancestor}/node_modules/${name}`]) return true;
-      if (ancestor === "node_modules/merrymen") return false;
+      if (ancestor === "node_modules/agentcap") return false;
       const index = ancestor.lastIndexOf("/node_modules/");
       if (index < 0) return false;
       ancestor = ancestor.slice(0, index);
@@ -122,7 +122,7 @@ export async function verifyNativeModules(installedRoot) {
  * last day 2026-11-22) is gone. Its four copies came in through
  * @privy-io/react-auth under x402, @coinbase/cdp-sdk and @reown/appkit-wallet
  * (also nested under @wagmi/connectors); no zod 3 release is patched. The
- * package.json overrides now give those three packages Merrymen's own patched
+ * package.json overrides now give those three packages AgentCap's own patched
  * zod 4 (Milla's decision of 2026-11-24, docs/perps-paper-launch.md), and
  * assertPatched above rejects any zod older than 4.6.6. With those copies
  * gone, the abitype copies under @coinbase/cdp-sdk (1.0.6) and
@@ -144,7 +144,7 @@ export function evaluateAudit(audit) {
 }
 
 export function auditPhysicalLock(snapshot) {
-  const directory = mkdtempSync(path.join(tmpdir(), "merrymen-installed-audit-"));
+  const directory = mkdtempSync(path.join(tmpdir(), "agentcap-installed-audit-"));
   try {
     writeFileSync(path.join(directory, "package.json"), JSON.stringify(snapshot.manifest));
     writeFileSync(path.join(directory, "package-lock.json"), JSON.stringify(snapshot.lock));
@@ -181,9 +181,9 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     });
     if (proofCheck.error || proofCheck.status !== 0) throw new Error("Prebuilt Gloam bundle verification failed.");
     const { metadata } = auditPhysicalLock(snapshot);
-    console.log(`[merrymen] Verified ${Object.keys(snapshot.lock.packages).length - 1} installed packages; native sharp, esbuild and Next SWC plus bundled Gloam proof/encryption modules work; audit: ${metadata.vulnerabilities.total} vulnerabilities.`);
+    console.log(`[agentcap] Verified ${Object.keys(snapshot.lock.packages).length - 1} installed packages; native sharp, esbuild and Next SWC plus bundled Gloam proof/encryption modules work; audit: ${metadata.vulnerabilities.total} vulnerabilities.`);
   } catch (error) {
-    console.error(`[merrymen] Installed package verification failed: ${error.message}`);
+    console.error(`[agentcap] Installed package verification failed: ${error.message}`);
     process.exitCode = 1;
   }
 }

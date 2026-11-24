@@ -118,7 +118,7 @@ export const SOLANA_STATUS_DAILY_OPERATIONS_USED = "This account made its maximu
  * SALES COUNT AGAINST THE SAME LIMITS AS BUYS. The vault program charges a sale's USDG proceeds to the session's per-trade and
  * daily USDG limits, as it charges a buy's spend, and its SOL to the SOL sold limits; admission counts the same way. Buys
  * therefore keep room for the position's exit (EXITS KEEP ROOM IN THE ROLLING LIMITS, solana-trading-store.ts: assessRisk and
- * admission refuse a buy that would leave too little), so the platform's live caps (MERRYMEN_SOLANA_LIVE_MAX_*), which bound
+ * admission refuse a buy that would leave too little), so the platform's live caps (AGENTCAP_SOLANA_LIVE_MAX_*), which bound
  * those limits, stop buys before exits. Sales alone, or a rise in the SOL price, can still use a day's room; then status says
  * so. Withdraw is never limited by either.
  * - Under 1 USDG (the live minimum) left of the USDG per 24 hours limit, admission refuses every live trade of at least 1 USDG,
@@ -167,7 +167,7 @@ export const SOLANA_STATUS_EXIT_OVER_SEVERAL_WINDOWS = "Your SOL position is mor
   + "the SOL price rises or the daily limits are lowered. Withdraw works at any time.";
 export const SOLANA_STATUS_NO_FALLBACK = "Live trading needs a second, independent RPC provider; an operator must configure one.";
 /**
- * The status warning while MERRYMEN_SOLANA_FEE_PAYER_LOW_LAMPORTS cannot be
+ * The status warning while AGENTCAP_SOLANA_FEE_PAYER_LOW_LAMPORTS cannot be
  * read. The threshold is a warning level only, so it refuses nothing: the fee
  * payer is called low below four times the fee cap meanwhile, and operators
  * get an [alert] (solana fee-payer-threshold misconfigured).
@@ -223,18 +223,18 @@ function refundBlocker({ mint, problem }: SolanaOwnerRefundBlock): string {
 }
 /**
  * The status blocker while a vault balance is below its book, and what the owner
- * can do about it: a withdrawal made outside Merrymen is recorded from its own
+ * can do about it: a withdrawal made outside AgentCap is recorded from its own
  * transaction (recordExternalWithdrawals); anything else stays held.
  */
-export const SOLANA_STATUS_BELOW_BOOK = "Vault balances are below recorded trades. If you withdrew from the vault outside Merrymen, with your owner key in another wallet or tool, record those withdrawals under Owner controls; until the records match the vault, trading and automated exits stay held.";
+export const SOLANA_STATUS_BELOW_BOOK = "Vault balances are below recorded trades. If you withdrew from the vault outside AgentCap, with your owner key in another wallet or tool, record those withdrawals under Owner controls; until the records match the vault, trading and automated exits stay held.";
 /** A withdrawal prepare refused because the vault holds less of the asset than the book. */
-export const SOLANA_WITHDRAW_BELOW_BOOK = "Your vault holds less of this asset than Merrymen's records, so this withdrawal could fail on Solana. If you withdrew from the vault outside Merrymen, record those withdrawals under Owner controls first, or withdraw at most what the vault holds. Nothing was prepared.";
+export const SOLANA_WITHDRAW_BELOW_BOOK = "Your vault holds less of this asset than AgentCap's records, so this withdrawal could fail on Solana. If you withdrew from the vault outside AgentCap, record those withdrawals under Owner controls first, or withdraw at most what the vault holds. Nothing was prepared.";
 /**
  * A permission the owner signed whose registration landed after a revocation (one beside it, or one made
- * outside Merrymen): Merrymen never activates it (activateLive), but its session stays live on Solana until
+ * outside AgentCap): AgentCap never activates it (activateLive), but its session stays live on Solana until
  * it expires, so the owner is told to revoke again.
  */
-export const SOLANA_STATUS_REGISTERED_AFTER_REVOKE = "A trading permission that landed on Solana after your revocation is still active there until it expires. Merrymen never uses it; revoke again under Owner controls to end it.";
+export const SOLANA_STATUS_REGISTERED_AFTER_REVOKE = "A trading permission that landed on Solana after your revocation is still active there until it expires. AgentCap never uses it; revoke again under Owner controls to end it.";
 /**
  * The live rollout's owner-facing words (web/src/lib/solana-live-caps.ts, shared with the page): SOLANA_LIVE_NOT_OPEN for a tenant
  * the list does not name that never went live, SOLANA_LIVE_PAUSED for one that went live and is off the list now (exits-only), and
@@ -396,7 +396,7 @@ export function createSolanaAppRuntime(options: SolanaAppRuntimeOptions = {}) {
   }
   /** The configured deployment, every check but the release pin's (config() adds it). Only status() uses it alone. */
   function configured() {
-    const programId = env.MERRYMEN_SOLANA_VAULT_PROGRAM, hash = env.MERRYMEN_SOLANA_VAULT_SHA256;
+    const programId = env.AGENTCAP_SOLANA_VAULT_PROGRAM, hash = env.AGENTCAP_SOLANA_VAULT_SHA256;
     if (!programId || !hash || !/^[a-f0-9]{64}$/.test(hash)) fail("An audited immutable Solana vault deployment and its binary hash must be configured.", "configuration");
     try { address(programId); } catch { fail("The configured Solana vault program is invalid.", "configuration"); }
     // The local test build's id is never a live deployment.
@@ -413,9 +413,9 @@ export function createSolanaAppRuntime(options: SolanaAppRuntimeOptions = {}) {
   }
   /**
    * Swap compute-unit price bounds, in micro-lamports.
-   * MERRYMEN_SOLANA_COMPUTE_UNIT_PRICE_MICROLAMPORTS is the minimum (default 0;
+   * AGENTCAP_SOLANA_COMPUTE_UNIT_PRICE_MICROLAMPORTS is the minimum (default 0;
    * it used to be the fixed price, so it keeps working alone).
-   * MERRYMEN_SOLANA_MAX_COMPUTE_UNIT_PRICE_MICROLAMPORTS is the maximum, by
+   * AGENTCAP_SOLANA_MAX_COMPUTE_UNIT_PRICE_MICROLAMPORTS is the maximum, by
    * default the larger of SOLANA_DEFAULT_MAX_COMPUTE_UNIT_PRICE and the minimum.
    * A maximum set below the minimum, or an unreadable value, is refused here as
    * configuration (a status blocker), never as a fee refusal at an exit.
@@ -425,15 +425,15 @@ export function createSolanaAppRuntime(options: SolanaAppRuntimeOptions = {}) {
       if (value === undefined) return fallback;
       try { return parseSolanaRawAmount(value, true); } catch { return fail("The Solana compute-unit price settings are misconfigured: each must be a whole number of micro-lamports.", "configuration"); }
     };
-    const minimum = read(env.MERRYMEN_SOLANA_COMPUTE_UNIT_PRICE_MICROLAMPORTS, 0n);
-    const maximum = read(env.MERRYMEN_SOLANA_MAX_COMPUTE_UNIT_PRICE_MICROLAMPORTS,
+    const minimum = read(env.AGENTCAP_SOLANA_COMPUTE_UNIT_PRICE_MICROLAMPORTS, 0n);
+    const maximum = read(env.AGENTCAP_SOLANA_MAX_COMPUTE_UNIT_PRICE_MICROLAMPORTS,
       minimum > SOLANA_DEFAULT_MAX_COMPUTE_UNIT_PRICE ? minimum : SOLANA_DEFAULT_MAX_COMPUTE_UNIT_PRICE);
     if (maximum < minimum) fail("The Solana compute-unit price settings are misconfigured: the maximum is below the minimum. Live trading and exits stay refused until an operator fixes them.", "configuration");
     return { minimum: minimum.toString(), maximum: maximum.toString() };
   }
   /**
    * Proven-expired attempts a day that do not count toward the owner's
-   * maxOpsPerDay (MERRYMEN_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE, default 0: every
+   * maxOpsPerDay (AGENTCAP_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE, default 0: every
    * signed transaction counts). See SOLANA_DEFAULT_EXPIRED_ATTEMPT_ALLOWANCE.
    * A value that is not a whole number from 0 to 96 is configuration.
    */
@@ -470,13 +470,13 @@ export function createSolanaAppRuntime(options: SolanaAppRuntimeOptions = {}) {
     verifying = { key, done };
     try { await done; } finally { if (verifying?.done === done) verifying = undefined; }
   }
-  function dek() { return seed(env.MERRYMEN_STORE_DEK, "Configure a 32-byte encryption key before registering live trading."); }
+  function dek() { return seed(env.AGENTCAP_STORE_DEK, "Configure a 32-byte encryption key before registering live trading."); }
   async function payer() {
-    return createKeyPairFromPrivateKeyBytes(seed(env.MERRYMEN_SOLANA_FEE_PAYER_SEED, "Configure the separate Solana network fee payer before live trading."));
+    return createKeyPairFromPrivateKeyBytes(seed(env.AGENTCAP_SOLANA_FEE_PAYER_SEED, "Configure the separate Solana network fee payer before live trading."));
   }
   const log = options.log ?? ((line: string) => { process.stderr.write(`${line}\n`); });
   /**
-   * MERRYMEN_SOLANA_REFERENCE_TOLERANCE_BPS, or a configuration refusal that
+   * AGENTCAP_SOLANA_REFERENCE_TOLERANCE_BPS, or a configuration refusal that
    * also says an [alert] to the operator, at most once a minute per process: an
    * unreadable tolerance refuses every live trade, exits included, as a bad
    * Pyth generation does (which requireSolanaPythGeneration alerts on). The
@@ -489,7 +489,7 @@ export function createSolanaAppRuntime(options: SolanaAppRuntimeOptions = {}) {
       if (toleranceAlertAtMs === undefined || at < toleranceAlertAtMs || at - toleranceAlertAtMs >= SOLANA_REFERENCE_ALERT_REPEAT_MS) {
         toleranceAlertAtMs = at;
         try {
-          log(`[alert] solana-reference-tolerance misconfigured: MERRYMEN_SOLANA_REFERENCE_TOLERANCE_BPS must be a whole number from ${SOLANA_REFERENCE_MIN_TOLERANCE_BPS} `
+          log(`[alert] solana-reference-tolerance misconfigured: AGENTCAP_SOLANA_REFERENCE_TOLERANCE_BPS must be a whole number from ${SOLANA_REFERENCE_MIN_TOLERANCE_BPS} `
             + `to ${SOLANA_REFERENCE_MAX_TOLERANCE_BPS} (unset is ${SOLANA_REFERENCE_DEFAULT_TOLERANCE_BPS}); no live Solana trade, exits included, is admitted until it is fixed`);
         } catch { /* Logging never changes an outcome. */ }
       }
@@ -518,12 +518,12 @@ export function createSolanaAppRuntime(options: SolanaAppRuntimeOptions = {}) {
     }
   }
   /**
-   * Whether MERRYMEN_SOLANA_LIVE_TENANTS names this store's tenant. Read on every ask, from this runtime's env. Asked of a store,
+   * Whether AGENTCAP_SOLANA_LIVE_TENANTS names this store's tenant. Read on every ask, from this runtime's env. Asked of a store,
    * never a bare scope: SolanaTradingStore refuses any tenant but 0x and 40 lowercase hex digits, and the list is lowercased when
    * read (solanaLiveTenants), so the two compare exactly whatever case an operator wrote.
    */
   function liveListed(s: SolanaTradingStore): boolean { return rollout(() => solanaLiveTenants(env)).has(s.scope.tenant); }
-  /** The live caps in force (MERRYMEN_SOLANA_LIVE_MAX_*), from this runtime's env. */
+  /** The live caps in force (AGENTCAP_SOLANA_LIVE_MAX_*), from this runtime's env. */
   function liveCaps(): SolanaLiveCaps { return rollout(() => solanaLiveCaps(env)); }
   /**
    * SETTINGS THAT MUST MATCH, CHECKED (solanaLiveRolloutFingerprint). The web and the Solana worker each read the list and the
@@ -591,18 +591,18 @@ export function createSolanaAppRuntime(options: SolanaAppRuntimeOptions = {}) {
     if (rolloutDiffersAlertAtMs === undefined || at < rolloutDiffersAlertAtMs || at - rolloutDiffersAlertAtMs >= SOLANA_REFERENCE_ALERT_REPEAT_MS) {
       rolloutDiffersAlertAtMs = at;
       try {
-        log(held === "worker-unseen" ? "[alert] solana-live-rollout differs: the Solana worker is running but has not published its MERRYMEN_SOLANA_LIVE_TENANTS and "
-          + "MERRYMEN_SOLANA_LIVE_MAX_* settings for over 90 s (code that publishes none, or a failing publish), so the web cannot check them; no live "
+        log(held === "worker-unseen" ? "[alert] solana-live-rollout differs: the Solana worker is running but has not published its AGENTCAP_SOLANA_LIVE_TENANTS and "
+          + "AGENTCAP_SOLANA_LIVE_MAX_* settings for over 90 s (code that publishes none, or a failing publish), so the web cannot check them; no live "
           + "Solana buy is admitted until it does (exits, revoke and withdraw continue)"
-          : held === "web-unpublished" ? "[alert] solana-live-rollout differs: the web has not published its MERRYMEN_SOLANA_LIVE_TENANTS and "
-          + "MERRYMEN_SOLANA_LIVE_MAX_* settings yet (it does as it starts, every 30 s after, and when it serves a Solana request), so the Solana worker "
-          + "cannot check them; the worker admits no live Solana buy until it does: deploy the web with MERRYMEN_SOLANA=1 and the same settings, "
+          : held === "web-unpublished" ? "[alert] solana-live-rollout differs: the web has not published its AGENTCAP_SOLANA_LIVE_TENANTS and "
+          + "AGENTCAP_SOLANA_LIVE_MAX_* settings yet (it does as it starts, every 30 s after, and when it serves a Solana request), so the Solana worker "
+          + "cannot check them; the worker admits no live Solana buy until it does: deploy the web with AGENTCAP_SOLANA=1 and the same settings, "
           + "and if it is running, see its [alert] solana-live-rollout unpublished (exits, revoke and withdraw continue)"
-          : service === "worker" ? "[alert] solana-live-rollout differs: the web last published different MERRYMEN_SOLANA_LIVE_TENANTS or "
-          + "MERRYMEN_SOLANA_LIVE_MAX_* settings from the Solana worker's (one was redeployed without the other, or the web cannot publish: see its "
+          : service === "worker" ? "[alert] solana-live-rollout differs: the web last published different AGENTCAP_SOLANA_LIVE_TENANTS or "
+          + "AGENTCAP_SOLANA_LIVE_MAX_* settings from the Solana worker's (one was redeployed without the other, or the web cannot publish: see its "
           + "[alert] solana-live-rollout unpublished); the worker admits no live Solana buy until both run the same values and the web has published "
           + "them, which it does as it starts and every 30 s after (exits, revoke and withdraw continue)"
-          : "[alert] solana-live-rollout differs: the web and the Solana worker run different MERRYMEN_SOLANA_LIVE_TENANTS or MERRYMEN_SOLANA_LIVE_MAX_* "
+          : "[alert] solana-live-rollout differs: the web and the Solana worker run different AGENTCAP_SOLANA_LIVE_TENANTS or AGENTCAP_SOLANA_LIVE_MAX_* "
           + "settings; no live Solana buy is admitted until both are deployed with the same values (exits, revoke and withdraw continue)");
       } catch { /* Logging never changes an outcome. */ }
     }
@@ -621,7 +621,7 @@ export function createSolanaAppRuntime(options: SolanaAppRuntimeOptions = {}) {
       if (rolloutCheckAlertAtMs === undefined || at < rolloutCheckAlertAtMs || at - rolloutCheckAlertAtMs >= SOLANA_REFERENCE_ALERT_REPEAT_MS) {
         rolloutCheckAlertAtMs = at;
         try {
-          log("[alert] solana-live-rollout unchecked: this service could not write its MERRYMEN_SOLANA_LIVE_TENANTS and MERRYMEN_SOLANA_LIVE_MAX_* "
+          log("[alert] solana-live-rollout unchecked: this service could not write its AGENTCAP_SOLANA_LIVE_TENANTS and AGENTCAP_SOLANA_LIVE_MAX_* "
             + "digest or read the other service's (solana_runtime_live_rollout_seen); no live Solana buy is admitted until it can (exits, revoke and withdraw continue)");
         } catch { /* Logging never changes an outcome. */ }
       }
@@ -719,7 +719,7 @@ export function createSolanaAppRuntime(options: SolanaAppRuntimeOptions = {}) {
     return use.operations + use.counted >= maxOpsPerDay ? SOLANA_EXPIRED_ATTEMPTS_EXHAUSTED : null;
   }
   /**
-   * Whether MERRYMEN_JUPITER_API_KEY is one every Jupiter request accepts
+   * Whether AGENTCAP_JUPITER_API_KEY is one every Jupiter request accepts
    * (solanaJupiterApiKey). A key that is set but unusable also says an [alert]
    * to the operator, at most once a minute per process: every quote and live
    * route, exits included, is refused as configuration until it is fixed. The line names the
@@ -729,10 +729,10 @@ export function createSolanaAppRuntime(options: SolanaAppRuntimeOptions = {}) {
   function jupiterKeyUsable(): boolean {
     try { solanaJupiterApiKey(env); return true; } catch {
       const at = now();
-      if (env.MERRYMEN_JUPITER_API_KEY && (jupiterKeyAlertAtMs === undefined || at < jupiterKeyAlertAtMs || at - jupiterKeyAlertAtMs >= SOLANA_REFERENCE_ALERT_REPEAT_MS)) {
+      if (env.AGENTCAP_JUPITER_API_KEY && (jupiterKeyAlertAtMs === undefined || at < jupiterKeyAlertAtMs || at - jupiterKeyAlertAtMs >= SOLANA_REFERENCE_ALERT_REPEAT_MS)) {
         jupiterKeyAlertAtMs = at;
         try {
-          log("[alert] solana-jupiter-key misconfigured: MERRYMEN_JUPITER_API_KEY must be 1 to 1024 printable ASCII characters with no spaces; "
+          log("[alert] solana-jupiter-key misconfigured: AGENTCAP_JUPITER_API_KEY must be 1 to 1024 printable ASCII characters with no spaces; "
             + "no Solana quote or live route, exits included, is made until it is fixed");
         } catch { /* Logging never changes an outcome. */ }
       }
@@ -758,15 +758,15 @@ export function createSolanaAppRuntime(options: SolanaAppRuntimeOptions = {}) {
   const DEFAULT_MAX_FEE_LAMPORTS = 5_000_000n;
   /**
    * The network fee and rent cap per live trade, in lamports
-   * (MERRYMEN_SOLANA_MAX_FEE_LAMPORTS, default 5,000,000). An unreadable value
+   * (AGENTCAP_SOLANA_MAX_FEE_LAMPORTS, default 5,000,000). An unreadable value
    * is configuration: a status blocker, and a refusal before anything is signed.
    */
   function maxFeeLamports(): bigint {
-    try { return parseSolanaRawAmount(env.MERRYMEN_SOLANA_MAX_FEE_LAMPORTS ?? DEFAULT_MAX_FEE_LAMPORTS.toString()); }
+    try { return parseSolanaRawAmount(env.AGENTCAP_SOLANA_MAX_FEE_LAMPORTS ?? DEFAULT_MAX_FEE_LAMPORTS.toString()); }
     catch { return fail("The Solana network fee limit setting is misconfigured: it must be a whole number of lamports above zero. Live trading and exits stay refused until an operator fixes it.", "configuration"); }
   }
   /**
-   * Where the shared fee payer is called low: MERRYMEN_SOLANA_FEE_PAYER_LOW_LAMPORTS,
+   * Where the shared fee payer is called low: AGENTCAP_SOLANA_FEE_PAYER_LOW_LAMPORTS,
    * by default four times the fee cap. A warning level only, so a value that
    * cannot be read refuses nothing (it once halted every tenant's automated
    * exits): it falls back to four times the fee cap (the default cap when that
@@ -779,14 +779,14 @@ export function createSolanaAppRuntime(options: SolanaAppRuntimeOptions = {}) {
   function feePayerLow(): { lamports: bigint; shown: bigint | null; misconfigured: boolean } {
     let maxFee: bigint | null = null;
     try { maxFee = maxFeeLamports(); } catch { /* Its own blocker; the default cap sizes the warning level. */ }
-    const fallback = (maxFee ?? DEFAULT_MAX_FEE_LAMPORTS) * 4n, raw = env.MERRYMEN_SOLANA_FEE_PAYER_LOW_LAMPORTS;
+    const fallback = (maxFee ?? DEFAULT_MAX_FEE_LAMPORTS) * 4n, raw = env.AGENTCAP_SOLANA_FEE_PAYER_LOW_LAMPORTS;
     if (raw === undefined) return { lamports: fallback, shown: maxFee === null ? null : fallback, misconfigured: false };
     try { const lamports = parseSolanaRawAmount(raw); return { lamports, shown: lamports, misconfigured: false }; } catch {
       const at = now();
       if (thresholdAlertAtMs === undefined || at < thresholdAlertAtMs || at - thresholdAlertAtMs >= FEE_PAYER_ALERT_REPEAT_MS) {
         thresholdAlertAtMs = at;
         try {
-          log("[alert] solana fee-payer-threshold misconfigured: MERRYMEN_SOLANA_FEE_PAYER_LOW_LAMPORTS must be a whole number of lamports above zero (unset is four times "
+          log("[alert] solana fee-payer-threshold misconfigured: AGENTCAP_SOLANA_FEE_PAYER_LOW_LAMPORTS must be a whole number of lamports above zero (unset is four times "
             + "the fee cap); until it is fixed the fee payer is called low below four times the fee cap. Trading and exits continue");
         } catch { /* Logging never changes an outcome. */ }
       }
@@ -805,7 +805,7 @@ export function createSolanaAppRuntime(options: SolanaAppRuntimeOptions = {}) {
    * payer); a buy's is a USDG account, sized from `cashAccount` (a vault's
    * own) or, before any exists, the upper bound. It pays a priority fee only
    * from what it holds beyond that, at no less than
-   * MERRYMEN_SOLANA_COMPUTE_UNIT_PRICE_MICROLAMPORTS (default 0).
+   * AGENTCAP_SOLANA_COMPUTE_UNIT_PRICE_MICROLAMPORTS (default 0).
    */
   async function feePayerState(read: SolanaLiveRead, payerAccount: ChainAccount, cashAccount: ChainAccount): Promise<FeePayerState> {
     if (payerAccount && (payerAccount.owner !== SOLANA_SYSTEM_PROGRAM || payerAccount.executable || payerAccount.data.length))
@@ -1332,13 +1332,13 @@ export function createSolanaAppRuntime(options: SolanaAppRuntimeOptions = {}) {
             permission = "current"; vaultDaily = { dailyUsdg: live.state.daily, dailyWsol: live.state.dailyWsol };
           }
           // A finalized registration activateLive never activates (the epoch moved more than its own landing: a
-          // revocation landed before it, beside it or outside Merrymen) whose session is still live on Solana.
+          // revocation landed before it, beside it or outside AgentCap) whose session is still live on Solana.
           const registering = await s.setup();
           if (registering && (registering.kind ?? "session") === "session" && registering.status === "finalized" && registering.session === live.state.session
             && live.state.expiresAt * 1000n > BigInt(now()) && session?.registrationSignature !== registering.signature
             && live.state.sessionEpoch !== solanaRegisteredEpoch(registering.priorSessionEpoch)) blockers.push(SOLANA_STATUS_REGISTERED_AFTER_REVOKE);
           // Still pending (the providers keep disagreeing about it), with a revocation beside it that landed, while a session
-          // registered after that landing is live: its own landing, or one made outside Merrymen. Never activated; revoke again.
+          // registered after that landing is live: its own landing, or one made outside AgentCap. Never activated; revoke again.
           const landedBeside = solanaLandedBeside(registering, await s.revokeSetup());
           if (landedBeside && live.state.expiresAt * 1000n > BigInt(now()) && solanaLiveAfterRevoke(landedBeside, live.state)) {
             revokeAgain = true; blockers.push(SOLANA_STATUS_REGISTERED_AFTER_REVOKE);
@@ -1348,7 +1348,7 @@ export function createSolanaAppRuntime(options: SolanaAppRuntimeOptions = {}) {
           // Below the book only once nothing of the app's own is still settling: a trade or owner withdrawal that
           // landed leaves the vault short of its book until both providers' finalized receipts book it, and its own
           // blocker ("awaiting final confirmation", below) holds trading and exits meanwhile. Saying that tokens left
-          // outside Merrymen then (and the agent's [alert]) would send an operator to reconcile a trade that is about
+          // outside AgentCap then (and the agent's [alert]) would send an operator to reconcile a trade that is about
           // to book itself. Balances read from before the book's own slot (a lagging provider) show no shortfall either.
           const owned = await s.setup(), settling = (await s.pending()).length > 0 || (!!owned?.signature && owned.status !== "finalized" && owned.status !== "failed");
           if (currentBook && shortOfBook(currentBook, balances) && !settling) {
@@ -1706,7 +1706,7 @@ export function createSolanaAppRuntime(options: SolanaAppRuntimeOptions = {}) {
       const registeredAt = (await s.setup())?.finalizedSlot;
       const live = await readSolanaVaultState(rpc(), cfg.programId, scope.owner, registeredAt);
       // Its landing moved the epoch once from what it was prepared at. Any other move since (a revocation
-      // that landed before it, beside it or outside Merrymen) means the owner's later word was to revoke.
+      // that landed before it, beside it or outside AgentCap) means the owner's later word was to revoke.
       const expectedEpoch = solanaRegisteredEpoch(setup.priorSessionEpoch);
       if (expectedEpoch === null || live.state.sessionEpoch !== expectedEpoch) fail(SOLANA_REGISTERED_AFTER_REVOKE, "permission");
       if (live.vault !== setup.vault || live.state.session !== session || live.state.perTrade !== BigInt(setup.limits.perTradeUsdg)
@@ -1773,7 +1773,7 @@ export function createSolanaAppRuntime(options: SolanaAppRuntimeOptions = {}) {
           }
           book = (await s.liveBook())!;
           // Never more than the book records, nor than the vault holds: a vault below its book
-          // (a withdrawal made outside Merrymen) is held with a clear message, never offered.
+          // (a withdrawal made outside AgentCap) is held with a clear message, never offered.
           const recorded = input.mint === SOLANA_USDG_MINT ? BigInt(book.cashRaw) : BigInt(book.wsolRaw) + solanaQuarantinedWsol(book);
           const held = BigInt(input.mint === SOLANA_USDG_MINT ? finalized.cashUsdg : finalized.wsolRaw);
           if (amount > recorded + synced) fail("The withdrawal exceeds the reconciled vault balance.");
@@ -1835,9 +1835,9 @@ export function createSolanaAppRuntime(options: SolanaAppRuntimeOptions = {}) {
       return observeOwner(read, owner, setup, setup.signature, epochOffset);
     },
     /**
-     * Records the owner's withdrawals made outside Merrymen (solana-recover, another
+     * Records the owner's withdrawals made outside AgentCap (solana-recover, another
      * wallet) by their transaction signatures, so a vault left below its book can
-     * trade and exit again (OWNER WITHDRAWALS MADE OUTSIDE MERRYMEN in
+     * trade and exit again (OWNER WITHDRAWALS MADE OUTSIDE AGENTCAP in
      * solana-trading-store.ts). Each transaction is read on both providers and
      * booked only when they derive the same withdrawal from it
      * (readSolanaExternalWithdrawal). The withdrawn position part of wrapped SOL
@@ -1847,7 +1847,7 @@ export function createSolanaAppRuntime(options: SolanaAppRuntimeOptions = {}) {
     async recordExternalWithdrawals(scope: SolanaAccountScope, input: { signatures: unknown }) {
       const signatures = input?.signatures;
       if (!Array.isArray(signatures) || signatures.length < 1 || signatures.length > 8 || new Set(signatures).size !== signatures.length
-        || signatures.some(item => typeof item !== "string" || !/^[1-9A-HJ-NP-Za-km-z]{64,90}$/.test(item))) fail("Give the signatures of up to eight withdrawal transactions you made outside Merrymen.");
+        || signatures.some(item => typeof item !== "string" || !/^[1-9A-HJ-NP-Za-km-z]{64,90}$/.test(item))) fail("Give the signatures of up to eight withdrawal transactions you made outside AgentCap.");
       const s = await store(scope), cfg = config();
       // The cheap refusals first: no book, or something still pending, reads nothing.
       if (!(await s.liveBook())) fail("There is no live trading record to reconcile yet.", "permission");

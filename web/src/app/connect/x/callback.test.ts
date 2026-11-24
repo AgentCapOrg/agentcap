@@ -47,7 +47,7 @@ describe("what the redirect means", () => {
     const r = readCallback(`?code=abc%2Bdef&state=${I}&evil=javascript:1`);
     assert.equal(r.kind, "ios");
     const href = (r as { href: string }).href;
-    assert.ok(href.startsWith("merrymen://x-connect?"));
+    assert.ok(href.startsWith("agentcap://x-connect?"));
     const q = new URLSearchParams(href.slice(href.indexOf("?")));
     assert.deepEqual([...q.keys()].sort(), ["code", "state"]);
     assert.equal(q.get("code"), "abc+def");
@@ -116,7 +116,7 @@ describe("the page, rendered", () => {
     await ui.render(createElement(XConnectClient));
     await settle();
     assert.match(text(), /Connected as @merry_poster/);
-    assert.match(text(), /Posting is back on: you allowed your Merryman to post from @merry_poster before, so it posts from it again\./);
+    assert.match(text(), /Posting is back on: you allowed your AgentCapAvatar to post from @merry_poster before, so it posts from it again\./);
     assert.match(text(), /skip it or turn posting off/);
     assert.doesNotMatch(text(), /won.t post anything yet/);
   });
@@ -167,14 +167,14 @@ describe("the page, rendered", () => {
   });
 
   it("an iOS connect sends nothing from here and hands the code to the app", async () => {
-    // jsdom cannot follow a merrymen:// navigation and says so on the console.
+    // jsdom cannot follow a agentcap:// navigation and says so on the console.
     mock.method(console, "error", () => {});
     at(`?code=the-code&state=${I}`);
     await ui.render(createElement(XConnectClient));
     assert.equal(calls.length, 0);
-    const link = ui.container.querySelector("a[href^='merrymen://']");
+    const link = ui.container.querySelector("a[href^='agentcap://']");
     assert.ok(link, "a way into the app if the automatic hand-off is blocked");
-    assert.equal(link.getAttribute("href"), `merrymen://x-connect?code=the-code&state=${encodeURIComponent(I)}`);
+    assert.equal(link.getAttribute("href"), `agentcap://x-connect?code=the-code&state=${encodeURIComponent(I)}`);
     assert.equal(ui.dom.window.location.search, "");
   });
 

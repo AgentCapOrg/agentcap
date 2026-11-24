@@ -36,7 +36,7 @@ def test_every_decision_depth_reads_prior_outcomes_and_peer_prose(stages):
     )
     req = DecideRequest(
         run_id="offline", agent_id="desk", trigger_id="timer", portfolio=book, stages=stages,
-        market=MarketState(snapshot_id="quote", as_of=1, instrument_id="merrymen:nvda", symbol="NVDA",
+        market=MarketState(snapshot_id="quote", as_of=1, instrument_id="agentcap:nvda", symbol="NVDA",
                            instrument_class="equity-token", signals={"sentiment": peer}),
         memory=[own],
     )

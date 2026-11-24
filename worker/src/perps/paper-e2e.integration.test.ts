@@ -38,12 +38,12 @@ import { createPerpLane, type PerpLane, type PerpLaneConfig, type PerpLaneDeps }
 import { parseOrderBookDetails } from "./markets";
 import { H4, T_LAST, breakout } from "./testkit-perps";
 
-const scratch = mkdtempSync(path.join(os.tmpdir(), "merrymen-perp-e2e-"));
+const scratch = mkdtempSync(path.join(os.tmpdir(), "agentcap-perp-e2e-"));
 const isolatedCwd = path.join(scratch, "cwd");
 mkdirSync(isolatedCwd);
-process.env.MERRYMEN_HOME = path.join(scratch, "home");
+process.env.AGENTCAP_HOME = path.join(scratch, "home");
 delete process.env.DATABASE_URL;
-delete process.env.MERRYMEN_FLEET_HOME;
+delete process.env.AGENTCAP_FLEET_HOME;
 const originalCwd = process.cwd();
 const store = await import("../store");
 try {
@@ -389,7 +389,7 @@ describe("paper perps, end to end, on one account", () => {
 
   it("agents.perps — the report the web and the apps read — says the book is flat, in a shape core's parser accepts", async () => {
     await a.lane.report();
-    const raw = new DatabaseSync(path.join(process.env.MERRYMEN_HOME!, "merrymen.db"));
+    const raw = new DatabaseSync(path.join(process.env.AGENTCAP_HOME!, "agentcap.db"));
     try {
       const row = raw.prepare("SELECT perps FROM agents WHERE smart_account = ?").get(a.id) as { perps: string | null } | undefined;
       assert.ok(row?.perps, "the lane wrote the column");
@@ -442,7 +442,7 @@ describe("the protective loop, with no tick and no route running (a paused agent
     assert.equal(fills[1]!.attribution, "intent", "an order of ours, not the venue's");
     const facts = await store.perpLaneLedgerFacts(a.id, "paper", Math.floor(clock / 1000) - 86_400);
     assert.equal(facts.lastExits.get(1)?.cause, "risk", "its decision is a hard risk exit (perp-risk-exit → provenance)");
-    const raw = new DatabaseSync(path.join(process.env.MERRYMEN_HOME!, "merrymen.db"));
+    const raw = new DatabaseSync(path.join(process.env.AGENTCAP_HOME!, "agentcap.db"));
     try {
       const rows = raw.prepare("SELECT source, provenance, reason FROM decisions WHERE agent_id = ? ORDER BY at, rowid").all(a.id) as {
         source: string;
@@ -572,7 +572,7 @@ describe("a position held in a market the owner un-ticked, with perps off (S3-01
     assert.notEqual(e.book, "unread");
     await a.lane.runRoute({ ...TICK, equityUsdg: e.equity }, hooks(a, e.equity));
     assert.equal(await held(a), null, "the aged exit went out and filled");
-    const raw = new DatabaseSync(path.join(process.env.MERRYMEN_HOME!, "merrymen.db"));
+    const raw = new DatabaseSync(path.join(process.env.AGENTCAP_HOME!, "agentcap.db"));
     try {
       const rows = raw.prepare("SELECT reason FROM decisions WHERE agent_id = ? ORDER BY at, rowid").all(a.id) as { reason: string | null }[];
       assert.ok(rows.some((d) => /168|held/i.test(d.reason ?? "")), JSON.stringify(rows));
@@ -620,7 +620,7 @@ describe("what the paper venue's clock could not run is said, not swallowed (R3-
     assert.equal(said().length, 1, JSON.stringify(a.events));
     assert.equal(said()[0]!.level, "warn");
     await a.lane.report();
-    const row = new DatabaseSync(path.join(process.env.MERRYMEN_HOME!, "merrymen.db"));
+    const row = new DatabaseSync(path.join(process.env.AGENTCAP_HOME!, "agentcap.db"));
     try {
       const r = parsePerpsReport(JSON.parse((row.prepare("SELECT perps FROM agents WHERE smart_account = ?").get(a.id) as { perps: string }).perps));
       assert.ok(r);

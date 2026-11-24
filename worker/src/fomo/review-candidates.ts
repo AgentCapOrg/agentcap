@@ -12,7 +12,7 @@
  * and the orchestrator queues research for exactly those.
  *
  * WHO MAY ASK. Only an account on the operator's research allowlist
- * (MERRYMEN_DECISION_RESEARCH_ACCOUNTS, decision-research.ts), only while its
+ * (AGENTCAP_DECISION_RESEARCH_ACCOUNTS, decision-research.ts), only while its
  * owner has research on (data access, and monitoring or follow), and only on
  * the live rail of a fast Trencher. The child checks all three before it
  * sends. The orchestrator checks the allowlist and the owner's switches again

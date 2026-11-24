@@ -1,5 +1,5 @@
 <en-US>
-Current Merrymen logo on the launcher and splash screen.
+Current AgentCap logo on the launcher and splash screen.
 Home opens without waiting for every account and version check.
 Agents, Activity and Markets are easier to find.
 Agent names stay visible when you return to Home.

@@ -1,6 +1,6 @@
 /**
  * HELD-POSITION LIFECYCLE — what social data may and may not do to a position
- * Merrymen already holds.
+ * AgentCap already holds.
  *
  * SYNCHRONOUS AND CHEAP, ON PURPOSE. Risk reduction must never queue behind a
  * model call or a provider read: `reviewHeldPosition` takes numbers the caller

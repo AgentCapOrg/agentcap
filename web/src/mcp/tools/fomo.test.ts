@@ -52,14 +52,14 @@ const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", "x-credits-cost": "250" } });
 
 let restore: (() => void) | null = null;
-const savedEnabled = process.env.MERRYMEN_FOMO_ENABLED;
+const savedEnabled = process.env.AGENTCAP_FOMO_ENABLED;
 before(() => {
   // Hosted Fomo is opt-in (fomo-runtime.ts hostedFomoEnabled); these tests run an opted-in deployment.
-  process.env.MERRYMEN_FOMO_ENABLED = "1";
+  process.env.AGENTCAP_FOMO_ENABLED = "1";
 });
 after(() => {
-  if (savedEnabled === undefined) delete process.env.MERRYMEN_FOMO_ENABLED;
-  else process.env.MERRYMEN_FOMO_ENABLED = savedEnabled;
+  if (savedEnabled === undefined) delete process.env.AGENTCAP_FOMO_ENABLED;
+  else process.env.AGENTCAP_FOMO_ENABLED = savedEnabled;
 });
 
 afterEach(() => {
@@ -68,7 +68,7 @@ afterEach(() => {
   setFomoRuntimeForTest(null);
   setFomoOwnerReaderForTest(null);
   resetMetricsForTest();
-  process.env.MERRYMEN_FOMO_ENABLED = "1";
+  process.env.AGENTCAP_FOMO_ENABLED = "1";
 });
 
 async function setup(o: { scopes?: string[]; settings?: Record<string, Record<string, unknown>>; withAgent?: string[] } = {}) {
@@ -126,7 +126,7 @@ const errCode = async (p: Principal, name: string, args: unknown): Promise<strin
 
 test("a deployment that has not opted in answers 'unsupported' for every Fomo tool, with no owner question, runtime or provider call", async () => {
   const { a, provider } = await setup();
-  delete process.env.MERRYMEN_FOMO_ENABLED;
+  delete process.env.AGENTCAP_FOMO_ENABLED;
   setFomoOwnerReaderForTest({ async hasAgent() { throw new Error("must not be asked while Fomo is not enabled"); } });
   setFomoRuntimeForTest(untouchable());
   for (const t of FOMO_MCP_TOOLS) {
@@ -284,7 +284,7 @@ test("research status needs agents:read and shows only the connection owner's ow
 
 test("through the SDK, on a deployment that has not opted in: no fomo_* tool is listed at all", async () => {
   const { tokenA } = await setup({ scopes: ["market:read", "agents:read", "offline_access"] });
-  delete process.env.MERRYMEN_FOMO_ENABLED;
+  delete process.env.AGENTCAP_FOMO_ENABLED;
   const handler = createMcpHandler(({ authInfo }) => buildServer(principalOf(authInfo), { tools: ALL_TOOLS as ToolDef[], deps: { now: () => NOW } }), { legacy: "stateless", responseMode: "auto" });
   const send = (req: Request) => handleMcpRequest(req, { cfg: testConfig(), now: () => NOW, fetch: (r, authInfo) => handler.fetch(r, { authInfo }) });
   const list = await rpcResult(await send(mcpRequest(tokenA, "tools/list")));

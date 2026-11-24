@@ -1,2 +1,2 @@
-export const metadata = {title:"Markets — merrymen"};
+export const metadata = {title:"Markets — agentcap"};
 export default function MarketsRoute() {return null;}

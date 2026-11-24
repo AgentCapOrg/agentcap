@@ -47,7 +47,7 @@ net.Socket.prototype.connect = function (...args) {
 syncBuiltinESMExports();
 `);
   const env = {
-    MERRYMEN_HOME: home,
+    AGENTCAP_HOME: home,
     NODE_OPTIONS: `--import=${pathToFileURL(guard).href}`,
     NO_COLOR: "1",
   };
@@ -93,7 +93,7 @@ test("Solana CLI help works offline without creating data or opening EVM onboard
     assert.match(result.stdout, /status --owner PUBLIC_KEY/);
     assert.match(result.stdout, /write-off --owner PUBLIC_KEY --mint MINT/);
     assert.match(result.stdout, /no wallet signing or real funds/);
-    assert.doesNotMatch(result.stdout, /the band is mustered|merrymen onboard|stand and deliver/);
+    assert.doesNotMatch(result.stdout, /the band is mustered|agentcap onboard|stand and deliver/);
     assert.equal(existsSync(home), false, "help must not initialize a paper book or EVM home");
   }
 });
@@ -214,13 +214,13 @@ test("Solana CLI refuses hosted mutation and inspection before creating a book",
   const { home, run } = fixture(t);
   for (const hosted of ["1", "true", " YES "]) {
     for (const command of ["init", "status"]) {
-      refusal(run([command, "--owner", OWNER], { MERRYMEN_HOSTED: hosted }),
+      refusal(run([command, "--owner", OWNER], { AGENTCAP_HOSTED: hosted }),
         /local-only until hosted tenant binding is implemented/);
       assert.equal(existsSync(home), false);
     }
   }
   // Operators may still read help without making an account or a network read.
-  assert.equal(run(["--help"], { MERRYMEN_HOSTED: "true" }).status, 0);
+  assert.equal(run(["--help"], { AGENTCAP_HOSTED: "true" }).status, 0);
   assert.equal(existsSync(home), false);
 });
 

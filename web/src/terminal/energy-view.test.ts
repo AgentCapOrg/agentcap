@@ -8,11 +8,11 @@
  *   - an unread balance rendered as a number — above all as 0, which is the
  *     number that sends somebody to buy tokens they may already hold.
  * And one about the remedy: the agent's address is offered as somewhere to
- * send $MERRYMEN only when tokens sent there would count.
+ * send $AGENTCAP only when tokens sent there would count.
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { EnergyStatus } from "@merrymen/core";
+import type { EnergyStatus } from "@agentcap/core";
 import { energyRemedies, energyView, meterBar, workerSaysFull } from "./energy-view";
 
 const NOW = 1_790_500_000;

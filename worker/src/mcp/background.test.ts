@@ -61,7 +61,7 @@ function recordingDb(
 test("the background work runs only with shared Postgres and MCP switched on", () => {
   assert.equal(mcpBackgroundEnabled({}), false);
   assert.equal(mcpBackgroundEnabled({ DATABASE_URL: "postgres://x" }), true);
-  assert.equal(mcpBackgroundEnabled({ DATABASE_URL: "postgres://x", MERRYMEN_MCP_ENABLED: "0" }), false);
+  assert.equal(mcpBackgroundEnabled({ DATABASE_URL: "postgres://x", AGENTCAP_MCP_ENABLED: "0" }), false);
 });
 
 test("a tick never throws and never blocks: a database outage is logged, and the next tick retries", async () => {

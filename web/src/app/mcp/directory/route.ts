@@ -1,12 +1,12 @@
 /**
- * The directory profile of the Merrymen MCP endpoint (Streamable HTTP):
- * https://mcp.merrymen.dev/mcp/directory, the address listed in Anthropic's
+ * The directory profile of the AgentCap MCP endpoint (Streamable HTTP):
+ * https://mcp.agentcap.xyz/mcp/directory, the address listed in Anthropic's
  * connector directory. The same server as /mcp (app/mcp/route.ts) with the
  * same Host, Origin, browser-navigation, bearer, rate and concurrency checks
  * (web/src/mcp/http.ts), but its own OAuth resource: only tokens issued for
  * this address are accepted, and trade:propose, drafts:write, social:write
  * and staff scopes can never be granted or used here. 404 unless hosted MCP
- * is enabled and the directory profile is on (MERRYMEN_MCP_DIRECTORY).
+ * is enabled and the directory profile is on (AGENTCAP_MCP_DIRECTORY).
  */
 import { MCP_EXPOSED_HEADERS, handleMcpRequest } from "@/mcp/http";
 import { mcpConfig } from "@/mcp/config";

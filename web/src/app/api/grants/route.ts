@@ -6,9 +6,9 @@
  * Replaced by Supabase (encrypted, per-user) once persistence lands.
  *
  * TWO WALLETS PER LOGIN (`?wallet=spot|perps`, absent is Spot; perps slice 5b).
- * POST makes or renews the wallet it names, and only while MERRYMEN_PERPS is
+ * POST makes or renews the wallet it names, and only while AGENTCAP_PERPS is
  * paper for a Perps one; GET answers for the wallet it names, whatever
- * MERRYMEN_PERPS says, so an owner can always see a Perps wallet they hold;
+ * AGENTCAP_PERPS says, so an owner can always see a Perps wallet they hold;
  * DELETE's kill names no wallet and stops every one.
  */
 
@@ -17,8 +17,8 @@ import { readGrantBalancesFrom, type GrantBalances } from "@/lib/grant-balances"
 import { mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
-import { writeFileAtomic } from "@merrymen/atomic-write";
-import { homePaths, merrymenHome, purposeHome } from "@merrymen/home";
+import { writeFileAtomic } from "@agentcap/atomic-write";
+import { homePaths, agentcapHome, purposeHome } from "@agentcap/home";
 import { createPublicClient } from "viem";
 import {
   accountsMatch,
@@ -38,7 +38,7 @@ import {
   GRANT_PERP_LIGHTER,
   grantPurpose,
   type GrantPurpose,
-} from "@merrymen/core";
+} from "@agentcap/core";
 import { requestOrigin, tenantOf, verifyGrantBinding } from "@/lib/auth";
 import { checkCanonicalWall, type WallVerdict } from "@/lib/canonical-wall";
 import { privyTokenOf, verifyPrivyToken } from "@/lib/privy";
@@ -47,9 +47,9 @@ import { readAgentEnergy } from "@/lib/agent-energy";
 import { readAgentPerps } from "@/lib/agent-perps";
 import { perpsCreationAllowed, perpsWalletRefused } from "@/lib/perps-enabled";
 import { NO_STORE_HEADERS, walletUnknown } from "@/lib/route-guard";
-import { assertIndependentWallets, getGrantStore, GrantReplacementConflict, GrantWalletConflict } from "@merrymen/grant-store";
-import { getIdentityStore } from "@merrymen/identity-store";
-import { getSettingsStore } from "@merrymen/settings-store";
+import { assertIndependentWallets, getGrantStore, GrantReplacementConflict, GrantWalletConflict } from "@agentcap/grant-store";
+import { getIdentityStore } from "@agentcap/identity-store";
+import { getSettingsStore } from "@agentcap/settings-store";
 import { ledgerHasAgent, mintAndNameAgent } from "@/lib/first-name";
 import { deriveKernelAccountAddress } from "@/lib/derive-account";
 import { archiveCurrentGrant, GrantArchiveError, removeSelfHostedGrant } from "@/lib/grant-archive";
@@ -65,7 +65,7 @@ import { readLocalPerpsBinding, clearLocalPerpsBinding } from "../../../../../wo
 import { perpsPaperAdmissionFailure, perpsPaperAdmissionRefusal, withPerpsPaperAdmission } from "@/lib/perps-paper-admission";
 import { workerStale as workerStaleOf } from "@/terminal/worker-stale";
 
-const DATA_DIR = merrymenHome();
+const DATA_DIR = agentcapHome();
 const GRANT_FILE = homePaths.grant();
 const HEARTBEAT_FILE = homePaths.heartbeat();
 
@@ -202,7 +202,7 @@ export interface AgentStatus {
    *
    * REPORTED BY THE WORKER, never computed here: the process that throttles is
    * the only one that knows its own counters and whether it could read the
-   * $MERRYMEN balances it throttles on (packages/core/src/energy.ts).
+   * $AGENTCAP balances it throttles on (packages/core/src/energy.ts).
    *
    * NULL IS "NOT SAID YET", NEVER ZERO. No report, an old ledger without the
    * column, or a value that is not the v1 shape are all null, and a screen
@@ -288,7 +288,7 @@ export async function POST(req: Request) {
     const named = grant.chainId === undefined ? "names no chain" : `is for chain ${JSON.stringify(grant.chainId).slice(0, 64)}`;
     return NextResponse.json(
       {
-        error: `this grant ${named}, and Merrymen only runs on Robinhood Chain (4663) and its testnet (46630). Nothing was saved.`,
+        error: `this grant ${named}, and AgentCap only runs on Robinhood Chain (4663) and its testnet (46630). Nothing was saved.`,
         code: "unsupported_chain",
       },
       { status: 400 },
@@ -321,7 +321,7 @@ export async function POST(req: Request) {
     );
   }
   // A PERPS WALLET IS MADE OR RENEWED ONLY WHERE PAPER PERPS ARE ON (decision
-  // D1): MERRYMEN_PERPS=paper, read through the one parser the worker and the
+  // D1): AGENTCAP_PERPS=paper, read through the one parser the worker and the
   // orchestrator use (perps-enabled.ts), so the web never makes a wallet the
   // deployment's workers would refuse to run. Anything else — unset, off, a
   // typo, and `live`, which this build reads as off — refuses creation AND
@@ -453,7 +453,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // ── THE SERVER STORES THE MERRYMEN WALL, OR NOTHING ──────────────────
+    // ── THE SERVER STORES THE AGENTCAP WALL, OR NOTHING ──────────────────
     //
     // Every check above is about WHO is asking and whether the caps are
     // usable. None of them looked at what the permission actually permits —
@@ -716,7 +716,7 @@ async function saveSelfHostedGrant(grant: StoredGrant, wallet: GrantPurpose): Pr
   // replaced.
   const kept = await archiveCurrentGrant(wallet);
   if (kept.kind === "failed") {
-    console.error(`[grants] the outgoing ${wallet === "perps" ? "Perps " : ""}grant was NOT archived (${kept.why}) — replacing grant.json anyway; its owner key is not in ${wallet === "perps" ? "~/.merrymen/accounts/perps/grants/" : "~/.merrymen/grants/"}`);
+    console.error(`[grants] the outgoing ${wallet === "perps" ? "Perps " : ""}grant was NOT archived (${kept.why}) — replacing grant.json anyway; its owner key is not in ${wallet === "perps" ? "~/.agentcap/accounts/perps/grants/" : "~/.agentcap/grants/"}`);
   }
   // grant.json holds the owner + session PRIVATE KEYS — owner-only perms (0600),
   // set on the temp file before it is renamed in.
@@ -736,7 +736,7 @@ function wallRefused(wall: Extract<WallVerdict, { ok: false }>): NextResponse {
   return NextResponse.json(
     {
       error:
-        `${wall.why}. This service only accepts the Merrymen permission wall. If this page was open ` +
+        `${wall.why}. This service only accepts the AgentCap permission wall. If this page was open ` +
         `from before an update, reload it and sign again.`,
       code: wall.code,
     },
@@ -857,7 +857,7 @@ async function otherLocalWalletRefusal(grant: StoredGrant, wallet: GrantPurpose)
 }
 
 /**
- * A SELF-HOSTED PERPS WALLET'S GRANT, into its own home ($MERRYMEN_HOME/
+ * A SELF-HOSTED PERPS WALLET'S GRANT, into its own home ($AGENTCAP_HOME/
  * accounts/perps, purposeHome): checked as hosted checks one, then the
  * outgoing Perps grant archived and grant.json replaced whole, as Spot's is.
  * Every refusal lands before anything is written.
@@ -913,7 +913,7 @@ export async function DELETE(req: Request) {
     if (body?.purpose === "permission-replacement") {
       // A PERPS RENEWAL IS REFUSED WHOLE, ITS FIRST STEP INCLUDED (decision D1).
       // A permission replacement exists only to be followed by the new grant's
-      // POST, and while MERRYMEN_PERPS is not paper that POST is refused
+      // POST, and while AGENTCAP_PERPS is not paper that POST is refused
       // (perpsCreationAllowed, above). Accepting the stop anyway would leave a
       // stopped Perps wallet nobody can renew until perps is back on: a refused
       // request that changed persistent state. So it is refused here, before
@@ -1000,7 +1000,7 @@ export async function DELETE(req: Request) {
 }
 
 /**
- * No Perps wallet is made or renewed on this server: MERRYMEN_PERPS is not
+ * No Perps wallet is made or renewed on this server: AGENTCAP_PERPS is not
  * paper (perpsCreationAllowed). One that exists is still shown (GET) and
  * stopped by every kill; only a renewal, its first step included, is refused.
  *
@@ -1119,7 +1119,7 @@ function statusResponse(status: AgentStatus | PerpsWalletStatus): NextResponse {
 export async function GET(req: Request) {
   // THE WALLET THE REQUEST NAMES, and only that one's: a Perps read is answered
   // from the Perps store, home and ledger and never with the Spot wallet's
-  // status, nor the other way round. ANSWERED WHATEVER MERRYMEN_PERPS SAYS
+  // status, nor the other way round. ANSWERED WHATEVER AGENTCAP_PERPS SAYS
   // (decision D1): an owner must always be able to see, and so stop, a Perps
   // wallet they hold, on a server that no longer makes them.
   const wallet = readWalletParam(req);
@@ -1247,7 +1247,7 @@ export async function GET(req: Request) {
   }
 
   // HOSTED READS THE LEDGER, because the file above is in this service's own
-  // MERRYMEN_HOME and the worker writes into its tenant's — different
+  // AGENTCAP_HOME and the worker writes into its tenant's — different
   // directories, different containers. Every hosted tenant reported IDLE
   // regardless of what their agent was doing, which made the LIVE/PAPER chip
   // decorative exactly where it matters most.

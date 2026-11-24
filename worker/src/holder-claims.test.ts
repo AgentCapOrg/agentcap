@@ -1,5 +1,5 @@
 /**
- * ONE $MERRYMEN WALLET POWERS ONE AGENT — the orchestrator's half.
+ * ONE $AGENTCAP WALLET POWERS ONE AGENT — the orchestrator's half.
  *
  * What the child is handed (childSettingsFor), how proofs from before claims
  * existed get claimed (backfillHolderClaims, earliest proof first), and the
@@ -15,11 +15,11 @@ import { backfillHolderClaims, childSettingsFor, lastWrittenHolder, planHolderBa
 import { FileSettingsStore } from "./settings-store";
 import { effectiveHolder } from "../../packages/core/src/index";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-holder-backfill-"));
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-holder-backfill-"));
 after(() => rmSync(HOME, { recursive: true, force: true }));
 let n = 0;
 const freshStore = () => {
-  process.env.MERRYMEN_HOME = path.join(HOME, `run-${++n}`);
+  process.env.AGENTCAP_HOME = path.join(HOME, `run-${++n}`);
   return new FileSettingsStore("spot");
 };
 
@@ -275,7 +275,7 @@ describe("backfillHolderClaims — against a real store", () => {
   it("AN UNREADABLE RECORD IS NOT 'NEVER RAN' — the run throws and claims nothing", async () => {
     const store = freshStore();
     await store.put(t(1), { holderProof: { address: W, at: 1 } });
-    writeFileSync(path.join(process.env.MERRYMEN_HOME!, "holder-claims-backfill.json"), "{ torn");
+    writeFileSync(path.join(process.env.AGENTCAP_HOME!, "holder-claims-backfill.json"), "{ torn");
     await assert.rejects(backfillHolderClaims(store));
     assert.equal((await store.holderClaims()).size, 0);
   });
@@ -345,7 +345,7 @@ describe("backfillHolderClaims — against a real store", () => {
     const A = t(0xa), P = t(0xb);
     await store.put(A, { holderProof: { address: W2, at: 1 } });
     await store.put(P, { holderProof: { address: W, at: 2 } });
-    const file = path.join(process.env.MERRYMEN_HOME!, "tenant-settings", `${P}.json`);
+    const file = path.join(process.env.AGENTCAP_HOME!, "tenant-settings", `${P}.json`);
     const good = readFileSync(file, "utf8");
     writeFileSync(file, JSON.stringify({ tenant: P, sealed: "{ torn", updatedAt: 1 }));
     await assert.rejects(store.get(P), "an unreadable blob is an error, not 'no settings'");

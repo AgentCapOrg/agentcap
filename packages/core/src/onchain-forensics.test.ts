@@ -2,7 +2,7 @@
  * THE FOUR QUESTIONS, AND THE ANSWERS THEY MUST REFUSE TO GIVE.
  *
  * Ported from ChainMind's holder and swap forensics, which is the indexer-side
- * analysis merrymen's `onchain` lens has never had a supplier for.
+ * analysis agentcap's `onchain` lens has never had a supplier for.
  *
  * The tests that matter are the refusals, for the same reason they were in the
  * snipe resolver: a forensics module that always returns a number gets believed.

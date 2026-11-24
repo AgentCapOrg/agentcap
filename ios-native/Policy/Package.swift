@@ -2,12 +2,12 @@
 import PackageDescription
 
 let package = Package(
-    name: "MerrymenPolicy",
+    name: "AgentCapPolicy",
     platforms: [.iOS(.v17), .macOS(.v13)],
-    products: [.library(name: "MerrymenPolicy", targets: ["MerrymenPolicy"])],
+    products: [.library(name: "AgentCapPolicy", targets: ["AgentCapPolicy"])],
     targets: [
-        .target(name: "MerrymenPolicy"),
-        .testTarget(name: "MerrymenPolicyTests", dependencies: ["MerrymenPolicy"])
+        .target(name: "AgentCapPolicy"),
+        .testTarget(name: "AgentCapPolicyTests", dependencies: ["AgentCapPolicy"])
     ]
 )
 

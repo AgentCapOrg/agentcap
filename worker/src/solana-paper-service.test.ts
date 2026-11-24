@@ -195,13 +195,13 @@ describe("Solana paper service", () => {
     const h = harness();
     await h.service.preview(OWNER, h.intent());
     assert.equal(h.store.get(OWNER)!.version, 0);
-    const saved = process.env.MERRYMEN_HOSTED;
-    process.env.MERRYMEN_HOSTED = "true";
+    const saved = process.env.AGENTCAP_HOSTED;
+    process.env.AGENTCAP_HOSTED = "true";
     try {
       h.market.readMint = async () => { assert.fail("RPC must not be called"); };
       await assert.rejects(h.service.trade(OWNER, h.intent()), /local-only/);
     } finally {
-      if (saved === undefined) delete process.env.MERRYMEN_HOSTED; else process.env.MERRYMEN_HOSTED = saved;
+      if (saved === undefined) delete process.env.AGENTCAP_HOSTED; else process.env.AGENTCAP_HOSTED = saved;
     }
   });
 });
@@ -240,7 +240,7 @@ describe("Solana paper dust", () => {
       const result = body.method === "getGenesisHash" ? SOLANA_MAINNET_GENESIS_HASH : body.method === "getSlot" ? SLOT : null;
       return new Response(JSON.stringify({ jsonrpc: "2.0", id: body.id, result }));
     };
-    const real = createSolanaMarket({ env: { MERRYMEN_SOLANA_RPC_MAINNET: "https://rpc.example.test/", MERRYMEN_JUPITER_API_KEY: "fixture-key" }, fetch: fetcher, now: () => NOW });
+    const real = createSolanaMarket({ env: { AGENTCAP_SOLANA_RPC_MAINNET: "https://rpc.example.test/", AGENTCAP_JUPITER_API_KEY: "fixture-key" }, fetch: fetcher, now: () => NOW });
     const market: SolanaPaperMarket = {
       readMint: async (address) => ({ address, program: address === SOLANA_USDG_MINT ? TOKEN_2022_PROGRAM : TOKEN_PROGRAM,
         decimals: 6, slot: SLOT, observedAtMs: NOW, buyBlockedReasons: [] }),

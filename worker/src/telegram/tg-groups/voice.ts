@@ -109,7 +109,7 @@ export interface SpeakCtx {
   /**
    * THE COLLAPSE PERMIT for the coin this line is about (handler.ts): only for
    * an answer or an ambient line, the persona may say the coin rugged and make
-   * one playful Merrymen brag (gate.ts TgGateCtx.rug, the prompt's RUGGED
+   * one playful AgentCap brag (gate.ts TgGateCtx.rug, the prompt's RUGGED
    * block). Never for a roast, a kind line, the coin flow or a template.
    */
   collapse?: TgCollapse;
@@ -340,7 +340,7 @@ export function styleLine(text: string, intent: TgIntent, style: TgStyle, rand: 
  */
 const POOLS: Readonly<Record<string, readonly string[]>> = {
   // A normal answer the model did not write, to a line shaped like a
-  // question ("@pine thoughts?", "merryman what do you think").
+  // question ("@pine thoughts?", "agentcapavatar what do you think").
   "answer:question": [
     "hmm good question",
     "honestly not sure 🤷",
@@ -356,10 +356,10 @@ const POOLS: Readonly<Record<string, readonly string[]>> = {
     "beats me 🤷",
     "hard to say tbh",
   ],
-  // …and to a line that asked nothing ("@pine you're cool", "merryman lol"):
+  // …and to a line that asked nothing ("@pine you're cool", "agentcapavatar lol"):
   // a question-shaped reply to a statement reads as a bot. Nothing that
   // agrees ("true true", "fair point", "lol same"): the statement it cannot
-  // read may be "merryman is cooked", and a person does not agree with that.
+  // read may be "agentcapavatar is cooked", and a person does not agree with that.
   "answer:ack": [
     "👀",
     "haha",
@@ -541,12 +541,12 @@ const POOLS: Readonly<Record<string, readonly string[]>> = {
     "cash is cash lol",
   ],
   "look:energy": [
-    "that's the merrymen coin, i leave that one alone",
+    "that's the agentcap coin, i leave that one alone",
     "lol that's our own coin, not trading it",
-    "that's the merrymen token, not a trade for me",
-    "i don't trade the merrymen coin",
+    "that's the agentcap token, not a trade for me",
+    "i don't trade the agentcap coin",
     "that one's family, not trading it",
-    "hands off the merrymen coin for me",
+    "hands off the agentcap coin for me",
   ],
   "look:stock": [
     "that's a stock token, not my thing",
@@ -914,7 +914,7 @@ export function templatePool(intent: TgIntent, ctx: SpeakCtx): string[] {
   const pool = key ? POOLS[key] : undefined;
   if (!pool) return [];
   const owner = sayableName(ctx?.ownerName) || "my owner";
-  const agent = sayableName(ctx?.agentName) || "a merryman";
+  const agent = sayableName(ctx?.agentName) || "a agentcapavatar";
   const coin = sayableName(ctx?.coinName);
   const out: string[] = [];
   for (const entry of pool) {
@@ -993,12 +993,12 @@ function collapseFor(intent: TgIntent, ctx: SpeakCtx): TgCollapse | null {
  * permit is this one coin's, in this one prompt.
  */
 const RUGGED_NEVER =
-  "Still never: say any person, dev, team, insider, whale or trader rugged, dumped, sold on anyone, stole, pulled liquidity or ran; call it a scam, a honeypot or fraud; tell anyone to buy, sell, hold or switch to anything, Merrymen's own coin included; promise any coin is safe or won't drop; any figure.";
+  "Still never: say any person, dev, team, insider, whale or trader rugged, dumped, sold on anyone, stole, pulled liquidity or ran; call it a scam, a honeypot or fraud; tell anyone to buy, sell, hold or switch to anything, AgentCap's own coin included; promise any coin is safe or won't drop; any figure.";
 function ruggedBlock(c: TgCollapse): string {
   const coin = nameOf(c.coin) || "this coin";
   const brag = c.brag
-    ? "you may add one playful Merrymen brag in fresh words of your own (the spirit: it wasn't one of ours; merrymen wouldn't have let that happen 😤), never a joke you already made here."
-    : "You made a Merrymen joke lately: none this time.";
+    ? "you may add one playful AgentCap brag in fresh words of your own (the spirit: it wasn't one of ours; agentcap wouldn't have let that happen 😤), never a joke you already made here."
+    : "You made a AgentCap joke lately: none this time.";
   if (c.source === "measured") {
     return [
       `RUGGED: «${coin}» is measured as collapsed: almost all of its value is gone from its high (a lookup in this chat measured it). About «${coin}» only, you may say it rugged or got rugged${c.brag ? `, and ${brag}` : `. ${brag}`}`,
@@ -1231,7 +1231,7 @@ function instruction(intent: TgIntent, ctx: SpeakCtx, owner: string | null): str
  */
 export function buildPrompt(intent: TgIntent, ctx: SpeakCtx): { system: string; prompt: string } | null {
   if (!intent || templateOnly(intent)) return null;
-  const me = nameOf(ctx.agentName) || "a merryman";
+  const me = nameOf(ctx.agentName) || "a agentcapavatar";
   const owner = nameOf(ctx.ownerName) || null;
 
   const held = (Array.isArray(ctx.heldNames) ? ctx.heldNames : [])

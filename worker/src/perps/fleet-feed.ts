@@ -3,7 +3,7 @@
  * read its file.
  *
  * A hosted child never opens a Lighter socket of its own (lane.ts
- * isHostedChildProcess): it reads `$MERRYMEN_FLEET_HOME/lighter-feed.json`,
+ * isHostedChildProcess): it reads `$AGENTCAP_FLEET_HOME/lighter-feed.json`,
  * which childEnv points at this process's home. Without a writer there, every
  * hosted paper book reads "unread" for ever — opens refused (perp-unpriced),
  * stops and fills unpriceable. This is that writer: the same feed.ts a
@@ -14,7 +14,7 @@
  *    replica's own Perps workers, from the settings it handed them and the
  *    positions their own books hold — never a Spot worker, and never a file a
  *    child could write.
- *  - IT RUNS ONLY WHILE `enabled()` (the operator's MERRYMEN_PERPS=paper) and
+ *  - IT RUNS ONLY WHILE `enabled()` (the operator's AGENTCAP_PERPS=paper) and
  *    nothing halts it. Off, it holds no socket and makes no request, whatever
  *    is held: with perps off no Perps worker runs to read the file (its
  *    positions are frozen as a kill leaves them), so a feed would serve nobody.
@@ -27,7 +27,7 @@
  *    tenant's L1 bucket, and nothing here signs, sends or holds a key.
  */
 import path from "node:path";
-import { perpMarketById, perpMarketByKey, type MerrymenSettings } from "../../../packages/core/src/index";
+import { perpMarketById, perpMarketByKey, type AgentCapSettings } from "../../../packages/core/src/index";
 import { mergeSettings } from "../settings";
 import { createLighterApi } from "./api";
 import { startLighterFeed, type LighterFeedHandle, type LighterFeedOptions } from "./feed";
@@ -35,18 +35,18 @@ import { LIGHTER_FEED_FILE } from "./feed-reader";
 
 /** What this replica's Perps workers want: the settings handed to each, and the markets their books hold. */
 export interface FleetPerpFeedTargets {
-  settings: readonly MerrymenSettings[];
+  settings: readonly AgentCapSettings[];
   heldMarketIds: readonly number[];
 }
 
 export interface FleetPerpFeedOptions {
-  /** This orchestrator's home: the file goes to `<home>/lighter-feed.json`, where childEnv's MERRYMEN_FLEET_HOME points every child. */
+  /** This orchestrator's home: the file goes to `<home>/lighter-feed.json`, where childEnv's AGENTCAP_FLEET_HOME points every child. */
   home: string;
-  /** True when the publisher may run at all (the operator's MERRYMEN_PERPS=paper). */
+  /** True when the publisher may run at all (the operator's AGENTCAP_PERPS=paper). */
   enabled: () => boolean;
   /** FLEET_HALT, or the fleet being called home. */
   halted: () => boolean;
-  readSettings: () => Promise<readonly MerrymenSettings[]>;
+  readSettings: () => Promise<readonly AgentCapSettings[]>;
   readHeld: () => Promise<readonly number[]>;
   env?: () => Record<string, string | undefined>;
   log?: (line: string) => void;
@@ -92,7 +92,7 @@ export function createFleetPerpFeed(o: FleetPerpFeedOptions): FleetPerpFeed {
   };
   const refresh = async () => {
     if (closed || o.halted() || !o.enabled()) return stopHandle();
-    let settings: readonly MerrymenSettings[] | null = null;
+    let settings: readonly AgentCapSettings[] | null = null;
     let heldNow: readonly number[] | null = null;
     try {
       settings = await o.readSettings();

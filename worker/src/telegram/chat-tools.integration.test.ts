@@ -3,7 +3,7 @@
  *
  * What these protect: every lookup names coins, never mistakes a launch-scan
  * line for the pause button, and never shows one agent another's rows.
- * MERRYMEN_HOME is a throwaway temp dir and MERRYMEN_HOSTED is set, so the
+ * AGENTCAP_HOME is a throwaway temp dir and AGENTCAP_HOSTED is set, so the
  * no-guess branch of resolveAgent is the one exercised. node --test runs each
  * file in its own process.
  */
@@ -14,9 +14,9 @@ import path from "node:path";
 import { after, before, describe, it } from "node:test";
 import type { ToolContext } from "./chat-tools";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-tools-"));
-process.env.MERRYMEN_HOME = HOME;
-process.env.MERRYMEN_HOSTED = "1";
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-tools-"));
+process.env.AGENTCAP_HOME = HOME;
+process.env.AGENTCAP_HOSTED = "1";
 
 const { closeStoreForTest, initStore, addTrade, addEvent, addDecision, newDecisionId, addEquity } = await import("../store");
 const { toolByName, answerTradeQuestion } = await import("./chat-tools");
@@ -106,7 +106,7 @@ describe("the lookups answer with names, and truthfully", () => {
       for (const out of [readStatus(context.status), await toolByName("agent_status")!.run({}, context)]) {
         assert.match(out, expected);
         assert.match(out, /service operator controls this hold/);
-        assert.doesNotMatch(out, /OTHER_SECRET|0x0000000000000000000000000000000000000b0b|MERRYMEN_/);
+        assert.doesNotMatch(out, /OTHER_SECRET|0x0000000000000000000000000000000000000b0b|AGENTCAP_/);
       }
       const settings = await toolByName("settings")!.run({}, context);
       assert.match(settings, expected);

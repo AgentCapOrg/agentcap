@@ -4,7 +4,7 @@
  * sqlite stand-in for the shared database and a Perps book on disk.
  *
  *  - killed, its grant removed: the removed home's final pass;
- *  - MERRYMEN_PERPS leaving paper, and a Spot worker taking its process slot:
+ *  - AGENTCAP_PERPS leaving paper, and a Spot worker taking its process slot:
  *    the stood-down worker's final pass, then its lease back;
  *  - held before its grant was handed over, then removed: the account it was
  *    read with, not one only a handed-over grant would have named;
@@ -29,19 +29,19 @@ import type { ChildProcess, SpawnOptions } from "node:child_process";
 import { privateKeyToAccount } from "viem/accounts";
 import type { StoredGrant } from "../../packages/core/src/index";
 
-const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-perps-final-")));
-process.env.MERRYMEN_HOME = fleet;
-process.env.MERRYMEN_HOSTED = "1";
+const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-perps-final-")));
+process.env.AGENTCAP_HOME = fleet;
+process.env.AGENTCAP_HOSTED = "1";
 delete process.env.DATABASE_URL;
-delete process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS;
-delete process.env.MERRYMEN_FLEET_RECOVERY_REPORT_ONLY;
-delete process.env.MERRYMEN_PERSISTENT_HOME_REQUIRED;
-delete process.env.MERRYMEN_FLEET_ROLLOUT;
-delete process.env.MERRYMEN_DRAIN_BUDGET_MS;
+delete process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS;
+delete process.env.AGENTCAP_FLEET_RECOVERY_REPORT_ONLY;
+delete process.env.AGENTCAP_PERSISTENT_HOME_REQUIRED;
+delete process.env.AGENTCAP_FLEET_ROLLOUT;
+delete process.env.AGENTCAP_DRAIN_BUDGET_MS;
 for (const key of Object.keys(process.env)) if (key.startsWith("RAILWAY_")) delete process.env[key];
 const dek = Buffer.alloc(32, 43);
-process.env.MERRYMEN_STORE_DEK = dek.toString("base64");
-process.env.MERRYMEN_PERPS = "paper";
+process.env.AGENTCAP_STORE_DEK = dek.toString("base64");
+process.env.AGENTCAP_PERPS = "paper";
 
 const orch = await import("./orchestrator");
 const { getGrantStore } = await import("./grant-store");
@@ -102,7 +102,7 @@ console.log = (...a: unknown[]) => { said.push(a.map(String).join(" ")); };
 const settle = async (n = 30) => { for (let i = 0; i < n; i++) await new Promise((r) => setImmediate(r)); };
 const spot = getGrantStore("spot"), perps = getGrantStore("perps");
 const perpsKey = (owner: string) => `${owner}:perps` as `0x${string}`;
-const live = (tenant: string) => spawned.filter((p) => p.env.MERRYMEN_HOME === orch.childHome(tenant) && !p.gone);
+const live = (tenant: string) => spawned.filter((p) => p.env.AGENTCAP_HOME === orch.childHome(tenant) && !p.gone);
 const used: `0x${string}`[] = [];
 const ownerAt = (n: number) => { const o = address(n); used.push(o); return o; };
 
@@ -143,7 +143,7 @@ async function sharedDb(opts: { controls?: boolean; onRecordRead?: () => void } 
 async function perpsBook(owner: `0x${string}`, account: `0x${string}`, alsoAgent?: `0x${string}`): Promise<void> {
   const home = orch.childHome(perpsKey(owner));
   mkdirSync(home, { recursive: true });
-  const raw = new DatabaseSync(path.join(home, "merrymen.db"));
+  const raw = new DatabaseSync(path.join(home, "agentcap.db"));
   try {
     await applyLedgerSchema(wrapSqlite(raw));
     for (const agent of [account, ...(alsoAgent ? [alsoAgent] : [])])
@@ -174,7 +174,7 @@ after(() => {
   rmSync(fleet, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
 });
 afterEach(async () => {
-  process.env.MERRYMEN_PERPS = "paper";
+  process.env.AGENTCAP_PERPS = "paper";
   orch.setPhantomProcessesForTest(0);
   for (const o of used.splice(0)) {
     await spot.remove(o);
@@ -204,18 +204,18 @@ describe("a stopped Perps worker's final pass", () => {
     assert.equal(fills(perpsAcct), 1, "the Perps worker's last fill is on the shared tape");
     assert.equal(fills(spotAcct), 0, "and never under the Spot account");
     assert.equal(orch.hasLeaseForTest(perpsKey(o)), false, "its lease is given back");
-    assert.ok(existsSync(path.join(orch.childHome(perpsKey(o)), "merrymen.db")), "its original book is kept");
+    assert.ok(existsSync(path.join(orch.childHome(perpsKey(o)), "agentcap.db")), "its original book is kept");
     assert.ok(!existsSync(path.join(orch.childHome(perpsKey(o)), "grant.json")), "and its revoked grant's copy is gone");
   });
 
-  it("MERRYMEN_PERPS leaving paper: stood down, final-passed, its lease back; its grant is kept", async () => {
+  it("AGENTCAP_PERPS leaving paper: stood down, final-passed, its lease back; its grant is kept", async () => {
     const { fills } = await sharedDb();
     const o = ownerAt(0x81), perpsAcct = address(0x83);
     await perps.put(o, grant(o, perpsAcct, { purpose: "perps" }));
     await passes(1);
     assert.equal(live(perpsKey(o)).length, 1);
     await perpsBook(o, perpsAcct);
-    process.env.MERRYMEN_PERPS = "off";
+    process.env.AGENTCAP_PERPS = "off";
     await passes(2);
     assert.equal(live(perpsKey(o)).length, 0);
     assert.equal(fills(perpsAcct), 1);
@@ -281,7 +281,7 @@ describe("a stopped Perps worker's final pass", () => {
     assert.equal(orch.hasLeaseForTest(perpsKey(o)), false);
     assert.equal(fills(otherAcct), 0, "they disagree: nothing copied");
     assert.equal(orch.hasLeaseForTest(perpsKey(p)), true, "and the lease and home are kept for recovery");
-    assert.ok(existsSync(path.join(orch.childHome(perpsKey(p)), "merrymen.db")));
+    assert.ok(existsSync(path.join(orch.childHome(perpsKey(p)), "agentcap.db")));
   });
 
   it("a book that is not one account's: nothing is copied, and its lease and home are kept", async () => {
@@ -295,7 +295,7 @@ describe("a stopped Perps worker's final pass", () => {
     await passes(3);
     assert.equal(fills(perpsAcct), 0, "no account's rows are settled as another's");
     assert.equal(orch.hasLeaseForTest(perpsKey(o)), true, "the lease is kept");
-    assert.ok(existsSync(path.join(orch.childHome(perpsKey(o)), "merrymen.db")), "and the home");
+    assert.ok(existsSync(path.join(orch.childHome(perpsKey(o)), "agentcap.db")), "and the home");
     assert.ok(said.some((l) => l.includes("This Perps book is not one account's")), "and it is said");
   });
 
@@ -313,7 +313,7 @@ describe("a stopped Perps worker's final pass", () => {
     await passes(3);
     assert.equal(fills(perpsAcct), 0, "no copy without the lease");
     assert.ok(!existsSync(path.join(orch.childHome(perpsKey(o)), "ledger-source-blocked.json")), "and no barrier left behind");
-    assert.ok(existsSync(path.join(orch.childHome(perpsKey(o)), "merrymen.db")), "the book is kept");
+    assert.ok(existsSync(path.join(orch.childHome(perpsKey(o)), "agentcap.db")), "the book is kept");
   });
 
   it("its grant expiring under it: stood down, final-passed by expiry retirement, its lease back", async () => {
@@ -379,7 +379,7 @@ describe("the SIGTERM drain (how a Railway variable change stops a Perps worker)
     await passes(1);
     assert.equal(live(perpsKey(o)).length, 1);
     await perpsBook(o, perpsAcct);
-    const spotBook = new DatabaseSync(path.join(orch.childHome(o), "merrymen.db"));
+    const spotBook = new DatabaseSync(path.join(orch.childHome(o), "agentcap.db"));
     await applyLedgerSchema(wrapSqlite(spotBook));
     spotBook.close();
     const exits: number[] = [];

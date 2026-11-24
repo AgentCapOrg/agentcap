@@ -29,9 +29,9 @@ here="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
 cache_root="$HOME/.cache/solana"
 tools_dir="$cache_root/$PLATFORM_TOOLS_VERSION/platform-tools"
-marker="$tools_dir/.merrymen-ci-verified-sha256"
+marker="$tools_dir/.agentcap-ci-verified-sha256"
 criterion_dir="$cache_root/$CRITERION_VERSION/criterion"
-criterion_marker="$criterion_dir/.merrymen-ci-verified-sha256"
+criterion_marker="$criterion_dir/.agentcap-ci-verified-sha256"
 
 die() { echo "::error::$*" >&2; exit 1; }
 

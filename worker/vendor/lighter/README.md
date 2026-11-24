@@ -1,6 +1,6 @@
 # Lighter signer (vendored)
 
-The only code in merrymen that can produce a Lighter transaction. Loaded by
+The only code in agentcap that can produce a Lighter transaction. Loaded by
 `worker/src/perps/signer.ts`, which hashes both files before running a byte of
 either, runs them in an isolated `node:vm` context, and refuses to arm unless a
 known-answer test against live mainnet transactions passes. Contract:

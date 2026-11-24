@@ -35,7 +35,7 @@
  * signed-out answer useful instead of empty.
  *
  * AND THE BALANCE IS THE COMBINED ONE. The worker counts the owner's wallet and
- * the agent's own account together (lib/merrymen-standing.ts), so `balance` is
+ * the agent's own account together (lib/agentcap-standing.ts), so `balance` is
  * that sum and the tier and fee are derived from it; `holderBalance` and
  * `agentBalance` say where it sits. The agent's account counts only on
  * Robinhood Chain and never twice. Either half failing to read is `unreadable`
@@ -46,10 +46,10 @@
 import { webChainRead } from "@/lib/chain-read";
 import { readFile } from "node:fs/promises";
 import { NextResponse } from "next/server";
-import { homePaths } from "@merrymen/home";
+import { homePaths } from "@agentcap/home";
 import {
   CIRCLE_TIERS,
-  MERRYMEN_TOKEN,
+  AGENTCAP_TOKEN,
   SETTINGS_DEFAULTS,
   effectivePerfFeeBps,
   isHostedMode,
@@ -57,12 +57,12 @@ import {
   robinhoodChain,
   tierForBalance,
   type CircleTier,
-  type MerrymenSettings,
-} from "@merrymen/core";
+  type AgentCapSettings,
+} from "@agentcap/core";
 import { tenantOf } from "@/lib/auth";
 import { holderWalletFor, type HolderWallet } from "@/lib/holder-wallet";
 import { agentAccountFor } from "@/lib/agent-account";
-import { countedAgent, readStanding, standingTokens } from "@/lib/merrymen-standing";
+import { countedAgent, readStanding, standingTokens } from "@/lib/agentcap-standing";
 import { createPublicClient } from "viem";
 import { errorText } from "../../../../../worker/src/redact-urls";
 import { walletNotSupported } from "@/lib/route-guard";
@@ -78,7 +78,7 @@ async function selfHostedHolder(): Promise<{
   try {
     const settings = JSON.parse(
       (await readFile(homePaths.settings(), "utf8")).replace(/^﻿/, ""),
-    ) as MerrymenSettings;
+    ) as AgentCapSettings;
     const a = settings.holderAddress;
     return {
       address: typeof a === "string" && /^0x[0-9a-fA-F]{40}$/.test(a) ? (a as `0x${string}`) : null,
@@ -107,10 +107,10 @@ export async function GET(req: Request) {
   if (walletRefused) return walletRefused;
   const baseFeeBps = SETTINGS_DEFAULTS.perfFeeBps;
   const token = {
-    symbol: MERRYMEN_TOKEN.symbol,
-    address: MERRYMEN_TOKEN.address,
-    chainId: MERRYMEN_TOKEN.chainId,
-    explorer: `${robinhoodChain.blockExplorers!.default.url}/token/${MERRYMEN_TOKEN.address}`,
+    symbol: AGENTCAP_TOKEN.symbol,
+    address: AGENTCAP_TOKEN.address,
+    chainId: AGENTCAP_TOKEN.chainId,
+    explorer: `${robinhoodChain.blockExplorers!.default.url}/token/${AGENTCAP_TOKEN.address}`,
   };
   const tiers = CIRCLE_TIERS.map((t) => ({
     ...tierView(t),

@@ -16,24 +16,24 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, afterEach, before, describe, it } from "node:test";
 
-import type { StoredGrant } from "@merrymen/core";
+import type { StoredGrant } from "@agentcap/core";
 import { mintSession } from "@/lib/auth";
-import { getGrantStore, resetGrantStoreForTest } from "@merrymen/grant-store";
-import { resetSettingsStoreForTest } from "@merrymen/settings-store";
+import { getGrantStore, resetGrantStoreForTest } from "@agentcap/grant-store";
+import { resetSettingsStoreForTest } from "@agentcap/settings-store";
 import { GET, POST } from "./route";
 import { POST as SNIPE } from "../snipe/route";
 
 const TENANT = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const OTHER = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-const KEYS = ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_SESSION_SECRET", "MERRYMEN_SETTINGS_FILE", "MERRYMEN_TELEGRAM_MAX_ACTION_USDG", "DATABASE_URL"] as const;
+const KEYS = ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_SESSION_SECRET", "AGENTCAP_SETTINGS_FILE", "AGENTCAP_TELEGRAM_MAX_ACTION_USDG", "DATABASE_URL"] as const;
 const original = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
 let dir: string;
 
 before(async () => {
-  dir = mkdtempSync(path.join(tmpdir(), "merrymen-owner-"));
-  process.env.MERRYMEN_HOME = dir;
-  process.env.MERRYMEN_SETTINGS_FILE = path.join(dir, "no-such-settings.json");
-  process.env.MERRYMEN_SESSION_SECRET = randomBytes(32).toString("hex");
+  dir = mkdtempSync(path.join(tmpdir(), "agentcap-owner-"));
+  process.env.AGENTCAP_HOME = dir;
+  process.env.AGENTCAP_SETTINGS_FILE = path.join(dir, "no-such-settings.json");
+  process.env.AGENTCAP_SESSION_SECRET = randomBytes(32).toString("hex");
   delete process.env.DATABASE_URL;
   resetSettingsStoreForTest();
   resetGrantStoreForTest();
@@ -43,8 +43,8 @@ before(async () => {
   await getGrantStore("spot").put(OTHER, grantOf("0x00000000000000000000000000000000000000a2"));
 });
 afterEach(() => {
-  delete process.env.MERRYMEN_HOSTED;
-  delete process.env.MERRYMEN_TELEGRAM_MAX_ACTION_USDG;
+  delete process.env.AGENTCAP_HOSTED;
+  delete process.env.AGENTCAP_TELEGRAM_MAX_ACTION_USDG;
 });
 after(() => {
   for (const k of KEYS) {
@@ -73,19 +73,19 @@ async function place(session: `0x${string}` | null, owner: unknown, usdgAmount =
 
 describe("POST /api/orders", () => {
   it("HOSTED, A SESSION THAT IS NOT THE OWNER WHO CONFIRMED PLACES NOTHING — and says why", async () => {
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOSTED = "1";
     const other = await place(OTHER, TENANT);
     assert.equal(other.status, 409);
     assert.match(other.error, /different wallet now than the one that confirmed this, so nothing was placed/);
     // Before the ceiling: "over your limit" would be the OTHER wallet's limit,
     // about an order that was never theirs.
-    process.env.MERRYMEN_TELEGRAM_MAX_ACTION_USDG = "1";
+    process.env.AGENTCAP_TELEGRAM_MAX_ACTION_USDG = "1";
     assert.equal((await place(OTHER, TENANT, 50)).status, 409);
     assert.equal((await place(OTHER, 42)).status, 409, "a claim that is not an address is nobody's");
   });
 
   it("the owner who confirmed goes on to the queue, however the address is cased", async () => {
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOSTED = "1";
     // No ledger to queue into here, so the queue answers — past every refusal.
     for (const owner of [TENANT, TENANT.toUpperCase().replace("0X", "0x")]) {
       const own = await place(TENANT, owner);
@@ -95,7 +95,7 @@ describe("POST /api/orders", () => {
   });
 
   it("a card that names nobody is judged by its session, as before", async () => {
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOSTED = "1";
     assert.match((await place(TENANT, undefined)).error, /couldn't queue it/);
     assert.equal((await place(null, TENANT)).status, 401, "signed out is still signed out");
   });
@@ -119,7 +119,7 @@ describe("GET /api/orders, asked what is open after a placement's answer was los
   };
 
   it("HOSTED, ANOTHER SESSION'S OPEN ORDER IS NOT READ FOR THE OWNER WHO CONFIRMED — it would be followed as theirs", async () => {
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOSTED = "1";
     const other = await lookup(OTHER, TENANT);
     assert.equal(other.status, 409);
     assert.equal(other.body.state, undefined, "no order, and no 'none' either — nothing was read");
@@ -127,7 +127,7 @@ describe("GET /api/orders, asked what is open after a placement's answer was los
   });
 
   it("the owner who confirmed, or a lookup that names nobody, is read as before", async () => {
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOSTED = "1";
     // No ledger to read here, so the read answers 503 — past the owner check.
     for (const owner of [TENANT, TENANT.toUpperCase().replace("0X", "0x"), undefined]) {
       assert.equal((await lookup(TENANT, owner)).status, 503, String(owner));
@@ -150,14 +150,14 @@ describe("POST /api/snipe", () => {
   };
 
   it("HOSTED, A LOOKUP FOR ANOTHER OWNER'S CONFIRM IS REFUSED — it would resolve against the wrong wallet's coins", async () => {
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOSTED = "1";
     const res = await snipe(OTHER, { query: "TSLA", usdgAmount: 5, owner: TENANT });
     assert.equal(res.status, 409);
     assert.match(res.error, /different wallet now than the one that confirmed this/);
   });
 
   it("the owner who confirmed, or a card that names nobody, is looked up as before", async () => {
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOSTED = "1";
     // An empty query is refused on its own merits — AFTER the owner check,
     // which is how these show they passed it without searching anything.
     for (const body of [{ query: "", usdgAmount: 5, owner: TENANT }, { query: "", usdgAmount: 5 }]) {

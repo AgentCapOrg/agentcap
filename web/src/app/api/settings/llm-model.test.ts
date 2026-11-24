@@ -3,23 +3,23 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, before, describe, it } from "node:test";
-import type { MerrymenSettings } from "@merrymen/core";
+import type { AgentCapSettings } from "@agentcap/core";
 import { resolveLlm } from "../../../../../worker/src/llm";
 import { mergeSettings } from "../../../../../worker/src/settings";
 import { providerChange, providerModelChange, providerModelValue } from "@/lib/settings-llm-model";
 
 let home: string;
 let PUT: (req: Request) => Promise<Response>;
-const saved = { home: process.env.MERRYMEN_HOME, hosted: process.env.MERRYMEN_HOSTED };
+const saved = { home: process.env.AGENTCAP_HOME, hosted: process.env.AGENTCAP_HOSTED };
 
 before(async () => {
   home = mkdtempSync(path.join(tmpdir(), "mm-settings-llm-model-"));
-  process.env.MERRYMEN_HOME = home;
-  delete process.env.MERRYMEN_HOSTED;
+  process.env.AGENTCAP_HOME = home;
+  delete process.env.AGENTCAP_HOSTED;
   ({ PUT } = await import("./route"));
 });
 after(() => {
-  for (const [key, value] of [["MERRYMEN_HOME", saved.home], ["MERRYMEN_HOSTED", saved.hosted]] as const) {
+  for (const [key, value] of [["AGENTCAP_HOME", saved.home], ["AGENTCAP_HOSTED", saved.hosted]] as const) {
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
   }
@@ -27,8 +27,8 @@ after(() => {
 });
 
 const file = () => path.join(home, "settings.json");
-const stored = () => JSON.parse(readFileSync(file(), "utf8")) as MerrymenSettings;
-const seed = (settings: MerrymenSettings) => writeFileSync(file(), JSON.stringify(settings));
+const stored = () => JSON.parse(readFileSync(file(), "utf8")) as AgentCapSettings;
+const seed = (settings: AgentCapSettings) => writeFileSync(file(), JSON.stringify(settings));
 const resolved = () => resolveLlm(mergeSettings(stored(), {}));
 const put = async (body: unknown) => {
   const response = await PUT(new Request("http://localhost/api/settings", {

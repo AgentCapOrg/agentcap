@@ -40,14 +40,14 @@ function procFixture(root: string, pid: number, start: string): void {
   writeFileSync(path.join(dir, "stat"), `${pid} (node) S ${Array(18).fill("0").join(" ")} ${start} 0`);
 }
 async function fixture(t: test.TestContext, emptyTenant = false) {
-  const dir = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-handover-cli-")));
+  const dir = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-handover-cli-")));
   const sourceHome = path.join(dir, "source"), child = path.join(sourceHome, "children", TENANT), targetHome = path.join(dir, "target");
   mkdirSync(path.join(child, "soul"), { recursive: true }); mkdirSync(targetHome, { mode: 0o700 });
   writeFileSync(path.join(sourceHome, "FLEET_HALT"), "reviewed original source hold", { mode: 0o600 });
   writeFileSync(path.join(child, "soul", "OWNER.md"), PERSONAL, { mode: 0o600 });
   writeFileSync(path.join(child, "grant.json"), SECRET, { mode: 0o600 });
   writeFileSync(path.join(child, "settings.json"), SECRET, { mode: 0o600 });
-  const raw = new DatabaseSync(path.join(child, "merrymen.db")), sharedRaw = new DatabaseSync(":memory:");
+  const raw = new DatabaseSync(path.join(child, "agentcap.db")), sharedRaw = new DatabaseSync(":memory:");
   t.after(() => { raw.close(); sharedRaw.close(); rmSync(dir, { recursive: true, force: true }); });
   const local = wrapSqlite(raw), shared = scopedSqlite(wrapSqlite(sharedRaw));
   await applyLedgerSchema(local); await applyLedgerSchema(shared); await shared.exec(MIRROR_STATE_DDL); await shared.exec(PAPER_CHECKPOINT_SCHEMA);
@@ -70,7 +70,7 @@ async function fixture(t: test.TestContext, emptyTenant = false) {
   assert.equal(await publishTgGroups({ tenant: TENANT, home: child, shared, dek: DEK, seen: new Map(), log() {} }), "published");
   const procRoot = path.join(dir, "proc"), targetProc = path.join(dir, "target-proc");
   procFixture(procRoot, 41, "1234"); procFixture(targetProc, 42, "5678");
-  const env: NodeJS.ProcessEnv = { MERRYMEN_HOME: sourceHome, RAILWAY_DEPLOYMENT_ID: "source-deployment", RAILWAY_GIT_COMMIT_SHA: SOURCE_SHA };
+  const env: NodeJS.ProcessEnv = { AGENTCAP_HOME: sourceHome, RAILWAY_DEPLOYMENT_ID: "source-deployment", RAILWAY_GIT_COMMIT_SHA: SOURCE_SHA };
   const source = inspectMemorySource({ expectedDeployment: "source-deployment", expectedCommit: SOURCE_SHA, orchestratorPid: 41,
     home: sourceHome, quiescent: true, singleReplicaConfirmed: true }, env, procRoot);
   const memory = await captureFleetMemory({ childrenDir: path.join(sourceHome, "children"), shared, dek: DEK, source, assertSource() {} });
@@ -85,8 +85,8 @@ async function fixture(t: test.TestContext, emptyTenant = false) {
   const captureArgs = ["capture", ...current, "--memory-artifact", memoryFile, "--output", artifact, "--target-volume-id", VOLUME,
     "--target-mount-path", targetHome, "--target-commit", TARGET_SHA, "--operation-token", OP];
   const sourceMode = (mode: string) => runLedgerHandoverCli([mode, ...current, "--artifact", artifact], deps);
-  const targetEnv: NodeJS.ProcessEnv = { MERRYMEN_HOME: targetHome, RAILWAY_DEPLOYMENT_ID: "target-deployment", RAILWAY_GIT_COMMIT_SHA: TARGET_SHA,
-    MERRYMEN_PERSISTENT_HOME_REQUIRED: "1", MERRYMEN_HOME_VOLUME_ID: VOLUME, RAILWAY_VOLUME_MOUNT_PATH: targetHome, MERRYMEN_INITIAL_HANDOVER: OP };
+  const targetEnv: NodeJS.ProcessEnv = { AGENTCAP_HOME: targetHome, RAILWAY_DEPLOYMENT_ID: "target-deployment", RAILWAY_GIT_COMMIT_SHA: TARGET_SHA,
+    AGENTCAP_PERSISTENT_HOME_REQUIRED: "1", AGENTCAP_HOME_VOLUME_ID: VOLUME, RAILWAY_VOLUME_MOUNT_PATH: targetHome, AGENTCAP_INITIAL_HANDOVER: OP };
   const st = (await import("node:fs")).lstatSync(targetHome, { bigint: true });
   const major = ((st.dev >> 8n) & 0xfffn) | ((st.dev >> 32n) & 0xfffff000n), minor = (st.dev & 0xffn) | ((st.dev >> 12n) & 0xffffff00n);
   const mountInfo = `40 20 ${major}:${minor} / ${targetHome} rw - ext4 /dev/volume rw\n`;
@@ -118,7 +118,7 @@ test("capture, verify, stage, restore and explicit completion preserve original 
   assert.equal(f.sharedRaw.prepare("SELECT state FROM tenant_ledger_import").get()!.state, "available");
   assert.equal((await f.targetMode("restore")).operation, "restored-and-verified");
   assert.equal(existsSync(path.join(f.targetHome, "FLEET_HALT")), true, "restore is not release");
-  const target = new DatabaseSync(path.join(f.targetChild, "merrymen.db"), { readOnly: true });
+  const target = new DatabaseSync(path.join(f.targetChild, "agentcap.db"), { readOnly: true });
   try {
     assert.deepEqual(target.prepare("SELECT * FROM trades").all(), f.raw.prepare("SELECT * FROM trades").all());
     assert.deepEqual(target.prepare("SELECT * FROM agents").all(), f.raw.prepare("SELECT * FROM agents").all());
@@ -138,12 +138,12 @@ test("capture, verify, stage, restore and explicit completion preserve original 
 test("source preconditions reject skipped original books and missing accounting sources without staging or blank fiction", async t => {
   const f = await fixture(t);
   const orphan = path.join(f.sourceHome, "children", `0x${"96".repeat(20)}`); mkdirSync(orphan);
-  writeFileSync(path.join(orphan, "merrymen.db"), "unlisted original book");
+  writeFileSync(path.join(orphan, "agentcap.db"), "unlisted original book");
   await assert.rejects(f.capture(), /Ledger handover refused/);
   assert.equal(existsSync(f.artifact), false);
   rmSync(orphan, { recursive: true });
   // Original handle is still open, but the namespace no longer exposes its book.
-  rmSync(path.join(f.child, "merrymen.db"));
+  rmSync(path.join(f.child, "agentcap.db"));
   await assert.rejects(f.capture(), /Ledger handover refused/);
   assert.equal(existsSync(f.artifact), false);
 });
@@ -183,14 +183,14 @@ test("capture requires the separate checkpoint's final exact cursors and every h
 test("wrong target volume, commit, source process proof or ephemeral mount cannot consume imports", async t => {
   const f = await fixture(t); await f.stage();
   const original = f.targetDeps.env!;
-  for (const env of [{ ...original, MERRYMEN_HOME_VOLUME_ID: randomUUID() }, { ...original, MERRYMEN_INITIAL_HANDOVER: "different-operation" }]) {
+  for (const env of [{ ...original, AGENTCAP_HOME_VOLUME_ID: randomUUID() }, { ...original, AGENTCAP_INITIAL_HANDOVER: "different-operation" }]) {
     await assert.rejects(runLedgerHandoverCli(f.targetArgs("restore"), { ...f.targetDeps, env }), /Ledger handover refused/);
   }
   const args = f.targetArgs("restore"); args[args.indexOf("--source-orchestrator-start") + 1] = "9999";
   await assert.rejects(runLedgerHandoverCli(args, f.targetDeps), /Ledger handover refused/);
   await assert.rejects(runLedgerHandoverCli(f.targetArgs("restore"), { ...f.targetDeps, persistentOptions: { readMountInfo: () => "40 20 0:1 / /ephemeral rw - overlay overlay rw\n" } }), /Ledger handover refused/);
   assert.equal(f.sharedRaw.prepare("SELECT state FROM tenant_ledger_import").get()!.state, "available");
-  assert.equal(existsSync(path.join(f.targetChild, "merrymen.db")), false);
+  assert.equal(existsSync(path.join(f.targetChild, "agentcap.db")), false);
   assert.equal(existsSync(path.join(f.targetHome, "FLEET_HALT")), true);
 });
 
@@ -204,7 +204,7 @@ test("completion compares memory bytes and full original financial content; matc
   await assert.rejects(f.targetMode("complete"), /Ledger handover refused/);
   assert.equal(existsSync(path.join(f.targetHome, "FLEET_HALT")), true);
   writeFileSync(path.join(f.targetChild, "tg-groups.json"), f.groupText);
-  const target = new DatabaseSync(path.join(f.targetChild, "merrymen.db"));
+  const target = new DatabaseSync(path.join(f.targetChild, "agentcap.db"));
   target.exec("UPDATE trades SET amount_usdg=6"); target.close();
   await assert.rejects(f.targetMode("complete"), /Ledger handover refused/);
   assert.equal(existsSync(path.join(f.targetHome, "FLEET_HALT")), true);
@@ -218,9 +218,9 @@ test("missing consumed books and conflicting stored memory leave the target held
   assert.equal(f.sharedRaw.prepare("SELECT state FROM tenant_ledger_import").get()!.state, "available");
   f.sharedRaw.prepare("UPDATE tenant_personal_memory SET sealed=?").run(old!);
   await f.targetMode("restore");
-  rmSync(path.join(f.targetChild, "merrymen.db"));
+  rmSync(path.join(f.targetChild, "agentcap.db"));
   await assert.rejects(f.targetMode("restore"), /Ledger handover refused/);
-  assert.equal(existsSync(path.join(f.targetChild, "merrymen.db")), false);
+  assert.equal(existsSync(path.join(f.targetChild, "agentcap.db")), false);
   assert.equal(f.sharedRaw.prepare("SELECT state,sealed FROM tenant_ledger_import").get()!.state, "consumed");
   assert.equal(existsSync(path.join(f.targetHome, "FLEET_HALT")), true);
 });
@@ -230,7 +230,7 @@ test("genuinely never-created sources are explicit and carry no invented financi
   const backup = openFleetLedgerHandover(readFileSync(f.artifact, "utf8"), DEK);
   assert.deepEqual(backup.withoutBook, [`0x${"74".repeat(20)}`]);
   await f.targetMode("restore");
-  assert.equal(existsSync(path.join(f.targetHome, "children", backup.withoutBook[0]!, "merrymen.db")), false);
+  assert.equal(existsSync(path.join(f.targetHome, "children", backup.withoutBook[0]!, "agentcap.db")), false);
   await f.targetMode("complete");
   assert.equal(existsSync(path.join(f.targetHome, "FLEET_HALT")), false);
 });
@@ -293,7 +293,7 @@ test("acknowledged historical gaps retain financial state and a durable owned bl
   await f.sourceMode("stage"); await f.targetMode("restore");
   const gapHome = path.join(f.targetHome, "children", GAP_TENANT), marker = path.join(gapHome, "ledger-source-blocked.json");
   assert.equal(existsSync(marker), true); assert.equal(existsSync(path.join(gapHome, HISTORICAL_GAP_PROOF_FILE)), true);
-  assert.equal(existsSync(path.join(gapHome, "merrymen.db")), false);
+  assert.equal(existsSync(path.join(gapHome, "agentcap.db")), false);
   const before = f.sharedRaw.prepare("SELECT * FROM events WHERE agent_id=?").all(GAP_ACCOUNT);
   const completed = await f.targetMode("complete");
   assert.equal(completed.historicalBlockedBooks, 1);
@@ -320,7 +320,7 @@ test("a historical gap's shared financial changes or replaced block forbid relea
   await assert.rejects(f.targetMode("complete"), /Ledger handover refused/);
   assert.equal(existsSync(path.join(f.targetHome, "FLEET_HALT")), true);
   const rebuiltHome = path.join(f.sourceHome, "children", GAP_TENANT); mkdirSync(rebuiltHome);
-  const rebuilt = new DatabaseSync(path.join(rebuiltHome, "merrymen.db")); await applyLedgerSchema(wrapSqlite(rebuilt)); rebuilt.close();
+  const rebuilt = new DatabaseSync(path.join(rebuiltHome, "agentcap.db")); await applyLedgerSchema(wrapSqlite(rebuilt)); rebuilt.close();
   const newArgs = [...f.captureArgs, "--acknowledge-historical-ledger-gaps"];
   newArgs[newArgs.indexOf("--output") + 1] = path.join(f.dir, "must-not-capture-rebuilt.sealed");
   await assert.rejects(runLedgerHandoverCli(newArgs, f.deps), /Ledger handover refused/);
@@ -360,7 +360,7 @@ test("A PERPS PAPER BOOK IS NOT COVERED YET: every mode refuses while children-p
   const perpsHome = path.join(f.sourceHome, "children-perps", OWNER);
   mkdirSync(perpsHome, { recursive: true, mode: 0o700 });
   assert.equal((await runLedgerHandoverCli(preflightArgs, f.deps)).operation, "preflight-read-only");
-  writeFileSync(path.join(perpsHome, "merrymen.db"), "a paper perps book", { mode: 0o600 });
+  writeFileSync(path.join(perpsHome, "agentcap.db"), "a paper perps book", { mode: 0o600 });
   const refused = (e: unknown) => {
     assert.ok(e instanceof PerpsBooksNotHandedOver, String(e));
     assert.match(e.message, /1 Perps paper book\(s\) under children-perps\/, and Perps paper books are not covered by the fleet handover yet/);
@@ -377,7 +377,7 @@ test("A PERPS PAPER BOOK IS NOT COVERED YET: every mode refuses while children-p
   // A target home that holds one refuses too.
   const targetPerps = path.join(f.targetHome, "children-perps", OWNER);
   mkdirSync(targetPerps, { recursive: true, mode: 0o700 });
-  writeFileSync(path.join(targetPerps, "merrymen.db"), "a paper perps book", { mode: 0o600 });
+  writeFileSync(path.join(targetPerps, "agentcap.db"), "a paper perps book", { mode: 0o600 });
   await assert.rejects(f.targetMode("restore"), refused);
   await assert.rejects(f.targetMode("complete"), refused);
 });

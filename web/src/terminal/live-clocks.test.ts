@@ -623,7 +623,7 @@ describe("the outage line over them", () => {
     s.clocks.stop();
   });
 
-  it("'Can't reach merrymen' when nothing answered anywhere, and not when the book alone did", async () => {
+  it("'Can't reach agentcap' when nothing answered anywhere, and not when the book alone did", async () => {
     const offline = Object.assign(new Error("offline"), { status: 0 });
     const s = shell({
       answer: (key) => (key === "feed" ? ok(BODIES.feed) : { text: null, answered: false }),

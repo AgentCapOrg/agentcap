@@ -26,7 +26,7 @@
  *
  * WHAT IT LEAVES ALONE. Public URLs read the same as before: the chain's own
  * RPC, a block explorer's `/tx/0x…` link (a hash or an address is public, and
- * an explorer link in a post is the point of the post), merrymen.dev, x.com.
+ * an explorer link in a post is the point of the post), agentcap.xyz, x.com.
  * A rule that redacted those would be switched off by the first person it got
  * in the way of.
  *
@@ -90,7 +90,7 @@ const PUBLIC_PATH_HOSTS: readonly string[] = [
   "github.com",
   "youtube.com",
   "youtu.be",
-  "merrymen.dev",
+  "agentcap.xyz",
 ];
 
 /** Query parameter names that carry a credential, whatever host they are on. */

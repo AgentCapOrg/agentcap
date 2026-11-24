@@ -1,11 +1,11 @@
 /**
  * WHO THE OPERATOR NAMED, READ THE SAME WAY BY THE WEB AND THE ORCHESTRATOR.
  *
- * MERRYMEN_XPOST_ACTIVE_TENANTS is set on both services: the orchestrator
+ * AGENTCAP_XPOST_ACTIVE_TENANTS is set on both services: the orchestrator
  * puts the named owners on the active cadence and lets them answer tags, and
  * the web tells those owners so in the reply warning. Two parsers would let
  * the warning and the behaviour disagree about who is active, so there is one.
- * MERRYMEN_XPOST_REPLIES_APPROVED, the operator's gate on replies at all, is
+ * AGENTCAP_XPOST_REPLIES_APPROVED, the operator's gate on replies at all, is
  * read here for the same reason: the web offers the reply switch to exactly
  * the owners the orchestrator will poll and answer for.
  *
@@ -35,12 +35,12 @@ export function activeTenantsOf(raw: string | undefined | null): { tenants: Set<
 }
 
 /**
- * WHO MAY REPLY ON X AT ALL (MERRYMEN_XPOST_REPLIES_APPROVED), before any
+ * WHO MAY REPLY ON X AT ALL (AGENTCAP_XPOST_REPLIES_APPROVED), before any
  * owner's own reply consent:
  *
  *   "1"      — every owner who consents: comment replies, and an active
  *              owner's answers to tags (the meaning it always had);
- *   "active" — only the owners MERRYMEN_XPOST_ACTIVE_TENANTS names; for
+ *   "active" — only the owners AGENTCAP_XPOST_ACTIVE_TENANTS names; for
  *              everyone else replies are not approved at all;
  *   unset or blank — nobody.
  *

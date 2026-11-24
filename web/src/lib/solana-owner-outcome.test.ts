@@ -111,10 +111,10 @@ async function fixture() {
       outAmount: intent.amountRaw, minOutAmount: (BigInt(intent.amountRaw) * 995n / 1000n).toString(), slippageBps: intent.slippageBps,
       contextSlot: 1000, quotedAtMs: clock.now, expiresAtMs: clock.now + 30_000 }),
   };
-  const env = { MERRYMEN_SOLANA_VAULT_PROGRAM: PROGRAM, MERRYMEN_SOLANA_VAULT_SHA256: createHash("sha256").update(binary).digest("hex"),
-    MERRYMEN_STORE_DEK: Buffer.alloc(32, 30).toString("base64"), MERRYMEN_SOLANA_FEE_PAYER_SEED: Buffer.alloc(32, 31).toString("base64"), MERRYMEN_JUPITER_API_KEY: "fixture",
+  const env = { AGENTCAP_SOLANA_VAULT_PROGRAM: PROGRAM, AGENTCAP_SOLANA_VAULT_SHA256: createHash("sha256").update(binary).digest("hex"),
+    AGENTCAP_STORE_DEK: Buffer.alloc(32, 30).toString("base64"), AGENTCAP_SOLANA_FEE_PAYER_SEED: Buffer.alloc(32, 31).toString("base64"), AGENTCAP_JUPITER_API_KEY: "fixture",
     // On the live list, with daily caps at the fixture's limits (50 USDG and 0.5 SOL; per trade the defaults).
-    MERRYMEN_SOLANA_LIVE_TENANTS: TENANT, MERRYMEN_SOLANA_LIVE_MAX_DAILY_USDG: "50", MERRYMEN_SOLANA_LIVE_MAX_DAILY_WSOL: "0.5" };
+    AGENTCAP_SOLANA_LIVE_TENANTS: TENANT, AGENTCAP_SOLANA_LIVE_MAX_DAILY_USDG: "50", AGENTCAP_SOLANA_LIVE_MAX_DAILY_WSOL: "0.5" };
   const app = createSolanaAppRuntime({ db, rpc, market, env, now: () => clock.now });
   const sign = async (wire: string) => getBase64EncodedWireTransaction(await signTransaction([ownerKeys], getTransactionDecoder().decode(Buffer.from(wire, "base64"))));
   const live = async () => { const binding = (await bindings.get(TENANT))!; await bindings.settings(TENANT, owner, binding.revision, "live", limits); };
@@ -139,9 +139,9 @@ import { solanaComputeBudgetInstructions } from "../../../worker/src/solana-exec
 import { address, appendTransactionMessageInstructions, compileTransaction, createTransactionMessage, decompileTransactionMessage,
   getCompiledTransactionMessageDecoder, setTransactionMessageFeePayer, setTransactionMessageLifetimeUsingBlockhash, type Blockhash, type Instruction } from "@solana/kit";
 
-const flag = process.env.MERRYMEN_SOLANA;
-test.before(() => { process.env.MERRYMEN_SOLANA = "1"; });
-test.after(() => { if (flag === undefined) delete process.env.MERRYMEN_SOLANA; else process.env.MERRYMEN_SOLANA = flag; });
+const flag = process.env.AGENTCAP_SOLANA;
+test.before(() => { process.env.AGENTCAP_SOLANA = "1"; });
+test.after(() => { if (flag === undefined) delete process.env.AGENTCAP_SOLANA; else process.env.AGENTCAP_SOLANA = flag; });
 /** What the page receives, and whether it would treat it as a refusal of the bytes. */
 async function asPage(run: () => Promise<unknown>) {
   const response = await solanaResponse(run);

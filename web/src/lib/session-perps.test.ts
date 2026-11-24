@@ -4,7 +4,7 @@ import { describe, it } from "node:test";
 // bytecode hash in the environment, which trencher-permission.ts reads once,
 // when session.ts loads it.
 import { signerGrant } from "./canonical-wall-fixture";
-import { GRANT_PERP_LIGHTER, LIGHTER_ROUTE_V1, publicGrantView, type StoredGrant, type PerpRecoveryReference } from "@merrymen/core";
+import { GRANT_PERP_LIGHTER, LIGHTER_ROUTE_V1, publicGrantView, type StoredGrant, type PerpRecoveryReference } from "@agentcap/core";
 import { decidePerpSeal, PerpSigningRefusal, priorPerpFor, type PerpRefusalCode } from "./session";
 import { checkCanonicalWall } from "./canonical-wall";
 

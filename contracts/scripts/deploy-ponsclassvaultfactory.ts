@@ -1,7 +1,7 @@
 /**
  * Deploy PonsClassVaultFactory.
  *
- *   $env:MERRYMEN_DEPLOYER_PRIVATE_KEY = "0x…"   # shell-only; close it after
+ *   $env:AGENTCAP_DEPLOYER_PRIVATE_KEY = "0x…"   # shell-only; close it after
  *   npx hardhat run scripts/deploy-ponsclassvaultfactory.ts --network robinhoodTestnet
  *   npx hardhat run scripts/deploy-ponsclassvaultfactory.ts --network robinhood
  *
@@ -48,7 +48,7 @@ async function main() {
 
   const [deployer] = await hre.viem.getWalletClients();
   if (!deployer) {
-    throw new Error("no deployer — set MERRYMEN_DEPLOYER_PRIVATE_KEY in this shell.");
+    throw new Error("no deployer — set AGENTCAP_DEPLOYER_PRIVATE_KEY in this shell.");
   }
   const balance = await publicClient.getBalance({ address: deployer.account.address });
   if (balance === 0n) {
@@ -113,7 +113,7 @@ async function main() {
   console.log("     and the wall REFUSES to seal a vault without a factory");
   console.log("  3. turn on the class route in /settings (classSnipeEnabled) AND set");
   console.log("     classPerEntryUsdg — both default to off/zero, and both are required");
-  console.log("  4. unset MERRYMEN_DEPLOYER_PRIVATE_KEY / close this shell");
+  console.log("  4. unset AGENTCAP_DEPLOYER_PRIVATE_KEY / close this shell");
   console.log("");
   console.log("what this does NOT unlock, so it is not a surprise later:");
   console.log("  - native-ETH-quoted curves. 53.6% of launches, and the vault refuses them");

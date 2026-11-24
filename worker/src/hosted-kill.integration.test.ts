@@ -12,7 +12,7 @@
  * spawned). The child side is the real killHosted and the real
  * loadArmableGrant that syncGrant arms from.
  *
- * MERRYMEN_HOME is per process (node --test forks per file), so switching it
+ * AGENTCAP_HOME is per process (node --test forks per file), so switching it
  * to a child's home and back never leaks into another test file.
  */
 import assert from "node:assert/strict";
@@ -25,18 +25,18 @@ import type { CommandDeps, PendingAction } from "./telegram/executor";
 
 // Resolved: the removed-agent cleanup refuses a home under a symlinked ancestor
 // (macOS's /var), and these tests watch it wipe or keep one, as on Linux.
-const FLEET = mkdtempSync(path.join(realpathSync(os.tmpdir()), "merrymen-hosted-kill-"));
-process.env.MERRYMEN_HOME = FLEET;
-process.env.MERRYMEN_HOSTED = "1";
+const FLEET = mkdtempSync(path.join(realpathSync(os.tmpdir()), "agentcap-hosted-kill-"));
+process.env.AGENTCAP_HOME = FLEET;
+process.env.AGENTCAP_HOSTED = "1";
 // The file store and the no-op lease: no Postgres in this test.
 delete process.env.DATABASE_URL;
-process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 5).toString("base64");
+process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 5).toString("base64");
 
 const { reconcile, childHome, adoptChildForTest, honourPendingKills, setKillConfirmForTest, setSolanaKillForTest } = await import("./orchestrator");
 const { getGrantStore } = await import("./grant-store");
 const { KILL_CLOCK_SLACK_SEC, KILL_REQUEST_PREFIX, killHosted, killRequested, honourKillRequest, writeKillRequest } = await import("./kill-request");
 const { loadArmableGrant, loadGrantFile } = await import("./grant");
-const { homePaths, merrymenHome } = await import("./home");
+const { homePaths, agentcapHome } = await import("./home");
 const { executeCommand } = await import("./telegram/executor");
 
 after(() => {
@@ -86,18 +86,18 @@ function fakeProc() {
   return { signals, kill: (s?: NodeJS.Signals | number) => (signals.push(String(s)), true) };
 }
 
-/** Run `fn` as the child: MERRYMEN_HOME is the child's own home, as childEnv sets it. */
+/** Run `fn` as the child: AGENTCAP_HOME is the child's own home, as childEnv sets it. */
 function asChild<T>(fn: () => T): T {
-  process.env.MERRYMEN_HOME = home();
+  process.env.AGENTCAP_HOME = home();
   try {
     return fn();
   } finally {
-    process.env.MERRYMEN_HOME = FLEET;
+    process.env.AGENTCAP_HOME = FLEET;
   }
 }
 
 /** The child's hosted kill, called exactly as index.ts calls it. */
-const childKill = (at = nowSec()) => asChild(() => killHosted(merrymenHome(), homePaths.grant(), loadGrantFile()!, at));
+const childKill = (at = nowSec()) => asChild(() => killHosted(agentcapHome(), homePaths.grant(), loadGrantFile()!, at));
 
 /** What spawn + an earlier reconcile leave behind: a stored grant and the child's copy of it. */
 async function armedTenant(grant: StoredGrant) {
@@ -328,14 +328,14 @@ describe("the child does not re-arm", () => {
     writeFileSync(unlistable, "not a directory");
     const copy = path.join(FLEET, "grant-copy.json");
     writeFileSync(copy, JSON.stringify(await store.get(TENANT), null, 2));
-    process.env.MERRYMEN_GRANT_FILE = copy;
-    process.env.MERRYMEN_HOME = unlistable;
+    process.env.AGENTCAP_GRANT_FILE = copy;
+    process.env.AGENTCAP_HOME = unlistable;
     try {
       assert.equal(killRequested(unlistable), true, "unknown counts as pending");
       assert.equal(loadArmableGrant(), null, "so nothing arms");
     } finally {
-      process.env.MERRYMEN_HOME = FLEET;
-      delete process.env.MERRYMEN_GRANT_FILE;
+      process.env.AGENTCAP_HOME = FLEET;
+      delete process.env.AGENTCAP_GRANT_FILE;
     }
     const k = await honourKillRequest(store, TENANT, unlistable, nowSec());
     assert.equal(k.outcome, "failed", "an unreadable home is not evidence of a kill");
@@ -362,7 +362,7 @@ describe("the child does not re-arm", () => {
     assert.equal(body.match(/killState\(/g)?.length, 1, "mayArm scans the home exactly once");
     const g = readFileSync(new URL("./grant.ts", import.meta.url), "utf8");
     const arm = g.slice(g.indexOf("export function loadArmableGrant("), g.indexOf("\n}", g.indexOf("export function loadArmableGrant(")));
-    assert.match(arm, /mayArm\(merrymenHome\(\), grant\)/);
+    assert.match(arm, /mayArm\(agentcapHome\(\), grant\)/);
     assert.doesNotMatch(arm, /killRequested\(|killState\(/, "and loadArmableGrant takes no second look of its own");
   });
 
@@ -379,7 +379,7 @@ describe("the child does not re-arm", () => {
     assert.match(kill, /const result = robinhoodKill\(\);[\s\S]*function robinhoodKill\(\): KillResult \{/);
     // Through hostedKillFromChat, which the hold process calls as well, and
     // which is killHosted once there is a grant to kill.
-    assert.match(kill, /if \(isHostedMode\(\)\) \{[\s\S]*hostedKillFromChat\(merrymenHome\(\), grantFilePath\(\)/);
+    assert.match(kill, /if \(isHostedMode\(\)\) \{[\s\S]*hostedKillFromChat\(agentcapHome\(\), grantFilePath\(\)/);
     const kr = readFileSync(new URL("./kill-request.ts", import.meta.url), "utf8");
     const fromChat = kr.slice(kr.indexOf("export function hostedKillFromChat("), kr.indexOf("\n}", kr.indexOf("export function hostedKillFromChat(")));
     assert.match(fromChat, /return killHosted\(home, grantFile, grant, nowSec\);/);
@@ -518,14 +518,14 @@ describe("the Telegram reply stays truthful", () => {
     const d = killDeps(() => childKill());
 
     const asked = await executeCommand({ kind: "kill" }, d);
-    assert.doesNotMatch(asked, /merrymen recover|~\/\.merrymen\/grants/, "no owner key is archived hosted, so none is promised");
+    assert.doesNotMatch(asked, /agentcap recover|~\/\.agentcap\/grants/, "no owner key is archived hosted, so none is promised");
     const done = await executeCommand({ kind: "confirm" }, d);
 
     assert.match(done, /KILL SWITCH/);
     // The reply claims only what the child did; the grant is still stored now.
     assert.ok(await store.get(TENANT), "the stored grant is not gone yet when the reply is sent");
     assert.match(done, /deleting your stored grant now; you'll get a ✅/);
-    assert.doesNotMatch(done, /archived|merrymen recover|revoked/, "hosted archives nothing, and claims nothing it has not done");
+    assert.doesNotMatch(done, /archived|agentcap recover|revoked/, "hosted archives nothing, and claims nothing it has not done");
     assert.deepEqual(confirmed, [], "no ✅ before the server has deleted it");
 
     await honourPendingKills();

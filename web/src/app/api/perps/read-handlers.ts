@@ -1,6 +1,6 @@
 /** Paper desk reads. No venue account calls, signing, or execution paths. */
 import { NextResponse } from "next/server";
-import { isHostedMode } from "@merrymen/core";
+import { isHostedMode } from "@agentcap/core";
 import { tenantOf } from "@/lib/auth";
 import { perpsOffered } from "@/lib/perps-enabled";
 import { NO_STORE_HEADERS, perRouteLimiter } from "@/lib/route-guard";

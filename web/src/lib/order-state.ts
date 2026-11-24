@@ -22,7 +22,7 @@
  * second order was admitted beside one GET still called queued.
  */
 // Browser-safe: chat-commands.ts, which the card bundles, imports it too.
-import { MERRYMEN_TOKEN } from "@merrymen/core";
+import { AGENTCAP_TOKEN } from "@agentcap/core";
 // Browser-safe too (it imports one type), and by path: the worker checks an
 // exit with this same parser before it builds one, so the two gates cannot
 // come to disagree about what an exit is.
@@ -175,14 +175,14 @@ export function readOrder(body: OrderBody): { order: OrderAsked } | { error: str
   // same order rather than two — the id is the idempotency key.
   const order: OrderAsked = { side, symbol, usdgAmount: Math.round(usdgAmount * 100) / 100 };
   // THE ENERGY MARKER, exactly or not at all (see OrderAsked.purpose). A
-  // marked order is the get-energy card, which fixes a buy of $MERRYMEN — so a
+  // marked order is the get-energy card, which fixes a buy of $AGENTCAP — so a
   // marked order that says anything else did not come from it, and is refused
   // here rather than handed to a route that buys the reserve whatever the
   // symbol said. The worker refuses the same mismatch again.
   if (body.purpose === "energy") {
-    if (side !== "buy" || symbol !== MERRYMEN_TOKEN.symbol) {
+    if (side !== "buy" || symbol !== AGENTCAP_TOKEN.symbol) {
       // "$" + the ticker — a token's name, not a currency amount.
-      return { error: `an energy order is a buy of ${"$" + MERRYMEN_TOKEN.symbol} and nothing else` };
+      return { error: `an energy order is a buy of ${"$" + AGENTCAP_TOKEN.symbol} and nothing else` };
     }
     order.purpose = "energy";
   }
@@ -492,7 +492,7 @@ export interface OpenFile {
 
 /**
  * Self-hosted placement: the web process and the worker share one
- * MERRYMEN_HOME, so there is no table and no ferry. The files are passed in —
+ * AGENTCAP_HOME, so there is no table and no ferry. The files are passed in —
  * command-files.ts is not something the browser bundle may load.
  *
  * THE SAME SLOT RULE AS HOSTED. A queued file past its own deadline and grace

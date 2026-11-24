@@ -12,9 +12,9 @@ import { LookupClient } from "./LookupClient";
  */
 
 export const metadata: Metadata = {
-  title: "Account lookup — merrymen",
+  title: "Account lookup — agentcap",
   description:
-    "Paste an address to see which merrymen account it is and what it holds. Read-only: no sign-in, no key, nothing that can move funds.",
+    "Paste an address to see which agentcap account it is and what it holds. Read-only: no sign-in, no key, nothing that can move funds.",
   // Not indexable. It answers questions about specific addresses and has no
   // business being a search result for any of them.
   robots: { index: false, follow: false },

@@ -16,11 +16,11 @@
  *
  * WHAT IS DELIBERATELY ABSENT, and provable by grep:
  *   - `@privy-io/react-auth/smart-wallets`, `SmartWalletsProvider`,
- *     `useSmartWallets` — merrymen already has Kernel v3.3, ERC-4337 and the
+ *     `useSmartWallets` — agentcap already has Kernel v3.3, ERC-4337 and the
  *     permission wall. A second smart-account implementation beside them is the
  *     thing this integration was scoped to avoid.
  *   - `useSigners`, `addSigners`, `useSessionSigners`, `delegateWallet` — server
- *     side signing would put a key merrymen does not hold in a place merrymen
+ *     side signing would put a key agentcap does not hold in a place agentcap
  *     cannot audit.
  * `privy-boundary.test.ts` asserts both, plus that `permissionless` is not even
  * installed.
@@ -28,14 +28,14 @@
 
 import { PrivyProvider } from "@privy-io/react-auth";
 import { defaultSolanaRpcsPlugin } from "@privy-io/react-auth/solana";
-import { robinhoodChain } from "@merrymen/core";
+import { robinhoodChain } from "@agentcap/core";
 import type { ReactNode } from "react";
 import { PRIVY_APP_ID, privyEnabled } from "@/lib/privy-client";
 import { LocaleProvider } from "@/lib/i18n";
 import type { LocaleTag } from "@/lib/locale";
 import { OwnerClock } from "./OwnerClock";
 /**
- * SOLANA IS THE SERVER'S CALL (solanaEnabled, MERRYMEN_SOLANA=1), passed down
+ * SOLANA IS THE SERVER'S CALL (solanaEnabled, AGENTCAP_SOLANA=1), passed down
  * by `(app)/layout.tsx` as a plain boolean. Off, Privy is configured exactly as
  * before Solana existed: Ethereum wallets only and no Solana RPC. Every other
  * mount (/connect, /auth/android) leaves it off.
@@ -45,7 +45,7 @@ import { OwnerClock } from "./OwnerClock";
  * renders, and with none configured react-auth throws "No RPC configuration
  * found for chain solana:mainnet" before the owner can approve. The fix is
  * Privy's own `defaultSolanaRpcsPlugin()` (react-auth 3.20+): Privy-hosted
- * endpoints keyed only by the public app id. Merrymen's server RPC URL, which
+ * endpoints keyed only by the public app id. AgentCap's server RPC URL, which
  * carries a provider key, never reaches the browser, and there is no proxy for
  * anyone to abuse. The CSP already allows https:/wss: connections.
  */
@@ -73,7 +73,7 @@ export function Providers({ locale, solana = false, children }: { locale: Locale
         //
         // "Continue with a wallet" is removed deliberately: an external wallet
         // can authenticate somebody, but it cannot be the Kernel OWNER — that
-        // has to be the embedded wallet, whose key merrymen never sees. Offering
+        // has to be the embedded wallet, whose key agentcap never sees. Offering
         // it as a third door produced exactly one outcome in testing, which was
         // a session whose wallet was not its owner and a mismatch error nobody
         // could act on.
@@ -88,7 +88,7 @@ export function Providers({ locale, solana = false, children }: { locale: Locale
         // however somebody authenticated.
         embeddedWallets: { ethereum: { createOnLogin: "all-users" } },
         // Chain 4663 is not one of Privy's built-ins, so it is supplied
-        // explicitly — from @merrymen/core, never redefined here. A second
+        // explicitly — from @agentcap/core, never redefined here. A second
         // definition is how a testnet id ends up in a mainnet signature.
         defaultChain: robinhoodChain,
         supportedChains: [robinhoodChain],
@@ -103,7 +103,7 @@ export function Providers({ locale, solana = false, children }: { locale: Locale
           // old value was /icon.png — which is not a file in web/public at all —
           // fetched through a middleware that answered with the password page.
           // Three separate reasons for one broken image.
-          logo: "https://app.merrymen.dev/icon-192.png",
+          logo: "https://app.agentcap.xyz/icon-192.png",
         },
         ...(solana ? { plugins: [defaultSolanaRpcsPlugin()] } : {}),
       }}

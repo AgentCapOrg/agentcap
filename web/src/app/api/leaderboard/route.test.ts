@@ -95,7 +95,7 @@ test("directory requests never run financial reads and never cache an unread dir
 test("any public-book row disables storage even when its current dollars are zero or unavailable", async () => {
   for (const amount of [0, null]) {
     const GET = handler(async () => board([row(false), row(true, amount, amount)]));
-    const response = await GET(new Request("https://app.merrymen.dev/api/leaderboard"));
+    const response = await GET(new Request("https://app.agentcap.xyz/api/leaderboard"));
     assert.equal(response.headers.get("cache-control"), "no-store");
     const body = await response.json();
     assert.equal(body.agents[1].performance.equityUsdg, amount);

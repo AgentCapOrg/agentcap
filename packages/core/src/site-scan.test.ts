@@ -66,7 +66,7 @@ describe("what a scanned site points at", () => {
   });
 
   it("reads socials and docs from what a visitor sees, never from a bundle's share buttons", () => {
-    const shown = findInSources([{ where: "link", text: "https://x.com/alanaidale\nhttps://twitter.com/intent/tweet\nhttps://t.me/merrymen\nhttps://discord.gg/abc\nhttps://acme.gitbook.io/acme" }]);
+    const shown = findInSources([{ where: "link", text: "https://x.com/alanaidale\nhttps://twitter.com/intent/tweet\nhttps://t.me/agentcap\nhttps://discord.gg/abc\nhttps://acme.gitbook.io/acme" }]);
     assert.deepEqual(shown.x, ["alanaidale"]);
     assert.equal(shown.telegram, true);
     assert.equal(shown.discord, true);

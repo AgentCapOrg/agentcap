@@ -3,7 +3,7 @@ import Module, { createRequire } from "node:module";
 import { afterEach, before, beforeEach, describe, it, mock } from "node:test";
 import { fileURLToPath } from "node:url";
 import React, { act } from "react";
-import { bindingMessage, buildCallPermissions, firstEnableEnvelope, wallShape, wallSignable, type GrantCaps, type StoredGrant } from "@merrymen/core";
+import { bindingMessage, buildCallPermissions, firstEnableEnvelope, wallShape, wallSignable, type GrantCaps, type StoredGrant } from "@agentcap/core";
 import type { MintOptions, SavedWallet } from "@/lib/session";
 import { JSDOM } from "jsdom";
 import { privateKeyToAccount } from "viem/accounts";
@@ -136,7 +136,7 @@ beforeEach(() => {
   preflight = async () => {};
   renew = async () => { throw new Error("Unexpected signing request"); };
   Object.defineProperty(ui.dom.window.HTMLElement.prototype, "scrollIntoView", { configurable: true, value() {} });
-  localStorage.setItem("merrymen.grant.backedup.v1", "1");
+  localStorage.setItem("agentcap.grant.backedup.v1", "1");
   globalThis.fetch = async (input) => {
     const path = String(input);
     if (path === "/api/grants") return json({ exists: true, grant: activeGrant, gasSponsored: true });
@@ -248,15 +248,15 @@ describe("the funded wallet's re-sign control", () => {
       storedGrantAvailable = false;
       activeGrant = { ...grant, demoOwnerPrivateKey: undefined, binding } as StoredGrant;
       const recovery = JSON.stringify({ ...grant, serialized: "private serialized permission", demoSessionPrivateKey: `0x${"6".repeat(64)}` });
-      localStorage.setItem("merrymen.grant.v1", recovery);
-      localStorage.removeItem("merrymen.grant.backedup.v1");
+      localStorage.setItem("agentcap.grant.v1", recovery);
+      localStorage.removeItem("agentcap.grant.backedup.v1");
       await ui.render(React.createElement(Wallet));
       assert.ok(ui.container.querySelector("#resign"), "public grant display does not require a local key or binding version");
       assert.match(ui.container.textContent!, /breaker 5%/);
       assert.match(ui.container.textContent!, /max 50 USDG\/trade/);
       assert.match(ui.container.textContent!, /500 USDG\/day/);
       assert.equal(ui.container.querySelector("input.restore-input"), null, "a second browser is not sent to the lost-wallet form");
-      assert.equal(localStorage.getItem("merrymen.grant.v1"), recovery, "the server's public grant cannot erase owner/session recovery material");
+      assert.equal(localStorage.getItem("agentcap.grant.v1"), recovery, "the server's public grant cannot erase owner/session recovery material");
       assert.equal(mintCalls, 0);
       assert.equal(revokeCalls, 0);
     });
@@ -548,7 +548,7 @@ describe("the funded wallet's re-sign control", () => {
       trencherFactoryAddress: trencherFactory,
       trencherVaultAddress: fixtureAddress(700),
     };
-    localStorage.setItem("merrymen.grant.v1", JSON.stringify({ ...activeGrant, serialized: "existing recoverable permission" }));
+    localStorage.setItem("agentcap.grant.v1", JSON.stringify({ ...activeGrant, serialized: "existing recoverable permission" }));
     const fetch = globalThis.fetch;
     globalThis.fetch = (input, init) => String(input) === "/api/settings"
       ? Promise.resolve(json({ values: { customTokens: tokens, basketSymbols: [], v4AdapterAddress: fixtureAddress(800), ponsClassVaultFactory: fixtureAddress(500) } }))
@@ -653,7 +653,7 @@ describe("the funded wallet's re-sign control", () => {
   for (const kind of ["legacy", "Privy"] as const) for (const [failure, response] of failedSettings) {
     it(`${kind} renewal keeps its grant on fresh settings ${failure} instead of using the mount-time adapter`, async () => {
       useRenewalOwner(kind);
-      localStorage.setItem("merrymen.grant.v1", JSON.stringify({ ...activeGrant, serialized: "old signed permission" }));
+      localStorage.setItem("agentcap.grant.v1", JSON.stringify({ ...activeGrant, serialized: "old signed permission" }));
       const fetch = globalThis.fetch;
       let settingsReads = 0;
       globalThis.fetch = (input, init) => {

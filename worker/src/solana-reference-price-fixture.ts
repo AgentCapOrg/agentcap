@@ -78,7 +78,7 @@ export const PYTH_SOL_USD_MAINNET_SNAPSHOT: PythMainnetSnapshot = {
  * The same feed's shard-0 account under Pyth's upgraded (2026-08-26) programs,
  * read straight after the snapshot above: owned by rec2HH…, at the PDA of
  * pyt2F4…. Accepted only when the "upgraded" generation is selected
- * (MERRYMEN_SOLANA_PYTH_GENERATION=upgraded); refused under "current".
+ * (AGENTCAP_SOLANA_PYTH_GENERATION=upgraded); refused under "current".
  */
 export const PYTH_SOL_USD_UPGRADED_MAINNET_SNAPSHOT: PythMainnetSnapshot = {
   rpc: "https://api.mainnet-beta.solana.com",

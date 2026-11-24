@@ -26,15 +26,15 @@ describe("the energy daily-cap announcement", () => {
   });
 
   it("says it is from the team, not the agent", () => {
-    assert.match(body, /^📣 <b>A note from the merrymen team<\/b> — not from your agent\./);
+    assert.match(body, /^📣 <b>A note from the agentcap team<\/b> — not from your agent\./);
   });
 
   it("STATES THE RULE, WHAT NEVER CHANGES, AND BOTH WAYS TO FULL STRENGTH", () => {
-    assert.match(body, /100,000 \$MERRYMEN/);
+    assert.match(body, /100,000 \$AGENTCAP/);
     assert.match(body, /00:00 UTC/);
     assert.match(body, /stop-losses, take-profits and the orders you place yourself always run/);
-    assert.match(body, /Send \$MERRYMEN on Robinhood Chain to your agent's account/);
-    assert.match(body, /Merrymen app chat<\/b> \(not here\)/);
+    assert.match(body, /Send \$AGENTCAP on Robinhood Chain to your agent's account/);
+    assert.match(body, /AgentCap app chat<\/b> \(not here\)/);
     assert.match(body, /can never sell or send it/);
   });
 

@@ -431,18 +431,18 @@ export async function repairAccount(
  * connect to. The variable names mirror the flags one-for-one so the two
  * descriptions of this tool never drift apart:
  *
- *   MERRYMEN_REPAIR=dry-run|verify-only|commit   --dry-run / --verify-only / --commit
- *   MERRYMEN_REPAIR_ACCOUNT=0x…                  --account <smartAccount>
- *   MERRYMEN_REPAIR_RUN_ID=…                     --run-id
- *   MERRYMEN_REPAIR_RESUME=1                     --resume
+ *   AGENTCAP_REPAIR=dry-run|verify-only|commit   --dry-run / --verify-only / --commit
+ *   AGENTCAP_REPAIR_ACCOUNT=0x…                  --account <smartAccount>
+ *   AGENTCAP_REPAIR_RUN_ID=…                     --run-id
+ *   AGENTCAP_REPAIR_RESUME=1                     --resume
  */
 export function parseRepairOptions(env: Record<string, string | undefined>, now = Date.now()): RepairOptions | null {
-  const raw = (env.MERRYMEN_REPAIR ?? "").trim().toLowerCase();
+  const raw = (env.AGENTCAP_REPAIR ?? "").trim().toLowerCase();
   if (!raw) return null;
   const mode: RepairMode = raw === "commit" ? "commit" : raw === "verify-only" ? "verify-only" : "dry-run";
   // Comma-separated, whitespace-tolerant, lower-cased once here so no
   // comparison downstream has to remember to do it.
-  const accounts = (env.MERRYMEN_REPAIR_ACCOUNT ?? "")
+  const accounts = (env.AGENTCAP_REPAIR_ACCOUNT ?? "")
     .split(",")
     .map((a) => a.trim().toLowerCase())
     .filter((a) => a.startsWith("0x"));
@@ -451,8 +451,8 @@ export function parseRepairOptions(env: Record<string, string | undefined>, now 
     accounts,
     // A generated id is timestamped rather than random so the run that moved a
     // row can be placed in time from the quarantine table alone.
-    runId: (env.MERRYMEN_REPAIR_RUN_ID ?? "").trim() || `run-${new Date(now).toISOString().replace(/[:.]/g, "-")}`,
-    resume: (env.MERRYMEN_REPAIR_RESUME ?? "") === "1",
+    runId: (env.AGENTCAP_REPAIR_RUN_ID ?? "").trim() || `run-${new Date(now).toISOString().replace(/[:.]/g, "-")}`,
+    resume: (env.AGENTCAP_REPAIR_RESUME ?? "") === "1",
   };
 }
 
@@ -554,7 +554,7 @@ export async function runRepair(
         contributionsBeforeUsdg: 0,
         contributionsAfterUsdg: 0,
         contributionsKnownAfter: false,
-        why: "commit requires MERRYMEN_REPAIR_ACCOUNT to name the accounts to repair",
+        why: "commit requires AGENTCAP_REPAIR_ACCOUNT to name the accounts to repair",
       },
     ];
   }

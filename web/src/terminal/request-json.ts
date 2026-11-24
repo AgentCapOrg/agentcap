@@ -27,7 +27,7 @@ export class RequestError extends Error {
 }
 
 /** Said for a timeout, a dropped connection, or a DNS failure alike — to the reader they are one thing. */
-export const UNREACHABLE = "Can't reach merrymen right now.";
+export const UNREACHABLE = "Can't reach agentcap right now.";
 
 /**
  * The server's own explanation, in the three shapes the routes use.
@@ -80,14 +80,14 @@ export async function requestJson<T>(url: string, init?: RequestInit): Promise<T
       // The server's sentence for a 4xx or an explicitly owner-facing 5xx.
       // Unmarked 5xx details belong in the console, not an owner's sign-in UI.
       const owned = explained(data, response.status);
-      if (response.status >= 500 && owned === null && data !== undefined) console.warn(`[merrymen] ${url} answered ${response.status}:`, data);
+      if (response.status >= 500 && owned === null && data !== undefined) console.warn(`[agentcap] ${url} answered ${response.status}:`, data);
       throw new RequestError(
-        owned ?? `merrymen answered with an error (${response.status}). Try again in a moment.`,
+        owned ?? `agentcap answered with an error (${response.status}). Try again in a moment.`,
         response.status,
       );
     }
     if (data === undefined) {
-      throw new RequestError("merrymen sent back something that isn't data. Try again in a moment.", response.status);
+      throw new RequestError("agentcap sent back something that isn't data. Try again in a moment.", response.status);
     }
     return data as T;
   } finally {

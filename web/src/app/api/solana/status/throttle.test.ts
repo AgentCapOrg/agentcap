@@ -21,9 +21,9 @@ test("one tenant looping its Solana status is paced; others are not", () => {
 const tenant = `0x${"c3".repeat(20)}`, did = "did:privy:looper";
 let statusCalls = 0;
 let GET: (req: Request) => Promise<Response>;
-const flag = process.env.MERRYMEN_SOLANA;
+const flag = process.env.AGENTCAP_SOLANA;
 before(() => {
-  process.env.MERRYMEN_SOLANA = "1";
+  process.env.AGENTCAP_SOLANA = "1";
   const directory = fileURLToPath(new URL("./", import.meta.url));
   const loader = Module as unknown as { _load: (id: string, parent: { filename?: string }, isMain: boolean) => unknown };
   const original = loader._load;
@@ -39,7 +39,7 @@ before(() => {
   try { GET = (createRequire(import.meta.url)(`${directory}route.ts`) as { GET: typeof GET }).GET; }
   finally { interception.mock.restore(); }
 });
-after(() => { if (flag === undefined) delete process.env.MERRYMEN_SOLANA; else process.env.MERRYMEN_SOLANA = flag; });
+after(() => { if (flag === undefined) delete process.env.AGENTCAP_SOLANA; else process.env.AGENTCAP_SOLANA = flag; });
 
 test("GET /api/solana/status in a tight loop reaches the runtime only for the burst (audit web-auth F1)", async () => {
   const codes: number[] = [];

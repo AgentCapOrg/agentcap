@@ -1,8 +1,8 @@
 /** Server boundaries for pilot enrollment and its separate administrator role. */
 import { NextResponse } from "next/server";
-import { isHostedMode } from "@merrymen/core";
+import { isHostedMode } from "@agentcap/core";
 import { getPerpsPilotStore } from "../../../worker/src/perps/pilot-store";
-import { disablePaperPerpsForKill, getSettingsStore } from "@merrymen/settings-store";
+import { disablePaperPerpsForKill, getSettingsStore } from "@agentcap/settings-store";
 import { requestOrigin, tenantOf } from "./auth";
 import { perpsCreationAllowed } from "./perps-enabled";
 import { NO_STORE_HEADERS } from "./route-guard";
@@ -16,7 +16,7 @@ export const pilotWalletRefusal = () => pilotReply({ error: "Name the Perps wall
 
 /** Dedicated role; membership, invite possession and body fields never confer it. */
 export function isPerpsPilotAdmin(owner: string): boolean {
-  const raw = process.env.MERRYMEN_PERPS_PILOT_ADMINS;
+  const raw = process.env.AGENTCAP_PERPS_PILOT_ADMINS;
   if (!raw || !pilotAddress(owner)) return false;
   const entries = raw.split(",").map(value => value.trim().toLowerCase());
   return entries.length <= 20 && entries.every(pilotAddress) && entries.some(entry => entry === owner.toLowerCase());
@@ -34,7 +34,7 @@ export function pilotActor(req: Request, admin = false): `0x${string}` | NextRes
 export function pilotMutationRefusal(req: Request): NextResponse | null {
   const origin = req.headers.get("origin");
   try {
-    if (!origin || origin !== new URL(requestOrigin(req)).origin) return pilotReply({ error: "Open this page on the Merrymen app and try again.", code: "origin-refused" }, 403);
+    if (!origin || origin !== new URL(requestOrigin(req)).origin) return pilotReply({ error: "Open this page on the AgentCap app and try again.", code: "origin-refused" }, 403);
   } catch { return pilotReply({ error: "This request's origin could not be verified.", code: "origin-refused" }, 403); }
   return null;
 }

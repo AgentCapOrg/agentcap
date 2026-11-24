@@ -10,17 +10,17 @@ import { mintSession } from "@/lib/auth";
 import { resetTourStoreForTest } from "@/lib/tour-store";
 
 const A = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", B = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-const original = { home: process.env.MERRYMEN_HOME, database: process.env.DATABASE_URL, secret: process.env.MERRYMEN_SESSION_SECRET };
+const original = { home: process.env.AGENTCAP_HOME, database: process.env.DATABASE_URL, secret: process.env.AGENTCAP_SESSION_SECRET };
 let dir: string;
 before(async () => {
-  dir = await mkdtemp(path.join(tmpdir(), "merrymen-tour-route-"));
-  process.env.MERRYMEN_HOME = dir;
-  process.env.MERRYMEN_SESSION_SECRET = randomBytes(32).toString("hex");
+  dir = await mkdtemp(path.join(tmpdir(), "agentcap-tour-route-"));
+  process.env.AGENTCAP_HOME = dir;
+  process.env.AGENTCAP_SESSION_SECRET = randomBytes(32).toString("hex");
   delete process.env.DATABASE_URL;
   resetTourStoreForTest();
 });
 after(async () => {
-  for (const [key, value] of Object.entries({ MERRYMEN_HOME: original.home, DATABASE_URL: original.database, MERRYMEN_SESSION_SECRET: original.secret })) {
+  for (const [key, value] of Object.entries({ AGENTCAP_HOME: original.home, DATABASE_URL: original.database, AGENTCAP_SESSION_SECRET: original.secret })) {
     if (value === undefined) delete process.env[key]; else process.env[key] = value;
   }
   resetTourStoreForTest();
@@ -53,7 +53,7 @@ it("rejects stale identity/version writes rather than dismissing a different acc
 it("returns a retryable failure when a dismissal cannot be persisted", async () => {
   const blocked = path.join(dir, "blocked"); await mkdir(blocked);
   await writeFile(path.join(blocked, "tour"), "not a directory");
-  process.env.MERRYMEN_HOME = blocked; resetTourStoreForTest();
+  process.env.AGENTCAP_HOME = blocked; resetTourStoreForTest();
   const response = await POST(request(B, "POST", { tenant: B, version: TOUR_VERSION }));
   assert.equal(response.status, 503);
   assert.equal((await response.json()).done, undefined);

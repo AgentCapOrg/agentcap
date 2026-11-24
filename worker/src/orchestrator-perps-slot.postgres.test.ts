@@ -1,10 +1,10 @@
 /**
  * WHAT THE ORCHESTRATOR'S PERPS SLOT ASKS OF THE SHARED POSTGRES (slice 4).
  *
- * Opt-in, disposable LOCAL PostgreSQL only (MERRYMEN_TEST_PG_URL). Never reads
+ * Opt-in, disposable LOCAL PostgreSQL only (AGENTCAP_TEST_PG_URL). Never reads
  * DATABASE_URL from the environment it was given. Pins three facts reconcile
  * rests on:
- *  - reading the Perps roster every pass, whatever MERRYMEN_PERPS says, is a
+ *  - reading the Perps roster every pass, whatever AGENTCAP_PERPS says, is a
  *    catalog look while no Perps grant exists, and makes no table;
  *  - once one does, the roster names its owner, its wallet and when it was
  *    stored — the cutoff a kill latches the other wallet's worker by;
@@ -18,7 +18,7 @@ import { test } from "node:test";
 import { privateKeyToAccount } from "viem/accounts";
 import type { StoredGrant } from "../../packages/core/src/index";
 
-const url = process.env.MERRYMEN_TEST_PG_URL ?? process.env.MERRYMEN_TEST_POSTGRES_URL;
+const url = process.env.AGENTCAP_TEST_PG_URL ?? process.env.AGENTCAP_TEST_POSTGRES_URL;
 interface Client {
   connect(): Promise<void>;
   query(sql: string, params?: unknown[]): Promise<{ rows: Record<string, unknown>[] }>;
@@ -38,7 +38,7 @@ const perpsGrant = (): StoredGrant => ({
 test("Postgres: the orchestrator's Perps roster and leases", { skip: !url, timeout: 60_000 }, async (t) => {
   const target = new URL(url!);
   assert.ok(["localhost", "127.0.0.1", "[::1]"].includes(target.hostname), "only a disposable local PostgreSQL is allowed");
-  process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 9).toString("base64");
+  process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 9).toString("base64");
   const pg = createRequire(import.meta.url)("pg") as { Client: new (config: { connectionString: string }) => Client };
   const schema = `mm_perps_slot_${randomBytes(8).toString("hex")}`;
   const admin = new pg.Client({ connectionString: target.toString() });

@@ -18,19 +18,19 @@ import { DatabaseSync } from "node:sqlite";
  */
 const ACCOUNT = "0xa6e17a1b2c3d4e5f60718293a4b5c6d7e8f90123";
 const CASED = "0xA6E17A1B2C3D4E5F60718293A4B5C6D7E8F90123";
-const saved = { home: process.env.MERRYMEN_HOME, hosted: process.env.MERRYMEN_HOSTED, database: process.env.DATABASE_URL };
+const saved = { home: process.env.AGENTCAP_HOME, hosted: process.env.AGENTCAP_HOSTED, database: process.env.DATABASE_URL };
 let dir: string;
 let GET: (req: Request) => Promise<Response>;
 
 before(async () => {
   dir = await mkdtemp(path.join(tmpdir(), "mm-scoreboard-flows-"));
-  process.env.MERRYMEN_HOME = dir;
-  delete process.env.MERRYMEN_HOSTED;
+  process.env.AGENTCAP_HOME = dir;
+  delete process.env.AGENTCAP_HOSTED;
   delete process.env.DATABASE_URL;
   ({ GET } = await import("./route"));
   const { wrapSqlite } = await import("../../../../../worker/src/db");
   const { applyLedgerSchema } = await import("../../../../../worker/src/store");
-  const raw = new DatabaseSync(path.join(dir, "merrymen.db"));
+  const raw = new DatabaseSync(path.join(dir, "agentcap.db"));
   try {
     const db = wrapSqlite(raw);
     await applyLedgerSchema(db);
@@ -63,7 +63,7 @@ before(async () => {
 });
 
 after(async () => {
-  for (const [k, v] of [["MERRYMEN_HOME", saved.home], ["MERRYMEN_HOSTED", saved.hosted], ["DATABASE_URL", saved.database]] as const) {
+  for (const [k, v] of [["AGENTCAP_HOME", saved.home], ["AGENTCAP_HOSTED", saved.hosted], ["DATABASE_URL", saved.database]] as const) {
     if (v === undefined) delete process.env[k];
     else process.env[k] = v;
   }
@@ -92,7 +92,7 @@ it("gas is charged once per operation, reverts included — a deliberate correct
 it("a deposit booked under another spelling of the account is subtracted too — a deliberate correction", async () => {
   // Read exactly, `agent_id = ?`, this deposit was in the book's cash and not
   // in what was subtracted from it: 20 USDG of the owner's own published as profit.
-  const raw = new DatabaseSync(path.join(dir, "merrymen.db"));
+  const raw = new DatabaseSync(path.join(dir, "agentcap.db"));
   try {
     raw.prepare(`INSERT INTO flows (agent_id, epoch, direction, amount_usdg, tx_hash, log_index, chain_id, source, at)
       VALUES (?, 2, 'in', 20, '0xcased', 0, 4663, 'chain-log', 1120)`).run(CASED);
@@ -104,7 +104,7 @@ it("a deposit booked under another spelling of the account is subtracted too —
 });
 
 it("a transfer booked as both our intent and its chain log leaves the P&L unpublished, never summed", async () => {
-  const raw = new DatabaseSync(path.join(dir, "merrymen.db"));
+  const raw = new DatabaseSync(path.join(dir, "agentcap.db"));
   try {
     const flow = raw.prepare(`INSERT INTO flows (agent_id, epoch, direction, amount_usdg, tx_hash, log_index, chain_id, source, at)
       VALUES (?, 2, 'out', 10, '0xhome', ?, 4663, ?, ?)`);
@@ -119,7 +119,7 @@ it("a transfer booked as both our intent and its chain log leaves the P&L unpubl
 });
 
 it("records that contradict each other are withheld as unread", async () => {
-  const raw = new DatabaseSync(path.join(dir, "merrymen.db"));
+  const raw = new DatabaseSync(path.join(dir, "agentcap.db"));
   try {
     raw.prepare(`INSERT INTO flows (agent_id, epoch, direction, amount_usdg, source, at) VALUES (?, 2, 'in', 90, 'epoch-carry', 1000)`)
       .run(ACCOUNT);

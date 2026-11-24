@@ -1,4 +1,4 @@
-import { AGENT_NAME_RE, DEFAULT_BASKET_SYMBOLS, RISK_PROFILES, STOCK_TOKENS, normalizeAgentName } from "@merrymen/core";
+import { AGENT_NAME_RE, DEFAULT_BASKET_SYMBOLS, RISK_PROFILES, STOCK_TOKENS, normalizeAgentName } from "@agentcap/core";
 import { requestJson, RequestError, UNREACHABLE } from "./request-json";
 
 const ID = /^prp_[0-9a-f]{32}$/;
@@ -47,7 +47,7 @@ async function readMcpCreateSetup(id:string):Promise<unknown> {
     return await requestJson<unknown>(`/api/mcp/approvals/${encodeURIComponent(id)}`);
   } catch(e) {
     if(e instanceof RequestError){
-      if(e.status===401)throw new Error("Sign in again to continue your Merryman setup.");
+      if(e.status===401)throw new Error("Sign in again to continue your AgentCapAvatar setup.");
       if(e.status===403||e.status===404)throw new Error("This setup is no longer available to your signed-in account or assistant connection. Return to your assistant to reconnect and prepare a fresh setup.");
       if(e.status===410)throw new Error("This approved setup expired. Ask your assistant for a fresh setup.");
     }

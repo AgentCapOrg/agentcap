@@ -50,7 +50,7 @@ import { ensureGroupchatSchema, getMember } from "./groupchat/store";
 import { STRATEGY_FLAVOUR, STRATEGY_SPOKEN, TRAIT_VOICE } from "./groupchat/templates";
 import { MUSINGS, SUBJECTS, TAKES } from "./groupchat/topics";
 import { xAppFromEnv, type FetchLike, type XApp, type XReply } from "./xpost/client";
-import { admitXPost, lettersOf, merrymenMentioned, moneySaid, namedIn, tickerRefusal, unreadableLetter, vocabularyRefusal, type BaseGate, type XGateCtx } from "./xpost/gate";
+import { admitXPost, lettersOf, agentcapMentioned, moneySaid, namedIn, tickerRefusal, unreadableLetter, vocabularyRefusal, type BaseGate, type XGateCtx } from "./xpost/gate";
 import { ACTIVE_CADENCE, VARIED_CADENCE, ANSWER_GAP_MS, ANSWER_STALE_MS, ANSWERS_PER_DAY, RECAP_CALLS_PER_AGENT, RECAP_GAP_MS, RECAP_WINDOW_MS, REPLY_STALE_MS, STANDARD_CADENCE, coinOf, hash32, introState, isWin, planPosts, recapCoverOf, recapCoverText, replyDueAt, sendDecision, type PlanCadence, type PlanClock, type PlanIntent, type PlanSell } from "./xpost/planner";
 import { APP_PAUSE_KEY, APP_PAUSE_MS, CREDITS_PAUSE_MS, PAUSE_KEY, readReplyComments, sendOne, type CardOutcome, type SendOutcome } from "./xpost/sender";
 import { isAnswerOptOut, isReplyOptOut, plainAsk, replyCandidate, smalltalkDraftSafe, tagCandidate, withoutReplyOptOut } from "./xpost/replies";
@@ -135,7 +135,7 @@ const REPLY_POLL_MS = 30 * MIN;
  * (5760); spent, the account waits for tomorrow's. Active accounts are still
  * read first within the pass's MAX_REPLY_POLLS_PER_PASS, and X's 429 backoff
  * and the credits and app pauses hold them like everyone else.
- * MERRYMEN_XPOST_REPLY_POLLS_PER_DAY=0 still turns every poll off.
+ * AGENTCAP_XPOST_REPLY_POLLS_PER_DAY=0 still turns every poll off.
  */
 export const ACTIVE_REPLY_POLL_MS = 15_000;
 export const ACTIVE_REPLY_POLLS_PER_DAY = 6000;
@@ -263,8 +263,8 @@ export function whyText(whys: ReadonlyMap<string, number> | undefined): string {
  * SET-BUT-EMPTY IS UNSET: a cleared variable asks for the default back, and
  * Number("") is 0.
  *
- * ZERO POSTS IS OFF, and said so: MERRYMEN_XPOST_PER_DAY=0 or
- * MERRYMEN_XPOST_FLEET_PER_DAY=0 turns posting off rather than failing a
+ * ZERO POSTS IS OFF, and said so: AGENTCAP_XPOST_PER_DAY=0 or
+ * AGENTCAP_XPOST_FLEET_PER_DAY=0 turns posting off rather than failing a
  * `> 0` check and running at the default.
  *
  * AN UNREADABLE VALUE IS SAID OUT LOUD, ONCE — by name, never by value: a key
@@ -282,7 +282,7 @@ export interface XPostEnv {
   /** Set only after the operator has X's written approval for AI replies. */
   repliesApproved?: boolean;
   /**
-   * MERRYMEN_XPOST_REPLIES_APPROVED=active: replies are approved only for the
+   * AGENTCAP_XPOST_REPLIES_APPROVED=active: replies are approved only for the
    * owners in activeTenants. Everyone else is not polled, drafts nothing, and
    * a reply or answer of theirs still waiting is cancelled at send time.
    */
@@ -290,26 +290,26 @@ export interface XPostEnv {
   /** Owners (tenant addresses, lowercase) on ACTIVE_CADENCE; absent or empty is nobody. */
   activeTenants?: ReadonlySet<string>;
   /**
-   * MERRYMEN_XPOST_RESEARCH=1: an active agent's answers look things up first
+   * AGENTCAP_XPOST_RESEARCH=1: an active agent's answers look things up first
    * (orchestrator-xpost-research.ts). Absent: answers are written from what it
    * already has, and a tag carrying a contract address is not answered.
    */
   research?: boolean;
-  /** MERRYMEN_XPOST_FOMO=1, with research on: answers may ask Fomo, paraphrased and attributed. */
+  /** AGENTCAP_XPOST_FOMO=1, with research on: answers may ask Fomo, paraphrased and attributed. */
   researchFomo?: boolean;
-  /** MERRYMEN_XPOST_RESEARCH_PER_HOUR: index lookups per hour across X accounts. Absent: the research default. */
+  /** AGENTCAP_XPOST_RESEARCH_PER_HOUR: index lookups per hour across X accounts. Absent: the research default. */
   researchPerHour?: number;
   /**
-   * MERRYMEN_XPOST_CHECKS=1, with research on: an active agent answers a larp
+   * AGENTCAP_XPOST_CHECKS=1, with research on: an active agent answers a larp
    * check (xpost/check.ts). Opt-in, like research and Fomo: it is the house
    * account saying, in public, whether a stranger's project looks real.
    */
   checks?: boolean;
-  /** MERRYMEN_XPOST_CHECKS_PER_DAY: larp checks a UTC day across X accounts. Absent: DEFAULT_CHECKS_PER_DAY. */
+  /** AGENTCAP_XPOST_CHECKS_PER_DAY: larp checks a UTC day across X accounts. Absent: DEFAULT_CHECKS_PER_DAY. */
   checksPerDay?: number;
   replyPollsPerDay?: number;
   /**
-   * MERRYMEN_XPOST_TEMPERATURE: the X writer's sampling temperature, 0 to 2
+   * AGENTCAP_XPOST_TEMPERATURE: the X writer's sampling temperature, 0 to 2
    * (xpost/writer.ts tryDraft). Absent: XPOST_TEMPERATURE_DEFAULT, 0.6 —
    * llmText's own, so unset changes nothing.
    */
@@ -323,7 +323,7 @@ export interface XPostEnv {
 }
 
 /**
- * LARP CHECKS A UTC DAY across X accounts (MERRYMEN_XPOST_CHECKS_PER_DAY): a
+ * LARP CHECKS A UTC DAY across X accounts (AGENTCAP_XPOST_CHECKS_PER_DAY): a
  * check holds the one research browser for up to forty seconds and reads
  * GitHub and the index, so it is counted apart from answers.
  */
@@ -331,8 +331,8 @@ export const DEFAULT_CHECKS_PER_DAY = 80;
 
 export function xpostEnv(env: Record<string, string | undefined> = process.env): XPostEnv {
   const none = { perDay: undefined, fleetPerDay: undefined, llmPerDay: undefined, notes: [] };
-  if ((env.MERRYMEN_XPOST ?? "").trim() === "0") {
-    return { ...none, off: "xpost: off — MERRYMEN_XPOST=0, so this orchestrator posts nothing on X (owners can still connect)" };
+  if ((env.AGENTCAP_XPOST ?? "").trim() === "0") {
+    return { ...none, off: "xpost: off — AGENTCAP_XPOST=0, so this orchestrator posts nothing on X (owners can still connect)" };
   }
   const notes: string[] = [];
   const count = (raw: string): number | null => {
@@ -341,75 +341,75 @@ export function xpostEnv(env: Record<string, string | undefined> = process.env):
   };
 
   let perDay: number | undefined;
-  const dayRaw = env.MERRYMEN_XPOST_PER_DAY?.trim();
+  const dayRaw = env.AGENTCAP_XPOST_PER_DAY?.trim();
   if (dayRaw) {
     const n = count(dayRaw);
-    if (n === null) notes.push(`xpost: ignoring MERRYMEN_XPOST_PER_DAY — it is set but is not a count of posts; each owner keeps the default of ${DEFAULT_PER_DAY} a day`);
-    else if (n === 0) return { ...none, off: "xpost: off — MERRYMEN_XPOST_PER_DAY=0 allows no posts" };
+    if (n === null) notes.push(`xpost: ignoring AGENTCAP_XPOST_PER_DAY — it is set but is not a count of posts; each owner keeps the default of ${DEFAULT_PER_DAY} a day`);
+    else if (n === 0) return { ...none, off: "xpost: off — AGENTCAP_XPOST_PER_DAY=0 allows no posts" };
     else perDay = n;
   }
 
   let fleetPerDay: number | undefined;
-  const fleetRaw = env.MERRYMEN_XPOST_FLEET_PER_DAY?.trim();
+  const fleetRaw = env.AGENTCAP_XPOST_FLEET_PER_DAY?.trim();
   if (fleetRaw) {
     const n = count(fleetRaw);
     if (n === null) {
-      return { ...none, off: "xpost: off — MERRYMEN_XPOST_FLEET_PER_DAY is set but is not a count of posts, and every post costs money; nothing is posted until it is" };
+      return { ...none, off: "xpost: off — AGENTCAP_XPOST_FLEET_PER_DAY is set but is not a count of posts, and every post costs money; nothing is posted until it is" };
     }
-    if (n === 0) return { ...none, off: "xpost: off — MERRYMEN_XPOST_FLEET_PER_DAY=0 allows no posts" };
+    if (n === 0) return { ...none, off: "xpost: off — AGENTCAP_XPOST_FLEET_PER_DAY=0 allows no posts" };
     fleetPerDay = n;
   }
 
   let llmPerDay: number | undefined;
-  const llmRaw = env.MERRYMEN_XPOST_LLM_PER_DAY?.trim();
+  const llmRaw = env.AGENTCAP_XPOST_LLM_PER_DAY?.trim();
   if (llmRaw) {
     const n = count(llmRaw);
     if (n === null) {
       llmPerDay = 0;
-      notes.push("xpost: MERRYMEN_XPOST_LLM_PER_DAY is set but is not a count of calls — no model calls until it is; only intros (from templates) and an active owner's recaps (code's own words) are posted");
+      notes.push("xpost: AGENTCAP_XPOST_LLM_PER_DAY is set but is not a count of calls — no model calls until it is; only intros (from templates) and an active owner's recaps (code's own words) are posted");
     } else {
       llmPerDay = n;
     }
   }
   // WHO MAY REPLY: "1" everyone who consents, "active" only the active owners
   // below. Anything else is off, and said by name, never by value.
-  const replies = repliesScopeOf(env.MERRYMEN_XPOST_REPLIES_APPROVED);
+  const replies = repliesScopeOf(env.AGENTCAP_XPOST_REPLIES_APPROVED);
   if (replies.unreadable) {
-    notes.push("xpost: MERRYMEN_XPOST_REPLIES_APPROVED is set but is neither 1 nor active — comment replies and tag answers are off");
+    notes.push("xpost: AGENTCAP_XPOST_REPLIES_APPROVED is set but is neither 1 nor active — comment replies and tag answers are off");
   }
   // ACTIVE OWNERS, by tenant address only: a name or a handle is not an
   // identity. An entry that is not an address is said by position, never by
   // value, and dropped; the rest still apply. The web reads the same variable
   // with the same parser (xpost/scope.ts), for the reply warning.
-  const { tenants: activeTenants, badEntries } = activeTenantsOf(env.MERRYMEN_XPOST_ACTIVE_TENANTS);
-  for (const i of badEntries) notes.push(`xpost: ignoring entry ${i} of MERRYMEN_XPOST_ACTIVE_TENANTS — it is not an owner address`);
-  const replyRaw = env.MERRYMEN_XPOST_REPLY_POLLS_PER_DAY?.trim();
+  const { tenants: activeTenants, badEntries } = activeTenantsOf(env.AGENTCAP_XPOST_ACTIVE_TENANTS);
+  for (const i of badEntries) notes.push(`xpost: ignoring entry ${i} of AGENTCAP_XPOST_ACTIVE_TENANTS — it is not an owner address`);
+  const replyRaw = env.AGENTCAP_XPOST_REPLY_POLLS_PER_DAY?.trim();
   const replyPollsPerDay = replyRaw ? count(replyRaw) : null;
-  if (replyRaw && replyPollsPerDay === null) notes.push("xpost: unreadable MERRYMEN_XPOST_REPLY_POLLS_PER_DAY — comment polling is off");
+  if (replyRaw && replyPollsPerDay === null) notes.push("xpost: unreadable AGENTCAP_XPOST_REPLY_POLLS_PER_DAY — comment polling is off");
   // RESEARCH FOR ANSWERS, OPT-IN, and Fomo inside it opt-in again: each is
   // outward-facing, so only an exact "1" turns it on. Fomo without research
   // has nothing to ride on, and says so rather than seeming on.
-  const research = env.MERRYMEN_XPOST_RESEARCH?.trim() === "1";
-  const fomoAsked = env.MERRYMEN_XPOST_FOMO?.trim() === "1";
-  if (fomoAsked && !research) notes.push("xpost: MERRYMEN_XPOST_FOMO=1 does nothing without MERRYMEN_XPOST_RESEARCH=1 — answers ask Fomo only while research is on");
-  const perHourRaw = env.MERRYMEN_XPOST_RESEARCH_PER_HOUR?.trim();
+  const research = env.AGENTCAP_XPOST_RESEARCH?.trim() === "1";
+  const fomoAsked = env.AGENTCAP_XPOST_FOMO?.trim() === "1";
+  if (fomoAsked && !research) notes.push("xpost: AGENTCAP_XPOST_FOMO=1 does nothing without AGENTCAP_XPOST_RESEARCH=1 — answers ask Fomo only while research is on");
+  const perHourRaw = env.AGENTCAP_XPOST_RESEARCH_PER_HOUR?.trim();
   const researchPerHour = perHourRaw ? count(perHourRaw) : null;
-  if (perHourRaw && researchPerHour === null) notes.push("xpost: ignoring MERRYMEN_XPOST_RESEARCH_PER_HOUR — it is not a count of lookups; the default applies");
+  if (perHourRaw && researchPerHour === null) notes.push("xpost: ignoring AGENTCAP_XPOST_RESEARCH_PER_HOUR — it is not a count of lookups; the default applies");
   // LARP CHECKS, OPT-IN, and only on research: a check is a research lane.
-  const checksAsked = env.MERRYMEN_XPOST_CHECKS?.trim() === "1";
-  if (checksAsked && !research) notes.push("xpost: MERRYMEN_XPOST_CHECKS=1 does nothing without MERRYMEN_XPOST_RESEARCH=1 — a larp check is research");
-  const checksRaw = env.MERRYMEN_XPOST_CHECKS_PER_DAY?.trim();
+  const checksAsked = env.AGENTCAP_XPOST_CHECKS?.trim() === "1";
+  if (checksAsked && !research) notes.push("xpost: AGENTCAP_XPOST_CHECKS=1 does nothing without AGENTCAP_XPOST_RESEARCH=1 — a larp check is research");
+  const checksRaw = env.AGENTCAP_XPOST_CHECKS_PER_DAY?.trim();
   const checksPerDay = checksRaw ? count(checksRaw) : null;
-  if (checksRaw && checksPerDay === null) notes.push("xpost: ignoring MERRYMEN_XPOST_CHECKS_PER_DAY — it is not a count of checks; the default applies");
+  if (checksRaw && checksPerDay === null) notes.push("xpost: ignoring AGENTCAP_XPOST_CHECKS_PER_DAY — it is not a count of checks; the default applies");
   // THE WRITER'S TEMPERATURE: a number from 0 to 2, the range providers take.
   // Anything else is said by name and the default applies — a value a
   // provider refuses would cost every draft, not just change its wording.
-  const tempRaw = env.MERRYMEN_XPOST_TEMPERATURE?.trim();
+  const tempRaw = env.AGENTCAP_XPOST_TEMPERATURE?.trim();
   const tempN = tempRaw ? Number(tempRaw) : NaN;
   const temperature = tempRaw && Number.isFinite(tempN) && tempN >= 0 && tempN <= 2 ? tempN : null;
-  if (tempRaw && temperature === null) notes.push(`xpost: ignoring MERRYMEN_XPOST_TEMPERATURE — it is not a number from 0 to 2; drafts keep the default of ${XPOST_TEMPERATURE_DEFAULT}`);
+  if (tempRaw && temperature === null) notes.push(`xpost: ignoring AGENTCAP_XPOST_TEMPERATURE — it is not a number from 0 to 2; drafts keep the default of ${XPOST_TEMPERATURE_DEFAULT}`);
   return { off: null, perDay, fleetPerDay, llmPerDay, notes,
-    ...(env.MERRYMEN_XPOST_VARIETY?.trim() === "1" ? { variety: true } : {}),
+    ...(env.AGENTCAP_XPOST_VARIETY?.trim() === "1" ? { variety: true } : {}),
     ...(replies.scope !== "off" ? { repliesApproved: true } : {}),
     ...(replies.scope === "active" ? { repliesActiveOnly: true } : {}),
     ...(activeTenants.size ? { activeTenants } : {}),
@@ -420,7 +420,7 @@ export function xpostEnv(env: Record<string, string | undefined> = process.env):
     ...(checksPerDay !== null ? { checksPerDay } : {}),
     ...(replyRaw ? { replyPollsPerDay: replyPollsPerDay ?? 0 } : {}),
     ...(temperature !== null ? { temperature } : {}),
-    ...(env.MERRYMEN_XPOST_SMALLTALK_DRAFTS?.trim() === "1" ? { smalltalkDrafts: true } : {}),
+    ...(env.AGENTCAP_XPOST_SMALLTALK_DRAFTS?.trim() === "1" ? { smalltalkDrafts: true } : {}),
   };
 }
 
@@ -441,7 +441,7 @@ export interface XPostSetup {
  * open the sealed tokens with. The writer's model is the X key, or the room's
  * own key when X has none — and either is refused when it IS a fleet key, the
  * room's included when the room itself was allowed to share one, unless
- * MERRYMEN_XPOST_SHARE_HOUSE_KEY=1 (xpostModel). A key that is its own but
+ * AGENTCAP_XPOST_SHARE_HOUSE_KEY=1 (xpostModel). A key that is its own but
  * runs trading's Groq model gets the room's same-organization WARNING too.
  */
 export function xpostSetup(env: Record<string, string | undefined> = process.env, dek: Buffer | null = storeDek()): XPostSetup {
@@ -449,9 +449,9 @@ export function xpostSetup(env: Record<string, string | undefined> = process.env
   const off = (why: string): XPostSetup => ({ off: why, lines: [why, ...knobs.notes], app: null, dek: null, knobs, creds: null });
   if (knobs.off) return off(knobs.off);
   const app = xAppFromEnv(env);
-  if (!app) return off("xpost: off — the X app is not configured (MERRYMEN_X_CLIENT_ID and its secret are not both set)");
+  if (!app) return off("xpost: off — the X app is not configured (AGENTCAP_X_CLIENT_ID and its secret are not both set)");
   if (!env.DATABASE_URL?.trim()) return off("xpost: off — no DATABASE_URL, so there is nowhere to keep the connections and posts");
-  if (!dek) return off("xpost: off — MERRYMEN_STORE_DEK is not a 32-byte key, so the X tokens cannot be opened");
+  if (!dek) return off("xpost: off — AGENTCAP_STORE_DEK is not a 32-byte key, so the X tokens cannot be opened");
   const model = xpostModel(env, groupChatCreds(env));
   const warning = xpostModelWarning(model.creds, env);
   return { off: null, lines: [...knobs.notes, model.line, ...(warning ? [warning] : [])], app, dek, knobs, creds: model.creds };
@@ -845,7 +845,7 @@ function exactBuys(f: AgentFacts, address: string | null): { label: string; pape
  * withFigures): an active owner's answer's, and its market insight post's
  * (2026-10-13). Only a line in the renderer's own grammar (admitFiguresLine,
  * again here), naming no sherwood, and every ticker it shows clearing the
- * gate's own vocabulary (tickerRefusal), naming no merrymen in any spelling,
+ * gate's own vocabulary (tickerRefusal), naming no agentcap in any spelling,
  * none of `ownNames` (the agent's own name and its words) and no model or
  * provider; and, but for bitcoin, ether and solana in the big coins' day, no
  * name its own buys go by (`ownCoins`, ownCoinTicker).
@@ -855,7 +855,7 @@ function figuresFor(admitted: string, spec: FiguresSpec, ownNames: readonly stri
     .filter((t): t is string => t !== null && MARKET_MAJORS.some((m) => m.symbol.toUpperCase() === t)));
   const figured = withFigures(admitted, spec);
   return figured.line != null && admitFiguresLine(figured.line) && !sherwoodMentioned(figured.line)
-    && figuresTickers(figured.line).every((t) => tickerRefusal(t) === null && !merrymenMentioned(t) && !sherwoodMentioned(t) && !namedIn(t, [...ownNames]) && !modelNamed(t)
+    && figuresTickers(figured.line).every((t) => tickerRefusal(t) === null && !agentcapMentioned(t) && !sherwoodMentioned(t) && !namedIn(t, [...ownNames]) && !modelNamed(t)
       && (bigCoins.has(t) || !ownCoinTicker(t, ownCoins))) ? figured : null;
 }
 
@@ -1123,7 +1123,7 @@ export function makeXPoster(o: { creds: LlmCreds | null; knobs: XPostEnv; app: X
         // its unit back. Read here only to skip planning while it is reached.
         let ceiling = ((await readMeta(shared, `posts:${utcDay(nowMs)}`))?.n ?? 0) >= fleetPerDay;
         // THE OPERATOR'S OWN AGENTS' REPLY CONSENT, before they are polled.
-        // MERRYMEN_XPOST_ACTIVE_TENANTS names the operator's own agents: the
+        // AGENTCAP_XPOST_ACTIVE_TENANTS names the operator's own agents: the
         // operator is their owner, so with posting on (a consent already
         // given through the posting warning, for this X account) and replies
         // in scope, their reply consent is recorded once, here. Never over an
@@ -1141,7 +1141,7 @@ export function makeXPoster(o: { creds: LlmCreds | null; knobs: XPostEnv; app: X
             // Not before its hello: the posting warning promised that first.
             if (!(await helloDone(shared, account, nowMs))) continue;
             if (await setReplying(shared, account.tenant, true, account.xUserId, at(), { house: true })) {
-              notes.push(`xpost: recorded reply consent for house agent ${account.tenant} on its connected X account (MERRYMEN_XPOST_ACTIVE_TENANTS); turning replies off in Settings is never overridden`);
+              notes.push(`xpost: recorded reply consent for house agent ${account.tenant} on its connected X account (AGENTCAP_XPOST_ACTIVE_TENANTS); turning replies off in Settings is never overridden`);
             }
           }
         }
@@ -1813,7 +1813,7 @@ export function makeXPoster(o: { creds: LlmCreds | null; knobs: XPostEnv; app: X
    * Everything else still holds: STOP, six a person a day, sixty a day, the tag
    * screens, the gate, the fleet's ceiling, the pauses and the 429 backoff.
    *
-   * WITH RESEARCH ON (MERRYMEN_XPOST_RESEARCH=1), the question is read by
+   * WITH RESEARCH ON (AGENTCAP_XPOST_RESEARCH=1), the question is read by
    * code first and one bounded bundle is looked up for it
    * (orchestrator-xpost-research.ts): code-built, digit-free, attributed
    * words the answer may say. A tagged contract address is the bundle's
@@ -2016,7 +2016,7 @@ export function makeXPoster(o: { creds: LlmCreds | null; knobs: XPostEnv; app: X
       // author X named, whose handle and display name name no sherwood.
       // NOR ANY ANSWER TO A SHERWOOD ACCOUNT, and the model line to no name
       // that names a model or a provider either (red-team 2026-10-12): an
-      // answer under "@SherwoodTGE · SHERWOOD presale LIVE" is Merrymen's
+      // answer under "@SherwoodTGE · SHERWOOD presale LIVE" is AgentCap's
       // account talking with the presale, whatever it says.
       const author = comment.author;
       const authorSherwood = !!author && (sherwoodMentioned(author.username) || sherwoodMentioned(author.name));
@@ -2136,18 +2136,18 @@ export function makeXPoster(o: { creds: LlmCreds | null; knobs: XPostEnv; app: X
       const codeLineElsewhere = candidate.otherHandles === true && (marketKind || smallKind !== null);
       const marketToUnread = marketKind && !author;
       // A CHECK NEVER UNDER SHERWOOD OR THE HOUSE (2026-10-13): a post, a quoted
-      // post, an author or a target that names sherwood in any form or merrymen
-      // is one the house account never larp-checks: it would be Merrymen
+      // post, an author or a target that names sherwood in any form or agentcap
+      // is one the house account never larp-checks: it would be AgentCap
       // judging a token named after its own model, or itself.
       const checkTarget = checked ? (checked.target.kind === "site" ? checked.target.url : `${checked.target.address} ${checked.target.site ?? ""}`) : "";
       const checkHouse = checked !== null && [checkTarget, ...(comment.context ?? []).flatMap((c) => [c.text, c.author?.username ?? "", c.author?.name ?? "", c.author?.url ?? ""])]
-        .some((t) => sherwoodMentioned(t) || sherwoodNamed(t) || merrymenMentioned(t));
+        .some((t) => sherwoodMentioned(t) || sherwoodNamed(t) || agentcapMentioned(t));
       const asked: TagIntent = sherwoodTagged || authorSherwood || (classified.kind === "model" && (candidate.otherHandles || !namedClean))
         || smallHeld || unreadWord || unflaggedAdvice || unbanteredChat || closedFollowUp
         || tradeMarket || codeLineElsewhere || marketToUnread || tradesElsewhere || checkHouse ? { kind: "unanswered" } : classified;
       // SHERWOOD IN ANY FORM, OR A MODEL QUESTION OFF THE ALLOWLIST, is
       // answered by nothing: the model line under "sherwood TGE soon?" reads
-      // as Merrymen confirming a token, and a draft is never asked about the
+      // as AgentCap confirming a token, and a draft is never asked about the
       // model. No row, no draft, nothing spent. Fail closed.
       if (asked.kind === "unanswered") {
         // WHICH RULE, AS A COUNT (2026-10-18): answer-unanswered-<the first of
@@ -2590,7 +2590,7 @@ export function makeXPoster(o: { creds: LlmCreds | null; knobs: XPostEnv; app: X
       // chat, handed nothing (xpost/words.ts marketTalkIn).
       // NOR THE HOUSE, A TOKEN, A LAUNCH, SAFETY OR MONEY (red-team 2026-10-12):
       // "no panic fren, the crew is on it and the money is safe" under "did
-      // merrymen get hacked?" (xpost/words.ts houseTalkIn).
+      // agentcap get hacked?" (xpost/words.ts houseTalkIn).
       const unlookedCoin = !coded && verdict?.ok === true && !handed && !told
         && (coinTalkIn(withoutReplyOptOut(verdict.text), f.name) || unknownWordIn(withoutReplyOptOut(verdict.text), f.name) || marketTalkIn(withoutReplyOptOut(verdict.text))
           || houseTalkIn(withoutReplyOptOut(verdict.text)));

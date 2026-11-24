@@ -73,7 +73,7 @@ export interface McpBackgroundOptions {
 }
 
 export function mcpBackgroundEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
-  return !!env.DATABASE_URL && env.MERRYMEN_MCP_ENABLED !== "0";
+  return !!env.DATABASE_URL && env.AGENTCAP_MCP_ENABLED !== "0";
 }
 
 /** A database call that did not answer within the pass's bound. Its name is all a log line carries. */

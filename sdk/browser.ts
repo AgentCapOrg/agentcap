@@ -25,8 +25,8 @@ export type { LocalAccount } from "viem";
  * different code never share a version. "+source" means it is running unbundled.
  */
 export const PARTNER_API_VERSION = "2026-10-08";
-declare const __MERRYMEN_SDK_BUILD__: string | undefined;
-export const SDK_VERSION = `${PARTNER_API_VERSION}+${typeof __MERRYMEN_SDK_BUILD__ === "string" ? __MERRYMEN_SDK_BUILD__ : "source"}`;
+declare const __AGENTCAP_SDK_BUILD__: string | undefined;
+export const SDK_VERSION = `${PARTNER_API_VERSION}+${typeof __AGENTCAP_SDK_BUILD__ === "string" ? __AGENTCAP_SDK_BUILD__ : "source"}`;
 
 /**
  * WHAT A PARTNER CHOOSES: the owner, the limits and the chain. Nothing else.
@@ -45,7 +45,7 @@ export const SDK_VERSION = `${PARTNER_API_VERSION}+${typeof __MERRYMEN_SDK_BUILD
  * web/src/lib/partner-enrollment.ts): enrollment grants no Trencher permission,
  * so the option let an owner approve a permission that then failed with a 400.
  */
-export interface PrepareMerrymanOptions {
+export interface PrepareAgentCapAvatarOptions {
   owner: LocalAccount;
   caps: GrantCaps;
   /** Robinhood Chain 4663, the default and real funds, or its testnet 46630. */
@@ -80,13 +80,13 @@ function shown(value: unknown): string {
 }
 
 /**
- * Derive and sign the same permission wall the Merrymen dashboard uses.
+ * Derive and sign the same permission wall the AgentCap dashboard uses.
  *
  * Anything partner activation would refuse is refused HERE, before a chain read
  * or a signature: the owner must never approve a permission that activation
  * then throws away, nor one naming a contract nobody verified.
  */
-export async function prepareMerryman(options: PrepareMerrymanOptions): Promise<StoredGrant> {
+export async function prepareAgentCapAvatar(options: PrepareAgentCapAvatarOptions): Promise<StoredGrant> {
   const { owner, caps, onStatus = () => {} } = options;
   // The type offers nothing else; plain-JavaScript callers can still pass it.
   // Refused rather than dropped, so an integrator who asked for a route learns
@@ -97,7 +97,7 @@ export async function prepareMerryman(options: PrepareMerrymanOptions): Promise<
   }
   if (unoffered.length) {
     throw new Error(
-      `prepareMerryman takes only owner, caps, chainId and onStatus; remove ${unoffered.join(", ")}. ` +
+      `prepareAgentCapAvatar takes only owner, caps, chainId and onStatus; remove ${unoffered.join(", ")}. ` +
         "Partner enrollment seals the platform's own routes and listed tokens. Nothing was signed.",
     );
   }
@@ -123,16 +123,16 @@ export async function prepareMerryman(options: PrepareMerrymanOptions): Promise<
   return grant;
 }
 
-export interface MerrymanAuthorizationChallenge {
+export interface AgentCapAvatarAuthorizationChallenge {
   claim: PartnerEnrollmentClaim;
   message: string;
   challenge_token: string;
 }
 
-export interface SignMerrymanAuthorizationOptions {
+export interface SignAgentCapAvatarAuthorizationOptions {
   owner: LocalAccount;
   grant: StoredGrant;
-  challenge: MerrymanAuthorizationChallenge;
+  challenge: AgentCapAvatarAuthorizationChallenge;
   /** The choices the owner just approved in your application's form. */
   settings: PartnerEnrollmentSettings;
   /** Pin to your application/agent, never to identifiers copied from a challenge. */
@@ -148,9 +148,9 @@ export interface SignMerrymanAuthorizationOptions {
  * The returned session grant goes to your backend for activation. No request
  * is sent here, and the owner wallet's private key is never requested.
  */
-export async function signMerrymanAuthorization({
+export async function signAgentCapAvatarAuthorization({
   owner, grant, challenge, settings, expectedAppId, expectedAgentId, expectedExternalUserId, expectedScopes,
-}: SignMerrymanAuthorizationOptions): Promise<{
+}: SignAgentCapAvatarAuthorizationOptions): Promise<{
   grant: StoredGrant;
   challenge_token: string;
   signature: `0x${string}`;

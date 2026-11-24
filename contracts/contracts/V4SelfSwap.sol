@@ -8,7 +8,7 @@ import {IPoolManager, IUnlockCallback, IERC20Minimal, PoolKey, SwapParams} from 
  * @notice A Uniswap v4 spot swap that CANNOT send the output anywhere but back
  * to the caller. That single hardcoded word is the entire product.
  *
- * WHY THIS EXISTS. merrymen's agent is a Kernel smart account whose session key
+ * WHY THIS EXISTS. agentcap's agent is a Kernel smart account whose session key
  * is bounded by an on-chain call policy — "the wall" (packages/core/src/wall.ts).
  * A call policy can pin a target, a selector, and individual DECLARED ABI
  * arguments. The only v4 route on this chain is Permit2 + UniversalRouter, and

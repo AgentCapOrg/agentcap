@@ -17,8 +17,8 @@
 import path from "node:path";
 import { mkdir, readFile, readdir } from "node:fs/promises";
 import { NextResponse } from "next/server";
-import { writeFileAtomic } from "@merrymen/atomic-write";
-import { homePaths, merrymenHome, purposeHome } from "@merrymen/home";
+import { writeFileAtomic } from "@agentcap/atomic-write";
+import { homePaths, agentcapHome, purposeHome } from "@agentcap/home";
 import {
   HOSTED_FORBIDDEN_SETTING_FIELDS,
   LLM_PROVIDER_IDS,
@@ -38,13 +38,13 @@ import {
   perpsNumberOk,
   robinhoodChain,
   type LlmProviderInfo,
-  type MerrymenSettings,
+  type AgentCapSettings,
   type PerpsDriver,
   type PerpsNumKey,
   type SecretSettingKey,
-} from "@merrymen/core";
+} from "@agentcap/core";
 // Relative, as the orders route reaches the worker: `tsx --test` resolves
-// against the root tsconfig, which has no @merrymen/settings.
+// against the root tsconfig, which has no @agentcap/settings.
 import { readSettingsFileWithText, writeSettingsFileIfUnchanged } from "../../../../../worker/src/settings";
 import { errorText } from "../../../../../worker/src/redact-urls";
 import type { Db } from "../../../../../worker/src/db";
@@ -52,7 +52,7 @@ import { tenantOf } from "@/lib/auth";
 import { fomoEnabledFor } from "@/lib/fomo-switch";
 import { OWNER_CHANGED_SETTING, ownerMismatch } from "@/lib/order-owner";
 import { parseAmount, settingDecimals } from "@/lib/parse-amount";
-import { getSettingsStore, putSettingsIfUnchanged, readSettingsVersioned } from "@merrymen/settings-store";
+import { getSettingsStore, putSettingsIfUnchanged, readSettingsVersioned } from "@agentcap/settings-store";
 import { agentNameSave } from "@/lib/settings-agent-name";
 import { clearsStaleProviderModel } from "@/lib/settings-llm-model";
 import { withoutEnergyReserve, withoutReserveBasket } from "@/lib/energy-reserve";
@@ -73,7 +73,7 @@ import { perpsPaperAdmission, withPerpsPaperAdmission } from "@/lib/perps-paper-
 
 export const dynamic = "force-dynamic";
 
-const DATA_DIR = merrymenHome();
+const DATA_DIR = agentcapHome();
 const SETTINGS_FILE = homePaths.settings();
 
 export interface SecretView {
@@ -94,7 +94,7 @@ export interface SettingsView {
   telegramTranscribeKey: SecretView;
   virtualsApiKey: SecretView;
   bitqueryApiKey: SecretView;
-  merrymenToken: SecretView;
+  agentcapToken: SecretView;
   /**
    * The Fomo data provider key (self-hosted settings `fomoApiKey`), masked like
    * every other secret. GET always sends it; it is optional in the type only
@@ -104,7 +104,7 @@ export interface SettingsView {
   // everything else, verbatim (undefined = using env/default). The Omit is the
   // shared SECRET_SETTING_KEYS list, not a hand-written one: a hand-written
   // list here is how fomoApiKey came back in plaintext under `values`.
-  values: Omit<MerrymenSettings, SecretSettingKey>;
+  values: Omit<AgentCapSettings, SecretSettingKey>;
   defaults: typeof SETTINGS_DEFAULTS;
   knownSymbols: string[];
   /**
@@ -140,7 +140,7 @@ export interface SettingsView {
 
 const STRATEGIES_DIR = homePaths.strategies();
 // Free + Merry Circle (holder-gated) builtins — both selectable; the worker runs
-// the Circle ones only for $MERRYMEN holders. Mirrors worker/src/strategies/registry.ts.
+// the Circle ones only for $AGENTCAP holders. Mirrors worker/src/strategies/registry.ts.
 const BUILTIN_STRATEGIES = ["steady-basket", "weekend-gap", "llm-strategist", "trencher", "even-keel", "dip-hunter"];
 
 async function listCustomStrategies(): Promise<string[]> {
@@ -156,7 +156,7 @@ async function listCustomStrategies(): Promise<string[]> {
   }
 }
 
-type StoredRead = { ok: true; settings: MerrymenSettings } | { ok: false; why: string };
+type StoredRead = { ok: true; settings: AgentCapSettings } | { ok: false; why: string };
 
 /**
  * The stored settings, or why they could not be read.
@@ -183,7 +183,7 @@ async function readStoredStrict(tenant?: `0x${string}` | null): Promise<StoredRe
   try {
     // BOM-strip: hand-edited or PowerShell-written files may carry a UTF-8 BOM.
     const parsed: unknown = JSON.parse(raw.replace(/^\ufeff/, ""));
-    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return { ok: true, settings: parsed as MerrymenSettings };
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return { ok: true, settings: parsed as AgentCapSettings };
   } catch {
     /* reported below */
   }
@@ -191,7 +191,7 @@ async function readStoredStrict(tenant?: `0x${string}` | null): Promise<StoredRe
 }
 
 /** For display: a file that cannot be read shows as nothing saved, as it always has. */
-async function readStored(tenant?: `0x${string}` | null): Promise<MerrymenSettings> {
+async function readStored(tenant?: `0x${string}` | null): Promise<AgentCapSettings> {
   const read = await readStoredStrict(tenant);
   return read.ok ? read.settings : {};
 }
@@ -211,7 +211,7 @@ function mask(value: string | undefined): SecretView {
  * browser in clear under `values`. Iterating the list means the next secret
  * added to core is masked here the day it is added.
  */
-function splitSecrets(stored: MerrymenSettings): { secrets: Record<SecretSettingKey, SecretView>; values: Omit<MerrymenSettings, SecretSettingKey> } {
+function splitSecrets(stored: AgentCapSettings): { secrets: Record<SecretSettingKey, SecretView>; values: Omit<AgentCapSettings, SecretSettingKey> } {
   const values: Record<string, unknown> = { ...stored };
   const secrets = {} as Record<SecretSettingKey, SecretView>;
   for (const key of SECRET_SETTING_KEYS) {
@@ -219,7 +219,7 @@ function splitSecrets(stored: MerrymenSettings): { secrets: Record<SecretSetting
     secrets[key] = mask(typeof raw === "string" ? raw : undefined);
     delete values[key];
   }
-  return { secrets, values: values as Omit<MerrymenSettings, SecretSettingKey> };
+  return { secrets, values: values as Omit<AgentCapSettings, SecretSettingKey> };
 }
 
 /** ASCII sentinel that cannot appear in a real URL path — encoding-robust
@@ -245,13 +245,13 @@ function redactUrl(u: unknown): string | undefined {
 export async function GET(req: Request) {
   const wallet = readWalletParam(req);
   if (wallet === null) return walletUnknown("Nothing was read.");
-  // The Perps wallet's own settings, read whatever MERRYMEN_PERPS says (D1):
+  // The Perps wallet's own settings, read whatever AGENTCAP_PERPS says (D1):
   // an owner who holds a Perps wallet can always see it, and switch it off.
   if (wallet === "perps") return perpsSettingsView(req);
   // Hosted: show the signed-in tenant's own settings (a signed-out caller sees
   // defaults — nothing personal, no secrets). Self-hosted: the single file.
   const tenant = isHostedMode() ? tenantOf(req) : null;
-  const stored: MerrymenSettings = isHostedMode() && !tenant ? {} : await readStored(tenant);
+  const stored: AgentCapSettings = isHostedMode() && !tenant ? {} : await readStored(tenant);
   const { secrets, values } = splitSecrets(stored);
   const servedTokens = withoutEnergyReserve(values.customTokens);
   // These URL fields can embed API keys — redact before they leave the server.
@@ -262,7 +262,7 @@ export async function GET(req: Request) {
     rpcTestnet: redactUrl(values.rpcTestnet),
     telegramTranscribeBase: redactUrl(values.telegramTranscribeBase),
     // Every signer builds its wall from this list — an old iOS engine or a
-    // stale tab would seal $MERRYMEN from it and be refused (energy-reserve.ts).
+    // stale tab would seal $AGENTCAP from it and be refused (energy-reserve.ts).
     customTokens: servedTokens,
     // AND THE BASKET SYMBOL ONLY THAT RESERVE ENTRY SUPPLIED, or every client
     // that saves both fields is refused for a coin its own list no longer
@@ -399,7 +399,7 @@ const BOOL_FIELDS = [
   "trencherLiveEnabled",
   "trencherFastEnabled",
   "scoutEnabled",
-  // BUYING A TOKEN NOBODY ENUMERATED. See MerrymenSettings.classSnipeEnabled
+  // BUYING A TOKEN NOBODY ENUMERATED. See AgentCapSettings.classSnipeEnabled
   // for what this actually permits. It is a SECOND decision on top of sealing a
   // class vault at /grant — the signature says the key could reach class
   // tokens, this says go and do it — and both are required.
@@ -408,7 +408,7 @@ const BOOL_FIELDS = [
   // turn something OFF rather than on — and a field missing from this list is
   // dropped with an {ok:true}, which for an opt-OUT means the owner's refusal is
   // discarded and the page tells them it saved. See
-  // MerrymenSettings.officialCoinsEnabled.
+  // AgentCapSettings.officialCoinsEnabled.
   "officialCoinsEnabled",
   "discoveryEnabled",
   // FOMO RESEARCH (docs/fomo.md): three separate permissions. fomoDataAccess
@@ -437,7 +437,7 @@ const STR_ARRAY_FIELDS: Record<string, number> = {
 export async function PUT(req: Request) {
   const wallet = readWalletParam(req);
   if (wallet === null) return walletUnknown("Nothing was saved.");
-  let body: Partial<Record<keyof MerrymenSettings, unknown>>;
+  let body: Partial<Record<keyof AgentCapSettings, unknown>>;
   try {
     body = (await req.json()) as typeof body;
   } catch {
@@ -495,7 +495,7 @@ export async function PUT(req: Request) {
  * connection that lock is held on (see PUT).
  */
 async function saveSettings(
-  body: Partial<Record<keyof MerrymenSettings, unknown>>,
+  body: Partial<Record<keyof AgentCapSettings, unknown>>,
   tenant: `0x${string}` | null,
   moveBot: boolean,
   claims: SaveClaims,
@@ -511,12 +511,12 @@ async function saveSettings(
     );
   }
   const stored = read.settings;
-  const next: MerrymenSettings = { ...stored };
+  const next: AgentCapSettings = { ...stored };
 
   // Every settings key this request actually processed. Used at the end to
   // name what was DROPPED — see the note above the `ignored` computation.
   const touched = new Set<string>();
-  const setOrClear = <K extends keyof MerrymenSettings>(key: K, value: MerrymenSettings[K] | undefined) => {
+  const setOrClear = <K extends keyof AgentCapSettings>(key: K, value: AgentCapSettings[K] | undefined) => {
     touched.add(key as string);
     if (value === undefined) delete next[key];
     else next[key] = value;
@@ -557,7 +557,7 @@ async function saveSettings(
 
   // ── numbers ─────────────────────────────────────────────────────────────
   for (const [key, [min, max]] of Object.entries(NUM_FIELDS)) {
-    const k = key as keyof MerrymenSettings;
+    const k = key as keyof AgentCapSettings;
     if (!(k in body)) continue;
     const v = body[k];
     if (v === "" || v === null || v === undefined) {
@@ -676,14 +676,14 @@ async function saveSettings(
     if (v === "" || v === null || v === undefined) {
       setOrClear("strategy", undefined);
     } else if (typeof v === "string" && BUILTIN_STRATEGIES.includes(v)) {
-      setOrClear("strategy", v as MerrymenSettings["strategy"]);
+      setOrClear("strategy", v as AgentCapSettings["strategy"]);
     } else if (!isHostedMode() && typeof v === "string" && (await listCustomStrategies()).includes(v)) {
       // Custom strategy files are self-hosted ONLY. Hosted, the loader refuses to
       // execute them (registry.ts fail-closed); rejecting the name here too means
       // the control plane never even stores it — the write-time half of the gate.
-      setOrClear("strategy", v as MerrymenSettings["strategy"]);
+      setOrClear("strategy", v as AgentCapSettings["strategy"]);
     } else if (isHostedMode()) {
-      errors.push("strategy: only built-in strategies are available on hosted merrymen");
+      errors.push("strategy: only built-in strategies are available on hosted agentcap");
     } else {
       errors.push(`strategy: not a builtin and no strategies/${String(v)}.ts file exists`);
     }
@@ -692,7 +692,7 @@ async function saveSettings(
     const v = body.swapVenue;
     if (v === "" || v === null || v === undefined) setOrClear("swapVenue", undefined);
     else if (["uniswap", "rialto"].includes(v as string))
-      setOrClear("swapVenue", v as MerrymenSettings["swapVenue"]);
+      setOrClear("swapVenue", v as AgentCapSettings["swapVenue"]);
     else errors.push("swapVenue: unknown venue");
   }
 
@@ -735,7 +735,7 @@ async function saveSettings(
       setOrClear("ponsClassVaultFactory", v.trim());
     else errors.push("ponsClassVaultFactory: must be a 0x… address");
   }
-  // $MERRYMEN holder wallet — a read-only address for the Merry Circle fee tier.
+  // $AGENTCAP holder wallet — a read-only address for the Merry Circle fee tier.
   if ("holderAddress" in body) {
     const v = body.holderAddress;
     if (v === "" || v === null || v === undefined) setOrClear("holderAddress", undefined);
@@ -904,7 +904,7 @@ async function saveSettings(
 
   // ── telegram PC string allowlists (capabilities / shell / app) ──────────
   for (const [key, maxLen] of Object.entries(STR_ARRAY_FIELDS)) {
-    const k = key as keyof MerrymenSettings;
+    const k = key as keyof AgentCapSettings;
     if (!(k in body)) continue;
     const v = body[k];
     if (v === null || v === undefined) {
@@ -934,7 +934,7 @@ async function saveSettings(
       const selectable = selectableSymbols(custom);
       // A SYMBOL ONLY THE ENERGY RESERVE SUPPLIED IS DROPPED, NOT REFUSED. GET
       // no longer serves the reserve, so a client built on an older view (or a
-      // stored basket that outlived its reserve entry) still sends MERRYMEN
+      // stored basket that outlived its reserve entry) still sends AGENTCAP
       // with nothing left to select it by — refusing it left the owner a basket
       // they could not edit from any client (energy-reserve.ts).
       const legs = withoutReserveBasket(v as unknown[], [
@@ -1083,7 +1083,7 @@ async function saveSettings(
  * the live rail off, the real-money consent withdrawn. Written even when the
  * rest of the save is refused (`offs`), over what was stored and never over the
  * rest of the body, and the refusal says it was. And WHERE PERPS ARE NOT
- * OFFERED (MERRYMEN_PERPS is not paper, D1), an off is the only thing a save
+ * OFFERED (AGENTCAP_PERPS is not paper, D1), an off is the only thing a save
  * may do: anything else is refused 403 `perps-wallet-not-offered` and nothing
  * else is written, so a server that offers no Perps wallet grows no Perps
  * settings, self-hosted as hosted (D19). GET stays readable.
@@ -1146,7 +1146,7 @@ const PERPS_VIEW_HEADERS = { ...NO_STORE_HEADERS, Vary: "Cookie" };
  * against (the stored text as read; null when nothing is stored), or why they
  * could not be read.
  */
-type PerpsStoredRead = { ok: true; settings: MerrymenSettings; version: string | null } | { ok: false; why: string };
+type PerpsStoredRead = { ok: true; settings: AgentCapSettings; version: string | null } | { ok: false; why: string };
 
 /**
  * The Perps wallet's stored settings, or why they could not be read. Hosted, a
@@ -1178,7 +1178,7 @@ async function readPerpsStoredStrict(tenant: `0x${string}` | null): Promise<Perp
 async function perpsSettingsView(req: Request): Promise<NextResponse> {
   const hosted = isHostedMode();
   const tenant = hosted ? tenantOf(req) : null;
-  let stored: MerrymenSettings = {};
+  let stored: AgentCapSettings = {};
   let version: string | null = null;
   if (!hosted || tenant) {
     const read = await readPerpsStoredStrict(tenant);
@@ -1316,7 +1316,7 @@ async function judgePerpsSave(
         );
   }
   const stored = read.settings;
-  const next: MerrymenSettings = { ...stored, strategy: PERPS_ONLY };
+  const next: AgentCapSettings = { ...stored, strategy: PERPS_ONLY };
   const errors: string[] = [];
   const staleEnable = body.perpsEnabled === true && expectedVersion !== perpsSettingsVersion(read.version, tenant);
   // Not asked where Perps are not offered: only offs are saved there (below),
@@ -1324,7 +1324,7 @@ async function judgePerpsSave(
   const admission = tenant !== null && body.perpsEnabled === true && perpsOffered() ? await perpsPaperAdmission(tenant, held) : "allowed";
   const pilotRefused = admission !== "allowed";
   const touched = new Set<string>();
-  const setOrClear = <K extends keyof MerrymenSettings>(key: K, value: MerrymenSettings[K] | undefined) => {
+  const setOrClear = <K extends keyof AgentCapSettings>(key: K, value: AgentCapSettings[K] | undefined) => {
     touched.add(key as string);
     if (value === undefined) delete next[key];
     else next[key] = value;
@@ -1332,7 +1332,7 @@ async function judgePerpsSave(
   // THE OFFS THIS BODY CARRIES, each as the change it makes to what was
   // stored — only a switch that is on has an off to keep. Written even when
   // the rest is refused (see the header above).
-  const offs: Array<{ key: string; apply: (s: MerrymenSettings) => void }> = [];
+  const offs: Array<{ key: string; apply: (s: AgentCapSettings) => void }> = [];
   // The body keys that only turn something off, or change nothing: all a save
   // may carry where Perps are not offered (D1).
   const offOnly = new Set<string>();
@@ -1590,9 +1590,9 @@ async function judgePerpsSave(
    * (readPerpsStoredStrict) already answer. It used to be put inside that
    * sentence, word for word.
    */
-  const persist = async (settings: MerrymenSettings): Promise<"saved" | "raced" | "failed"> => {
+  const persist = async (settings: AgentCapSettings): Promise<"saved" | "raced" | "failed"> => {
     try {
-      const blob: MerrymenSettings = { ...settings, strategy: PERPS_ONLY };
+      const blob: AgentCapSettings = { ...settings, strategy: PERPS_ONLY };
       const wrote = tenant
         ? await putSettingsIfUnchanged(getSettingsStore("perps"), tenant, blob, version)
         : writeSettingsFileIfUnchanged(perpsSettingsFile(), version, JSON.stringify(blob, null, 2));
@@ -1607,7 +1607,7 @@ async function judgePerpsSave(
   /** The offs alone, over what was stored: the keys switched off, that they could not be written, or "raced". */
   const saveOffs = async (): Promise<{ saved: string[] } | "failed" | "raced"> => {
     if (offs.length === 0) return { saved: [] };
-    const offOnlyBlob: MerrymenSettings = { ...stored };
+    const offOnlyBlob: AgentCapSettings = { ...stored };
     for (const off of offs) off.apply(offOnlyBlob);
     const wrote = await persist(offOnlyBlob);
     if (wrote !== "saved") return wrote;

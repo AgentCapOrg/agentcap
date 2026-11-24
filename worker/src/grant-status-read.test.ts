@@ -14,12 +14,12 @@ import type { StoredRecord } from "./grant-store";
 import { sealSecret } from "./store-crypto";
 
 const home = mkdtempSync(path.join(tmpdir(), "mm-grant-status-read-"));
-const savedHome = process.env.MERRYMEN_HOME, savedDek = process.env.MERRYMEN_STORE_DEK;
-process.env.MERRYMEN_HOME = home;
-process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
+const savedHome = process.env.AGENTCAP_HOME, savedDek = process.env.AGENTCAP_STORE_DEK;
+process.env.AGENTCAP_HOME = home;
+process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
 after(() => {
-  if (savedHome === undefined) delete process.env.MERRYMEN_HOME; else process.env.MERRYMEN_HOME = savedHome;
-  if (savedDek === undefined) delete process.env.MERRYMEN_STORE_DEK; else process.env.MERRYMEN_STORE_DEK = savedDek;
+  if (savedHome === undefined) delete process.env.AGENTCAP_HOME; else process.env.AGENTCAP_HOME = savedHome;
+  if (savedDek === undefined) delete process.env.AGENTCAP_STORE_DEK; else process.env.AGENTCAP_STORE_DEK = savedDek;
   rmSync(home, { recursive: true, force: true });
 });
 const { FileGrantStore, PgGrantStore } = await import("./grant-store");

@@ -4,7 +4,7 @@
  * and dry-run the payment reconciliation.
  *
  * Run it where the gateway runs, on the same volume (`railway ssh`), with the
- * gateway's environment, so it reads the same $MERRYMEN_DATA_DIR/billing.jsonl:
+ * gateway's environment, so it reads the same $AGENTCAP_DATA_DIR/billing.jsonl:
  *
  *   node billing-cli.mjs list
  *   node billing-cli.mjs show <wallet>
@@ -98,7 +98,7 @@ async function show(argv) {
   console.log(`\n  account   ${v.account.id}  ${JSON.stringify(v.account.name)}  created ${v.account.created_at}`);
   console.log(`  wallet    ${v.account.wallet}`);
   console.log(`  plan      ${v.plan.id}${v.plan.ends_at ? ` ${v.plan.starts_at} → ${v.plan.ends_at}` : ""}  selected ${v.plan.selected}${v.plan.renews_on_next_request ? "  (renews on next request)" : ""}`);
-  console.log(`  credit    ${v.credit_tokens} MERRYMEN${v.due_tokens ? `  due ${v.due_tokens} for ${v.due_for}` : ""}`);
+  console.log(`  credit    ${v.credit_tokens} AGENTCAP${v.due_tokens ? `  due ${v.due_tokens} for ${v.due_for}` : ""}`);
   console.log(`  usage     ${v.usage.used} / ${v.usage.limit} until ${v.usage.resets_at}${v.usage.by_key.length ? `  (${v.usage.by_key.map((k) => `${k.key_id} ${k.used}`).join(", ")})` : ""}`);
   console.log("  history:");
   for (const h of v.history) console.log(`    ${h.at}  ${h.type.padEnd(10)}  ${h.amount_tokens.padStart(14)}  ${[h.tier, h.reason, h.tx_hash].filter(Boolean).join("  ")}`);
@@ -113,9 +113,9 @@ async function adjust(argv) {
   const why = note(argv);
   const ledger = await writer();
   const acct = ledger.state.byOwner.get(owner);
-  if (!acct) die(`no account for ${owner}: the developer creates one at merrymen.dev/api first`);
+  if (!acct) die(`no account for ${owner}: the developer creates one at agentcap.xyz/api first`);
   await write(ledger, { type: "adjustment", account_id: acct.account_id, amount_raw: amount.toString(), note: why, operator: true });
-  console.log(`[billing] ${owner}: ${amount > 0n ? "+" : ""}${formatTokens(amount)} MERRYMEN of API credit, now ${formatTokens(ledger.state.byOwner.get(owner).credit)}. The gateway applies it within 10 s.`);
+  console.log(`[billing] ${owner}: ${amount > 0n ? "+" : ""}${formatTokens(amount)} AGENTCAP of API credit, now ${formatTokens(ledger.state.byOwner.get(owner).credit)}. The gateway applies it within 10 s.`);
 }
 
 async function comp(argv) {
@@ -128,7 +128,7 @@ async function comp(argv) {
   const why = note(argv);
   const ledger = await writer();
   const acct = ledger.state.byOwner.get(owner);
-  if (!acct) die(`no account for ${owner}: the developer creates one at merrymen.dev/api first`);
+  if (!acct) die(`no account for ${owner}: the developer creates one at agentcap.xyz/api first`);
   const now = ledger.now();
   // A comp starts now and runs alongside anything already running. Over a
   // period the developer paid for, it would either be hidden by it (a cheaper
@@ -149,12 +149,12 @@ async function comp(argv) {
 }
 
 async function reconcile(argv) {
-  if (!config.rpc) die("set MERRYMEN_PAYMENTS_RPC or MERRYMEN_GATEWAY_RPC to read the chain");
+  if (!config.rpc) die("set AGENTCAP_PAYMENTS_RPC or AGENTCAP_GATEWAY_RPC to read the chain");
   const billing = await view({ publicClient: createPaymentsClient(config.rpc) });
   const all = argv.includes("--all");
   const findings = await billing.reconcile({ dryRun: true, all });
   if (!findings.length) return console.log(`[billing] every ${all ? "" : "recent "}payment still stands on chain.`);
-  for (const f of findings) console.log(`  WOULD REVERSE  ${f.tx_hash}  ${f.owner}  ${formatTokens(f.amount_raw)} MERRYMEN  (${f.why})`);
+  for (const f of findings) console.log(`  WOULD REVERSE  ${f.tx_hash}  ${f.owner}  ${formatTokens(f.amount_raw)} AGENTCAP  (${f.why})`);
   console.log("[billing] dry run: nothing written. This is one reading of the chain; the gateway reverses a payment itself only when two of its own checks, five minutes apart, find the same.");
 }
 

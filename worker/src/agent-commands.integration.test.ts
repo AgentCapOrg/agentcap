@@ -23,8 +23,8 @@ import { mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-cmd-"));
-process.env.MERRYMEN_HOME = HOME;
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-cmd-"));
+process.env.AGENTCAP_HOME = HOME;
 
 const { closeStoreForTest, initStore, enqueueCommand, claimCommand, finishCommand, latestCommand } = await import("./store");
 const { homePaths } = await import("./home");

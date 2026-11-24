@@ -49,10 +49,10 @@ import { createPaperPerpExecutor } from "./perps/executor";
 import { parseLighterFeed, specToJson } from "./perps/feed-reader";
 import { parseOrderBookDetails } from "./perps/markets";
 
-const scratch = mkdtempSync(path.join(os.tmpdir(), "merrymen-perp-ledger-"));
+const scratch = mkdtempSync(path.join(os.tmpdir(), "agentcap-perp-ledger-"));
 const isolatedCwd = path.join(scratch, "cwd");
 mkdirSync(isolatedCwd);
-process.env.MERRYMEN_HOME = path.join(scratch, "home");
+process.env.AGENTCAP_HOME = path.join(scratch, "home");
 delete process.env.DATABASE_URL;
 const originalCwd = process.cwd();
 const store = await import("./store");
@@ -62,7 +62,7 @@ try {
 } finally {
   process.chdir(originalCwd);
 }
-const raw = new DatabaseSync(path.join(process.env.MERRYMEN_HOME, "merrymen.db"));
+const raw = new DatabaseSync(path.join(process.env.AGENTCAP_HOME, "agentcap.db"));
 const others: DatabaseSync[] = [];
 
 after(() => {

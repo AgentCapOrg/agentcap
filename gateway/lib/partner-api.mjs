@@ -249,8 +249,8 @@ export function createPartnerApi({ partners, store, forward, billing = null, tun
 
       if (method === "GET" && route === "/") {
         return { status: 200, json: {
-          service: "merrymen-partner-api", api_version: version,
-          description: "Create a Merryman with its owner's permission, follow its worker status, and chat from your app.",
+          service: "agentcap-partner-api", api_version: version,
+          description: "Create a AgentCapAvatar with its owner's permission, follow its worker status, and chat from your app.",
           authentication: "Server-side Authorization: Bearer <partner key>",
           endpoints: { health: "GET /health", meta: "GET /meta", create_agent: "POST /agents",
             authorization_challenge: "POST /agents/{id}/challenge", activate_agent: "POST /agents/{id}/activate",
@@ -263,7 +263,7 @@ export function createPartnerApi({ partners, store, forward, billing = null, tun
       // Liveness, unauthenticated. Distinct from /healthz, which describes the
       // holder gateway — a partner checking the wrong one learns nothing useful.
       if (method === "GET" && route === "/health") {
-        return { status: 200, json: { ok: true, service: "merrymen-partner-api", api_version: version } };
+        return { status: 200, json: { ok: true, service: "agentcap-partner-api", api_version: version } };
       }
 
       // The first call a partner makes: does my key work, and what does it carry?

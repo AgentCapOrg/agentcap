@@ -148,7 +148,7 @@ function assertReadOnlyDescriptorOpens(raw: string): void {
   visit(tree);
 }
 const posix = process.platform !== "win32";
-const tmpDir = () => mkdtempSync(path.join(os.tmpdir(), "merrymen-child-files-"));
+const tmpDir = () => mkdtempSync(path.join(os.tmpdir(), "agentcap-child-files-"));
 const leftovers = (dir: string) => readdirSync(dir).filter((n) => n.endsWith(".tmp"));
 
 function restoreEnv(saved: Record<string, string | undefined>): void {
@@ -262,11 +262,11 @@ describe("the other writers of those files", () => {
 });
 
 describe("saveTelegramState", () => {
-  const saved = { MERRYMEN_HOME: process.env.MERRYMEN_HOME };
+  const saved = { AGENTCAP_HOME: process.env.AGENTCAP_HOME };
   let home = "";
   before(() => {
     home = tmpDir();
-    process.env.MERRYMEN_HOME = home;
+    process.env.AGENTCAP_HOME = home;
   });
   after(() => {
     restoreEnv(saved);
@@ -287,13 +287,13 @@ describe("saveTelegramState", () => {
 });
 
 describe("writeBootstrapForChild", () => {
-  const saved = { MERRYMEN_HOME: process.env.MERRYMEN_HOME, DATABASE_URL: process.env.DATABASE_URL };
+  const saved = { AGENTCAP_HOME: process.env.AGENTCAP_HOME, DATABASE_URL: process.env.DATABASE_URL };
   const tenant = "0x00000000000000000000000000000000000000b1" as const;
   const account = "0x00000000000000000000000000000000000000c2" as const;
   let root = "";
   before(() => {
     root = tmpDir();
-    process.env.MERRYMEN_HOME = root;
+    process.env.AGENTCAP_HOME = root;
     // No shared database: the anchor is `unknown`, which is still a whole,
     // valid file — what matters here is how it lands.
     delete process.env.DATABASE_URL;
@@ -455,7 +455,7 @@ describe("a running child reading grant.json during a re-sign never sees a null 
         kind: "grant",
         mod: "./grant.ts",
         fn: "loadGrantFile",
-        env: { MERRYMEN_GRANT_FILE: file, MERRYMEN_HOME: dir },
+        env: { AGENTCAP_GRANT_FILE: file, AGENTCAP_HOME: dir },
         write: (v) => write(file, grant(v)),
         iterations,
         stopOnTear,
@@ -478,11 +478,11 @@ describe("a running child reading grant.json during a re-sign never sees a null 
 });
 
 describe("a reader of telegram.json never gets state that has forgotten the owner", () => {
-  const saved = { MERRYMEN_HOME: process.env.MERRYMEN_HOME };
+  const saved = { AGENTCAP_HOME: process.env.AGENTCAP_HOME };
   let home = "";
   before(() => {
     home = tmpDir();
-    process.env.MERRYMEN_HOME = home;
+    process.env.AGENTCAP_HOME = home;
   });
   after(() => {
     restoreEnv(saved);
@@ -496,7 +496,7 @@ describe("a reader of telegram.json never gets state that has forgotten the owne
       kind: "telegram",
       mod: "./telegram/state.ts",
       fn: "loadTelegramState",
-      env: { MERRYMEN_HOME: home },
+      env: { AGENTCAP_HOME: home },
       write: (v) => writeFileSync(homePaths.telegram(), JSON.stringify(state(v), null, 2), "utf8"),
       iterations: 5_000,
       stopOnTear: true,
@@ -509,7 +509,7 @@ describe("a reader of telegram.json never gets state that has forgotten the owne
       kind: "telegram",
       mod: "./telegram/state.ts",
       fn: "loadTelegramState",
-      env: { MERRYMEN_HOME: home },
+      env: { AGENTCAP_HOME: home },
       write: (v) => saveTelegramState(state(v)),
       iterations: 150,
     });

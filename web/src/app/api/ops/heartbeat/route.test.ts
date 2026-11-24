@@ -22,9 +22,9 @@ import { GET } from "./route";
 const TOKEN = "ops-token-0123456789abcdef0123456789abcdef";
 const ACCOUNT = "0x00000000000000000000000000000000000000a1";
 const ADDRESS = /0x[0-9a-f]{40}/i;
-const ROUTE = "https://app.merrymen.dev/api/ops/heartbeat";
+const ROUTE = "https://app.agentcap.xyz/api/ops/heartbeat";
 
-const saved = Object.fromEntries(["MERRYMEN_HOME", "MERRYMEN_OPS_TOKEN", "DATABASE_URL"].map((k) => [k, process.env[k]]));
+const saved = Object.fromEntries(["AGENTCAP_HOME", "AGENTCAP_OPS_TOKEN", "DATABASE_URL"].map((k) => [k, process.env[k]]));
 let home: string;
 
 const get = (authorization?: string) =>
@@ -32,9 +32,9 @@ const get = (authorization?: string) =>
 
 before(async () => {
   home = mkdtempSync(path.join(tmpdir(), "mm-ops-heartbeat-"));
-  process.env.MERRYMEN_HOME = home;
+  process.env.AGENTCAP_HOME = home;
   delete process.env.DATABASE_URL;
-  const raw = new DatabaseSync(path.join(home, "merrymen.db"));
+  const raw = new DatabaseSync(path.join(home, "agentcap.db"));
   try {
     const funnel = foldFunnel(
       [
@@ -77,8 +77,8 @@ before(async () => {
 });
 
 beforeEach(() => {
-  delete process.env.MERRYMEN_OPS_TOKEN;
-  process.env.MERRYMEN_HOME = home;
+  delete process.env.AGENTCAP_OPS_TOKEN;
+  process.env.AGENTCAP_HOME = home;
 });
 
 after(() => {
@@ -99,12 +99,12 @@ describe("GET /api/ops/heartbeat", () => {
   });
 
   it("treats a short token as unset: a guessable token is worse than none", async () => {
-    process.env.MERRYMEN_OPS_TOKEN = "short-token";
+    process.env.AGENTCAP_OPS_TOKEN = "short-token";
     assert.equal((await get("Bearer short-token")).status, 404);
   });
 
   it("is 401 without the bearer token, or with the wrong one", async () => {
-    process.env.MERRYMEN_OPS_TOKEN = TOKEN;
+    process.env.AGENTCAP_OPS_TOKEN = TOKEN;
     for (const auth of [undefined, `Bearer ${TOKEN}x`, `Bearer ${TOKEN.slice(1)}`, TOKEN, `Basic ${TOKEN}`]) {
       const res = await get(auth);
       assert.equal(res.status, 401, String(auth));
@@ -114,7 +114,7 @@ describe("GET /api/ops/heartbeat", () => {
   });
 
   it("is 200 with the token: the beat, its age and the counts, aggregates only and never cached", async () => {
-    process.env.MERRYMEN_OPS_TOKEN = TOKEN;
+    process.env.AGENTCAP_OPS_TOKEN = TOKEN;
     const res = await get(`Bearer ${TOKEN}`);
     assert.equal(res.status, 200);
     assert.equal(res.headers.get("cache-control"), "no-store");
@@ -138,10 +138,10 @@ describe("GET /api/ops/heartbeat", () => {
   });
 
   it("no ledger yet is no heartbeat yet: an empty list, not an error and not a healthy fleet", async () => {
-    process.env.MERRYMEN_OPS_TOKEN = TOKEN;
+    process.env.AGENTCAP_OPS_TOKEN = TOKEN;
     const empty = mkdtempSync(path.join(tmpdir(), "mm-ops-heartbeat-empty-"));
     try {
-      process.env.MERRYMEN_HOME = empty;
+      process.env.AGENTCAP_HOME = empty;
       const res = await get(`Bearer ${TOKEN}`);
       assert.equal(res.status, 200);
       assert.deepEqual((await res.json()).heartbeats, []);

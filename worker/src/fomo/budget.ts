@@ -729,16 +729,16 @@ type Env = Record<string, string | undefined>;
  * limits, and budgetConfigFor still holds each one under the shared pool.
  */
 export const FOMO_CAP_ENV = Object.freeze({
-  groupHourlyCredits: "MERRYMEN_FOMO_GROUP_HOURLY_CREDITS",
-  tenantHourlyCredits: "MERRYMEN_FOMO_TENANT_HOURLY_CREDITS",
-  tenantDailyCredits: "MERRYMEN_FOMO_TENANT_DAILY_CREDITS",
+  groupHourlyCredits: "AGENTCAP_FOMO_GROUP_HOURLY_CREDITS",
+  tenantHourlyCredits: "AGENTCAP_FOMO_TENANT_HOURLY_CREDITS",
+  tenantDailyCredits: "AGENTCAP_FOMO_TENANT_DAILY_CREDITS",
   /** Read where X answers are asked (the orchestrator); the web never asks on that surface, but agrees on it harmlessly. */
-  xHourlyCredits: "MERRYMEN_FOMO_X_HOURLY_CREDITS",
+  xHourlyCredits: "AGENTCAP_FOMO_X_HOURLY_CREDITS",
 } as const);
 
-/** The provider plan's monthly credits (MERRYMEN_FOMO_PLAN_CREDITS): a positive number, else undefined and the default applies. */
+/** The provider plan's monthly credits (AGENTCAP_FOMO_PLAN_CREDITS): a positive number, else undefined and the default applies. */
 export function fomoPlanFrom(env: Env): number | undefined {
-  const plan = Number(env?.MERRYMEN_FOMO_PLAN_CREDITS);
+  const plan = Number(env?.AGENTCAP_FOMO_PLAN_CREDITS);
   return Number.isFinite(plan) && plan > 0 ? plan : undefined;
 }
 

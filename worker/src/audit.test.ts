@@ -250,7 +250,7 @@ describe("reconcile", () => {
  *
  * The purchase is booked as an 'energy-buy' out-flow (capital leaving the book)
  * and its trade row is fill-less: the reserve is never a position, so there is
- * no fillSide and nothing enters grossBuyNotional. $MERRYMEN is never in
+ * no fillSide and nothing enters grossBuyNotional. $AGENTCAP is never in
  * positions, so the composition check is untouched. With the flow booked the
  * envelope residual is exactly what it would be without the purchase; with the
  * flow MISSING, equity sits below contributions by the spend with no purchase to
@@ -261,7 +261,7 @@ describe("an energy purchase in the journal", () => {
   const ME = "0x00000000000000000000000000000000000000a1";
   const PAIR = "0x00000000000000000000000000000000000000b1";
   const USDG = "0x0000000000000000000000000000000000000dd0";
-  const MERRYMEN = "0xa15cd06dd305269a0f48bebeb30aa3588fba7b32";
+  const AGENTCAP = "0xa15cd06dd305269a0f48bebeb30aa3588fba7b32";
   const TRANSFER = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
   const topic = (a: string) => `0x${"0".repeat(24)}${a.slice(2)}`;
   const xfer = (token: string, from: string, to: string, v: bigint) => ({
@@ -309,7 +309,7 @@ describe("an energy purchase in the journal", () => {
   it("the flow and the fill-less trade both agree with the receipt", () => {
     const receipt = {
       status: "0x1",
-      logs: [xfer(USDG, ME, PAIR, 42_000_000n), xfer(MERRYMEN, PAIR, ME, 98_000n * 10n ** 18n)],
+      logs: [xfer(USDG, ME, PAIR, 42_000_000n), xfer(AGENTCAP, PAIR, ME, 98_000n * 10n ** 18n)],
     };
     const check = (kind: string, payload: Record<string, unknown>) =>
       compareRecord({ seq: 1, kind, payload, receipt, account: ME, usdgToken: USDG });

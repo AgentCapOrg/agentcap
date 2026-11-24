@@ -4,7 +4,7 @@ import { afterEach, before, beforeEach, describe, it, mock } from "node:test";
 import { fileURLToPath } from "node:url";
 import { JSDOM } from "jsdom";
 import React, { act } from "react";
-import { LLM_PROVIDERS, SETTINGS_DEFAULTS } from "@merrymen/core";
+import { LLM_PROVIDERS, SETTINGS_DEFAULTS } from "@agentcap/core";
 import type { SettingsView } from "@/app/api/settings/route";
 
 // A LINK TO ONE SETTING HAS TO LAND ON IT. The Telegram agent answers "turn on
@@ -58,7 +58,7 @@ function view(): SettingsView {
     bundlerApiKey: secret, groqApiKey: secret, anthropicApiKey: secret,
     llmApiKey: secret, rialtoApiKey: secret, telegramBotToken: secret,
     telegramTranscribeKey: secret, virtualsApiKey: secret, bitqueryApiKey: secret,
-    merrymenToken: secret,
+    agentcapToken: secret,
     values: { strategy: "steady-basket", liveTradingEnabled: false, customTokens: [] },
     defaults: structuredClone(SETTINGS_DEFAULTS), knownSymbols: ["AAPL"],
     officialCoins: [], strategies: { builtin: ["steady-basket", "trencher"], custom: [] },

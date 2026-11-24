@@ -12,7 +12,7 @@ mainnet the pool is `ShieldPoolPayments` at `0x39e28cde55cab798874746ac52cb4b5cc
 and it holds USDG at `0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168`, the same token the agent
 trades with (`packages/core/src/ids.ts`).
 
-## What changes in merrymen
+## What changes in agentcap
 
 One block in the Add funds panel (`FundingPanel` in `web/src/terminal/HostedControls.tsx`),
 under the agent account address:
@@ -21,7 +21,7 @@ under the agent account address:
   paused for recovery (the same rule the energy note follows).
 - **Copy address**, then **Open Gloam**: separate controls copy the agent account address
   and open `https://gloam.trade/app/vault?tab=move&mode=pay` in a new tab, with
-  `rel="noopener noreferrer"` so Gloam is not told which merrymen page sent the owner.
+  `rel="noopener noreferrer"` so Gloam is not told which agentcap page sent the owner.
 - Clipboard failure leaves the address visible with instructions to copy it manually.
 - The URL carries nothing about the agent. See "Gloam side" below for why.
 
@@ -36,14 +36,14 @@ these properties.
 1. The owner has a private USDG balance on Gloam, on Robinhood Chain. They got it by
    adding USDG to Gloam from any wallet (beta limits today: 500 USDG per deposit, 25,000 in
    the pool), or by being paid privately by someone else.
-2. In merrymen, Add funds, copy the agent address and open Gloam.
+2. In agentcap, Add funds, copy the agent address and open Gloam.
 3. In Gloam: choose Robinhood Chain, open Pay, paste the address, enter an amount of USDG.
    Pay sees a 0x address and hands it to Cash out, which sends from the private balance to
    that address. With **Hide my wallet** on (the default wherever Gloam's relay is up), the
    relay submits the transaction, so the owner's wallet is not its sender. The owner can
    also choose to send it in a few pieces at random times over a window they pick.
 4. On chain: a USDG `Transfer` from the Gloam pool to the agent account.
-5. In merrymen nothing new runs. The deposit scanner (`worker/src/deposit-log.ts`) reads
+5. In agentcap nothing new runs. The deposit scanner (`worker/src/deposit-log.ts`) reads
    the transfer and `classifyUsdgMovement` (`packages/core/src/capital-classify.ts`)
    decides it: an inbound USDG leg, nothing else moving the other way, from an address that
    is not one of ours, not chain infrastructure and not a trading venue, so `capital-in`
@@ -71,8 +71,8 @@ may be reused; an embedded wallet is not a promise of a fresh identity. An agent
 the owner's main wallet is already linked to it. This feature changes the funding route,
 not the account's ownership history.
 
-**Who sees what in phase 1.** merrymen sees nothing new: there is no call from merrymen to Gloam, and
-Gloam is not told which merrymen account the owner has. Gloam's relay sees the
+**Who sees what in phase 1.** agentcap sees nothing new: there is no call from agentcap to Gloam, and
+Gloam is not told which agentcap account the owner has. Gloam's relay sees the
 transactions it submits, which are public once they land, and the connection they arrive on.
 
 The panel never calls this anonymous or untraceable, and must not.
@@ -111,9 +111,9 @@ https://gloam.trade/app/vault?tab=move&mode=pay#to=<agent account>&asset=0x5fc53
 Note the network key: on Gloam, `robinhood` is the testnet and `robinhood-mainnet` is 4663.
 
 **Not chosen for this step.** A heavier route, already proven with another integration,
-gives each agent its own Gloam receive address: a merrymen service finds incoming payments
+gives each agent its own Gloam receive address: a agentcap service finds incoming payments
 (`scanIncomingPayments` in `@gloamtrade/sdk`), secures them (`sweepReceivedNote`) and cashes
-them out to the agent account. It needs no paste step, but it puts Gloam keys on a merrymen
+them out to the agent account. It needs no paste step, but it puts Gloam keys on a agentcap
 server, which is more than funding needs.
 
 ## Phase 2: owner-approved withdrawal to Gloam
@@ -126,7 +126,7 @@ The agent-to-pool amount and time remain public.
 `GloamWithdrawal` appears alongside the existing Spot recovery panel on Robinhood mainnet.
 The browser client and relay reject Perps wallets, including valid Perps recovery tickets.
 The browser requires `NEXT_PUBLIC_GLOAM_WITHDRAWALS_ENABLED=1`; the bundler relay
-independently requires `MERRYMEN_GLOAM_WITHDRAWALS_ENABLED=1`. Both default off.
+independently requires `AGENTCAP_GLOAM_WITHDRAWALS_ENABLED=1`. Both default off.
 These are separate from the funding flag. Public flags must be set at build time.
 
 1. The owner enters an amount, limited to 500 USDG per operation, and their public
@@ -139,7 +139,7 @@ These are separate from the funding flag. Public flags must be set at build time
 4. The owner signs one atomic Kernel batch: approve exactly the amount to the pinned
    pool, call `shieldBound`, post the encrypted memo to the pinned payment board, then
    reset the USDG approval to zero. A failure reverts the entire batch.
-5. Merrymen verifies the real chain receipt, including the matching EntryPoint
+5. AgentCap verifies the real chain receipt, including the matching EntryPoint
    operation hash, sender and nonce, the USDG transfer, pool commitment and exact memo
    within that operation. Gloam then discovers and secures the received note through
    its existing claim flow. A confirmed deposit does not mean that claim has happened.
@@ -214,4 +214,4 @@ For a rollback, disable the server withdrawal flag first. Keep the browser withd
 flag enabled while owners check or download pending records: receipt reads remain
 available, but new Gloam submissions are refused. Turning off the browser flag hides
 this panel and its local journal. Gloam's on-chain encrypted memo remains discoverable
-in Gloam even if Merrymen is unavailable.
+in Gloam even if AgentCap is unavailable.

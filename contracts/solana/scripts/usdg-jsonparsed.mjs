@@ -45,7 +45,7 @@ function base58(bytes) {
 }
 const sha256 = data => createHash("sha256").update(data).digest();
 /** A fixed public key for a role, derived from no secret: nothing ever signs with it. */
-export const roleKey = role => base58(sha256(`merrymen usdg jsonParsed ${role}`));
+export const roleKey = role => base58(sha256(`agentcap usdg jsonParsed ${role}`));
 
 /** The read bytes changed by a variant's ops, in order, as custody.rs applies them; checked against its sha256. */
 export function variantBytes(fixture, variant) {

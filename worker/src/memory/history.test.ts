@@ -1,8 +1,8 @@
 /**
  * Chat history has to survive a worker restart. Before chat_turns it lived in an
- * in-memory Map, so every restart silently wiped the thread and the merryman
+ * in-memory Map, so every restart silently wiped the thread and the agentcapavatar
  * greeted a mid-conversation owner like a stranger. These run against a real
- * sqlite file in a throwaway MERRYMEN_HOME.
+ * sqlite file in a throwaway AGENTCAP_HOME.
  */
 import assert from "node:assert/strict";
 import { after, describe, it } from "node:test";
@@ -11,7 +11,7 @@ import os from "node:os";
 import path from "node:path";
 
 const HOME = mkdtempSync(path.join(os.tmpdir(), "mm-hist-"));
-process.env.MERRYMEN_HOME = HOME;
+process.env.AGENTCAP_HOME = HOME;
 
 const { closeStoreForTest, initStore, appendChatTurn, recentChatTurns, clearChatTurns } = await import("../store");
 

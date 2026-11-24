@@ -3,7 +3,7 @@
  *
  * A fifth lens for the memecoin desk, and the first one that is not about the
  * market. `technical` is price, `liquidity` is depth, `onchain` is who holds
- * the float, `social` is what other Merrymen published — four readings of the
+ * the float, `social` is what other AgentCap published — four readings of the
  * same tape. None of them can answer the question a human asks first: is
  * anybody still building the thing this ticker is named after.
  *

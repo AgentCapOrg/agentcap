@@ -39,7 +39,7 @@ function keypair(seedByte: number) {
   const secret = new Uint8Array(64);
   secret.set(seed, 0);
   secret.set(pub, 32);
-  const sig = ed25519.sign(new TextEncoder().encode("merrymen"), seed);
+  const sig = ed25519.sign(new TextEncoder().encode("agentcap"), seed);
   return { pub: base58Encode(pub), secret, secretB58: base58Encode(secret), sig: base58Encode(sig) };
 }
 
@@ -227,7 +227,7 @@ describe("glued on-chain id detection (audit regressions F3)", () => {
     // read as glued ids, every digest, EVM hash and long number like these was withheld.
     for (const text of [
       "6fde6ce70efd0bc3e0c60538ccf57431cf76c354a617bd6c5a1f8198d4342cfa",
-      "| `MERRYMEN_ADOPT_HOME_HALT_SHA256` | `6fde6ce70efd0bc3e0c60538ccf57431cf76c354a617bd6c5a1f8198d4342cfa` |",
+      "| `AGENTCAP_ADOPT_HOME_HALT_SHA256` | `6fde6ce70efd0bc3e0c60538ccf57431cf76c354a617bd6c5a1f8198d4342cfa` |",
       "02D20BBD7E394AD5999A4CEBABAC9619732C343A4CAC99470C03E23BA2BDC2BC",
       "supply 63971511409728546707420640415976470808777281049430980144558505433936508649475518010444363585908687133263558897911835323323191563463575735092780586118530448 ok",
     ]) assert.deepEqual(onchainIdsIn(text, glued), [], text);
@@ -248,7 +248,7 @@ describe("glued on-chain id detection (audit regressions F3)", () => {
   it("leaves prose, tickers, hex digests, long numbers and other base58 alone", () => {
     for (const text of [
       "the market is quiet today", "PEPE pumped 40% on the week", "$SOL $BONK $WIF $JUP and $USDG",
-      "supercalifragilisticexpialidociousandmorewordsjoined", "merrymen:meme dec_9f2c4b7a1e3d5f60 [ref:d3fa91cr2c1] up to 30 minutes",
+      "supercalifragilisticexpialidociousandmorewordsjoined", "agentcap:meme dec_9f2c4b7a1e3d5f60 [ref:d3fa91cr2c1] up to 30 minutes",
       "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "abcdef123456789".repeat(5),
       "ABCDEF123456789abcdef".repeat(4), "2345678923456789234567892345678923456789", "9".repeat(120),
       "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa paid", "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq",

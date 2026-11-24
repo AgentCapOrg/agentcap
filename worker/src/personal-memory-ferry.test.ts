@@ -25,7 +25,7 @@ const CHAT = 'same-second fresh turn';
 const CHAT_SCHEMA = `CREATE TABLE chat_turns (id INTEGER PRIMARY KEY AUTOINCREMENT, chat_id INTEGER NOT NULL, role TEXT NOT NULL, content TEXT NOT NULL, memory_ids TEXT, at INTEGER NOT NULL);`;
 const quiet = () => { const lines: string[] = []; return { lines, log: (s: string) => lines.push(s) }; };
 const home = (t: { after(fn: () => void): void }) => {
-  const h = mkdtempSync(path.join(os.tmpdir(), 'merrymen-personal-ferry-'));
+  const h = mkdtempSync(path.join(os.tmpdir(), 'agentcap-personal-ferry-'));
   t.after(() => rmSync(h, { recursive: true, force: true })); return h;
 };
 async function shared(t: { after(fn: () => void): void }) {
@@ -42,7 +42,7 @@ function soul(h: string, extra = false) {
   }
 }
 function chats(h: string) {
-  const raw = new DatabaseSync(path.join(h, 'merrymen.db')); raw.exec(CHAT_SCHEMA); return raw;
+  const raw = new DatabaseSync(path.join(h, 'agentcap.db')); raw.exec(CHAT_SCHEMA); return raw;
 }
 function insert(raw: DatabaseSync, chatId: number, content: string, at = 100) {
   raw.prepare('INSERT INTO chat_turns (chat_id, role, content, memory_ids, at) VALUES (?, ?, ?, ?, ?)')
@@ -79,7 +79,7 @@ test('sealed whitelist restores soul and newest 40 DM turns, without keys, raw g
     assert.equal(lstatSync(path.join(dest,'soul',name)).mode & 0o777, 0o600);
   }
   assert.ok(!existsSync(path.join(dest,'grant.json')));
-  const restored = new DatabaseSync(path.join(dest,'merrymen.db'));
+  const restored = new DatabaseSync(path.join(dest,'agentcap.db'));
   assert.equal(restored.prepare('SELECT count(*) n FROM chat_turns').get()!.n, 40);
   assert.equal(restored.prepare("SELECT count(*) n FROM sqlite_master WHERE name = 'grants'").get()!.n, 0);
   restored.close();
@@ -92,7 +92,7 @@ test('never overwrite existing soul file or an existing DM chat', async (t) => {
   const d = chats(dest); insert(d, 10, 'new local DM'); d.close();
   assert.equal(await restore(A, dest, db), 'restored');
   assert.equal(readFileSync(path.join(dest,'soul','OWNER.md'),'utf8'), 'new local owner');
-  const after = new DatabaseSync(path.join(dest,'merrymen.db'));
+  const after = new DatabaseSync(path.join(dest,'agentcap.db'));
   assert.equal(after.prepare('SELECT content FROM chat_turns WHERE chat_id = 10').get()!.content, 'new local DM');
   assert.equal(after.prepare('SELECT content FROM chat_turns WHERE chat_id = 11').get()!.content, 'another DM'); after.close();
 });
@@ -107,7 +107,7 @@ test('pending forget removes stored owner/archive and DM; restored post-forget s
   assert.equal(old.soul['NOTES.md'], 'NOTES.md\n' + PRIVATE); assert.deepEqual(old.chats, []);
   writeFileSync(path.join(src,'soul','OWNER.md'), 'fresh owner fact');
   writeFileSync(path.join(src,'soul','ARCHIVE.md'), 'fresh archive'); completePersonalMemoryForget(owner, src);
-  const next = new DatabaseSync(path.join(src,'merrymen.db')); next.exec('DELETE FROM chat_turns WHERE chat_id = 10');
+  const next = new DatabaseSync(path.join(src,'agentcap.db')); next.exec('DELETE FROM chat_turns WHERE chat_id = 10');
   completePersonalMemoryForget(chat, src); insert(next, 10, CHAT, 100); next.close();
   assert.equal(await pub(A, src, db), 'published');
   assert.equal(opened(raw).chats[0]!.turns[0]!.content, CHAT);
@@ -201,11 +201,11 @@ test('oversized memory and excess DM chats never replace a good snapshot', async
 
 test('partial restore retains a marker, blocks publish, and retries without overwriting', async (t) => {
   const {db}=await shared(t);const src=home(t);const dest=home(t);soul(src);const local=chats(src);insert(local,10,PRIVATE);local.close();await pub(A,src,db);
-  const broken=new DatabaseSync(path.join(dest,'merrymen.db'));broken.exec('CREATE TABLE chat_turns (id INTEGER PRIMARY KEY, chat_id INTEGER, role TEXT, content TEXT, memory_ids TEXT, at INTEGER); CREATE TRIGGER block_restore BEFORE INSERT ON chat_turns BEGIN SELECT RAISE(ABORT,\'blocked\'); END;');broken.close();
+  const broken=new DatabaseSync(path.join(dest,'agentcap.db'));broken.exec('CREATE TABLE chat_turns (id INTEGER PRIMARY KEY, chat_id INTEGER, role TEXT, content TEXT, memory_ids TEXT, at INTEGER); CREATE TRIGGER block_restore BEFORE INSERT ON chat_turns BEGIN SELECT RAISE(ABORT,\'blocked\'); END;');broken.close();
   assert.equal(await restore(A,dest,db),'failed');assert.ok(existsSync(path.join(dest,PERSONAL_MEMORY_RESTORE_FILE)));
   assert.equal(readFileSync(path.join(dest,'soul','OWNER.md'),'utf8'),'OWNER.md\n'+PRIVATE);
   assert.equal(await pub(A,dest,db),'failed');
-  const repaired=new DatabaseSync(path.join(dest,'merrymen.db'));repaired.exec('DROP TRIGGER block_restore');repaired.close();
+  const repaired=new DatabaseSync(path.join(dest,'agentcap.db'));repaired.exec('DROP TRIGGER block_restore');repaired.close();
   assert.equal(await restore(A,dest,db),'restored');assert.ok(!existsSync(path.join(dest,PERSONAL_MEMORY_RESTORE_FILE)));
 });
 
@@ -247,7 +247,7 @@ test('explicit local removal prevents personal-memory resurrection while preserv
   assert.equal(await pub(A,src,db),'absent');
   assert.ok(existsSync(path.join(src,'grant.json')));assert.ok(existsSync(path.join(src,'settings.json')));
   assert.ok(existsSync(path.join(src,'soul','keys.json')));
-  const after=new DatabaseSync(path.join(src,'merrymen.db'));
+  const after=new DatabaseSync(path.join(src,'agentcap.db'));
   assert.equal(after.prepare('SELECT count(*) n FROM chat_turns WHERE chat_id>0').get()!.n,0);
   assert.equal(after.prepare('SELECT value FROM equity').get()!.value,'durable finance');after.close();
 });
@@ -265,7 +265,7 @@ test('failed explicit DM deletion keeps an erasure barrier so a regrant cannot r
   local.exec("CREATE TRIGGER blocked_forget BEFORE DELETE ON chat_turns BEGIN SELECT RAISE(ABORT,'blocked'); END;");local.close();
   forgetPersonalMemoryHome(src,()=>{});assert.ok(existsSync(path.join(src,PERSONAL_MEMORY_ERASE_FILE)));
   assert.equal(await pub(A,src,db),'failed');assert.equal(await restore(A,src,db),'failed');
-  const repaired=new DatabaseSync(path.join(src,'merrymen.db'));repaired.exec('DROP TRIGGER blocked_forget');repaired.close();
+  const repaired=new DatabaseSync(path.join(src,'agentcap.db'));repaired.exec('DROP TRIGGER blocked_forget');repaired.close();
   assert.ok(forgetPersonalMemoryHome(src,()=>{})>=6);assert.ok(!existsSync(path.join(src,PERSONAL_MEMORY_ERASE_FILE)));
   assert.equal(await pub(A,src,db),'absent');
 });
@@ -282,12 +282,12 @@ test('owner forget wipes mixed archive and its durable journal; NOTES and JOURNA
     import { ensureSoul, forgetOwner, rememberOwnerFact } from './worker/src/soul.ts';
     import { writeFileSync, readFileSync } from 'node:fs';
     import path from 'node:path';
-    const h=process.env.MERRYMEN_HOME;ensureSoul();rememberOwnerFact('favorite food is rice');
+    const h=process.env.AGENTCAP_HOME;ensureSoul();rememberOwnerFact('favorite food is rice');
     writeFileSync(path.join(h,'soul','ARCHIVE.md'),'old private fact');
     writeFileSync(path.join(h,'soul','NOTES.md'),'keep note');
     writeFileSync(path.join(h,'soul','JOURNAL.md'),'keep journal');forgetOwner();
     console.log(JSON.stringify({owner:readFileSync(path.join(h,'soul','OWNER.md'),'utf8'),archive:readFileSync(path.join(h,'soul','ARCHIVE.md'),'utf8'),note:readFileSync(path.join(h,'soul','NOTES.md'),'utf8'),journal:readFileSync(path.join(h,'soul','JOURNAL.md'),'utf8')}));
-  `],{cwd:process.cwd(),env:{...process.env,MERRYMEN_HOME:h},encoding:'utf8'});
+  `],{cwd:process.cwd(),env:{...process.env,AGENTCAP_HOME:h},encoding:'utf8'});
   const result=JSON.parse(output);assert.ok(!result.owner.includes('favorite food'));assert.ok(!result.archive.includes('private fact'));
   assert.equal(result.note,'keep note');assert.equal(result.journal,'keep journal');
   assert.equal(JSON.parse(readFileSync(path.join(h,PERSONAL_MEMORY_FORGET_FILE),'utf8').trim()).completed,true);

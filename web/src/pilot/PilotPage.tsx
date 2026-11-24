@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { isHostedMode } from "@merrymen/core";
+import { isHostedMode } from "@agentcap/core";
 import { Providers } from "../terminal/Providers";
 import { DEFAULT_LOCALE, LOCALE_COOKIE, normalizeLocale } from "../lib/locale";
 

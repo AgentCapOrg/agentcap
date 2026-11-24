@@ -40,11 +40,11 @@ export function partnerGrantDigest(grant: unknown): Hex {
 /** The owner signs both app consent and the exact grant/settings being installed. */
 export function partnerEnrollmentMessage(claim: PartnerEnrollmentClaim): string {
   return [
-    "Authorize my Merryman in another app",
+    "Authorize my AgentCapAvatar in another app",
     "",
     `App: ${JSON.stringify(claim.app_name)} (${claim.app_id})`,
     `App user: ${JSON.stringify(claim.external_user_id)}`,
-    `Merryman: ${claim.agent_id}`,
+    `AgentCapAvatar: ${claim.agent_id}`,
     `Owner: ${claim.owner.toLowerCase()}`,
     `Agent wallet: ${claim.smart_account.toLowerCase()}`,
     `Chain ID: ${claim.chain_id}`,
@@ -53,7 +53,7 @@ export function partnerEnrollmentMessage(claim: PartnerEnrollmentClaim): string 
     `App access: ${claim.scopes.join(", ")}`,
     "",
     "I authorize this app to view my agent's status and, if listed above, chat using my private portfolio and trading history.",
-    "I authorize Merrymen to install this signed session permission and run my agent within it. My owner key stays in my wallet.",
+    "I authorize AgentCap to install this signed session permission and run my agent within it. My owner key stays in my wallet.",
     claim.settings.live_trading_enabled
       ? "LIVE TRADING: I authorize automatic trading with real funds under this permission."
       : "PAPER TRADING: simulated fills only; this authorization does not enable real trading.",

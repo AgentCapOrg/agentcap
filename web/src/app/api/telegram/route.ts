@@ -12,7 +12,7 @@
  * THIS ROUTE ANSWERED ABOUT THE WRONG MACHINE, AND ABOUT NOBODY.
  *
  * `GET()` took no Request, so it could not resolve a tenant even in principle,
- * and it read `merrymenHome()` — the WEB container's home. Hosted, the web app
+ * and it read `agentcapHome()` — the WEB container's home. Hosted, the web app
  * and the orchestrator are separate Railway services with separate filesystems:
  * the child mints its link code into `<childHome>/telegram.json` on the
  * orchestrator's disk, and nothing has ever written a `telegram.json` on the web
@@ -43,9 +43,9 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
-import { merrymenHome } from "@merrymen/home";
-import { isHostedMode, type MerrymenSettings } from "@merrymen/core";
-import { getSettingsStore } from "@merrymen/settings-store";
+import { agentcapHome } from "@agentcap/home";
+import { isHostedMode, type AgentCapSettings } from "@agentcap/core";
+import { getSettingsStore } from "@agentcap/settings-store";
 import { tenantOf } from "@/lib/auth";
 import { ownerMismatch } from "@/lib/order-owner";
 import { withReadDb } from "@/lib/ledger";
@@ -58,8 +58,8 @@ import { walletNotSupported } from "@/lib/route-guard";
 export const dynamic = "force-dynamic";
 
 /** Self-hosted only: one operator, one home, and the file IS the store. */
-const SETTINGS_FILE = path.join(merrymenHome(), "settings.json");
-const TELEGRAM_FILE = path.join(merrymenHome(), "telegram.json");
+const SETTINGS_FILE = path.join(agentcapHome(), "settings.json");
+const TELEGRAM_FILE = path.join(agentcapHome(), "telegram.json");
 
 async function readJson<T>(file: string): Promise<T | null> {
   try {
@@ -75,14 +75,14 @@ async function readJson<T>(file: string): Promise<T | null> {
  * The same shape /api/settings and /api/feed use. Hosted that is the per-tenant
  * sealed store; self-hosted it is the one file on disk.
  */
-async function settingsFor(tenant: `0x${string}` | null): Promise<MerrymenSettings> {
+async function settingsFor(tenant: `0x${string}` | null): Promise<AgentCapSettings> {
   if (isHostedMode()) return tenant ? ((await getSettingsStore("spot").get(tenant)) ?? {}) : {};
-  return (await readJson<MerrymenSettings>(SETTINGS_FILE)) ?? {};
+  return (await readJson<AgentCapSettings>(SETTINGS_FILE)) ?? {};
 }
 
 /**
  * THE TOKEN THE WORKER POLLS WITH, which is the bot every answer here is
- * about: the saved one, or, SELF-HOSTED ONLY, MERRYMEN_TELEGRAM_BOT_TOKEN,
+ * about: the saved one, or, SELF-HOSTED ONLY, AGENTCAP_TELEGRAM_BOT_TOKEN,
  * by the worker's own rule (worker/src/settings.ts str(): trimmed, and blank
  * is absent).
  *
@@ -95,11 +95,11 @@ async function settingsFor(tenant: `0x${string}` | null): Promise<MerrymenSettin
  * because one token in the environment would be every tenant's bot, and the
  * web container's environment must not stand in for a tenant's token either.
  */
-function effectiveToken(settings: MerrymenSettings): string | undefined {
+function effectiveToken(settings: AgentCapSettings): string | undefined {
   const saved = settings.telegramBotToken;
   if (typeof saved === "string" && saved.trim() !== "") return saved.trim();
   if (isHostedMode()) return undefined;
-  const env = process.env.MERRYMEN_TELEGRAM_BOT_TOKEN;
+  const env = process.env.AGENTCAP_TELEGRAM_BOT_TOKEN;
   return env !== undefined && env.trim() !== "" ? env.trim() : undefined;
 }
 
@@ -107,7 +107,7 @@ function effectiveToken(settings: MerrymenSettings): string | undefined {
  * The runtime half — minted by the child, ferried up by the orchestrator.
  *
  * Self-hosted there is no orchestrator and no ferry: the worker and the web
- * process share one MERRYMEN_HOME, so the file the child wrote IS readable here
+ * process share one AGENTCAP_HOME, so the file the child wrote IS readable here
  * and is the right answer.
  *
  * With it, whether anything is hearing the bot and whether the tenant trades
@@ -214,7 +214,7 @@ async function botUsername(token: string): Promise<string | null> {
  * Only this is ever asked of the bot claims (lib/telegram-runtime.ts). A
  * token getMe does not confirm is saved as typed, and a bot id is public, so
  * the saved token's id alone would let any signed-in account learn whether a
- * Merrymen agent holds a bot it names. A live token is proof of control of
+ * AgentCap agent holds a bot it names. A live token is proof of control of
  * the bot, which is the rule the settings save's 409 already keeps
  * (lib/telegram-claims.ts decideBotClaim).
  */
@@ -242,7 +242,7 @@ export interface TelegramStatus {
    */
   linkPending: boolean;
   /**
-   * The saved bot is connected to another Merrymen agent (its claim names
+   * The saved bot is connected to another AgentCap agent (its claim names
    * another account), so this one will never poll it, and there is no code.
    * Which agent is never said.
    */

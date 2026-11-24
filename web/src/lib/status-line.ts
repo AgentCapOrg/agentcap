@@ -28,7 +28,7 @@
  */
 
 import { usdAdaptive } from "@/lib/format";
-import { RENEW_SOON_DAYS } from "@merrymen/core";
+import { RENEW_SOON_DAYS } from "@agentcap/core";
 
 export interface AgentSnapshot {
   name: string;

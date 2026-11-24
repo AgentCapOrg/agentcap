@@ -20,7 +20,7 @@
  * fomoMonitoringEnabled / fomoFollowEnabled settings say.
  */
 import { NextResponse } from "next/server";
-import { isHostedMode } from "@merrymen/core";
+import { isHostedMode } from "@agentcap/core";
 import { tenantOf } from "@/lib/auth";
 import { FOMO_NEEDS_AGENT, FOMO_NOT_ENABLED, fomoEnabledFor, fomoRuntime, fomoTenantFor, hostedFomoOwner } from "@/lib/fomo-runtime";
 import { FOMO_ATTRIBUTION, renderEnvelope } from "../../../../../../worker/src/fomo/render";

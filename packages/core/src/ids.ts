@@ -1,7 +1,7 @@
 /**
  * CHAIN-NEUTRAL IDENTITY (Solana integration, phase 0, 2026-10-16).
  *
- * Until now every id in Merrymen was an EVM id on Robinhood Chain: a 0x
+ * Until now every id in AgentCap was an EVM id on Robinhood Chain: a 0x
  * address, lowercased, or a 0x transaction hash. Solana ids are base58 and
  * CASE-SENSITIVE: lowercasing a mint makes a different (usually nonexistent)
  * mint, and lowercasing a signature makes it unfindable. So a chain is named
@@ -24,7 +24,7 @@
 import { ed25519 } from "@noble/curves/ed25519";
 import { sha256 } from "@noble/hashes/sha256";
 
-/** The chain families Merrymen can name. */
+/** The chain families AgentCap can name. */
 export type ChainFamily = "evm" | "solana";
 
 /** CAIP-2 references: `eip155:<chain id>`, `solana:<first 32 chars of the genesis hash>`. */
@@ -104,7 +104,7 @@ const REGISTRY: ReadonlyMap<string, ChainInfo> = new Map<string, ChainInfo>([
   }],
 ]);
 
-/** Every chain Merrymen names, in display order. */
+/** Every chain AgentCap names, in display order. */
 export function allChains(): ChainInfo[] {
   return [...REGISTRY.values()];
 }

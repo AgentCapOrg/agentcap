@@ -135,7 +135,7 @@ describe("code's casual answers", () => {
         assert.equal(v.ok && v.text, line, "posted exactly as built");
         const words = withoutReplyOptOut(line);
         assert.doesNotMatch(words, /\p{N}|\$|@|#|https?:|0x/u, line);
-        assert.doesNotMatch(words, /\b(?:hot|trending|next|soon|tonight|tomorrow|later today|early|bullish|bearish|moon|pump|up only|higher|lower|top|bottom|green|red|profit|loss|size|hold|holding|sell|selling|best|biggest|fund|merrymen|robinhood|sherwood)\b/i, line);
+        assert.doesNotMatch(words, /\b(?:hot|trending|next|soon|tonight|tomorrow|later today|early|bullish|bearish|moon|pump|up only|higher|lower|top|bottom|green|red|profit|loss|size|hold|holding|sell|selling|best|biggest|fund|agentcap|robinhood|sherwood)\b/i, line);
         assert.doesNotMatch(words, /\b(?:you should|should you|i'?d buy|buy it|get in)\b/i, line);
       }
     }

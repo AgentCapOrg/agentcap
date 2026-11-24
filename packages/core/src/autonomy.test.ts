@@ -166,7 +166,7 @@ describe("the remedy offered must be able to fix the cause", () => {
   /**
    * A tester reported: "I'm resigning but this banner keeps appearing."
    *
-   * His key was signed for another network. The banner said "Your Merryman
+   * His key was signed for another network. The banner said "Your AgentCapAvatar
    * needs a free permission renewal", the button said "Renew permission", and
    * the grant screen syncs its chain selector to the key being REPLACED — so
    * renewing re-signed the same wrong network, and the banner returned. The

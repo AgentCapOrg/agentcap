@@ -26,9 +26,9 @@ import { after, describe, it, mock } from "node:test";
 
 import type { EnergyStatus } from "../../../packages/core/src/index";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-energy-alert-redeploy-"));
-process.env.MERRYMEN_HOME = HOME; // no ledger file: the notifier's trade pass reads nothing
-process.env.MERRYMEN_DASHBOARD_URL = "https://app.merrymen.dev";
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-energy-alert-redeploy-"));
+process.env.AGENTCAP_HOME = HOME; // no ledger file: the notifier's trade pass reads nothing
+process.env.AGENTCAP_DASHBOARD_URL = "https://app.agentcap.xyz";
 after(() => rmSync(HOME, { recursive: true, force: true }));
 
 const { wrapSqlite } = await import("../db");

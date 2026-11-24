@@ -34,7 +34,7 @@ import { CliError, sourceFingerprint, targetDigest, type PgClient } from "./chai
 import { parseRepairReport, REPAIRS_TABLE } from "./closed-epoch-capital";
 import { closedEpochSourceFingerprint, createClosedEpochRpc, failureLine, main, parseClosedEpochArgs } from "./closed-epoch-capital-cli";
 
-const dir = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-closed-epoch-cli-")));
+const dir = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-closed-epoch-cli-")));
 const handles: DatabaseSync[] = [];
 after(() => { for (const h of handles) h.close(); rmSync(dir, { recursive: true, force: true }); });
 
@@ -538,7 +538,7 @@ describe("whole runs through the shell", () => {
     }
     assert.deepEqual([connected, existsSync(out), count(raw, "SELECT COUNT(*) AS n FROM flows")], [0, false, 2], "nothing read, written or changed");
     // A report cut short, or empty: the apply that writes it never reached its COMMIT (the report is whole and synced before it is sent).
-    for (const text of ["", '{"format":"merrymen.closed-epoch-capital.apply.v1","repairId":"7d4f']) {
+    for (const text of ["", '{"format":"agentcap.closed-epoch-capital.apply.v1","repairId":"7d4f']) {
       const cut = path.join(dir, `named-cut-${text.length}.json`);
       writeFileSync(cut, text);
       await assert.rejects(main(["--revert", cut, "--dry-run", "--output", path.join(dir, `named-cut-${text.length}-out.json`)], env, run(raw, [], [])),

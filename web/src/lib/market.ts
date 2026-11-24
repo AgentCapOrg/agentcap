@@ -17,7 +17,7 @@ import {
   STOCK_ABI,
   STOCK_TOKENS,
   robinhoodChain,
-} from "@merrymen/core";
+} from "@agentcap/core";
 
 export interface MarketToken {
   symbol: string;

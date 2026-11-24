@@ -9,8 +9,8 @@ let ui: ReturnType<typeof testDom>;
 beforeEach(() => {
   ui = testDom();
   mock.timers.enable({ apis: ["setTimeout"] });
-  localStorage.setItem("merrymen.grant.v1", "recoverable wallet fixture");
-  localStorage.setItem("merrymen.grant.perps.v1", "recoverable perps wallet fixture");
+  localStorage.setItem("agentcap.grant.v1", "recoverable wallet fixture");
+  localStorage.setItem("agentcap.grant.perps.v1", "recoverable perps wallet fixture");
 });
 afterEach(async () => {
   await ui.close();
@@ -31,8 +31,8 @@ for (const failure of ["network", 400, 500] as const) {
     await ui.click("◉ press again to confirm");
     assert.match(ui.container.textContent!, /try the kill again/);
     assert.doesNotMatch(ui.container.textContent!, /permission deleted|all agents killed/);
-    assert.equal(localStorage.getItem("merrymen.grant.v1"), "recoverable wallet fixture");
-    assert.equal(localStorage.getItem("merrymen.grant.perps.v1"), "recoverable perps wallet fixture");
+    assert.equal(localStorage.getItem("agentcap.grant.v1"), "recoverable wallet fixture");
+    assert.equal(localStorage.getItem("agentcap.grant.perps.v1"), "recoverable perps wallet fixture");
   });
 }
 
@@ -41,8 +41,8 @@ for (const failure of ["network", 400, 500] as const) {
 it("a confirmed kill archives and clears BOTH wallets' browser slots, Spot and Perps", async () => {
   const spot = JSON.stringify({ smartAccount: `0x${"aa".repeat(20)}`, demoOwnerPrivateKey: `0x${"01".repeat(32)}` });
   const perps = JSON.stringify({ smartAccount: `0x${"bb".repeat(20)}`, demoOwnerPrivateKey: `0x${"01".repeat(32)}` });
-  localStorage.setItem("merrymen.grant.v1", spot);
-  localStorage.setItem("merrymen.grant.perps.v1", perps);
+  localStorage.setItem("agentcap.grant.v1", spot);
+  localStorage.setItem("agentcap.grant.perps.v1", perps);
   globalThis.fetch = async (_url, init) => {
     assert.equal(init?.method, "DELETE");
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
@@ -51,10 +51,10 @@ it("a confirmed kill archives and clears BOTH wallets' browser slots, Spot and P
   await ui.click("◉ kill all agents");
   await ui.click("◉ press again to confirm");
   assert.match(ui.container.textContent!, /permission deleted/);
-  assert.equal(localStorage.getItem("merrymen.grant.v1"), null);
-  assert.equal(localStorage.getItem("merrymen.grant.perps.v1"), null);
-  assert.equal(localStorage.getItem(`merrymen.grant.archive.0x${"aa".repeat(20)}`), spot);
-  assert.equal(localStorage.getItem(`merrymen.grant.archive.0x${"bb".repeat(20)}`), perps);
+  assert.equal(localStorage.getItem("agentcap.grant.v1"), null);
+  assert.equal(localStorage.getItem("agentcap.grant.perps.v1"), null);
+  assert.equal(localStorage.getItem(`agentcap.grant.archive.0x${"aa".repeat(20)}`), spot);
+  assert.equal(localStorage.getItem(`agentcap.grant.archive.0x${"bb".repeat(20)}`), perps);
 });
 
 it("cannot delete before the signed-in tenant is known", async () => {

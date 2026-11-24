@@ -2,7 +2,7 @@
  * HOW AN ENERGY PURCHASE IS BOOKED — the pure half.
  *
  * WHAT THE PURCHASE IS, IN ACCOUNTING TERMS. USDG spent buying the energy
- * reserve ($MERRYMEN) into the agent's own account is CAPITAL LEAVING THE
+ * reserve ($AGENTCAP) into the agent's own account is CAPITAL LEAVING THE
  * TRADING BOOK. The reserve sits outside the book the way ETH gas does — never
  * watched, never a position, never valued into equity, never sold by a strategy
  * (equity.ts) — but unlike gas it is BOUGHT and KEPT, not consumed. So it is
@@ -207,7 +207,7 @@ function recordAndPeaks(a: {
       rule: "no-contribution-record",
       why:
         "this agent has no record of the capital put into it yet, so an energy purchase could not be told apart from " +
-        "its P&L — send USDG to it (or let it record its opening balance) first, or send $MERRYMEN to its account directly",
+        "its P&L — send USDG to it (or let it record its opening balance) first, or send $AGENTCAP to its account directly",
     };
   }
   if (a.lifetimePeakUsdg < a.spendUsdg || a.breakerPeakUsdg <= a.spendUsdg) {
@@ -216,7 +216,7 @@ function recordAndPeaks(a: {
       rule: "peak-below-spend",
       why:
         `spending ${fmt(a.spendUsdg)} USDG would take this agent's high-water mark (${fmt(a.breakerPeakUsdg)} USDG) to zero, ` +
-        `which would switch its drawdown limit off — top up USDG first, or send $MERRYMEN to its account directly`,
+        `which would switch its drawdown limit off — top up USDG first, or send $AGENTCAP to its account directly`,
     };
   }
   return null;
@@ -302,7 +302,7 @@ export function energyPreTradeGate(a: {
             : `spending ${fmt(a.spendUsdg)} USDG on energy would leave only ${fmt(left)} of the ${fmt(net)} USDG of ` +
               `capital on record for me — I keep at least ${fmt(floor)} (a tenth, and never under 1 USDG) so I can ` +
               `size trades and report how I'm doing`) +
-          ` — send USDG to me first and ask again, or send $MERRYMEN to my account directly`,
+          ` — send USDG to me first and ask again, or send $AGENTCAP to my account directly`,
       };
     }
   }
@@ -314,7 +314,7 @@ export function energyPreTradeGate(a: {
       rule: "would-trip-breaker",
       why:
         `spending ${fmt(a.spendUsdg)} USDG on energy would put this agent's drawdown at ${after}bps against its ` +
-        `${a.maxDrawdownBps}bps limit, and the limit is not loosened for this — top up USDG first, or send $MERRYMEN ` +
+        `${a.maxDrawdownBps}bps limit, and the limit is not loosened for this — top up USDG first, or send $AGENTCAP ` +
         `to its account directly`,
     };
   }

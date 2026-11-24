@@ -1,5 +1,5 @@
 /**
- * Paper trading — the full merrymen loop with zero funds.
+ * Paper trading — the full agentcap loop with zero funds.
  *
  * When the account can't sign (no bundler key), approved intents are FILLED
  * here instead of stubbed: at the live on-chain oracle price (the same
@@ -64,12 +64,12 @@ export function paperUiShares(shares: number, multiplier: number): number {
  * paper book would therefore have frozen the agent forever: no equity, no
  * breaker, no strategy, and every owner order answered "book unread".
  *
- * DEFENSIVE, not a migration. No paper book can have bought $MERRYMEN: a paper
- * fill refuses without a live price, $MERRYMEN has no feed, and its only depth
+ * DEFENSIVE, not a migration. No paper book can have bought $AGENTCAP: a paper
+ * fill refuses without a live price, $AGENTCAP has no feed, and its only depth
  * is a v2 pair against VIRTUAL (measured, core energy.ts) while the worker had
  * no v2 venue before energy. So this drops a row that should not exist, rather
  * than letting its existence stop the book.
- * By ADDRESS, case-insensitively — a coin that merely calls itself MERRYMEN
+ * By ADDRESS, case-insensitively — a coin that merely calls itself AGENTCAP
  * elsewhere is an ordinary holding and is valued (or held) like any other.
  */
 export function paperBookPositions(positions: readonly PaperPosition[]): PaperPosition[] {

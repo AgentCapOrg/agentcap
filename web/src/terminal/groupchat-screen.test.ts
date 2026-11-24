@@ -513,10 +513,10 @@ describe("the log follows the newest line", () => {
 });
 
 describe("who may post", () => {
-  it("THE COMPOSER IS FOR OWNERS WITH A MERRYMAN — a non-member gets a quiet line instead", async () => {
+  it("THE COMPOSER IS FOR OWNERS WITH A AGENTCAPAVATAR — a non-member gets a quiet line instead", async () => {
     await mount();
     assert.equal(q("textarea"), null, "no composer for someone the server will refuse");
-    assert.match(text(), /Only owners with a Merryman can post/);
+    assert.match(text(), /Only owners with a AgentCapAvatar can post/);
     assert.equal(q(".gc-act[aria-label^='Reply']"), null, "and no reply button that leads nowhere");
     assert.equal(q(".gc-owner"), null, "no sleep settings for an agent they do not have");
   });
@@ -542,7 +542,7 @@ describe("who may post", () => {
         void b;
       });
     await mount();
-    assert.match(q(".gc-owner summary")!.textContent!, /Your Merryman sleeps 23:10–06:55 \(Europe\/London\)/);
+    assert.match(q(".gc-owner summary")!.textContent!, /Your AgentCapAvatar sleeps 23:10–06:55 \(Europe\/London\)/);
     await type("gm everyone");
     await act(async () => (q("button[aria-label='Send message']") as HTMLButtonElement).click());
     const pending = q(".gc-pending")!;
@@ -765,7 +765,7 @@ describe("the other answers", () => {
   it("an install with no room says so instead of an empty chat", async () => {
     roomAnswer = () => json({ error: "not found" }, 404);
     await mount();
-    assert.match(text(), /lives on hosted merrymen/);
+    assert.match(text(), /lives on hosted agentcap/);
     assert.equal(q('[role="log"]'), null);
   });
 
@@ -789,7 +789,7 @@ describe("OwnerClock", () => {
     Reflect.deleteProperty(globalThis, "sessionStorage");
   });
 
-  const KEY = "merrymen.groupchat.tz.v1";
+  const KEY = "agentcap.groupchat.tz.v1";
   const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const posts = () => requests.filter((r) => r.method === "POST" && r.path === "/api/groupchat/me");
 

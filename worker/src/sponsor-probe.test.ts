@@ -5,7 +5,7 @@
  * it was written — `paymaster.ts` says so, and a live probe with the production
  * key answers `{paymaster, paymasterData, paymasterPostOpGasLimit}` today. It
  * has simply never been switched on: `sponsorGasEnabled` defaults false and
- * `MERRYMEN_SPONSOR_GAS` is unset in production, which is why twelve agents in
+ * `AGENTCAP_SPONSOR_GAS` is unset in production, which is why twelve agents in
  * the fleet are blocked by `no-gas` while holding USDG they cannot spend.
  *
  * THE REASON THE SWITCH WAS DANGEROUS. A sponsor refusal is not a fallback.

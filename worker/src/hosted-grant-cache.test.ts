@@ -37,7 +37,7 @@ function fixture(t: TestContext, cached = grant(NOW - 1)) {
   writeFileSync(file, JSON.stringify(cached), { mode: 0o600 });
   mkdirSync(path.join(home, "soul"));
   const protectedFiles = new Map([
-    ["merrymen.db", Buffer.from("original ledger fixture")],
+    ["agentcap.db", Buffer.from("original ledger fixture")],
     ["soul/OWNER.md", Buffer.from("private owner memory fixture")],
     ["settings.json", Buffer.from("private configuration fixture")],
     ["ledger-source-blocked.json", Buffer.from("durable accounting barrier fixture")],
@@ -79,10 +79,10 @@ test("self-hosted homes and a home owned by any writer retain their key", t => {
 test("a freshly fetched newer PgGrantStore authority preserves even an older expired cache", async t => {
   const f = fixture(t);
   const original = readFileSync(f.file);
-  const saved = process.env.MERRYMEN_STORE_DEK;
+  const saved = process.env.AGENTCAP_STORE_DEK;
   const dek = Buffer.alloc(32, 31);
-  process.env.MERRYMEN_STORE_DEK = dek.toString("base64");
-  t.after(() => { if (saved === undefined) delete process.env.MERRYMEN_STORE_DEK; else process.env.MERRYMEN_STORE_DEK = saved; });
+  process.env.AGENTCAP_STORE_DEK = dek.toString("base64");
+  t.after(() => { if (saved === undefined) delete process.env.AGENTCAP_STORE_DEK; else process.env.AGENTCAP_STORE_DEK = saved; });
   const newer = grant(NOW + 100, NEW_KEY);
   const { demoSessionPrivateKey, ...publicGrant } = newer;
   let selects = 0;

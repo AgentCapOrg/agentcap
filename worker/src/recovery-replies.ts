@@ -395,7 +395,7 @@ export async function runRecoveryReplies(options: RecoveryReplyOptions = {}): Pr
     catch {
         throw new RecoveryReplyFleetRefusal("root-proof");
     }
-    const groupsOn = () => env.MERRYMEN_TG_GROUPS === undefined || ["1", "true"].includes(env.MERRYMEN_TG_GROUPS.trim().toLowerCase());
+    const groupsOn = () => env.AGENTCAP_TG_GROUPS === undefined || ["1", "true"].includes(env.AGENTCAP_TG_GROUPS.trim().toLowerCase());
     let dek: Buffer;
     try {
         dek = options.dek ?? requireDek();

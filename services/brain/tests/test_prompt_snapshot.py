@@ -73,7 +73,7 @@ def pulse_memecoin(**extra) -> DecideRequest:
         memory=["Held MEME for 20 minutes; exited flat after volume faded.", "Previous view: hold."],
         portfolio=_portfolio(),
         market=MarketState(
-            snapshot_id="mkt-1", as_of=1_760_000_000, instrument_id="merrymen:meme", symbol="MEME",
+            snapshot_id="mkt-1", as_of=1_760_000_000, instrument_id="agentcap:meme", symbol="MEME",
             instrument_class="memecoin", price_usd="0.0000123", expected_trade_gas_usdg=760_000,
             signals={
                 "technical": "5m: +4.1% on $18,200 volume; 1h: +11% on $140,000; 24h: -6%.",
@@ -89,13 +89,13 @@ def pulse_memecoin(**extra) -> DecideRequest:
 def full_equity_shut_gate(**extra) -> DecideRequest:
     return DecideRequest(
         run_id="snap-full", agent_id="agent-b", trigger_id="price-move_2", tier="research", stages="full",
-        persona="You are Robin, a Merryman.",
+        persona="You are Robin, a AgentCapAvatar.",
         portfolio=_portfolio(
             quality=_quality(equity_complete=False, quarantined_assets_present=True, position_history_available=False),
-            positions=[Position(instrument_id="merrymen:tsla", symbol="TSLA", qty="0.1", value_usdg=12_500_000)],
+            positions=[Position(instrument_id="agentcap:tsla", symbol="TSLA", qty="0.1", value_usdg=12_500_000)],
         ),
         market=MarketState(
-            snapshot_id="mkt-2", as_of=1_760_000_000, instrument_id="merrymen:tsla", symbol="TSLA",
+            snapshot_id="mkt-2", as_of=1_760_000_000, instrument_id="agentcap:tsla", symbol="TSLA",
             instrument_class="equity-token", price_usd="125.00", expected_trade_gas_usdg=None,
             signals={
                 "technical": "20-day 118.4, 50-day 117.9; volume 1.4x the 30-day average.",
@@ -108,7 +108,7 @@ def full_equity_shut_gate(**extra) -> DecideRequest:
 
 
 FLOW = (
-    "Source: trader activity reported by a third-party platform, grouped by Merrymen.\n"
+    "Source: trader activity reported by a third-party platform, grouped by AgentCap.\n"
     "Activity over 24h: 5 distinct buyers and 2 distinct sellers. [ref:snap1]"
 )
 

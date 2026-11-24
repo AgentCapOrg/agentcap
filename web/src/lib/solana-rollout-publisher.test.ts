@@ -57,7 +57,7 @@ test("a publish that fails never throws and never stops the next one: the operat
 });
 
 test("register(): on the Node.js server of a deployment offering Solana, the web's rollout digest is written as it starts, with no request served; never at build, on the edge runtime or with Solana off", async () => {
-  const home = mkdtempSync(join(tmpdir(), "merrymen-rollout-boot-"));
+  const home = mkdtempSync(join(tmpdir(), "agentcap-rollout-boot-"));
   const saved = { ...process.env };
   const restore = () => { for (const key of Object.keys(process.env)) if (!(key in saved)) delete process.env[key]; Object.assign(process.env, saved); };
   const webRow = () => {
@@ -68,10 +68,10 @@ test("register(): on the Node.js server of a deployment offering Solana, the web
     } finally { db.close(); }
   };
   try {
-    for (const key of ["DATABASE_URL", "MERRYMEN_HOSTED", "NEXT_PHASE"]) delete process.env[key];
-    Object.assign(process.env, { MERRYMEN_HOME: home, MERRYMEN_SOLANA: "1", MERRYMEN_SOLANA_LIVE_TENANTS: `0x${"11".repeat(20)}` });
+    for (const key of ["DATABASE_URL", "AGENTCAP_HOSTED", "NEXT_PHASE"]) delete process.env[key];
+    Object.assign(process.env, { AGENTCAP_HOME: home, AGENTCAP_SOLANA: "1", AGENTCAP_SOLANA_LIVE_TENANTS: `0x${"11".repeat(20)}` });
     // `next build` prerendering, the edge runtime, and a deployment without Solana start nothing.
-    for (const env of [{ NEXT_RUNTIME: "nodejs", NEXT_PHASE: "phase-production-build" }, { NEXT_RUNTIME: "edge" }, { NEXT_RUNTIME: "nodejs", MERRYMEN_SOLANA: "" }]) {
+    for (const env of [{ NEXT_RUNTIME: "nodejs", NEXT_PHASE: "phase-production-build" }, { NEXT_RUNTIME: "edge" }, { NEXT_RUNTIME: "nodejs", AGENTCAP_SOLANA: "" }]) {
       const before = { ...process.env };
       Object.assign(process.env, env);
       await register();

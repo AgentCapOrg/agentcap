@@ -5,7 +5,7 @@
  * redeploy starts it from nothing. At the next arm the in-flight reconciler
  * writes back only the last few hours of operations, and writes each one as a
  * bare copy — no coin, no decision, stamped at the restart. So an owner asking
- * the Telegram merryman "what did you buy yesterday" got "no trades" or eight
+ * the Telegram agentcapavatar "what did you buy yesterday" got "no trades" or eight
  * nameless rows at one second, while the real tape sat untouched in the shared
  * Postgres the dashboard reads.
  *

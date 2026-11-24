@@ -16,7 +16,7 @@ const safe = `https://${host}/[redacted]`;
 test("start redacts both child pipes, split URL chunks and native fatal errors", { timeout: 15_000 }, async (t) => {
   // Exercise the installed plain-Node entry point. The child tools are small
   // local fixtures, so no dashboard, network, wallet or real worker is needed.
-  const fixture = mkdtempSync(path.join(tmpdir(), "merrymen start redaction "));
+  const fixture = mkdtempSync(path.join(tmpdir(), "agentcap start redaction "));
   t.after(() => rmSync(fixture, { recursive: true, force: true }));
   for (const dir of ["cli", "worker/src", "web/.next", "node_modules/.bin"]) {
     mkdirSync(path.join(fixture, dir), { recursive: true });
@@ -52,7 +52,7 @@ test("start redacts both child pipes, split URL chunks and native fatal errors",
     setTimeout(() => { throw new Error('fatal worker URL: ' + endpoint); }, 100);
   `);
 
-  const env = { ...process.env, MERRYMEN_HOME: path.join(fixture, "home"), MERRYMEN_NO_ANIM: "1", NO_COLOR: "1" };
+  const env = { ...process.env, AGENTCAP_HOME: path.join(fixture, "home"), AGENTCAP_NO_ANIM: "1", NO_COLOR: "1" };
   delete env.NODE_TEST_CONTEXT;
   delete env.NODE_OPTIONS;
   const child = spawn(process.execPath, [path.join(fixture, "cli/bin.mjs"), "start", "--no-open"], { cwd: fixture, env });

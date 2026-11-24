@@ -32,7 +32,7 @@ export async function POST(req: Request) {
       const signedTransactionBase64 = body.signedTransactionBase64;
       bucket = "submit"; run = async () => ({ result: await app.submitOwnerAction(scope, { signedTransactionBase64 }) });
     } else if (body.stage === "record" && body.action === "external-withdrawals" && Array.isArray(body.signatures) && body.mint === undefined && body.amountRaw === undefined) {
-      // Withdrawals the owner made outside Merrymen, by their signatures: read on both providers, nothing signed or sent.
+      // Withdrawals the owner made outside AgentCap, by their signatures: read on both providers, nothing signed or sent.
       const signatures: unknown[] = body.signatures;
       bucket = "prepare"; run = async () => ({ recorded: await app.recordExternalWithdrawals(scope, { signatures }) });
     } else throw new SolanaWebError(400, "Invalid Solana owner action.");

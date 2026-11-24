@@ -44,10 +44,10 @@ export function ExportClient({ id }: { id: string }) {
       if (res.status === 401) return setState({ phase: "signed-out" });
       if (res.status === 404) return setState({ phase: "missing" });
       if (res.status === 410) return setState({ phase: "expired" });
-      if (!res.ok) return setState({ phase: "error", message: `Merrymen could not read this export right now (${res.status}). Try again shortly.` });
+      if (!res.ok) return setState({ phase: "error", message: `AgentCap could not read this export right now (${res.status}). Try again shortly.` });
       setState({ phase: "ready", info: await res.json() as Info });
     } catch {
-      setState({ phase: "error", message: "Merrymen took too long to answer. Check your connection and try again." });
+      setState({ phase: "error", message: "AgentCap took too long to answer. Check your connection and try again." });
     }
   }, [href]);
 
@@ -63,7 +63,7 @@ export function ExportClient({ id }: { id: string }) {
         <div className="connect-context">
           <span className="connect-eyebrow">PREPARED BY YOUR ASSISTANT</span>
           <h1>Your export.</h1>
-          <p>An assistant you connected asked Merrymen to prepare this file. Only you, signed in as the agent’s owner, can download it, and it expires a day after it was made.</p>
+          <p>An assistant you connected asked AgentCap to prepare this file. Only you, signed in as the agent’s owner, can download it, and it expires a day after it was made.</p>
         </div>
         <section className="connect-panel" aria-busy={state.phase === "loading"}>
           {state.phase === "loading" && <div className="connect-wait" role="status"><span className="connect-spinner" aria-hidden />Loading…</div>}

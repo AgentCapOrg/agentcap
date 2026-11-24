@@ -14,7 +14,7 @@
  * zero-sized exit never meets it.
  */
 import { NextResponse } from "next/server";
-import { isHostedMode } from "@merrymen/core";
+import { isHostedMode } from "@agentcap/core";
 import { tenantOf } from "@/lib/auth";
 import { ceilingFor } from "@/lib/order-ceiling";
 import { walletNotSupported } from "@/lib/route-guard";

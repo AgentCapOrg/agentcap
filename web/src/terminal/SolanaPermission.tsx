@@ -184,7 +184,7 @@ export function PermissionTerms({ limits, heading }: { limits: SolanaPaperLimits
     {limits.perTradeWsol && limits.dailyWsol && <li>{displaySolanaAmount(limits.perTradeWsol, 9)} SOL sold per trade and {displaySolanaAmount(limits.dailyWsol, 9)} SOL sold per 24 hours</li>}
     <li>At most {limits.maxOpsPerDay} trades per 24 hours</li>
     <li>Expires {permissionExpiry(limits.expiresAtMs)}{hours > 0 ? ` (in about ${hours < 1 ? "less than an hour" : `${Math.round(hours)} hour${Math.round(hours) === 1 ? "" : "s"}`})` : " (expired)"}</li>
-  </ul><p>The {limits.maxDrawdownBps / 100}% maximum drawdown is enforced by the Merrymen trading service, not by the on-chain permission.</p></div>;
+  </ul><p>The {limits.maxDrawdownBps / 100}% maximum drawdown is enforced by the AgentCap trading service, not by the on-chain permission.</p></div>;
 }
 
 /**

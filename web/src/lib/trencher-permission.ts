@@ -1,5 +1,5 @@
 import { keccak256, type Address, type PublicClient } from "viem";
-import { CASH, UNISWAP, TRENCHER_FACTORY_ABI } from "@merrymen/core";
+import { CASH, UNISWAP, TRENCHER_FACTORY_ABI } from "@agentcap/core";
 
 /** No default deployment: the permission stays unavailable until a verified factory is configured. */
 const configuredFactory = process.env.NEXT_PUBLIC_TRENCHER_FACTORY;

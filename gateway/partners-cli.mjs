@@ -3,8 +3,8 @@
  * Operator CLI to issue, revoke and list partner keys.
  *
  * Most keys no longer come from here. Developers mint their own at
- * merrymen.dev/api, through this gateway's /developer/v1 routes
- * (lib/developer-api.mjs): only the site, holding MERRYMEN_DEVELOPER_PORTAL_SECRET,
+ * agentcap.xyz/api, through this gateway's /developer/v1 routes
+ * (lib/developer-api.mjs): only the site, holding AGENTCAP_DEVELOPER_PORTAL_SECRET,
  * may call them, and only for a wallet that has just signed in. Those keys are
  * fixed: read:agents, write:agents and chat:agents at 30 requests a minute, at
  * most five active per wallet.
@@ -12,9 +12,9 @@
  * This CLI is for what the portal deliberately cannot do: other scopes, a custom
  * quota (--rpm), or a key that belongs to no developer wallet. Such a key does
  * not show in the portal, which cannot rotate or revoke it; do that here. Both
- * kinds share one registry, $MERRYMEN_DATA_DIR/partners.jsonl.
+ * kinds share one registry, $AGENTCAP_DATA_DIR/partners.jsonl.
  *
- *   MERRYMEN_GATEWAY_SECRET=… MERRYMEN_DATA_DIR=/data \
+ *   AGENTCAP_GATEWAY_SECRET=… AGENTCAP_DATA_DIR=/data \
  *     node partners-cli.mjs issue --name prism --app-id prism-production \
  *       --scopes read:agents,write:agents,chat:agents
  *   node partners-cli.mjs revoke <keyId>
@@ -31,7 +31,7 @@
 
 import { DEFAULT_SCOPES, SCOPES, hashSecret, loadRegistry, makeKey, writeRecord } from "./lib/partners.mjs";
 
-const SECRET = process.env.MERRYMEN_GATEWAY_SECRET;
+const SECRET = process.env.AGENTCAP_GATEWAY_SECRET;
 
 function die(msg) {
   console.error(`[partners] ${msg}`);
@@ -44,7 +44,7 @@ function flag(argv, name) {
 }
 
 async function issue(argv) {
-  if (!SECRET) die("MERRYMEN_GATEWAY_SECRET is not set — the key hash is derived from it.");
+  if (!SECRET) die("AGENTCAP_GATEWAY_SECRET is not set — the key hash is derived from it.");
   const name = flag(argv, "name");
   if (!name) die("issue needs --name <partner>");
 

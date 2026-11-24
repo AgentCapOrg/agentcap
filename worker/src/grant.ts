@@ -2,20 +2,20 @@ import { mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { StoredGrant } from "../../packages/core/src/index";
 import { fsyncDirSync, writeFileAtomicSync } from "./atomic-write";
-import { homePaths, merrymenHome } from "./home";
+import { homePaths, agentcapHome } from "./home";
 import { mayArm } from "./kill-request";
 
 /**
  * The grant file this worker reads, archives and — on a kill — deletes. ONE
  * answer for all three: the kill used to delete homePaths.grant() while it read
- * and archived MERRYMEN_GRANT_FILE, so with that set it reported the grant
+ * and archived AGENTCAP_GRANT_FILE, so with that set it reported the grant
  * destroyed and the next tick re-armed from the file it never touched.
  */
 export function grantFilePath(): string {
-  return process.env.MERRYMEN_GRANT_FILE ?? homePaths.grant();
+  return process.env.AGENTCAP_GRANT_FILE ?? homePaths.grant();
 }
 
-/** Reads the grant handoff written by web's /api/grants (~/.merrymen/grant.json). */
+/** Reads the grant handoff written by web's /api/grants (~/.agentcap/grant.json). */
 export function loadGrantFile(): StoredGrant | null {
   const file = grantFilePath();
   try {
@@ -40,7 +40,7 @@ export function loadGrantFile(): StoredGrant | null {
 export function loadArmableGrant(): StoredGrant | null {
   const grant = loadGrantFile();
   if (!grant) return null;
-  return mayArm(merrymenHome(), grant) ? grant : null;
+  return mayArm(agentcapHome(), grant) ? grant : null;
 }
 
 /**
@@ -68,7 +68,7 @@ const isAddress = (v: unknown): v is string => typeof v === "string" && /^0x[0-9
  * Copy the live grant into the archive before anything destroys it.
  *
  * `grant.json` is a SINGLE SLOT, and for a grant that has never been replaced
- * it is the only on-disk copy of the owner key — the key `merrymen recover`
+ * it is the only on-disk copy of the owner key — the key `agentcap recover`
  * needs to sweep funds out of the smart account. Deleting it without a copy
  * strands the funds permanently.
  *

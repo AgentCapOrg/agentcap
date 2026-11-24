@@ -5,7 +5,7 @@
  * does not name its purpose, so an old renewal tab cannot discard a grant by
  * accident. The web kill switch names it ("delete-agent"); the phones never
  * did. iOS "Stand down agent" (AccountScreens.swift) sent `{}`, and Android
- * "Stop my agent" (MerrymenApi.revokeGrant) sent a null body, which sendJson
+ * "Stop my agent" (AgentCapApi.revokeGrant) sent a null body, which sendJson
  * turns into `{}`. Both were refused 400, the Robinhood grant and the Solana
  * strategy kept trading, and the phone showed "Reload your wallet", which no
  * phone screen can act on.
@@ -22,11 +22,11 @@ import path from "node:path";
 import { after, before, beforeEach, it, mock } from "node:test";
 import { NextRequest } from "next/server";
 
-const ORIGIN = "https://app.merrymen.dev";
+const ORIGIN = "https://app.agentcap.xyz";
 const OWNER = `0x${"c".repeat(40)}` as `0x${string}`;
 const OTHER = `0x${"d".repeat(40)}` as `0x${string}`;
 const saved = Object.fromEntries(
-  ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_PUBLIC_ORIGIN", "MERRYMEN_SESSION_SECRET", "DATABASE_URL", "MERRYMEN_STORE_DEK"]
+  ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_PUBLIC_ORIGIN", "AGENTCAP_SESSION_SECRET", "DATABASE_URL", "AGENTCAP_STORE_DEK"]
     .map((key) => [key, process.env[key]]),
 );
 
@@ -41,11 +41,11 @@ const perpsAsked: string[] = [];
 
 before(async () => {
   home = mkdtempSync(path.join(tmpdir(), "mm-grant-phone-kill-"));
-  process.env.MERRYMEN_HOME = home;
-  process.env.MERRYMEN_HOSTED = "1";
-  process.env.MERRYMEN_PUBLIC_ORIGIN = ORIGIN;
-  process.env.MERRYMEN_SESSION_SECRET = "test-secret-at-least-thirty-two-characters-long";
-  process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
+  process.env.AGENTCAP_HOME = home;
+  process.env.AGENTCAP_HOSTED = "1";
+  process.env.AGENTCAP_PUBLIC_ORIGIN = ORIGIN;
+  process.env.AGENTCAP_SESSION_SECRET = "test-secret-at-least-thirty-two-characters-long";
+  process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
   process.env.DATABASE_URL = "postgres://127.0.0.1:1/never-connected";
 
   auth = await import("@/lib/auth");
@@ -62,7 +62,7 @@ before(async () => {
   const solana = await import("@/lib/solana-binding-store");
   mock.method(solana.getSolanaBindingStore(), "disableForKill", async (tenant: string) => { solanaStopped.push(tenant); return true; });
   ({ DELETE } = await import("./route"));
-  // The middleware reads MERRYMEN_HOSTED and the public origin once, at import.
+  // The middleware reads AGENTCAP_HOSTED and the public origin once, at import.
   ({ middleware } = await import("@/middleware"));
 });
 
@@ -88,12 +88,12 @@ const PHONES: Phone[] = [
       cookie: `${auth.SESSION_COOKIE}=${auth.mintSession(tenant)}`, origin: ORIGIN,
     }),
   },
-  // MerrymenApi.sendJson over the app's cookie jar; MerrymenHeaders adds the
+  // AgentCapApi.sendJson over the app's cookie jar; AgentCapHeaders adds the
   // user-agent and accept, and deliberately no Origin (net/Http.kt).
   {
     app: "Android Stop my agent",
     headers: (tenant) => ({
-      accept: "application/json", "content-type": "application/json; charset=utf-8", "user-agent": "merrymen-android/0.4.1",
+      accept: "application/json", "content-type": "application/json; charset=utf-8", "user-agent": "agentcap-android/0.4.1",
       cookie: `${auth.SESSION_COOKIE}=${auth.mintSession(tenant)}`,
     }),
   },

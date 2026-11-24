@@ -231,9 +231,9 @@ async function killFixture(t: import("node:test").TestContext) {
 test("a kill stops the Solana worker: kill, tick, no trade (audit 2026-10-18)", async t => {
   const f = await killFixture(t);
   // Hosted with the shared database: the kill names the tenant.
-  const saved = { db: process.env.DATABASE_URL, hosted: process.env.MERRYMEN_HOSTED };
-  process.env.DATABASE_URL = "postgres://127.0.0.1:1/never-connected"; process.env.MERRYMEN_HOSTED = "1";
-  t.after(() => { for (const [k, v] of [["DATABASE_URL", saved.db], ["MERRYMEN_HOSTED", saved.hosted]] as const) { if (v === undefined) delete process.env[k]; else process.env[k] = v; } });
+  const saved = { db: process.env.DATABASE_URL, hosted: process.env.AGENTCAP_HOSTED };
+  process.env.DATABASE_URL = "postgres://127.0.0.1:1/never-connected"; process.env.AGENTCAP_HOSTED = "1";
+  t.after(() => { for (const [k, v] of [["DATABASE_URL", saved.db], ["AGENTCAP_HOSTED", saved.hosted]] as const) { if (v === undefined) delete process.env[k]; else process.env[k] = v; } });
   assert.equal(await stopSolanaForKill(f.tenant, f.bindings), "stopped");
   assert.deepEqual(await createSolanaAgent({ db: f.db, runtime: f.actual, market: f.market, now: () => NOW }).tick(), []);
   assert.equal(await f.trades(), 0);
@@ -434,7 +434,7 @@ test("a strategy whose expired attempts used up the day's operations is held bef
   assert.deepEqual((await agent.tick()).map(r => r.outcome), ["held"]);
   assert.equal(f.lines.length, 1);
   assert.match(f.lines[0]!, /^\[alert\] Solana autonomous strategy refused: proven-expired attempts used up an account's daily operations/);
-  assert.match(f.lines[0]!, /MERRYMEN_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE/);
+  assert.match(f.lines[0]!, /AGENTCAP_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE/);
   assert.deepEqual(fieldsOf(f.lines[0]!), { solana: "alert", kind: "expired-attempts-exhausted", account: solanaAccountRef({ tenant: TENANT, owner: OWNER }),
     expired: 4, counted: 4, allowance: 0, operations: 0, maxOpsPerDay: 4 });
   // No tenant identity or owner key in the line.

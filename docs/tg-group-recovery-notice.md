@@ -1,7 +1,7 @@
 # One-time Telegram group recovery notice
 
-This operator path can speak only through Shogun's own bot (`@Merrymanme_bot`)
-in a room Shogun's owner approved and Telegram currently calls `Merrymen`.
+This operator path can speak only through Shogun's own bot (`@AgentCapAvatarme_bot`)
+in a room Shogun's owner approved and Telegram currently calls `AgentCap`.
 It reads the sealed room state inside the orchestrator. It never polls updates,
 reads chat history into logs, or touches a trading path.
 
@@ -10,9 +10,9 @@ been checked live. The prepared text is
 [`docs/announcements/tg-group-recovery-2026-10-01.html`](announcements/tg-group-recovery-2026-10-01.html).
 Review its claims immediately before a real send.
 
-1. Set `MERRYMEN_TG_RECOVERY_ID=recovery-2026-10-01` on the orchestrator and
+1. Set `AGENTCAP_TG_RECOVERY_ID=recovery-2026-10-01` on the orchestrator and
    deploy. This is a dry run. The first healthy mirror pass prints only approved
-   Shogun rooms titled `Merrymen`, each numeric chat ID, the prepared body, and
+   Shogun rooms titled `AgentCap`, each numeric chat ID, the prepared body, and
    its SHA-256 digest. The digest is of the trimmed text that will be sent.
    It contacts no Telegram API and sends nothing.
 2. Confirm the intended public beta room's numeric ID independently from a
@@ -20,9 +20,9 @@ Review its claims immediately before a real send.
    alone is insufficient if several rooms have the same title. Stop if the dry
    run prints no candidate, more than one plausible candidate, or an unexpected
    Shogun/room state.
-3. Set `MERRYMEN_TG_RECOVERY_CHAT_ID` to **exactly** that negative numeric ID
-   `MERRYMEN_TG_RECOVERY_CONFIRM=recovery-2026-10-01`, and
-   `MERRYMEN_TG_RECOVERY_BODY_SHA256` to the **exact digest printed by the
+3. Set `AGENTCAP_TG_RECOVERY_CHAT_ID` to **exactly** that negative numeric ID
+   `AGENTCAP_TG_RECOVERY_CONFIRM=recovery-2026-10-01`, and
+   `AGENTCAP_TG_RECOVERY_BODY_SHA256` to the **exact digest printed by the
    reviewed dry run**, then deploy. If the message file changes, the digest
    differs and the send is refused until a new dry run is reviewed. A real
    send verifies the tenant's current grant/account name, durable bot claim,

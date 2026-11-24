@@ -15,7 +15,7 @@ import { ensureBotClaims } from "./telegram-claims";
 import { commandDir } from "./command-files";
 import { ferryOrders, ferryForChild } from "./orchestrator";
 
-const url = process.env.MERRYMEN_TEST_PG_URL;
+const url = process.env.AGENTCAP_TEST_PG_URL;
 const address = (n: number) => `0x${n.toString(16).padStart(40,"0")}`;
 test("Postgres: recovery reports and financial queues serialize across separate pools", { skip: !url, timeout: 40_000 }, async t => {
   const target = new URL(url!);

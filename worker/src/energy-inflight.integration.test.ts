@@ -8,7 +8,7 @@
  * a purchase in flight), must not find settled or stale ones, and must answer
  * NULL — never false — when the ledger will not answer.
  *
- * MERRYMEN_HOME is set before any store import; node's --test runs each file in
+ * AGENTCAP_HOME is set before any store import; node's --test runs each file in
  * its own process, so the override never leaks.
  */
 import assert from "node:assert/strict";
@@ -17,17 +17,17 @@ import { mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-energy-inflight-"));
-process.env.MERRYMEN_HOME = HOME;
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-energy-inflight-"));
+process.env.AGENTCAP_HOME = HOME;
 
 const { closeStoreForTest, initStore, ensureAgent, addTrade, energyBuysInFlight, listSubmittedOps } = await import("./store");
 const { homePaths } = await import("./home");
 const { DatabaseSync } = await import("node:sqlite");
-const { CASH, ENERGY_ROUTE_V1, MERRYMEN_TOKEN } = await import("../../packages/core/src/index");
+const { CASH, ENERGY_ROUTE_V1, AGENTCAP_TOKEN } = await import("../../packages/core/src/index");
 
 const ACCOUNT = "0x00000000000000000000000000000000000e0e02";
 const USDG = CASH.USDG as string;
-const MERRY = MERRYMEN_TOKEN.address as string;
+const MERRY = AGENTCAP_TOKEN.address as string;
 const AAPL = "0x000000000000000000000000000000000000aa01";
 const GRANT = {
   smartAccount: ACCOUNT,

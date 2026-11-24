@@ -99,7 +99,7 @@ const ANSWERED: ReadonlySet<ResultStatus> = new Set(["ok", "empty", "partial", "
 
 export interface FomoChatDeps {
   runtime?: typeof fomoRuntime;
-  /** Tests only: whether this deployment runs Fomo (default: fomoEnabledFor, the MERRYMEN_FOMO_ENABLED switch). */
+  /** Tests only: whether this deployment runs Fomo (default: fomoEnabledFor, the AGENTCAP_FOMO_ENABLED switch). */
   enabled?: () => boolean;
 }
 

@@ -73,10 +73,10 @@ describe("contract-bound project metadata", () => {
 
   it("fetches only the fixed exact-contract info endpoint and memoizes observation time", async () => {
     const oldFetch = globalThis.fetch;
-    const oldHome = process.env.MERRYMEN_FLEET_HOME;
-    const oldPro = process.env.MERRYMEN_COINGECKO_PRO_API_KEY;
-    delete process.env.MERRYMEN_FLEET_HOME;
-    delete process.env.MERRYMEN_COINGECKO_PRO_API_KEY;
+    const oldHome = process.env.AGENTCAP_FLEET_HOME;
+    const oldPro = process.env.AGENTCAP_COINGECKO_PRO_API_KEY;
+    delete process.env.AGENTCAP_FLEET_HOME;
+    delete process.env.AGENTCAP_COINGECKO_PRO_API_KEY;
     resetDeskReadsForTest();
     const urls: string[] = [];
     globalThis.fetch = async (url, opts) => { urls.push(String(url)); assert.equal(opts?.redirect, "error"); return Response.json(body()); };
@@ -90,8 +90,8 @@ describe("contract-bound project metadata", () => {
       assert.equal(urls.length, 1);
     } finally {
       globalThis.fetch = oldFetch;
-      if (oldHome === undefined) delete process.env.MERRYMEN_FLEET_HOME; else process.env.MERRYMEN_FLEET_HOME = oldHome;
-      if (oldPro === undefined) delete process.env.MERRYMEN_COINGECKO_PRO_API_KEY; else process.env.MERRYMEN_COINGECKO_PRO_API_KEY = oldPro;
+      if (oldHome === undefined) delete process.env.AGENTCAP_FLEET_HOME; else process.env.AGENTCAP_FLEET_HOME = oldHome;
+      if (oldPro === undefined) delete process.env.AGENTCAP_COINGECKO_PRO_API_KEY; else process.env.AGENTCAP_COINGECKO_PRO_API_KEY = oldPro;
       resetDeskReadsForTest();
     }
   });
@@ -111,10 +111,10 @@ describe("contract-bound project metadata", () => {
 
   it("keeps configured provider credentials on the fixed origin and separates source caches", async () => {
     const oldFetch = globalThis.fetch;
-    const oldHome = process.env.MERRYMEN_FLEET_HOME;
-    const oldPro = process.env.MERRYMEN_COINGECKO_PRO_API_KEY;
-    delete process.env.MERRYMEN_FLEET_HOME;
-    delete process.env.MERRYMEN_COINGECKO_PRO_API_KEY;
+    const oldHome = process.env.AGENTCAP_FLEET_HOME;
+    const oldPro = process.env.AGENTCAP_COINGECKO_PRO_API_KEY;
+    delete process.env.AGENTCAP_FLEET_HOME;
+    delete process.env.AGENTCAP_COINGECKO_PRO_API_KEY;
     resetDeskReadsForTest();
     const urls: string[] = [];
     globalThis.fetch = async (url, opts) => {
@@ -125,7 +125,7 @@ describe("contract-bound project metadata", () => {
     };
     try {
       assert.equal((await readTokenInfo(TOKEN)).info?.description, "public-source concept");
-      process.env.MERRYMEN_COINGECKO_PRO_API_KEY = "test-only-key";
+      process.env.AGENTCAP_COINGECKO_PRO_API_KEY = "test-only-key";
       const pro = await readTokenInfo(TOKEN);
       assert.equal(pro.info?.description, "configured-source concept");
       assert.equal(urls[1], `https://pro-api.coingecko.com/api/v3/onchain/networks/robinhood/tokens/${TOKEN}/info`);
@@ -133,8 +133,8 @@ describe("contract-bound project metadata", () => {
       assert.equal(urls.length, 2);
     } finally {
       globalThis.fetch = oldFetch;
-      if (oldHome === undefined) delete process.env.MERRYMEN_FLEET_HOME; else process.env.MERRYMEN_FLEET_HOME = oldHome;
-      if (oldPro === undefined) delete process.env.MERRYMEN_COINGECKO_PRO_API_KEY; else process.env.MERRYMEN_COINGECKO_PRO_API_KEY = oldPro;
+      if (oldHome === undefined) delete process.env.AGENTCAP_FLEET_HOME; else process.env.AGENTCAP_FLEET_HOME = oldHome;
+      if (oldPro === undefined) delete process.env.AGENTCAP_COINGECKO_PRO_API_KEY; else process.env.AGENTCAP_COINGECKO_PRO_API_KEY = oldPro;
       resetDeskReadsForTest();
     }
   });
@@ -150,7 +150,7 @@ describe("optional lore within the existing desk budget", () => {
   });
 
   it("survives a cold fleet slot beyond three seconds and admits lore before chart work", async (t) => {
-    const home = mkdtempSync(path.join(tmpdir(), "merrymen-lore-pacing-"));
+    const home = mkdtempSync(path.join(tmpdir(), "agentcap-lore-pacing-"));
     t.mock.timers.enable({ apis: ["Date", "setTimeout"], now: NOW });
     const clock: FeedClock = {
       now: () => Date.now(),
@@ -326,9 +326,9 @@ describe("optional lore within the existing desk budget", () => {
 });
 
 it("reads contract-bound public metadata after a Pro outage without leaking credentials", async () => {
-  const oldFetch = globalThis.fetch, oldKey = process.env.MERRYMEN_COINGECKO_PRO_API_KEY, oldHome = process.env.MERRYMEN_FLEET_HOME;
-  process.env.MERRYMEN_COINGECKO_PRO_API_KEY = "private-metadata-key";
-  delete process.env.MERRYMEN_FLEET_HOME;
+  const oldFetch = globalThis.fetch, oldKey = process.env.AGENTCAP_COINGECKO_PRO_API_KEY, oldHome = process.env.AGENTCAP_FLEET_HOME;
+  process.env.AGENTCAP_COINGECKO_PRO_API_KEY = "private-metadata-key";
+  delete process.env.AGENTCAP_FLEET_HOME;
   resetDeskReadsForTest();
   let calls = 0;
   globalThis.fetch = async (input, init) => {
@@ -348,7 +348,7 @@ it("reads contract-bound public metadata after a Pro outage without leaking cred
     assert.doesNotMatch(JSON.stringify(result), /private-metadata-key/);
   } finally {
     globalThis.fetch = oldFetch; resetDeskReadsForTest();
-    if (oldKey === undefined) delete process.env.MERRYMEN_COINGECKO_PRO_API_KEY; else process.env.MERRYMEN_COINGECKO_PRO_API_KEY = oldKey;
-    if (oldHome === undefined) delete process.env.MERRYMEN_FLEET_HOME; else process.env.MERRYMEN_FLEET_HOME = oldHome;
+    if (oldKey === undefined) delete process.env.AGENTCAP_COINGECKO_PRO_API_KEY; else process.env.AGENTCAP_COINGECKO_PRO_API_KEY = oldKey;
+    if (oldHome === undefined) delete process.env.AGENTCAP_FLEET_HOME; else process.env.AGENTCAP_FLEET_HOME = oldHome;
   }
 });

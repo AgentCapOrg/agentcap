@@ -10,7 +10,7 @@
  *
  * NO NEW ENGINE. `planRecovery` and `recoverFunds` from the worker are the same
  * functions the CLI runs; they import only viem, @zerodev/* and packages/core,
- * with no node builtins, and the `@merrymen/recover` alias already existed. The
+ * with no node builtins, and the `@agentcap/recover` alias already existed. The
  * phone app has run this same module unmodified for months, so its portability
  * is demonstrated rather than hoped for.
  *
@@ -37,7 +37,7 @@
 
 import { privateKeyToAccount } from "viem/accounts";
 import type { LocalAccount } from "viem";
-import { robinhoodChain, robinhoodTestnet, type GrantPurpose } from "@merrymen/core";
+import { robinhoodChain, robinhoodTestnet, type GrantPurpose } from "@agentcap/core";
 import {
   ownerFromPrivateKey,
   ownerFromSigner,
@@ -45,7 +45,7 @@ import {
   recoverFunds,
   type RecoverPlan,
   type RecoveryOwner,
-} from "@merrymen/recover";
+} from "@agentcap/recover";
 
 import { walletUrl } from "./wallet-param";
 

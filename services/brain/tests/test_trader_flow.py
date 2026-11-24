@@ -66,7 +66,7 @@ REF_B = "[ref:d1a2b3cr2c2]"
 #: Shaped like the worker's rendered block: attribution first, opaque refs.
 FLOW = (
     "Source: trader activity and written theses reported by a third-party social-trading "
-    "platform, grouped and counted by Merrymen. Theses are the traders' own claims, not findings.\n"
+    "platform, grouped and counted by AgentCap. Theses are the traders' own claims, not findings.\n"
     "WHAT THIS IS NOT: independent market evidence.\n"
     f"Activity over 24h: 6 distinct buyers and 1 distinct seller. {REF_A}\n"
     f"Strongest objection, from traders' statements: the deployer still holds a large share. {REF_B}"
@@ -105,7 +105,7 @@ def _request(signals, *, tier="pulse", instrument_class="memecoin", quality=None
             net_contributions_usdg=100_000_000, positions=positions or [],
             quality=quality or _quality()),
         market=MarketState(
-            snapshot_id="market", as_of=1, instrument_id="merrymen:meme", symbol="MEME",
+            snapshot_id="market", as_of=1, instrument_id="agentcap:meme", symbol="MEME",
             instrument_class=instrument_class, signals=signals))
 
 
@@ -173,7 +173,7 @@ def _only_inside_fences(text: str, needle: str) -> bool:
 
 class TestTheLens:
     def test_a_request_may_carry_trader_flow_material(self):
-        ok = MarketState(snapshot_id="s", as_of=1, instrument_id="merrymen:meme", symbol="MEME",
+        ok = MarketState(snapshot_id="s", as_of=1, instrument_id="agentcap:meme", symbol="MEME",
                          instrument_class="memecoin", signals={"trader-flow": FLOW})
         assert ok.signals["trader-flow"] == FLOW
         assert "trader-flow" in LENS_KEYS
@@ -183,12 +183,12 @@ class TestTheLens:
         # The allowlist grew by one name and no more. A near-spelling is not
         # the lens; it is material nobody reads, paid for anyway.
         with pytest.raises(ValidationError, match="is not a lens"):
-            MarketState(snapshot_id="s", as_of=1, instrument_id="merrymen:meme", symbol="MEME",
+            MarketState(snapshot_id="s", as_of=1, instrument_id="agentcap:meme", symbol="MEME",
                         instrument_class="memecoin", signals={key: FLOW})
 
     def test_it_is_bounded_like_every_other_lens(self):
         with pytest.raises(ValidationError, match="over 8000"):
-            MarketState(snapshot_id="s", as_of=1, instrument_id="merrymen:meme", symbol="MEME",
+            MarketState(snapshot_id="s", as_of=1, instrument_id="agentcap:meme", symbol="MEME",
                         instrument_class="memecoin", signals={"trader-flow": "x" * 8_001})
 
     def test_the_desk_check_at_import_still_passes(self):
@@ -494,7 +494,7 @@ class TestTheProposalSurvivesTheGate:
     def test_a_proposed_sell_is_bounded_by_the_holding(self):
         from brain.schemas import Position
 
-        held = [Position(instrument_id="merrymen:meme", symbol="MEME", qty="10", value_usdg=3_000_000)]
+        held = [Position(instrument_id="agentcap:meme", symbol="MEME", qty="10", value_usdg=3_000_000)]
         result = self._decide({"action": "sell", "suggested_delta_usdg": -8_000_000},
                               quality=_quality(**SHUT), positions=held)
         assert result.action == "hold"
@@ -522,7 +522,7 @@ class TestTheProposalSurvivesTheGate:
         assert isinstance(result, Refusal) and result.reason == "output-invalid"
 
     def test_the_fields_are_optional_for_older_callers(self):
-        base = dict(decision_id="d", agent_id="a", created_at=1, action="hold", instrument_id="merrymen:meme",
+        base = dict(decision_id="d", agent_id="a", created_at=1, action="hold", instrument_id="agentcap:meme",
                     symbol="MEME", confidence=.5, suggested_delta_usdg=0, thesis="Mixed.", tier="pulse",
                     cost=Cost(model_calls=0, tokens_in=0, tokens_out=0, usd=0.0))
         d = BrainDecision(**base)
@@ -531,7 +531,7 @@ class TestTheProposalSurvivesTheGate:
 
     @pytest.mark.parametrize("action,delta", [("buy", -1), ("buy", 0), ("sell", 5), ("hold", 3), ("buy", None)])
     def test_an_incoherent_proposal_is_refused_by_the_schema(self, action, delta):
-        base = dict(decision_id="d", agent_id="a", created_at=1, action="hold", instrument_id="merrymen:meme",
+        base = dict(decision_id="d", agent_id="a", created_at=1, action="hold", instrument_id="agentcap:meme",
                     symbol="MEME", confidence=.5, suggested_delta_usdg=0, thesis="Mixed.", tier="pulse",
                     cost=Cost(model_calls=0, tokens_in=0, tokens_out=0, usd=0.0))
         with pytest.raises(ValidationError):

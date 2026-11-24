@@ -91,28 +91,28 @@ describe("the energy line — spoken only while the gate enforces", () => {
     assert.match(l, /^• energy: spent for today — back at 00:00 UTC\./);
     assert.match(l, /Stop-losses, take-profits and your own orders still run; my own AI reviews, including of my open positions, are paced\./);
     assert.doesNotMatch(l, /\bselling\b/i, "an exit the AI decides is paced like the rest");
-    assert.match(l, /\/wallet shows my address for \$MERRYMEN/);
+    assert.match(l, /\/wallet shows my address for \$AGENTCAP/);
     assert.doesNotMatch(l, /0x[0-9a-fA-F]{40}/, "the line never types an address; /wallet prints it from the ledger");
   });
 
   it("spent on an account on another network: the owner's wallet, never the account", () => {
     const l = line({ spent: true, buy: "not-mainnet", agentTokens: null })!;
     assert.doesNotMatch(l, /\/wallet/, "tokens sent to that account would not count");
-    assert.match(l, /100,000 \$MERRYMEN in your own wallet on Robinhood Chain/);
+    assert.match(l, /100,000 \$AGENTCAP in your own wallet on Robinhood Chain/);
   });
 
   it("LOW on an account on another network: the owner's wallet is named, /wallet never is", () => {
     // The chat model reads this line; without the marker it would send them
-    // to /wallet — an address whose $MERRYMEN is never counted there.
+    // to /wallet — an address whose $AGENTCAP is never counted there.
     const l = line({ buy: "not-mainnet", agentTokens: null })!;
     assert.match(l, /^• energy: low — /);
-    assert.match(l, /100,000 \$MERRYMEN in your own wallet on Robinhood Chain — my account is on another network, so only your own wallet counts$/);
+    assert.match(l, /100,000 \$AGENTCAP in your own wallet on Robinhood Chain — my account is on another network, so only your own wallet counts$/);
     assert.doesNotMatch(l, /\/wallet/);
   });
 
   it("UNREAD on another network says the same, and a mainnet line carries no such suffix", () => {
     const l = line({ level: "unread", buy: "not-mainnet", agentTokens: null, holderTokens: null })!;
-    assert.match(l, /our read, not your wallet\)\. Full strength: 100,000 \$MERRYMEN in your own wallet on Robinhood Chain/);
+    assert.match(l, /our read, not your wallet\)\. Full strength: 100,000 \$AGENTCAP in your own wallet on Robinhood Chain/);
     assert.doesNotMatch(l, /\/wallet/);
     for (const over of [{}, { level: "unread" as const }, { spent: true }]) {
       assert.doesNotMatch(line(over)!, /another network/, JSON.stringify(over));
@@ -121,7 +121,7 @@ describe("the energy line — spoken only while the gate enforces", () => {
 
   it("unread: couldn't read — our read, not your wallet — and no number", () => {
     const l = line({ level: "unread", agentTokens: null, holderTokens: null })!;
-    assert.match(l, /couldn't read the \$MERRYMEN balances/);
+    assert.match(l, /couldn't read the \$AGENTCAP balances/);
     assert.match(l, /our read, not your wallet/);
     assert.doesNotMatch(l, /\d/);
   });
@@ -129,7 +129,7 @@ describe("the energy line — spoken only while the gate enforces", () => {
   it("unread AND spent says both", () => {
     const l = line({ level: "unread", spent: true, agentTokens: null, holderTokens: null })!;
     assert.match(l, /spent for today — back at 00:00 UTC/);
-    assert.match(l, /couldn't read the \$MERRYMEN balances/);
+    assert.match(l, /couldn't read the \$AGENTCAP balances/);
     assert.match(l, /our read, not your wallet/);
   });
 

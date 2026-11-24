@@ -12,7 +12,7 @@ import { readFileSync } from "node:fs";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { JSDOM } from "jsdom";
-import { autonomyOf } from "@merrymen/core";
+import { autonomyOf } from "@agentcap/core";
 import type { LiveMine } from "./live";
 import { shortAddress } from "./CopyButton";
 
@@ -59,7 +59,7 @@ describe("quick access", () => {
     const page = await me(owner(ADDRESS));
     const stop = page.querySelector("a.account-control.account-stop")!;
     assert.equal(stop.getAttribute("href"), "/grant#permission-security");
-    assert.equal(stop.querySelector("strong")!.textContent, "Stop my merryman");
+    assert.equal(stop.querySelector("strong")!.textContent, "Stop my agentcapavatar");
     const wallet = [...page.querySelectorAll(".account-control")].find((item) => item.querySelector("strong")?.textContent === "Wallet & permissions")!;
     assert.equal(wallet.querySelector("small")!.textContent, "Renew, stop or revoke his permission");
     // The heading is shortened for reading; the button beside it is what carries the address.

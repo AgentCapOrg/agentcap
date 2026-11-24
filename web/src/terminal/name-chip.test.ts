@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, it } from "node:test";
 import React from "react";
-import { agentNameForSlug, DEFAULT_AGENT_NAME } from "@merrymen/core";
+import { agentNameForSlug, DEFAULT_AGENT_NAME } from "@agentcap/core";
 import { NameChip } from "./NameChip";
 import { json, testDom } from "./test-dom";
 

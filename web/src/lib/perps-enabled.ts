@@ -2,7 +2,7 @@
  * MAY THIS SERVER OFFER A PERPS WALLET, MAY IT MAKE ONE, AND DOES ONE RUN
  * HERE? SERVER-SIDE ONLY.
  *
- * Three questions, all answered from MERRYMEN_PERPS through the one parser the
+ * Three questions, all answered from AGENTCAP_PERPS through the one parser the
  * worker and the orchestrator use (packages/core/src/perps-ceiling.ts), so the
  * web can never offer what the deployment's workers would refuse to run. The
  * web and the orchestrator must be given the same value (the Phase 3 deploy
@@ -49,19 +49,19 @@ import { NO_STORE_HEADERS } from "./route-guard";
 
 type Env = Readonly<Record<string, string | undefined>>;
 
-/** Perps exists on this server: MERRYMEN_PERPS is not off. */
+/** Perps exists on this server: AGENTCAP_PERPS is not off. */
 export function perpsOffered(env: Env = process.env): boolean {
-  return perpsCeilingOf(env.MERRYMEN_PERPS) !== "off";
+  return perpsCeilingOf(env.AGENTCAP_PERPS) !== "off";
 }
 
-/** A Perps wallet may be made or renewed on this server: MERRYMEN_PERPS is paper. */
+/** A Perps wallet may be made or renewed on this server: AGENTCAP_PERPS is paper. */
 export function perpsCreationAllowed(env: Env = process.env): boolean {
-  return perpsCeilingOf(env.MERRYMEN_PERPS) === "paper";
+  return perpsCeilingOf(env.AGENTCAP_PERPS) === "paper";
 }
 
-/** A Perps wallet's worker runs on this server, and takes its owner's orders and resets: MERRYMEN_PERPS is paper. */
+/** A Perps wallet's worker runs on this server, and takes its owner's orders and resets: AGENTCAP_PERPS is paper. */
 export function perpsWorkersRun(env: Env = process.env): boolean {
-  return perpsCeilingOf(env.MERRYMEN_PERPS) === "paper";
+  return perpsCeilingOf(env.AGENTCAP_PERPS) === "paper";
 }
 
 /**
@@ -73,7 +73,7 @@ export function perpsWorkersRun(env: Env = process.env): boolean {
  *
  * - HOSTED, NOTHING MOVES THEM. The orchestrator starts no Perps worker under
  *   any ceiling but paper (orchestrator.ts perpsSpawnable), given the same
- *   MERRYMEN_PERPS as this web, which the Phase 3 deploy checklist holds
+ *   AGENTCAP_PERPS as this web, which the Phase 3 deploy checklist holds
  *   (D18). With no child, no stop, take-profit, liquidation or funding is
  *   booked against what is held: the positions stay exactly as they were.
  * - SELF-HOSTED, A WORKER MAY STILL BE RUNNING, and this server cannot see

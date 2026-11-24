@@ -11,9 +11,9 @@ import { SHARED_FLOW, TX, tradedFixture } from "./receipt-attestation-traded-fix
 import { readReceiptAttestation } from "./receipt-attestation-state";
 
 const root = realpathSync(mkdtempSync(path.join(os.tmpdir(), "mm-supervisor-attestation-")));
-process.env.MERRYMEN_HOME = root;
-process.env.MERRYMEN_HOSTED = "1";
-process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS = TEST_TENANT;
+process.env.AGENTCAP_HOME = root;
+process.env.AGENTCAP_HOSTED = "1";
+process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS = TEST_TENANT;
 delete process.env.DATABASE_URL;
 const { attestReceiptUnderSupervisor, setPersistentHomeVerifierForTest, setTenantLeaseForTest, setSpawningForTest,
   adoptChildForTest, mirrorRunningLedgerForTest, reconcile, isRetiringExpiredForTest, hasLeaseForTest, setRetirementMirrorForTest } = await import("./orchestrator");
@@ -30,7 +30,7 @@ after(() => { rmSync(root, { recursive: true, force: true }); });
 
 test("real supervisor derives no-child/spawn/lease/volume authority; pending shared audit blocks mirror before any local marker", async () => {
   const f = await receiptFixture();
-  process.env.MERRYMEN_HOME = f.options.volume.homeRoot;
+  process.env.AGENTCAP_HOME = f.options.volume.homeRoot;
   const store = getGrantStore("spot"); await store.put(TEST_TENANT, grant);
   setPersistentHomeVerifierForTest(() => f.options.volume);
   const options = { tenant: TEST_TENANT, smartAccount: TEST_ACCOUNT, shared: f.shared, rpc: f.rpc, dialect: "sqlite" as const };
@@ -72,7 +72,7 @@ test("real supervisor derives no-child/spawn/lease/volume authority; pending sha
 
 test("a traded-book repair on an expired grant survives a reconcile pass: expiry retirement leaves its lease alone", async () => {
   const f = await tradedFixture();
-  process.env.MERRYMEN_HOME = f.options.volume.homeRoot;
+  process.env.AGENTCAP_HOME = f.options.volume.homeRoot;
   const store = getGrantStore("spot");
   // Alan's case: the grant lapsed, and re-signing between preview and commit would change the bound grant.
   await store.put(TEST_TENANT, { ...grant, expiresAt: Math.floor(Date.now() / 1000) - 60 } as StoredGrant);

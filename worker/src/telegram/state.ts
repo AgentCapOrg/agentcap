@@ -1,5 +1,5 @@
 /**
- * Telegram runtime state, persisted at ~/.merrymen/telegram.json:
+ * Telegram runtime state, persisted at ~/.agentcap/telegram.json:
  *   - the getUpdates offset (so a restart doesn't replay old messages), the bot
  *     it belongs to, and where any other bot this agent polled got to
  *   - the link code (shown in the dashboard; consumed by /link) and its round —

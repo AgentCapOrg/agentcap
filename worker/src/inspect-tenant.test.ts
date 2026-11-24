@@ -198,7 +198,7 @@ describe("IT CANNOT PRINT A SECRET", () => {
       "telegramAllowlist",
       "grant_json",
       "DATABASE_URL",
-      "MERRYMEN_STORE_DEK",
+      "AGENTCAP_STORE_DEK",
       "privateKey",
       "sessionKey",
     ]) {
@@ -222,10 +222,10 @@ describe("IT CANNOT PRINT A SECRET", () => {
     // The one fleet-id parser validates it (fleet-id.ts), before any read.
     const at = orch.search(/^async function runTenantInspectIfAsked\(/m);
     const body = orch.slice(at, at + orch.slice(at).search(/^}/m));
-    assert.match(body, /fleetIdTarget\("MERRYMEN_INSPECT_TENANT", process\.env\.MERRYMEN_INSPECT_TENANT\)/, "the env value is validated before any read");
+    assert.match(body, /fleetIdTarget\("AGENTCAP_INSPECT_TENANT", process\.env\.AGENTCAP_INSPECT_TENANT\)/, "the env value is validated before any read");
     assert.ok(body.indexOf("fleetIdTarget(") < body.indexOf("DATABASE_URL"));
     for (const value of ["0x123", "sol:9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin", "everyone"]) {
-      const target = fleetIdTarget("MERRYMEN_INSPECT_TENANT", value);
+      const target = fleetIdTarget("AGENTCAP_INSPECT_TENANT", value);
       assert.ok(target && "refused" in target && /refusing to guess/.test(target.refused), value);
     }
   });

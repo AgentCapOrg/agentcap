@@ -4,7 +4,7 @@
  * The Perps wallet is wallet authority, and every rule here is one a skipped
  * check would break:
  *
- * - it is made only while MERRYMEN_PERPS is paper (D1), and refused with
+ * - it is made only while AGENTCAP_PERPS is paper (D1), and refused with
  *   nothing written otherwise — creation and renewal alike, the renewal's
  *   first step (its permission-replacement stop) included; the kill is not a
  *   renewal and still stops it;
@@ -47,16 +47,16 @@ import { after, before, describe, it, mock, type TestContext } from "node:test";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import type { LocalAccount } from "viem";
 import { sealSecret } from "../../../../../worker/src/store-crypto";
-import { bindingMessage, type GrantPurpose, type StoredGrant } from "@merrymen/core";
+import { bindingMessage, type GrantPurpose, type StoredGrant } from "@agentcap/core";
 import {
   RENEWAL_PERPS_OWNER_DIFFERS, RENEWAL_PERPS_UNREAD, RESTORE_PERPS_HOSTED, RESTORE_PERPS_UNREAD_HOSTED, renewalPerpsRefusal, restorePerpsRefusal,
 } from "@/lib/restore-perps-owner";
 
-const ORIGIN = "https://app.merrymen.dev";
-const APP = "merrymen-test-app";
+const ORIGIN = "https://app.agentcap.xyz";
+const APP = "agentcap-test-app";
 const ENV = [
-  "MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_SESSION_SECRET", "MERRYMEN_STORE_DEK", "DATABASE_URL", "MERRYMEN_PUBLIC_ORIGIN",
-  "MERRYMEN_PERPS", "MERRYMEN_PERPS_PAPER_TENANTS", "NEXT_PUBLIC_PRIVY_APP_ID", "PRIVY_APP_SECRET", "PRIVY_VERIFICATION_KEY",
+  "AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_SESSION_SECRET", "AGENTCAP_STORE_DEK", "DATABASE_URL", "AGENTCAP_PUBLIC_ORIGIN",
+  "AGENTCAP_PERPS", "AGENTCAP_PERPS_PAPER_TENANTS", "NEXT_PUBLIC_PRIVY_APP_ID", "PRIVY_APP_SECRET", "PRIVY_VERIFICATION_KEY",
 ] as const;
 const saved = Object.fromEntries(ENV.map((k) => [k, process.env[k]]));
 
@@ -86,7 +86,7 @@ async function login(name: string, admitted = true): Promise<Login> {
   if (admitted) await pilot.set(account.address, "allowed");
   // These tests exercise wallet authority after pilot admission. Admit only
   // their generated owners; read/kill tests below also withdraw that admission.
-  process.env.MERRYMEN_PERPS_PAPER_TENANTS = [process.env.MERRYMEN_PERPS_PAPER_TENANTS, account.address].filter(Boolean).join(",");
+  process.env.AGENTCAP_PERPS_PAPER_TENANTS = [process.env.AGENTCAP_PERPS_PAPER_TENANTS, account.address].filter(Boolean).join(",");
   const at = async (wallet: GrantPurpose) => {
     const d = await derive(account.address, 4663, wallet);
     assert.ok(d.ok, "the stub chain derives");
@@ -154,14 +154,14 @@ function revokeAfterPositivePreflight(t: TestContext, who: Login) {
 
 before(async () => {
   home = mkdtempSync(path.join(tmpdir(), "mm-grants-dual-purpose-"));
-  process.env.MERRYMEN_HOME = home;
-  process.env.MERRYMEN_HOSTED = "1";
-  process.env.MERRYMEN_SESSION_SECRET = "test-secret-at-least-thirty-two-characters-long";
-  process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
+  process.env.AGENTCAP_HOME = home;
+  process.env.AGENTCAP_HOSTED = "1";
+  process.env.AGENTCAP_SESSION_SECRET = "test-secret-at-least-thirty-two-characters-long";
+  process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
   delete process.env.DATABASE_URL;
-  delete process.env.MERRYMEN_PUBLIC_ORIGIN;
-  process.env.MERRYMEN_PERPS = "paper";
-  delete process.env.MERRYMEN_PERPS_PAPER_TENANTS;
+  delete process.env.AGENTCAP_PUBLIC_ORIGIN;
+  process.env.AGENTCAP_PERPS = "paper";
+  delete process.env.AGENTCAP_PERPS_PAPER_TENANTS;
   pilot = pilotFixture();
   process.env.NEXT_PUBLIC_PRIVY_APP_ID = APP;
   // WRITTEN, never read, and so not as `process.env.PRIVY_APP_SECRET`: that
@@ -410,8 +410,8 @@ describe("hosted: refused before anything, with nothing written", () => {
     const identity = await identities.getIdentityStore().get(grace.account.address);
     const tryAll = async (what: string) => {
       for (const ceiling of [undefined, "off", "papr", "live", "on"]) {
-        if (ceiling === undefined) delete process.env.MERRYMEN_PERPS;
-        else process.env.MERRYMEN_PERPS = ceiling;
+        if (ceiling === undefined) delete process.env.AGENTCAP_PERPS;
+        else process.env.AGENTCAP_PERPS = ceiling;
         const before = { perps: read(tenantFile("tenants-perps", grace)), spot: read(tenantFile("tenants", grace)), spent: nonces };
         const res = await privyPost(await perpsGrant(grace), "?wallet=perps", grace, "perps");
         assert.equal(res.status, 403, `${what} at ${String(ceiling)}`);
@@ -422,7 +422,7 @@ describe("hosted: refused before anything, with nothing written", () => {
         assert.equal(read(tenantFile("tenants", grace)), before.spot, "and the Spot one");
         assert.deepEqual(await identities.getIdentityStore().get(grace.account.address), identity, "and the identity");
       }
-      process.env.MERRYMEN_PERPS = "paper";
+      process.env.AGENTCAP_PERPS = "paper";
     };
     await tryAll("creation");
     assert.equal(await perpsGrantOf(grace), null);
@@ -450,8 +450,8 @@ describe("hosted: refused before anything, with nothing written", () => {
     const before = { perps: read(tenantFile("tenants-perps", nina)), spot: read(tenantFile("tenants", nina)) };
     try {
       for (const ceiling of [undefined, "off", "papr", "live"]) {
-        if (ceiling === undefined) delete process.env.MERRYMEN_PERPS;
-        else process.env.MERRYMEN_PERPS = ceiling;
+        if (ceiling === undefined) delete process.env.AGENTCAP_PERPS;
+        else process.env.AGENTCAP_PERPS = ceiling;
         const res = await del("?wallet=perps", { purpose: "permission-replacement", expectedAccount: held.smartAccount, expectedSession: held.sessionKeyAddress });
         assert.equal(res.status, 403, String(ceiling));
         const body = (await res.json()) as { code?: string; error?: string; ownerFacing?: boolean };
@@ -464,7 +464,7 @@ describe("hosted: refused before anything, with nothing written", () => {
       }
       // The kill is not a renewal: it names no wallet and stops the Perps one
       // whatever the lever says.
-      delete process.env.MERRYMEN_PERPS;
+      delete process.env.AGENTCAP_PERPS;
       const kill = await del("", { purpose: "delete-agent" });
       const killed = await kill.text();
       assert.equal(kill.status, 200, killed);
@@ -472,7 +472,7 @@ describe("hosted: refused before anything, with nothing written", () => {
       assert.equal(await perpsGrantOf(nina), null);
       assert.equal(await stores.getGrantStore("spot").get(nina.account.address), null);
     } finally {
-      process.env.MERRYMEN_PERPS = "paper";
+      process.env.AGENTCAP_PERPS = "paper";
     }
   });
 
@@ -540,7 +540,7 @@ describe("hosted: GET ?wallet=perps answers for the Perps wallet, and only it", 
     const { applyLedgerSchema } = await import("../../../../../worker/src/store");
     for (const dir of [home, path.join(home, "accounts", "perps")]) {
       mkdirSync(dir, { recursive: true });
-      const raw = new DatabaseSync(path.join(dir, "merrymen.db"));
+      const raw = new DatabaseSync(path.join(dir, "agentcap.db"));
       try { await applyLedgerSchema(wrapSqlite(raw)); } finally { raw.close(); }
     }
   });
@@ -691,32 +691,32 @@ describe("hosted: GET ?wallet=perps answers for the Perps wallet, and only it", 
     }
   });
 
-  it("D1: answered whatever MERRYMEN_PERPS says, including after pilot access ends, so an owner can always see a Perps wallet they hold", async (t) => {
+  it("D1: answered whatever AGENTCAP_PERPS says, including after pilot access ends, so an owner can always see a Perps wallet they hold", async (t) => {
     await pilot.set(kim.account.address, "revoked");
-    const admitted = process.env.MERRYMEN_PERPS_PAPER_TENANTS;
-    delete process.env.MERRYMEN_PERPS_PAPER_TENANTS;
+    const admitted = process.env.AGENTCAP_PERPS_PAPER_TENANTS;
+    delete process.env.AGENTCAP_PERPS_PAPER_TENANTS;
     t.after(() => {
-      process.env.MERRYMEN_PERPS = "paper";
-      if (admitted === undefined) delete process.env.MERRYMEN_PERPS_PAPER_TENANTS;
-      else process.env.MERRYMEN_PERPS_PAPER_TENANTS = admitted;
+      process.env.AGENTCAP_PERPS = "paper";
+      if (admitted === undefined) delete process.env.AGENTCAP_PERPS_PAPER_TENANTS;
+      else process.env.AGENTCAP_PERPS_PAPER_TENANTS = admitted;
     });
     for (const ceiling of [undefined, "off", "live"]) {
-      if (ceiling === undefined) delete process.env.MERRYMEN_PERPS;
-      else process.env.MERRYMEN_PERPS = ceiling;
+      if (ceiling === undefined) delete process.env.AGENTCAP_PERPS;
+      else process.env.AGENTCAP_PERPS = ceiling;
       const body = (await (await get(kim, "?wallet=perps")).json()) as { exists?: boolean; grant?: { smartAccount?: string } };
       assert.equal(body.exists, true, String(ceiling));
       assert.equal(body.grant?.smartAccount?.toLowerCase(), kim.perps.toLowerCase());
     }
-    process.env.MERRYMEN_PERPS = "paper";
+    process.env.AGENTCAP_PERPS = "paper";
   });
 
   it("and the kill made for it stops it after pilot access ends: the Perps wallet made here is revoked with the Spot one", async (t) => {
     await pilot.set(kim.account.address, "revoked");
-    const admitted = process.env.MERRYMEN_PERPS_PAPER_TENANTS;
-    delete process.env.MERRYMEN_PERPS_PAPER_TENANTS;
+    const admitted = process.env.AGENTCAP_PERPS_PAPER_TENANTS;
+    delete process.env.AGENTCAP_PERPS_PAPER_TENANTS;
     t.after(() => {
-      if (admitted === undefined) delete process.env.MERRYMEN_PERPS_PAPER_TENANTS;
-      else process.env.MERRYMEN_PERPS_PAPER_TENANTS = admitted;
+      if (admitted === undefined) delete process.env.AGENTCAP_PERPS_PAPER_TENANTS;
+      else process.env.AGENTCAP_PERPS_PAPER_TENANTS = admitted;
     });
     const res = await route.DELETE(new Request(`${ORIGIN}/api/grants`, {
       method: "DELETE",
@@ -733,7 +733,7 @@ describe("hosted: GET ?wallet=perps answers for the Perps wallet, and only it", 
 /**
  * A SPOT RECORD STOPPED FOR A RENEWAL THAT NEVER LANDED is `stored`, as the
  * Perps branch says of its own (2026-11-18: an owner stopped his agent for a
- * re-signature and never signed; his screens said "Create your merryman").
+ * re-signature and never signed; his screens said "Create your agentcapavatar").
  * The owner's screens read it to point at the re-signature rather than at
  * creating an agent (terminal/owner-state.ts). Everything else about the Spot
  * answer is unchanged: still `exists` false, never a grant view, and a record
@@ -753,7 +753,7 @@ describe("hosted: GET (Spot) says `stored` for a record stopped for a renewal, a
     const { wrapSqlite } = await import("../../../../../worker/src/db");
     const { applyLedgerSchema } = await import("../../../../../worker/src/store");
     mkdirSync(home, { recursive: true });
-    const raw = new DatabaseSync(path.join(home, "merrymen.db"));
+    const raw = new DatabaseSync(path.join(home, "agentcap.db"));
     try { await applyLedgerSchema(wrapSqlite(raw)); } finally { raw.close(); }
   });
 

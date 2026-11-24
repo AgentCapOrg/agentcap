@@ -32,7 +32,7 @@
  * read under the recovery view the grants and chat routes serve), for this
  * tenant's own row only.
  */
-import { liveBlockerText, RENEW_SOON_DAYS, type RefuseRule } from "@merrymen/core";
+import { liveBlockerText, RENEW_SOON_DAYS, type RefuseRule } from "@agentcap/core";
 import type { Db } from "../../../../worker/src/db";
 import { readFleetRecoveryHold } from "../../../../worker/src/fleet-recovery";
 import { PRIVATE_REVIEW_SOURCE } from "../../../../worker/src/market-review";
@@ -587,7 +587,7 @@ export function diagnoseInactivity(i: InactivityInputs): Diagnosis {
       const at = expired ? i.permission.expiresAt : (i.expiryNoticeAt ?? row?.expires_at ?? null);
       add({ category: "permission", status: "blocking", kind: "not_permitted", summary: `The signed trading permission expired at ${iso(at)}, so the agent cannot trade.`, observed, threshold, recorded_at: at, since: at, remedy: [resign] });
     } else if (status === "error") {
-      add({ category: "permission", status: "blocking", kind: "not_permitted", summary: "The worker could not arm the signed permission, so it is not trading. The error text is only in the agent's own log.", observed, threshold, recorded_at: i.events.arm_failure.last_at ?? beat, since: i.events.arm_failure.first_at, remedy: [resign, "If it still cannot start after re-signing, contact Merrymen support."] });
+      add({ category: "permission", status: "blocking", kind: "not_permitted", summary: "The worker could not arm the signed permission, so it is not trading. The error text is only in the agent's own log.", observed, threshold, recorded_at: i.events.arm_failure.last_at ?? beat, since: i.events.arm_failure.first_at, remedy: [resign, "If it still cannot start after re-signing, contact AgentCap support."] });
     } else if (i.permission.expiresAt !== null && i.permission.expiresAt - i.now < RENEW_SOON_DAYS * 86_400) {
       add({ category: "permission", status: "warning", kind: null, summary: `The permission is valid but expires soon, at ${iso(i.permission.expiresAt)}.`, observed, threshold, recorded_at: i.permission.grantedAt, remedy: [resign] });
     } else {
@@ -605,9 +605,9 @@ export function diagnoseInactivity(i: InactivityInputs): Diagnosis {
       // records are verified (a chat-only holder at most), so a stale or missing
       // heartbeat is the hold, not a dead worker, and a fresh one is not a worker
       // that trades. Only this tenant's own report sets it (readInactivityInputs).
-      // It carries no remedy: lifting it is on Merrymen's side. When the hold
+      // It carries no remedy: lifting it is on AgentCap's side. When the hold
       // started is not in the report this reads, so `since` stays unknown.
-      add({ category: "worker_liveness", status: "blocking", kind: "recovery_hold", summary: `Trading is paused for recovery: Merrymen is holding this agent until its saved trading records are verified (the hold was last confirmed at ${iso(hold.checkedAt)}). A held agent does not trade, so a stale or missing heartbeat here is the hold, not a worker that died. Lifting the hold is on Merrymen's side.`, observed: { ...observed, recovery_hold_confirmed_at: iso(hold.checkedAt) }, threshold, recorded_at: hold.checkedAt });
+      add({ category: "worker_liveness", status: "blocking", kind: "recovery_hold", summary: `Trading is paused for recovery: AgentCap is holding this agent until its saved trading records are verified (the hold was last confirmed at ${iso(hold.checkedAt)}). A held agent does not trade, so a stale or missing heartbeat here is the hold, not a worker that died. Lifting the hold is on AgentCap's side.`, observed: { ...observed, recovery_hold_confirmed_at: iso(hold.checkedAt) }, threshold, recorded_at: hold.checkedAt });
     } else if (!row) {
       add({ category: "worker_liveness", status: "unknown", kind: null, summary: i.account ? "The worker has never reported for this account." : "No account yet, so there is no worker to report.", observed, threshold });
     } else if (beat === null) {
@@ -623,7 +623,7 @@ export function diagnoseInactivity(i: InactivityInputs): Diagnosis {
       // down nothing restarts at all. Shared records cannot say which of those
       // holds, so the remedy promises nothing it cannot see. An unreadable
       // recovery report is said here, where a hold would otherwise have been.
-      add({ category: "worker_liveness", status: "blocking", kind: "worker_not_reporting", summary: `No heartbeat for ${beatAge}s (fresh within ${within}s): the worker or the ledger mirror has stopped, and shared records cannot tell which.`, observed, threshold, recorded_at: beat, since: beat, remedy: ["If it stays stale, contact Merrymen support."],
+      add({ category: "worker_liveness", status: "blocking", kind: "worker_not_reporting", summary: `No heartbeat for ${beatAge}s (fresh within ${within}s): the worker or the ledger mirror has stopped, and shared records cannot tell which.`, observed, threshold, recorded_at: beat, since: beat, remedy: ["If it stays stale, contact AgentCap support."],
         evidence: holdUnread ? ["Its recovery report could not be read, so whether it is held for recovery is unknown. A held agent's heartbeat goes stale too, so this may be a recovery hold rather than a stopped worker."] : [] });
     }
   }
@@ -652,7 +652,7 @@ export function diagnoseInactivity(i: InactivityInputs): Diagnosis {
     } else if (blocker === "no-gas" || blocker === "no-cash") {
       add({ category: "live_rail", status: "ok", kind: null, summary: "Every leg of the live rail except funding is available (see funding).", observed, recorded_at: beat });
     } else if (blocker && RAIL_BLOCKERS.has(blocker)) {
-      add({ category: "live_rail", status: liveIntended ? "blocking" : "warning", kind: "live_rail_blocked", summary: `${liveIntended ? "Not trading for real" : "Live trading is off; when turned on it would not trade for real"}: ${view?.text ?? blocker}.`, observed, recorded_at: beat, remedy: railRemedy(blocker), evidence: view?.is_fault && !view.owner_can_fix ? ["This is on Merrymen's side to fix, not yours."] : [] });
+      add({ category: "live_rail", status: liveIntended ? "blocking" : "warning", kind: "live_rail_blocked", summary: `${liveIntended ? "Not trading for real" : "Live trading is off; when turned on it would not trade for real"}: ${view?.text ?? blocker}.`, observed, recorded_at: beat, remedy: railRemedy(blocker), evidence: view?.is_fault && !view.owner_can_fix ? ["This is on AgentCap's side to fix, not yours."] : [] });
     } else if (blocker) {
       add({ category: "live_rail", status: liveIntended ? "blocking" : "warning", kind: "live_rail_blocked", summary: `The worker reports a live-rail blocker this server does not recognise (${blocker.slice(0, 40)}).`, observed, recorded_at: beat });
     } else {
@@ -794,7 +794,7 @@ export function diagnoseInactivity(i: InactivityInputs): Diagnosis {
     const lasts = [i.events.provider_failure.last_at, d0.brain_failure_last_at].filter((x): x is number => x !== null);
     const firsts = [i.events.provider_failure.first_at, d0.brain_failure_first_at].filter((x): x is number => x !== null);
     const last = lasts.length ? Math.max(...lasts) : null;
-    const remedy = ["If the agent uses your own model provider key (Settings), check that it is valid and has credit; otherwise this is on Merrymen's side."];
+    const remedy = ["If the agent uses your own model provider key (Settings), check that it is valid and has credit; otherwise this is on AgentCap's side."];
     const shadowNote = d0.shadow_failures ? [`${d0.shadow_failures} Brain shadow run(s) also failed; shadow runs are only watched, so they stop nothing.`] : [];
     if (!failures) {
       add({ category: "provider", status: "ok", kind: null, summary: "No model or Brain service failure that could stop trading is recorded in the window.", observed, evidence: shadowNote });
@@ -888,7 +888,7 @@ export function diagnoseInactivity(i: InactivityInputs): Diagnosis {
 
   // ── while held: no call to action ──
   // NOTHING THE OWNER DOES NOW MAKES A HELD AGENT TRADE: lifting the hold is on
-  // Merrymen's side. So while it is held no check offers a remedy, neither in
+  // AgentCap's side. So while it is held no check offers a remedy, neither in
   // what_owner_can_do nor in the check's own list. Otherwise every other check's
   // remedy is promoted as the owner's only actions: a re-signed permission (which
   // revokes the old one on-chain and costs network fees), a deposit, a /resume
@@ -902,7 +902,7 @@ export function diagnoseInactivity(i: InactivityInputs): Diagnosis {
   if (hold) {
     for (const c of checks) if (c.kind !== "recovery_hold") c.remedy = [];
     const perm = checks.find((c) => c.category === "permission")!;
-    if (perm.status === "blocking") perm.evidence.push("It is also held for recovery (see worker_liveness): a held agent does not trade, and lifting the hold is on Merrymen's side, so no remedy is offered while it is held.");
+    if (perm.status === "blocking") perm.evidence.push("It is also held for recovery (see worker_liveness): a held agent does not trade, and lifting the hold is on AgentCap's side, so no remedy is offered while it is held.");
   }
 
   const by = new Map(checks.map((c) => [c.category, c]));

@@ -484,7 +484,7 @@ export interface PerpMarketSpec {
 
 export type PerpSide = "long" | "short";
 
-/** The highest leverage merrymen ever sets, whatever the owner or venue allows (rule 6). */
+/** The highest leverage agentcap ever sets, whatever the owner or venue allows (rule 6). */
 export const PERP_MAX_LEVERAGE = 10;
 
 /** lighter-go MaxOrderPrice (uint32). A price above it cannot be signed; one below 1 is nil. */
@@ -562,7 +562,7 @@ export function baseForNotional(
 }
 
 /**
- * The leverage merrymen sets on a market, and the IMF that encodes it (rule 6).
+ * The leverage agentcap sets on a market, and the IMF that encodes it (rule 6).
  *
  *   L = min(perpsMaxLeverage, floor(10000 / minImfBp), 10)
  *   imfBp = ceil(10000 / L)
@@ -1059,7 +1059,7 @@ export function stopBeatsLiquidation(args: {
 }
 
 /**
- * The per-trade fee merrymen charges on a perp fill: none.
+ * The per-trade fee agentcap charges on a perp fill: none.
  *
  * A v1 decision (docs/perps.md, "Decisions that need Milla": any future
  * turnover fee is hers to decide). The performance fee still applies, through
@@ -1141,7 +1141,7 @@ export function perpsBlockerText(b: PerpBlocker): { what: string; remedy: string
     case "perps-key-mismatch":
       return {
         what: "Lighter holds a different trading key for this agent than the one you signed.",
-        remedy: "If you did not change it yourself, treat the key as compromised and use `merrymen recover` with your owner key. Once Lighter is flat, use Wallet → Re-enable perpetuals to verify the recovery receipt and sign a fresh permission.",
+        remedy: "If you did not change it yourself, treat the key as compromised and use `agentcap recover` with your owner key. Once Lighter is flat, use Wallet → Re-enable perpetuals to verify the recovery receipt and sign a fresh permission.",
       };
     case "perps-venue-unreachable":
       // No remedy: it retries by itself, and resting stops at the venue keep
@@ -1157,7 +1157,7 @@ export function perpsBlockerText(b: PerpBlocker): { what: string; remedy: string
     case "perps-unknown-activity":
       return {
         what: "Lighter shows activity on the agent's account that the agent did not do. New positions are stopped and open ones are being closed.",
-        remedy: "Use `merrymen recover` with your owner key to replace the trading key and recover available funds. Once Lighter is flat, use Wallet → Re-enable perpetuals to verify the recovery receipt and sign a fresh permission.",
+        remedy: "Use `agentcap recover` with your owner key to replace the trading key and recover available funds. Once Lighter is flat, use Wallet → Re-enable perpetuals to verify the recovery receipt and sign a fresh permission.",
       };
     case "perps-entries-halted":
       return {
@@ -1245,7 +1245,7 @@ function delayText(sec: number | null): string {
  * is the default).
  */
 export function custodySentence(exposure: PerpExposure, opts?: { recover?: string }): string {
-  const recover = opts?.recover ?? "run `merrymen recover`";
+  const recover = opts?.recover ?? "run `agentcap recover`";
   if (exposure.kind === "none") {
     return "Nothing is held on Lighter, so your funds stay in your smart account.";
   }

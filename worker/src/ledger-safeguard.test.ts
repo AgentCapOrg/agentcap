@@ -21,7 +21,7 @@ async function fixture(t: { after(fn: () => void): void }) {
   const childrenDir = path.join(root, "children"), home = path.join(childrenDir, TENANT);
   mkdirSync(path.join(home, "soul"), { recursive: true });
   writeFileSync(path.join(home, "soul", "IDENTITY.md"), "fixture identity");
-  const local = new DatabaseSync(path.join(home, "merrymen.db"));
+  const local = new DatabaseSync(path.join(home, "agentcap.db"));
   const raw = new DatabaseSync(":memory:");
   await applyLedgerSchema(wrapSqlite(local));
   await applyLedgerSchema(wrapSqlite(raw));
@@ -72,11 +72,11 @@ test("held, unrestored, pending-chain, changed-account and nonquiescent books re
     rmSync(path.join(f.home, file));
   }
   await assert.rejects(checkpointFleetLedger({ ...f, backup: { ...f.backup, source: { ...source, quiescent: false } } }), /refused/);
-  const local = new DatabaseSync(path.join(f.home, "merrymen.db"));
+  const local = new DatabaseSync(path.join(f.home, "agentcap.db"));
   local.prepare("INSERT INTO trades(agent_id, kind, target, amount_usdg, status) VALUES (?, 'call', 'fixture', 1, 'submitted')").run(ACCOUNT);
   local.close();
   await assert.rejects(checkpointFleetLedger(f), /refused/);
-  const changed = new DatabaseSync(path.join(f.home, "merrymen.db"));
+  const changed = new DatabaseSync(path.join(f.home, "agentcap.db"));
   changed.exec("DELETE FROM trades"); changed.prepare("UPDATE agents SET smart_account=?").run(`0x${"96".repeat(20)}`); changed.close();
   await assert.rejects(checkpointFleetLedger(f), /refused/);
   assert.equal(count(), 0); assert.equal(f.releases(), 0);
@@ -114,7 +114,7 @@ test("cold rebuilt source refuses before moving the cursor and repeated invocati
   f.raw.prepare("INSERT INTO mirror_state(tenant, table_name, last_id, last_stamp, updated_at) VALUES (?, 'trades', 100, 900, 1000)").run(TENANT);
   f.raw.prepare("INSERT INTO positions(agent_id, symbol, token, raw_balance, ui_multiplier, price_usd, price_stale, value_usdg, updated_at) VALUES (?, 'KEEP', '0xasset', '10', '1', 4, 0, 40, 900)").run(ACCOUNT);
   f.raw.prepare("INSERT INTO cost_basis(agent_id, mode, symbol, qty_raw, cost_usdg, updated_at) VALUES (?, 'live', 'KEEP', '10', '20', 900)").run(ACCOUNT);
-  const local = new DatabaseSync(path.join(f.home, "merrymen.db"));
+  const local = new DatabaseSync(path.join(f.home, "agentcap.db"));
   local.prepare("INSERT INTO trades(agent_id, kind, target, amount_usdg, status, created_at) VALUES (?, 'call', 'fixture', 1, 'rejected', 1001)").run(ACCOUNT);
   local.close();
   for (let n = 0; n < 2; n++) {
@@ -128,7 +128,7 @@ test("cold rebuilt source refuses before moving the cursor and repeated invocati
 
 test("a book from before owner_operations checkpoints exactly as before: the missing table is zero rows, never a refusal", async t => {
   const f = await fixture(t);
-  const local = new DatabaseSync(path.join(f.home, "merrymen.db"));
+  const local = new DatabaseSync(path.join(f.home, "agentcap.db"));
   local.exec("DROP TABLE owner_operations");
   local.close();
   const done = await checkpointFleetLedger(f);
@@ -139,7 +139,7 @@ test("a book from before owner_operations checkpoints exactly as before: the mis
 
 test("an owner operation in the book is carried up under the roster's account and tenant, and the continuity proof never names it", async t => {
   const f = await fixture(t);
-  const local = new DatabaseSync(path.join(f.home, "merrymen.db"));
+  const local = new DatabaseSync(path.join(f.home, "agentcap.db"));
   const op = `0x${"0f".repeat(32)}`, tx = `0x${"1f".repeat(32)}`;
   local.prepare(`INSERT INTO owner_operations (tenant, agent_id, chain_id, user_op_hash, tx_hash, block_number, block_time, log_index, nonce, validator, disposition,
       review_reason, usdg_legs_json, covers_logs_json, token_moves_json, paymaster, gas_wei, source, recorded_epoch, created_at)

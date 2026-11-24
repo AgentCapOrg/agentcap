@@ -2,7 +2,7 @@
  * The pure half of booking an energy purchase: what the receipt says moved, and
  * whether the book can take it.
  *
- * The receipt fixtures are the real route's shape — USDG -> VIRTUAL -> $MERRYMEN
+ * The receipt fixtures are the real route's shape — USDG -> VIRTUAL -> $AGENTCAP
  * over two Uniswap v2 pairs, the buy tax skimmed to the token contract — so the
  * classifier is exercised on the four legs a mainnet purchase actually emits.
  */
@@ -16,7 +16,7 @@ import { rejectRuleLabel, rejectRuleRemedy } from "./thesis-policy";
 const ACCOUNT = "0x00000000000000000000000000000000000000A1";
 const USDG = "0x5fc5360d0400a0fd4f2af552add042d716f1d168";
 const VIRTUAL = "0xc6911796042b15d7fa4f6cde69e245ddcd3d9c31";
-const MERRYMEN = "0xa15cd06dd305269a0f48bebeb30aa3588fba7b32";
+const AGENTCAP = "0xa15cd06dd305269a0f48bebeb30aa3588fba7b32";
 const TSLA = "0x322f0929c4625ed5bad873c95208d54e1c003b2d";
 const PAIR_A = "0x00000000000000000000000000000000000000b1";
 const PAIR_B = "0x00000000000000000000000000000000000000b2";
@@ -41,15 +41,15 @@ const transfer = (
 const energyReceipt = (over: { usdgLogIndex?: number | string | null; usdgBlock?: bigint | null } = {}) => [
   transfer(USDG, ACCOUNT, PAIR_A, 41_500_000n, over.usdgLogIndex === undefined ? 17 : over.usdgLogIndex, over.usdgBlock === undefined ? 9_000_001n : over.usdgBlock),
   transfer(VIRTUAL, PAIR_A, PAIR_B, 90n * 10n ** 18n, 18, 9_000_001n),
-  transfer(MERRYMEN, PAIR_B, MERRYMEN, 2_000n * 10n ** 18n, 19, 9_000_001n),
-  transfer(MERRYMEN, PAIR_B, ACCOUNT, 98_000n * 10n ** 18n, 20, 9_000_001n),
+  transfer(AGENTCAP, PAIR_B, AGENTCAP, 2_000n * 10n ** 18n, 19, 9_000_001n),
+  transfer(AGENTCAP, PAIR_B, ACCOUNT, 98_000n * 10n ** 18n, 20, 9_000_001n),
 ];
 
 const read = (logs: ReceiptLog[] | null, extra: { blockNumber?: bigint | number | null; reserveTokens?: string[] } = {}) =>
   energyFlowFromReceipt({
     account: ACCOUNT,
     usdgToken: USDG,
-    reserveTokens: extra.reserveTokens ?? [MERRYMEN],
+    reserveTokens: extra.reserveTokens ?? [AGENTCAP],
     logs,
     blockNumber: extra.blockNumber,
   });
@@ -120,7 +120,7 @@ describe("energyFlowFromReceipt", () => {
   });
 
   it("no USDG leaving the account: not ok, not unreadable", () => {
-    const r = read([transfer(MERRYMEN, PAIR_B, ACCOUNT, 1n, 1, 5n)]);
+    const r = read([transfer(AGENTCAP, PAIR_B, ACCOUNT, 1n, 1, 5n)]);
     assert.equal(r.ok, false);
     assert.equal(!r.ok && r.unreadable, false);
   });
@@ -230,7 +230,7 @@ describe("energyPreTradeGate", () => {
     assert.equal(sliver.action === "refuse" && sliver.rule, "would-exhaust-contributions");
     const why = sliver.action === "refuse" ? sliver.why : "";
     assert.match(why, /would leave only 1\.00 of the 20\.00 USDG of capital on record for me — I keep at least 2\.00/);
-    assert.match(why, /send USDG to me first and ask again, or send \$MERRYMEN to my account directly$/);
+    assert.match(why, /send USDG to me first and ask again, or send \$AGENTCAP to my account directly$/);
     assert.doesNotMatch(why, /price|returns?\b|profit|investment|moon|\d+\s*%/i);
     // 18 leaves exactly the floor, and is booked.
     const at = energyPreTradeGate(
@@ -261,7 +261,7 @@ describe("energyPreTradeGate", () => {
     assert.equal(v.action, "refuse");
     const why = v.action === "refuse" ? v.why : "";
     assert.match(why, /spending 10\.00 USDG on energy would use up all 10\.00 USDG of capital on record for me/);
-    assert.match(why, /send USDG to me first and ask again, or send \$MERRYMEN to my account directly/);
+    assert.match(why, /send USDG to me first and ask again, or send \$AGENTCAP to my account directly/);
     assert.doesNotMatch(why, /price|returns?\b|profit|investment|moon|\d+\s*%/i);
   });
 
@@ -283,7 +283,7 @@ describe("energyPreTradeGate", () => {
     ]) {
       assert.equal(v.action, "refuse");
       const why = v.action === "refuse" ? v.why : "";
-      assert.match(why, /send \$MERRYMEN to its account directly/);
+      assert.match(why, /send \$AGENTCAP to its account directly/);
       assert.doesNotMatch(why, /price|return|profit|moon/i);
     }
   });

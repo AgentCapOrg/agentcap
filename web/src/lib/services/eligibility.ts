@@ -42,7 +42,7 @@ import {
   sellableAssets,
   shortAddress,
   type AssetMode,
-} from "@merrymen/core";
+} from "@agentcap/core";
 import { ENERGY_RESERVE_WHY } from "../energy-reserve";
 import type { Db } from "../../../../worker/src/db";
 import { classRouteLooks } from "../../../../worker/src/class-entry-gate";
@@ -476,7 +476,7 @@ export function judgeEligibility(o: {
   else if (o.mode === "idle") notes.push("The agent is running but not trading right now (see get_agent_status for why).");
   else if (o.mode === "unknown") notes.push("The agent's current book (paper or live) could not be read.");
   if (o.settings && !o.settings.liveTradingEnabled) notes.push("Live trading is off in the owner's settings, so no real order is placed until the owner turns it on.");
-  notes.push("Price floors are Merrymen's defaults: the owner may have changed them, and that setting is not visible to this server.");
+  notes.push("Price floors are AgentCap's defaults: the owner may have changed them, and that setting is not visible to this server.");
   if (flags.includes("impersonates_trusted_ticker")) notes.push("This token's label copies a trusted ticker at a different address. It is not that asset.");
 
   return {

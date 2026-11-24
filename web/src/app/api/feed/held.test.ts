@@ -19,19 +19,19 @@ import { pnlBasisOf } from "@/lib/feed-pnl";
  * the real GET, self-hosted, against the worker's own schema.
  */
 const ACCOUNT = "0xa6e17a1b2c3d4e5f60718293a4b5c6d7e8f90123";
-const saved = { home: process.env.MERRYMEN_HOME, hosted: process.env.MERRYMEN_HOSTED, database: process.env.DATABASE_URL };
+const saved = { home: process.env.AGENTCAP_HOME, hosted: process.env.AGENTCAP_HOSTED, database: process.env.DATABASE_URL };
 let dir: string;
 let GET: (req: Request) => Promise<Response>;
 
 before(async () => {
   dir = await mkdtemp(path.join(tmpdir(), "mm-feed-held-"));
-  process.env.MERRYMEN_HOME = dir;
-  delete process.env.MERRYMEN_HOSTED;
+  process.env.AGENTCAP_HOME = dir;
+  delete process.env.AGENTCAP_HOSTED;
   delete process.env.DATABASE_URL;
   ({ GET } = await import("./route"));
   const { wrapSqlite } = await import("../../../../../worker/src/db");
   const { applyLedgerSchema } = await import("../../../../../worker/src/store");
-  const raw = new DatabaseSync(path.join(dir, "merrymen.db"));
+  const raw = new DatabaseSync(path.join(dir, "agentcap.db"));
   try {
     const db = wrapSqlite(raw);
     await applyLedgerSchema(db);
@@ -60,7 +60,7 @@ before(async () => {
 });
 
 after(async () => {
-  for (const [k, v] of [["MERRYMEN_HOME", saved.home], ["MERRYMEN_HOSTED", saved.hosted], ["DATABASE_URL", saved.database]] as const) {
+  for (const [k, v] of [["AGENTCAP_HOME", saved.home], ["AGENTCAP_HOSTED", saved.hosted], ["DATABASE_URL", saved.database]] as const) {
     if (v === undefined) delete process.env[k];
     else process.env[k] = v;
   }

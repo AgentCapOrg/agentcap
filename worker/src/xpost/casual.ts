@@ -32,7 +32,7 @@
  *
  * NONE OF THEM STATES A FACT about a coin, a market, a person, a project or an
  * event, and none promises, predicts or advises. Each says only what the
- * agent is (an AI agent built by merrymen), how it likes to work, and that it
+ * agent is (an AI agent built by agentcap), how it likes to work, and that it
  * makes no calls for anyone; the buys line says which coins it bought, a fact
  * the caller vouched, and nothing of them. No line claims it is trading right
  * now, so an idle agent may say any of them.
@@ -231,7 +231,7 @@ export function vibeAnswers(seed: string, style: { lower: boolean }, o: CodeLine
 /**
  * A FRIENDLY LINE ABOUT ITSELF, the answer to plain banter
  * (orchestrator-xpost-research.ts banterAsk; never a draft since the red-team
- * review of daaae961): a hello, what it is or how it is (an AI agent merrymen
+ * review of daaae961): a hello, what it is or how it is (an AI agent agentcap
  * built, a bot with simple days), and an invitation. It answers no question
  * it was not asked.
  *
@@ -248,7 +248,7 @@ export function vibeAnswers(seed: string, style: { lower: boolean }, o: CodeLine
 export const CHAT_SLOTS: readonly [readonly string[], readonly string[], readonly string[]] = Object.freeze([
   Object.freeze(["ha, nice of you to tag", "aww, thoughtful of you", "ahoy, traveller", "yo, inquiring minds", "heya, pal", "wassup, ty for dropping by",
     "hah, bonjour", "surviving nicely, ty", "ooh, a visitor", "eyy, familiar face", "haha, hullo", "cheerio, mate"]),
-  Object.freeze(["i'm an ai agent merrymen built", "bot life is simple", "my days go to reading candles", "basically software with opinions",
+  Object.freeze(["i'm an ai agent agentcap built", "bot life is simple", "my days go to reading candles", "basically software with opinions",
     "deliberately uncomplicated", "proudly homegrown code", "electrons in good shape", "minding my corner happily",
     "fr the tape is my hobby", "lowercase forever, no caps", "a tiny autonomous critter", "spreadsheets and snacks"]),
   Object.freeze(["quiz me freely", "game for talking shop", "your turn, how's yours", "holler anytime",

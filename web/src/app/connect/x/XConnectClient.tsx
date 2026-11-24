@@ -2,7 +2,7 @@
 
 /**
  * WHERE X SENDS AN OWNER BACK AFTER THEY APPROVE (OR DON'T) — the one
- * registered callback, `${MERRYMEN_PUBLIC_ORIGIN}/connect/x`.
+ * registered callback, `${AGENTCAP_PUBLIC_ORIGIN}/connect/x`.
  *
  * A PAGE, NOT AN API ROUTE, and that is forced: the middleware refuses a
  * cross-site request on /api/*, and the SameSite=Strict session cookie is not
@@ -56,7 +56,7 @@ async function finishConnect(code: string, state: string): Promise<Phase> {
       signal: AbortSignal.timeout(30_000),
     });
   } catch {
-    return { kind: "failed", message: "Couldn't reach merrymen to finish connecting X. Start again from Settings." };
+    return { kind: "failed", message: "Couldn't reach agentcap to finish connecting X. Start again from Settings." };
   }
   const data = (await res.json().catch(() => null)) as
     | { ok?: unknown; username?: unknown; postingEnabled?: unknown; error?: unknown }
@@ -70,7 +70,7 @@ async function finishConnect(code: string, state: string): Promise<Phase> {
     };
   }
   if (res.status === 401) {
-    return { kind: "failed", message: "Sign in to merrymen in this browser, then connect X again from Settings." };
+    return { kind: "failed", message: "Sign in to agentcap in this browser, then connect X again from Settings." };
   }
   // The route's sentences are written for owners and never carry what X said.
   if (typeof data?.error === "string" && data.error) return { kind: "failed", message: data.error };
@@ -116,9 +116,9 @@ export function XConnectClient() {
       </header>
       <main className="connect-main">
         <div className="connect-context">
-          <span className="connect-eyebrow">YOUR MERRYMAN, ON X</span>
+          <span className="connect-eyebrow">YOUR AGENTCAPAVATAR, ON X</span>
           <h1>Connect X.</h1>
-          <p>Your Merryman posts only after you turn posting on in Settings. Each post then waits there under Coming up for at least ten minutes, and you can skip it.</p>
+          <p>Your AgentCapAvatar posts only after you turn posting on in Settings. Each post then waits there under Coming up for at least ten minutes, and you can skip it.</p>
         </div>
         <section className="connect-panel" aria-busy={phase.kind === "working"} aria-live="polite">
           {phase.kind === "working" && (
@@ -126,7 +126,7 @@ export function XConnectClient() {
           )}
           {phase.kind === "handoff" && (
             <>
-              <h2>Back to the merrymen app…</h2>
+              <h2>Back to the agentcap app…</h2>
               <p>If the app doesn&apos;t open by itself, <a href={phase.href}>open it here</a>.</p>
             </>
           )}
@@ -135,12 +135,12 @@ export function XConnectClient() {
               <h2>{phase.handle ? `Connected as ${phase.handle}` : "Connected."}</h2>
               {phase.postingEnabled ? (
                 <p>
-                  Posting is back on: you allowed your Merryman to post from {phase.handle ?? "this account"} before, so it
+                  Posting is back on: you allowed your AgentCapAvatar to post from {phase.handle ?? "this account"} before, so it
                   posts from it again. Each post waits under Coming up in Settings for at least ten minutes, where you can
                   skip it or turn posting off.
                 </p>
               ) : (
-                <p>Your Merryman won&apos;t post anything yet. Turn posting on in Settings when you&apos;re ready — you&apos;ll see exactly which account it posts from first.</p>
+                <p>Your AgentCapAvatar won&apos;t post anything yet. Turn posting on in Settings when you&apos;re ready — you&apos;ll see exactly which account it posts from first.</p>
               )}
               <a className="flow-primary" href={SETTINGS}><ArrowLeft size={16} aria-hidden /> Back to Settings</a>
             </>

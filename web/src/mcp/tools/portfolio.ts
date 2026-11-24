@@ -683,11 +683,11 @@ export const PORTFOLIO_RESOURCES: ResourceDef[] = [
     description: "The agent's balances and holdings per book (paper and live separately).",
     mimeType: "application/json",
     capability: "portfolio.read",
-    uri: "merrymen://agents/{agent}/portfolio",
+    uri: "agentcap://agents/{agent}/portfolio",
     async list(ctx) {
       const agents = await ctx.agents();
       return agents.map((a) => ({
-        uri: `merrymen://agents/${a.slug}/portfolio`,
+        uri: `agentcap://agents/${a.slug}/portfolio`,
         name: `portfolio-${a.slug}`,
         title: `Portfolio of agent ${a.slug}`,
         mimeType: "application/json",

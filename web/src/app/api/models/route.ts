@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { NextResponse } from "next/server";
-import { homePaths } from "@merrymen/home";
-import { getSettingsStore } from "@merrymen/settings-store";
-import { isHostedMode, llmProviderById, type MerrymenSettings } from "@merrymen/core";
+import { homePaths } from "@agentcap/home";
+import { getSettingsStore } from "@agentcap/settings-store";
+import { isHostedMode, llmProviderById, type AgentCapSettings } from "@agentcap/core";
 import { tenantOf } from "@/lib/auth";
 import { walletNotSupported } from "@/lib/route-guard";
 
@@ -18,7 +18,7 @@ interface FetchModelsBody {
 /**
  * THE SAME SETTINGS THE REST OF THE PRODUCT READS.
  *
- * This read only ~/.merrymen/settings.json — a file that does not exist on the
+ * This read only ~/.agentcap/settings.json — a file that does not exist on the
  * hosted deploy, where a tenant's settings live in the per-tenant encrypted
  * store and the global file belongs to nobody. So `saved` came back empty for
  * every hosted tenant, the saved Groq key was never attached, and the request
@@ -32,13 +32,13 @@ interface FetchModelsBody {
  * back to the global file when hosted: those settings are not this tenant's,
  * and reading somebody else's key here would be worse than not reading one.
  */
-async function readSavedSettings(req: Request): Promise<MerrymenSettings> {
+async function readSavedSettings(req: Request): Promise<AgentCapSettings> {
   const tenant = isHostedMode() ? tenantOf(req) : null;
   if (isHostedMode()) return tenant ? ((await getSettingsStore("spot").get(tenant)) ?? {}) : {};
   try {
     return JSON.parse(
       (await readFile(homePaths.settings(), "utf8")).replace(/^﻿/, ""),
-    ) as MerrymenSettings;
+    ) as AgentCapSettings;
   } catch {
     return {};
   }
@@ -142,7 +142,7 @@ export async function POST(req: Request) {
     if (prov.id === "groq") apiKey = saved.groqApiKey || house(process.env.GROQ_API_KEY);
     else if (prov.id === "anthropic") apiKey = saved.anthropicApiKey || house(process.env.ANTHROPIC_API_KEY);
     else if (prov.id === "custom") apiKey = saved.llmApiKey ?? "";
-    else apiKey = saved.llmApiKey || house(process.env.MERRYMEN_LLM_API_KEY);
+    else apiKey = saved.llmApiKey || house(process.env.AGENTCAP_LLM_API_KEY);
     if (apiKey) {
       const savedForProvider =
         prov.id === "groq" ? saved.groqApiKey :
@@ -168,7 +168,7 @@ export async function POST(req: Request) {
     //
     // Before this guard, POSTing {provider:"custom", baseUrl:"https://attacker"}
     // with no apiKey made the route load the SAVED llmApiKey out of
-    // ~/.merrymen/settings.json and send it as `Authorization: Bearer` to that
+    // ~/.agentcap/settings.json and send it as `Authorization: Bearer` to that
     // URL — a key-exfiltration oracle sitting on a dashboard that has no login.
     // middleware.ts limits who can reach it, but "only locally exploitable" is
     // not the standard for a file holding a paid API credential.

@@ -32,14 +32,14 @@ import path from "node:path";
 /**
  * The directory every child in this container can see.
  *
- * A child's own MERRYMEN_HOME is `<fleet>/children/<tenant>`, so it is NOT the
+ * A child's own AGENTCAP_HOME is `<fleet>/children/<tenant>`, so it is NOT the
  * shared one — writing there would give each child a private file and the
  * silent appearance of a working breaker. The orchestrator passes the fleet
  * home explicitly at spawn; self-hosted there is one process and its own home
  * is the honest answer.
  */
 export function cooldownFile(home: string, endpoint?: string): string {
-  const fleet = process.env.MERRYMEN_FLEET_HOME?.trim();
+  const fleet = process.env.AGENTCAP_FLEET_HOME?.trim();
   // ONE FILE PER ENDPOINT once reads can fail over (rpc-failover.ts). The
   // house endpoint refusing and the public one refusing are different facts,
   // and a single number would make the fleet stop asking one because the other

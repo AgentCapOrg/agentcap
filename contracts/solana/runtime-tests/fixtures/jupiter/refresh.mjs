@@ -18,7 +18,7 @@
 //       this directory) and each program's ELF without its on-chain zero padding (to
 //       --elf-out, default --out), with the provenance tests/jupiter_fork.rs checks.
 //
-// --vault-program defaults to declare_id! in programs/merrymen-vault/src/lib.rs and
+// --vault-program defaults to declare_id! in programs/agentcap-vault/src/lib.rs and
 // --owner-seed to the test's OWNER_SEED. route.json's provenance.builtFor names both and
 // the addresses derived from them; the test moves those three vault accounts to its own
 // build's program ID, so a new declare_id needs no new fetch. A Jupiter, Whirlpool or SPL
@@ -33,8 +33,8 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const LIB_RS = path.join(HERE, "..", "..", "..", "programs", "merrymen-vault", "src", "lib.rs");
-export const OWNER_SEED = "merrymen jupiter fork test owner";
+const LIB_RS = path.join(HERE, "..", "..", "..", "programs", "agentcap-vault", "src", "lib.rs");
+export const OWNER_SEED = "agentcap jupiter fork test owner";
 export const USDG = "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH";
 export const WSOL = "So11111111111111111111111111111111111111112";
 const TOKEN = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";

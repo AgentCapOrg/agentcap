@@ -96,7 +96,7 @@ export function bookBox(v: Pick<View, "status" | "binding" | "result" | "current
     return { warn: false, text: `Practice. This was filled in your practice book; no money moved.${proposed !== "paper" ? ` It was proposed while your agent was ${wasIn(proposed)}.` : ""}` };
   }
   if (TERMINAL.has(v.status)) {
-    if (v.result?.outcome_unknown === true) return { warn: true, text: "Its outcome could not be confirmed, so Merrymen cannot say whether it traded or in which mode. Check your agent’s trades before asking for it again." };
+    if (v.result?.outcome_unknown === true) return { warn: true, text: "Its outcome could not be confirmed, so AgentCap cannot say whether it traded or in which mode. Check your agent’s trades before asking for it again." };
     if (v.status === "failed") return { warn: false, text: "No trade was recorded for it." };
     return { warn: false, text: "Nothing was traded, so no money moved." };
   }
@@ -120,7 +120,7 @@ export function bookBox(v: Pick<View, "status" | "binding" | "result" | "current
     return { warn: true, text: `Real money. Your agent sent this order on chain with its real funds; the ledger has not recorded whether it landed yet.${proposed !== "live" ? ` It was proposed while your agent was ${wasIn(proposed)}.` : ""}` };
   }
   if (v.status === "executing" && v.result && typeof v.result.note === "string") {
-    return { warn: true, text: "Your agent has finished this order. Until its trade record reaches the ledger, Merrymen cannot say whether it traded live (real money) or in practice." };
+    return { warn: true, text: "Your agent has finished this order. Until its trade record reaches the ledger, AgentCap cannot say whether it traded live (real money) or in practice." };
   }
   const base = now === "live"
     ? "Real money. Your agent trades live right now; it executes this order in whatever mode it is in when it picks it up."

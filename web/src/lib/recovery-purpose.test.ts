@@ -6,7 +6,7 @@ import path from "node:path";
 import { decodeFunctionData, encodeErrorResult, getAddress, keccak256, parseAbi, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { ownerFromPrivateKey, planRecovery, recoverFunds } from "../../../worker/src/recover";
-import { chainForId } from "@merrymen/core";
+import { chainForId } from "@agentcap/core";
 import { GET as ticketGet, POST as ticketPost } from "../app/api/recover/ticket/route";
 import { GET as recoverGet, POST as recoverPost } from "../app/api/recover/route";
 import { mintTicket, readTicket, recoveryChallengeMessage } from "./recovery-ticket";
@@ -19,8 +19,8 @@ const old = { ...process.env }, oldFetch = globalThis.fetch;
 let home: string;
 before(() => {
   home = mkdtempSync(path.join(tmpdir(), "perps-recovery-purpose-"));
-  process.env.MERRYMEN_HOME = home; process.env.MERRYMEN_SESSION_SECRET = "test-only-secret".repeat(4);
-  delete process.env.MERRYMEN_HOSTED; delete process.env.MERRYMEN_PERPS; delete process.env.DATABASE_URL;
+  process.env.AGENTCAP_HOME = home; process.env.AGENTCAP_SESSION_SECRET = "test-only-secret".repeat(4);
+  delete process.env.AGENTCAP_HOSTED; delete process.env.AGENTCAP_PERPS; delete process.env.DATABASE_URL;
   globalThis.fetch = async (_url, init) => {
     const value = JSON.parse(String(init?.body));
     const answer = (req: { id: number; method: string; params: {data: Hex}[] }) => {
@@ -32,7 +32,7 @@ before(() => {
     return Response.json(Array.isArray(value) ? value.map(answer) : answer(value));
   };
 });
-after(() => { globalThis.fetch = oldFetch; for (const k of ["MERRYMEN_HOME", "MERRYMEN_SESSION_SECRET", "MERRYMEN_HOSTED", "MERRYMEN_PERPS", "DATABASE_URL"]) { if (old[k] === undefined) delete process.env[k]; else process.env[k] = old[k]; } rmSync(home, { recursive: true, force: true }); });
+after(() => { globalThis.fetch = oldFetch; for (const k of ["AGENTCAP_HOME", "AGENTCAP_SESSION_SECRET", "AGENTCAP_HOSTED", "AGENTCAP_PERPS", "DATABASE_URL"]) { if (old[k] === undefined) delete process.env[k]; else process.env[k] = old[k]; } rmSync(home, { recursive: true, force: true }); });
 const salt = (code: Hex) => BigInt(decodeFunctionData({ abi: FACTORY, data: `0x${code.slice(42)}` }).args[2]);
 it("plan and sweep derive Spot at index 0 and Perps at index 1, then enforce expected account before money reads", async () => {
   const codes: Hex[] = [];
@@ -69,7 +69,7 @@ it("Perps recovery challenges and tickets work paper-off, but cannot replay a Sp
     asked.length = 0;
     assert.equal((await ticketPost(req(wallet === "spot" ? "perps" : "spot", payload))).status, 401); assert.equal(asked.length, 0);
     const minted = await ticketPost(req(wallet, payload)); assert.equal(minted.status, 200); assert.equal(salt(asked[0]), wallet === "spot" ? 0n : 1n);
-    const token = minted.headers.get("set-cookie")!.match(/merrymen_recovery=([^;]+)/)![1]; assert.equal(readTicket(token)?.purpose ?? "spot", wallet);
+    const token = minted.headers.get("set-cookie")!.match(/agentcap_recovery=([^;]+)/)![1]; assert.equal(readTicket(token)?.purpose ?? "spot", wallet);
     assert.equal((await ticketPost(req(wallet, payload))).status, 401, "single use after successful mint");
   }
 });
@@ -81,7 +81,7 @@ it("paper-off local recovery uses Perps home and never the Spot owner key; hoste
   const absent = await (await recoverGet(req())).json(); assert.equal(absent.hasStoredKey, false); assert.equal(asked.length, 0);
   writeFileSync(path.join(home, "accounts/perps/grant.json"), JSON.stringify({ purpose: "perps", smartAccount: ACCOUNT, chainId: 46630, demoOwnerPrivateKey: KEY }));
   const own = await (await recoverGet(req())).json(); assert.equal(own.hasStoredKey, true); assert.match(own.error, /not the expected/); assert.equal(salt(asked[0]), 1n);
-  process.env.MERRYMEN_HOSTED = "1";
+  process.env.AGENTCAP_HOSTED = "1";
   assert.equal((await recoverPost(req("POST", "not-json"))).status, 403); assert.equal((await (await recoverGet(req())).json()).clientSide, true);
-  delete process.env.MERRYMEN_HOSTED;
+  delete process.env.AGENTCAP_HOSTED;
 });

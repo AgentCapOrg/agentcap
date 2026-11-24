@@ -27,7 +27,7 @@ const dirs = [];
 after(() => Promise.all(dirs.map((d) => rm(d, { recursive: true, force: true }))));
 
 test("a second upgrade in one period is priced against the tier the first one bought, live and after a restart", async () => {
-  const dir = await mkdtemp(path.join(tmpdir(), "merrymen-upgrades-"));
+  const dir = await mkdtemp(path.join(tmpdir(), "agentcap-upgrades-"));
   dirs.push(dir);
   const clock = { t: START };
   const boot = () => createBilling({ dataDir: dir, dataDirPersistent: true, mode: "enforce", now: () => clock.t, log: () => {}, timers: false, keyRegistry: async () => new Map() });

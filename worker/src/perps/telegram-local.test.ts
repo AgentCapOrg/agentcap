@@ -12,9 +12,9 @@ import { tokenTagOf } from "../telegram/state";
 const ACCOUNT = "0x1111111111111111111111111111111111111111", OWNER = "0x2222222222222222222222222222222222222222", OTHER = "0x3333333333333333333333333333333333333333";
 const report = { v: 1, mode: "paper", blocker: null, venueReadAt: Date.now(), protectAt: Date.now(), accountIndex: null, positions: [], openNotionalMicro: "0", collateralMicro: "100000000", inTransitMicro: "0", minLiqDistanceBps: null, stopsMissing: 0, incident: false };
 function setup(t: { after(fn: () => void): void }) {
-  const home = mkdtempSync(path.join(tmpdir(), "mm-local-bot-")), perpsHome = path.join(home, "accounts", "perps"), saved = process.env.MERRYMEN_PERPS;
-  process.env.MERRYMEN_PERPS = "paper";
-  t.after(() => { if (saved === undefined) delete process.env.MERRYMEN_PERPS; else process.env.MERRYMEN_PERPS = saved; rmSync(home, { recursive: true, force: true }); });
+  const home = mkdtempSync(path.join(tmpdir(), "mm-local-bot-")), perpsHome = path.join(home, "accounts", "perps"), saved = process.env.AGENTCAP_PERPS;
+  process.env.AGENTCAP_PERPS = "paper";
+  t.after(() => { if (saved === undefined) delete process.env.AGENTCAP_PERPS; else process.env.AGENTCAP_PERPS = saved; rmSync(home, { recursive: true, force: true }); });
   mkdirSync(perpsHome, { recursive: true });
   const grant = { purpose: "perps", smartAccount: ACCOUNT, owner: OWNER, chainId: 4663, expiresAt: Math.floor(Date.now() / 1000) + 1000 };
   writeFileSync(path.join(perpsHome, "grant.json"), JSON.stringify(grant));
@@ -22,7 +22,7 @@ function setup(t: { after(fn: () => void): void }) {
   const token = "123:local-test-secret";
   writeFileSync(path.join(home, "settings.json"), JSON.stringify({ telegramEnabled: true, telegramBotToken: token, telegramAllowlist: [42] }));
   writeFileSync(path.join(home, "telegram.json"), JSON.stringify({ botId: "123", tokenTag: tokenTagOf(token), ownerId: 42, linkedChatAt: { "42": Math.floor(Date.now() / 1000) - 20 } }));
-  const raw = new DatabaseSync(path.join(perpsHome, "merrymen.db"));
+  const raw = new DatabaseSync(path.join(perpsHome, "agentcap.db"));
   raw.exec("CREATE TABLE agents(smart_account TEXT PRIMARY KEY,owner_address TEXT,chain_id INTEGER,mode TEXT,perps TEXT)");
   raw.prepare("INSERT INTO agents VALUES(?,?,?,'paper',?)").run(ACCOUNT, OWNER, 4663, JSON.stringify(report)); raw.close();
   const port = createLocalPerpsPort(home);
@@ -31,9 +31,9 @@ function setup(t: { after(fn: () => void): void }) {
 }
 
 test("reads the dedicated Perps ledger and validates its owner, never the Spot ledger", async t => {
-  const { home, perpsHome, port } = setup(t); writeFileSync(path.join(home, "merrymen.db"), "not a database");
+  const { home, perpsHome, port } = setup(t); writeFileSync(path.join(home, "agentcap.db"), "not a database");
   const view = await port.read(); assert.equal(view.state, "ready"); if (view.state === "ready") { assert.equal(view.account, ACCOUNT); assert.equal(view.report?.collateralMicro, "100000000"); }
-  const raw = new DatabaseSync(path.join(perpsHome, "merrymen.db")); raw.prepare("UPDATE agents SET owner_address=?").run(OTHER); raw.close();
+  const raw = new DatabaseSync(path.join(perpsHome, "agentcap.db")); raw.prepare("UPDATE agents SET owner_address=?").run(OTHER); raw.close();
   assert.deepEqual(await port.read(), { state: "unread" });
   rmSync(path.join(perpsHome, "grant.json")); assert.deepEqual(await port.read(), { state: "absent" });
   writeFileSync(path.join(perpsHome, "grant.json"), "{bad"); assert.deepEqual(await port.read(), { state: "unread" });
@@ -83,10 +83,10 @@ test("a waiting exit rechecks a revoked Telegram owner or replaced grant under t
 
 test("off, expired, stale, held, malformed and wrong-account requests never queue", async t => {
   const { perpsHome, port, input, grant } = setup(t);
-  process.env.MERRYMEN_PERPS = "off"; assert.match(await port.exit(input), /not running/); process.env.MERRYMEN_PERPS = "paper";
+  process.env.AGENTCAP_PERPS = "off"; assert.match(await port.exit(input), /not running/); process.env.AGENTCAP_PERPS = "paper";
   for (const bad of [{ ...input, expectedAccount: OTHER as `0x${string}` }, { ...input, askedAtSec: input.askedAtSec - 1000 }, { ...input, market: "BAD-PERP<script>" as "BTC-PERP" }]) assert.doesNotMatch(await port.exit(bad), /^Your paper Perps exit was queued/);
   writeFileSync(path.join(perpsHome, "grant.json"), JSON.stringify({ ...grant, expiresAt: input.askedAtSec })); assert.match(await port.exit(input), /expired/);
   writeFileSync(path.join(perpsHome, "grant.json"), JSON.stringify(grant));
-  const raw = new DatabaseSync(path.join(perpsHome, "merrymen.db")); raw.exec("CREATE TABLE paper_recovery_health(agent_id TEXT,blocked INTEGER)"); raw.prepare("INSERT INTO paper_recovery_health VALUES(?,1)").run(ACCOUNT); raw.close();
+  const raw = new DatabaseSync(path.join(perpsHome, "agentcap.db")); raw.exec("CREATE TABLE paper_recovery_health(agent_id TEXT,blocked INTEGER)"); raw.prepare("INSERT INTO paper_recovery_health VALUES(?,1)").run(ACCOUNT); raw.close();
   assert.match(await port.exit(input), /held/); assert.equal(openCommands(perpsHome).length, 0);
 });

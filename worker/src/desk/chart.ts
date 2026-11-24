@@ -182,7 +182,7 @@ export function coinChartSvg(c: CoinMeasure): string | null {
   }
   if (t.rsi14 !== null) parts.push(textSvg(`RSI ${Number(t.rsi14.toFixed(1))}`, lx + 4, top + 20, 15, C.dim));
   parts.push(textSvg("volume", left + 10, volTop + 18, 14, C.dim));
-  parts.push(textSvg(`merrymen · GeckoTerminal ${utcClock(c.observedAtMs)} UTC`, W - 32, H - 14, 15, C.dim, "end"));
+  parts.push(textSvg(`agentcap · GeckoTerminal ${utcClock(c.observedAtMs)} UTC`, W - 32, H - 14, 15, C.dim, "end"));
   return frame(parts.join(""));
 }
 
@@ -218,7 +218,7 @@ export function marketChartSvg(m: MarketMeasure): string | null {
     parts.push(textSvg(fmtPct(v), v >= 0 ? zero + len + 8 : zero - len - 8, cy + 6, 17, color, v >= 0 ? "start" : "end"));
     parts.push(textSvg(`vol ${fmtUsd(c.volume24h)}`, W - 44, cy + 6, 16, C.dim, "end"));
   });
-  parts.push(textSvg(`top ${rows.length} by 24h volume · merrymen · GeckoTerminal ${utcClock(m.observedAtMs)} UTC`, W - 32, H - 14, 15, C.dim, "end"));
+  parts.push(textSvg(`top ${rows.length} by 24h volume · agentcap · GeckoTerminal ${utcClock(m.observedAtMs)} UTC`, W - 32, H - 14, 15, C.dim, "end"));
   return frame(parts.join(""));
 }
 

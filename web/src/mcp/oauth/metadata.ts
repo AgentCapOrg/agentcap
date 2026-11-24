@@ -44,7 +44,7 @@ export function protectedResourceMetadata(cfg: McpConfig, profile: McpProfile = 
     authorization_servers: [cfg.issuer],
     scopes_supported: [...advertisedScopesFor(profile)],
     bearer_methods_supported: ["header"],
-    resource_name: "Merrymen",
+    resource_name: "AgentCap",
     resource_documentation: `${cfg.issuer}/connect/mcp`,
   };
 }

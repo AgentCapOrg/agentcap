@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
+process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
 
 const { PgGrantStore } = await import("./grant-store");
 const { PgIdentityStore } = await import("./identity-store");

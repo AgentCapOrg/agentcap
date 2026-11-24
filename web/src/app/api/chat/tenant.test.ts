@@ -8,31 +8,31 @@ import { POST } from "./route";
 
 const A = `0x${"a".repeat(40)}` as `0x${string}`;
 const B = `0x${"b".repeat(40)}` as `0x${string}`;
-const priorHosted = process.env.MERRYMEN_HOSTED;
-const priorSecret = process.env.MERRYMEN_SESSION_SECRET;
-const priorHome = process.env.MERRYMEN_HOME;
+const priorHosted = process.env.AGENTCAP_HOSTED;
+const priorSecret = process.env.AGENTCAP_SESSION_SECRET;
+const priorHome = process.env.AGENTCAP_HOME;
 const priorDatabase = process.env.DATABASE_URL;
-const testHome = mkdtempSync(path.join(os.tmpdir(), "merrymen-chat-tenant-"));
+const testHome = mkdtempSync(path.join(os.tmpdir(), "agentcap-chat-tenant-"));
 
-process.env.MERRYMEN_HOSTED = "1";
-process.env.MERRYMEN_SESSION_SECRET = "test-chat-tenant-secret-at-least-32-chars";
-process.env.MERRYMEN_HOME = testHome;
+process.env.AGENTCAP_HOSTED = "1";
+process.env.AGENTCAP_SESSION_SECRET = "test-chat-tenant-secret-at-least-32-chars";
+process.env.AGENTCAP_HOME = testHome;
 delete process.env.DATABASE_URL;
 
 after(() => {
-  if (priorHosted === undefined) delete process.env.MERRYMEN_HOSTED;
-  else process.env.MERRYMEN_HOSTED = priorHosted;
-  if (priorSecret === undefined) delete process.env.MERRYMEN_SESSION_SECRET;
-  else process.env.MERRYMEN_SESSION_SECRET = priorSecret;
-  if (priorHome === undefined) delete process.env.MERRYMEN_HOME;
-  else process.env.MERRYMEN_HOME = priorHome;
+  if (priorHosted === undefined) delete process.env.AGENTCAP_HOSTED;
+  else process.env.AGENTCAP_HOSTED = priorHosted;
+  if (priorSecret === undefined) delete process.env.AGENTCAP_SESSION_SECRET;
+  else process.env.AGENTCAP_SESSION_SECRET = priorSecret;
+  if (priorHome === undefined) delete process.env.AGENTCAP_HOME;
+  else process.env.AGENTCAP_HOME = priorHome;
   if (priorDatabase === undefined) delete process.env.DATABASE_URL;
   else process.env.DATABASE_URL = priorDatabase;
   rmSync(testHome, { recursive: true, force: true });
 });
 
 function post(session: `0x${string}` | null, expectedTenant?: unknown): Promise<Response> {
-  return POST(new Request("https://app.merrymen.dev/api/chat", {
+  return POST(new Request("https://app.agentcap.xyz/api/chat", {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -69,7 +69,7 @@ it("keeps signed-out hosted chat unauthorized", async () => {
 });
 
 it("lets the confirmed tenant reach normal chat validation", async () => {
-  const response = await POST(new Request("https://app.merrymen.dev/api/chat", {
+  const response = await POST(new Request("https://app.agentcap.xyz/api/chat", {
     method: "POST",
     headers: { "content-type": "application/json", cookie: `${SESSION_COOKIE}=${mintSession(A)}` },
     body: JSON.stringify({ message: "", expectedTenant: A.toUpperCase().replace("0X", "0x") }),

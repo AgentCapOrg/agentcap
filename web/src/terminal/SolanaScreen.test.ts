@@ -277,14 +277,14 @@ test("registration and the deposit address are offered only for a program the pa
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
   };
   await mount();
-  assert.match(ui.container.textContent!, /not a released Merrymen vault program/);
+  assert.match(ui.container.textContent!, /not a released AgentCap vault program/);
   assert.equal(button("Register bounded trading permission").disabled, true);
   assert.ok(!ui.container.textContent!.includes("Fund the Solana vault"));
   assert.equal(calls.some((call) => call.path === "setup"), false);
   // Once the pin lists it, both are offered.
   releases = [{ programId: OTHER, sha256: "ab".repeat(32) }];
   await mount();
-  assert.ok(!ui.container.textContent!.includes("not a released Merrymen vault program"));
+  assert.ok(!ui.container.textContent!.includes("not a released AgentCap vault program"));
   assert.match(ui.container.textContent!, /Fund the Solana vault/);
   assert.equal(button("Register bounded trading permission").disabled, false);
   // A deposit address that is not the bound owner's vault of that program is never shown.
@@ -338,8 +338,8 @@ test("a session and a wallet sign-in of different logins: both are named, and no
   await render(); await settle();
   const text = ui.container.textContent!;
   assert.match(text, /Two different sign-ins/);
-  assert.match(text, /signed in to Merrymen with X \(@jamesc\), but this browser's wallet sign-in is email \(james@example\.com\)/);
-  assert.match(text, /starts a new, empty Merrymen account for email \(james@example\.com\)\. The account you're signed in to now stays as it is/);
+  assert.match(text, /signed in to AgentCap with X \(@jamesc\), but this browser's wallet sign-in is email \(james@example\.com\)/);
+  assert.match(text, /starts a new, empty AgentCap account for email \(james@example\.com\)\. The account you're signed in to now stays as it is/);
   assert.ok(!text.includes(SOLANA_SIGN_IN_MISMATCH), "the bare refusal is not what the page says");
   assert.equal(button("Set up my account"), undefined, "no wallet is offered for the wrong login");
   assert.equal(walletSignOuts, 0); assert.equal(button("Sign in"), undefined, "no sign-in runs by itself");
@@ -347,7 +347,7 @@ test("a session and a wallet sign-in of different logins: both are named, and no
   await press("Sign in with X");
   assert.equal(walletSignOuts, 1);
   await render(); await settle();
-  assert.match(ui.container.textContent!, /Your Merrymen account signs in with X \(@jamesc\)\./);
+  assert.match(ui.container.textContent!, /Your AgentCap account signs in with X \(@jamesc\)\./);
   assert.ok(button("Sign in"));
   // The right login now: the account opens.
   signerAuthenticated = true; signerDid = "did:privy:james-x";
@@ -360,7 +360,7 @@ test("keeping the wallet sign-in's login finishes its sign-in, then reads that a
   let switched = false;
   respond = async (path) => { if (path === "status") return switched ? json(state) : mismatchAnswer(true); throw new Error("Unexpected fixture route"); };
   await render(); await settle();
-  assert.match(ui.container.textContent!, /opens the Merrymen account of email \(james@example\.com\), everywhere on the site/);
+  assert.match(ui.container.textContent!, /opens the AgentCap account of email \(james@example\.com\), everywhere on the site/);
   await press("Use this wallet sign-in instead");
   assert.equal(walletSignOuts, 0, "the wallet sign-in is kept");
   assert.equal(button("Sign in with X"), undefined, "one choice at a time");
@@ -402,7 +402,7 @@ test("an action refused for a different login shows the same choice, not a bare 
   assert.ok(button("Sign in with X") && button("Use this wallet sign-in instead"));
   assert.equal(calls.filter((call) => call.path === "bind").length, 0, "nothing was signed or posted");
 });
-test("no Merrymen session in this browser: the sign-in finishes on the page, then the account opens", async () => {
+test("no AgentCap session in this browser: the sign-in finishes on the page, then the account opens", async () => {
   let session = false;
   respond = async (path) => {
     if (path !== "status") throw new Error("Unexpected fixture route");
@@ -1018,7 +1018,7 @@ test("a revocation saved beside a pending withdrawal is found in the server's re
   assert.equal(signCount, 1); assert.deepEqual(ownerCalls(), ["prepare:revoke", "submit", "submit", "submit"]);
 });
 
-test("withdrawals made outside Merrymen are recorded by their signatures, read by the server, and nothing is signed", async () => {
+test("withdrawals made outside AgentCap are recorded by their signatures, read by the server, and nothing is signed", async () => {
   state.runtime.live.programId = PROGRAM; wentLiveBefore();
   const first = base58Encode(new Uint8Array(64).fill(3)), second = base58Encode(new Uint8Array(64).fill(4));
   respond = async (path, body) => {
@@ -1034,7 +1034,7 @@ test("withdrawals made outside Merrymen are recorded by their signatures, read b
   await act(async () => { setter.call(box, ` ${first}\n${second}, `); box.dispatchEvent(new ui.dom.window.Event("input", { bubbles: true })); });
   await press("Record these withdrawals");
   assert.deepEqual(calls.filter((call) => call.path === "owner").map((call) => call.body), [{ stage: "record", action: "external-withdrawals", signatures: [first, second] }]);
-  assert.match(ui.container.textContent!, /Recorded your withdrawals made outside Merrymen: 90 USDG, 1\.5 wrapped SOL\./);
+  assert.match(ui.container.textContent!, /Recorded your withdrawals made outside AgentCap: 90 USDG, 1\.5 wrapped SOL\./);
   assert.equal(signCount, 0); assert.equal(box.value, "");
   // A refusal is shown as the server words it, and the signatures stay to correct.
   respond = async (path, body) => {
@@ -1478,16 +1478,16 @@ test("the Solana fetch keeps a refusal's validated notSaved and freshMinOutAmoun
   const none = await answer(() => { throw new TypeError("network down"); }) as InstanceType<typeof SolanaRequestError>;
   assert.equal(none.status, 0); assert.equal(none.message, UNREACHABLE);
   const proxy = await answer(() => new Response("<html>bad gateway</html>", { status: 502, headers: { "content-type": "text/html" } })) as Error & { status: number };
-  assert.equal(proxy.status, 502); assert.equal(proxy.message, "merrymen answered with an error (502). Try again in a moment.");
+  assert.equal(proxy.status, 502); assert.equal(proxy.message, "agentcap answered with an error (502). Try again in a moment.");
   const warn = mock.method(console, "warn", () => undefined);
   try {
     const hidden = await answer(() => json({ error: "internal detail" }, 503)) as Error & { status: number };
-    assert.equal(hidden.message, "merrymen answered with an error (503). Try again in a moment."); assert.equal(warn.mock.callCount(), 1);
+    assert.equal(hidden.message, "agentcap answered with an error (503). Try again in a moment."); assert.equal(warn.mock.callCount(), 1);
   } finally { warn.mock.restore(); }
   const owned = await answer(() => json({ error: "Solana is temporarily unavailable.", ownerFacing: true }, 503)) as Error;
   assert.equal(owned.message, "Solana is temporarily unavailable.");
   const text = await answer(() => new Response("ok", { status: 200 })) as Error & { status: number };
-  assert.equal(text.message, "merrymen sent back something that isn't data. Try again in a moment.");
+  assert.equal(text.message, "agentcap sent back something that isn't data. Try again in a moment.");
   globalThis.fetch = async () => json({ preview: 1 });
   assert.deepEqual(await screen.solanaRequestJson("/api/solana/intent"), { preview: 1 });
   // A caller's cancellation reaches the request.
@@ -1740,7 +1740,7 @@ test("a booked write-off says so and shows the lot gone, even when the status re
     await ui.click("Check for write-off"); await ui.click("Write off…"); await ui.click("Write off at zero");
   };
   for (const [scenario, failure, carries] of [
-    ["paced", PACED, "its book"], ["unreachable", "Can't reach merrymen right now.", "its book"],
+    ["paced", PACED, "its book"], ["unreachable", "Can't reach agentcap right now.", "its book"],
     // An answer without a usable book (none, or one still listing the lot): the shown book drops exactly that lot.
     ["paced", PACED, "no book"], ["paced", PACED, "the lot"],
     // A book older than the one shown never replaces it: only the lot is dropped.
@@ -1836,7 +1836,7 @@ test("receipts show the minimum the recorded trade enforced, not the earlier pre
   assert.match(ui.container.textContent!, /Received 0\.00999 wrapped SOL, against a quoted minimum of 0\.00995 wrapped SOL\./);
 });
 
-const EXPORT_FLAG = "NEXT_PUBLIC_MERRYMEN_SOLANA_OWNER_KEY_EXPORT";
+const EXPORT_FLAG = "NEXT_PUBLIC_AGENTCAP_SOLANA_OWNER_KEY_EXPORT";
 /** A live owner whose vault the server has read: what key export can protect. */
 function liveVault() {
   state = initial("live");
@@ -1862,7 +1862,7 @@ test("with export turned on, it is offered only to the bound owner of a vault th
     // Paper only: no vault to protect, so no reason to handle the key.
     await render(); assert.equal(!!exportCard(), false);
     // Status could not load: nothing shows that a vault exists.
-    respond = async () => { throw new Error("Merrymen is down"); };
+    respond = async () => { throw new Error("AgentCap is down"); };
     await ui.click("Refresh account"); assert.equal(!!exportCard(), false);
     respond = async (path) => { if (path === "status") return json(state); throw new Error("Unexpected fixture route"); };
     liveVault(); await ui.click("Refresh account");
@@ -1871,7 +1871,7 @@ test("with export turned on, it is offered only to the bound owner of a vault th
     assert.ok(card.textContent!.includes("Vault: Vau1tAddress1111111111111111111111111111111"));
     assert.ok(card.textContent!.includes(`Owner wallet: ${OWNER}`));
     assert.match(card.textContent!, /Anyone who has this key controls your owner wallet and everything in your vault/);
-    assert.match(card.textContent!, /Merrymen never sees it and will never ask for it/);
+    assert.match(card.textContent!, /AgentCap never sees it and will never ask for it/);
     assert.match(card.textContent!, /any app or person offering to recover your funds/);
     // Export needs an explicit acknowledgement each time.
     assert.equal(button("Export owner key with Privy").disabled, true);
@@ -1888,12 +1888,12 @@ test("with export turned on, it is offered only to the bound owner of a vault th
     assert.equal(!!exportCard(), false);
   });
 });
-test("the export card never names a merrymen command that cli/bin.mjs does not register", async () => {
+test("the export card never names a agentcap command that cli/bin.mjs does not register", async () => {
   const cli = readFileSync(fileURLToPath(new URL("../../../cli/bin.mjs", import.meta.url)), "utf8");
   await withExportFlag("1", async () => {
     liveVault(); await render();
     const text = exportCard()!.textContent!;
-    for (const [, command] of text.matchAll(/merrymen ([a-z][a-z0-9-]*)/g)) assert.ok(cli.includes(`case "${command}"`), `merrymen ${command} is not a registered command`);
+    for (const [, command] of text.matchAll(/agentcap ([a-z][a-z0-9-]*)/g)) assert.ok(cli.includes(`case "${command}"`), `agentcap ${command} is not a registered command`);
   });
 });
 
@@ -1925,7 +1925,7 @@ test("owner controls show the owner wallet's SOL against what revoke and withdra
   await render();
   const text = () => ui.container.textContent!;
   assert.match(text(), /Your owner wallet holds 0\.0005 SOL and pays the network fees of these transactions\. To revoke it must hold at least 0\.00089588 SOL; to withdraw, up to 0\.00293428 SOL/);
-  assert.match(text(), /Merrymen adds a priority fee only from SOL beyond that, and this page signs none above 0\.001 SOL/);
+  assert.match(text(), /AgentCap adds a priority fee only from SOL beyond that, and this page signs none above 0\.001 SOL/);
   assert.match(text(), /That is too little to revoke\. Send SOL to your owner wallet now/);
   assert.match(text(), /The vault account holds 1\.5 SOL above its rent reserve/);
   assert.match(text(), /0\.25 SOL was sent to the vault's wrapped SOL account without being wrapped/);
@@ -2344,24 +2344,24 @@ test("a wallet that refuses after the review's deadline leaves the review lapsed
   await press("Sign permission with my wallet");
   assert.equal(signCount, 2); assert.equal(progress.submits, 1); assert.equal(progress.activated, true);
 }));
-/** The `merrymen solana-recover` command the card shows, as the arguments a shell passes. */
+/** The `agentcap solana-recover` command the card shows, as the arguments a shell passes. */
 function cardCommand(text: string): string[] {
-  const shown = text.match(/merrymen solana-recover (--program \S+ [^\n]*?)(?=The key goes|Nothing is signed|Use --rpc|$)/)?.[1];
+  const shown = text.match(/agentcap solana-recover (--program \S+ [^\n]*?)(?=The key goes|Nothing is signed|Use --rpc|$)/)?.[1];
   assert.ok(shown, text);
   return shown.trim().split(/\s+/);
 }
 /** What the card tells the owner to run first: the RPC goes in the environment, never on a command line. */
-const RECOVER_RPC_READ = "read -rs MERRYMEN_SOLANA_RECOVER_RPC; export MERRYMEN_SOLANA_RECOVER_RPC";
+const RECOVER_RPC_READ = "read -rs AGENTCAP_SOLANA_RECOVER_RPC; export AGENTCAP_SOLANA_RECOVER_RPC";
 const RECOVER_RPC_PUBLIC_ONLY = "Use --rpc <https-url> instead only for a public URL with no API key in it.";
 /**
  * Runs the real tool on `args` offline: no answer ever comes from the RPC,
  * so it stops at its first chain read, or refuses before it. A generated
  * test key stands in on standard input. The environment is always explicit
  * (by default the RPC as the card's read -rs line leaves it), so a
- * MERRYMEN_SOLANA_RECOVER_RPC in the developer's own shell changes nothing.
+ * AGENTCAP_SOLANA_RECOVER_RPC in the developer's own shell changes nothing.
  */
 async function runTool(args: string[], list: readonly { programId: string; sha256: string }[],
-  env: Record<string, string | undefined> = { MERRYMEN_SOLANA_RECOVER_RPC: "https://rpc.example.test" }) {
+  env: Record<string, string | undefined> = { AGENTCAP_SOLANA_RECOVER_RPC: "https://rpc.example.test" }) {
   const reads: string[] = [];
   const fetch = (async (url: unknown) => { reads.push(String(url)); throw new Error("offline"); }) as typeof globalThis.fetch;
   const key = base58Encode(crypto.getRandomValues(new Uint8Array(32)));
@@ -2370,7 +2370,7 @@ async function runTool(args: string[], list: readonly { programId: string; sha25
     .then(() => null, (e: unknown) => e as Error);
   return { reads: reads.length, error };
 }
-const NOT_RELEASED = /is not a released Merrymen vault program/;
+const NOT_RELEASED = /is not a released AgentCap vault program/;
 test("for a released program, step 2 names the signing command with the key on standard input and the pinned hash, and the tool accepts it", async () => {
   await withExportFlag("1", async () => {
     const pin = [{ programId: PROGRAM, sha256: "ab".repeat(32) }];
@@ -2379,13 +2379,13 @@ test("for a released program, step 2 names the signing command with the key on s
     liveVault(); Object.assign(state.runtime.live, { programSha256: "cd".repeat(32) });
     await render();
     const text = exportCard()!.textContent!;
-    assert.ok(text.includes(`Step 2: recover without Merrymen`));
+    assert.ok(text.includes(`Step 2: recover without AgentCap`));
     assert.ok(text.includes(RECOVER_RPC_READ), text);
-    assert.ok(text.includes(`merrymen solana-recover --program ${PROGRAM} --key-file - --send`), text);
+    assert.ok(text.includes(`agentcap solana-recover --program ${PROGRAM} --key-file - --send`), text);
     assert.ok(text.includes(RECOVER_RPC_PUBLIC_ONLY), text);
     // No provider URL on a command line: it would stay in shell history and ps.
     assert.doesNotMatch(text, /solana-recover --program \S+ --rpc|Replace <https-url>/);
-    assert.match(text, /The key goes in on standard input \(--key-file -\), for example pbpaste \| merrymen solana-recover … on a Mac/);
+    assert.match(text, /The key goes in on standard input \(--key-file -\), for example pbpaste \| agentcap solana-recover … on a Mac/);
     assert.match(text, /Never type the key into the command itself/);
     assert.ok(text.includes(`--owner ${OWNER} in place of --key-file - --send: nothing is signed or sent`));
     assert.ok(text.includes(`Vault program: ${PROGRAM}`));
@@ -2403,7 +2403,7 @@ test("for a released program, step 2 names the signing command with the key on s
     assert.doesNotMatch(run.error?.message ?? "", NOT_RELEASED);
     // The RPC comes from the environment the read -rs line sets: without it the tool asks for it and reads nothing.
     const unset = await runTool(args, pin, {});
-    assert.equal(unset.reads, 0); assert.match(unset.error!.message, /^Set MERRYMEN_SOLANA_RECOVER_RPC /);
+    assert.equal(unset.reads, 0); assert.match(unset.error!.message, /^Set AGENTCAP_SOLANA_RECOVER_RPC /);
     // The same command against a tool with no release refuses before reading anything: why it is shown only for a listed program.
     const unreleased = await runTool(args, []);
     assert.equal(unreleased.reads, 0); assert.match(unreleased.error!.message, NOT_RELEASED);
@@ -2417,10 +2417,10 @@ test("for a program no release lists, step 2 offers only the read-only plan, whi
       liveVault(); Object.assign(state.runtime.live, { programSha256: "ab".repeat(32) });
       await render();
       const text = exportCard()!.textContent!;
-      assert.ok(text.includes("Step 2: check your vault without Merrymen"), JSON.stringify(pin));
-      assert.match(text, /This vault program is not a released Merrymen vault program yet, so the Merrymen command-line tool does not sign for it/);
+      assert.ok(text.includes("Step 2: check your vault without AgentCap"), JSON.stringify(pin));
+      assert.match(text, /This vault program is not a released AgentCap vault program yet, so the AgentCap command-line tool does not sign for it/);
       assert.ok(text.includes(RECOVER_RPC_READ), text);
-      assert.ok(text.includes(`merrymen solana-recover --program ${PROGRAM} --owner ${OWNER}`), text);
+      assert.ok(text.includes(`agentcap solana-recover --program ${PROGRAM} --owner ${OWNER}`), text);
       assert.ok(text.includes(`Nothing is signed or sent. ${RECOVER_RPC_PUBLIC_ONLY}`), text);
       assert.doesNotMatch(text, /solana-recover --program \S+ --rpc|Replace <https-url>/);
       assert.doesNotMatch(text, /--send|--key-file|SHA-256|released hash|unlisted-program|program-sha256/);
@@ -2516,7 +2516,7 @@ test("a pending owner record the server cannot settle says so plainly, never 'a 
   await render();
   assert.match(text(), /Your withdrawal is awaiting final confirmation, and the server cannot read its outcome from Solana right now\./);
   assert.match(text(), STUCK); assert.doesNotMatch(text(), USUAL);
-  assert.match(text(), /Check it again later\. If it stays this way, Merrymen has to fix how the server reads Solana: nothing on this page can settle it\./);
+  assert.match(text(), /Check it again later\. If it stays this way, AgentCap has to fix how the server reads Solana: nothing on this page can settle it\./);
   assert.doesNotMatch(text(), /solana-recover|owner key card|recovery tool/);
   assert.equal(button("Revoke all Solana sessions").disabled, false, "a stuck withdrawal never holds back the revocation");
   assert.equal(button("Ask wallet to resume buys").disabled, true);
@@ -2554,7 +2554,7 @@ test("a pending owner record the server cannot settle says so plainly, never 'a 
       await render();
       assert.match(text(), pointer); assert.ok(exportCard());
       if (!pin.length) assert.doesNotMatch(text(), /SHA-256|--send|--key-file|offline owner key/);
-      assert.doesNotMatch(text(), /Merrymen has to fix/);
+      assert.doesNotMatch(text(), /AgentCap has to fix/);
       await ui.close(); ui = testDom();
     }
   });

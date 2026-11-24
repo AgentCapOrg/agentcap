@@ -10,7 +10,7 @@ import type { Address, PublicClient } from "viem";
 export function decisionResearchEnabledFor(account: string, env: NodeJS.ProcessEnv = process.env): boolean {
   const address = /^0x[0-9a-f]{40}$/i;
   if (!address.test(account) || /^0x0{40}$/i.test(account)) return false;
-  return (env.MERRYMEN_DECISION_RESEARCH_ACCOUNTS ?? "").split(/[\s,]+/)
+  return (env.AGENTCAP_DECISION_RESEARCH_ACCOUNTS ?? "").split(/[\s,]+/)
     .some(value => address.test(value) && value.toLowerCase() === account.toLowerCase());
 }
 
@@ -20,7 +20,7 @@ export function decisionResearchEnabledFor(account: string, env: NodeJS.ProcessE
  */
 export function decisionResearchBootLine(env: NodeJS.ProcessEnv = process.env): string {
   const address = /^0x[0-9a-f]{40}$/i;
-  const values = (env.MERRYMEN_DECISION_RESEARCH_ACCOUNTS ?? "").split(/[\s,]+/).filter(Boolean);
+  const values = (env.AGENTCAP_DECISION_RESEARCH_ACCOUNTS ?? "").split(/[\s,]+/).filter(Boolean);
   const accounts = values.filter(v => address.test(v) && !/^0x0{40}$/i.test(v));
   const ignored = values.length - accounts.length;
   if (!accounts.length) return `decision research: nobody${ignored ? ` (${ignored} entr${ignored === 1 ? "y is" : "ies are"} not an address)` : ""}`;

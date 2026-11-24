@@ -110,7 +110,7 @@ test("the vendored files are the pinned bytes", () => {
 });
 
 test("a tampered or missing artifact refuses to load, before any Go runs", async () => {
-  const dir = mkdtempSync(path.join(os.tmpdir(), "merrymen-signer-"));
+  const dir = mkdtempSync(path.join(os.tmpdir(), "agentcap-signer-"));
   try {
     // wasm_exec.js one byte off.
     const exec = readFileSync(path.join(LIGHTER_VENDOR_DIR, "wasm_exec.js"));
@@ -610,7 +610,7 @@ test("a transient load failure is retried after a short backoff, never cached fo
   // An in-place upgrade (or EMFILE/EIO) makes the first lazy load fail. Every
   // exit signs through this loader, so that failure must not outlive the
   // backoff: once the files read again, the next call gets a working signer.
-  const dir = mkdtempSync(path.join(os.tmpdir(), "merrymen-signer-retry-"));
+  const dir = mkdtempSync(path.join(os.tmpdir(), "agentcap-signer-retry-"));
   try {
     copyFileSync(path.join(LIGHTER_VENDOR_DIR, "wasm_exec.js"), path.join(dir, "wasm_exec.js"));
     let t = 1_000_000;
@@ -643,7 +643,7 @@ test("a transient load failure is retried after a short backoff, never cached fo
 test("a failed re-instantiation after the runtime died is retried too", async () => {
   // The dead-runtime branch builds a replacement; if THAT fails transiently it
   // must not become the new permanent answer either.
-  const dir = mkdtempSync(path.join(os.tmpdir(), "merrymen-signer-redo-"));
+  const dir = mkdtempSync(path.join(os.tmpdir(), "agentcap-signer-redo-"));
   try {
     copyFileSync(path.join(LIGHTER_VENDOR_DIR, "wasm_exec.js"), path.join(dir, "wasm_exec.js"));
     copyFileSync(path.join(LIGHTER_VENDOR_DIR, LIGHTER_SIGNER_ARTIFACT.wasmFile), path.join(dir, LIGHTER_SIGNER_ARTIFACT.wasmFile));

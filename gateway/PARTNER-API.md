@@ -1,14 +1,14 @@
-# Merrymen partner API
+# AgentCap partner API
 
 Build agent creation, status and chat into your own application. The user can
 complete setup inside your app: their wallet signs a capped session grant and an
-authorization for your app; Merrymen hosts the worker. An optional Merrymen-hosted
+authorization for your app; AgentCap hosts the worker. An optional AgentCap-hosted
 setup page is also available.
 
-**Base URL:** `https://ai.merrymen.dev/partner/v1`
+**Base URL:** `https://ai.agentcap.xyz/partner/v1`
 
 The clean hostname serves the Railway gateway with a valid certificate. The
-`merrymen-gateway-production.up.railway.app` hostname remains an alternate host.
+`agentcap-gateway-production.up.railway.app` hostname remains an alternate host.
 The embedded enrollment routes and browser SDK require deployment of this
 revision to both the gateway and hosted web service; a healthy gateway alone
 does not prove the hosted runtime is configured.
@@ -27,7 +27,7 @@ bundle or wallet. The API does not enable browser CORS. The public browser SDK i
 separate: it prepares and signs permissions locally, then calls your backend.
 Holder `mmk_` keys for `/v1/chat/completions` cannot authorize partner requests.
 
-Visit [Merrymen Developers](https://merrymen.dev/api), sign in with a wallet,
+Visit [AgentCap Developers](https://agentcap.xyz/api), sign in with a wallet,
 create your developer account (the portal asks for one before your first key),
 and create a key for your application. Copy the key immediately: it is shown
 only once. The portal includes an SDK download, integration tutorial, and a
@@ -66,8 +66,8 @@ disclose this before asking for consent.
 Verify your key and record its stable `app_id`:
 
 ```bash
-curl https://ai.merrymen.dev/partner/v1/meta \
-  -H "Authorization: Bearer $MERRYMEN_PARTNER_KEY"
+curl https://ai.agentcap.xyz/partner/v1/meta \
+  -H "Authorization: Bearer $AGENTCAP_PARTNER_KEY"
 ```
 
 The response contains `key_id`, `app_id`, `name`, `scopes`, `rate_per_min`,
@@ -83,7 +83,7 @@ configuration for `app_id`; do not accept it from a browser request.
 
 Your backend must authenticate its own user, derive their `external_user_id`,
 and enforce ownership of each connection before forwarding requests. Never let
-a client choose another user's identifier or an arbitrary Merrymen connection.
+a client choose another user's identifier or an arbitrary AgentCap connection.
 Use an opaque internal ID, not an email address or other unnecessary personal data.
 
 1. Your backend requests a connection with `POST /agents`.
@@ -119,7 +119,7 @@ emoji and other surrogate pairs are fine. A pending connection returns HTTP
   "name": "Robin",
   "status": "pending_authorization",
   "created_at": 1789747200,
-  "onboarding_url": "https://app.merrymen.dev/connect#token=...",
+  "onboarding_url": "https://app.agentcap.xyz/connect#token=...",
   "onboarding_expires_at": 1789749000
 }
 ```
@@ -133,7 +133,7 @@ not the worker's slug. The optional `onboarding_url` is unnecessary for the
 embedded flow.
 
 **After a disconnect** (your `DELETE /agents/{id}/connection`, or the owner
-disconnecting your app on Merrymen), `POST /agents` for the same
+disconnecting your app on AgentCap), `POST /agents` for the same
 `external_user_id` starts a fresh authorization under a **new** `id`: HTTP 202,
 `pending_authorization`, a new `onboarding_url`. Replace the stored ID. The
 owner must authorize again (a new challenge, signature and activation, or the
@@ -148,10 +148,10 @@ Once this revision is deployed, load the browser ESM module:
 
 ```js
 import {
-  prepareMerryman,
+  prepareAgentCapAvatar,
   partnerGrantDigest,
-  signMerrymanAuthorization,
-} from "https://app.merrymen.dev/sdk/merrymen-browser.js";
+  signAgentCapAvatarAuthorization,
+} from "https://app.agentcap.xyz/sdk/agentcap-browser.js";
 ```
 
 For a pinned build, check out a reviewed repository revision, install its
@@ -178,7 +178,7 @@ const settings = {
 const approvedScopes = ["read:agents", "chat:agents"];
 
 // Show these limits to the owner and obtain consent before requesting signatures.
-const grant = await prepareMerryman({
+const grant = await prepareAgentCapAvatar({
   owner,
   chainId: 4663,
   caps: {
@@ -199,7 +199,7 @@ const challenge = await backend.challenge(connection.id, {
   settings,
 });
 
-const authorization = await signMerrymanAuthorization({
+const authorization = await signAgentCapAvatarAuthorization({
   owner,
   grant,
   challenge,
@@ -220,7 +220,7 @@ connection: a key with `chat:agents` requests both scopes. For a read-only setup
 use a key without `chat:agents` and expect only `read:agents`. If an owner declines
 the requested access, do not sign or activate that challenge.
 
-`prepareMerryman` takes only `owner`, `caps`, `chainId` and `onStatus`, and
+`prepareAgentCapAvatar` takes only `owner`, `caps`, `chainId` and `onStatus`, and
 refuses anything else (`trencherFactory`, adapter addresses, `extraTokens` and
 the like) before any chain read or signature. `chainId` is `4663` or `46630`;
 leaving it out means `4663`, real funds, and `null` is refused. It refuses
@@ -229,8 +229,8 @@ unmodified, is never refused as `unsupported_permission` (see below). A copy you
 serve yourself carries the platform constants of the revision it was built from
 (the class-vault factory, the listed coins), so rebuild it whenever hosted web
 deploys; its `SDK_VERSION` should match the hosted module's. The owner signs twice in
-all: one typed-data signature for the permission inside `prepareMerryman`, and
-one message signature in `signMerrymanAuthorization`.
+all: one typed-data signature for the permission inside `prepareAgentCapAvatar`, and
+one message signature in `signAgentCapAvatarAuthorization`.
 
 `settings.name` is 1–24 characters: letters, digits, combining marks, spaces,
 apostrophes (`'`), periods and hyphens (and the zero-width joiners some scripts
@@ -241,14 +241,14 @@ stock symbols; `live_trading_enabled` must be an explicit boolean. A value
 outside these rules is 400 `invalid_settings`. The challenge carries the
 settings as the server will store them: the name NFC-normalized, trimmed and
 with each run of whitespace made one space, and repeated symbols dropped.
-`signMerrymanAuthorization` refuses a challenge whose settings differ from
+`signAgentCapAvatarAuthorization` refuses a challenge whose settings differ from
 yours, so normalize the name the same way
 (`name.normalize("NFC").trim().replace(/\s+/g, " ")`) and send unique symbols
 before you show them to the owner. Supported enrollment chains are Robinhood
 mainnet `4663` and testnet `46630`; fund and use the same chain selected for
 the grant.
 
-The signed session grant contains a **session private key**, which Merrymen needs
+The signed session grant contains a **session private key**, which AgentCap needs
 to run only the delegated permissions. Treat the activation payload as a secret:
 send it over HTTPS, exclude it from logs/analytics/error captures, and do not
 retain it in your backend unless you have a specific secured need. An owner
@@ -293,7 +293,7 @@ committed but the worker's state could not then be read, the answer is still
 HTTP 200, with `status: "connected"`, no `agent` object and
 `runtime_available: false`; poll `GET /agents/{id}`.
 
-A partner grant may seal only what `prepareMerryman` seals from owner, caps and
+A partner grant may seal only what `prepareAgentCapAvatar` seals from owner, caps and
 chain. Activation refuses with HTTP 422 `unsupported_permission`, before the
 challenge is spent, a grant that seals a v4 or Pons adapter address, a grant
 feature beyond `tradeable-v2`, `energy-buy-v1`, `scoped-spenders` and
@@ -325,7 +325,7 @@ Retrying an activation:
   mode with the grant installed and live trading off. Even while it is still
   pending, the owner's agent may already have been switched to paper mode
   (live trading off) with these settings, and its grant replaced: an owner who
-  already ran a Merrymen agent should be told before you go on. Inspect
+  already ran a AgentCap agent should be told before you go on. Inspect
   `GET /agents/{id}`, then request a fresh challenge and owner signature.
 - **409 `challenge_used`**: this authorization was already spent, by an
   attempt that was refused or stopped after spending it, by an activation a
@@ -441,16 +441,16 @@ URL or automatic redirect; the user returns to your application themselves.
 ## Plans and billing
 
 Requests made with a key from the developer portal count against its
-developer account's plan. Merrymen switches this on in stages, and `/meta`
+developer account's plan. AgentCap switches this on in stages, and `/meta`
 says which one is running (`billing.mode`, or `billing: null` while it is off):
 
 | Partner billing | What your keys see |
 | --- | --- |
 | `off` | Nothing is counted or refused for quota, there are no quota headers, and `/meta` reports `billing: null`. Each key keeps its own per-minute rate. |
-| `observe` | Every request is counted, and answers carry the quota headers with `x-merrymen-quota-enforced: false`, but no request is refused for quota. Each key keeps its own per-minute rate, raised to its plan's when that is higher. |
+| `observe` | Every request is counted, and answers carry the quota headers with `x-agentcap-quota-enforced: false`, but no request is refused for quota. Each key keeps its own per-minute rate, raised to its plan's when that is higher. |
 | `enforce` | A request past the plan's quota is refused with 402 `quota_exhausted`, and all of an account's keys share one per-minute rate: the plan's. |
 
-Treat `observe` as a dry run: if `x-merrymen-quota-remaining` reaches `0`
+Treat `observe` as a dry run: if `x-agentcap-quota-remaining` reaches `0`
 there, the same requests would be refused under `enforce`. Keys an operator
 issued with the gateway CLI belong to no account and are never counted.
 
@@ -459,17 +459,17 @@ issued with the gateway CLI belong to no account and are never counted.
 | Plan | Cost per 30 days | Requests per 30 days | Requests a minute, per account |
 | --- | --- | --- | --- |
 | Free | nothing | 1,000 | 30 |
-| Crumbs | 100,000 MERRYMEN | 50,000 | 60 |
-| Loaf | 400,000 MERRYMEN | 250,000 | 120 |
-| Feast | 1,000,000 MERRYMEN | 1,000,000 | 300 |
+| Crumbs | 100,000 AGENTCAP | 50,000 | 60 |
+| Loaf | 400,000 AGENTCAP | 250,000 | 120 |
+| Feast | 1,000,000 AGENTCAP | 1,000,000 | 300 |
 
-The live table is at [merrymen.dev/api#plans](https://merrymen.dev/api#plans).
+The live table is at [agentcap.xyz/api#plans](https://agentcap.xyz/api#plans).
 It can change, and a change applies from your next charge: a period already
 paid for keeps the requests and rate it started with until it ends.
 
 ### Paying for a plan
 
-1. Sign in at [merrymen.dev/api](https://merrymen.dev/api) with a standard
+1. Sign in at [agentcap.xyz/api](https://agentcap.xyz/api) with a standard
    wallet (an EOA). Only payments sent **from that wallet** are credited to its
    account.
 2. Create your developer account: a name of 1–48 characters, one account per
@@ -483,8 +483,8 @@ paid for keeps the requests and rate it started with until it ends.
    next renewal, cancel renewal, or wait for a payment. It names every amount
    taken from credit and what it buys, and for an upgrade the request quota
    the rest of the period gets (see **Upgrade** below).
-4. Send $MERRYMEN (token `0xa15cd06dd305269a0f48bebeb30aa3588fba7b32`) on
-   Robinhood Chain (chain `4663`) from your signed-in wallet to the Merrymen
+4. Send $AGENTCAP (token `0xa15cd06dd305269a0f48bebeb30aa3588fba7b32`) on
+   Robinhood Chain (chain `4663`) from your signed-in wallet to the AgentCap
    payments wallet the console shows. The console shows what is due rounded up
    to a whole token; anything sent over that stays on the account as credit.
    **Pay with wallet** sends the transfer for you when your browser wallet is
@@ -502,7 +502,7 @@ of any payment until it shows as credited.
 
 What is credited:
 
-- $MERRYMEN transfers on Robinhood Chain, from the signed-in wallet, to the
+- $AGENTCAP transfers on Robinhood Chain, from the signed-in wallet, to the
   payments wallet (or to an address it replaced recently), in blocks after
   payments opened. A transfer from any other wallet, an exchange, a smart
   account or a swap is not credited to this account, even if it reached the
@@ -510,7 +510,7 @@ What is credited:
   to that wallet's own account, by signing in with it and submitting the hash
   there.
 - Every such transfer in one transaction adds up to one payment, which must be
-  at least 1 MERRYMEN. A transaction is credited once, however its hash is
+  at least 1 AGENTCAP. A transaction is credited once, however its hash is
   written.
 - Payments are not refunded automatically: the gateway never sends tokens.
   Credit stays on the account and is used for later charges.
@@ -520,9 +520,9 @@ When a transfer is not credited, the console says why:
 | Code | Meaning |
 | --- | --- |
 | `payment_pending` (202) | `stage: "not_found_yet"`: not on Robinhood Chain yet. `stage: "confirming"`: found, with `confirmations`, `needed` and `ready_in_sec`. The console keeps checking. |
-| `payment_not_found` (422) | `reason` is `wrong_token` (no $MERRYMEN transfer in it), `wrong_sender` (not sent from the signed-in wallet), `wrong_recipient` (not sent to the payments wallet) or `before_start_block` (sent before payments opened). |
+| `payment_not_found` (422) | `reason` is `wrong_token` (no $AGENTCAP transfer in it), `wrong_sender` (not sent from the signed-in wallet), `wrong_recipient` (not sent to the payments wallet) or `before_start_block` (sent before payments opened). |
 | `payment_failed` (422) | The transaction failed on chain, so nothing was sent. |
-| `payment_too_small` (422) | Less than 1 MERRYMEN in all. |
+| `payment_too_small` (422) | Less than 1 AGENTCAP in all. |
 | `payment_unsupported` (422) | More than 256 matching transfers in one transaction. Send one transfer. |
 | `chain_unavailable`, `payments_unavailable`, `billing_unavailable`, `billing_off` (503) | The chain could not be read, payments are closed for now, billing could not record the payment just now, or paid plans are switched off. Check again later. |
 
@@ -550,7 +550,7 @@ transfer is final again, it is credited again.
   requests is never charged. It renews the plan you selected if credit covers
   it; if not, the plan that just ended, if you paid for it and credit covers
   it; otherwise the account is on Free, keeps its credit, and the console
-  shows what is due. A period Merrymen gave at no charge renews only into the
+  shows what is due. A period AgentCap gave at no charge renews only into the
   plan you selected. `renews_on_next_request: true` (in `/meta` and the
   console) means a charge is waiting for your next counted request.
 - **Paying ahead.** Right after a plan starts, the console shows the next
@@ -563,10 +563,10 @@ transfer is final again, it is credited again.
   the difference in requests for the same time left, rounded down. The period
   keeps its end date and the requests already used; the new plan's per-minute
   rate applies at once. For example, on Crumbs with 2 days left, moving to
-  Feast costs 60,000 MERRYMEN and raises that period's quota from 50,000 to
+  Feast costs 60,000 AGENTCAP and raises that period's quota from 50,000 to
   113,333 requests. Each upgrade costs the difference from the plan the period
   was last moved to: Crumbs at the start, Loaf with 20 days left and Feast with
-  10 days left cost 100,000 + 200,000 + 200,000 MERRYMEN, and the next period
+  10 days left cost 100,000 + 200,000 + 200,000 AGENTCAP, and the next period
   on Feast costs 1,000,000. Without enough credit an upgrade waits for a
   payment; the amount due only falls as the period runs.
 - **Downgrade.** A plan that costs less takes effect at the next renewal. The
@@ -604,10 +604,10 @@ Every counted answer, and `/meta`, carries these headers:
 
 | Header | Value |
 | --- | --- |
-| `x-merrymen-quota-limit` | Requests in the current window |
-| `x-merrymen-quota-remaining` | Requests left; never below `0` |
-| `x-merrymen-quota-reset` | When the window ends, in Unix seconds |
-| `x-merrymen-quota-enforced` | `true` when a spent quota is refused (`enforce`), `false` under `observe` |
+| `x-agentcap-quota-limit` | Requests in the current window |
+| `x-agentcap-quota-remaining` | Requests left; never below `0` |
+| `x-agentcap-quota-reset` | When the window ends, in Unix seconds |
+| `x-agentcap-quota-enforced` | `true` when a spent quota is refused (`enforce`), `false` under `observe` |
 
 They are absent while billing is off, for operator keys, on discovery and
 `/health`, and on refusals made before counting (401, 403, 429, 413). An answer
@@ -621,13 +621,13 @@ the window ends), the quota headers and:
 {
   "error": {
     "code": "quota_exhausted",
-    "message": "This account has used its 1000 requests on Free until 2026-11-08T09:00:00.000Z. Choose a larger plan at https://merrymen.dev/api#plans.",
+    "message": "This account has used its 1000 requests on Free until 2026-11-08T09:00:00.000Z. Choose a larger plan at https://agentcap.xyz/api#plans.",
     "request_id": "req_0123456789ab",
     "plan": "free",
     "limit": 1000,
     "used": 1000,
     "resets_at": "2026-11-08T09:00:00.000Z",
-    "upgrade_url": "https://merrymen.dev/api#plans"
+    "upgrade_url": "https://agentcap.xyz/api#plans"
   }
 }
 ```
@@ -734,12 +734,12 @@ configured chat or a reachable bridge.
 
 Plans and billing, added after `2026-10-08` without a new version string
 (`/meta` still reports `api_version: "2026-10-08"`). None of this applies
-until Merrymen turns partner billing on; `/meta`'s `billing` says when it
+until AgentCap turns partner billing on; `/meta`'s `billing` says when it
 has:
 
 - Requests made with portal keys are counted against the developer account's
   plan ([Plans and billing](#plans-and-billing)). Counted answers carry
-  `x-merrymen-quota-limit`, `-remaining`, `-reset` and `-enforced`, and `/meta`
+  `x-agentcap-quota-limit`, `-remaining`, `-reset` and `-enforced`, and `/meta`
   carries them too.
 - `/meta` has a new `billing` object (`null` while billing is off and for
   operator keys), and its `rate_per_min` is the rate the key actually gets.
@@ -764,7 +764,7 @@ has:
   answering `disconnected`, and nothing from it carries over.
 - `GET /agents` lists newest first, and leaves out connections that a reconnect
   replaced.
-- Activation refuses grants that seal more than `prepareMerryman` does with 422
+- Activation refuses grants that seal more than `prepareAgentCapAvatar` does with 422
   `unsupported_permission`, may answer 503 `class_vault_unavailable` (resend the
   same authorization), answers a retry after a lost response with the current
   detail instead of `challenge_used`, and succeeds with `runtime_available: false`
@@ -780,15 +780,15 @@ has:
   failing, and a model that does not answer within 18 seconds (or within what
   is left of the request's 40 seconds, after any wait) yields the status
   reply.
-- The SDK's `prepareMerryman` takes only `owner`, `caps`, `chainId` and
+- The SDK's `prepareAgentCapAvatar` takes only `owner`, `caps`, `chainId` and
   `onStatus`, refuses a `null` chain, and exports `PARTNER_API_VERSION` and
   `SDK_VERSION`. The hosted module loads in browsers again.
 
 ## Operator configuration and key rotation
 
-Developers issue their own keys at [merrymen.dev/api](https://merrymen.dev/api).
+Developers issue their own keys at [agentcap.xyz/api](https://agentcap.xyz/api).
 The site reaches the gateway's `/developer/v1` routes with
-`MERRYMEN_DEVELOPER_PORTAL_SECRET`, and the wallet's signed-in session decides
+`AGENTCAP_DEVELOPER_PORTAL_SECRET`, and the wallet's signed-in session decides
 which keys it may see, create or revoke. Portal and CLI keys live in the same
 registry on the gateway's volume.
 
@@ -796,7 +796,7 @@ The key CLI remains for operator-issued keys: other scopes, a custom rate
 (`--rpm`), or a key no developer wallet owns. Such a key does not appear in the
 portal, is never counted against a plan, and is rotated and revoked with the
 CLI. Run it on the gateway's
-configured registry/volume with `MERRYMEN_GATEWAY_SECRET` available. Keys are
+configured registry/volume with `AGENTCAP_GATEWAY_SECRET` available. Keys are
 printed once. Pass `--scopes` explicitly: without it the CLI issues
 `read:agents,read:theses,read:market`, which cannot create agents or chat. Use
 a stable 12–64 character application ID:
@@ -814,20 +814,20 @@ partner backend, verify `/meta` and an existing connection, then revoke the old
 key. A different app ID is a different application and cannot access existing
 connections. Older keys without `appId` use their `keyId` as their app ID; preserve
 that exact value for their first rotation. A CLI revocation reaches the running
-gateway within 30 seconds. Keep `MERRYMEN_GATEWAY_SECRET` stable: it also
+gateway within 30 seconds. Keep `AGENTCAP_GATEWAY_SECRET` stable: it also
 underlies stored partner key hashes and the developer portal's session key, so
 rotating it invalidates every partner key and signs every developer out. To sign
 every developer out without touching partner keys (a leaked session cookie),
-rotate `MERRYMEN_DEVELOPER_PORTAL_SECRET` on the gateway and the site together.
+rotate `AGENTCAP_DEVELOPER_PORTAL_SECRET` on the gateway and the site together.
 A rotation ends sessions; it does not undo what a stolen session already did.
 After rotating, list each affected developer's keys (`GET /keys` in the portal,
 or `node partners-cli.mjs list` on the gateway), revoke any created while the
 cookie was exposed, and reissue any legitimate key it revoked.
 
 The gateway forwards authenticated requests to hosted web using a dedicated
-`MERRYMEN_PARTNER_BRIDGE_SECRET` (at least 32 bytes), configured identically on
-both services. `MERRYMEN_PARTNER_APP_ORIGIN` on the gateway defaults to
-`https://app.merrymen.dev`. Never distribute the bridge secret to partners.
+`AGENTCAP_PARTNER_BRIDGE_SECRET` (at least 32 bytes), configured identically on
+both services. `AGENTCAP_PARTNER_APP_ORIGIN` on the gateway defaults to
+`https://app.agentcap.xyz`. Never distribute the bridge secret to partners.
 Hosted web also needs its normal Postgres and grant-encryption configuration;
 the orchestrator needs the same grant store and its worker configuration. Web
 needs an LLM credential for conversational replies beyond the factual fallback.

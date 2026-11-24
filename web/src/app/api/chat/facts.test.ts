@@ -11,14 +11,14 @@ const OWNER = `0x${"a".repeat(40)}`;
 const OTHER = `0x${"b".repeat(40)}`;
 const NOW = Date.parse("2026-10-01T12:00:00Z") / 1000;
 const DAY = Date.parse("2026-10-01T00:00:00Z") / 1000;
-const home = mkdtempSync(path.join(os.tmpdir(), "merrymen-chat-facts-route-"));
-const envKeys = ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "DATABASE_URL"] as const;
+const home = mkdtempSync(path.join(os.tmpdir(), "agentcap-chat-facts-route-"));
+const envKeys = ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "DATABASE_URL"] as const;
 const saved = new Map(envKeys.map(key => [key, process.env[key]]));
 let fetches = 0;
 
 before(() => {
-  process.env.MERRYMEN_HOME = home;
-  process.env.MERRYMEN_HOSTED = "0";
+  process.env.AGENTCAP_HOME = home;
+  process.env.AGENTCAP_HOSTED = "0";
   delete process.env.DATABASE_URL;
   mock.method(Date, "now", () => NOW * 1000);
   mock.method(globalThis, "fetch", async () => {
@@ -26,7 +26,7 @@ before(() => {
     throw new Error("the factual route must not call a model or external service");
   });
   writeFileSync(path.join(home, "grant.json"), JSON.stringify({ smartAccount: OWNER }), "utf8");
-  const db = new DatabaseSync(path.join(home, "merrymen.db"));
+  const db = new DatabaseSync(path.join(home, "agentcap.db"));
   try {
     // Modern run/fill metadata is present, including recorded receipt cash.
     db.exec(`

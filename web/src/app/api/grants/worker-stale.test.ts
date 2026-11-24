@@ -14,7 +14,7 @@ import os from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { after, before, beforeEach, mock, test } from "node:test";
-import type { MerrymenSettings, StoredGrant } from "@merrymen/core";
+import type { AgentCapSettings, StoredGrant } from "@agentcap/core";
 import { freshWithin } from "@/lib/services/agent-status";
 import { ORDER_IN_FLIGHT_MS } from "@/lib/order-state";
 import { WORKER_STALE_MARGIN_SEC } from "@/terminal/worker-stale";
@@ -25,15 +25,15 @@ const ACCOUNT = `0x${"c".repeat(40)}` as `0x${string}`;
 const NOW = Date.parse("2026-10-05T12:00:00Z") / 1000;
 /** The rule terminal/stale-autonomy.test.ts pins: the watchdog's window, floored at one order's run, plus the margin. */
 const edgeFor = (tick: number | null) => Math.max(freshWithin(tick), ORDER_IN_FLIGHT_MS / 1000) + WORKER_STALE_MARGIN_SEC;
-const ORIGIN = "https://app.merrymen.dev";
-const saved = new Map(["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_SESSION_SECRET", "DATABASE_URL", "MERRYMEN_STORE_DEK",
-  "MERRYMEN_SETTINGS_FILE", "MERRYMEN_TICK_SECONDS"].map(key => [key, process.env[key]]));
+const ORIGIN = "https://app.agentcap.xyz";
+const saved = new Map(["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_SESSION_SECRET", "DATABASE_URL", "AGENTCAP_STORE_DEK",
+  "AGENTCAP_SETTINGS_FILE", "AGENTCAP_TICK_SECONDS"].map(key => [key, process.env[key]]));
 let home: string, db: DatabaseSync;
 let auth: typeof import("@/lib/auth");
 let settingsStore: typeof import("../../../../../worker/src/settings-store");
 let GET: (req: Request) => Promise<Response>;
 /** What the tenant's settings read returns: settings, or an Error to throw. */
-let settings: MerrymenSettings | Error | null;
+let settings: AgentCapSettings | Error | null;
 const settingsReads: string[] = [];
 let restoreBalances: (() => void) | undefined;
 
@@ -44,14 +44,14 @@ const grant = (): StoredGrant => ({
 } as unknown as StoredGrant);
 
 before(async () => {
-  home = mkdtempSync(path.join(os.tmpdir(), "merrymen-grants-stale-"));
-  process.env.MERRYMEN_HOME = home;
-  process.env.MERRYMEN_HOSTED = "1";
-  process.env.MERRYMEN_SESSION_SECRET = "test-grants-worker-stale-secret-at-least-32-characters";
+  home = mkdtempSync(path.join(os.tmpdir(), "agentcap-grants-stale-"));
+  process.env.AGENTCAP_HOME = home;
+  process.env.AGENTCAP_HOSTED = "1";
+  process.env.AGENTCAP_SESSION_SECRET = "test-grants-worker-stale-secret-at-least-32-characters";
   delete process.env.DATABASE_URL;
-  delete process.env.MERRYMEN_STORE_DEK;
-  delete process.env.MERRYMEN_SETTINGS_FILE;
-  delete process.env.MERRYMEN_TICK_SECONDS;
+  delete process.env.AGENTCAP_STORE_DEK;
+  delete process.env.AGENTCAP_SETTINGS_FILE;
+  delete process.env.AGENTCAP_TICK_SECONDS;
   mock.method(Date, "now", () => NOW * 1000);
   mock.method(globalThis, "fetch", async () => { throw new Error("Network forbidden in this fixture."); });
   auth = await import("@/lib/auth");
@@ -72,14 +72,14 @@ before(async () => {
   const cachedBalances = require.cache[require.resolve("../../../lib/grant-balances.ts")]!;
   cachedBalances.exports = { ...balances, readGrantBalancesFrom: async () => ({ ethWei: null, cashUsdg: null, vaultUsdg: null }) };
   restoreBalances = () => { cachedBalances.exports = balances; };
-  db = new DatabaseSync(path.join(home, "merrymen.db"));
+  db = new DatabaseSync(path.join(home, "agentcap.db"));
   ({ GET } = await import("./route"));
 });
 
 beforeEach(() => {
   settings = null;
   settingsReads.length = 0;
-  process.env.MERRYMEN_HOSTED = "1";
+  process.env.AGENTCAP_HOSTED = "1";
   db.exec(`DROP TABLE IF EXISTS agents;
     CREATE TABLE agents(smart_account TEXT PRIMARY KEY,mode TEXT,beat_at INTEGER,sponsor_gas INTEGER,live_blocker TEXT,energy TEXT);`);
 });
@@ -153,7 +153,7 @@ test("a heartbeat nobody could read is marked unread, so null is not 'never'", a
 });
 
 test("self-hosted judges the heartbeat file, with the worker's own tick", async () => {
-  delete process.env.MERRYMEN_HOSTED;
+  delete process.env.AGENTCAP_HOSTED;
   writeFileSync(path.join(home, "grant.json"), JSON.stringify(grant()), { mode: 0o600 });
   // No settings.json: the worker's default tick, as resolveConfig reads it.
   const beat = (at: number) => writeFileSync(path.join(home, "heartbeat.json"), JSON.stringify({ at, mode: "paper", sponsorGas: false }));

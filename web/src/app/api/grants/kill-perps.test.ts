@@ -5,7 +5,7 @@
  * self-hosted. The phone apps send the kill's same request (PR #358's body),
  * so the hosted rows are theirs too. worker/src/perps-kill.test.ts and
  * perps-kill-hosted.integration.test.ts hold the rest of the matrix: the
- * hosted and self-hosted Telegram kills and `merrymen kill`.
+ * hosted and self-hosted Telegram kills and `agentcap kill`.
  *
  * Every row: each wallet the owner has is stopped, the answer says what was
  * done, a half that fails is reported incomplete (never done) and a retry
@@ -22,10 +22,10 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, before, beforeEach, describe, it, mock } from "node:test";
 import { privateKeyToAccount } from "viem/accounts";
-import type { StoredGrant } from "@merrymen/core";
+import type { StoredGrant } from "@agentcap/core";
 
-const ORIGIN = "https://app.merrymen.dev";
-const ENV = ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_GRANT_FILE", "MERRYMEN_SESSION_SECRET", "MERRYMEN_STORE_DEK", "DATABASE_URL"] as const;
+const ORIGIN = "https://app.agentcap.xyz";
+const ENV = ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_GRANT_FILE", "AGENTCAP_SESSION_SECRET", "AGENTCAP_STORE_DEK", "DATABASE_URL"] as const;
 const saved = Object.fromEntries(ENV.map((k) => [k, process.env[k]]));
 let home = "";
 let route: typeof import("./route");
@@ -35,10 +35,10 @@ let stores: typeof import("../../../../../worker/src/grant-store");
 
 before(async () => {
   home = mkdtempSync(path.join(tmpdir(), "mm-grants-kill-perps-"));
-  process.env.MERRYMEN_HOME = home;
-  for (const k of ["MERRYMEN_HOSTED", "MERRYMEN_GRANT_FILE", "DATABASE_URL"] as const) delete process.env[k];
-  process.env.MERRYMEN_SESSION_SECRET = "test-secret-at-least-thirty-two-characters-long";
-  process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
+  process.env.AGENTCAP_HOME = home;
+  for (const k of ["AGENTCAP_HOSTED", "AGENTCAP_GRANT_FILE", "DATABASE_URL"] as const) delete process.env[k];
+  process.env.AGENTCAP_SESSION_SECRET = "test-secret-at-least-thirty-two-characters-long";
+  process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
   route = await import("./route");
   discard = await import("./discard/route");
   auth = await import("@/lib/auth");
@@ -85,7 +85,7 @@ describe("hosted: Kill all agents (and the phones' Stop) reaches every wallet", 
     if (hasSpot(owner)) await stores.getGrantStore("spot").put(T, grant(T, SPOT, key("ab")));
     if (hasPerps(owner)) await stores.getGrantStore("perps").put(T, grant(T, PERPS, key("cd"), { purpose: "perps" }));
   };
-  beforeEach(() => { process.env.MERRYMEN_HOSTED = "1"; });
+  beforeEach(() => { process.env.AGENTCAP_HOSTED = "1"; });
 
   for (const owner of OWNERS) {
     it(`${owner}: every wallet it has is stopped, and the answer says so`, async () => {
@@ -209,7 +209,7 @@ describe("self-hosted: Kill all agents reaches the local Perps wallet", () => {
       writeFileSync(perpsFile(), local(PERPS, { purpose: "perps" }));
     }
   };
-  beforeEach(() => { delete process.env.MERRYMEN_HOSTED; });
+  beforeEach(() => { delete process.env.AGENTCAP_HOSTED; });
 
   for (const owner of OWNERS) {
     it(`${owner}: every local wallet's grant is archived, then removed`, async () => {

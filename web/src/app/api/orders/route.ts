@@ -81,7 +81,7 @@
  *   (FileCommand.account), because the Perps home outlives the account in it,
  *   and the worker answers it without running it on any other.
  * - ONLY WHERE A PERPS WORKER RUNS (perps-enabled.ts perpsWorkersRun, D1).
- *   Under any other MERRYMEN_PERPS the wallet's worker takes no command (it
+ *   Under any other AGENTCAP_PERPS the wallet's worker takes no command (it
  *   is not running hosted; self-hosted, one started by hand claims none,
  *   D19), so an exit queued then could only wait, unclaimed, inside the order
  *   window every exit carries (`expiresAt`, two Perps-worker ticks and a
@@ -126,12 +126,12 @@
  */
 import { createHash, randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
-import { merrymenHome, purposeHome } from "@merrymen/home";
+import { agentcapHome, purposeHome } from "@agentcap/home";
 import { withLocalStateLock } from "../../../../../worker/src/local-state-lock";
-import { isHostedMode, type GrantPurpose } from "@merrymen/core";
+import { isHostedMode, type GrantPurpose } from "@agentcap/core";
 // RELATIVE, NOT THE ALIASES, so a test can run this route. `tsx --test`
-// resolves against the root tsconfig, which has no @merrymen/command-files or
-// @merrymen/settings; the build resolves either way (lib/order-ceiling.ts
+// resolves against the root tsconfig, which has no @agentcap/command-files or
+// @agentcap/settings; the build resolves either way (lib/order-ceiling.ts
 // reaches settings the same way). ceiling/route.test.ts runs POST for real.
 import { openCommands, readCommandState, writeCommand } from "../../../../../worker/src/command-files";
 import { isPerpExitPurpose } from "../../../../../worker/src/perps/owner-order";
@@ -347,7 +347,7 @@ export async function POST(req: Request) {
         return placeRecoveryCheckedOrder(db, { agent, id, args, expiresAt, now });
       }, wallet).catch(() => ({ ok: false as const, why: "unreachable" as const }))
     : wallet === "perps"
-      ? await withLocalStateLock(merrymenHome(), async () => {
+      ? await withLocalStateLock(agentcapHome(), async () => {
           // Telegram, HTTP and grant replacement share this lock. Re-resolve
           // after waiting: the grant read above may belong to a stopped wallet.
           const current = await diskAgent("perps");

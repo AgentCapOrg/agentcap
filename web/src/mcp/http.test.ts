@@ -77,7 +77,7 @@ test("the 401 without a token says what to do in plain words, with the help page
   assert.equal(res.status, 401);
   const body = await res.json() as { error: string; error_description: string };
   assert.equal(body.error, "unauthorized");
-  assert.equal(body.error_description, "Add this server to your assistant as a connector, then sign in to Merrymen when it asks. Help: https://app.test/connect/mcp");
+  assert.equal(body.error_description, "Add this server to your assistant as a connector, then sign in to AgentCap when it asks. Help: https://app.test/connect/mcp");
 });
 
 /** A person opening the server address in a browser tab. */
@@ -138,8 +138,8 @@ test("every client request to /mcp still meets the Host, Origin and bearer check
 for (const era of ["legacy", "modern"] as Era[]) test(`${era}: serverInfo offers a description and current PNG and SVG connector marks`, async () => {
   const { a } = await setup();
   // buildServer reads the issuer from the environment, which these tests leave unset.
-  const saved = process.env.MERRYMEN_PUBLIC_ORIGIN;
-  process.env.MERRYMEN_PUBLIC_ORIGIN = "https://app.test";
+  const saved = process.env.AGENTCAP_PUBLIC_ORIGIN;
+  process.env.AGENTCAP_PUBLIC_ORIGIN = "https://app.test";
   try {
     const res = era === "legacy"
       ? await rpcResult(await call(mcpRequest(a.tokens.access_token, "initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "x", version: "1" } })))
@@ -147,8 +147,8 @@ for (const era of ["legacy", "modern"] as Era[]) test(`${era}: serverInfo offers
     const info = (era === "legacy" ? res.result?.serverInfo : (res.result?._meta as Record<string, unknown>)?.["io.modelcontextprotocol/serverInfo"]) as {
       title?: string; description?: string; websiteUrl?: string; icons?: Array<{ src: string; mimeType: string; sizes: string[] }>;
     } | undefined;
-    assert.equal(info?.title, "Merrymen");
-    assert.equal(info?.websiteUrl, "https://merrymen.dev");
+    assert.equal(info?.title, "AgentCap");
+    assert.equal(info?.websiteUrl, "https://agentcap.xyz");
     assert.match(info?.description ?? "", /trading agent, portfolio, trade receipts and decisions/);
     const icons = info?.icons ?? [];
     assert.deepEqual(icons.map((i) => [i.src, i.mimeType, i.sizes.join(" ")]), [
@@ -164,8 +164,8 @@ for (const era of ["legacy", "modern"] as Era[]) test(`${era}: serverInfo offers
       } else assert.match(bytes.toString("utf8"), /<svg/, icon.src);
     }
   } finally {
-    if (saved === undefined) delete process.env.MERRYMEN_PUBLIC_ORIGIN;
-    else process.env.MERRYMEN_PUBLIC_ORIGIN = saved;
+    if (saved === undefined) delete process.env.AGENTCAP_PUBLIC_ORIGIN;
+    else process.env.AGENTCAP_PUBLIC_ORIGIN = saved;
   }
 });
 
@@ -219,13 +219,13 @@ for (const era of ["legacy", "modern"] as Era[]) {
 
   test(`${era}: resources/read of another owner's object is resource-not-found (-32602 {uri}), exactly like an absent one`, async () => {
     const { a } = await setup();
-    const foreign = `merrymen://agents/${SLUG_B}/portfolio`;
+    const foreign = `agentcap://agents/${SLUG_B}/portfolio`;
     const res = await rpcResult(await call(mcpRequest(a.tokens.access_token, "resources/read", { uri: foreign }, { era })));
     const err = res.error as { code: number; message: string; data?: unknown } | undefined;
     assert.equal(err?.code, -32602, JSON.stringify(res));
     assert.deepEqual(err?.data, { uri: foreign });
     assert.ok(!JSON.stringify(res).includes(ACCOUNT_B));
-    const absent = await rpcResult(await call(mcpRequest(a.tokens.access_token, "resources/read", { uri: "merrymen://nothing/here" }, { era })));
+    const absent = await rpcResult(await call(mcpRequest(a.tokens.access_token, "resources/read", { uri: "agentcap://nothing/here" }, { era })));
     assert.equal(absent.error?.code, err?.code);
     assert.deepEqual(Object.keys((absent.error as { data?: object }).data ?? {}), ["uri"]);
   });
@@ -234,7 +234,7 @@ for (const era of ["legacy", "modern"] as Era[]) {
     const { deps } = await setup();
     const b = await connectAs(deps, OWNER_B, { scopes: ["market:read"], agents: [SLUG_B] });
     const probe: ResourceDef = {
-      name: "probe", title: "Probe", description: "test", mimeType: "text/plain", capability: "market.read", uri: "merrymen://probe/{kind}",
+      name: "probe", title: "Probe", description: "test", mimeType: "text/plain", capability: "market.read", uri: "agentcap://probe/{kind}",
       async read(_uri, vars) {
         if (vars.kind === "bad") throw new McpError("invalid_input", "kind is malformed");
         if (vars.kind === "busy") throw new McpError("rate_limited", "slow down", { retryAfterSec: 7 });
@@ -243,7 +243,7 @@ for (const era of ["legacy", "modern"] as Era[]) {
       },
     };
     const handler = createMcpHandler(({ authInfo }) => buildServer(principalOf(authInfo), { tools: [], resources: [probe], deps: { now: () => NOW } }), { legacy: "stateless", responseMode: "auto" });
-    const read = async (kind: string) => (await rpcResult(await handleMcpRequest(mcpRequest(b.tokens.access_token, "resources/read", { uri: `merrymen://probe/${kind}` }, { era }), {
+    const read = async (kind: string) => (await rpcResult(await handleMcpRequest(mcpRequest(b.tokens.access_token, "resources/read", { uri: `agentcap://probe/${kind}` }, { era }), {
       cfg: testConfig(), now: () => NOW, fetch: (r, auth) => handler.fetch(r, { authInfo: auth }),
     }))).error as { code: number; message: string; data?: Record<string, unknown> } | undefined;
     const bad = await read("bad");
@@ -258,7 +258,7 @@ for (const era of ["legacy", "modern"] as Era[]) {
     assert.equal(busy?.data?.retry_after_s, 7);
     const gone = await read("gone");
     assert.equal(gone?.code, -32602);
-    assert.deepEqual(gone?.data, { uri: "merrymen://probe/gone" });
+    assert.deepEqual(gone?.data, { uri: "agentcap://probe/gone" });
     assert.match(gone?.message ?? "", /not_found/);
   });
 }
@@ -384,7 +384,7 @@ test("another owner's agent is not found, whatever id is passed", async () => {
   const { a } = await setup();
   const res = await rpcResult(await call(mcpRequest(a.tokens.access_token, "tools/call", { name: "get_agent_status", arguments: { agent: SLUG_B } })));
   assert.equal(res.result?.isError, true);
-  assert.equal((res.result?._meta as Record<string, { code: string }> | undefined)?.["dev.merrymen/error"]?.code, "not_found");
+  assert.equal((res.result?._meta as Record<string, { code: string }> | undefined)?.["dev.agentcap/error"]?.code, "not_found");
   assert.ok(!JSON.stringify(res).includes(ACCOUNT_B));
 });
 
@@ -401,7 +401,7 @@ test("an agent unshared on the owner's side becomes unreachable at once", async 
   restore?.();
   restore = installFixtures(d, { directory: { async agentsFor() { return []; } } });
   const res = await rpcResult(await call(mcpRequest(a.tokens.access_token, "tools/call", { name: "get_agent_status", arguments: {} })));
-  assert.equal((res.result?._meta as Record<string, { code: string }> | undefined)?.["dev.merrymen/error"]?.code, "not_found");
+  assert.equal((res.result?._meta as Record<string, { code: string }> | undefined)?.["dev.agentcap/error"]?.code, "not_found");
 });
 
 test("per-connection request rate is limited with Retry-After", async () => {
@@ -453,7 +453,7 @@ test("audit rows record the call without argument text", async () => {
 
 /** Every tool reachable with trade:propose, drafts:write or social:write (see scopes.ts and tools/). */
 const DIRECTORY_EXCLUDED_TOOLS = [
-  "cancel_proposal", "create_agent_draft", "create_merryman", "draft_post", "follow_agent", "get_proposal", "list_proposals",
+  "cancel_proposal", "create_agent_draft", "create_agentcapavatar", "draft_post", "follow_agent", "get_proposal", "list_proposals",
   "propose_settings_change", "propose_trade", "quote_trade", "unfollow_agent",
 ];
 const DIR_PATH = "/mcp/directory";
@@ -489,8 +489,8 @@ test("sensitive tools stay excluded unless a read-only tool explicitly declares 
 test("a drafts-only full connection lists setup guidance without private agent tools", async () => {
   const { a } = await setup(["drafts:write"]);
   const names = await listNames(await call(mcpRequest(a.tokens.access_token, "tools/list")));
-  assert.ok(names.includes("get_merryman_setup"));
-  assert.ok(names.includes("create_merryman"));
+  assert.ok(names.includes("get_agentcapavatar_setup"));
+  assert.ok(names.includes("create_agentcapavatar"));
   for (const name of ["list_agents", "get_agent_status", "get_agent_controls", "get_portfolio"]) assert.ok(!names.includes(name), name);
 });
 
@@ -565,7 +565,7 @@ test("tools/list on the directory endpoint never includes a trade, setting, draf
   const prompts = (await rpcResult(await callDir(dirRequest(dir.tokens.access_token, "prompts/list")))).result?.prompts as Array<{ name: string }>;
   assert.ok(Array.isArray(prompts));
   // The scope catalogue a directory connection reads describes only what it can hold.
-  const doc = await rpcResult(await callDir(dirRequest(dir.tokens.access_token, "resources/read", { uri: "merrymen://docs/capabilities" })));
+  const doc = await rpcResult(await callDir(dirRequest(dir.tokens.access_token, "resources/read", { uri: "agentcap://docs/capabilities" })));
   const text = ((doc.result?.contents as Array<{ text: string }>)[0]!).text;
   assert.ok(text.includes("`market:read`") && !text.includes("`trade:propose`"), text.slice(0, 300));
 });
@@ -672,7 +672,7 @@ test("resourceInProfile: only the proposal view among the views is left off the 
   for (const r of ALL_RESOURCES) assert.equal(resourceInProfile(r, "full"), true, r.uri);
   // A resource that only needs a capability the directory lacks is left off by capability alone.
   const needs = (capability: ResourceDef["capability"], profileAnyOf?: ResourceDef["profileAnyOf"]) =>
-    ({ name: "x", title: "x", description: "x", mimeType: "text/plain", capability, profileAnyOf, uri: "merrymen://x", read: async () => ({ mimeType: "text/plain", text: "" }) }) as ResourceDef;
+    ({ name: "x", title: "x", description: "x", mimeType: "text/plain", capability, profileAnyOf, uri: "agentcap://x", read: async () => ({ mimeType: "text/plain", text: "" }) }) as ResourceDef;
   assert.equal(resourceInProfile(needs("trade.propose"), "directory"), false);
   assert.equal(resourceInProfile(needs(null, ["trade.propose", "portfolio.read"]), "directory"), true, "any one allowed capability is enough");
   assert.equal(resourceInProfile(needs(null, []), "directory"), true, "an empty list restricts nothing");
@@ -713,7 +713,7 @@ test("the directory endpoint keeps /mcp's Host, Origin and browser checks, and i
   assert.equal((await callDir(dirRequest(dir.tokens.access_token, "tools/list"), testConfig({ allowedOrigins: new Set(["https://app.test"]) }))).status, 200);
   const foreign = await callDir(mcpRequest(dir.tokens.access_token, "tools/list", {}, { path: DIR_PATH, headers: { origin: "https://evil.test" } }));
   assert.equal(foreign.status, 403);
-  // MERRYMEN_MCP_DIRECTORY=0: 404 there, and /mcp untouched.
+  // AGENTCAP_MCP_DIRECTORY=0: 404 there, and /mcp untouched.
   const off = testConfig({ directoryResource: "" });
   assert.equal((await callDir(dirRequest(dir.tokens.access_token, "tools/list"), off)).status, 404);
   assert.equal((await callDir(dirRequest(null, "tools/list"), off)).status, 404);
@@ -721,14 +721,14 @@ test("the directory endpoint keeps /mcp's Host, Origin and browser checks, and i
 });
 
 test("the directory route and its discovery document, through the Next route handlers", async () => {
-  const keys = ["MERRYMEN_HOSTED", "DATABASE_URL", "MERRYMEN_PUBLIC_ORIGIN", "MERRYMEN_MCP_RESOURCE_URL", "MERRYMEN_SESSION_SECRET", "MERRYMEN_OAUTH_ISSUER", "MERRYMEN_MCP_DIRECTORY", "MERRYMEN_MCP_DIRECTORY_RESOURCE_URL"] as const;
+  const keys = ["AGENTCAP_HOSTED", "DATABASE_URL", "AGENTCAP_PUBLIC_ORIGIN", "AGENTCAP_MCP_RESOURCE_URL", "AGENTCAP_SESSION_SECRET", "AGENTCAP_OAUTH_ISSUER", "AGENTCAP_MCP_DIRECTORY", "AGENTCAP_MCP_DIRECTORY_RESOURCE_URL"] as const;
   const saved = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
   try {
     Object.assign(process.env, {
-      MERRYMEN_HOSTED: "1", DATABASE_URL: "postgres://unused", MERRYMEN_PUBLIC_ORIGIN: "https://app.test",
-      MERRYMEN_MCP_RESOURCE_URL: "https://mcp.test/mcp", MERRYMEN_SESSION_SECRET: "s".repeat(40),
+      AGENTCAP_HOSTED: "1", DATABASE_URL: "postgres://unused", AGENTCAP_PUBLIC_ORIGIN: "https://app.test",
+      AGENTCAP_MCP_RESOURCE_URL: "https://mcp.test/mcp", AGENTCAP_SESSION_SECRET: "s".repeat(40),
     });
-    for (const k of ["MERRYMEN_OAUTH_ISSUER", "MERRYMEN_MCP_DIRECTORY", "MERRYMEN_MCP_DIRECTORY_RESOURCE_URL"] as const) delete process.env[k];
+    for (const k of ["AGENTCAP_OAUTH_ISSUER", "AGENTCAP_MCP_DIRECTORY", "AGENTCAP_MCP_DIRECTORY_RESOURCE_URL"] as const) delete process.env[k];
     const wellKnown = await import("../app/.well-known/oauth-protected-resource/[[...path]]/route");
     const route = await import("../app/mcp/directory/route");
     const doc = async (path?: string[]) => wellKnown.GET(new Request("https://mcp.test/x"), { params: Promise.resolve({ path }) });
@@ -749,7 +749,7 @@ test("the directory route and its discovery document, through the Next route han
     assert.match(res.headers.get("www-authenticate") ?? "", /resource_metadata="https:\/\/mcp\.test\/\.well-known\/oauth-protected-resource\/mcp\/directory"/);
     assert.equal(route.OPTIONS(new Request("https://mcp.test/mcp/directory", { method: "OPTIONS" })).status, 204);
     // The kill switch: route, preflight and document all gone; /mcp's document stays.
-    process.env.MERRYMEN_MCP_DIRECTORY = "0";
+    process.env.AGENTCAP_MCP_DIRECTORY = "0";
     assert.equal((await route.POST(new Request("https://mcp.test/mcp/directory", { method: "POST", headers: { host: "mcp.test" }, body: "{}" }))).status, 404);
     assert.equal(route.OPTIONS(new Request("https://mcp.test/mcp/directory", { method: "OPTIONS" })).status, 404);
     assert.equal((await doc(["mcp", "directory"])).status, 404);

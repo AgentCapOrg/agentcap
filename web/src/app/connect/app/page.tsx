@@ -7,8 +7,8 @@ import "../mcp-connect.css";
 import "../mcp-consent.css";
 
 export const metadata: Metadata = {
-  title: "Connect an AI assistant · merrymen",
-  description: "Choose what an AI assistant can see and do with your Merrymen agent.",
+  title: "Connect an AI assistant · agentcap",
+  description: "Choose what an AI assistant can see and do with your AgentCap agent.",
   robots: { index: false, follow: false },
   referrer: "no-referrer",
 };

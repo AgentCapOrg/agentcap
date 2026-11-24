@@ -25,13 +25,13 @@ const WS_STATS_SNAPSHOT = JSON.parse(WS_FRAMES.find((s) => s.includes('"type":"s
   market_stats: Record<string, Record<string, unknown>>;
 };
 
-const ROOT = mkdtempSync(path.join(os.tmpdir(), "merrymen-lighter-feed-"));
+const ROOT = mkdtempSync(path.join(os.tmpdir(), "agentcap-lighter-feed-"));
 const FLEET = path.join(ROOT, "fleet");
-const priorFleet = process.env.MERRYMEN_FLEET_HOME;
-process.env.MERRYMEN_FLEET_HOME = FLEET;
+const priorFleet = process.env.AGENTCAP_FLEET_HOME;
+process.env.AGENTCAP_FLEET_HOME = FLEET;
 after(() => {
-  if (priorFleet === undefined) delete process.env.MERRYMEN_FLEET_HOME;
-  else process.env.MERRYMEN_FLEET_HOME = priorFleet;
+  if (priorFleet === undefined) delete process.env.AGENTCAP_FLEET_HOME;
+  else process.env.AGENTCAP_FLEET_HOME = priorFleet;
   rmSync(ROOT, { recursive: true, force: true });
 });
 

@@ -4,10 +4,10 @@
  * HOW TO RUN — against a disposable LOCAL Postgres only (the test refuses any
  * other host, and never reads DATABASE_URL):
  *
- *   MERRYMEN_TEST_PG_URL=postgres://merrymen@localhost:55432/merrymen_pgtest \
+ *   AGENTCAP_TEST_PG_URL=postgres://agentcap@localhost:55432/agentcap_pgtest \
  *     npx tsx --test worker/src/fomo/store.postgres.test.ts
  *
- * (MERRYMEN_TEST_POSTGRES_URL works too.) With neither set it is skipped, so
+ * (AGENTCAP_TEST_POSTGRES_URL works too.) With neither set it is skipped, so
  * `npm test` and CI need no database and no `pg`. Each run works in a schema
  * of its own, `mm_fomo_store_test_<hex>`, dropped at the end.
  *
@@ -25,7 +25,7 @@ import { makePgDb, type Db } from "../db";
 import * as store from "./store";
 import type { CohortMember, FollowAssessment, TokenIdentity, TraderEvent } from "./types";
 
-const url = process.env.MERRYMEN_TEST_PG_URL ?? process.env.MERRYMEN_TEST_POSTGRES_URL;
+const url = process.env.AGENTCAP_TEST_PG_URL ?? process.env.AGENTCAP_TEST_POSTGRES_URL;
 
 interface PgClient {
   connect(): Promise<void>;
@@ -91,7 +91,7 @@ test("Postgres: the fomo store", { skip: !url, timeout: 120_000 }, async (t) => 
   const scoped = (who: string) => {
     const u = new URL(target);
     u.searchParams.set("options", `-c search_path=${schema} -c statement_timeout=20000 -c lock_timeout=10000`);
-    u.searchParams.set("application_name", `merrymen-fomo-test-${who}`);
+    u.searchParams.set("application_name", `agentcap-fomo-test-${who}`);
     return u.toString();
   };
   const admin = new pg!.Client({ connectionString: target.toString() });

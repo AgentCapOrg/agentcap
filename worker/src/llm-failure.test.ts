@@ -126,24 +126,24 @@ describe("describeLlmFailure", () => {
 
   it("THE HOLDER GATEWAY RELAYS THE HOUSE'S HOLD — said as ours, never as the holder's bill", () => {
     // gateway/lib/core.mjs passes the upstream's status and body through, so
-    // the house Groq account's hold reached holders as "merrymen 400 — …" and
-    // told them to "settle it with Merrymen", for a perk with no bill.
-    const held = describeLlmFailure(GROQ_DELINQUENT.replace(/^groq /, "merrymen "));
+    // the house Groq account's hold reached holders as "agentcap 400 — …" and
+    // told them to "settle it with AgentCap", for a perk with no bill.
+    const held = describeLlmFailure(GROQ_DELINQUENT.replace(/^groq /, "agentcap "));
     assert.equal(held.kind, "billing", "still billing, so the rooms back off the same way");
     assert.equal(
       held.text,
-      "Merrymen AI's own provider has paused the account it runs on, so I can't answer in my own words right now. That's ours to fix, not yours — your holder token is fine.",
+      "AgentCap AI's own provider has paused the account it runs on, so I can't answer in my own words right now. That's ours to fix, not yours — your holder token is fine.",
     );
     assert.doesNotMatch(held.text, /billing|overdue|settle|Settings|[{}]|400/);
-    assert.equal(describeLlmFailure("merrymen 402").kind, "billing");
-    assert.match(describeLlmFailure("merrymen 402").text, /ours to fix, not yours/);
+    assert.equal(describeLlmFailure("agentcap 402").kind, "billing");
+    assert.match(describeLlmFailure("agentcap 402").text, /ours to fix, not yours/);
     // The gateway forces its model: one missing upstream is ours too.
-    const gone = describeLlmFailure("merrymen 404 — model_not_found: The model `merrymen-fast` does not exist or you do not have access to it.");
+    const gone = describeLlmFailure("agentcap 404 — model_not_found: The model `agentcap-fast` does not exist or you do not have access to it.");
     assert.equal(gone.kind, "model-missing");
     assert.match(gone.text, /ours to fix, not yours/);
     assert.doesNotMatch(gone.text, /Check the model name/);
     // The gateway's OWN 401 is an expired holder claim: the holder's to renew.
-    const expired = describeLlmFailure("merrymen 401 — invalid or expired Merrymen AI token — re-claim at /claim");
+    const expired = describeLlmFailure("agentcap 401 — invalid or expired AgentCap AI token — re-claim at /claim");
     assert.equal(expired.kind, "key-rejected");
     assert.doesNotMatch(expired.text, /ours to fix/);
   });
@@ -274,12 +274,12 @@ describe("interpretWithLlm on an account held over billing", () => {
     const r = await interpretWithLlm(
       "Hii",
       { state: "idle" } as never,
-      { provider: "merrymen", transport: "openai", baseUrl: `http://127.0.0.1:${port}/v1`, apiKey: "mm_holder_token_not_real", model: "merrymen-fast", vision: false },
+      { provider: "agentcap", transport: "openai", baseUrl: `http://127.0.0.1:${port}/v1`, apiKey: "mm_holder_token_not_real", model: "agentcap-fast", vision: false },
     );
     const reply = (r.cmd as { reply: string }).reply;
-    assert.match(reply, /^Merrymen AI's own provider has paused the account it runs on/, reply);
+    assert.match(reply, /^AgentCap AI's own provider has paused the account it runs on/, reply);
     assert.match(reply, /ours to fix, not yours — your holder token is fine/, reply);
     assert.doesNotMatch(reply, /settle|billing|overdue|recognise|[{}]|400/, reply);
-    assert.ok(logs.some((l) => l.includes("(billing): merrymen 400 — organization_delinquent")), logs.join("\n"));
+    assert.ok(logs.some((l) => l.includes("(billing): agentcap 400 — organization_delinquent")), logs.join("\n"));
   });
 });

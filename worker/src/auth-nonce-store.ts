@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { isHostedMode } from "../../packages/core/src/hosted";
 import { makePgDb, wrapSqlite, type Db } from "./db";
-import { merrymenHome } from "./home";
+import { agentcapHome } from "./home";
 
 export interface NonceStore {
   /** True only for the first successful claim. Storage failures must throw. */
@@ -95,5 +95,5 @@ export function getNonceStore(): NonceStore {
   // An ephemeral or instance-local file cannot prevent hosted replays after a
   // redeploy or on another replica. Never fall back when shared storage is absent.
   if (isHostedMode()) throw new Error("hosted challenge verification requires DATABASE_URL");
-  return new LocalNonceStore(merrymenHome());
+  return new LocalNonceStore(agentcapHome());
 }

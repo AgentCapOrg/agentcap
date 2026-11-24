@@ -10,7 +10,7 @@
  * nobody asked for.
  */
 import { NextResponse } from "next/server";
-import { isHostedMode } from "@merrymen/core";
+import { isHostedMode } from "@agentcap/core";
 import { challengeMessage, issueChallengeNonce, requestOrigin } from "@/lib/auth";
 import { walletNotSupported } from "@/lib/route-guard";
 

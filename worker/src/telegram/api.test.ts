@@ -39,10 +39,10 @@ const OK = (result: unknown) => ({ ok: true, result });
 
 describe("getMe", () => {
   it("returns the bot identity on a valid token", async () => {
-    const f = fakeFetch(200, OK({ id: 42, username: "merryman_bot", is_bot: true }));
+    const f = fakeFetch(200, OK({ id: 42, username: "agentcapavatar_bot", is_bot: true }));
     const { bot, reason } = await getMe({ token: "123:abc", fetchFn: f });
     assert.equal(reason, undefined);
-    assert.deepEqual(bot, { id: 42, username: "merryman_bot", isBot: true });
+    assert.deepEqual(bot, { id: 42, username: "agentcapavatar_bot", isBot: true });
     assert.match(f.lastUrl!, /\/bot123:abc\/getMe$/);
   });
 
@@ -102,9 +102,9 @@ describe("getMe", () => {
 
 describe("getChat for a targeted operator notice", () => {
   it("checks the current numeric id, title, type and forum flag", async () => {
-    const f = fakeFetch(200, OK({ id: -1001234, title: "Merrymen", type: "supergroup", is_forum: false }));
+    const f = fakeFetch(200, OK({ id: -1001234, title: "AgentCap", type: "supergroup", is_forum: false }));
     const r = await getChat({ token: "123:abc", fetchFn: f }, -1001234);
-    assert.deepEqual(r, { chat: { id: -1001234, title: "Merrymen", type: "supergroup", isForum: false } });
+    assert.deepEqual(r, { chat: { id: -1001234, title: "AgentCap", type: "supergroup", isForum: false } });
     assert.match(f.lastUrl!, /\/bot123:abc\/getChat$/);
     assert.equal(JSON.parse(f.lastBody!).chat_id, -1001234);
   });
@@ -210,7 +210,7 @@ describe("sendMessage — inline buttons", () => {
   it("sends the keyboard in Telegram's wire shape and returns the message id", async () => {
     const f = fakeFetch(200, OK({ message_id: 314 }));
     const r = await sendMessage({ token: "t", fetchFn: f }, 1, "change it?", {
-      keyboard: [[{ text: "Yes", callbackData: "mm:ok:1" }, { text: "Sign", url: "https://app.merrymen.dev/grant" }]],
+      keyboard: [[{ text: "Yes", callbackData: "mm:ok:1" }, { text: "Sign", url: "https://app.agentcap.xyz/grant" }]],
     });
     assert.equal(r.ok, true);
     assert.equal(r.messageId, 314);
@@ -218,7 +218,7 @@ describe("sendMessage — inline buttons", () => {
     assert.deepEqual(body.reply_markup.inline_keyboard, [
       [
         { text: "Yes", callback_data: "mm:ok:1" },
-        { text: "Sign", url: "https://app.merrymen.dev/grant" },
+        { text: "Sign", url: "https://app.agentcap.xyz/grant" },
       ],
     ]);
   });
@@ -713,7 +713,7 @@ describe("every request is bounded", () => {
   });
 
   it("an upload gets 60 seconds, since it carries the file itself", async () => {
-    const dir = mkdtempSync(path.join(os.tmpdir(), "merrymen-upload-"));
+    const dir = mkdtempSync(path.join(os.tmpdir(), "agentcap-upload-"));
     const file = path.join(dir, "report.txt");
     writeFileSync(file, "hello");
     mock.timers.enable({ apis: ["setTimeout"] });
@@ -737,7 +737,7 @@ describe("every request is bounded", () => {
   it("a caller's timeoutMs can raise an upload's 60 seconds, never cut it short", async () => {
     // One TelegramOpts serves JSON calls and uploads alike: a bound set short
     // to keep calls quick must not cut every photo and document to it.
-    const dir = mkdtempSync(path.join(os.tmpdir(), "merrymen-upload-"));
+    const dir = mkdtempSync(path.join(os.tmpdir(), "agentcap-upload-"));
     const file = path.join(dir, "report.txt");
     writeFileSync(file, "hello");
     mock.timers.enable({ apis: ["setTimeout"] });

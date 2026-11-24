@@ -17,11 +17,11 @@ import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 
 // Set BEFORE the auth functions are called (they read the secret at call time,
 // not at import), so a static import is safe and the CJS test target is happy.
-process.env.MERRYMEN_SESSION_SECRET = "test-secret-at-least-thirty-two-characters-long";
-const testHome = mkdtempSync(join(tmpdir(), "merrymen-auth-"));
-process.env.MERRYMEN_HOME = testHome;
+process.env.AGENTCAP_SESSION_SECRET = "test-secret-at-least-thirty-two-characters-long";
+const testHome = mkdtempSync(join(tmpdir(), "agentcap-auth-"));
+process.env.AGENTCAP_HOME = testHome;
 delete process.env.DATABASE_URL;
-delete process.env.MERRYMEN_HOSTED;
+delete process.env.AGENTCAP_HOSTED;
 after(() => rmSync(testHome, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 }));
 
 import {
@@ -33,7 +33,7 @@ import {
   verifySignedChallenge,
 } from "./auth";
 
-const ORIGIN = "https://app.merrymen.dev";
+const ORIGIN = "https://app.agentcap.xyz";
 
 async function signIn(origin = ORIGIN, now?: number) {
   const account = privateKeyToAccount(generatePrivateKey());
@@ -82,26 +82,26 @@ test("unreadable nonce storage fails closed and can recover", async () => {
   const args = { origin: ORIGIN, ...await signIn() };
   const blockedHome = join(testHome, "not-a-directory");
   writeFileSync(blockedHome, "test fixture");
-  process.env.MERRYMEN_HOME = blockedHome;
+  process.env.AGENTCAP_HOME = blockedHome;
   try {
     assert.deepEqual(await verifySignedChallenge(args), {
       ok: false, why: "challenge store unavailable — please try again",
     });
   } finally {
-    process.env.MERRYMEN_HOME = testHome;
+    process.env.AGENTCAP_HOME = testHome;
   }
   assert.equal((await verifySignedChallenge(args)).ok, true);
 });
 
 test("hosted verification never falls back to instance-local storage", async () => {
   const args = { origin: ORIGIN, ...await signIn() };
-  process.env.MERRYMEN_HOSTED = "1";
+  process.env.AGENTCAP_HOSTED = "1";
   try {
     assert.deepEqual(await verifySignedChallenge(args), {
       ok: false, why: "challenge store unavailable — please try again",
     });
   } finally {
-    delete process.env.MERRYMEN_HOSTED;
+    delete process.env.AGENTCAP_HOSTED;
   }
 });
 

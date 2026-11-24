@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
 /**
- * $MERRYMEN CANNOT BE ADDED AS A TRADABLE COIN.
+ * $AGENTCAP CANNOT BE ADDED AS A TRADABLE COIN.
  *
  * Every signer drops the energy reserve from the sealed tokens (core wall.ts
  * usableExtraTokens) and the worker never watches it, so a form that accepted
@@ -22,7 +22,7 @@ describe("the token-add forms refuse the energy reserve", () => {
     assert.ok(at > 0);
     const body = src.slice(at, src.indexOf("setTokens([...current, candidate])", at));
     assert.match(body, /if \(isEnergyReserveToken\(candidate\.address\)\) \{/);
-    assert.match(body, /get its \$MERRYMEN/);
+    assert.match(body, /get its \$AGENTCAP/);
   });
 
   it("CREATE REFUSES IT BEFORE THE WIZARD LIST GROWS", () => {

@@ -1,5 +1,5 @@
 import SwiftUI
-import MerrymenPolicy
+import AgentCapPolicy
 
 struct SettingsScreen: View {
     @EnvironmentObject var store: AppStore
@@ -320,7 +320,7 @@ struct CircleScreen: View {
                 Text(circle["tier"]["name"].string ?? "Membership").font(.title2)
                 if circle["why"].string == "unreadable" { Text("Your balance could not be read. Your tier is unknown.").foregroundStyle(.orange) }
                 else if circle["why"].string == "sign-in" { SignInCard() }
-                Metric(label: "$MERRYMEN held", value: circle["balance"].number.map { $0.formatted() } ?? "—")
+                Metric(label: "$AGENTCAP held", value: circle["balance"].number.map { $0.formatted() } ?? "—")
                 Metric(label: "Performance fee", value: bps(circle["effectiveFeeBps"].number))
                 if let holder = circle["holderAddress"].string { Text(holder).font(.caption.monospaced()).textSelection(.enabled) }
                 if store.owner != nil { NavigationLink("Manage holder wallet", value: Route.holderWallet) }

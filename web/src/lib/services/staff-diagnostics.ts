@@ -1,5 +1,5 @@
 /**
- * Fleet-wide diagnostics for Merrymen operators, over the shared ledger and
+ * Fleet-wide diagnostics for AgentCap operators, over the shared ledger and
  * the MCP tables.
  *
  * Everything here is an AGGREGATE. An operator needs to know that the fleet is
@@ -182,7 +182,7 @@ export interface FleetHealthOptions {
   /** The owner's configured tick in seconds for that wallet's worker, when known. Null (or a throw) means the default tick. */
   tickFor?: (tenant: `0x${string}`, wallet: "spot" | "perps") => Promise<number | null>;
   /**
-   * Whether Perps workers run (this service's MERRYMEN_PERPS is paper). False:
+   * Whether Perps workers run (this service's AGENTCAP_PERPS is paper). False:
    * the fleet stands every Perps worker down and keeps its grant, so a Perps
    * wallet is not counted as a current worker (its frozen beat would read as
    * stale, and its cursors pin the mirror lag). Absent is true.
@@ -291,7 +291,7 @@ async function readCurrentAccounts(db: Db, limit: number, warnings: string[], pe
   try {
     if (await tablePresent(db, "perps_grants")) {
       if (perpsWorkersRun) await read("perps_grants", "perps");
-      else warnings.push("Perps workers do not run on this service (MERRYMEN_PERPS is not paper), so Perps wallets are counted as without a current grant, not as stale workers.");
+      else warnings.push("Perps workers do not run on this service (AGENTCAP_PERPS is not paper), so Perps wallets are counted as without a current grant, not as stale workers.");
     }
   } catch {
     warnings.push("The Perps grants could not be read, so Perps workers are counted as without a current grant.");
@@ -700,13 +700,13 @@ export async function readProviderErrors(db: Db, o: { now: number; windowHours: 
  * The root package's version. Same lookup as /api/version (the web process
  * runs with cwd = web/, so the root manifest is one level up), plus the cwd
  * itself for processes started at the repo root. Only a manifest named
- * "merrymen" counts, so a stray package.json is never reported as ours.
+ * "agentcap" counts, so a stray package.json is never reported as ours.
  */
 export async function readPackageVersion(cwd: string = process.cwd()): Promise<string | null> {
   for (const file of [join(cwd, "..", "package.json"), join(cwd, "package.json")]) {
     try {
       const pkg = JSON.parse(await readFile(file, "utf8")) as { name?: unknown; version?: unknown };
-      if (pkg.name === "merrymen" && typeof pkg.version === "string" && /^\d+\.\d+\.\d+[\w.+-]{0,40}$/.test(pkg.version)) return pkg.version;
+      if (pkg.name === "agentcap" && typeof pkg.version === "string" && /^\d+\.\d+\.\d+[\w.+-]{0,40}$/.test(pkg.version)) return pkg.version;
     } catch {
       /* try the next location */
     }

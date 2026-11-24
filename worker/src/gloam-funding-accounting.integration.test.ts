@@ -15,8 +15,8 @@ import type { RawLog, ReconcileChain } from "./inflight-reconcile";
 import { accrueAboveHwm } from "./fees";
 import { pnlUsdg } from "./equity";
 
-const testHome = mkdtempSync(path.join(os.tmpdir(), "merrymen-gloam-funding-"));
-process.env.MERRYMEN_HOME = testHome;
+const testHome = mkdtempSync(path.join(os.tmpdir(), "agentcap-gloam-funding-"));
+process.env.AGENTCAP_HOME = testHome;
 const store = await import("./store");
 const { homePaths } = await import("./home");
 const { CASH } = await import("../../packages/core/src/index");

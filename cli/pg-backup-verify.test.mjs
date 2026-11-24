@@ -6,7 +6,7 @@
  * read in and the statements each one is sent. The SQL itself is pinned by the
  * opt-in case at the bottom, against real Postgres:
  *
- *   MERRYMEN_TEST_PG_URL=postgres://merrymen@127.0.0.1:55432/postgres \
+ *   AGENTCAP_TEST_PG_URL=postgres://agentcap@127.0.0.1:55432/postgres \
  *     NODE_PATH=<a directory holding pg@8> npx tsx --test cli/pg-backup-verify.test.mjs
  *
  * It refuses any host but loopback, creates two databases of its own and drops
@@ -47,7 +47,7 @@ const LATER = R + 1800; // after the restore point: the source only
 
 const FORK_URL = "postgres://drill:fork-secret@postgres-fork.railway.internal:5432/railway";
 const SOURCE_URL = "postgres://drill:source-secret@postgres.railway.internal:5432/railway";
-const ENV = { MERRYMEN_RESTORE_FORK_URL: FORK_URL, MERRYMEN_RESTORE_SOURCE_URL: SOURCE_URL };
+const ENV = { AGENTCAP_RESTORE_FORK_URL: FORK_URL, AGENTCAP_RESTORE_SOURCE_URL: SOURCE_URL };
 const ARGV = ["--restore-point", RESTORE_POINT];
 
 const expectRefusal = (fn, code) => assert.throws(fn, (e) => e instanceof DrillRefusal && e.code === code);
@@ -294,25 +294,25 @@ test("arguments: refused, by a fixed message that never repeats what it was give
       assert.doesNotMatch(e.message, /secret|railway\.internal|yesterday|15m/);
     }
   }
-  expectRefusal(() => parseDrillArgs(ARGV, { MERRYMEN_RESTORE_FORK_URL: FORK_URL }, NOW_MS), "usage");
-  expectRefusal(() => parseDrillArgs(ARGV, { ...ENV, MERRYMEN_RESTORE_SOURCE_URL: "https://example.com/db" }, NOW_MS), "usage");
+  expectRefusal(() => parseDrillArgs(ARGV, { AGENTCAP_RESTORE_FORK_URL: FORK_URL }, NOW_MS), "usage");
+  expectRefusal(() => parseDrillArgs(ARGV, { ...ENV, AGENTCAP_RESTORE_SOURCE_URL: "https://example.com/db" }, NOW_MS), "usage");
 });
 
 test("a URL's database is its host, port and name, whatever its credentials", () => {
   assert.equal(databaseOf("postgres://a:b@Postgres.Railway.Internal/railway"), "postgres.railway.internal:5432/railway");
   assert.equal(databaseOf("postgresql://a@postgres.railway.internal:5432/railway?sslmode=require"), "postgres.railway.internal:5432/railway");
-  assert.equal(databaseOf("postgres://merrymen@localhost:55432"), "localhost:55432/merrymen");
+  assert.equal(databaseOf("postgres://agentcap@localhost:55432"), "localhost:55432/agentcap");
   assert.equal(databaseOf("postgres://u@ignored/db?host=/var/run/postgresql&port=5433"), "/var/run/postgresql:5433/db");
   for (const bad of [undefined, "", "not a url", "mysql://h/db", "postgres://h/%zz"]) assert.equal(databaseOf(bad), null);
 });
 
 test("the source is never the fork: the same database under other credentials, or this service's own DATABASE_URL", () => {
-  const same = { MERRYMEN_RESTORE_FORK_URL: "postgresql://other:pw@POSTGRES.railway.internal/railway", MERRYMEN_RESTORE_SOURCE_URL: SOURCE_URL };
+  const same = { AGENTCAP_RESTORE_FORK_URL: "postgresql://other:pw@POSTGRES.railway.internal/railway", AGENTCAP_RESTORE_SOURCE_URL: SOURCE_URL };
   expectRefusal(() => parseDrillArgs(ARGV, same, NOW_MS), "fork-is-source");
   expectRefusal(() => parseDrillArgs(ARGV, { ...ENV, DATABASE_URL: FORK_URL.replace("fork-secret", "x") }, NOW_MS), "fork-is-live");
   // Another database on the same server is a different database.
-  const sibling = { ...ENV, MERRYMEN_RESTORE_FORK_URL: SOURCE_URL.replace("/railway", "/railway_fork") };
-  assert.equal(parseDrillArgs(ARGV, sibling, NOW_MS).forkUrl, sibling.MERRYMEN_RESTORE_FORK_URL);
+  const sibling = { ...ENV, AGENTCAP_RESTORE_FORK_URL: SOURCE_URL.replace("/railway", "/railway_fork") };
+  assert.equal(parseDrillArgs(ARGV, sibling, NOW_MS).forkUrl, sibling.AGENTCAP_RESTORE_FORK_URL);
   // The source being DATABASE_URL is the ordinary case.
   assert.equal(parseDrillArgs(ARGV, { ...ENV, DATABASE_URL: SOURCE_URL }, NOW_MS).sourceUrl, SOURCE_URL);
 });
@@ -681,7 +681,7 @@ test("the command line prints the same JSON and exit code, and refuses a URL in 
 
 // ── opt-in: real Postgres ────────────────────────────────────────────────────
 
-const url = process.env.MERRYMEN_TEST_PG_URL ?? process.env.MERRYMEN_TEST_POSTGRES_URL;
+const url = process.env.AGENTCAP_TEST_PG_URL ?? process.env.AGENTCAP_TEST_POSTGRES_URL;
 // LOADED ONLY WHEN A DATABASE IS NAMED: `pg` is not a dependency of this repo.
 const pg = url ? createRequire(import.meta.url)("pg") : null;
 
@@ -740,7 +740,7 @@ test("Postgres: the drill's SQL over two real databases", { skip: !url, timeout:
     INSERT INTO holder_claims VALUES ('0xw3', '0x3', ${LATER * 1000});
     UPDATE grants SET updated_at = ${LATER} WHERE tenant = '0x2';`);
 
-  const env = { MERRYMEN_RESTORE_FORK_URL: urlOf(names.fork), MERRYMEN_RESTORE_SOURCE_URL: urlOf(names.source) };
+  const env = { AGENTCAP_RESTORE_FORK_URL: urlOf(names.fork), AGENTCAP_RESTORE_SOURCE_URL: urlOf(names.source) };
   const run = (overrides = {}) => runRestoreDrill({ argv: ARGV, env: { ...env, ...overrides }, now: () => NOW_MS });
 
   const first = await run();
@@ -769,7 +769,7 @@ test("Postgres: the drill's SQL over two real databases", { skip: !url, timeout:
   // The same database through a second spelling of its host: refused at runtime.
   const alias = new URL(urlOf(names.source));
   alias.hostname = alias.hostname === "localhost" ? "127.0.0.1" : "localhost";
-  const same = await run({ MERRYMEN_RESTORE_FORK_URL: alias.toString() });
+  const same = await run({ AGENTCAP_RESTORE_FORK_URL: alias.toString() });
   assert.equal(same.exitCode, 64);
   assert.equal(same.report.error.code, "fork-is-source");
 
@@ -781,7 +781,7 @@ test("Postgres: the drill's SQL over two real databases", { skip: !url, timeout:
   await admin.query(`CREATE ROLE ${reader} LOGIN PASSWORD '${readerPassword}'`);
   for (const c of Object.values(clients)) await c.query(`GRANT SELECT ON trades, flows, holder_claims, tenant_settings TO ${reader}`);
   const as = (name) => Object.assign(new URL(urlOf(name)), { username: reader, password: readerPassword }).toString();
-  const unreadable = await run({ MERRYMEN_RESTORE_FORK_URL: as(names.fork), MERRYMEN_RESTORE_SOURCE_URL: as(names.source) });
+  const unreadable = await run({ AGENTCAP_RESTORE_FORK_URL: as(names.fork), AGENTCAP_RESTORE_SOURCE_URL: as(names.source) });
   assert.equal(unreadable.exitCode, 1);
   assert.deepEqual(unreadable.report.error, { code: "query-failed", detail: "A read failed and the drill stopped.", side: "fork", table: "grants", cause: "42501" });
 

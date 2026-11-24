@@ -76,7 +76,7 @@ export const BITQUERY_LANE_DEFAULTS = Object.freeze({
   /**
    * Points per UTC day. 25,000 x 30 = 750,000 a month. THE GATEWAY MAY SPEND
    * FROM THE SAME PLAN under its own, separate fleet-wide counter
-   * (MERRYMEN_GATEWAY_BITQUERY_POINTS_PER_DAY, default 12,500 a day in
+   * (AGENTCAP_GATEWAY_BITQUERY_POINTS_PER_DAY, default 12,500 a day in
    * gateway/lib/core.mjs: 10,000 for the public memescope at its 45 s
    * refresh, 2,500 for holders). Neither counter sees the other's spend, so
    * the operator sizes both to the plan, leaving room for the estimates below
@@ -145,22 +145,22 @@ function knob(raw: string | undefined, name: string, fallback: number, ceiling: 
 
 /**
  * The lane's switches, read once on the orchestrator. ON ONLY WITH A KEY: no
- * MERRYMEN_BITQUERY_API_KEY means no lane, no SQLite file, no request, and
- * every flow question answers "unavailable". MERRYMEN_BITQUERY_LANE=0 turns it
+ * AGENTCAP_BITQUERY_API_KEY means no lane, no SQLite file, no request, and
+ * every flow question answers "unavailable". AGENTCAP_BITQUERY_LANE=0 turns it
  * off with the key still set — the way to stop spending without a redeploy of
  * secrets.
  */
 export function bitqueryLaneSetup(env: Record<string, string | undefined>): BitqueryLaneSetup {
-  if (env.MERRYMEN_BITQUERY_LANE?.trim() === "0") {
-    return { off: true, lines: ["bitquery lane: off — MERRYMEN_BITQUERY_LANE=0"], config: null };
+  if (env.AGENTCAP_BITQUERY_LANE?.trim() === "0") {
+    return { off: true, lines: ["bitquery lane: off — AGENTCAP_BITQUERY_LANE=0"], config: null };
   }
-  const apiKey = env.MERRYMEN_BITQUERY_API_KEY?.trim();
+  const apiKey = env.AGENTCAP_BITQUERY_API_KEY?.trim();
   if (!apiKey) {
-    return { off: true, lines: ["bitquery lane: off — no MERRYMEN_BITQUERY_API_KEY on this process (set it on the orchestrator only)"], config: null };
+    return { off: true, lines: ["bitquery lane: off — no AGENTCAP_BITQUERY_API_KEY on this process (set it on the orchestrator only)"], config: null };
   }
   const lines: string[] = [];
-  const pointsPerDay = knob(env.MERRYMEN_BITQUERY_POINTS_PER_DAY, "MERRYMEN_BITQUERY_POINTS_PER_DAY", BITQUERY_LANE_DEFAULTS.pointsPerDay, BITQUERY_LANE_CEILINGS.pointsPerDay, lines);
-  const rpm = knob(env.MERRYMEN_BITQUERY_RPM, "MERRYMEN_BITQUERY_RPM", BITQUERY_LANE_DEFAULTS.rpm, BITQUERY_LANE_CEILINGS.rpm, lines);
+  const pointsPerDay = knob(env.AGENTCAP_BITQUERY_POINTS_PER_DAY, "AGENTCAP_BITQUERY_POINTS_PER_DAY", BITQUERY_LANE_DEFAULTS.pointsPerDay, BITQUERY_LANE_CEILINGS.pointsPerDay, lines);
+  const rpm = knob(env.AGENTCAP_BITQUERY_RPM, "AGENTCAP_BITQUERY_RPM", BITQUERY_LANE_DEFAULTS.rpm, BITQUERY_LANE_CEILINGS.rpm, lines);
   lines.unshift(
     `bitquery lane: on — ${pointsPerDay} points/UTC day (${Math.floor(pointsPerDay * BITQUERY_LANE_DEFAULTS.evidenceShare)} for child evidence), ` +
       `${rpm} requests/min, ${BITQUERY_LANE_DEFAULTS.maxConcurrency} at once`,
@@ -198,7 +198,7 @@ const TOKEN_WHERE = `Pair: {Market: {NetworkBid: {is: "${ROBINHOOD_BID}"}}, Toke
  * purpose — dropping a duplicated swap leg (parseTokenFlow) — and the hash
  * goes no further than the parser.
  */
-export const TOKEN_FLOW_QUERY = `query MerrymenTokenFlow($tokens: [String!], ${FLOW_WINDOWS.map((m) => `$t${m}: DateTime`).join(", ")}, $sellLimit: Int, $venueLimit: Int) {
+export const TOKEN_FLOW_QUERY = `query AgentCapTokenFlow($tokens: [String!], ${FLOW_WINDOWS.map((m) => `$t${m}: DateTime`).join(", ")}, $sellLimit: Int, $venueLimit: Int) {
   Trading {
     totals: Trades(where: {${TOKEN_WHERE}}) {
       ${FLOW_WINDOWS.map(windowAggregates).join("\n      ")}
@@ -236,7 +236,7 @@ export const TOKEN_FLOW_QUERY = `query MerrymenTokenFlow($tokens: [String!], ${F
  * launch event, never supplied by a child and never taken from the token's
  * word about itself (orchestrator-flow.ts).
  */
-export const CREATOR_FLOW_QUERY = `query MerrymenCreatorFlow($tokens: [String!], $creators: [String!], $since: DateTime) {
+export const CREATOR_FLOW_QUERY = `query AgentCapCreatorFlow($tokens: [String!], $creators: [String!], $since: DateTime) {
   Trading {
     creatorSells: Trades(
       where: {Pair: {Market: {NetworkBid: {is: "${ROBINHOOD_BID}"}}, Token: {Address: {in: $tokens}}}, Trader: {Address: {in: $creators}}, Side: {is: "Sell"}, Block: {Time: {since: $since}}}
@@ -263,7 +263,7 @@ export const CREATOR_FLOW_QUERY = `query MerrymenCreatorFlow($tokens: [String!],
  * directory. A pool here is a candidate to verify on chain (factory getPool),
  * never a route by itself.
  */
-export const V3_POOLS_QUERY = `query MerrymenV3Pools($factory: [String!], $tokens: [String!], $since: DateTime, $limit: Int) {
+export const V3_POOLS_QUERY = `query AgentCapV3Pools($factory: [String!], $tokens: [String!], $since: DateTime, $limit: Int) {
   EVM(network: robinhood) {
     Events(
       limit: {count: $limit}
@@ -825,7 +825,7 @@ export class BitqueryLane {
       this.authCooldownUntil = Math.max(this.authCooldownUntil, now + 60_000);
     }
     if (status === 401 || status === 403) this.authCooldownUntil = Math.max(this.authCooldownUntil, now + 900_000);
-    this.sayOnce(`http-${status}`, `the provider answered ${status}${status === 401 || status === 403 ? " — check MERRYMEN_BITQUERY_API_KEY" : status === 402 ? " — the plan's points look spent" : ""}; holding off`);
+    this.sayOnce(`http-${status}`, `the provider answered ${status}${status === 401 || status === 403 ? " — check AGENTCAP_BITQUERY_API_KEY" : status === 402 ? " — the plan's points look spent" : ""}; holding off`);
   }
 
   private store(key: string, data: unknown, observedAt: number, ttlMs: number): void {

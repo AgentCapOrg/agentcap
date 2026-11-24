@@ -1,4 +1,4 @@
-# Merrymen MCP: operations, deployment and rollback
+# AgentCap MCP: operations, deployment and rollback
 
 ## Where it runs
 
@@ -87,33 +87,33 @@ dashboard's chat orders use.
 
 | Variable | Service | Default | Meaning |
 |---|---|---|---|
-| `MERRYMEN_HOSTED` | web | — | Must be `1`. MCP answers 404 on self-hosted installs. |
+| `AGENTCAP_HOSTED` | web | — | Must be `1`. MCP answers 404 on self-hosted installs. |
 | `DATABASE_URL` | web, orchestrator | — | Shared Postgres. Required. |
-| `MERRYMEN_PUBLIC_ORIGIN` | web | — | e.g. `https://app.merrymen.dev`. The OAuth issuer and (by default) the resource origin. Required. |
-| `MERRYMEN_SESSION_SECRET` | web | — | Owner sign-in (already required by the dashboard). |
-| `MERRYMEN_MCP_ENABLED` | web, orchestrator (one shared Railway variable) | on | `0` switches MCP off. On **web**: every MCP route answers 404 (tokens unused). On the **orchestrator**: no backtest runs and no Telegram alert is evaluated or sent. Each service reads only its own environment, so set it on both — see [Emergency](#emergency-revoke-everything). |
-| `MERRYMEN_OAUTH_ISSUER` | web | public origin | Only if the issuer must differ from the public origin. |
-| `MERRYMEN_MCP_RESOURCE_URL` | web | `<origin>/mcp` | The canonical resource URL tokens are bound to, e.g. `https://mcp.merrymen.dev/mcp`. **Only the origin may change; the path must be `/mcp`** (a trailing slash is fine), because that is the only path the endpoint is served at (see [below](#the-endpoint-path-is-always-mcp)). Any other path, the root included, switches MCP off with a reason naming this variable, exactly as an invalid URL does. Changing it invalidates every existing token (audience changes); clients simply reconnect. |
-| `MERRYMEN_MCP_DIRECTORY` | web | on | `0` switches the directory profile off: `/mcp/directory` and its metadata answer 404, authorize refuses its address, and directory tokens stop working (`invalid_grant` at refresh). `/mcp` is untouched. |
-| `MERRYMEN_MCP_DIRECTORY_RESOURCE_URL` | web | `/mcp/directory` on the resource's origin | The directory profile's resource URL, e.g. `https://mcp.merrymen.dev/mcp/directory`. Only the origin may change: it must be https and its path exactly `/mcp/directory`, the only path the route serves; any other path (or the canonical one) switches the directory profile off, and `/api/mcp/health` says why. Changing it disconnects every directory connection once, like the canonical one. |
-| `MERRYMEN_MCP_ALLOWED_ORIGINS` | web | — | Extra browser origins allowed to call `/mcp` (comma separated). Server-side clients send no Origin and are unaffected. |
-| `MERRYMEN_MCP_STAFF_TENANTS` | web | — | Comma-separated owner addresses that may grant themselves `staff:diagnostics`. Re-checked on every call. |
-| `MERRYMEN_MCP_ACCESS_TTL_SEC`, `_REFRESH_TTL_SEC`, `_REFRESH_FAMILY_MAX_SEC` | web | 3600, 30 d, 90 d | Token lifetimes (bounded). |
-| `MERRYMEN_RPC_MAINNET` | web | chain default | RPC for quotes (already used elsewhere). |
+| `AGENTCAP_PUBLIC_ORIGIN` | web | — | e.g. `https://app.agentcap.xyz`. The OAuth issuer and (by default) the resource origin. Required. |
+| `AGENTCAP_SESSION_SECRET` | web | — | Owner sign-in (already required by the dashboard). |
+| `AGENTCAP_MCP_ENABLED` | web, orchestrator (one shared Railway variable) | on | `0` switches MCP off. On **web**: every MCP route answers 404 (tokens unused). On the **orchestrator**: no backtest runs and no Telegram alert is evaluated or sent. Each service reads only its own environment, so set it on both — see [Emergency](#emergency-revoke-everything). |
+| `AGENTCAP_OAUTH_ISSUER` | web | public origin | Only if the issuer must differ from the public origin. |
+| `AGENTCAP_MCP_RESOURCE_URL` | web | `<origin>/mcp` | The canonical resource URL tokens are bound to, e.g. `https://mcp.agentcap.xyz/mcp`. **Only the origin may change; the path must be `/mcp`** (a trailing slash is fine), because that is the only path the endpoint is served at (see [below](#the-endpoint-path-is-always-mcp)). Any other path, the root included, switches MCP off with a reason naming this variable, exactly as an invalid URL does. Changing it invalidates every existing token (audience changes); clients simply reconnect. |
+| `AGENTCAP_MCP_DIRECTORY` | web | on | `0` switches the directory profile off: `/mcp/directory` and its metadata answer 404, authorize refuses its address, and directory tokens stop working (`invalid_grant` at refresh). `/mcp` is untouched. |
+| `AGENTCAP_MCP_DIRECTORY_RESOURCE_URL` | web | `/mcp/directory` on the resource's origin | The directory profile's resource URL, e.g. `https://mcp.agentcap.xyz/mcp/directory`. Only the origin may change: it must be https and its path exactly `/mcp/directory`, the only path the route serves; any other path (or the canonical one) switches the directory profile off, and `/api/mcp/health` says why. Changing it disconnects every directory connection once, like the canonical one. |
+| `AGENTCAP_MCP_ALLOWED_ORIGINS` | web | — | Extra browser origins allowed to call `/mcp` (comma separated). Server-side clients send no Origin and are unaffected. |
+| `AGENTCAP_MCP_STAFF_TENANTS` | web | — | Comma-separated owner addresses that may grant themselves `staff:diagnostics`. Re-checked on every call. |
+| `AGENTCAP_MCP_ACCESS_TTL_SEC`, `_REFRESH_TTL_SEC`, `_REFRESH_FAMILY_MAX_SEC` | web | 3600, 30 d, 90 d | Token lifetimes (bounded). |
+| `AGENTCAP_RPC_MAINNET` | web | chain default | RPC for quotes (already used elsewhere). |
 
 `GET /api/mcp/health` reports `enabled`, the reason when disabled, database
 latency, the deployed commit, the canonical `endpoint` and `directory`: the
 directory profile's `endpoint`, or `null` with a `why` naming the variable that
-turned it off (`MERRYMEN_MCP_DIRECTORY=0`; an unusable
-`MERRYMEN_MCP_DIRECTORY_RESOURCE_URL`, including one on any path but
+turned it off (`AGENTCAP_MCP_DIRECTORY=0`; an unusable
+`AGENTCAP_MCP_DIRECTORY_RESOURCE_URL`, including one on any path but
 `/mcp/directory`). It returns `503` with `Retry-After` when not ready.
 
 ### The endpoint path is always `/mcp`
 
 The full MCP endpoint is one Next route, `web/src/app/mcp/route.ts`, and
 `web/next.config.mjs` has no rewrites (on purpose: see the comment there). So
-`MERRYMEN_MCP_RESOURCE_URL` may move the endpoint to another origin (that is
-how `mcp.merrymen.dev` works) but never to another path. The resource URL is
+`AGENTCAP_MCP_RESOURCE_URL` may move the endpoint to another origin (that is
+how `mcp.agentcap.xyz` works) but never to another path. The resource URL is
 not just a label: it is what `/llms.txt`, `/api/mcp/health` (`endpoint`), the
 protected-resource metadata (`resource`), the `401` challenge
 (`resource_metadata`) and every install link on `/connect/mcp` hand to
@@ -121,12 +121,12 @@ clients, so a URL like `https://mcp.example.com/v2/mcp`, or the bare origin,
 used to be advertised everywhere while every client POST to it got `404`.
 `web/src/mcp/config.ts` (`CANONICAL_ROUTE_PATH`) now refuses it: MCP stays off,
 and health, `/llms.txt` and `/connect/mcp` say
-`MERRYMEN_MCP_RESOURCE_URL must have the path /mcp, the only path the MCP endpoint is served at (only the origin may change)`.
+`AGENTCAP_MCP_RESOURCE_URL must have the path /mcp, the only path the MCP endpoint is served at (only the origin may change)`.
 The MCP-host middleware (`web/src/mcp/landing.ts`, `MCP_ROUTE_PATH`, pinned to
 the same value by `web/src/middleware.test.ts`) applies the same rule, so with
 such a URL there is no dedicated MCP host either.
 
-Production's value, `https://mcp.merrymen.dev/mcp`, gives the same resource
+Production's value, `https://mcp.agentcap.xyz/mcp`, gives the same resource
 string as before this rule, so existing tokens keep verifying and refreshing
 (`web/src/mcp/oauth/oauth.test.ts` pins both). If the endpoint ever has to
 live at another path, add a route there (or a deliberate rewrite, and read
@@ -147,54 +147,54 @@ request.
 After a deploy, verify:
 
 ```bash
-curl -s https://mcp.merrymen.dev/api/mcp/health          # endpoint: https://mcp.merrymen.dev/mcp, directory.endpoint: https://mcp.merrymen.dev/mcp/directory
-curl -s https://mcp.merrymen.dev/.well-known/oauth-protected-resource/mcp
-curl -s https://app.merrymen.dev/.well-known/oauth-authorization-server
-curl -si -X POST https://mcp.merrymen.dev/mcp -H 'content-type: application/json' -d '{}' | head -5   # expect 401 + WWW-Authenticate
+curl -s https://mcp.agentcap.xyz/api/mcp/health          # endpoint: https://mcp.agentcap.xyz/mcp, directory.endpoint: https://mcp.agentcap.xyz/mcp/directory
+curl -s https://mcp.agentcap.xyz/.well-known/oauth-protected-resource/mcp
+curl -s https://app.agentcap.xyz/.well-known/oauth-authorization-server
+curl -si -X POST https://mcp.agentcap.xyz/mcp -H 'content-type: application/json' -d '{}' | head -5   # expect 401 + WWW-Authenticate
 # the directory profile: its own metadata (no trade:propose, drafts:write, social:write) and challenge
-curl -s https://mcp.merrymen.dev/.well-known/oauth-protected-resource/mcp/directory
-curl -si -X POST https://mcp.merrymen.dev/mcp/directory -H 'content-type: application/json' -d '{}' | grep -i '^www-authenticate'   # resource_metadata=…/mcp/directory
+curl -s https://mcp.agentcap.xyz/.well-known/oauth-protected-resource/mcp/directory
+curl -si -X POST https://mcp.agentcap.xyz/mcp/directory -H 'content-type: application/json' -d '{}' | grep -i '^www-authenticate'   # resource_metadata=…/mcp/directory
 ```
 
 ### The dedicated hostname
 
-The MCP endpoint's canonical address is **`https://mcp.merrymen.dev/mcp`**
+The MCP endpoint's canonical address is **`https://mcp.agentcap.xyz/mcp`**
 (since 2026-09-25). It is the same **web** service under a second custom
-domain; the OAuth issuer stays `https://app.merrymen.dev`, because the owner's
+domain; the OAuth issuer stays `https://app.agentcap.xyz`, because the owner's
 sign-in cookie (and so consent, Connected apps and approvals) lives there.
 
 How it is set up (repeat these steps for another hostname):
 
-1. Railway, **web** service: custom domain `mcp.merrymen.dev`, target port
-   8080 (`railway domain mcp.merrymen.dev --service web --port 8080`; without
+1. Railway, **web** service: custom domain `mcp.agentcap.xyz`, target port
+   8080 (`railway domain mcp.agentcap.xyz --service web --port 8080`; without
    `--port` the domain has no port and answers "Application not found").
-2. Vercel DNS for merrymen.dev (the zone's wildcard would otherwise send the
+2. Vercel DNS for agentcap.xyz (the zone's wildcard would otherwise send the
    name to Vercel): `CNAME mcp → 6a8l8zfi.up.railway.app` and the TXT record
    `_railway-verify.mcp` that the domain command prints.
 3. Railway verifies ownership and issues a Let's Encrypt certificate
    (`railway domain status <id> --service web`: `Verified: yes`,
    `CERTIFICATE_STATUS_TYPE_VALID`).
-4. `MERRYMEN_MCP_RESOURCE_URL=https://mcp.merrymen.dev/mcp` on web. Tokens are
+4. `AGENTCAP_MCP_RESOURCE_URL=https://mcp.agentcap.xyz/mcp` on web. Tokens are
    bound to this URL, so changing it again disconnects every app once: their
    access tokens get `401 invalid_token` and their refresh gets
    `invalid_grant`, which makes a client start a new sign-in. The protected-resource metadata names this URL, which is what
    spec-following clients check against the address they were given: connect
-   them to `https://mcp.merrymen.dev/mcp`, not the app host.
+   them to `https://mcp.agentcap.xyz/mcp`, not the app host.
 
 ### What the MCP host does for a browser, and for the bare domain
 
 The MCP host serves the whole web app, so without a rule a browser there got
 the terminal, signed out (the sign-in cookie is on the app host), and a client
-given `https://mcp.merrymen.dev` got HTML. `web/src/middleware.ts` (logic in
+given `https://mcp.agentcap.xyz` got HTML. `web/src/middleware.ts` (logic in
 `web/src/mcp/landing.ts`) now answers, on the MCP host only:
 
 - **A page load in a browser** (GET or HEAD with `Sec-Fetch-Dest: document`,
   or no Sec-Fetch headers and `Accept: text/html`; no `Authorization`, no
   `MCP-Protocol-Version`): `307` to the app host. `/` goes to
-  `https://app.merrymen.dev/connect/mcp`, any other page to the same path and
+  `https://app.agentcap.xyz/connect/mcp`, any other page to the same path and
   query there.
 - **Anything else at `/`** (an MCP client given the bare domain): `308` to
-  `https://mcp.merrymen.dev/mcp`, keeping the method and body. Lenient clients
+  `https://mcp.agentcap.xyz/mcp`, keeping the method and body. Lenient clients
   then connect. Spec-strict ones still refuse, because the protected-resource
   metadata names `…/mcp`, not the address they were given: give them the full
   URL.
@@ -204,13 +204,13 @@ given `https://mcp.merrymen.dev` got HTML. `web/src/middleware.ts` (logic in
 `/mcp` opened in a browser, on either host, answers `307` to the connect page
 instead of the JSON `401`; clients still get `401` + `WWW-Authenticate`. The
 app host, an install whose MCP URL is on the app host, and self-hosted
-installs are untouched. Targets come only from `MERRYMEN_PUBLIC_ORIGIN` (or
-`MERRYMEN_OAUTH_ISSUER`) and `MERRYMEN_MCP_RESOURCE_URL`, which the middleware
+installs are untouched. Targets come only from `AGENTCAP_PUBLIC_ORIGIN` (or
+`AGENTCAP_OAUTH_ISSUER`) and `AGENTCAP_MCP_RESOURCE_URL`, which the middleware
 reads when it loads. To check after a deploy:
 
 ```bash
-curl -si https://mcp.merrymen.dev/ -H 'sec-fetch-dest: document' | grep -i '^location'   # https://app.merrymen.dev/connect/mcp (307)
-curl -si -X POST https://mcp.merrymen.dev/ -d '{}' | grep -i '^location'                 # https://mcp.merrymen.dev/mcp (308)
+curl -si https://mcp.agentcap.xyz/ -H 'sec-fetch-dest: document' | grep -i '^location'   # https://app.agentcap.xyz/connect/mcp (307)
+curl -si -X POST https://mcp.agentcap.xyz/ -d '{}' | grep -i '^location'                 # https://mcp.agentcap.xyz/mcp (308)
 ```
 
 ## Observability
@@ -253,7 +253,7 @@ Limits are enforced in shared Postgres, so they hold across web replicas.
 ## Emergency: revoke everything
 
 To take down only the directory listing's address (`/mcp/directory`) and
-leave custom connectors on `/mcp` working, set `MERRYMEN_MCP_DIRECTORY=0` on
+leave custom connectors on `/mcp` working, set `AGENTCAP_MCP_DIRECTORY=0` on
 web: the endpoint and its metadata answer 404 and directory tokens stop
 working; they work again when it is unset. To end those connections for good:
 
@@ -266,7 +266,7 @@ UPDATE mcp_connections SET status = 'revoked', revoked_at = EXTRACT(EPOCH FROM n
 
 To cut every MCP connection at once without a deploy, either:
 
-- set `MERRYMEN_MCP_ENABLED=0` on **both web and orchestrator** — best as one
+- set `AGENTCAP_MCP_ENABLED=0` on **both web and orchestrator** — best as one
   shared Railway variable referenced by both services, so one change reaches
   both (each service restarts to pick it up). What each one stops:
   - **web**: `/mcp`, the OAuth routes, the MCP `/.well-known/*` metadata and
@@ -307,9 +307,9 @@ UPDATE mcp_proposals SET status = 'expired', updated_at = EXTRACT(EPOCH FROM now
 
 Orders already queued by an approval are ordinary owner orders: the worker's
 own expiry, one-order-at-a-time slot, caps, policy and the on-chain permission
-still apply, and the owner can stop the agent from Merrymen (You → Wallet &
+still apply, and the owner can stop the agent from AgentCap (You → Wallet &
 permissions → 'discard & start over') or with Telegram `/kill`, then `/confirm`
-(needs "allow control commands" on). On hosted Merrymen the Telegram kill
+(needs "allow control commands" on). On hosted AgentCap the Telegram kill
 stops the agent on its next tick and leaves a kill request in the agent's
 home. The orchestrator carries it out within seconds, on its three-second
 order-ferry clock as well as in reconcile. It removes the stored grant, the

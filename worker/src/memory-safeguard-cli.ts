@@ -6,7 +6,7 @@ import { makePgDb } from "./db";
 import { requireDek } from "./store-crypto";
 import { checkpointFleetLedger } from "./ledger-safeguard";
 import { accountingHoldTenants } from "./accounting-maintenance";
-import { merrymenHome } from "./home";
+import { agentcapHome } from "./home";
 import { PerpsBooksNotHandedOver, refuseWhilePerpsBooks } from "./perps-handover-refusal";
 import {
   captureFleetMemory, openMemoryBackup, readMemoryBackupArtifact, sealMemoryBackup,
@@ -84,7 +84,7 @@ export async function runMemorySafeguardCli(argv: string[]): Promise<Record<stri
     const backup = openMemoryBackup(readMemoryBackupArtifact(path.resolve(values.get("--artifact")!)), dek);
     return { operation: "verified", ...await verifyMemoryBackup(backup, dek) };
   }
-  const home = merrymenHome();
+  const home = agentcapHome();
   if (!home || !path.isAbsolute(home) || !process.env.DATABASE_URL) throw fail();
   // THE SAME REFUSAL AS THE LEDGER HANDOVER'S, for the same reason: capture,
   // seed and the fleet checkpoint each walk `children/` alone, so a Perps

@@ -16,17 +16,17 @@ import { AGENT_NAME_RULE } from "@/lib/agent-name-rule";
  */
 let home: string;
 let PUT: (req: Request) => Promise<Response>;
-const saved = { home: process.env.MERRYMEN_HOME, hosted: process.env.MERRYMEN_HOSTED };
+const saved = { home: process.env.AGENTCAP_HOME, hosted: process.env.AGENTCAP_HOSTED };
 
 before(async () => {
   home = mkdtempSync(path.join(tmpdir(), "mm-settings-agent-name-"));
-  process.env.MERRYMEN_HOME = home;
-  delete process.env.MERRYMEN_HOSTED;
+  process.env.AGENTCAP_HOME = home;
+  delete process.env.AGENTCAP_HOSTED;
   // After the env: the route resolves its settings path when it loads.
   ({ PUT } = await import("./route"));
 });
 after(() => {
-  for (const [key, value] of [["MERRYMEN_HOME", saved.home], ["MERRYMEN_HOSTED", saved.hosted]] as const) {
+  for (const [key, value] of [["AGENTCAP_HOME", saved.home], ["AGENTCAP_HOSTED", saved.hosted]] as const) {
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
   }

@@ -1,9 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Merryman } from "@/merryman/Merryman";
-import { useReactions } from "@/merryman/MerrymanHero";
-import { moodOf, wordOf, type ChatPhase, type Move } from "@/merryman/mood";
-import { useOutfit } from "@/merryman/wardrobe-store";
-import type { Autonomy } from "@merrymen/core";
+import { AgentCapAvatar } from "@/agentcapavatar/AgentCapAvatar";
+import { useReactions } from "@/agentcapavatar/AgentCapAvatarHero";
+import { moodOf, wordOf, type ChatPhase, type Move } from "@/agentcapavatar/mood";
+import { useOutfit } from "@/agentcapavatar/wardrobe-store";
+import type { Autonomy } from "@agentcap/core";
 import { Proposals } from "../Proposals";
 import { TrencherAnnouncement } from "../TrencherAnnouncement";
 import { blockerAdvice } from "@/lib/live-blocker";
@@ -42,7 +42,7 @@ import { isCircleStrategyId } from "../strategy";
 import type { TierView } from "@/app/api/tier/route";
 import { loadTier } from "../tier";
 import { count } from "@/lib/format";
-import { ENERGY_NOTICE_PREFIX, isOwnerActionRule, type EnergyStatus } from "@merrymen/core";
+import { ENERGY_NOTICE_PREFIX, isOwnerActionRule, type EnergyStatus } from "@agentcap/core";
 import { energyRemedies, energyView, workerSaysFull } from "../energy-view";
 import { EnergyNote } from "../EnergyNote";
 import { RecoveryNotice } from "../RecoveryNotice";
@@ -126,7 +126,7 @@ export function Agent({
   energy?: EnergyStatus | null;
   /** The agent's account address in full (grant.smartAccount), for the energy remedy. */
   account?: string | null;
-  /** The grant's chain: $MERRYMEN sent to the account only counts on Robinhood Chain. */
+  /** The grant's chain: $AGENTCAP sent to the account only counts on Robinhood Chain. */
   chainId?: number | null;
   /** Only the route's Agent follows #trades; the floating chat stays independent. */
   followTradeLinks?: boolean;
@@ -717,10 +717,10 @@ export function Agent({
           `.desk-conversation` below. The blocker stays pinned: it is short, and
           it is the one thing on this screen that must not be scrolled past. */}
       <header className="desk-header">
-        {/* HE IS IN THE ROOM. The same merryman as Home, head and shoulders,
+        {/* HE IS IN THE ROOM. The same agentcapavatar as Home, head and shoulders,
             thinking while your question is out and talking while the answer
             streams — the chat controller's own state, nothing guessed. */}
-        <DeskMerryman name={mine.name} slug={mine.slug} autonomy={mine.autonomy} recovery={recovery !== null} chat={chat.sending ? (chat.streaming ? "replying" : "thinking") : "idle"} moves={mine.moves} />
+        <DeskAgentCapAvatar name={mine.name} slug={mine.slug} autonomy={mine.autonomy} recovery={recovery !== null} chat={chat.sending ? (chat.streaming ? "replying" : "thinking") : "idle"} moves={mine.moves} />
         <div>
           <h1>{mine.name}</h1>
           <p>{strategyName(mine.glance.id)}</p>
@@ -731,7 +731,7 @@ export function Agent({
         {/* The dot is green for a running agent, so NOT RUNNING never wears it. */}
         <span className={`desk-status ${notTrading ? "paused" : ""}`} title={recovery ? "RECOVERING" : mine.statusLabel ?? "Offline"}>
           <i />
-          {/* The verdict in a plain word (merryman/mood.ts wordOf); the core's
+          {/* The verdict in a plain word (agentcapavatar/mood.ts wordOf); the core's
               all-caps label stays as the tooltip and in every API answer. */}
           {mine.autonomy ? wordOf(mine.autonomy.state, { recovery: recovery !== null, expired: mine.autonomy.rule === "expired", needsOwner: mine.autonomy.needsOwnerAction }) : "Offline"}
         </span>
@@ -959,24 +959,24 @@ export function Agent({
             </strong>
             {/* THE REMEDIES, NONE OF THEM "ADD FUNDS". This used to tell the
                 owner that money was not the fix, which stopped being true the
-                day an agent could turn USDG into its own $MERRYMEN — and a
+                day an agent could turn USDG into its own $AGENTCAP — and a
                 funded owner told otherwise is exactly who needs to hear that it
                 can be. The count is the COMBINED one, the owner's wallet and this
                 account together, and an unread one is said to be unread: never
                 `?? 0`, which rendered "you hold 0" for a balance nobody read. */}
             <p>
               {tier?.why === "unreadable"
-                ? "We couldn't read your $MERRYMEN balance just now, so this may clear on its own. That's our read failing, not your wallet."
+                ? "We couldn't read your $AGENTCAP balance just now, so this may clear on its own. That's our read failing, not your wallet."
                 : `Your agent is armed and watching, but this strategy only opens new trades while your wallet and my account hold ${count(
                     tier?.needTokens ?? null,
-                  )} $MERRYMEN between them — right now ${
+                  )} $AGENTCAP between them — right now ${
                     tier?.tokens == null ? "I couldn't read how many" : count(tier.tokens)
                   }. Until then it leaves its basket as it is; positions in a class vault are still closed by their own exit rules. Switch to Steady basket or Strategist, which run for everyone, or top up: ${
                     remedies.sendToAgent
-                      ? `send $MERRYMEN on Robinhood Chain to my account${
-                          remedies.usdg === "ready" ? ", or send USDG there and ask me to get my $MERRYMEN" : ""
+                      ? `send $AGENTCAP on Robinhood Chain to my account${
+                          remedies.usdg === "ready" ? ", or send USDG there and ask me to get my $AGENTCAP" : ""
                         }`
-                      : "keep $MERRYMEN on Robinhood Chain in your own wallet"
+                      : "keep $AGENTCAP on Robinhood Chain in your own wallet"
                   }.`}
             </p>
             {tier?.why !== "unreadable" && remedies.sendToAgent && (
@@ -996,7 +996,7 @@ export function Agent({
             account={account ?? null}
             estimateUsdg={energy?.estimateUsdg ?? null}
             onDeposit={onDeposit}
-            onAsk={() => setAsk("Get your $MERRYMEN")}
+            onAsk={() => setAsk("Get your $AGENTCAP")}
             onResign={onResign}
           />
         )}
@@ -1326,14 +1326,14 @@ function CopyReply({ text }: { text: string }) {
   );
 }
 
-/** The chat header's merryman: head and shoulders, no island, same moods. */
-function DeskMerryman({ name, slug, autonomy, recovery, chat, moves }: { name: string; slug: string | null; autonomy: Autonomy | undefined; recovery: boolean; chat: ChatPhase; moves?: readonly Move[] }) {
+/** The chat header's agentcapavatar: head and shoulders, no island, same moods. */
+function DeskAgentCapAvatar({ name, slug, autonomy, recovery, chat, moves }: { name: string; slug: string | null; autonomy: Autonomy | undefined; recovery: boolean; chat: ChatPhase; moves?: readonly Move[] }) {
   const { outfit } = useOutfit(slug, slug ?? name);
   const mood = moodOf({ phase: "agent", autonomy: autonomy ?? null, recovery, chat });
   const reaction = useReactions(moves);
   return (
-    <div className="desk-merryman">
-      <Merryman outfit={outfit} base={mood.clip} cue={reaction.cue} framing="portrait" ground={false} label={`${name}: ${mood.word}`} />
+    <div className="desk-agentcapavatar">
+      <AgentCapAvatar outfit={outfit} base={mood.clip} cue={reaction.cue} framing="portrait" ground={false} label={`${name}: ${mood.word}`} />
     </div>
   );
 }

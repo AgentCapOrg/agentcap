@@ -3,7 +3,7 @@ import { Alert, AppState, Linking, Pressable, ScrollView, StyleSheet, Text, View
 import { router } from "expo-router";
 import * as LocalAuthentication from "expo-local-authentication";
 import * as Clipboard from "expo-clipboard";
-import { RENEW_SOON_DAYS, type StoredGrant } from "@merrymen/core";
+import { RENEW_SOON_DAYS, type StoredGrant } from "@agentcap/core";
 import { EXPLORER } from "@/net/chainlinks";
 import { feedOrigin, isMock } from "@/net/api";
 import { chatUrl, fetchTelegramStatus, type TelegramStatus } from "@/net/telegram";

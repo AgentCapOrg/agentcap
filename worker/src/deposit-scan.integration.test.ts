@@ -9,8 +9,8 @@ import type { Hex } from "viem";
 import type { RawLog, ReconcileChain } from "./inflight-reconcile";
 import type { ReceiptLog } from "./fills";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-deposit-scan-"));
-process.env.MERRYMEN_HOME = HOME;
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-deposit-scan-"));
+process.env.AGENTCAP_HOME = HOME;
 const store = await import("./store");
 const { homePaths } = await import("./home");
 const { CASH } = await import("../../packages/core/src/index");

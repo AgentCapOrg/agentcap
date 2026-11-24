@@ -23,7 +23,7 @@ import {
   perpsNumberOk,
   type CustomToken,
   type GrantPurpose,
-  type MerrymenSettings,
+  type AgentCapSettings,
   type PerpKey,
   type PerpsDriver,
   type PerpsNumKey,
@@ -37,7 +37,7 @@ import { normalizeAgentBrief } from "./agent-brief";
 import type { DiscoveryFocus } from "./discovery-focus";
 import { energyExemptAccountsOf, energyModeOf, type EnergyMode } from "./energy";
 import { perpsCeilingOf, type PerpsCeiling } from "../../packages/core/src/perps-ceiling";
-// MERRYMEN_PERPS's one parser lives in core now, so the web reads the lever
+// AGENTCAP_PERPS's one parser lives in core now, so the web reads the lever
 // exactly as this worker and the orchestrator do. Re-exported so every import
 // from here keeps working unchanged.
 export { PERPS_CEILINGS, perpsCeilingNote, perpsCeilingOf, type PerpsCeiling } from "../../packages/core/src/perps-ceiling";
@@ -47,10 +47,10 @@ export { PERPS_CEILINGS, perpsCeilingNote, perpsCeilingOf, type PerpsCeiling } f
  * field list is HOUSE_KEY_FIELDS in core, shared with the settings API so the
  * worker's "strip before merge" and the API's "refuse to write" can't drift.
  */
-export function stripHouseKeys(file: MerrymenSettings): MerrymenSettings {
+export function stripHouseKeys(file: AgentCapSettings): AgentCapSettings {
   const copy = { ...file } as Record<string, unknown>;
   for (const k of HOUSE_KEY_FIELDS) delete copy[k];
-  return copy as MerrymenSettings;
+  return copy as AgentCapSettings;
 }
 
 export interface ResolvedConfig {
@@ -104,7 +104,7 @@ export interface ResolvedConfig {
   enforceLiveIntent: boolean;
   /**
    * The energy gate (core energy.ts, worker/src/energy.ts): off, observe or
-   * enforce. OPERATOR ENV ONLY — MERRYMEN_ENERGY_GATE, never a settings-file
+   * enforce. OPERATOR ENV ONLY — AGENTCAP_ENERGY_GATE, never a settings-file
    * key, never a house key a tenant could strip or set — and HOSTED ONLY:
    * self-hosted is always 'off' whatever the env says. On their own machine the
    * owner pays their own model and runs open code; a throttle there would be
@@ -167,16 +167,16 @@ export interface ResolvedConfig {
   scoutBudgetUsdg: number;
   /** Max USDG into any single unpriceable token. */
   scoutPerTokenUsdg: number;
-  /** The class route. See MerrymenSettings.classSnipeEnabled — OFF by default. */
+  /** The class route. See AgentCapSettings.classSnipeEnabled — OFF by default. */
   classSnipeEnabled: boolean;
   classPerEntryUsdg: number;
   classMaxPositions: number;
   classMinDepthUsdg: number;
-  /** The class EXIT. See MerrymenSettings.classMaxHoldSec — a clock, not a price. */
+  /** The class EXIT. See AgentCapSettings.classMaxHoldSec — a clock, not a price. */
   classMaxHoldSec: number;
   classExitAtGraduationPct: number;
   /**
-   * The platform's official coins. See MerrymenSettings.officialCoinsEnabled —
+   * The platform's official coins. See AgentCapSettings.officialCoinsEnabled —
    * ON by default, and the only member of this block that is.
    */
   officialCoinsEnabled: boolean;
@@ -188,13 +188,13 @@ export interface ResolvedConfig {
   llmModel: string;
   llmIntervalMin: number;
   llmMaxActionUsdg: number;
-  /** Wallet holding $MERRYMEN — sets the Merry Circle tier / fee discount. */
+  /** Wallet holding $AGENTCAP — sets the Merry Circle tier / fee discount. */
   holderAddress: `0x${string}` | undefined;
   /** Virtuals API key (secret) — streams agent activity to its Virtuals page. */
   virtualsApiKey: string | undefined;
   bitqueryApiKey: string | undefined;
   /** Merry Circle gateway token — opens the gateway brain AND its Bitquery route. */
-  merrymenToken: string | undefined;
+  agentcapToken: string | undefined;
   /** Master switch for Virtuals Terminal streaming (off by default). */
   virtualsEnabled: boolean;
   telegramBotToken: string | undefined;
@@ -279,18 +279,18 @@ export interface ResolvedConfig {
   perpsLiqBufferPct: number;
   perpsMaxSlippageBps: number;
   /**
-   * MERRYMEN_PERPS — the most this deployment allows before the tenant
+   * AGENTCAP_PERPS — the most this deployment allows before the tenant
    * allowlist is applied. Use perpsCeilingFor(cfg, smartAccount), never this
    * alone, to decide whether an account may open live.
    */
   perpsOperatorCeiling: PerpsCeiling;
   /**
-   * MERRYMEN_PERPS_LIVE_TENANTS, lowercased smart accounts. HOSTED ONLY: an
+   * AGENTCAP_PERPS_LIVE_TENANTS, lowercased smart accounts. HOSTED ONLY: an
    * array (empty = nobody live) hosted, null self-hosted, where the one owner
    * on the box needs nobody's list.
    */
   perpsLiveTenants: readonly `0x${string}`[] | null;
-  /** MERRYMEN_HALT_PERP_ENTRIES — no opens anywhere; exits and protection keep running. */
+  /** AGENTCAP_HALT_PERP_ENTRIES — no opens anywhere; exits and protection keep running. */
   perpsEntriesHalted: boolean;
   /**
    * WHICH OF THE LOGIN'S TWO WALLETS THIS WORKER SERVES (workerWalletOf).
@@ -301,11 +301,11 @@ export interface ResolvedConfig {
 }
 
 /**
- * MERRYMEN_WALLET_PURPOSE: which wallet's worker this process is (docs/perps.md
+ * AGENTCAP_WALLET_PURPOSE: which wallet's worker this process is (docs/perps.md
  * "One login, two wallets"). It is set by whatever starts a Perps wallet's
- * worker — the orchestrator's per-wallet slot (slice 4), `merrymen start` for
+ * worker — the orchestrator's per-wallet slot (slice 4), `agentcap start` for
  * the Perps home (slice 5) — never by a tenant: it is the operator's
- * environment, like MERRYMEN_PERPS, and a settings file cannot name it.
+ * environment, like AGENTCAP_PERPS, and a settings file cannot name it.
  * Unset is Spot, which every worker on main is. Anything else refuses to
  * resolve: a worker must never guess which wallet's authority it holds.
  *
@@ -313,14 +313,14 @@ export interface ResolvedConfig {
  * the variable alone can neither give a Spot grant perps nor a Perps grant spot.
  */
 export function workerWalletOf(env: Record<string, string | undefined>): GrantPurpose {
-  const v = (env.MERRYMEN_WALLET_PURPOSE ?? "").trim();
+  const v = (env.AGENTCAP_WALLET_PURPOSE ?? "").trim();
   if (v === "") return "spot";
-  if (!isGrantPurpose(v)) throw new Error(`MERRYMEN_WALLET_PURPOSE must be spot or perps, not ${JSON.stringify(v).slice(0, 40)}`);
+  if (!isGrantPurpose(v)) throw new Error(`AGENTCAP_WALLET_PURPOSE must be spot or perps, not ${JSON.stringify(v).slice(0, 40)}`);
   return v;
 }
 
 /**
- * MERRYMEN_PERPS_LIVE_TENANTS, hosted only. An entry that is not an address
+ * AGENTCAP_PERPS_LIVE_TENANTS, hosted only. An entry that is not an address
  * can never match an account, so dropping it removes nothing but itself.
  */
 function perpsLiveTenantsOf(raw: string | undefined, hosted: boolean): readonly `0x${string}`[] | null {
@@ -334,7 +334,7 @@ function perpsLiveTenantsOf(raw: string | undefined, hosted: boolean): readonly 
 }
 
 /**
- * MERRYMEN_HALT_PERP_ENTRIES, read so that only an explicit "no" is no. Its
+ * AGENTCAP_HALT_PERP_ENTRIES, read so that only an explicit "no" is no. Its
  * documented form is `=1`; an operator who writes `=yes` or `=halt` in an
  * incident means halt, and a restrict-only switch that failed open on spelling
  * would fail at the one moment it is reached for.
@@ -346,7 +346,7 @@ function perpsEntriesHaltedOf(raw: string | undefined): boolean {
 
 /**
  * The most an account may do with perps, as far as the OPERATOR is concerned:
- * MERRYMEN_PERPS, then, hosted, the live allowlist. `smartAccount` is the
+ * AGENTCAP_PERPS, then, hosted, the live allowlist. `smartAccount` is the
  * account the grant trades from (grant.smartAccount — never the SIWE tenant,
  * which is a different address). Unknown account hosted = not on the list.
  *
@@ -365,7 +365,7 @@ export function perpsCeilingFor(
 /**
  * IS THIS A PERPS WALLET'S WORKER THAT THE OPERATOR HAS STOOD DOWN? (D19.)
  *
- * The orchestrator never starts a Perps worker unless MERRYMEN_PERPS is paper
+ * The orchestrator never starts a Perps worker unless AGENTCAP_PERPS is paper
  * (orchestrator.ts perpsSpawnable), and a self-hosted one is to match it. A
  * stood-down Perps wallet is not managed by owner orders (docs/perps.md, D1):
  * so a Perps worker that runs anyway under any other ceiling — started by
@@ -395,7 +395,7 @@ export function perpsWorkerStoodDown(cfg: Pick<ResolvedConfig, "workerWallet" | 
  * as allowed". The PUT refuses anything this would discard, so only a
  * hand-edited or older file ever reaches it.
  */
-function perpsNum(file: MerrymenSettings, key: PerpsNumKey): number {
+function perpsNum(file: AgentCapSettings, key: PerpsNumKey): number {
   const v = file[key];
   return perpsNumberOk(key, v) ? v : SETTINGS_DEFAULTS[key];
 }
@@ -466,7 +466,7 @@ export function strArray(file: unknown, env: string | undefined, fallback: strin
 
 /** Pure merge — exported for tests. `env` defaults to process.env at the call site. */
 export function mergeSettings(
-  file: MerrymenSettings,
+  file: AgentCapSettings,
   env: Record<string, string | undefined>,
 ): ResolvedConfig {
   const d = SETTINGS_DEFAULTS;
@@ -480,12 +480,12 @@ export function mergeSettings(
   // keys, but a shell on our server is never a tenant's to enable).
   if (hosted) file = stripHouseKeys(file);
 
-  const rawBreaker = str(file.breakerAddress, env.MERRYMEN_BREAKER_ADDRESS);
+  const rawBreaker = str(file.breakerAddress, env.AGENTCAP_BREAKER_ADDRESS);
   const breakerAddress =
     rawBreaker && /^0x[0-9a-fA-F]{40}$/.test(rawBreaker) ? (rawBreaker as `0x${string}`) : undefined;
 
-  const agentName = str(file.agentName, env.MERRYMEN_AGENT_NAME);
-  const xHandle = str(file.xHandle, env.MERRYMEN_X_HANDLE);
+  const agentName = str(file.agentName, env.AGENTCAP_AGENT_NAME);
+  const xHandle = str(file.xHandle, env.AGENTCAP_X_HANDLE);
   // Shape-checked before use, because a settings blob is data: a malformed
   // proof falls back to "unproven" rather than reaching the column as whatever
   // it happens to be. Same treatment holderProof gets in the orchestrator.
@@ -499,12 +499,12 @@ export function mergeSettings(
       ? { handle: rawProof.handle, at: rawProof.at }
       : undefined;
 
-  const rawAdapter = str(file.v4AdapterAddress, env.MERRYMEN_V4_ADAPTER_ADDRESS);
+  const rawAdapter = str(file.v4AdapterAddress, env.AGENTCAP_V4_ADAPTER_ADDRESS);
   const v4AdapterAddress =
     rawAdapter && /^0x[0-9a-fA-F]{40}$/.test(rawAdapter) ? (rawAdapter as `0x${string}`) : undefined;
 
-  const rawPons = str(file.ponsAdapterAddress, env.MERRYMEN_PONS_ADAPTER_ADDRESS);
-  const rawClassFactory = str(file.ponsClassVaultFactory, env.MERRYMEN_CLASS_VAULT_FACTORY);
+  const rawPons = str(file.ponsAdapterAddress, env.AGENTCAP_PONS_ADAPTER_ADDRESS);
+  const rawClassFactory = str(file.ponsClassVaultFactory, env.AGENTCAP_CLASS_VAULT_FACTORY);
   const ponsClassVaultFactory =
     rawClassFactory && /^0x[0-9a-fA-F]{40}$/.test(rawClassFactory)
       ? (rawClassFactory as `0x${string}`)
@@ -512,7 +512,7 @@ export function mergeSettings(
   const ponsAdapterAddress =
     rawPons && /^0x[0-9a-fA-F]{40}$/.test(rawPons) ? (rawPons as `0x${string}`) : undefined;
 
-  const rawHolder = str(file.holderAddress, env.MERRYMEN_HOLDER_ADDRESS);
+  const rawHolder = str(file.holderAddress, env.AGENTCAP_HOLDER_ADDRESS);
   const holderAddress =
     rawHolder && /^0x[0-9a-fA-F]{40}$/.test(rawHolder) ? (rawHolder as `0x${string}`) : undefined;
 
@@ -547,8 +547,8 @@ export function mergeSettings(
   // ── perpetuals ──────────────────────────────────────────────────────────
   // NO ENVIRONMENT TERM FOR ANY OWNER FIELD — `undefined` in every env slot,
   // the liveTradingEnabled reasoning above applied to a whole block. A
-  // `MERRYMEN_PERPS_LIVE=1` on the orchestrator would be the house consenting
-  // to leverage for every owner in the fleet at once; a `MERRYMEN_PERPS_MAX_
+  // `AGENTCAP_PERPS_LIVE=1` on the orchestrator would be the house consenting
+  // to leverage for every owner in the fleet at once; a `AGENTCAP_PERPS_MAX_
   // LEVERAGE` would be the house raising every owner's risk. settings.test.ts
   // sets such variables and asserts nothing moves.
   //
@@ -610,19 +610,19 @@ export function mergeSettings(
   const perpsPerTradeUsdg = Math.min(perpsNum(file, "perpsPerTradeUsdg"), perpsMaxOpenNotionalUsdg);
 
   return {
-    bundlerApiKey: str(file.bundlerApiKey, env.MERRYMEN_BUNDLER_API_KEY),
-    bundlerUrl: str(file.bundlerUrl, env.MERRYMEN_BUNDLER_URL),
-    rpcMainnet: str(file.rpcMainnet, env.MERRYMEN_RPC_MAINNET),
-    rpcTestnet: str(file.rpcTestnet, env.MERRYMEN_RPC_TESTNET),
+    bundlerApiKey: str(file.bundlerApiKey, env.AGENTCAP_BUNDLER_API_KEY),
+    bundlerUrl: str(file.bundlerUrl, env.AGENTCAP_BUNDLER_URL),
+    rpcMainnet: str(file.rpcMainnet, env.AGENTCAP_RPC_MAINNET),
+    rpcTestnet: str(file.rpcTestnet, env.AGENTCAP_RPC_TESTNET),
     groqApiKey: str(file.groqApiKey, env.GROQ_API_KEY),
-    groqModel: str(file.groqModel, env.MERRYMEN_GROQ_MODEL, d.groqModel)!,
+    groqModel: str(file.groqModel, env.AGENTCAP_GROQ_MODEL, d.groqModel)!,
     anthropicApiKey: str(file.anthropicApiKey, env.ANTHROPIC_API_KEY),
-    llmProvider: str(file.llmProvider, env.MERRYMEN_LLM_PROVIDER),
-    llmApiKey: str(file.llmApiKey, env.MERRYMEN_LLM_API_KEY),
-    llmBaseUrl: str(file.llmBaseUrl, env.MERRYMEN_LLM_BASE_URL),
-    llmProviderModel: str(file.llmProviderModel, env.MERRYMEN_LLM_PROVIDER_MODEL),
-    rialtoApiKey: str(file.rialtoApiKey, env.MERRYMEN_RIALTO_API_KEY),
-    rialtoApiKeyHeader: str(file.rialtoApiKeyHeader, env.MERRYMEN_RIALTO_API_KEY_HEADER, d.rialtoApiKeyHeader)!,
+    llmProvider: str(file.llmProvider, env.AGENTCAP_LLM_PROVIDER),
+    llmApiKey: str(file.llmApiKey, env.AGENTCAP_LLM_API_KEY),
+    llmBaseUrl: str(file.llmBaseUrl, env.AGENTCAP_LLM_BASE_URL),
+    llmProviderModel: str(file.llmProviderModel, env.AGENTCAP_LLM_PROVIDER_MODEL),
+    rialtoApiKey: str(file.rialtoApiKey, env.AGENTCAP_RIALTO_API_KEY),
+    rialtoApiKeyHeader: str(file.rialtoApiKeyHeader, env.AGENTCAP_RIALTO_API_KEY_HEADER, d.rialtoApiKeyHeader)!,
     breakerAddress,
     agentName,
     agentBrief: normalizeAgentBrief(file.agentBrief),
@@ -632,13 +632,13 @@ export function mergeSettings(
     v4AdapterAddress,
     ponsAdapterAddress,
     ponsClassVaultFactory,
-    assetMode: oneOf(file.assetMode, env.MERRYMEN_ASSET_MODE, ["all", "stocks", "crypto"] as const, d.assetMode),
-    paperTradingEnabled: bool(file.paperTradingEnabled, env.MERRYMEN_PAPER_TRADING, d.paperTradingEnabled),
+    assetMode: oneOf(file.assetMode, env.AGENTCAP_ASSET_MODE, ["all", "stocks", "crypto"] as const, d.assetMode),
+    paperTradingEnabled: bool(file.paperTradingEnabled, env.AGENTCAP_PAPER_TRADING, d.paperTradingEnabled),
     // NO ENVIRONMENT OVERRIDE, and the omission is the point.
     //
-    // Every sibling here takes `env.MERRYMEN_*` as a middle term, which is right
+    // Every sibling here takes `env.AGENTCAP_*` as a middle term, which is right
     // for operational knobs: the house may set a bundler, a tick rate, a fee. It
-    // is wrong for this one. `MERRYMEN_LIVE_TRADING=true` on the orchestrator
+    // is wrong for this one. `AGENTCAP_LIVE_TRADING=true` on the orchestrator
     // would be the house granting consent to spend real money on behalf of every
     // owner in the fleet simultaneously — the exact implicit promotion this
     // field was added to prevent, available as a single deploy variable.
@@ -650,7 +650,7 @@ export function mergeSettings(
     // NOT a tenant setting and not in the file: this is an operator-controlled
     // migration state.
     //
-    // IT USED TO READ `MERRYMEN_BACKFILL_LIVE_INTENT !== "report"`, so that
+    // IT USED TO READ `AGENTCAP_BACKFILL_LIVE_INTENT !== "report"`, so that
     // asking the migration to REPORT also switched the gate off. That was right
     // exactly once — before the migration had run, when the field was absent
     // fleet-wide and enforcing it would have moved every live agent to paper.
@@ -666,123 +666,123 @@ export function mergeSettings(
     // `=report` is inert. Set this ONLY on a deployment whose owners have no
     // `liveTradingEnabled` recorded yet — a fresh self-hosted upgrade — and
     // remove it in the same session, as docs/live-trading-consent.md sets out.
-    enforceLiveIntent: (env.MERRYMEN_LIVE_INTENT_STAND_DOWN ?? "").trim() !== "1",
+    enforceLiveIntent: (env.AGENTCAP_LIVE_INTENT_STAND_DOWN ?? "").trim() !== "1",
     // THE ENERGY GATE, from the operator's environment and nowhere else — the
     // same shape as the line above. `file` is never consulted: a tenant must
     // not be able to switch off the throttle they are under, and a key in the
     // file would be exactly that. Off unless the operator says otherwise, and
     // off self-hosted whatever they say. Reaches hosted children through
     // childEnv; it is not a secret, so CHILD_SECRET_STRIP leaves it alone.
-    energyGate: hosted ? energyModeOf(env.MERRYMEN_ENERGY_GATE) : "off",
-    energyExemptAccounts: hosted ? energyExemptAccountsOf(env.MERRYMEN_ENERGY_EXEMPT_ACCOUNTS) : [],
-    paperStartUsdg: num(file.paperStartUsdg, env.MERRYMEN_PAPER_START_USDG, d.paperStartUsdg, 1, 10_000_000),
+    energyGate: hosted ? energyModeOf(env.AGENTCAP_ENERGY_GATE) : "off",
+    energyExemptAccounts: hosted ? energyExemptAccountsOf(env.AGENTCAP_ENERGY_EXEMPT_ACCOUNTS) : [],
+    paperStartUsdg: num(file.paperStartUsdg, env.AGENTCAP_PAPER_START_USDG, d.paperStartUsdg, 1, 10_000_000),
     // Any sane token is a valid strategy name — builtins resolve directly,
     // everything else resolves to strategies/<name>.* (missing file = honest
     // no-trades with the reason in the event feed, decided at tick time).
     strategy: (() => {
-      const v = str(file.strategy, env.MERRYMEN_STRATEGY);
+      const v = str(file.strategy, env.AGENTCAP_STRATEGY);
       return v && /^[A-Za-z0-9_-]{1,64}$/.test(v) ? v : d.strategy;
     })(),
-    swapVenue: oneOf(file.swapVenue, env.MERRYMEN_SWAP_VENUE, ["uniswap", "rialto"], d.swapVenue),
-    slippageBps: num(file.slippageBps, env.MERRYMEN_SLIPPAGE_BPS, d.slippageBps, 1, SLIPPAGE_BPS_MAX),
+    swapVenue: oneOf(file.swapVenue, env.AGENTCAP_SWAP_VENUE, ["uniswap", "rialto"], d.swapVenue),
+    slippageBps: num(file.slippageBps, env.AGENTCAP_SLIPPAGE_BPS, d.slippageBps, 1, SLIPPAGE_BPS_MAX),
     // Floor of 0 is meaningful here: it turns the guard off. Ceiling of 10_000
     // is 100% impact, past which the number stops meaning anything.
-    maxImpactBps: num(file.maxImpactBps, env.MERRYMEN_MAX_IMPACT_BPS, d.maxImpactBps, 0, 10_000),
-    perfFeeBps: num(file.perfFeeBps, env.MERRYMEN_PERF_FEE_BPS, d.perfFeeBps, 0, 5_000),
+    maxImpactBps: num(file.maxImpactBps, env.AGENTCAP_MAX_IMPACT_BPS, d.maxImpactBps, 0, 10_000),
+    perfFeeBps: num(file.perfFeeBps, env.AGENTCAP_PERF_FEE_BPS, d.perfFeeBps, 0, 5_000),
     // Bounded well below the performance fee ceiling: this is charged on every
     // trade regardless of outcome, so the same number means something much
     // larger here. 500 bps of turnover would eat an account in a fortnight.
-    tradeFeeBps: num(file.tradeFeeBps, env.MERRYMEN_TRADE_FEE_BPS, d.tradeFeeBps ?? 50, 0, 500),
-    tradeFeeAddress: str(file.tradeFeeAddress, env.MERRYMEN_TRADE_FEE_ADDRESS),
-    tickSeconds: num(file.tickSeconds, env.MERRYMEN_TICK_SECONDS, d.tickSeconds, 15, MAX_DECISION_INTERVAL_SEC),
+    tradeFeeBps: num(file.tradeFeeBps, env.AGENTCAP_TRADE_FEE_BPS, d.tradeFeeBps ?? 50, 0, 500),
+    tradeFeeAddress: str(file.tradeFeeAddress, env.AGENTCAP_TRADE_FEE_ADDRESS),
+    tickSeconds: num(file.tickSeconds, env.AGENTCAP_TICK_SECONDS, d.tickSeconds, 15, MAX_DECISION_INTERVAL_SEC),
     basketSymbols,
     customTokens,
-    memecoinMinFdvUsd: num(file.memecoinMinFdvUsd, env.MERRYMEN_MEMECOIN_MIN_FDV_USD, d.memecoinMinFdvUsd ?? 0, 0, 1_000_000_000_000),
-    minPoolLiquidityUsdg: num(file.minPoolLiquidityUsdg, env.MERRYMEN_MIN_POOL_LIQUIDITY_USDG, d.minPoolLiquidityUsdg, 0, 100_000_000),
-    maxPriceDivergenceBps: num(file.maxPriceDivergenceBps, env.MERRYMEN_MAX_PRICE_DIVERGENCE_BPS, d.maxPriceDivergenceBps, 10, 10_000),
-    discoveryEnabled: bool(file.discoveryEnabled, env.MERRYMEN_DISCOVERY_ENABLED, d.discoveryEnabled),
-    discoveryIntervalMin: num(file.discoveryIntervalMin, env.MERRYMEN_DISCOVERY_INTERVAL_MIN, d.discoveryIntervalMin, 1, 1440),
-    fomoDataAccess: bool(file.fomoDataAccess, env.MERRYMEN_FOMO_DATA_ACCESS, d.fomoDataAccess ?? true),
-    fomoMonitoringEnabled: bool(file.fomoMonitoringEnabled, env.MERRYMEN_FOMO_MONITORING, d.fomoMonitoringEnabled ?? false),
-    fomoFollowEnabled: bool(file.fomoFollowEnabled, env.MERRYMEN_FOMO_FOLLOW, d.fomoFollowEnabled ?? false),
-    // MERRYMEN_FOMO_API_KEY is the house convention; FOMO_API_KEY is the name
+    memecoinMinFdvUsd: num(file.memecoinMinFdvUsd, env.AGENTCAP_MEMECOIN_MIN_FDV_USD, d.memecoinMinFdvUsd ?? 0, 0, 1_000_000_000_000),
+    minPoolLiquidityUsdg: num(file.minPoolLiquidityUsdg, env.AGENTCAP_MIN_POOL_LIQUIDITY_USDG, d.minPoolLiquidityUsdg, 0, 100_000_000),
+    maxPriceDivergenceBps: num(file.maxPriceDivergenceBps, env.AGENTCAP_MAX_PRICE_DIVERGENCE_BPS, d.maxPriceDivergenceBps, 10, 10_000),
+    discoveryEnabled: bool(file.discoveryEnabled, env.AGENTCAP_DISCOVERY_ENABLED, d.discoveryEnabled),
+    discoveryIntervalMin: num(file.discoveryIntervalMin, env.AGENTCAP_DISCOVERY_INTERVAL_MIN, d.discoveryIntervalMin, 1, 1440),
+    fomoDataAccess: bool(file.fomoDataAccess, env.AGENTCAP_FOMO_DATA_ACCESS, d.fomoDataAccess ?? true),
+    fomoMonitoringEnabled: bool(file.fomoMonitoringEnabled, env.AGENTCAP_FOMO_MONITORING, d.fomoMonitoringEnabled ?? false),
+    fomoFollowEnabled: bool(file.fomoFollowEnabled, env.AGENTCAP_FOMO_FOLLOW, d.fomoFollowEnabled ?? false),
+    // AGENTCAP_FOMO_API_KEY is the house convention; FOMO_API_KEY is the name
     // the provider's own docs use, accepted so an operator following them is
     // not silently unconfigured. Both are stripped from hosted children.
-    fomoApiKey: str(file.fomoApiKey, env.MERRYMEN_FOMO_API_KEY ?? env.FOMO_API_KEY),
-    trencherLiveEnabled: bool(file.trencherLiveEnabled, env.MERRYMEN_TRENCHER_LIVE, d.trencherLiveEnabled),
-    trencherFastEnabled: bool(file.trencherFastEnabled, env.MERRYMEN_TRENCHER_FAST, d.trencherFastEnabled),
-    sponsorGasEnabled: bool(file.sponsorGasEnabled, env.MERRYMEN_SPONSOR_GAS, d.sponsorGasEnabled),
-    sponsorshipPolicyId: str(file.sponsorshipPolicyId, env.MERRYMEN_SPONSORSHIP_POLICY_ID),
-    depositScanEnabled: bool(file.depositScanEnabled, env.MERRYMEN_DEPOSIT_SCAN, d.depositScanEnabled),
-    deskEnabled: bool(file.deskEnabled, env.MERRYMEN_DESK, d.deskEnabled),
-    deskMaxSteps: num(file.deskMaxSteps, env.MERRYMEN_DESK_MAX_STEPS, d.deskMaxSteps, 1, 12),
-    browserUrl: str(file.browserUrl, env.MERRYMEN_BROWSER_URL),
-    browserToken: str(file.browserToken, env.MERRYMEN_BROWSER_TOKEN),
-    brainUrl: str(file.brainUrl, env.MERRYMEN_BRAIN_URL),
-    brainToken: str(file.brainToken, env.MERRYMEN_BRAIN_TOKEN),
-    scoutEnabled: bool(file.scoutEnabled, env.MERRYMEN_SCOUT_ENABLED, d.scoutEnabled),
-    scoutBudgetUsdg: num(file.scoutBudgetUsdg, env.MERRYMEN_SCOUT_BUDGET_USDG, d.scoutBudgetUsdg, 0, 1_000_000),
-    scoutPerTokenUsdg: num(file.scoutPerTokenUsdg, env.MERRYMEN_SCOUT_PER_TOKEN_USDG, d.scoutPerTokenUsdg, 0, 1_000_000),
-    classSnipeEnabled: bool(file.classSnipeEnabled, env.MERRYMEN_CLASS_SNIPE, d.classSnipeEnabled),
-    classPerEntryUsdg: num(file.classPerEntryUsdg, env.MERRYMEN_CLASS_PER_ENTRY_USDG, d.classPerEntryUsdg, 0, 1_000_000),
-    classMaxPositions: num(file.classMaxPositions, env.MERRYMEN_CLASS_MAX_POSITIONS, d.classMaxPositions, 0, 1_000),
-    classMinDepthUsdg: num(file.classMinDepthUsdg, env.MERRYMEN_CLASS_MIN_DEPTH_USDG, d.classMinDepthUsdg, 0, 10_000_000),
+    fomoApiKey: str(file.fomoApiKey, env.AGENTCAP_FOMO_API_KEY ?? env.FOMO_API_KEY),
+    trencherLiveEnabled: bool(file.trencherLiveEnabled, env.AGENTCAP_TRENCHER_LIVE, d.trencherLiveEnabled),
+    trencherFastEnabled: bool(file.trencherFastEnabled, env.AGENTCAP_TRENCHER_FAST, d.trencherFastEnabled),
+    sponsorGasEnabled: bool(file.sponsorGasEnabled, env.AGENTCAP_SPONSOR_GAS, d.sponsorGasEnabled),
+    sponsorshipPolicyId: str(file.sponsorshipPolicyId, env.AGENTCAP_SPONSORSHIP_POLICY_ID),
+    depositScanEnabled: bool(file.depositScanEnabled, env.AGENTCAP_DEPOSIT_SCAN, d.depositScanEnabled),
+    deskEnabled: bool(file.deskEnabled, env.AGENTCAP_DESK, d.deskEnabled),
+    deskMaxSteps: num(file.deskMaxSteps, env.AGENTCAP_DESK_MAX_STEPS, d.deskMaxSteps, 1, 12),
+    browserUrl: str(file.browserUrl, env.AGENTCAP_BROWSER_URL),
+    browserToken: str(file.browserToken, env.AGENTCAP_BROWSER_TOKEN),
+    brainUrl: str(file.brainUrl, env.AGENTCAP_BRAIN_URL),
+    brainToken: str(file.brainToken, env.AGENTCAP_BRAIN_TOKEN),
+    scoutEnabled: bool(file.scoutEnabled, env.AGENTCAP_SCOUT_ENABLED, d.scoutEnabled),
+    scoutBudgetUsdg: num(file.scoutBudgetUsdg, env.AGENTCAP_SCOUT_BUDGET_USDG, d.scoutBudgetUsdg, 0, 1_000_000),
+    scoutPerTokenUsdg: num(file.scoutPerTokenUsdg, env.AGENTCAP_SCOUT_PER_TOKEN_USDG, d.scoutPerTokenUsdg, 0, 1_000_000),
+    classSnipeEnabled: bool(file.classSnipeEnabled, env.AGENTCAP_CLASS_SNIPE, d.classSnipeEnabled),
+    classPerEntryUsdg: num(file.classPerEntryUsdg, env.AGENTCAP_CLASS_PER_ENTRY_USDG, d.classPerEntryUsdg, 0, 1_000_000),
+    classMaxPositions: num(file.classMaxPositions, env.AGENTCAP_CLASS_MAX_POSITIONS, d.classMaxPositions, 0, 1_000),
+    classMinDepthUsdg: num(file.classMinDepthUsdg, env.AGENTCAP_CLASS_MIN_DEPTH_USDG, d.classMinDepthUsdg, 0, 10_000_000),
     // FLOOR OF 60s, not 0. A zero hold window would sell every position on the
     // tick after it opened, turning the route into a fee pump; the exit exists
     // to bound a hold, not to forbid one.
-    classMaxHoldSec: num(file.classMaxHoldSec, env.MERRYMEN_CLASS_MAX_HOLD_SEC, d.classMaxHoldSec, 60, 30 * 86_400),
-    classExitAtGraduationPct: num(file.classExitAtGraduationPct, env.MERRYMEN_CLASS_EXIT_GRAD_PCT, d.classExitAtGraduationPct, 1, 100),
-    officialCoinsEnabled: bool(file.officialCoinsEnabled, env.MERRYMEN_OFFICIAL_COINS, d.officialCoinsEnabled),
+    classMaxHoldSec: num(file.classMaxHoldSec, env.AGENTCAP_CLASS_MAX_HOLD_SEC, d.classMaxHoldSec, 60, 30 * 86_400),
+    classExitAtGraduationPct: num(file.classExitAtGraduationPct, env.AGENTCAP_CLASS_EXIT_GRAD_PCT, d.classExitAtGraduationPct, 1, 100),
+    officialCoinsEnabled: bool(file.officialCoinsEnabled, env.AGENTCAP_OFFICIAL_COINS, d.officialCoinsEnabled),
     // 0 disables it; the ceiling is 100x, past which it is not a take-profit
     // rule, it is a number nobody will ever hit.
-    strategistStopLossBps: num(file.strategistStopLossBps, env.MERRYMEN_STRATEGIST_STOP_LOSS_BPS, d.strategistStopLossBps ?? 0, 0, 10_000),
-    takeProfitBps: num(file.takeProfitBps, env.MERRYMEN_TAKE_PROFIT_BPS, d.takeProfitBps ?? 0, 0, 1_000_000),
-    buyPerTickUsdg: num(file.buyPerTickUsdg, env.MERRYMEN_BUY_PER_TICK_USDG, d.buyPerTickUsdg, 1, 100_000),
-    idleFloorUsdg: num(file.idleFloorUsdg, env.MERRYMEN_IDLE_FLOOR_USDG, d.idleFloorUsdg, 0, 1_000_000),
-    gapEnterBudgetUsdg: num(file.gapEnterBudgetUsdg, env.MERRYMEN_GAP_BUDGET_USDG, d.gapEnterBudgetUsdg, 1, 1_000_000),
-    llmModel: str(file.llmModel, env.MERRYMEN_LLM_MODEL, d.llmModel)!,
-    llmIntervalMin: num(file.llmIntervalMin, env.MERRYMEN_LLM_INTERVAL_MIN, d.llmIntervalMin, 1, 1_440),
-    llmMaxActionUsdg: num(file.llmMaxActionUsdg, env.MERRYMEN_LLM_MAX_ACTION_USDG, d.llmMaxActionUsdg, 1, 100_000),
+    strategistStopLossBps: num(file.strategistStopLossBps, env.AGENTCAP_STRATEGIST_STOP_LOSS_BPS, d.strategistStopLossBps ?? 0, 0, 10_000),
+    takeProfitBps: num(file.takeProfitBps, env.AGENTCAP_TAKE_PROFIT_BPS, d.takeProfitBps ?? 0, 0, 1_000_000),
+    buyPerTickUsdg: num(file.buyPerTickUsdg, env.AGENTCAP_BUY_PER_TICK_USDG, d.buyPerTickUsdg, 1, 100_000),
+    idleFloorUsdg: num(file.idleFloorUsdg, env.AGENTCAP_IDLE_FLOOR_USDG, d.idleFloorUsdg, 0, 1_000_000),
+    gapEnterBudgetUsdg: num(file.gapEnterBudgetUsdg, env.AGENTCAP_GAP_BUDGET_USDG, d.gapEnterBudgetUsdg, 1, 1_000_000),
+    llmModel: str(file.llmModel, env.AGENTCAP_LLM_MODEL, d.llmModel)!,
+    llmIntervalMin: num(file.llmIntervalMin, env.AGENTCAP_LLM_INTERVAL_MIN, d.llmIntervalMin, 1, 1_440),
+    llmMaxActionUsdg: num(file.llmMaxActionUsdg, env.AGENTCAP_LLM_MAX_ACTION_USDG, d.llmMaxActionUsdg, 1, 100_000),
     holderAddress,
-    virtualsApiKey: str(file.virtualsApiKey, env.MERRYMEN_VIRTUALS_API_KEY),
+    virtualsApiKey: str(file.virtualsApiKey, env.AGENTCAP_VIRTUALS_API_KEY),
     bitqueryApiKey: str(file.bitqueryApiKey, env.BITQUERY_API_KEY),
-    merrymenToken: str(file.merrymenToken, env.MERRYMEN_TOKEN),
-    virtualsEnabled: bool(file.virtualsEnabled, env.MERRYMEN_VIRTUALS_ENABLED, d.virtualsEnabled),
-    telegramBotToken: str(file.telegramBotToken, env.MERRYMEN_TELEGRAM_BOT_TOKEN),
-    telegramEnabled: bool(file.telegramEnabled, env.MERRYMEN_TELEGRAM_ENABLED, d.telegramEnabled),
-    telegramControlEnabled: bool(file.telegramControlEnabled, env.MERRYMEN_TELEGRAM_CONTROL, d.telegramControlEnabled),
-    telegramAllowlist: numArray(file.telegramAllowlist, env.MERRYMEN_TELEGRAM_ALLOWLIST, d.telegramAllowlist),
-    telegramMaxActionUsdg: num(file.telegramMaxActionUsdg, env.MERRYMEN_TELEGRAM_MAX_ACTION_USDG, d.telegramMaxActionUsdg, 1, 100_000),
-    telegramTransferEnabled: bool(file.telegramTransferEnabled, env.MERRYMEN_TELEGRAM_TRANSFER, d.telegramTransferEnabled),
-    telegramTransferDailyUsdg: num(file.telegramTransferDailyUsdg, env.MERRYMEN_TELEGRAM_TRANSFER_DAILY_USDG, d.telegramTransferDailyUsdg, 1, 1_000_000),
-    telegramNotifyEnabled: bool(file.telegramNotifyEnabled, env.MERRYMEN_TELEGRAM_NOTIFY, d.telegramNotifyEnabled),
-    telegramNotifyEveryMin: num(file.telegramNotifyEveryMin, env.MERRYMEN_TELEGRAM_NOTIFY_EVERY_MIN, d.telegramNotifyEveryMin, 0, 1440),
-    telegramDigestHour: num(file.telegramDigestHour, env.MERRYMEN_TELEGRAM_DIGEST_HOUR, d.telegramDigestHour, 0, 23),
+    agentcapToken: str(file.agentcapToken, env.AGENTCAP_TOKEN),
+    virtualsEnabled: bool(file.virtualsEnabled, env.AGENTCAP_VIRTUALS_ENABLED, d.virtualsEnabled),
+    telegramBotToken: str(file.telegramBotToken, env.AGENTCAP_TELEGRAM_BOT_TOKEN),
+    telegramEnabled: bool(file.telegramEnabled, env.AGENTCAP_TELEGRAM_ENABLED, d.telegramEnabled),
+    telegramControlEnabled: bool(file.telegramControlEnabled, env.AGENTCAP_TELEGRAM_CONTROL, d.telegramControlEnabled),
+    telegramAllowlist: numArray(file.telegramAllowlist, env.AGENTCAP_TELEGRAM_ALLOWLIST, d.telegramAllowlist),
+    telegramMaxActionUsdg: num(file.telegramMaxActionUsdg, env.AGENTCAP_TELEGRAM_MAX_ACTION_USDG, d.telegramMaxActionUsdg, 1, 100_000),
+    telegramTransferEnabled: bool(file.telegramTransferEnabled, env.AGENTCAP_TELEGRAM_TRANSFER, d.telegramTransferEnabled),
+    telegramTransferDailyUsdg: num(file.telegramTransferDailyUsdg, env.AGENTCAP_TELEGRAM_TRANSFER_DAILY_USDG, d.telegramTransferDailyUsdg, 1, 1_000_000),
+    telegramNotifyEnabled: bool(file.telegramNotifyEnabled, env.AGENTCAP_TELEGRAM_NOTIFY, d.telegramNotifyEnabled),
+    telegramNotifyEveryMin: num(file.telegramNotifyEveryMin, env.AGENTCAP_TELEGRAM_NOTIFY_EVERY_MIN, d.telegramNotifyEveryMin, 0, 1440),
+    telegramDigestHour: num(file.telegramDigestHour, env.AGENTCAP_TELEGRAM_DIGEST_HOUR, d.telegramDigestHour, 0, 23),
     // Telegram groups. NOT forced off hosted, unlike the remote-execution block
     // below: talking in a group runs no shell and moves no money (its model
     // calls have their own daily allowance, docs/tg-groups.md rule 7), and a
     // coin posted there is a nomination the Brain and every trencher limit
     // still judge. A chattiness the resolver does not know (a typo, a level from
     // a newer build) falls back to "normal" rather than to anything louder.
-    telegramGroupsEnabled: bool(file.telegramGroupsEnabled, env.MERRYMEN_TELEGRAM_GROUPS, d.telegramGroupsEnabled),
-    telegramGroupCoinsEnabled: bool(file.telegramGroupCoinsEnabled, env.MERRYMEN_TELEGRAM_GROUP_COINS, d.telegramGroupCoinsEnabled),
-    telegramGroupsChattiness: oneOf(file.telegramGroupsChattiness, env.MERRYMEN_TELEGRAM_GROUPS_CHATTINESS, TELEGRAM_GROUPS_CHATTINESS, d.telegramGroupsChattiness),
+    telegramGroupsEnabled: bool(file.telegramGroupsEnabled, env.AGENTCAP_TELEGRAM_GROUPS, d.telegramGroupsEnabled),
+    telegramGroupCoinsEnabled: bool(file.telegramGroupCoinsEnabled, env.AGENTCAP_TELEGRAM_GROUP_COINS, d.telegramGroupCoinsEnabled),
+    telegramGroupsChattiness: oneOf(file.telegramGroupsChattiness, env.AGENTCAP_TELEGRAM_GROUPS_CHATTINESS, TELEGRAM_GROUPS_CHATTINESS, d.telegramGroupsChattiness),
     // Remote-execution surface — FORCED OFF hosted, regardless of file or env.
     // Self-hosted these mean "a shell / PC control on the owner's own machine";
     // hosted they would mean "a shell on OUR server", with an allowlist the
     // attacker picked. The settings route also refuses to write them, and the
     // agent gate refuses to run them — this is the config-resolution boundary of
     // the same defence, the one that wins even for a value already on disk.
-    telegramPcControlEnabled: hosted ? false : bool(file.telegramPcControlEnabled, env.MERRYMEN_TELEGRAM_PC_CONTROL, d.telegramPcControlEnabled),
-    telegramCapabilities: hosted ? [] : strArray(file.telegramCapabilities, env.MERRYMEN_TELEGRAM_CAPABILITIES, d.telegramCapabilities),
-    telegramFilesRoot: hosted ? undefined : str(file.telegramFilesRoot, env.MERRYMEN_TELEGRAM_FILES_ROOT),
-    telegramShellAllowlist: hosted ? [] : strArray(file.telegramShellAllowlist, env.MERRYMEN_TELEGRAM_SHELL_ALLOWLIST, d.telegramShellAllowlist),
-    telegramAppAllowlist: hosted ? [] : strArray(file.telegramAppAllowlist, env.MERRYMEN_TELEGRAM_APP_ALLOWLIST, d.telegramAppAllowlist),
-    telegramTranscribeKey: str(file.telegramTranscribeKey, env.MERRYMEN_TELEGRAM_TRANSCRIBE_KEY),
-    telegramTranscribeBase: str(file.telegramTranscribeBase, env.MERRYMEN_TELEGRAM_TRANSCRIBE_BASE, d.telegramTranscribeBase)!,
-    telegramAgentEnabled: hosted ? false : bool(file.telegramAgentEnabled, env.MERRYMEN_TELEGRAM_AGENT, d.telegramAgentEnabled),
-    telegramAgentAutoShell: hosted ? false : bool(file.telegramAgentAutoShell, env.MERRYMEN_TELEGRAM_AGENT_AUTOSHELL, d.telegramAgentAutoShell),
-    telegramAgentMaxSteps: num(file.telegramAgentMaxSteps, env.MERRYMEN_TELEGRAM_AGENT_MAX_STEPS, d.telegramAgentMaxSteps, 1, 60),
+    telegramPcControlEnabled: hosted ? false : bool(file.telegramPcControlEnabled, env.AGENTCAP_TELEGRAM_PC_CONTROL, d.telegramPcControlEnabled),
+    telegramCapabilities: hosted ? [] : strArray(file.telegramCapabilities, env.AGENTCAP_TELEGRAM_CAPABILITIES, d.telegramCapabilities),
+    telegramFilesRoot: hosted ? undefined : str(file.telegramFilesRoot, env.AGENTCAP_TELEGRAM_FILES_ROOT),
+    telegramShellAllowlist: hosted ? [] : strArray(file.telegramShellAllowlist, env.AGENTCAP_TELEGRAM_SHELL_ALLOWLIST, d.telegramShellAllowlist),
+    telegramAppAllowlist: hosted ? [] : strArray(file.telegramAppAllowlist, env.AGENTCAP_TELEGRAM_APP_ALLOWLIST, d.telegramAppAllowlist),
+    telegramTranscribeKey: str(file.telegramTranscribeKey, env.AGENTCAP_TELEGRAM_TRANSCRIBE_KEY),
+    telegramTranscribeBase: str(file.telegramTranscribeBase, env.AGENTCAP_TELEGRAM_TRANSCRIBE_BASE, d.telegramTranscribeBase)!,
+    telegramAgentEnabled: hosted ? false : bool(file.telegramAgentEnabled, env.AGENTCAP_TELEGRAM_AGENT, d.telegramAgentEnabled),
+    telegramAgentAutoShell: hosted ? false : bool(file.telegramAgentAutoShell, env.AGENTCAP_TELEGRAM_AGENT_AUTOSHELL, d.telegramAgentAutoShell),
+    telegramAgentMaxSteps: num(file.telegramAgentMaxSteps, env.AGENTCAP_TELEGRAM_AGENT_MAX_STEPS, d.telegramAgentMaxSteps, 1, 60),
     perpsEnabled: bool(file.perpsEnabled, undefined, d.perpsEnabled),
     perpsLiveEnabled,
     perpsLiveConsentStale: liveAsked && !perpsLiveEnabled,
@@ -804,11 +804,11 @@ export function mergeSettings(
     // THE OPERATOR'S THREE, from env ONLY and restrict-only — the energyGate
     // shape: `file` is never consulted, so a tenant can neither lift a ceiling
     // they are under nor halt someone else's entries. They reach hosted
-    // children through childEnv like MERRYMEN_ENERGY_GATE (not secrets, so
+    // children through childEnv like AGENTCAP_ENERGY_GATE (not secrets, so
     // CHILD_SECRET_STRIP leaves them alone).
-    perpsOperatorCeiling: perpsCeilingOf(env.MERRYMEN_PERPS),
-    perpsLiveTenants: perpsLiveTenantsOf(env.MERRYMEN_PERPS_LIVE_TENANTS, hosted),
-    perpsEntriesHalted: perpsEntriesHaltedOf(env.MERRYMEN_HALT_PERP_ENTRIES),
+    perpsOperatorCeiling: perpsCeilingOf(env.AGENTCAP_PERPS),
+    perpsLiveTenants: perpsLiveTenantsOf(env.AGENTCAP_PERPS_LIVE_TENANTS, hosted),
+    perpsEntriesHalted: perpsEntriesHaltedOf(env.AGENTCAP_HALT_PERP_ENTRIES),
     workerWallet,
     // A PERPS WALLET'S WORKER RUNS NO SPOT PRODUCER, whatever its settings file
     // says. The Perps wallet holds the Lighter account and nothing else
@@ -838,7 +838,7 @@ export function mergeSettings(
 
 /** What one read of settings.json found. */
 export type SettingsFileRead =
-  | { kind: "parsed"; settings: MerrymenSettings }
+  | { kind: "parsed"; settings: AgentCapSettings }
   | { kind: "absent" }
   | { kind: "unusable"; why: string };
 
@@ -894,7 +894,7 @@ export function readSettingsFileWithText(file: string): { read: SettingsFileRead
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     return { read: { kind: "unusable", why: "settings.json is not a JSON object" }, text: raw };
   }
-  return { read: { kind: "parsed", settings: parsed as MerrymenSettings }, text: raw };
+  return { read: { kind: "parsed", settings: parsed as AgentCapSettings }, text: raw };
 }
 
 /**
@@ -937,7 +937,7 @@ export interface SettingsProblem {
 
 export interface SettingsSource {
   /** The settings in force: this read's, or the last usable read's when this one is not. */
-  read(): MerrymenSettings;
+  read(): AgentCapSettings;
   problem(): SettingsProblem | null;
 }
 
@@ -960,7 +960,7 @@ export function settingsSource(
   now: () => number = Date.now,
   warn: (line: string) => void = (line) => console.warn(line),
 ): SettingsSource {
-  let lastGood: MerrymenSettings | null = null;
+  let lastGood: AgentCapSettings | null = null;
   let problem: SettingsProblem | null = null;
   return {
     read() {
@@ -989,13 +989,13 @@ export function settingsSource(
 }
 
 /**
- * Keyed by path. MERRYMEN_SETTINGS_FILE is read on every call, and one process
+ * Keyed by path. AGENTCAP_SETTINGS_FILE is read on every call, and one process
  * can be pointed at more than one file (tests do it constantly) — a last good
  * parse of one file must never stand in for another.
  */
 const sources = new Map<string, SettingsSource>();
 function currentSource(): SettingsSource {
-  const file = process.env.MERRYMEN_SETTINGS_FILE ?? homePaths.settings();
+  const file = process.env.AGENTCAP_SETTINGS_FILE ?? homePaths.settings();
   let source = sources.get(file);
   if (!source) {
     source = settingsSource(file);
@@ -1082,8 +1082,8 @@ export function settingsHoldNotice(
  * and self-hosted so does a hand edit with a stray comma; there it is the only
  * copy. Throws instead, and the Telegram command says it failed.
  */
-export function patchSettingsFile(patch: Partial<MerrymenSettings>): MerrymenSettings {
-  const file = process.env.MERRYMEN_SETTINGS_FILE ?? homePaths.settings();
+export function patchSettingsFile(patch: Partial<AgentCapSettings>): AgentCapSettings {
+  const file = process.env.AGENTCAP_SETTINGS_FILE ?? homePaths.settings();
   const read = readSettingsFileAt(file);
   if (read.kind === "unusable") throw new Error(`${read.why} — not overwriting it; fix or remove it first`);
   const current = read.kind === "parsed" ? read.settings : {};

@@ -5,20 +5,20 @@ import { LiveBandDesk } from "@/components/LiveBandDesk";
 import { HeroSignal } from "@/components/HeroSignal";
 import { PUBLIC_LEADERBOARD, readPublicAgents, type PublicAgent } from "@/lib/public-leaderboard";
 
-const GITHUB = "https://github.com/millw14/merrymen";
+const GITHUB = "https://github.com/millw14/agentcap";
 
 /**
  * The hosted product.
  *
- * This page described merrymen for months without ever linking to it. The
+ * This page described agentcap for months without ever linking to it. The
  * primary button went to /docs and the quickstart was `npm install -g`, so the
- * only people who reached app.merrymen.dev were the ones already told the
+ * only people who reached app.agentcap.xyz were the ones already told the
  * subdomain — while the hero copy two lines below says "self-host it or run it
  * hosted", offering exactly one of those.
  */
-const HOSTED_APP = "https://app.merrymen.dev";
+const HOSTED_APP = "https://app.agentcap.xyz";
 /** The MCP server address, as public/llms.txt and /claude give it. */
-const MCP_SERVER = "https://mcp.merrymen.dev/mcp";
+const MCP_SERVER = "https://mcp.agentcap.xyz/mcp";
 
 /**
  * The beta testers' room — an open Telegram invite. Anyone with the link joins,
@@ -37,7 +37,7 @@ const TELEGRAM_BETA = "https://t.me/+oL-7xzghFwA4OTc8";
  * The Windows installer, pinned to an exact asset.
  *
  * Deliberately NOT a link to the releases page. A misnamed release — tagged for
- * the merrymen version it was built against but titled like a desktop version —
+ * the agentcap version it was built against but titled like a desktop version —
  * once sat there offering a pre-security-fix binary; it has been deleted, and
  * the remaining releases are all correctly named. Keep pinning the exact file
  * anyway: this link is right or it is broken, and a broken link is the failure
@@ -50,7 +50,7 @@ const TELEGRAM_BETA = "https://t.me/+oL-7xzghFwA4OTc8";
  */
 const DESKTOP_VERSION = "0.1.7";
 const DESKTOP_SIZE = "147 MB";
-const WINDOWS_DOWNLOAD = `${GITHUB}/releases/download/desktop-v${DESKTOP_VERSION}/merrymen.Setup.${DESKTOP_VERSION}.exe`;
+const WINDOWS_DOWNLOAD = `${GITHUB}/releases/download/desktop-v${DESKTOP_VERSION}/agentcap.Setup.${DESKTOP_VERSION}.exe`;
 
 /**
  * The Android build, and it is NOT the desktop app's equal — do not let the copy
@@ -77,12 +77,12 @@ const WINDOWS_DOWNLOAD = `${GITHUB}/releases/download/desktop-v${DESKTOP_VERSION
 // whole fix on the site's side, because the URL is derived from it.
 const ANDROID_VERSION = "0.1.2";
 const ANDROID_SIZE = "108 MB";
-const ANDROID_DOWNLOAD = `${GITHUB}/releases/download/mobile-v${ANDROID_VERSION}/merrymen-demo-${ANDROID_VERSION}.apk`;
+const ANDROID_DOWNLOAD = `${GITHUB}/releases/download/mobile-v${ANDROID_VERSION}/agentcap-demo-${ANDROID_VERSION}.apk`;
 
 function Wordmark() {
   return (
     <div className="wordmark-wrap" aria-hidden>
-      <div className="wordmark">MERRYMEN</div>
+      <div className="wordmark">AGENTCAP</div>
     </div>
   );
 }
@@ -98,7 +98,7 @@ function Wordmark() {
   that sentence back when the worker keys paper on capability instead.
 */
 const STEPS: [string, string, string][] = [
-  ["1", "Open it and connect a wallet", "No install, nothing to run, no card. Your wallet signs to prove it is you — it never moves anything, and merrymen never sees a private key of yours."],
+  ["1", "Open it and connect a wallet", "No install, nothing to run, no card. Your wallet signs to prove it is you — it never moves anything, and agentcap never sees a private key of yours."],
   ["2", "Sign the wall", "Choose what your agent may spend and how long its key lives, then sign once. That signature IS the limit: your account contract checks it on every operation, so the agent cannot exceed it even if our software is compromised."],
   ["3", "Fund it and it trades", "Send it some money and it starts working the market. Change the limits whenever you like — re-signing is free and instant. Steer it from Telegram if you prefer, or take everything back out with your own key."],
 ];
@@ -129,7 +129,7 @@ export default async function Home() {
           <div className="hero-copy">
             <p className="hero-eyebrow">Trading agents with on-chain limits</p>
             <h1 className="hero-statement">Your agent.<br /><span className="accent">Your rules.</span></h1>
-            <p className="hero-sub">Meet your Merryman. A trading agent you can name, chat with, and put to work — with limits enforced on-chain and an owner key that stays yours.</p>
+            <p className="hero-sub">Meet your AgentCapAvatar. A trading agent you can name, chat with, and put to work — with limits enforced on-chain and an owner key that stays yours.</p>
             <div className="hero-cta">
               <div className="path">
                 <span>For traders</span>
@@ -138,7 +138,7 @@ export default async function Home() {
               </div>
               <div className="path">
                 <span>For developers</span>
-                <Link href="/api" className="btn btn-ghost btn-lg">Build with Merrymen <Icon name="arrow" size={16}/></Link>
+                <Link href="/api" className="btn btn-ghost btn-lg">Build with AgentCap <Icon name="arrow" size={16}/></Link>
               </div>
             </div>
           </div>
@@ -302,20 +302,20 @@ export default async function Home() {
                 {" · "}
                 <a className="link" href="/llms.txt">instructions for AI assistants</a>
                 {" · "}
-                <Link className="link" href="/api">Build with Merrymen</Link>
+                <Link className="link" href="/api">Build with AgentCap</Link>
                 {" · "}
                 <a className="link" href={GITHUB}>GitHub</a>
               </p>
             </div>
           </div>
           <pre className="code" style={{ marginTop: 36 }}>{`# Linux / macOS
-curl -fsSL https://raw.githubusercontent.com/millw14/merrymen/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/millw14/agentcap/main/install.sh | bash
 
 # Windows (PowerShell)
-irm https://raw.githubusercontent.com/millw14/merrymen/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/millw14/agentcap/main/install.ps1 | iex
 
 # already have Node 22.12+ ? (any OS)
-npm install -g merrymen && merrymen start`}</pre>
+npm install -g agentcap && agentcap start`}</pre>
         </div>
       </section>
 
@@ -344,7 +344,7 @@ npm install -g merrymen && merrymen start`}</pre>
           <p className="words-invite" data-reveal="up" style={{ ["--d" as string]: "140ms" }}>
             Riding with the band? Tell us what broke and what sang — the{" "}
             <a href={TELEGRAM_BETA} target="_blank" rel="noreferrer">beta group on Telegram</a>,{" "}
-            <a href="https://x.com/MerrymenAI" target="_blank" rel="noreferrer">@MerrymenAI</a>, or a{" "}
+            <a href="https://x.com/AgentCapAI" target="_blank" rel="noreferrer">@AgentCapAI</a>, or a{" "}
             <a href={GITHUB + "/issues"} target="_blank" rel="noreferrer">GitHub issue</a>. Real words
             from real riders end up here.
           </p>
@@ -355,7 +355,7 @@ npm install -g merrymen && merrymen start`}</pre>
       <section className="cta">
         <div className="wrap">
           <h2 data-reveal="mask">Muster your band.</h2>
-          <p data-reveal="up" style={{ ["--d" as string]: "80ms" }}>Free, open source, and yours. Install it, name your merryman, loose the first arrow.</p>
+          <p data-reveal="up" style={{ ["--d" as string]: "80ms" }}>Free, open source, and yours. Install it, name your agentcapavatar, loose the first arrow.</p>
           <div className="hero-cta" data-reveal="up" style={{ marginTop: 30, ["--d" as string]: "150ms" }}>
             <a href={HOSTED_APP} className="btn btn-primary btn-lg has-box">
               Start trading <span className="box"><Icon name="arrow" size={16} /></span>

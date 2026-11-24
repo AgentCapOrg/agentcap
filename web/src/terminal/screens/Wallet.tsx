@@ -8,7 +8,7 @@ import { stopAgentForReplacement } from "@/lib/stop-agent";
 import { renewalPerpsRefusal, restorePerpsRefusal } from "@/lib/restore-perps-owner";
 import { markPermissionForReplacement, needsPermissionReplacement } from "@/lib/permission-replacement";
 import { loadRecoveryGrants, saveRecoveryGrant, trustedSavedGrant } from "@/lib/saved-grant-binding";
-import { DEFAULT_PERMISSION_DAYS, MAX_USDG_UI, RENEW_EVERY_TIP, RENEW_SOON_DAYS, isWallTooWide } from "@merrymen/core";
+import { DEFAULT_PERMISSION_DAYS, MAX_USDG_UI, RENEW_EVERY_TIP, RENEW_SOON_DAYS, isWallTooWide } from "@agentcap/core";
 import { parseAmount, type AmountField } from "@/lib/parse-amount";
 import { fullDateTime } from "@/lib/format";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -31,7 +31,7 @@ import {
   TRADEABLE_V2,
   uncoveredBasketSymbols,
   type CustomToken,  PONS_SELFTRADE_ABI,
-} from "@merrymen/core";
+} from "@agentcap/core";
 import {
   clearGrant,
   createAgentWallet,
@@ -54,7 +54,7 @@ import {
 } from "@/lib/session";
 import { SignOut } from "../SignOut";
 import { fetchAccountForSession } from "../account-session";
-import { conceptTooltip } from "@merrymen/core";
+import { conceptTooltip } from "@agentcap/core";
 import { V4PermissionLine } from "../V4PermissionLine";
 import { canStart } from "@/lib/can-start";
 import { usePrivyOwner } from "@/terminal/usePrivyOwner";
@@ -223,7 +223,7 @@ function GI({ d, size = 15 }: { d: string; size?: number }) {
 const sameCaps = (a: GrantCaps, b: GrantCaps) =>
   (Object.keys(a) as (keyof GrantCaps)[]).every((k) => a[k] === b[k]);
 
-const BACKUP_KEY = "merrymen.grant.backedup.v1";
+const BACKUP_KEY = "agentcap.grant.backedup.v1";
 const TESTNET = robinhoodTestnet.id; // 46630 — the sandbox
 
 /** Adapter verification uses the canonical allowlist before signing permissions. */
@@ -388,7 +388,7 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
     MAINNET BY DEFAULT, because the old default produced an agent that could
     never trade. preflight.ts classifies a non-4663 grant as a hard BLOCKER for
     a reason that is not a policy choice: every token and router address
-    merrymen knows is a mainnet deployment, so on testnet a balance reads as
+    agentcap knows is a mainnet deployment, so on testnet a balance reads as
     zero and every route is refused. The most common outcome of the old default
     was a user who did everything right and got an agent that does nothing —
     and a new user on a faucet asking "how to do leave testnet?", which is what
@@ -419,7 +419,7 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
   // Whether the SERVER still holds this grant (grant.json). null = still checking.
   // The browser copy and the server file can desync — a kill switch or CLI kill
   // deletes the server file but not this localStorage — so the dashboard shows
-  // "no merryman" while this page would happily show a wallet the worker ignores.
+  // "no agentcapavatar" while this page would happily show a wallet the worker ignores.
   const [serverArmed, setServerArmed] = useState<boolean | null>(null);
   const [accountReadFailed, setAccountReadFailed] = useState(false);
   const [accountReadVersion, setAccountReadVersion] = useState(0);
@@ -532,7 +532,7 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
            * mint the agent left this screen with `grant === null`, so it fell
            * to `restore` — a panel that asks for the owner PRIVATE KEY. For a
            * Privy-owned agent there is no such key to paste: the owner is the
-           * embedded wallet behind their login, and merrymen never holds it.
+           * embedded wallet behind their login, and agentcap never holds it.
            * So the one screen that changes trading limits offered the single
            * thing that account can never do, and re-signing was unreachable
            * from anywhere but the original browser. A tester got out by hand-
@@ -544,7 +544,7 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
            * Privy owner, which travels with the login. All three are in this
            * response already.
            *
-           * NEVER WRITTEN TO localStorage. `merrymen.grant.v1` is the browser's
+           * NEVER WRITTEN TO localStorage. `agentcap.grant.v1` is the browser's
            * own full-fat copy — session key, and on a legacy agent the OWNER
            * key, which is the smart account's sudo validator and is not bound
            * by the wall. `/api/grants` strips all three
@@ -1037,7 +1037,7 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
    *
    * Two owners, one control. A legacy agent re-signs from the owner key in this
    * browser's localStorage; a Privy agent re-signs from the embedded wallet,
-   * which merrymen never holds and never can. Both land in `renewKey` below, so
+   * which agentcap never holds and never can. Both land in `renewKey` below, so
    * there is still exactly ONE signing control with one set of conditions —
    * the thing this file already learned the hard way.
    *
@@ -1311,7 +1311,7 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
         `This wallet still holds ${amt} USDG.\n\n` +
           `Discarding it here does NOT move the funds — they stay in the smart account and can ` +
           `only be reached with THIS wallet's owner key. Back that key up first, or sweep the ` +
-          `funds out now by running:  merrymen recover\n\n` +
+          `funds out now by running:  agentcap recover\n\n` +
           `Discard anyway?`,
       );
       if (!okToDrop) return;
@@ -2075,7 +2075,7 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
                       did not happen, on the screen where being wrong costs the
                       most. */}
                   {isPrivyOwned(grant)
-                    ? "held by your Privy login — merrymen never sees it"
+                    ? "held by your Privy login — agentcap never sees it"
                     : reveal
                       ? (grant.demoOwnerPrivateKey ??
                         "couldn't read your owner key — don't fund this account, and tell us")
@@ -2132,7 +2132,7 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
                 sealed into the signature when you sign it, so neither adding a token nor a new pool
                 appearing can widen it.
                 <br />
-                Your merryman <b>won&apos;t buy {uncoveredNames.length === 1 ? "it" : "them"}</b> until
+                Your agentcapavatar <b>won&apos;t buy {uncoveredNames.length === 1 ? "it" : "them"}</b> until
                 you re-sign — buying something it can&apos;t sell back would leave you holding a
                 position with no way out, and no cap protects you from that.
                 <br />
@@ -2279,7 +2279,7 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
                 </span>
                 <span className="fund-bal-s">
                   {grantIsTestnet
-                    ? "not tracked on the testnet — merrymen only knows the mainnet USDG address"
+                    ? "not tracked on the testnet — agentcap only knows the mainnet USDG address"
                     : usdgFunded
                       ? "funded ✓"
                       : "the agent's trading capital"}
@@ -2312,7 +2312,7 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
               <div className="fund-ready mono">
                 {grantIsTestnet ? (
                   <>
-                    Testnet ETH received. {session?.hosted ? "Open your agent to follow paper trades." : <>Run <code>merrymen start</code> to begin paper trading.</>}
+                    Testnet ETH received. {session?.hosted ? "Open your agent to follow paper trades." : <>Run <code>agentcap start</code> to begin paper trading.</>}
                   </>
                 ) : usdgFunded ? (
                   <>
@@ -2320,7 +2320,7 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
                         per tenant on its own clock. Telling a hosted owner to run a
                         CLI they never installed is the first instruction the product
                         gives them, and it does not apply. */}
-                    Funds received. {session?.hosted ? <>Open your agent.</> : <>Run <code>merrymen start</code> to begin.</>}
+                    Funds received. {session?.hosted ? <>Open your agent.</> : <>Run <code>agentcap start</code> to begin.</>}
                   </>
                 ) : (
                   <>
@@ -2390,7 +2390,7 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
               cannot drift apart into two different explanations of one number.
 
               The tooltips are not decoration. Two of these four caps are
-              enforced by merrymen's own software rather than by the chain, and
+              enforced by agentcap's own software rather than by the chain, and
               the entries say so — which is the single most important thing an
               owner can know about a row that otherwise reads as four equally
               hard guarantees.
@@ -2605,7 +2605,7 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
                     MOVING A KEY BETWEEN CHAINS, as a first-class action.
 
                     Testnet cannot trade anything. Every token and router address
-                    merrymen knows is a mainnet-4663 deployment (preflight.ts's
+                    agentcap knows is a mainnet-4663 deployment (preflight.ts's
                     chain guard says so in as many words), so a grant on 46630 is
                     a rehearsal that can never become a performance. The only way
                     off it was a control labelled "switch to another wallet",
@@ -2746,7 +2746,7 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
                     <>
                       This browser does not hold the owner key for {short(grant.smartAccount)}, and
                       re-signing needs it. Use <b>switch to another wallet</b> below and paste the
-                      key in, or run <code>merrymen recover</code> to sweep the funds somewhere you
+                      key in, or run <code>agentcap recover</code> to sweep the funds somewhere you
                       control.
                     </>
                   )}

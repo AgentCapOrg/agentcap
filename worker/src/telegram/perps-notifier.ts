@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
 import { writeFileAtomicSync } from "../atomic-write";
-import { ensureHome, merrymenHome } from "../home";
+import { ensureHome, agentcapHome } from "../home";
 import { esc, sendMessage } from "./api";
 import { botIdOf, type StateRef } from "./state";
 import { perpsAttention, type TelegramPerpsPort, type TelegramPerpsSnapshot } from "./perps";
@@ -14,7 +14,7 @@ export function startPerpsNotifier(deps: {perps: TelegramPerpsPort; getCfg(): Co
   let stopped = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
   const now = deps.now ?? (() => Math.floor(Date.now() / 1000));
-  const home = deps.home ?? merrymenHome();
+  const home = deps.home ?? agentcapHome();
   const file = join(home, "telegram-perps-notices.json");
   const pass = async () => {
     const cfg = deps.getCfg(), owner = deps.stateRef.get().ownerId;

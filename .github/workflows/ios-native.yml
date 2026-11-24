@@ -52,7 +52,7 @@ jobs:
         working-directory: ios-native
         run: |
           set -o pipefail
-          xcodebuild test -project Merrymen.xcodeproj -scheme Merrymen \
+          xcodebuild test -project AgentCap.xcodeproj -scheme AgentCap \
             -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' \
             -derivedDataPath DerivedData -resultBundlePath TestResults.xcresult \
             CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= | tee build.log
@@ -61,21 +61,21 @@ jobs:
         run: |
           set -o pipefail
           IPAD_ID=$(xcrun simctl list devices available --json | python3 -c 'import sys,json; d=json.load(sys.stdin)["devices"]; print(next(x["udid"] for runtime,devices in d.items() if "iOS-18-5" in runtime for x in devices if x["name"].startswith("iPad")))')
-          xcodebuild test -project Merrymen.xcodeproj -scheme Merrymen \
+          xcodebuild test -project AgentCap.xcodeproj -scheme AgentCap \
             -destination "platform=iOS Simulator,id=$IPAD_ID" \
-            -only-testing:MerrymenUITests/MerrymenUITests/testLargeTextNavigationAndRecovery \
-            -only-testing:MerrymenUITests/MerrymenUITests/testSpanishNavigationUsesSelectedLanguage \
+            -only-testing:AgentCapUITests/AgentCapUITests/testLargeTextNavigationAndRecovery \
+            -only-testing:AgentCapUITests/AgentCapUITests/testSpanishNavigationUsesSelectedLanguage \
             -derivedDataPath DerivedData -resultBundlePath iPadResults.xcresult \
             CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= | tee ipad-build.log
       - name: Build unsigned Release device archive
         working-directory: ios-native
         run: |
           set -o pipefail
-          xcodebuild archive -project Merrymen.xcodeproj -scheme Merrymen -configuration Release \
-            -destination 'generic/platform=iOS' -archivePath Merrymen.xcarchive \
+          xcodebuild archive -project AgentCap.xcodeproj -scheme AgentCap -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath AgentCap.xcarchive \
             -derivedDataPath DerivedData CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO DEVELOPMENT_TEAM= | tee archive.log
-          ditto -c -k --sequesterRsrc --keepParent Merrymen.xcarchive Merrymen-unsigned.xcarchive.zip
-          ditto -c -k --sequesterRsrc --keepParent DerivedData/Build/Products/Debug-iphonesimulator/Merrymen.app Merrymen-simulator.zip
+          ditto -c -k --sequesterRsrc --keepParent AgentCap.xcarchive AgentCap-unsigned.xcarchive.zip
+          ditto -c -k --sequesterRsrc --keepParent DerivedData/Build/Products/Debug-iphonesimulator/AgentCap.app AgentCap-simulator.zip
       - name: Export simulator screenshots
         if: ${{ !cancelled() }}
         timeout-minutes: 2
@@ -115,7 +115,7 @@ jobs:
         with:
           name: native-ios-builds
           path: |
-            ios-native/Merrymen-unsigned.xcarchive.zip
-            ios-native/Merrymen-simulator.zip
+            ios-native/AgentCap-unsigned.xcarchive.zip
+            ios-native/AgentCap-simulator.zip
           if-no-files-found: error
           retention-days: 14

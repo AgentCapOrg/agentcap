@@ -40,7 +40,7 @@ function countingStore() {
 }
 
 async function fixture({ mode = "enforce", plans = SMALL, keys = [key("k1")], forward = async () => ({ status: 200, json: { agents: [] } }), billing: wired = true, ...billingOptions } = {}) {
-  const dir = await mkdtemp(path.join(tmpdir(), "merrymen-metering-"));
+  const dir = await mkdtemp(path.join(tmpdir(), "agentcap-metering-"));
   dirs.push(dir);
   const clock = { t: START };
   const logs = [];
@@ -71,18 +71,18 @@ async function fixture({ mode = "enforce", plans = SMALL, keys = [key("k1")], fo
   return f;
 }
 
-const quota = (r) => Object.fromEntries(Object.entries(r.headers ?? {}).filter(([k]) => k.startsWith("x-merrymen-quota")));
+const quota = (r) => Object.fromEntries(Object.entries(r.headers ?? {}).filter(([k]) => k.startsWith("x-agentcap-quota")));
 
 test("a metered request counts before it is forwarded, carries its quota, and a spent quota is a structured 402 the runtime never sees", async () => {
   const f = await fixture();
   const ok = await f.call("/agents");
   assert.equal(ok.status, 200);
-  assert.deepEqual(quota(ok), { "x-merrymen-quota-limit": "3", "x-merrymen-quota-remaining": "2",
-    "x-merrymen-quota-reset": String(Math.ceil((START - 3_600_000 + PERIOD_MS) / 1000)), "x-merrymen-quota-enforced": "true" });
+  assert.deepEqual(quota(ok), { "x-agentcap-quota-limit": "3", "x-agentcap-quota-remaining": "2",
+    "x-agentcap-quota-reset": String(Math.ceil((START - 3_600_000 + PERIOD_MS) / 1000)), "x-agentcap-quota-enforced": "true" });
   // A partner's own mistake, refused by the runtime or by the gateway, counts.
   f.forward = async () => ({ status: 404, json: { error: { code: "not_found", message: "No such agent" } } });
-  assert.equal(quota(await f.call("/agents/pa_1"))["x-merrymen-quota-remaining"], "1");
-  assert.equal(quota(await f.call("/nope"))["x-merrymen-quota-remaining"], "0");
+  assert.equal(quota(await f.call("/agents/pa_1"))["x-agentcap-quota-remaining"], "1");
+  assert.equal(quota(await f.call("/nope"))["x-agentcap-quota-remaining"], "0");
   assert.equal(f.forwards.length, 2);
 
   const refused = await f.call("/agents");
@@ -91,8 +91,8 @@ test("a metered request counts before it is forwarded, carries its quota, and a 
   const { error } = refused.json;
   assert.match(error.request_id, /^req_[0-9a-f]{12}$/);
   assert.deepEqual(error, { code: "quota_exhausted", message: error.message, request_id: error.request_id, plan: "free", limit: 3, used: 3,
-    resets_at: new Date(START - 3_600_000 + PERIOD_MS).toISOString(), upgrade_url: "https://merrymen.dev/api#plans" });
-  assert.equal(refused.headers["x-merrymen-quota-remaining"], "0");
+    resets_at: new Date(START - 3_600_000 + PERIOD_MS).toISOString(), upgrade_url: "https://agentcap.xyz/api#plans" });
+  assert.equal(refused.headers["x-agentcap-quota-remaining"], "0");
   assert.equal(refused.headers["retry-after"], String(Math.ceil((PERIOD_MS - 3_600_000) / 1000)));
   assert.equal(f.used(), 3, "the 402 itself is not counted");
 
@@ -101,7 +101,7 @@ test("a metered request counts before it is forwarded, carries its quota, and a 
     const meta = await f.call("/meta");
     assert.equal(meta.status, 200);
     assert.equal(meta.json.billing.requests_used, 3);
-    assert.equal(meta.headers["x-merrymen-quota-remaining"], "0");
+    assert.equal(meta.headers["x-agentcap-quota-remaining"], "0");
   }
   assert.equal(f.used(), 3);
 });
@@ -119,7 +119,7 @@ test("a request the platform failed gives its unit back; a relayed Retry-After s
     f.forward = async () => structuredClone(failure);
     const r = await f.call("/agents", { method: "POST" });
     assert.equal(r.status, failure.status);
-    assert.equal(r.headers["x-merrymen-quota-remaining"], "3", failure.json.error.code);
+    assert.equal(r.headers["x-agentcap-quota-remaining"], "3", failure.json.error.code);
   }
   f.forward = async () => { throw new Error("socket hang up"); };
   assert.equal((await f.call("/agents")).json.error.code, "upstream_unavailable");
@@ -127,7 +127,7 @@ test("a request the platform failed gives its unit back; a relayed Retry-After s
   f.forward = async () => structuredClone(busy);
   const r = await f.call("/agents/pa_1/messages", { method: "POST" });
   assert.deepEqual(r.headers, { "retry-after": "2", ...quota(r) });
-  assert.equal(r.headers["x-merrymen-quota-remaining"], "3");
+  assert.equal(r.headers["x-agentcap-quota-remaining"], "3");
   assert.equal(f.used(), 0, "nothing the platform failed was counted");
 
   // No runtime configured at all is the platform's failure too.
@@ -139,7 +139,7 @@ test("a request the platform failed gives its unit back; a relayed Retry-After s
   // A partner's malformed input, refused by the runtime, is theirs and counts.
   f.forward = async () => ({ status: 400, json: { error: { code: "bad_request", message: "x" } } });
   f.rewire();
-  assert.equal((await f.call("/agents", { method: "POST" })).headers["x-merrymen-quota-remaining"], "2");
+  assert.equal((await f.call("/agents", { method: "POST" })).headers["x-agentcap-quota-remaining"], "2");
   assert.equal(f.used(), 1);
 });
 
@@ -262,7 +262,7 @@ test("at a renewal the rate is the plan the renewal makes: a busy paid account i
   assert.equal(await f.raw().then((t) => t.split("\n").filter((l) => l.includes('"type":"charge"')).length), 1, "/meta renewed nothing");
   const r = await f.call("/agents");
   assert.equal(r.status, 200, JSON.stringify(r.json));
-  assert.equal(r.headers["x-merrymen-quota-limit"], "1000000", "counted against the renewed period");
+  assert.equal(r.headers["x-agentcap-quota-limit"], "1000000", "counted against the renewed period");
   const charges = (await f.raw()).split("\n").filter(Boolean).map((l) => JSON.parse(l)).filter((c) => c.type === "charge");
   assert.deepEqual(charges.map((c) => [c.reason, c.tier]), [["activate", "feast"], ["renew", "feast"]]);
   assert.deepEqual([...new Set(f.store.hits.filter((h) => !h.key.startsWith("pip:")).map((h) => h.limit))], [300], "never checked at Free's rate");
@@ -337,7 +337,7 @@ test("a metered request makes the charge a crash left undone; /meta, a 429 and a
   f.rewire();
   const served = await f.call("/agents");
   assert.equal(served.status, 200);
-  assert.equal(served.headers["x-merrymen-quota-limit"], "50000", "counted against the plan the payment bought");
+  assert.equal(served.headers["x-agentcap-quota-limit"], "50000", "counted against the plan the payment bought");
   const charges = (await f.raw()).split("\n").filter(Boolean).map((l) => JSON.parse(l)).filter((r) => r.type === "charge");
   assert.deepEqual(charges.map((c) => [c.reason, c.tier, c.price_raw]), [["activate", "crumbs", T(100_000)]]);
   await f.call("/agents");

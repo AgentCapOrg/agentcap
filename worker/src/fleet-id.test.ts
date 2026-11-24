@@ -68,20 +68,20 @@ describe("unsupportedFleetIdLabel", () => {
 
 describe("fleetIdTarget: an operator variable naming one tenant", () => {
   it("unset or blank names nobody", () => {
-    assert.equal(fleetIdTarget("MERRYMEN_X_FOR", undefined), null);
-    assert.equal(fleetIdTarget("MERRYMEN_X_FOR", "  "), null);
+    assert.equal(fleetIdTarget("AGENTCAP_X_FOR", undefined), null);
+    assert.equal(fleetIdTarget("AGENTCAP_X_FOR", "  "), null);
   });
 
   it("trims and lowercases first, as those variables always did", () => {
-    assert.deepEqual(fleetIdTarget("MERRYMEN_X_FOR", ` ${MIXED} `), { id: MIXED.toLowerCase() });
-    assert.deepEqual(fleetIdTarget("MERRYMEN_X_FOR", `0X${A.slice(2)}`), { id: A }, "lowercased before the check, as before");
+    assert.deepEqual(fleetIdTarget("AGENTCAP_X_FOR", ` ${MIXED} `), { id: MIXED.toLowerCase() });
+    assert.deepEqual(fleetIdTarget("AGENTCAP_X_FOR", `0X${A.slice(2)}`), { id: A }, "lowercased before the check, as before");
   });
 
   it("refuses anything else, naming the variable and never the value", () => {
     for (const raw of [SOL_AGENT, SOL, "0x123", "all"]) {
-      const target = fleetIdTarget("MERRYMEN_X_FOR", raw);
+      const target = fleetIdTarget("AGENTCAP_X_FOR", raw);
       assert.ok(target && "refused" in target, raw);
-      assert.match(target.refused, /^MERRYMEN_X_FOR is not a Robinhood Chain tenant address .*refusing to guess/);
+      assert.match(target.refused, /^AGENTCAP_X_FOR is not a Robinhood Chain tenant address .*refusing to guess/);
       assert.ok(!target.refused.toLowerCase().includes(raw.toLowerCase()), "the value is not echoed");
     }
   });
@@ -89,20 +89,20 @@ describe("fleetIdTarget: an operator variable naming one tenant", () => {
 
 describe("fleetIdScope: an operator variable naming some tenants or accounts", () => {
   it("unset, blank or only commas names nobody, as before", () => {
-    for (const raw of [undefined, "", " ", ",", " , ,"]) assert.deepEqual(fleetIdScope("MERRYMEN_X_ONLY", raw), { ids: new Set() }, String(raw));
+    for (const raw of [undefined, "", " ", ",", " , ,"]) assert.deepEqual(fleetIdScope("AGENTCAP_X_ONLY", raw), { ids: new Set() }, String(raw));
   });
 
   it("names exactly the ids the old filter kept, whenever every entry is an address", () => {
     const raw = ` ${A}, ${MIXED} ,${A},, `;
     const old = new Set(raw.split(",").map((t) => t.trim().toLowerCase()).filter((t) => t.startsWith("0x")));
-    assert.deepEqual(fleetIdScope("MERRYMEN_X_ONLY", raw), { ids: old });
+    assert.deepEqual(fleetIdScope("AGENTCAP_X_ONLY", raw), { ids: old });
   });
 
   it("refuses the whole list on any entry that is not 0x, by position, never echoing it", () => {
     for (const [raw, at] of [[SOL_AGENT, 1], [`${A},${SOL}`, 2], [`${A},,0x123`, 3], [`${A},everyone`, 2]] as const) {
-      const scope = fleetIdScope("MERRYMEN_X_ONLY", raw);
+      const scope = fleetIdScope("AGENTCAP_X_ONLY", raw);
       assert.ok("refused" in scope, raw);
-      assert.match(scope.refused, new RegExp(`^MERRYMEN_X_ONLY entry ${at} is not a Robinhood Chain address .*refusing the whole list`));
+      assert.match(scope.refused, new RegExp(`^AGENTCAP_X_ONLY entry ${at} is not a Robinhood Chain address .*refusing the whole list`));
       assert.ok(!scope.refused.includes(SOL) && !scope.refused.includes("everyone"));
     }
   });
@@ -111,14 +111,14 @@ describe("fleetIdScope: an operator variable naming some tenants or accounts", (
     // The old filter's answer, which every repair read as "no scope given".
     const old = new Set([SOL_AGENT].map((t) => t.trim().toLowerCase()).filter((t) => t.startsWith("0x")));
     assert.equal(old.size, 0);
-    assert.ok("refused" in fleetIdScope("MERRYMEN_REPAIR_HWM_ONLY", SOL_AGENT));
+    assert.ok("refused" in fleetIdScope("AGENTCAP_REPAIR_HWM_ONLY", SOL_AGENT));
   });
 });
 
 describe("every orchestrator read of an operator variable naming tenants goes through the parser", () => {
   const src = readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "orchestrator.ts"), "utf8");
-  const SCOPES = ["MERRYMEN_REPAIR_HWM_ONLY", "MERRYMEN_REPAIR_HWM_PHANTOM_PROFIT", "MERRYMEN_REPAIR_CLASS_PNL_ONLY", "MERRYMEN_REPAIR_CLASS_CASH_ROW_ONLY", "MERRYMEN_REPAIR_ACCOUNT"];
-  const TARGETS = ["MERRYMEN_RESUME_CLASS_ENTRIES_FOR", "MERRYMEN_ENABLE_CLASS_FOR", "MERRYMEN_HALT_CLASS_ENTRIES_FOR", "MERRYMEN_INSPECT_TENANT"];
+  const SCOPES = ["AGENTCAP_REPAIR_HWM_ONLY", "AGENTCAP_REPAIR_HWM_PHANTOM_PROFIT", "AGENTCAP_REPAIR_CLASS_PNL_ONLY", "AGENTCAP_REPAIR_CLASS_CASH_ROW_ONLY", "AGENTCAP_REPAIR_ACCOUNT"];
+  const TARGETS = ["AGENTCAP_RESUME_CLASS_ENTRIES_FOR", "AGENTCAP_ENABLE_CLASS_FOR", "AGENTCAP_HALT_CLASS_ENTRIES_FOR", "AGENTCAP_INSPECT_TENANT"];
 
   for (const [names, parser] of [[SCOPES, "fleetIdScope"], [TARGETS, "fleetIdTarget"]] as const) {
     for (const name of names) {

@@ -25,7 +25,7 @@ describe("/status chain line — you always know which mode the band rides", () 
     // first. The `• mode:` line above carries Paper/Live; this line is the chain.
     assert.match(readStatus(statusCtx(46630)), /testnet 46630 — <b>simulated only<\/b>/);
   });
-  // People fund testnet, see 0, and think merrymen is broken. /status must say why.
+  // People fund testnet, see 0, and think agentcap is broken. /status must say why.
   it("testnet explains that funded balances are neither used nor shown", () => {
     const out = readStatus({ ...statusCtx(46630), paperStartUsdg: 1000 });
     assert.match(out, /not used and not shown/);

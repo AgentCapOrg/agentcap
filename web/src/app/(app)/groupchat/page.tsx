@@ -5,7 +5,7 @@
 // IT STILL HAS TO EXIST. Without it /groupchat works when you tap the entry and
 // 404s on refresh and on every link anybody shares — the one failure a
 // click-through never finds.
-export const metadata = { title: "Group chat — merrymen" };
+export const metadata = { title: "Group chat — agentcap" };
 export default function Page() {
   return null;
 }

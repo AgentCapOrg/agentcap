@@ -1,13 +1,13 @@
 /**
- * Merrymen AI gateway — standalone Node server (Docker / Railway / Fly / a VPS).
+ * AgentCap AI gateway — standalone Node server (Docker / Railway / Fly / a VPS).
  *
  * A long-lived http server that holds the upstream LLM key and exposes an
- * OpenAI-compatible endpoint gated on $MERRYMEN holdings. All the security logic
+ * OpenAI-compatible endpoint gated on $AGENTCAP holdings. All the security logic
  * lives in lib/core.mjs (shared with the Vercel functions in api/); this file is
  * just env wiring + http plumbing over it.
  *
  * SAFETY (enforced in lib/core.mjs):
- *  - Upstream key server-only (MERRYMEN_GATEWAY_UPSTREAM_KEY), never logged/sent.
+ *  - Upstream key server-only (AGENTCAP_GATEWAY_UPSTREAM_KEY), never logged/sent.
  *  - HMAC-signed expiring tokens; access re-checked against a cached on-chain balance.
  *  - Claim uses a single-use, domain-bound nonce (no replay); no wildcard CORS.
  *  - Per-address rate limit + per-IP claim limit + hard completion clamp + body cap.
@@ -27,36 +27,36 @@ import { createBilling, createPaymentsClient, parseBillingConfig } from "./lib/b
 
 // ── config (env) ─────────────────────────────────────────────────────────────
 const PORT = Number(process.env.PORT || 8787);
-const UPSTREAM_URL = process.env.MERRYMEN_GATEWAY_UPSTREAM || "https://api.groq.com/openai/v1/chat/completions";
-const UPSTREAM_KEY = process.env.MERRYMEN_GATEWAY_UPSTREAM_KEY; // REQUIRED — the real key, server-only
-const BITQUERY_KEY = process.env.MERRYMEN_GATEWAY_BITQUERY_KEY; // optional — enables /bitquery for holders
+const UPSTREAM_URL = process.env.AGENTCAP_GATEWAY_UPSTREAM || "https://api.groq.com/openai/v1/chat/completions";
+const UPSTREAM_KEY = process.env.AGENTCAP_GATEWAY_UPSTREAM_KEY; // REQUIRED — the real key, server-only
+const BITQUERY_KEY = process.env.AGENTCAP_GATEWAY_BITQUERY_KEY; // optional — enables /bitquery for holders
 // The fleet-wide daily cap on what that key spends, holders and memescope together (lib/core.mjs).
-const BITQUERY_BUDGET = bitqueryPointsPerDayFrom(process.env.MERRYMEN_GATEWAY_BITQUERY_POINTS_PER_DAY);
+const BITQUERY_BUDGET = bitqueryPointsPerDayFrom(process.env.AGENTCAP_GATEWAY_BITQUERY_POINTS_PER_DAY);
 // FORCED SERVER-SIDE, and it must be a model that still exists. Groq retired
 // the whole Llama 3.x chat line; see packages/core/src/llm-providers.ts for
 // the trace. That fix landed for the groq provider and missed this file, so
-// every completion through the merrymen provider 404'd — chat answered
+// every completion through the agentcap provider 404'd — chat answered
 // nothing and the strategist silently proposed nothing, for weeks.
 // Pinned against SETTINGS_DEFAULTS.groqModel by packages/core/src/gateway-model.test.ts.
-const MODEL = process.env.MERRYMEN_GATEWAY_MODEL || "qwen/qwen3.8-27b";
-const SECRET = process.env.MERRYMEN_GATEWAY_SECRET; // REQUIRED — HMAC token-signing secret (32+ random bytes)
-const RPC = process.env.MERRYMEN_GATEWAY_RPC; // REQUIRED — Robinhood Chain RPC for balanceOf
-const MIN_TOKENS = BigInt(process.env.MERRYMEN_GATEWAY_MIN_TOKENS || "10000"); // whole $MERRYMEN to qualify
-const GATEWAY_DOMAIN = process.env.MERRYMEN_GATEWAY_DOMAIN || "merrymen.dev"; // shown in the signed message
+const MODEL = process.env.AGENTCAP_GATEWAY_MODEL || "qwen/qwen3.8-27b";
+const SECRET = process.env.AGENTCAP_GATEWAY_SECRET; // REQUIRED — HMAC token-signing secret (32+ random bytes)
+const RPC = process.env.AGENTCAP_GATEWAY_RPC; // REQUIRED — Robinhood Chain RPC for balanceOf
+const MIN_TOKENS = BigInt(process.env.AGENTCAP_GATEWAY_MIN_TOKENS || "10000"); // whole $AGENTCAP to qualify
+const GATEWAY_DOMAIN = process.env.AGENTCAP_GATEWAY_DOMAIN || "agentcap.xyz"; // shown in the signed message
 
-// $MERRYMEN — mirrors packages/core/src/token.ts (kept inline; the gateway is standalone).
+// $AGENTCAP — mirrors packages/core/src/token.ts (kept inline; the gateway is standalone).
 const TOKEN_ADDRESS = "0xa15cd06dd305269a0f48bebeb30aa3588fba7b32";
 const CHAIN_ID = 4663;
 const MAX_BODY_BYTES = 256 * 1024; // reject oversized chat payloads
 
-for (const [k, v] of Object.entries({ MERRYMEN_GATEWAY_UPSTREAM_KEY: UPSTREAM_KEY, MERRYMEN_GATEWAY_SECRET: SECRET, MERRYMEN_GATEWAY_RPC: RPC })) {
+for (const [k, v] of Object.entries({ AGENTCAP_GATEWAY_UPSTREAM_KEY: UPSTREAM_KEY, AGENTCAP_GATEWAY_SECRET: SECRET, AGENTCAP_GATEWAY_RPC: RPC })) {
   if (!v) {
     console.error(`[gateway] refusing to start: ${k} is not set (see .env.example).`);
     process.exit(1);
   }
 }
 if (Buffer.byteLength(SECRET, "utf8") < 32) {
-  console.error("[gateway] refusing to start: MERRYMEN_GATEWAY_SECRET is too short — use 32+ random bytes (see .env.example).");
+  console.error("[gateway] refusing to start: AGENTCAP_GATEWAY_SECRET is too short — use 32+ random bytes (see .env.example).");
   process.exit(1);
 }
 
@@ -111,7 +111,7 @@ function readBody(req) {
 }
 
 // CORS is OFF by default and stays off. The claim page is same-origin and the
-// merrymen client is a server-side (Node) caller exempt from CORS, so no route
+// agentcap client is a server-side (Node) caller exempt from CORS, so no route
 // needs ACAO to work — while withholding it is what stops a phishing page from
 // minting a token in a victim's browser and reading it back.
 //
@@ -130,8 +130,8 @@ function readBody(req) {
  * Named origins only, and the browser enforces it.
  */
 const SIGNUP_ORIGINS = new Set([
-  "https://merrymen.dev",
-  "https://www.merrymen.dev",
+  "https://agentcap.xyz",
+  "https://www.agentcap.xyz",
   "http://localhost:3000",
   "http://localhost:3999",
 ]);
@@ -166,12 +166,12 @@ function respond(res, r) {
 // ── the partner API ─────────────────────────────────────────────────────────
 //
 // A SECOND credential system on the same host, sharing only the rate-limit
-// store. It reuses MERRYMEN_GATEWAY_SECRET as an HMAC PEPPER over per-key
+// store. It reuses AGENTCAP_GATEWAY_SECRET as an HMAC PEPPER over per-key
 // secrets rather than as the key material itself, so revoking one partner does
 // not invalidate every holder token at the same time.
 //
-// BILLING: MERRYMEN-paid plans for that API (lib/billing.mjs). OFF unless every
-// requirement holds, an explicit MERRYMEN_DATA_DIR on a persistent volume among
+// BILLING: AGENTCAP-paid plans for that API (lib/billing.mjs). OFF unless every
+// requirement holds, an explicit AGENTCAP_DATA_DIR on a persistent volume among
 // them; each reason it is not on is a [billing] line here at boot. Its ledger
 // is the only record of who paid, so it is built ONCE and shared by the
 // partner gate (metering) and the developer API (accounts, plans, payments): a
@@ -189,7 +189,7 @@ const billing = await createBilling({ ...billingConfig,
   const on = billing.mode !== "off";
   const degraded = billing.mode !== billingConfig.requested || (on && !billing.paymentsReady) || !!billing.blocked;
   (degraded ? console.error : console.log)(`[gateway] partner billing: ${billing.mode}`
-    + (billing.mode !== billingConfig.requested ? ` (MERRYMEN_BILLING=${asked}; see the [billing] lines above)` : "")
+    + (billing.mode !== billingConfig.requested ? ` (AGENTCAP_BILLING=${asked}; see the [billing] lines above)` : "")
     + (!on ? ", nothing is metered"
       : `, ${billing.enforced ? "quotas enforced" : "metered, no quota refused, each key at its own rate or its plan's if higher"}; payments ${billing.paymentsReady ? `to ${billingConfig.treasury}` : "UNAVAILABLE"}`)
     + (billing.blocked ? `; ledger writes REFUSED (${billing.blocked})` : ""));
@@ -197,13 +197,13 @@ const billing = await createBilling({ ...billingConfig,
 
 const partners = createPartners({ secret: SECRET });
 const partnerApi = createPartnerApi({ partners, store, billing,
-  forward: createPartnerBridge({ secret: process.env.MERRYMEN_PARTNER_BRIDGE_SECRET,
-    origin: process.env.MERRYMEN_PARTNER_APP_ORIGIN || "https://app.merrymen.dev" }),
+  forward: createPartnerBridge({ secret: process.env.AGENTCAP_PARTNER_BRIDGE_SECRET,
+    origin: process.env.AGENTCAP_PARTNER_APP_ORIGIN || "https://app.agentcap.xyz" }),
 });
 // No chain client for sign-in, deliberately: developer sign-in is checked
 // locally, so no RPC can vouch for a signature (see refusal() in
 // lib/developer-api.mjs). Billing's client checks payment transfers and nothing else.
-const developerApi = createDeveloperApi({ portalSecret: process.env.MERRYMEN_DEVELOPER_PORTAL_SECRET,
+const developerApi = createDeveloperApi({ portalSecret: process.env.AGENTCAP_DEVELOPER_PORTAL_SECRET,
   gatewaySecret: SECRET, partners, partnerApi, store, billing });
 
 const server = createServer(async (req, res) => {
@@ -236,7 +236,7 @@ const server = createServer(async (req, res) => {
     if (req.method === "GET" && (pathname === "/" || pathname === "/claim")) return respond(res, gw.serveClaimPage(CLAIM_HTML));
     if (req.method === "GET" && pathname === "/nonce") return respond(res, await gw.nonce({ address: url.searchParams.get("address"), ip }));
     // The list every OpenAI-compatible client asks for before it will show a
-    // model picker. Without it the catch-all below answered 404 and merrymen's
+    // model picker. Without it the catch-all below answered 404 and agentcap's
     // own settings page blamed the user's key.
     if (req.method === "GET" && (pathname === "/v1/models" || pathname === "/models")) return respond(res, gw.models());
 
@@ -367,7 +367,7 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`[gateway] Merrymen AI listening on :${PORT} — model forced to "${MODEL}", min hold ${MIN_TOKENS} $MERRYMEN`);
+  console.log(`[gateway] AgentCap AI listening on :${PORT} — model forced to "${MODEL}", min hold ${MIN_TOKENS} $AGENTCAP`);
   console.log(
     `[gateway] discovery: ${BITQUERY_KEY ? `Bitquery ON (named queries only, ${BITQUERY_BUDGET.points} points/UTC day across holders and the memescope)` : "Bitquery OFF (no key set)"}`,
   );
@@ -377,7 +377,7 @@ server.listen(PORT, () => {
   if (!hasRedis) console.log("[gateway] state store: in-memory (fine for a single process; set KV_REST_API_URL/TOKEN for multi-instance).");
   // Optional services, so not fatal, but say so at boot: otherwise the first
   // sign of a missing secret is a partner's or developer's 503.
-  for (const [name, routes] of [["MERRYMEN_PARTNER_BRIDGE_SECRET", "partner agent routes"], ["MERRYMEN_DEVELOPER_PORTAL_SECRET", "developer portal routes"]]) {
+  for (const [name, routes] of [["AGENTCAP_PARTNER_BRIDGE_SECRET", "partner agent routes"], ["AGENTCAP_DEVELOPER_PORTAL_SECRET", "developer portal routes"]]) {
     if (Buffer.byteLength(process.env[name] || "") < 32) console.error(`[gateway] ${name} is unset or under 32 bytes: ${routes} will answer 503.`);
   }
 });

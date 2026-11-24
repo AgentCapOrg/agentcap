@@ -198,7 +198,7 @@ describe("the fleet sweep", () => {
  * trade and deriving a peak too high by every purchase.
  */
 describe("energy purchases in the fleet sweep", () => {
-  const MERRYMEN = "0xa15cd06dd305269a0f48bebeb30aa3588fba7b32";
+  const AGENTCAP = "0xa15cd06dd305269a0f48bebeb30aa3588fba7b32";
   const VIRTUAL = "0xc6911796042b15d7fa4f6cde69e245ddcd3d9c31";
   const PAIR_A = "0x00000000000000000000000000000000000000b1";
   const PAIR_B = "0x00000000000000000000000000000000000000b2";
@@ -210,8 +210,8 @@ describe("energy purchases in the fleet sweep", () => {
   const RECEIPT = [
     USDG_OUT,
     other(VIRTUAL, PAIR_A, PAIR_B, 9n * 10n ** 19n, 6),
-    other(MERRYMEN, PAIR_B, MERRYMEN, 2n * 10n ** 21n, 7),
-    other(MERRYMEN, PAIR_B, ACCT, 98n * 10n ** 21n, 8),
+    other(AGENTCAP, PAIR_B, AGENTCAP, 2n * 10n ** 21n, 7),
+    other(AGENTCAP, PAIR_B, ACCT, 98n * 10n ** 21n, 8),
   ];
   const rpc: RpcCall = async (method, params) => {
     if (method === "eth_getTransactionReceipt") {
@@ -230,7 +230,7 @@ describe("energy purchases in the fleet sweep", () => {
     scanFleetCapital(rpc, { accounts: [ACCT], usdgToken: USDG, fromBlock: 0n, toBlock: 5_000_000n, reserveTokens });
 
   it("with the reserve named, the purchase is reserve-out and totalled as such", async () => {
-    const cap = (await sweep([MERRYMEN])).get(ACCT)!;
+    const cap = (await sweep([AGENTCAP])).get(ACCT)!;
     const m = cap.movements.find((x) => x.txHash === "0xenergy")!;
     assert.equal(m.classification.kind, "reserve-out");
     assert.equal(m.classification.evidence.rule, "reserve-purchase");

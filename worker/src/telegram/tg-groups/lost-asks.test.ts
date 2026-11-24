@@ -48,7 +48,7 @@ const CHAT = -1009876543210;
 const MILLA = 424242;
 const BOB = 515151;
 const TOKEN = "123456:SECRET-TOKEN-XYZ";
-const BOT: BotSelf = { id: 999999, username: "Merrymanme_bot", name: "Shogun" };
+const BOT: BotSelf = { id: 999999, username: "AgentCapAvatarme_bot", name: "Shogun" };
 const CA = "0xabab00000000000000000000000000000000c0de";
 
 class FakeTg {
@@ -227,10 +227,10 @@ beforeEach(() => {
   desk = new CtlDesk();
   tstate = { ownerId: MILLA } as unknown as TelegramState;
   envVars = {
-    MERRYMEN_TG_GROUPS_LLM_KEY: "k-test",
-    MERRYMEN_TG_GROUPS_LLM_PROVIDER: "openai",
-    MERRYMEN_TG_GROUPS_LLM_BASE_URL: "https://llm.test/v1",
-    MERRYMEN_TG_GROUPS_MODEL: "fake",
+    AGENTCAP_TG_GROUPS_LLM_KEY: "k-test",
+    AGENTCAP_TG_GROUPS_LLM_PROVIDER: "openai",
+    AGENTCAP_TG_GROUPS_LLM_BASE_URL: "https://llm.test/v1",
+    AGENTCAP_TG_GROUPS_MODEL: "fake",
   };
   picks = [];
   routePrompts = [];

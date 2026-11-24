@@ -1,9 +1,9 @@
 /**
  * The brokerage columns and book, proven against a REAL sqlite file (a
- * throwaway MERRYMEN_HOME) — the same discipline as the decisions substrate
+ * throwaway AGENTCAP_HOME) — the same discipline as the decisions substrate
  * test, because a schema claim that never touched SQLite is a guess.
  *
- * MERRYMEN_HOME is set before any store import runs getDb(); node's --test
+ * AGENTCAP_HOME is set before any store import runs getDb(); node's --test
  * runs each file in its own process, so the override never leaks.
  */
 import assert from "node:assert/strict";
@@ -12,8 +12,8 @@ import { mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-brk-"));
-process.env.MERRYMEN_HOME = HOME;
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-brk-"));
+process.env.AGENTCAP_HOME = HOME;
 
 const { closeStoreForTest, initStore, addTrade, getRealizedPnlUsdg, getSpentTodayUsdg, getOpsToday, getBasis, setBasis } =
   await import("./store");

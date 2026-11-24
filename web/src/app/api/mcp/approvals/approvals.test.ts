@@ -12,8 +12,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, before, test } from "node:test";
 import type { PublicClient } from "viem";
-import { STOCK_TOKENS } from "@merrymen/core";
-import { getSettingsStore, resetSettingsStoreForTest } from "@merrymen/settings-store";
+import { STOCK_TOKENS } from "@agentcap/core";
+import { getSettingsStore, resetSettingsStoreForTest } from "@agentcap/settings-store";
 import { mintSession } from "@/lib/auth";
 import { setQuoteClientForTest } from "@/lib/services/trade-quote";
 import { APPROVED_STALE_SEC, createProposal } from "@/lib/services/proposals";
@@ -27,13 +27,13 @@ import { POST as connectionsPost } from "../connections/route";
 const NVDA = STOCK_TOKENS.find((t) => t.symbol === "NVDA")!.address.toLowerCase();
 
 before(() => {
-  process.env.MERRYMEN_HOSTED = "1";
+  process.env.AGENTCAP_HOSTED = "1";
   process.env.DATABASE_URL = "postgres://unused-in-tests";
-  process.env.MERRYMEN_PUBLIC_ORIGIN = "https://app.test";
-  process.env.MERRYMEN_SESSION_SECRET = "s".repeat(48);
+  process.env.AGENTCAP_PUBLIC_ORIGIN = "https://app.test";
+  process.env.AGENTCAP_SESSION_SECRET = "s".repeat(48);
   // The house's fallback owner-order ceiling (resolveConfig): the shipped default, whatever this machine's settings file says.
-  process.env.MERRYMEN_SETTINGS_FILE = join(tmpdir(), `merrymen-no-settings-${randomBytes(6).toString("hex")}.json`);
-  delete process.env.MERRYMEN_TELEGRAM_MAX_ACTION_USDG;
+  process.env.AGENTCAP_SETTINGS_FILE = join(tmpdir(), `agentcap-no-settings-${randomBytes(6).toString("hex")}.json`);
+  delete process.env.AGENTCAP_TELEGRAM_MAX_ACTION_USDG;
 });
 
 let restore: (() => void) | null = null;
@@ -215,9 +215,9 @@ test("a draft for an owner with no signed permission says it applies to nothing 
 
 const noCreatedAgent = () => fixtureDirectory({ [OWNER_A]: [] });
 
-test("new Merryman approval reviews setup without writing settings, a grant or an order", async () => {
+test("new AgentCapAvatar approval reviews setup without writing settings, a grant or an order", async () => {
   const { d, settings, run, a } = await base({ directory: noCreatedAgent(), settings: { agentName: "Kept", strategy: "steady-basket" }, scopes: ["drafts:write"] });
-  const { id, hash } = await run("create_merryman", { name: "Robin", strategy: "trencher", idempotency_key: "new-approval-01" });
+  const { id, hash } = await run("create_agentcapavatar", { name: "Robin", strategy: "trencher", idempotency_key: "new-approval-01" });
   assert.equal((await GET(req(id, { method: "GET", owner: OWNER_B }), params(id))).status, 404);
   assert.equal((await POST(req(id, { owner: null, body: { decision: "approve", hash } }), params(id))).status, 401);
   assert.equal((await POST(req(id, { body: { decision: "approve", hash: "a".repeat(64) } }), params(id))).status, 409);
@@ -238,11 +238,11 @@ test("new Merryman approval reviews setup without writing settings, a grant or a
 
 test("creation approval refuses an agent created after the proposal, and a failed grant read", async () => {
   const { d, run } = await base({ directory: noCreatedAgent(), scopes: ["drafts:write"] });
-  const { id, hash } = await run("create_merryman", { idempotency_key: "new-raced-01" });
+  const { id, hash } = await run("create_agentcapavatar", { idempotency_key: "new-raced-01" });
   d.raw.prepare("INSERT INTO grants VALUES (?, 4663, '{}', 'not-read', 1)").run(OWNER_A);
   let res = await POST(req(id, { body: { decision: "approve", hash } }), params(id));
   assert.equal(res.status, 409);
-  assert.match((await res.json() as { error_description: string }).error_description, /already have a Merryman/);
+  assert.match((await res.json() as { error_description: string }).error_description, /already have a AgentCapAvatar/);
   assert.equal(statusOf(d, id), "awaiting_approval");
   d.raw.exec("DROP TABLE grants");
   res = await POST(req(id, { body: { decision: "approve", hash } }), params(id));
@@ -253,7 +253,7 @@ test("creation approval refuses an agent created after the proposal, and a faile
 
 test("approved creation hydration refuses a revoked connection and expires after its original deadline", async () => {
   const { d, run, a } = await base({ directory: noCreatedAgent(), scopes: ["drafts:write"] });
-  const { id, hash } = await run("create_merryman", { idempotency_key: "new-revoked-01" });
+  const { id, hash } = await run("create_agentcapavatar", { idempotency_key: "new-revoked-01" });
   assert.equal((await POST(req(id, { body: { decision: "approve", hash } }), params(id))).status, 200);
   d.raw.prepare("UPDATE mcp_connections SET status = 'revoked' WHERE id = ?").run(a.principal.connectionId);
   assert.equal((await GET(req(id, { method: "GET" }), params(id))).status, 403);
@@ -264,7 +264,7 @@ test("approved creation hydration refuses a revoked connection and expires after
 
 test("interrupted creation review resumes without probing or writing settings", async () => {
   const { d, settings, run } = await base({ directory: noCreatedAgent(), settings: { agentName: "Kept" }, scopes: ["drafts:write"] });
-  const { id } = await run("create_merryman", { name: "Robin", idempotency_key: "new-resume-01" });
+  const { id } = await run("create_agentcapavatar", { name: "Robin", idempotency_key: "new-resume-01" });
   d.raw.prepare("UPDATE mcp_proposals SET status = 'approved', decided_at = ? WHERE id = ?").run(Math.floor(Date.now() / 1000) - APPROVED_STALE_SEC - 1, id);
   const res = await GET(req(id, { method: "GET" }), params(id));
   assert.equal(res.status, 200);
@@ -386,11 +386,11 @@ test("the approval page cancels, and says why, a proposal whose app no longer ho
 // ── every chat-settable key reaches the store (C2) ──────────────────────────
 
 test("an approved classExitAtGraduationPct change is saved and reported applied, never applied-but-ignored (C2)", async () => {
-  const home = mkdtempSync(join(tmpdir(), "merrymen-approvals-settings-"));
-  const saved = { home: process.env.MERRYMEN_HOME, db: process.env.DATABASE_URL };
+  const home = mkdtempSync(join(tmpdir(), "agentcap-approvals-settings-"));
+  const saved = { home: process.env.AGENTCAP_HOME, db: process.env.DATABASE_URL };
   // The settings route writes the per-tenant store: a file store here, cached
   // before DATABASE_URL (which MCP needs to be enabled) is put back.
-  process.env.MERRYMEN_HOME = home;
+  process.env.AGENTCAP_HOME = home;
   delete process.env.DATABASE_URL;
   resetSettingsStoreForTest();
   getSettingsStore("spot");
@@ -407,8 +407,8 @@ test("an approved classExitAtGraduationPct change is saved and reported applied,
     assert.equal(((await getSettingsStore("spot").get(OWNER_A)) as unknown as Record<string, unknown>).classExitAtGraduationPct, 50);
   } finally {
     resetSettingsStoreForTest();
-    if (saved.home === undefined) delete process.env.MERRYMEN_HOME;
-    else process.env.MERRYMEN_HOME = saved.home;
+    if (saved.home === undefined) delete process.env.AGENTCAP_HOME;
+    else process.env.AGENTCAP_HOME = saved.home;
     rmSync(home, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
 });

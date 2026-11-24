@@ -1,5 +1,5 @@
 import SwiftUI
-import MerrymenPolicy
+import AgentCapPolicy
 
 /// Resolution is read-only. The existing TradeScreen owns the sole order POST,
 /// durable submission record, confirmation and receipt reconciliation.
@@ -54,10 +54,10 @@ struct SnipeScreen: View {
                             NavigationLink("Review buy order", value: Route.tradeRequest(result["target"]["symbol"].text, "buy", resolvedAmount, result["target"]["address"].string))
                         }
                     case "energy":
-                        // $MERRYMEN is the agent's energy, never a snipe: the
+                        // $AGENTCAP is the agent's energy, never a snipe: the
                         // server says how to top it up, and nothing is placed.
                         Card {
-                            Text("$MERRYMEN is your agent's energy").font(.headline)
+                            Text("$AGENTCAP is your agent's energy").font(.headline)
                             Text(result["say"].text)
                             Text("No order has been placed.").foregroundStyle(.secondary)
                         }

@@ -4,7 +4,7 @@
  *
  * The kill turns the Perps home's `perpsEnabled` off in the same file the
  * settings PUT replaces whole, under a short cross-process file lock: here
- * (turnOffLocalPaperPerps) and from another one (`merrymen kill`, a
+ * (turnOffLocalPaperPerps) and from another one (`agentcap kill`, a
  * self-hosted Telegram /kill). The save reads the file, judges its body, and
  * hands this the text it read; a write that landed in between must make it
  * write nothing and say so, or the save puts its stale blob back over the

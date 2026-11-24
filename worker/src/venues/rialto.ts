@@ -1,7 +1,7 @@
 /**
  * Rialto — the meta-router venue. API-first: GET /quote returns a ready-to-send
  * transaction targeting the CURRENT RialtoRouter. Two hard rules from the
- * verification notes in @merrymen/core:
+ * verification notes in @agentcap/core:
  *
  *   1. NEVER build router calldata by hand — the quote API is the only source.
  *   2. NEVER trust the API's target address — resolve the router from the
@@ -9,7 +9,7 @@
  *      `to` differs. An attacker-controlled or buggy API response must not be
  *      able to point the agent's approval at an arbitrary contract.
  *
- * Gated on MERRYMEN_RIALTO_API_KEY (integrator onboarding is wallet-signed and
+ * Gated on AGENTCAP_RIALTO_API_KEY (integrator onboarding is wallet-signed and
  * user-performed). Without the key, the venue stays approval-only.
  */
 
@@ -122,7 +122,7 @@ export interface RialtoClientOpts {
 /**
  * Fetch and validate a swap quote. `taker` is the smart account executing it.
  * Header name for the key is unconfirmed pending onboarding docs — override
- * with MERRYMEN_RIALTO_API_KEY_HEADER if their integration guide differs.
+ * with AGENTCAP_RIALTO_API_KEY_HEADER if their integration guide differs.
  */
 export async function fetchRialtoQuote(
   opts: RialtoClientOpts,
@@ -136,7 +136,7 @@ export async function fetchRialtoQuote(
 ): Promise<{ quote: RialtoQuote | null; reason?: string }> {
   const base = opts.apiBase ?? RIALTO.apiBase;
   const fetchFn = opts.fetchFn ?? (fetch as unknown as FetchLike);
-  const headerName = opts.headerName ?? process.env.MERRYMEN_RIALTO_API_KEY_HEADER ?? "x-api-key";
+  const headerName = opts.headerName ?? process.env.AGENTCAP_RIALTO_API_KEY_HEADER ?? "x-api-key";
 
   const url =
     `${base}/quote?sellToken=${args.sellToken}&buyToken=${args.buyToken}` +

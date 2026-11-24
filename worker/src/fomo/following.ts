@@ -4,7 +4,7 @@
  *
  * A trader buying a coin is a reason to investigate, not an instruction to
  * buy. This module turns the investigation into a research STATE and, for
- * the narrow case where Merrymen could act, into a HINT for the path that
+ * the narrow case where AgentCap could act, into a HINT for the path that
  * already exists: a nomination with a priority and a per-entry ceiling for
  * the Trencher review, or a sooner review of a coin already held. It never
  * produces an order, never builds calldata and never sizes from a provider
@@ -14,7 +14,7 @@
  *
  * ── THE STATES, WORST FIRST ──────────────────────────────────────────────
  *
- *   RESEARCH_ONLY    Merrymen cannot or may not act (unsupported chain, no
+ *   RESEARCH_ONLY    AgentCap cannot or may not act (unsupported chain, no
  *                    verified route, follow off, permission missing, the
  *                    rail refuses). The research is still produced, and the
  *                    state it WOULD have reached is kept as `would-be:<state>`
@@ -83,7 +83,7 @@ export interface FollowPermissions {
   grantCoversToken: boolean;
 }
 
-/** Merrymen's OWN quote, never a provider price. */
+/** AgentCap's OWN quote, never a provider price. */
 export interface FollowQuote {
   price8: bigint;
   at: number;
@@ -290,7 +290,7 @@ function cleanLabel(l: TokenLabel | null | undefined): TokenLabel {
   return { symbol: sanitizeText(l?.symbol, 32) || null, name: sanitizeText(l?.name, 64) || null };
 }
 
-/** Why Merrymen may not act on this at all, independent of how good the setup is. */
+/** Why AgentCap may not act on this at all, independent of how good the setup is. */
 function researchOnlyReasons(i: FollowInput): string[] {
   const out: string[] = [];
   if (i.availability !== "supported-authorized") out.push(`execution:${i.availability}`);
@@ -575,7 +575,7 @@ const DECIMAL = /^[1-9]\d{0,17}$/;
 
 /**
  * WHAT THE EXISTING PATH MAY BE TOLD — and only for a Robinhood token
- * Merrymen is authorised on. Everything else is `none`.
+ * AgentCap is authorised on. Everything else is `none`.
  *
  * ADD_CANDIDATE is `none` on purpose: Trencher v1 does not add to an open
  * position (trencher.ts drops a held symbol from the entry loop, and the

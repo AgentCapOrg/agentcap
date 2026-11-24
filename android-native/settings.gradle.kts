@@ -13,5 +13,5 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "merrymen"
+rootProject.name = "agentcap"
 include(":app")

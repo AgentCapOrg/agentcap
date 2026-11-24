@@ -1,5 +1,5 @@
 /**
- * WHEN A MERRYMAN POSTS ON X — the cadence of docs/x-posting.md "What gets
+ * WHEN A AGENTCAPAVATAR POSTS ON X — the cadence of docs/x-posting.md "What gets
  * posted, and when", as pure decisions.
  *
  * PURE, AND THE CLOCK IS INJECTED. No Date.now, no database, no model: the
@@ -169,7 +169,7 @@ export const DEFAULT_PER_DAY = 3;
  * HOW OFTEN ONE ACCOUNT POSTS. STANDARD_CADENCE is every owner's: three a day,
  * three hours apart, two trade posts and one casual afternoon post on most
  * days. ACTIVE_CADENCE is the operator's opt-in for named owners
- * (MERRYMEN_XPOST_ACTIVE_TENANTS): about ten a day, seventy-five minutes
+ * (AGENTCAP_XPOST_ACTIVE_TENANTS): about ten a day, seventy-five minutes
  * apart, every buy posted, casual posts spread over the waking day and mostly about how it
  * trades. It never lifts the owner's own smaller choice, the fleet's day
  * ceiling, the model allowance, the review window, the night, or the gate.

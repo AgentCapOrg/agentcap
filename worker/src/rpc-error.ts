@@ -1,7 +1,7 @@
 /**
  * WHAT WENT WRONG, AND WHOSE FAULT IT IS.
  *
- * merrymen's whole doctrine is that "we could not read" must never render as
+ * agentcap's whole doctrine is that "we could not read" must never render as
  * "there is nothing there". Every module that gets this right — `delivery.ts`
  * on a balance, `read-candles.ts` on a chart, `recover.ts` on a token, the
  * three-way policy-contract probe in `index.ts` — reaches the same shape: a
@@ -136,7 +136,7 @@ function headerRetryAfter(e: unknown): number | undefined {
  * from an upstream, and telling the two apart is the entire reason `declined`
  * exists as its own kind.
  */
-export const DECLINED_MARKER = "merrymen-rpc-declined";
+export const DECLINED_MARKER = "agentcap-rpc-declined";
 
 /**
  * The marker rpc-meter.ts stamps on a refusal whose body said the quota is
@@ -144,7 +144,7 @@ export const DECLINED_MARKER = "merrymen-rpc-declined";
  * response is not ours to log — so this is how the verdict survives the trip
  * through viem's error wrapping.
  */
-export const QUOTA_MARKER = "merrymen-rpc-quota-exhausted";
+export const QUOTA_MARKER = "agentcap-rpc-quota-exhausted";
 
 /**
  * Does this provider text say the account's allowance for the period is spent?

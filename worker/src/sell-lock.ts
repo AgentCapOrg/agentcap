@@ -115,7 +115,7 @@ export const SELL_CHECK_TTL_MS = {
  * no code and no history, derived rather than chosen so that no token's
  * special-case list (the zero address, 0x…dEaD) can name it.
  */
-export const CONTROL_RECIPIENT: Address = getAddress(slice(keccak256(toHex("merrymen sell-lock control recipient")), 12));
+export const CONTROL_RECIPIENT: Address = getAddress(slice(keccak256(toHex("agentcap sell-lock control recipient")), 12));
 
 /** The marker `findBalanceSlot` writes: big enough that no real balance meets it by chance, small enough not to overflow arithmetic on it. */
 const MARK = 1n << 100n;

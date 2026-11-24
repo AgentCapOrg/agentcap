@@ -11,7 +11,7 @@
  * This is that booking, reviewed, for one tenant at a time.
  *
  * ONLY FOR A TENANT THAT IS HELD, PROVED FROM POSTGRES (holdOf). Nothing in
- * Postgres says which tenants a deploy's MERRYMEN_FLEET_ROLLOUT runs, and a
+ * Postgres says which tenants a deploy's AGENTCAP_FLEET_ROLLOUT runs, and a
  * tenant still running on its own book can have an operation on chain that
  * its mirror has not copied yet — a wedged mirror under a live worker widens
  * that from seconds to hours. Booking it then would be worse than late: the
@@ -159,10 +159,10 @@ import { fillSymbolFor } from "./token-label";
 import { BOOKING_CONFIRMATIONS } from "./chain-confirmations";
 export { BOOKING_CONFIRMATIONS } from "./chain-confirmations";
 
-export const BOOKING_FORMAT = "merrymen.chain-gap-booking.v1";
-export const APPLY_FORMAT = "merrymen.chain-gap-booking.apply.v1";
-export const REVERT_FORMAT = "merrymen.chain-gap-booking.revert.v1";
-export const RECEIPTS_FORMAT = "merrymen.chain-gap-booking.receipts.v1";
+export const BOOKING_FORMAT = "agentcap.chain-gap-booking.v1";
+export const APPLY_FORMAT = "agentcap.chain-gap-booking.apply.v1";
+export const REVERT_FORMAT = "agentcap.chain-gap-booking.revert.v1";
+export const RECEIPTS_FORMAT = "agentcap.chain-gap-booking.receipts.v1";
 /** The receipts table: one row per booked row, kept (as 'reverted') after a revert. */
 export const BOOKINGS_TABLE = "chain_gap_bookings";
 /** How the reconciler and the key-install resolver name a revert whose message is gone. */
@@ -671,11 +671,11 @@ export function holdOf(snap: BookingSnapshot, nowSec: number): { anchorSec: numb
   const { beatAt, lastMirrorAt } = snap.admission.liveness;
   if (beatAt !== null && beatAt > anchorSec) {
     refusals.push(`its worker beat at ${iso(beatAt)}, after admission refused it at ${iso(anchorSec)}: it has run since, so it is not held — ` +
-      "keep it out of MERRYMEN_FLEET_ROLLOUT, let admission refuse it again, then preview again");
+      "keep it out of AGENTCAP_FLEET_ROLLOUT, let admission refuse it again, then preview again");
   }
   if (lastMirrorAt !== null && lastMirrorAt > anchorSec) {
     refusals.push(`rows were mirrored for it at ${iso(lastMirrorAt)}, after admission refused it at ${iso(anchorSec)}: something wrote its book since, so it is not held — ` +
-      "keep it out of MERRYMEN_FLEET_ROLLOUT, let admission refuse it again, then preview again");
+      "keep it out of AGENTCAP_FLEET_ROLLOUT, let admission refuse it again, then preview again");
   }
   const last = Math.max(beatAt ?? 0, lastMirrorAt ?? 0);
   if (last > 0 && nowSec - last < BOOKING_QUIET_SEC) {
@@ -1443,7 +1443,7 @@ export function planBooking(snap: BookingSnapshot, ev: ChainEvidence, o: { nowSe
   if (chainId !== null && ev.rpcChainId !== chainId) refusals.push(`the RPC serves chain ${ev.rpcChainId}, and the grant is on chain ${chainId}`);
   if (snap.openApproval) {
     refusals.push(`an approval is open (${snap.openApproval.state}, evidence ${snap.openApproval.evidence.slice(0, 12)}…): withdraw it with ` +
-      `MERRYMEN_RESUME_REVOKE=${snap.tenant}:${snap.openApproval.evidence} and deploy first — a booking changes the evidence it was approved on`);
+      `AGENTCAP_RESUME_REVOKE=${snap.tenant}:${snap.openApproval.evidence} and deploy first — a booking changes the evidence it was approved on`);
   }
   if (snap.admitted) refusals.push(`already admitted (attested generation ${snap.admitted.slice(0, 8)}…): its running book's own reconciler books what it lacks`);
   if (ev.gap.status === "unavailable") refusals.push(`the chain could not be read (${ev.gap.why}); preview again`);
@@ -2305,7 +2305,7 @@ export function admittedSince(was: AdmissionState, is: AdmissionState & { inUse:
     if (!before) {
       if (a.state === "approved" && a.generation === null && !a.archived) {
         return { code: "open-approval", why: "an approval of the tenant made after this booking is open (approved), given on evidence that holds these rows: " +
-          "withdraw it with MERRYMEN_RESUME_REVOKE and deploy first" };
+          "withdraw it with AGENTCAP_RESUME_REVOKE and deploy first" };
       }
       if (OPEN_APPROVAL_STATES.has(a.state) || a.state === "applied" || a.generation !== null || a.archived) {
         return { code: "admitted", why: `an approval of the tenant made after this booking went past approval (now ${a.state}` +

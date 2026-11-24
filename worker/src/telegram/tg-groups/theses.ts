@@ -1,7 +1,7 @@
 /**
  * WHAT TRADERS ARE SAYING ABOUT A COIN, IN THE GROUP MODEL'S OWN WORDS
  * (docs/tg-groups.md "Fomo research in a room"; plan WP9 P2, decision D5,
- * OFF unless MERRYMEN_TG_THESES_MODEL=1: Milla, 2026-10-08, after four review
+ * OFF unless AGENTCAP_TG_THESES_MODEL=1: Milla, 2026-10-08, after four review
  * rounds kept finding ways past its checks; rooms hear the code digest).
  *
  * The code-written digest (fomo/digest.ts) can only say what its lexicon
@@ -20,7 +20,7 @@
  * no $, @, # or link, no quotation mark, no five-word run shared with any
  * sample (never a quote, not even a paraphrase that is one), no domain
  * spelled out ("pons dot vip"), nothing about
- * instructions, nothing in the first person or naming the agent, Merrymen or
+ * instructions, nothing in the first person or naming the agent, AgentCap or
  * this room (never a pick or a position in its voice), no lure (an airdrop,
  * a presale, free tokens, someone to message; nothing waited on is a claim),
  * no crime laid at anyone's door (OUT_ACCUSE: theft, robbery, looting,
@@ -73,13 +73,13 @@ const WAITINGS = 2;
 const COPY_RUN = 5;
 
 /**
- * OFF BY DEFAULT: only MERRYMEN_TG_THESES_MODEL=1 turns the paraphrase on.
+ * OFF BY DEFAULT: only AGENTCAP_TG_THESES_MODEL=1 turns the paraphrase on.
  * Its input is text any Fomo trader can write, and its checks are a list
  * that each review round found new ways past, so rooms hear the code-written
  * digest unless the operator opts in (Milla, 2026-10-08).
  */
 export function thesesModelOn(env: Record<string, string | undefined>): boolean {
-  return (env?.MERRYMEN_TG_THESES_MODEL ?? "").trim() === "1";
+  return (env?.AGENTCAP_TG_THESES_MODEL ?? "").trim() === "1";
 }
 
 /** No digits on purpose: a figure in the prompt is one the model may echo. */
@@ -167,7 +167,7 @@ const MARKUP = /[@$#"“”«»„]|https?:|www\.|t\.me|\.(?:com|net|org|io|xyz|
 const SPELLED_DOMAIN = /(?<![\p{L}\p{N}])dot\s+\p{L}{2,}(?![\p{L}\p{N}])/iu;
 const ABOUT_ITSELF = /\b(?:instructions?|prompts?|system|assistant|ignore|disregard)\b/i;
 /**
- * A phrase in the first person, or about Merrymen or this room, would be said
+ * A phrase in the first person, or about AgentCap or this room, would be said
  * in the agent's own voice: "Shogun picked it as a buy", "we're holding a bag"
  * are a nomination or a position nobody took (rules 1, 2, 5). So would one
  * about the room's own people, its owner, admin, mod, bot or desk ("the
@@ -178,7 +178,7 @@ const ABOUT_ITSELF = /\b(?:instructions?|prompts?|system|assistant|ignore|disreg
  * renounced", "the agent posts on its own" and "a US listing" are fair points.
  */
 const SELF_REF =
-  /\b(?:i|i'm|im|i've|i'd|we|we're|we've|we'd|our|ours|my|me|merrymen|merryman)\b|\b(?:this|the) desk\b|\bthis (?:group|chat|room)\b|\b(?:group|chat|room|channel)(?:'s)?\s+(?:owners?|admins?|bots?|agents?|mods?)\b|\b(?:owners?|admins?|bots?|agents?|mods?|desk)\s+(?:here|(?:of|in)\s+(?:the|this|your)\s+(?:group|chat|room|channel))\b/i;
+  /\b(?:i|i'm|im|i've|i'd|we|we're|we've|we'd|our|ours|my|me|agentcap|agentcapavatar)\b|\b(?:this|the) desk\b|\bthis (?:group|chat|room)\b|\b(?:group|chat|room|channel)(?:'s)?\s+(?:owners?|admins?|bots?|agents?|mods?)\b|\b(?:owners?|admins?|bots?|agents?|mods?|desk)\s+(?:here|(?:of|in)\s+(?:the|this|your)\s+(?:group|chat|room|channel))\b/i;
 /**
  * TRADE ADVICE IN THE AGENT'S VOICE: a trade verb opening the phrase or one
  * of its clauses ("get some before the listing", "still early, join in",

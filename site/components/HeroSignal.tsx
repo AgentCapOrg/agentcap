@@ -21,9 +21,9 @@ export function HeroSignal() {
         clearTimer = window.setTimeout(() => setMode(null), changed ? 1_500 : 900);
       });
     };
-    window.addEventListener("merrymen:band-update", onBandUpdate);
+    window.addEventListener("agentcap:band-update", onBandUpdate);
     return () => {
-      window.removeEventListener("merrymen:band-update", onBandUpdate);
+      window.removeEventListener("agentcap:band-update", onBandUpdate);
       window.cancelAnimationFrame(frame);
       window.clearTimeout(clearTimer);
     };

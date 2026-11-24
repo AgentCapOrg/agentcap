@@ -19,7 +19,7 @@ import { useState } from "react";
 import { formatUnits } from "viem";
 import { isAddr, normalizeAddr } from "@/lib/address";
 import { chainFor, readAddress, readAsOwner, verdictOf, type Lookup, type Reading } from "@/lib/account-lookup";
-import { robinhoodChain, robinhoodTestnet } from "@merrymen/core";
+import { robinhoodChain, robinhoodTestnet } from "@agentcap/core";
 import "@/styles/lookup.css";
 
 const MAINNET = robinhoodChain.id;
@@ -111,7 +111,7 @@ function Verdict({ l }: { l: Lookup }) {
         </p>
         <p>
           To move it you need the private key for <code>{l.input}</code> — the recovery key you saved
-          when the agent was created. Run <code>npx merrymen recover</code> and paste it there.
+          when the agent was created. Run <code>npx agentcap recover</code> and paste it there.
         </p>
       </div>
     );
@@ -248,7 +248,7 @@ export function LookupClient() {
   return (
     <div className="mm mm-lookup">
       <div className="mm-lookup-inner">
-        <p className="mm-lookup-brand">merrymen</p>
+        <p className="mm-lookup-brand">agentcap</p>
         <h1>What is in this account?</h1>
         <p className="mm-lookup-lede">
           Paste any address — your agent&rsquo;s account, or the owner it was created from — and this
@@ -348,7 +348,7 @@ export function LookupClient() {
             </dd>
           </dl>
           <p>
-            With the recovery key, <code>npx merrymen recover</code> sweeps the account to any wallet
+            With the recovery key, <code>npx agentcap recover</code> sweeps the account to any wallet
             you name. It runs on your machine and the key never leaves it. The key is never sent to our
             servers, so if it is lost and the browser profile that created it is gone, nobody can
             recover the account — including us.

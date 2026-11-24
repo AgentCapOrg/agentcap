@@ -95,7 +95,7 @@ async function evaluate({ github, owner, repo, number }) {
 
 async function run({ github, context, core }) {
   const { owner, repo } = context.repo;
-  if (`${owner}/${repo}` !== 'millw14/merrymen') throw new Error('Unexpected repository');
+  if (`${owner}/${repo}` !== 'millw14/agentcap') throw new Error('Unexpected repository');
   const prs = await github.paginate(github.rest.pulls.list, { owner, repo, state: 'open', base: 'main', sort: 'created', direction: 'asc', per_page: 100 });
   for (const pr of prs) {
     try {

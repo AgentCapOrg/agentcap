@@ -2,7 +2,7 @@ import { closeSync, chmodSync, mkdirSync, openSync } from "node:fs";
 import path from "node:path";
 import { CHAINS } from "../../packages/core/src/ids";
 import { parseSolanaRawAmount, parseSolanaSwapIntent, solanaPaperAgentId, validateSolanaPaperLimits } from "../../packages/core/src/solana";
-import { merrymenHome } from "./home";
+import { agentcapHome } from "./home";
 import { createSolanaMarket } from "./solana-market";
 import { SOLANA_PAPER_RENEW_DEFAULT_DAYS, SolanaPaperStore, type SolanaPaperLimitsRenewal } from "./solana-paper-store";
 import { assertSolanaPaperLocalMode, createSolanaPaperService, type SolanaPaperMarket } from "./solana-paper-service";
@@ -48,9 +48,9 @@ output for it. The lot leaves the book with its cost basis realized as a
 loss, cash and the peak stay as they are, and the book keeps the record,
 with Jupiter's zero-output answer as its evidence, in writeOffs.
 
-Quotes require MERRYMEN_SOLANA_RPC_MAINNET and MERRYMEN_JUPITER_API_KEY.
-An optional MERRYMEN_SOLANA_RPC_MAINNET_FALLBACK provides independent RPC
-reads. The book lives in MERRYMEN_HOME/solana-paper.sqlite (default ~/.merrymen).
+Quotes require AGENTCAP_SOLANA_RPC_MAINNET and AGENTCAP_JUPITER_API_KEY.
+An optional AGENTCAP_SOLANA_RPC_MAINNET_FALLBACK provides independent RPC
+reads. The book lives in AGENTCAP_HOME/solana-paper.sqlite (default ~/.agentcap).
 The owner is a paper-book label, not proof of wallet control or a deposit
 address. Hosted use and live mode are unavailable. Results simulate quote
 minimum output; network fees and rent are excluded.`;
@@ -134,7 +134,7 @@ function renewalOf(flags: Record<string, string>, nowMs: number): SolanaPaperLim
 }
 
 function openPaperStore(): SolanaPaperStore {
-  const home = merrymenHome();
+  const home = agentcapHome();
   mkdirSync(home, { recursive: true, mode: 0o700 });
   const file = path.join(home, "solana-paper.sqlite");
   closeSync(openSync(file, "a", 0o600));

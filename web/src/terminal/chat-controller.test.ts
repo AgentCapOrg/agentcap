@@ -17,7 +17,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import React, { act, createElement } from "react";
-import { autonomyOf, LLM_PROVIDERS, SETTINGS_DEFAULTS, STOCK_TOKENS } from "@merrymen/core";
+import { autonomyOf, LLM_PROVIDERS, SETTINGS_DEFAULTS, STOCK_TOKENS } from "@agentcap/core";
 import type { SettingsView } from "@/app/api/settings/route";
 import { agentReplyResponse, type AgentChatBody } from "@/lib/agent-chat";
 import { sseEvent } from "@/lib/chat-stream";
@@ -29,7 +29,7 @@ import { chatKeyFor } from "./chat-store";
 import { MAX_MESSAGES, tradeKeyOf } from "./chat-thread";
 import { deferred, json, testDom } from "./test-dom";
 
-const KEY = "merrymen.chat.self";
+const KEY = "agentcap.chat.self";
 const ORDER_ID = "0123456789abcdef0123456789abcdef";
 const noop = () => {};
 
@@ -207,7 +207,7 @@ const SETTINGS_VIEW: SettingsView = {
   telegramTranscribeKey: unset,
   virtualsApiKey: unset,
   bitqueryApiKey: unset,
-  merrymenToken: unset,
+  agentcapToken: unset,
   values: {},
   defaults: SETTINGS_DEFAULTS,
   knownSymbols: STOCK_TOKENS.map((t) => t.symbol),
@@ -223,7 +223,7 @@ describe("sending feels instant", () => {
   it("binds a hosted chat request to the account whose confirmed thread supplied its history", async () => {
     const owner = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     routes["POST /api/chat"] = () => json({ reply: "Aye." });
-    await ui.render(h({ chatKey: `merrymen.chat.${owner}` }));
+    await ui.render(h({ chatKey: `agentcap.chat.${owner}` }));
     await settle();
     await typeAndSend("How is my agent?");
     await until(() => /Aye\./.test(text()), "reply");
@@ -1025,16 +1025,16 @@ describe("a proposal never outlives the conversation on screen", () => {
 describe("whose thread", () => {
   it("THE OUTGOING OWNER'S THREAD IS DELETED, not merely hidden", async () => {
     routes["POST /api/chat"] = () => json({ reply: "Hello, first owner." });
-    await ui.render(h({ chatKey: "merrymen.chat.0xaaa" }));
+    await ui.render(h({ chatKey: "agentcap.chat.0xaaa" }));
     await settle();
     await typeAndSend("hi");
     await until(() => /Hello, first owner\./.test(text()), "reply");
-    assert.ok(localStorage.getItem("merrymen.chat.0xaaa"));
-    await ui.render(h({ chatKey: "merrymen.chat.0xbbb" }));
+    assert.ok(localStorage.getItem("agentcap.chat.0xaaa"));
+    await ui.render(h({ chatKey: "agentcap.chat.0xbbb" }));
     await settle();
-    assert.equal(localStorage.getItem("merrymen.chat.0xaaa"), null);
+    assert.equal(localStorage.getItem("agentcap.chat.0xaaa"), null);
     assert.doesNotMatch(text(), /first owner/);
-    assert.equal(localStorage.getItem("merrymen.chat.0xbbb"), null, "and the old thread was not written under the new key");
+    assert.equal(localStorage.getItem("agentcap.chat.0xbbb"), null, "and the old thread was not written under the new key");
   });
 
   /** One held answer per POST /api/orders, in the order they were asked. */
@@ -1054,13 +1054,13 @@ describe("whose thread", () => {
   /** Owner A asks for a buy and taps Yes; then B signs in on the same browser and gets a card of their own. */
   async function switchMidConfirm() {
     routes["POST /api/chat"] = () => json({ reply: "I'll place it.", command: { id: "buy", args: { symbol: "TSLA", usdgAmount: 5 } } });
-    await ui.render(h({ chatKey: "merrymen.chat.0xaaa" }));
+    await ui.render(h({ chatKey: "agentcap.chat.0xaaa" }));
     await settle();
     await typeAndSend("buy $5 of TSLA");
     await until(() => buttons("Yes, do it").length === 1, "A's card");
     await ui.click("Yes, do it");
     assert.deepEqual(card(), ["Doing it…", "Not now"]);
-    await ui.render(h({ chatKey: "merrymen.chat.0xbbb" }));
+    await ui.render(h({ chatKey: "agentcap.chat.0xbbb" }));
     await settle();
     routes["POST /api/chat"] = () => json({ reply: "Sure.", command: { id: "buy", args: { symbol: "WIF", usdgAmount: 5 } } });
     await typeAndSend("buy $5 of WIF");
@@ -1078,7 +1078,7 @@ describe("whose thread", () => {
     held[0]!.resolve(placed());
     await settle(20);
     assert.deepEqual(chat.messages.map((m) => m.text), ["buy $5 of WIF", "Sure."], "nothing of A's order is said in B's thread");
-    assert.deepEqual((JSON.parse(localStorage.getItem("merrymen.chat.0xbbb")!) as { orders: unknown[] }).orders, [], "B's thread follows no order of A's");
+    assert.deepEqual((JSON.parse(localStorage.getItem("agentcap.chat.0xbbb")!) as { orders: unknown[] }).orders, [], "B's thread follows no order of A's");
     assert.equal(count("GET", "/api/orders"), 0, "and nobody polls it under B's session");
     assert.deepEqual(card(), ["Yes, do it", "Not now"], "B's own proposal is still there");
   });
@@ -1109,7 +1109,7 @@ describe("a confirm places its order for the owner who tapped it, or not at all"
   // never confirmed, with no line in B's thread and nothing following it.
   const A = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
   const B = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-  const keyOf = (owner: string) => `merrymen.chat.${owner}`;
+  const keyOf = (owner: string) => `agentcap.chat.${owner}`;
   const RESOLVED = { outcome: "resolved", say: "PEPE is the one you mean.", target: { symbol: "PEPE" }, usdgAmount: 5 };
   const sentOrders = () => count("POST", "/api/orders");
 
@@ -1251,10 +1251,10 @@ describe("a confirm places its order for the owner who tapped it, or not at all"
   it("THE OWNER NAMED IS THE WALLET THE THREAD IS KEPT FOR — and self-hosted, nobody", () => {
     const mixed = "0xAbCdEf0123456789aBcDeF0123456789AbCdEf01";
     assert.equal(ownerOfChatKey(chatKeyFor({ hosted: true, address: mixed })), mixed.toLowerCase());
-    assert.equal(ownerOfChatKey(`merrymen.chat.${mixed}`), mixed.toLowerCase(), "one wallet, however its key was cased");
+    assert.equal(ownerOfChatKey(`agentcap.chat.${mixed}`), mixed.toLowerCase(), "one wallet, however its key was cased");
     assert.equal(ownerOfChatKey(chatKeyFor({ hosted: false, address: null })), null);
     assert.equal(ownerOfChatKey(chatKeyFor(null)), null);
-    assert.equal(ownerOfChatKey("merrymen.chat.0xnot-an-address"), null);
+    assert.equal(ownerOfChatKey("agentcap.chat.0xnot-an-address"), null);
   });
 
   it("A SNIPE'S LOOKUP HAS A DEADLINE; the order itself is never cut short by one", async () => {

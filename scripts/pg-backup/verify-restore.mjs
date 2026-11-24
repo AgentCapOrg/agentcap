@@ -7,7 +7,7 @@
  * fork. "The restore finished" is not the evidence: a fork restored to the
  * wrong moment, or without a table, finishes too. This is the evidence.
  *
- *   MERRYMEN_RESTORE_FORK_URL=…  MERRYMEN_RESTORE_SOURCE_URL=… \
+ *   AGENTCAP_RESTORE_FORK_URL=…  AGENTCAP_RESTORE_SOURCE_URL=… \
  *     node scripts/pg-backup/verify-restore.mjs --restore-point 2026-10-05T02:00:00Z
  *
  * READ ONLY, ON BOTH SIDES. Every read is made inside a short transaction
@@ -70,7 +70,7 @@ import { fileURLToPath } from "node:url";
 
 // v2: tables carry their kind, presence-only tables read
 // `present-content-unverified`, and the report says `contentsVerified`.
-export const DRILL_FORMAT = "merrymen-restore-drill/v2";
+export const DRILL_FORMAT = "agentcap-restore-drill/v2";
 
 /**
  * THE KINDS: WHAT A VERDICT MAY SAY ABOUT A TABLE'S CONTENTS.
@@ -419,7 +419,7 @@ export const DEFAULT_SETTLE_SEC = 900;
 const MAX_SETTLE_SEC = 3_600;
 const ISO_WITH_ZONE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:\d{2})$/;
 const USAGE = "Usage: node scripts/pg-backup/verify-restore.mjs --restore-point <ISO-8601 time with zone> [--settle-sec N]. "
-  + "The URLs are read from MERRYMEN_RESTORE_FORK_URL and MERRYMEN_RESTORE_SOURCE_URL only. See docs/backups.md.";
+  + "The URLs are read from AGENTCAP_RESTORE_FORK_URL and AGENTCAP_RESTORE_SOURCE_URL only. See docs/backups.md.";
 
 /** Verdicts that fail the drill. Everything else is reported and passes. */
 export const FAILING_VERDICTS = Object.freeze(["missing-in-fork", "missing-in-source", "bad-stamp", "fork-after-restore-point", "fork-behind"]);
@@ -502,8 +502,8 @@ export function parseDrillArgs(argv, env, nowMs) {
   const settleSec = settle === undefined ? DEFAULT_SETTLE_SEC : Number(settle);
   if (settleSec > MAX_SETTLE_SEC) throw new DrillRefusal("usage", "--settle-sec is at most 3600.");
 
-  const forkUrl = env.MERRYMEN_RESTORE_FORK_URL;
-  const sourceUrl = env.MERRYMEN_RESTORE_SOURCE_URL;
+  const forkUrl = env.AGENTCAP_RESTORE_FORK_URL;
+  const sourceUrl = env.AGENTCAP_RESTORE_SOURCE_URL;
   const fork = databaseOf(forkUrl);
   const source = databaseOf(sourceUrl);
   if (!fork || !source) throw new DrillRefusal("usage", USAGE);
@@ -543,7 +543,7 @@ export async function connectPg(url, load = () => createRequire(import.meta.url)
   } catch {
     throw new DrillRefusal("no-driver", "The pg driver is not installed here. Run from the hosted image, where the Dockerfile installs it.");
   }
-  const client = new pg.Client({ connectionString: url, application_name: "merrymen-restore-drill", connectionTimeoutMillis: 15_000 });
+  const client = new pg.Client({ connectionString: url, application_name: "agentcap-restore-drill", connectionTimeoutMillis: 15_000 });
   client.on("error", () => {});
   try {
     await client.connect();

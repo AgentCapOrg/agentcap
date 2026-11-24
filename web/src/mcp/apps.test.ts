@@ -35,7 +35,7 @@ import { OWNER_A, OWNER_B, SLUG_A, SLUG_B, connectAs, installFixtures, makeDeps,
 import type { Principal } from "./oauth/server";
 
 // The proposal view is built with the configured issuer, as in production.
-process.env.MERRYMEN_PUBLIC_ORIGIN = "https://app.test";
+process.env.AGENTCAP_PUBLIC_ORIGIN = "https://app.test";
 
 const VIEWS: AppView[] = ["home", "portfolio", "decision", "token", "proposal"];
 const ISSUER = "https://app.test";
@@ -146,7 +146,7 @@ const INACTIVITY = () => sample("explain_agent_inactivity", {
   what_owner_can_do: ["Deposit USDG to the smart account."],
   unknown_from_shared_records: ["Whether the worker's model key is valid."],
   truncated: { trades: false, events: false },
-  data_source: "Merrymen's shared ledger.", untrusted_note: "Only latest_view.stored_explanation here is agent-written text.",
+  data_source: "AgentCap's shared ledger.", untrusted_note: "Only latest_view.stored_explanation here is agent-written text.",
 });
 
 const DECISION = () => sample("get_decision", {
@@ -222,7 +222,7 @@ const QUOTE = {
   impact_verdict: { ok: true, rule: null, detail: null, cap_bps: 300 }, route: { venue: "uniswap-v3", fee_tier_bps: 30, hops: [ADDR, ADDR2] },
   routes_considered: { direct_v3: true, via_weth: false, v4: false, hooked_v4_pools: false, launchpad_curve: false },
   gas: { units_estimate: "180000", swap_leg_units: "120000", expected_usdg: 0.01, note: "Sponsored when the paymaster pays." },
-  merrymen_trade_fee: { bps: 0, usdg: 0, note: "No fee." }, block_number: "4242", quoted_at: T0, source: "QuoterV2", caveats: ["Indicative only."],
+  agentcap_trade_fee: { bps: 0, usdg: 0, note: "No fee." }, block_number: "4242", quoted_at: T0, source: "QuoterV2", caveats: ["Indicative only."],
 };
 const QUOTE_ONLY = () => sample("quote_trade", QUOTE);
 const PROPOSAL_ID = "prp_0123456789abcdef0123456789abcdef";
@@ -302,7 +302,7 @@ function assertNoInjectedMarkup(m: Mounted) {
 // ── wiring ──────────────────────────────────────────────────────────────────
 
 test("every mapped tool exists and names a view through both the current and the legacy _meta key", () => {
-  const expected = ["get_merryman_setup", "create_merryman", "create_agent_draft", "propose_settings_change", "get_portfolio", "get_performance", "explain_agent_inactivity", "get_decision", "get_token", "check_token_eligibility", "search_tokens", "quote_trade", "propose_trade", "get_proposal"];
+  const expected = ["get_agentcapavatar_setup", "create_agentcapavatar", "create_agent_draft", "propose_settings_change", "get_portfolio", "get_performance", "explain_agent_inactivity", "get_decision", "get_token", "check_token_eligibility", "search_tokens", "quote_trade", "propose_trade", "get_proposal"];
   assert.deepEqual(Object.keys(APP_TOOL_META).sort(), [...expected].sort());
   const uris = new Set(APP_RESOURCES.map((r) => r.uri));
   for (const [name, meta] of Object.entries(APP_TOOL_META)) {
@@ -355,7 +355,7 @@ test("each view is an MCP App resource: ui:// URI, the Apps MIME type, no capabi
   assert.equal(ALL_RESOURCES.filter((r) => views.has(r)).length, APP_RESOURCES.length, "every view is registered");
   const taken = new Set(ALL_RESOURCES.filter((r) => !views.has(r)).map((r) => r.name));
   for (const r of APP_RESOURCES) {
-    assert.match(r.uri, /^ui:\/\/merrymen\/[a-z]+\.html$/);
+    assert.match(r.uri, /^ui:\/\/agentcap\/[a-z]+\.html$/);
     assert.equal(r.mimeType, MCP_APP_MIME);
     assert.equal(r.capability, null, "presentation only");
     assert.ok(!taken.has(r.name), `${r.name} does not collide with an existing resource`);
@@ -494,8 +494,8 @@ test("the pages are self-contained: no external scripts, styles, fonts, frames o
     assert.ok(!/<\/(script|style)/i.test(script) && !script.includes("<!--"), "nothing in the script can end the element early");
   }
   // With an issuer configured, that origin is the only URL on any page.
-  const withIssuer = appHtml("proposal", { issuer: "https://app.merrymen.dev" });
-  assert.deepEqual(withIssuer.match(/https?:\/\/[^\s"'<>]*/g), ["https://app.merrymen.dev"]);
+  const withIssuer = appHtml("proposal", { issuer: "https://app.agentcap.xyz" });
+  assert.deepEqual(withIssuer.match(/https?:\/\/[^\s"'<>]*/g), ["https://app.agentcap.xyz"]);
   assert.ok(appHtml("proposal", { issuer: "https://x.test/\"</script><script>alert(1)//" }).includes('var ISSUER = "";'), "a malformed issuer is dropped, not embedded");
 });
 
@@ -515,7 +515,7 @@ test("the handshake follows the spec: ui/initialize first, then initialized, the
   assert.equal(init.method, "ui/initialize");
   assert.equal(init.jsonrpc, "2.0");
   assert.equal(typeof init.id, "number");
-  assert.deepEqual(init.params, { appInfo: { name: "merrymen-portfolio", version: "1.0.0" }, appCapabilities: {}, protocolVersion: "2026-01-26" });
+  assert.deepEqual(init.params, { appInfo: { name: "agentcap-portfolio", version: "1.0.0" }, appCapabilities: {}, protocolVersion: "2026-01-26" });
   await handshake(m, { hostContext: { theme: "dark", locale: "en-US", styles: { variables: { "--color-text-primary": "#fafafa", "--color-background-primary": "url(https://evil.test/x.png)" } } } });
   assert.deepEqual(m.sent.map((s) => s.method), ["ui/initialize", "ui/notifications/initialized", "ui/notifications/size-changed"]);
   const size = m.sent[2]!.params as { width: unknown; height: unknown };
@@ -788,7 +788,7 @@ test("proposal view: without the host's open-link capability the plain link stay
     await handshake(x, { hostCapabilities: { openLinks: {} } });
     await showResult(x, PROPOSED({ approval_url: url }));
     assert.equal(x.doc.querySelectorAll("a").length, 0, `not linked: ${url}`);
-    assert.match(x.text(), /not this Merrymen server's approval page/);
+    assert.match(x.text(), /not this AgentCap server's approval page/);
   }
   // No issuer configured: never linked.
   const none = mount("proposal", { issuer: "" });
@@ -1003,7 +1003,7 @@ test("errors, cancellations, text-only results, unknown shapes and missing field
   assert.match(m.text(), /Waiting for the result/);
   m.deliver({ jsonrpc: "2.0", method: "ui/notifications/tool-result", params: { isError: true, content: [{ type: "text", text: `Error not_found: No such token.
 
-${JSON.stringify({ error: { code: "not_found", message: `No such token. ${EVIL}` } })}` }], _meta: { "dev.merrymen/error": { code: "not_found", message: `No such token. ${EVIL}` } } } });
+${JSON.stringify({ error: { code: "not_found", message: `No such token. ${EVIL}` } })}` }], _meta: { "dev.agentcap/error": { code: "not_found", message: `No such token. ${EVIL}` } } } });
   assert.match(m.text(), /The tool returned an error\./);
   assert.match(m.text(), /No such token\./);
   assertNoInjectedMarkup(m);
@@ -1055,23 +1055,23 @@ test("outside a host the page shows a harmless notice and sends nothing", async 
 
 // ── interactive home, driven by real tool schemas ───────────────────────────
 
-const HOME = (over: Record<string, unknown> = {}) => sample("get_merryman_setup", {
+const HOME = (over: Record<string, unknown> = {}) => sample("get_agentcapavatar_setup", {
   phase: "no_shared_agent", summary: "No agent is visible to this connection. That does not mean the owner has no agent.",
   connection: { id: "test-home-connection", profile: "full", can_read_agents: true, can_create_draft: true, can_propose_settings: false, shared_agent_count: 0,
-    available_tools: ["get_merryman_setup", "list_agents", "create_merryman"] },
+    available_tools: ["get_agentcapavatar_setup", "list_agents", "create_agentcapavatar"] },
   agent: null, next_steps: [
     { action: "share_agent", label: "Check connected-app access", detail: "Share an existing agent if you have one.", url: `${ISSUER}/connect/apps`, tool: null, owner_action_required: true },
-    { action: "review_funding", label: "Review funding", detail: "Owner funding stays in Merrymen.", url: `${ISSUER}/deposit`, tool: null, owner_action_required: true },
+    { action: "review_funding", label: "Review funding", detail: "Owner funding stays in AgentCap.", url: `${ISSUER}/deposit`, tool: null, owner_action_required: true },
   ],
   links: { create: `${ISSUER}/create`, wallet: `${ISSUER}/grant`, settings: `${ISSUER}/settings`, funding: `${ISSUER}/deposit`, connected_apps: `${ISSUER}/connect/apps` },
-  runtime: { hosted: true, keep_chat_open: false, explanation: "Merrymen's hosted worker runs after owner signing and activation. You can close the chat." },
+  runtime: { hosted: true, keep_chat_open: false, explanation: "AgentCap's hosted worker runs after owner signing and activation. You can close the chat." },
   controls: [], observed_at: T0, ...over,
 });
 const HOME_AGENT_DETAILS = { id: SLUG_A, name: "Robin", account: ADDR, chain_id: 8453, status: "active", mode: "paper", strategy: "trencher", permission_expires_at: FUTURE, heartbeat_at: T0, worker_fresh: true, live_blocker: null, energy: null };
 const HOME_AGENT = (over: Record<string, unknown> = {}) => HOME({
   phase: "paper", summary: "The worker has a fresh paper-mode report. Practice balances are simulated.",
   connection: { id: "test-home-connection", profile: "full", can_read_agents: true, can_create_draft: true, can_propose_settings: true, shared_agent_count: 1,
-    available_tools: ["get_merryman_setup", "get_portfolio", "get_trades", "list_decisions", "get_agent_controls", "create_agent_draft", "list_notification_channels", "list_subscriptions", "subscribe", "unsubscribe"] },
+    available_tools: ["get_agentcapavatar_setup", "get_portfolio", "get_trades", "list_decisions", "get_agent_controls", "create_agent_draft", "list_notification_channels", "list_subscriptions", "subscribe", "unsubscribe"] },
   agent: HOME_AGENT_DETAILS,
   next_steps: [], ...over,
 });
@@ -1090,7 +1090,7 @@ async function answer(m: Mounted, call: Msg, data: unknown) {
 test("home: genuine owner paths work, hostile paths and ungranted controls never appear, rendering never calls a tool", async () => {
   const m = mount("home"); await handshake(m, { hostCapabilities: { serverTools: {}, openLinks: {} } });
   await showResult(m, HOME());
-  assert.match(m.text(), /Meet your next Merryman/);
+  assert.match(m.text(), /Meet your next AgentCapAvatar/);
   assert.ok(m.doc.querySelector('input[aria-label="Name"]'));
   assert.ok(m.doc.querySelector('select[aria-label="Strategy"]'));
   assert.ok(m.doc.querySelector('select[aria-label="Risk settings"]'));
@@ -1099,7 +1099,7 @@ test("home: genuine owner paths work, hostile paths and ungranted controls never
   assert.ok(m.doc.querySelector('a[href="https://app.test/connect/apps"]'));
   assert.equal(m.doc.querySelectorAll('[role="tab"]').length, 1);
   assert.equal(m.sent.filter(s => s.method === "tools/call").length, 0);
-  const readonly = HOME({ connection: { id: "test-readonly-connection", profile: "directory", can_read_agents: false, can_create_draft: false, can_propose_settings: false, shared_agent_count: 0, available_tools: ["get_merryman_setup"] }, links: { ...HOME().links, wallet: "https://evil.example/grant", connected_apps: "https://app.test/connect/apps?token=secret" } });
+  const readonly = HOME({ connection: { id: "test-readonly-connection", profile: "directory", can_read_agents: false, can_create_draft: false, can_propose_settings: false, shared_agent_count: 0, available_tools: ["get_agentcapavatar_setup"] }, links: { ...HOME().links, wallet: "https://evil.example/grant", connected_apps: "https://app.test/connect/apps?token=secret" } });
   await showResult(m, readonly);
   assert.equal(m.doc.querySelector("form"), null);
   assert.equal(m.doc.querySelector('a[href^="https://evil"]'), null);
@@ -1116,19 +1116,19 @@ test("home: create submits exact user selections once, reuses idempotency on fai
   m.doc.querySelector<HTMLSelectElement>('select[name="strategy"]')!.value = "steady-basket";
   m.doc.querySelector<HTMLSelectElement>('select[name="risk_level"]')!.value = "balanced";
   const submit = () => m.doc.querySelector("form")!.dispatchEvent(new m.w.Event("submit", { bubbles: true, cancelable: true }));
-  submit(); const call = lastToolCall(m, "create_merryman");
+  submit(); const call = lastToolCall(m, "create_agentcapavatar");
   const args = call.params!.arguments as Record<string, unknown>;
   assert.equal(args.name, "Night Owl"); assert.equal(args.strategy, "steady-basket"); assert.equal(args.risk_level, "balanced");
-  assert.ok(toolNamed("create_merryman").input.safeParse(args).success);
+  assert.ok(toolNamed("create_agentcapavatar").input.safeParse(args).success);
   submit(); assert.equal(m.sent.filter(s => s.method === "tools/call").length, 1, "double submit suppressed");
   m.deliver({ jsonrpc: "2.0", id: call.id, error: { code: -32000, message: "Temporary host failure" } }); await m.tick();
   assert.match(m.text(), /Temporary host failure/); submit();
-  const retry = lastToolCall(m, "create_merryman"); assert.deepEqual(retry.params!.arguments, args);
-  const proposal = sample("create_merryman", { proposal_id: PROPOSAL_ID, kind: "agent_draft", status: "awaiting_approval", approval_url: `${ISSUER}/connect/approve/${PROPOSAL_ID}`, expires_at: FUTURE, binding_hash: "ab".repeat(32), summary: { action: "Create a new Merryman", purpose: "create", settings: { agentName: "Night Owl", strategy: "steady-basket" }, after_approval: "Owner signing remains required." }, next_steps: "Owner reviews and signs.", created: true, risk_profile: null, left_out: [], diff: null });
+  const retry = lastToolCall(m, "create_agentcapavatar"); assert.deepEqual(retry.params!.arguments, args);
+  const proposal = sample("create_agentcapavatar", { proposal_id: PROPOSAL_ID, kind: "agent_draft", status: "awaiting_approval", approval_url: `${ISSUER}/connect/approve/${PROPOSAL_ID}`, expires_at: FUTURE, binding_hash: "ab".repeat(32), summary: { action: "Create a new AgentCapAvatar", purpose: "create", settings: { agentName: "Night Owl", strategy: "steady-basket" }, after_approval: "Owner signing remains required." }, next_steps: "Owner reviews and signs.", created: true, risk_profile: null, left_out: [], diff: null });
   await answer(m, retry, proposal);
   assert.ok(m.doc.querySelector(`a[href="${ISSUER}/connect/approve/${PROPOSAL_ID}"]`));
   assert.match(m.text(), /Check activation/);
-  assert.deepEqual(m.sent.filter(s => s.method === "tools/call").map(s => s.params!.name), ["create_merryman", "create_merryman"]);
+  assert.deepEqual(m.sent.filter(s => s.method === "tools/call").map(s => s.params!.name), ["create_agentcapavatar", "create_agentcapavatar"]);
   assert.ok(!Array.from(APP_CALLABLE_TOOLS).some(n => /approve|execute|sign|send_transaction|propose_trade/.test(n)));
 });
 
@@ -1162,7 +1162,7 @@ test("home: stale live reports are labelled as last reported mode; settings need
 test("creation-only approved setup stays distinct from settings applied or a running agent", async () => {
   const m = mount("proposal"); await handshake(m, { hostCapabilities: { openLinks: {} } });
   await showResult(m, PROPOSAL_VIEW({ kind: "agent_draft", status: "applied", expires_at: FUTURE,
-    summary: { action: "Create a new Merryman", purpose: "create", settings: { agentName: "Robin" } },
+    summary: { action: "Create a new AgentCapAvatar", purpose: "create", settings: { agentName: "Robin" } },
     result: { setup_only: true, setup_url: "https://evil.example/steal", note: "Owner signing remains required." },
   }));
   assert.match(m.text(), /Setup approved/); assert.match(m.text(), /Owner wallet creation, permission signing and activation are still required/);
@@ -1174,9 +1174,9 @@ test("creation-only approved setup stays distinct from settings applied or a run
 
 test("home: approved shared-agent selection uses real list_agents ids and restores actions", async () => {
   const m = mount("home"); await handshake(m, { hostCapabilities: { serverTools: {} } });
-  await showResult(m, HOME({ phase: "select_agent", connection: { ...HOME().connection, shared_agent_count: 2, available_tools: ["get_merryman_setup", "list_agents"] } }));
-  clickText(m, "Choose a shared Merryman"); const call = lastToolCall(m, "list_agents");
+  await showResult(m, HOME({ phase: "select_agent", connection: { ...HOME().connection, shared_agent_count: 2, available_tools: ["get_agentcapavatar_setup", "list_agents"] } }));
+  clickText(m, "Choose a shared AgentCapAvatar"); const call = lastToolCall(m, "list_agents");
   await answer(m, call, sample("list_agents", { agents: [{ agent: SLUG_A, name: "Robin", account: ADDR, chain_id: 4663, status: "active", mode: "paper", live_blocker: null, permission_expires_at: FUTURE }, { agent: SLUG_B, name: "Marian", account: ADDR2, chain_id: 4663, status: "active", mode: "paper", live_blocker: null, permission_expires_at: FUTURE }], observed_at: T0 }));
-  clickText(m, "Robin"); const selected = lastToolCall(m, "get_merryman_setup"); assert.deepEqual(selected.params!.arguments, { agent: SLUG_A });
+  clickText(m, "Robin"); const selected = lastToolCall(m, "get_agentcapavatar_setup"); assert.deepEqual(selected.params!.arguments, { agent: SLUG_A });
   await answer(m, selected, HOME_AGENT()); assert.match(m.text(), /Robin/);
 });

@@ -23,8 +23,8 @@ import { after, describe, it, mock } from "node:test";
 
 import type { TelegramState } from "./state";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-poll-bounded-"));
-process.env.MERRYMEN_HOME = HOME; // the soul files and a /link's settings patch land here
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-poll-bounded-"));
+process.env.AGENTCAP_HOME = HOME; // the soul files and a /link's settings patch land here
 after(() => rmSync(HOME, { recursive: true, force: true }));
 
 const { startTelegram } = await import("./service");

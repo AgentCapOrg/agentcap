@@ -43,8 +43,8 @@ import {
   stampCommitOutcome, type ApplyReport, type GasRepairPlan,
 } from "./gas-repair";
 
-export const READ_APPLICATION_NAME = "merrymen-gas-repair-readonly";
-export const WRITE_APPLICATION_NAME = "merrymen-gas-repair-apply";
+export const READ_APPLICATION_NAME = "agentcap-gas-repair-readonly";
+export const WRITE_APPLICATION_NAME = "agentcap-gas-repair-apply";
 const SELF = "node --import tsx worker/src/gas-repair-cli.ts";
 export const HELP = `Gas repair — PREVIEW FIRST. Completes the gas of rows the board withholds P&L for, from each row's receipt.
 
@@ -53,7 +53,7 @@ export const HELP = `Gas repair — PREVIEW FIRST. Completes the gas of rows the
   ${SELF} --check /absolute/apply-report.json --output /absolute/new-check.json
   ${SELF} --revert /absolute/apply-report.json --output /absolute/new-revert-report.json
 
-Required environment: DATABASE_URL. Optional: MERRYMEN_CHAIN_GAP_RPC (defaults to the public Robinhood Chain mainnet RPC).
+Required environment: DATABASE_URL. Optional: AGENTCAP_CHAIN_GAP_RPC (defaults to the public Robinhood Chain mainnet RPC).
 Only NULL gas columns are written, only from the row's own UserOperationEvent and the Chainlink ETH/USD round in force at its block.
 A row whose recorded gas or payer disagrees with its receipt is listed as unresolved and left alone.
 --apply recomputes the preview and writes it in one SERIALIZABLE transaction, only when the digest is the one you confirm.
@@ -197,7 +197,7 @@ export async function main(args: readonly string[] = process.argv.slice(2), env:
   const full = {
     ...deps,
     connect: deps.connect ?? ((u: string, readOnly: boolean) => connectBooking(u, readOnly, undefined, readOnly ? READ_APPLICATION_NAME : WRITE_APPLICATION_NAME)),
-    rpc: deps.rpc ?? createRepairRpc(env.MERRYMEN_CHAIN_GAP_RPC || DEFAULT_RPC),
+    rpc: deps.rpc ?? createRepairRpc(env.AGENTCAP_CHAIN_GAP_RPC || DEFAULT_RPC),
     nowMs: deps.nowMs ?? (() => Date.now()),
   };
 

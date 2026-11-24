@@ -8,7 +8,7 @@
 import assert from "node:assert/strict";
 import type { DatabaseSync } from "node:sqlite";
 import { test } from "node:test";
-import { CASH } from "@merrymen/core";
+import { CASH } from "@agentcap/core";
 import { runTool, type ToolDef } from "../tool";
 import { ACCOUNT_A, OWNER_A, connectAs, installFixtures, makeDeps, makeTestDb } from "../testing";
 import { REPORTS_TOOLS } from "./reports";

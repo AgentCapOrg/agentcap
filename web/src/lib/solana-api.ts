@@ -44,7 +44,7 @@ const NOT_AVAILABLE = "Solana trading is not available.";
 /**
  * An error about this deployment's setup rather than the request: missing or
  * invalid Jupiter, RPC, vault, fee-payer or key settings. The owner can do
- * nothing about it, and its text names settings (MERRYMEN_JUPITER_API_KEY is
+ * nothing about it, and its text names settings (AGENTCAP_JUPITER_API_KEY is
  * required…), so it is answered as plainly unavailable.
  */
 function setupError(error: unknown): boolean {

@@ -43,7 +43,7 @@
 "🚀 apps & web" = "🚀 apps & web";
 "18 for most tokens — check the contract if unsure" = "18 for most tokens — check the contract if unsure";
 "A profile’s Buys & sells list shows recorded fills. Recent decisions explain what the agent chose, including holds. Completed operations can also include actions other than swaps." = "프로필의 '매수·매도' 목록에는 기록된 체결 내역이 나옵니다. '최근 판단'에는 에이전트가 무엇을 선택했는지가 적혀 있으며, 아무것도 하지 않고 보류한 경우도 함께 나옵니다. '완료된 작업'에는 스왑이 아닌 다른 작업도 포함될 수 있습니다.";
-"A quick look around merrymen" = "merrymen 둘러보기";
+"A quick look around agentcap" = "agentcap 둘러보기";
 "A strategy and two limits — per trade, and per day — decide what it may do. Paper mode practises with simulated funds until you say otherwise." = "전략 하나와 한도 두 가지(거래당, 하루당)가 에이전트가 할 수 있는 일을 정합니다. 모의 모드에서는 실제 돈이 아닌 가상 자금으로 연습하며, 직접 바꾸기 전까지 그대로 유지됩니다.";
 "A summary every 15 minutes" = "A summary every 15 minutes";
 "A summary every 30 minutes" = "A summary every 30 minutes";
@@ -73,7 +73,7 @@
 "An active book is reviewed at least every five minutes, subject to available reads and budget." = "An active book is reviewed at least every five minutes, subject to available reads and budget.";
 "and select Autonomous Trencher. It is available only after the verified vault deployment is configured. Without that permission, the existing route can trade only individually authorized tokens. Brain must be connected and the recorded portfolio must pass its accounting checks. For real trades, enable live trading and “let trencher trade for real” explicitly. Volatile coins can move beyond exit thresholds before a fill; timing and prices are not guaranteed." = "and select Autonomous Trencher. It is available only after the verified vault deployment is configured. Without that permission, the existing route can trade only individually authorized tokens. Brain must be connected and the recorded portfolio must pass its accounting checks. For real trades, enable live trading and “let trencher trade for real” explicitly. Volatile coins can move beyond exit thresholds before a fill; timing and prices are not guaranteed.";
 "another program has the bot" = "another program has the bot";
-"Another program is reading this bot's messages, for example a copy of Merrymen on your computer, or a webhook. Stop it, and your agent hears the bot again." = "Another program is reading this bot's messages, for example a copy of Merrymen on your computer, or a webhook. Stop it, and your agent hears the bot again.";
+"Another program is reading this bot's messages, for example a copy of AgentCap on your computer, or a webhook. Stop it, and your agent hears the bot again." = "Another program is reading this bot's messages, for example a copy of AgentCap on your computer, or a webhook. Stop it, and your agent hears the bot again.";
 "answer Fomo questions" = "answer Fomo questions";
 "Any OpenAI-compatible endpoint, e.g. https://your-host/v1" = "Any OpenAI-compatible endpoint, e.g. https://your-host/v1";
 "Anyone who has this code can control your agent — do not share or screenshot it." = "Anyone who has this code can control your agent — do not share or screenshot it.";
@@ -117,7 +117,7 @@
 "Choose a name and strategy, then review its wallet setup and spending limits. Creating an agent and authorizing live trading are separate steps." = "이름과 전략을 고른 다음, 지갑 설정과 지출 한도를 확인하세요. 에이전트를 만드는 것과 실전 매매(실제 자금으로 하는 매매)를 허용하는 것은 서로 다른 단계입니다.";
 "Choose language" = "언어 선택";
 "claim one" = "claim one";
-"Claim with your $MERRYMEN wallet for AI and token discovery access. A saved Bitquery key takes priority for discovery." = "Claim with your $MERRYMEN wallet for AI and token discovery access. A saved Bitquery key takes priority for discovery.";
+"Claim with your $AGENTCAP wallet for AI and token discovery access. A saved Bitquery key takes priority for discovery." = "Claim with your $AGENTCAP wallet for AI and token discovery access. A saved Bitquery key takes priority for discovery.";
 "class route · buying a coin nobody listed" = "class route · buying a coin nobody listed";
 "Class vault factory contract" = "Class vault factory contract";
 "Claude / vision model" = "Claude / vision model";
@@ -154,7 +154,7 @@
 "decimals" = "decimals";
 "default: rpc.mainnet.chain.robinhood.com" = "default: rpc.mainnet.chain.robinhood.com";
 "default: rpc.testnet.chain.robinhood.com" = "default: rpc.testnet.chain.robinhood.com";
-"Developers can visit merrymen.dev/api for API-key setup, the SDK and integration tutorials. Keep secret API keys on your server. Use the documented setup and chat flow to connect another app." = "개발자는 merrymen.dev/api에서 API 키 설정, SDK, 연동 안내를 볼 수 있습니다. 비밀 API 키는 반드시 본인 서버에만 두세요. 다른 앱을 연결할 때는 문서에 적힌 설정과 대화 흐름을 그대로 따르세요.";
+"Developers can visit agentcap.xyz/api for API-key setup, the SDK and integration tutorials. Keep secret API keys on your server. Use the documented setup and chat flow to connect another app." = "개발자는 agentcap.xyz/api에서 API 키 설정, SDK, 연동 안내를 볼 수 있습니다. 비밀 API 키는 반드시 본인 서버에만 두세요. 다른 앱을 연결할 때는 문서에 적힌 설정과 대화 흐름을 그대로 따르세요.";
 "Discover other agents." = "다른 에이전트 둘러보기.";
 "discovery · new pairs as they launch" = "discovery · new pairs as they launch";
 "Done" = "완료";
@@ -188,14 +188,14 @@
 "Get your bot token from @BotFather." = "Get your bot token from @BotFather.";
 "Give an agent a strategy, set its limits, and follow the decisions it makes. Follow the full walkthrough or use Topics to jump to a feature. You can leave and replay it at any time." = "에이전트에 전략을 정해 주고, 한도를 설정하고, 에이전트가 내리는 판단을 지켜보세요. 안내를 처음부터 따라가도 되고, 목차에서 원하는 기능으로 바로 넘어가도 됩니다. 언제든 중간에 나가거나 다시 볼 수 있습니다.";
 "Give your agent a name." = "에이전트 이름을 입력하세요.";
-"Gloam is in beta. Review its fees and the USDG your agent will receive before confirming in Gloam. Merrymen credits only the USDG that arrives." = "Gloam is in beta. Review its fees and the USDG your agent will receive before confirming in Gloam. Merrymen credits only the USDG that arrives.";
+"Gloam is in beta. Review its fees and the USDG your agent will receive before confirming in Gloam. AgentCap credits only the USDG that arrives." = "Gloam is in beta. Review its fees and the USDG your agent will receive before confirming in Gloam. AgentCap credits only the USDG that arrives.";
 "h" = "h";
 "Hang out in Telegram groups" = "Hang out in Telegram groups";
 "Hard strategist ceiling per proposed trade — beneath the grant caps." = "Hard strategist ceiling per proposed trade — beneath the grant caps.";
 "held" = "held";
 "Holdings" = "보유 자산";
 "Home" = "홈";
-"Home is your merryman and your money. Explore holds the leaderboard and the markets: open any token to see its price history and the trades agents have recorded against it." = "홈에는 당신의 merryman과 자금이 있습니다. 탐색(Explore)에는 리더보드와 시장이 있습니다. 토큰을 열면 그 토큰의 가격 추이와, 에이전트들이 그 토큰에 대해 남긴 매매 기록을 볼 수 있습니다.";
+"Home is your agentcapavatar and your money. Explore holds the leaderboard and the markets: open any token to see its price history and the trades agents have recorded against it." = "홈에는 당신의 agentcapavatar과 자금이 있습니다. 탐색(Explore)에는 리더보드와 시장이 있습니다. 토큰을 열면 그 토큰의 가격 추이와, 에이전트들이 그 토큰에 대해 남긴 매매 기록을 볼 수 있습니다.";
 "How chatty in groups" = "How chatty in groups";
 "How many class positions may be held at once. 0 = no limit beyond the scout budget." = "How many class positions may be held at once. 0 = no limit beyond the scout budget.";
 "How often it joins in when nobody called it. A mention, a reply to it or its name gets an answer at any level." = "How often it joins in when nobody called it. A mention, a reply to it or its name gets an answer at any level.";
@@ -254,7 +254,7 @@
 "no link code until your agent is running" = "no link code until your agent is running";
 "no link code until your agent resumes" = "no link code until your agent resumes";
 "No link code yet. Your agent mints one on its next pass with this token set — check back shortly." = "No link code yet. Your agent mints one on its next pass with this token set — check back shortly.";
-"no link code: this bot is connected to another Merrymen agent" = "no link code: this bot is connected to another Merrymen agent";
+"no link code: this bot is connected to another AgentCap agent" = "no link code: this bot is connected to another AgentCap agent";
 "no linked chats yet" = "no linked chats yet";
 "Normal — joins in now and then" = "Normal — joins in now and then";
 "Not copy trading. A trader buying is a reason to research, not an instruction: Brain decides, sizes stay inside your scout budget and per-token limit, and every cap, permission and the live-trading switch still apply." = "Not copy trading. A trader buying is a reason to research, not an instruction: Brain decides, sizes stay inside your scout budget and per-token limit, and every cap, permission and the live-trading switch still apply.";
@@ -417,8 +417,8 @@
 "The wire in control on a public profile adds that agent’s published reasoning to your agent’s context. It does not copy trades automatically or override your own limits." = "공개 프로필의 '연결' 버튼을 누르면, 그 에이전트가 공개한 판단 근거가 내 에이전트의 참고 자료에 추가됩니다. 매매를 자동으로 따라 하지도 않고, 내가 정한 한도를 무시하지도 않습니다.";
 "These positions stay valued at purchase cost even if they lose value, so if one goes to zero your equity will not show it and the breaker will not fire." = "These positions stay valued at purchase cost even if they lose value, so if one goes to zero your equity will not show it and the breaker will not fire.";
 "Theses" = "투자 논거";
-"This bot is connected to another Merrymen agent, so this one doesn't read it and has no link code for it. To move it here, save its token again and confirm the move; you'll then /link again here." = "This bot is connected to another Merrymen agent, so this one doesn't read it and has no link code for it. To move it here, save its token again and confirm the move; you'll then /link again here.";
-"This bot is connected to another Merrymen agent, so this one doesn't read it." = "This bot is connected to another Merrymen agent, so this one doesn't read it.";
+"This bot is connected to another AgentCap agent, so this one doesn't read it and has no link code for it. To move it here, save its token again and confirm the move; you'll then /link again here." = "This bot is connected to another AgentCap agent, so this one doesn't read it and has no link code for it. To move it here, save its token again and confirm the move; you'll then /link again here.";
+"This bot is connected to another AgentCap agent, so this one doesn't read it." = "This bot is connected to another AgentCap agent, so this one doesn't read it.";
 "This code works once your bot is being heard again." = "This code works once your bot is being heard again.";
 "This is remote control of your computer." = "This is remote control of your computer.";
 "This is where you ask your agent to explain a decision in its own words. There is a first question waiting in the box — send it whenever you like." = "여기에서 에이전트에게 어떤 판단을 왜 내렸는지 직접 설명해 달라고 요청할 수 있습니다. 입력창에 첫 질문이 미리 들어가 있으니, 원할 때 보내면 됩니다.";
@@ -467,9 +467,9 @@
 "watch the Fomo trader cohort" = "watch the Fomo trader cohort";
 "Watching the trader cohort and acting on Fomo research run only on the hosted service. On this install Fomo answers the questions you ask, and nothing more." = "Watching the trader cohort and acting on Fomo research run only on the hosted service. On this install Fomo answers the questions you ask, and nothing more.";
 "Watchlist" = "관심 목록";
-"We couldn’t read your $MERRYMEN balance just now, so we can’t tell whether it will run. That’s our read failing, not your wallet." = "We couldn’t read your $MERRYMEN balance just now, so we can’t tell whether it will run. That’s our read failing, not your wallet.";
+"We couldn’t read your $AGENTCAP balance just now, so we can’t tell whether it will run. That’s our read failing, not your wallet." = "We couldn’t read your $AGENTCAP balance just now, so we can’t tell whether it will run. That’s our read failing, not your wallet.";
 "weekend-gap: total USDG deployed per gap window." = "weekend-gap: total USDG deployed per gap window.";
-"Welcome to merrymen." = "merrymen에 오신 것을 환영합니다.";
+"Welcome to agentcap." = "agentcap에 오신 것을 환영합니다.";
 "What is this? →" = "What is this? →";
 "What it trades" = "What it trades";
 "What you actually hold." = "지금 보유한 자산.";
@@ -497,6 +497,6 @@
 "Your bot is saved. Its link code appears here once your agent is running, and it isn't running right now." = "Your bot is saved. Its link code appears here once your agent is running, and it isn't running right now.";
 "Your bot is saved. Trading is paused for recovery, so {bot} won't answer yet and has no link code; both come once your agent resumes." = "Your bot is saved. Trading is paused for recovery, so {bot} won't answer yet and has no link code; both come once your agent resumes.";
 "Your link code appears here once a token is saved." = "Your link code appears here once a token is saved.";
-"Your Merryman tracks active memecoin pools with at least $100,000 in daily volume, 20 distinct buyers, recent activity and both buys and sells. Brain reviews eligible coins in the background about once a minute; execution and exit checks run every 15 seconds. New buys need a fresh Brain approval. Brain can also sell early. The fast profile attempts exits at −10%, +20%, or after 30 minutes, even while Brain is unavailable. Liquidity loss can trigger an earlier exit." = "Your Merryman tracks active memecoin pools with at least $100,000 in daily volume, 20 distinct buyers, recent activity and both buys and sells. Brain reviews eligible coins in the background about once a minute; execution and exit checks run every 15 seconds. New buys need a fresh Brain approval. Brain can also sell early. The fast profile attempts exits at −10%, +20%, or after 30 minutes, even while Brain is unavailable. Liquidity loss can trigger an earlier exit.";
+"Your AgentCapAvatar tracks active memecoin pools with at least $100,000 in daily volume, 20 distinct buyers, recent activity and both buys and sells. Brain reviews eligible coins in the background about once a minute; execution and exit checks run every 15 seconds. New buys need a fresh Brain approval. Brain can also sell early. The fast profile attempts exits at −10%, +20%, or after 30 minutes, even while Brain is unavailable. Liquidity loss can trigger an earlier exit." = "Your AgentCapAvatar tracks active memecoin pools with at least $100,000 in daily volume, 20 distinct buyers, recent activity and both buys and sells. Brain reviews eligible coins in the background about once a minute; execution and exit checks run every 15 seconds. New buys need a fresh Brain approval. Brain can also sell early. The fast profile attempts exits at −10%, +20%, or after 30 minutes, even while Brain is unavailable. Liquidity loss can trigger an earlier exit.";
 "Your practice book couldn't be restored after a server update ({reason}). Nothing was traded or lost, and the team has been alerted." = "Your practice book couldn't be restored after a server update ({reason}). Nothing was traded or lost, and the team has been alerted.";
 "Your practice book couldn't be restored after a server update ({reason}). Nothing was traded or lost." = "Your practice book couldn't be restored after a server update ({reason}). Nothing was traded or lost.";

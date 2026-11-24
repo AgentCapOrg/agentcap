@@ -28,4 +28,4 @@ export {
   rejectRuleLabel,
   type PublicThesis,
   type ThesisRow,
-} from "@merrymen/thesis";
+} from "@agentcap/thesis";

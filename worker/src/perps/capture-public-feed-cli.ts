@@ -3,14 +3,14 @@ import { capturePublicFeed } from "./capture-public-feed";
 // already produced by the one fleet feed; never start another venue socket.
 const [source, output, samplesText, intervalText, ...extra] = process.argv.slice(2);
 if (!source || !output || extra.length || (samplesText !== undefined && !/^\d+$/.test(samplesText)) || (intervalText !== undefined && !/^\d+$/.test(intervalText))) {
-  console.error("Usage: MERRYMEN_PERPS_CAPTURE_PUBLIC_FEED=1 node --import tsx worker/src/perps/capture-public-feed-cli.ts /existing/lighter-feed.json /new/capture-directory [samples=120] [interval-ms=5000]");
+  console.error("Usage: AGENTCAP_PERPS_CAPTURE_PUBLIC_FEED=1 node --import tsx worker/src/perps/capture-public-feed-cli.ts /existing/lighter-feed.json /new/capture-directory [samples=120] [interval-ms=5000]");
   process.exitCode = 1;
 } else {
   const stop = new AbortController();
   const interrupt = () => stop.abort();
   process.once("SIGINT", interrupt); process.once("SIGTERM", interrupt);
   try {
-    const result = await capturePublicFeed({ source, output, samples: Number(samplesText ?? 120), intervalMs: Number(intervalText ?? 5_000), optIn: process.env.MERRYMEN_PERPS_CAPTURE_PUBLIC_FEED, signal: stop.signal });
+    const result = await capturePublicFeed({ source, output, samples: Number(samplesText ?? 120), intervalMs: Number(intervalText ?? 5_000), optIn: process.env.AGENTCAP_PERPS_CAPTURE_PUBLIC_FEED, signal: stop.signal });
     console.log(JSON.stringify(result, null, 2));
     if (!result.complete || result.unreadFrames) process.exitCode = 2;
   } catch (error) {

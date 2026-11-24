@@ -11,15 +11,15 @@ import { wrapSqlite } from "./db";
 import { PAPER_CHECKPOINT_SCHEMA, restorePaperCheckpoint } from "./paper-checkpoint";
 import { readPaperReturn } from "../../web/src/lib/paper-return";
 
-const scratch = mkdtempSync(path.join(os.tmpdir(), "merrymen-paper-opening-"));
+const scratch = mkdtempSync(path.join(os.tmpdir(), "agentcap-paper-opening-"));
 const isolated = path.join(scratch, "cwd");
 mkdirSync(isolated);
-process.env.MERRYMEN_HOME = path.join(scratch, "home");
+process.env.AGENTCAP_HOME = path.join(scratch, "home");
 delete process.env.DATABASE_URL;
 const store = await import("./store");
 const cwd = process.cwd();
 try { process.chdir(isolated); await store.initStore(); } finally { process.chdir(cwd); }
-const raw = new DatabaseSync(path.join(process.env.MERRYMEN_HOME, "merrymen.db"));
+const raw = new DatabaseSync(path.join(process.env.AGENTCAP_HOME, "agentcap.db"));
 const db = wrapSqlite(raw);
 after(() => { raw.close(); store.closeStoreForTest(); rmSync(scratch, { recursive: true, force: true }); });
 

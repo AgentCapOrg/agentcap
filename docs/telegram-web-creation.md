@@ -1,23 +1,23 @@
 # Telegram bot creation from the web
 
 Hosted Settings → Telegram has a **Create Telegram bot** button (Home has the
-same flow as **Set up Telegram**). It opens a private chat with the Merrymen
+same flow as **Set up Telegram**). It opens a private chat with the AgentCap
 manager. The user starts that chat and approves the bot name in Telegram.
 The manager offers the usual creation button and a second **Create my bot on
 iPhone or iPad** link. The link opens Telegram's create-bot screen directly;
-keep its suggested username so Merrymen can associate the resulting notice
+keep its suggested username so AgentCap can associate the resulting notice
 with this setup. The bot's display name can be changed. The manager then
 answers in the same chat:
 
 > ✅ @their_bot is ready.
-> Connect it to your Merrymen agent?
+> Connect it to your AgentCap agent?
 >
 > [Connect @their_bot] [Not this bot]
 
-**Connect** saves the bot right there; the page in Merrymen, which keeps
+**Connect** saves the bot right there; the page in AgentCap, which keeps
 checking, shows it saved without another click. The page also still offers
 **Connect this bot**, so either place works, and whichever comes second finds
-it already done. Merrymen retrieves and seals the token on the server; users
+it already done. AgentCap retrieves and seals the token on the server; users
 never copy it. **Open your bot** then uses the existing private `/start` link to
 finish linking their agent. Saving a token does not prove a listener is running,
 and it does not enable trading or change a wallet permission.
@@ -46,19 +46,19 @@ webhook is set by hand.
 
    | Variable | Value |
    | --- | --- |
-   | `MERRYMEN_TELEGRAM_MANAGER_TOKEN` | The manager's Bot API token from BotFather |
-   | `MERRYMEN_TELEGRAM_MANAGER_USERNAME` | Its username, without `@` (must end in `bot`) |
-   | `MERRYMEN_TELEGRAM_MANAGER_WEBHOOK_SECRET` | Independent random 32–256 character secret of letters, digits, `_` and `-`, e.g. `openssl rand -hex 32` |
-   | `MERRYMEN_TELEGRAM_CREATE_ENABLED` | `true` to offer creation; anything else turns it off |
-   | `MERRYMEN_PUBLIC_ORIGIN` | Already required hosted. Must be the `https://` origin Telegram can reach, with no path |
+   | `AGENTCAP_TELEGRAM_MANAGER_TOKEN` | The manager's Bot API token from BotFather |
+   | `AGENTCAP_TELEGRAM_MANAGER_USERNAME` | Its username, without `@` (must end in `bot`) |
+   | `AGENTCAP_TELEGRAM_MANAGER_WEBHOOK_SECRET` | Independent random 32–256 character secret of letters, digits, `_` and `-`, e.g. `openssl rand -hex 32` |
+   | `AGENTCAP_TELEGRAM_CREATE_ENABLED` | `true` to offer creation; anything else turns it off |
+   | `AGENTCAP_PUBLIC_ORIGIN` | Already required hosted. Must be the `https://` origin Telegram can reach, with no path |
 
-   The hosted service already requires `DATABASE_URL` and `MERRYMEN_STORE_DEK`;
+   The hosted service already requires `DATABASE_URL` and `AGENTCAP_STORE_DEK`;
    without either, creation stays off. Keep these values out of client
    variables, shell arguments, request logs, screenshots and source control.
 3. **Deploy.** Start with a disposable operator account and bot; verify private
    linking and actual listening before announcing it to users.
 
-Turn creation off by clearing `MERRYMEN_TELEGRAM_CREATE_ENABLED`. Existing
+Turn creation off by clearing `AGENTCAP_TELEGRAM_CREATE_ENABLED`. Existing
 tenant bots continue through their current worker path. A setup already waiting
 for confirmation can still be confirmed or cancelled while the readiness probe
 below fails, but not once the flag or variables are cleared: Settings then
@@ -84,7 +84,7 @@ web service runs a readiness probe:
    `can_manage_bots: true` (Bot Management Mode is on);
 3. `getWebhookInfo` reports the manager's webhook URL, and:
    - **empty**: the service sets it to
-     `${MERRYMEN_PUBLIC_ORIGIN}/api/telegram/manager/webhook` with the webhook
+     `${AGENTCAP_PUBLIC_ORIGIN}/api/telegram/manager/webhook` with the webhook
      secret and `allowed_updates: ["message", "managed_bot", "callback_query"]`,
      then reads it back and requires this URL and all three update types;
    - **already this URL**: it is set again once per process with the current
@@ -114,7 +114,7 @@ receipts at least through the provider's retry window. The tables contain
 private account associations and are not public analytics data.
 
 The bot username Telegram suggests in its creation dialog is
-`merrymen_<16 hex>_bot`, derived with a domain-separated hash of this setup's
+`agentcap_<16 hex>_bot`, derived with a domain-separated hash of this setup's
 random challenge hash. It stays the same when `/start` is retried and never
 contains the owner's Telegram id. The native request button permits a different
 username. The iPhone/iPad link requires this exact suggestion; if it is taken,
@@ -124,14 +124,14 @@ start a new setup for a new suggestion, or connect an existing bot manually.
 
 | When | The manager says | Buttons |
 | --- | --- | --- |
-| A bot is made for a setup underway | ✅ @bot is ready. Connect it to your Merrymen agent? | Connect @bot · Not this bot |
-| A bot is made with no setup underway (it expired, was cancelled or replaced, or never began) | Your bot @bot was created, but no Merrymen setup is waiting for it, so it wasn't connected. To connect a new bot, start again from Merrymen and create it within 30 minutes. | Back to Merrymen |
-| **Connect** saved it, or the page did | ✅ Connected @bot to your Merrymen agent. @bot replies once your agent is running. Merrymen then shows "Open my bot" to link your chat with it. If your agent is paused for recovery, that waits until it resumes. | Back to Merrymen |
-| **Not this bot** | Cancelled. Start again from Merrymen when you're ready. (The bot itself stays in Telegram; it can be deleted in @BotFather.) | Back to Merrymen |
-| **Connect** on an expired setup | This setup expired. Start again from Merrymen. | Back to Merrymen |
-| **Connect** when the agent already has a bot | …already has a Telegram bot… replace the bot in Settings. | Back to Merrymen |
-| **Connect** on a bot another agent holds | …already connected to another Merrymen agent… (never whose) | Back to Merrymen |
-| **Connect** fails for any other reason | A separate message: Couldn't connect right now. Try again, or connect from Merrymen. | Original proposal retains its buttons |
+| A bot is made for a setup underway | ✅ @bot is ready. Connect it to your AgentCap agent? | Connect @bot · Not this bot |
+| A bot is made with no setup underway (it expired, was cancelled or replaced, or never began) | Your bot @bot was created, but no AgentCap setup is waiting for it, so it wasn't connected. To connect a new bot, start again from AgentCap and create it within 30 minutes. | Back to AgentCap |
+| **Connect** saved it, or the page did | ✅ Connected @bot to your AgentCap agent. @bot replies once your agent is running. AgentCap then shows "Open my bot" to link your chat with it. If your agent is paused for recovery, that waits until it resumes. | Back to AgentCap |
+| **Not this bot** | Cancelled. Start again from AgentCap when you're ready. (The bot itself stays in Telegram; it can be deleted in @BotFather.) | Back to AgentCap |
+| **Connect** on an expired setup | This setup expired. Start again from AgentCap. | Back to AgentCap |
+| **Connect** when the agent already has a bot | …already has a Telegram bot… replace the bot in Settings. | Back to AgentCap |
+| **Connect** on a bot another agent holds | …already connected to another AgentCap agent… (never whose) | Back to AgentCap |
+| **Connect** fails for any other reason | A separate message: Couldn't connect right now. Try again, or connect from AgentCap. | Original proposal retains its buttons |
 
 Connected means saved, not running. Only the agent's worker (or, when its
 practice book would not restore, its hold process) starts the bot and mints the
@@ -157,15 +157,15 @@ recovery, so @bot won't answer yet and has no link code; both come once your
 agent resumes", Home's recovery row says "Saved. @bot answers once your agent
 resumes", and neither waits or re-reads for a code.
 
-Back to Merrymen opens `MERRYMEN_PUBLIC_ORIGIN`. Each creation is answered
+Back to AgentCap opens `AGENTCAP_PUBLIC_ORIGIN`. Each creation is answered
 once: Telegram's redelivery of the same update says nothing again. A message
 Telegram refuses to deliver is logged with a fixed line
 (`[telegram-create] the manager's … message could not be sent`) and not retried;
-the page in Merrymen still offers the bot.
+the page in AgentCap still offers the bot.
 
 **Who may press Connect.** Only the Telegram user that the setup's `/start`
 challenge bound, in their private chat with the manager. That challenge came
-from the signed-in owner's own Merrymen page, so the bound user stands for that
+from the signed-in owner's own AgentCap page, so the bound user stands for that
 owner for this one setup; pressing connects exactly the bot the creation
 message proposed, nothing else. A button carries `mc:` or `mx:`, the setup's
 random id and the public bot id (at most 60 bytes). It never carries the

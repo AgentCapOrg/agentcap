@@ -1,5 +1,5 @@
 /**
- * Merrymen AI gateway — SHARED CORE (runtime-agnostic).
+ * AgentCap AI gateway — SHARED CORE (runtime-agnostic).
  *
  * All the security-critical logic lives here exactly once: HMAC access tokens,
  * single-use domain-bound claim nonces, the on-chain holder check, the cost
@@ -24,13 +24,13 @@ export const DEFAULTS = {
   // background poll quietly starve the brain the same holder is paying for.
   BITQUERY_RATE_PER_MIN: 6,
   // THE FLEET-WIDE DAILY CAP on Bitquery points this gateway spends, across
-  // every holder AND the public memescope (MERRYMEN_GATEWAY_BITQUERY_POINTS_PER_DAY).
+  // every holder AND the public memescope (AGENTCAP_GATEWAY_BITQUERY_POINTS_PER_DAY).
   // The per-address bucket above bounds one holder; nothing bounded all of
   // them, and each holder polling at the worker's default interval is
   // roughly 720 points a day. Reserved BEFORE each upstream call; a refusal
   // costs nothing. The default is 12,500 a day: 10,000 for the memescope at
   // its 45 s cadence and 2,500 for holders. The orchestrator's Bitquery lane
-  // keeps its own, separate counter (MERRYMEN_BITQUERY_POINTS_PER_DAY in
+  // keeps its own, separate counter (AGENTCAP_BITQUERY_POINTS_PER_DAY in
   // worker/src/venues/bitquery-lane.ts, default 25,000); neither sees the
   // other's spend, so the operator sizes both to the plan.
   BITQUERY_POINTS_PER_DAY: 12_500,
@@ -157,7 +157,7 @@ export function bitqueryAuthHeaders(key) {
 export const BITQUERY_POINTS_PER_DAY_CEILING = 30_000;
 
 /**
- * MERRYMEN_GATEWAY_BITQUERY_POINTS_PER_DAY as a number: a positive whole number
+ * AGENTCAP_GATEWAY_BITQUERY_POINTS_PER_DAY as a number: a positive whole number
  * up to the ceiling, or the default. Returns the line to log beside it, which
  * describes a bad value by its length and never echoes it — a key pasted into
  * the wrong variable must not reach the log through this.
@@ -167,11 +167,11 @@ export function bitqueryPointsPerDayFrom(raw) {
   if (raw === undefined || raw === null || String(raw).trim() === "") return { points: fallback, note: null };
   const s = String(raw).trim();
   if (!/^\d+$/.test(s) || Number(s) < 1) {
-    return { points: fallback, note: `MERRYMEN_GATEWAY_BITQUERY_POINTS_PER_DAY is not a positive whole number (${s.length} characters); ${fallback} applies` };
+    return { points: fallback, note: `AGENTCAP_GATEWAY_BITQUERY_POINTS_PER_DAY is not a positive whole number (${s.length} characters); ${fallback} applies` };
   }
   const n = Number(s);
   if (n > BITQUERY_POINTS_PER_DAY_CEILING) {
-    return { points: BITQUERY_POINTS_PER_DAY_CEILING, note: `MERRYMEN_GATEWAY_BITQUERY_POINTS_PER_DAY=${n} is above the ceiling of ${BITQUERY_POINTS_PER_DAY_CEILING}; ${BITQUERY_POINTS_PER_DAY_CEILING} applies` };
+    return { points: BITQUERY_POINTS_PER_DAY_CEILING, note: `AGENTCAP_GATEWAY_BITQUERY_POINTS_PER_DAY=${n} is above the ceiling of ${BITQUERY_POINTS_PER_DAY_CEILING}; ${BITQUERY_POINTS_PER_DAY_CEILING} applies` };
   }
   return { points: n, note: null };
 }
@@ -186,7 +186,7 @@ export function createGateway(cfg) {
     bitqueryKey,
     bitqueryUrl = "https://streaming.bitquery.io/graphql",
     model,
-    brandModel = "merrymen-fast",
+    brandModel = "agentcap-fast",
     domain,
     minTokens,
     tokenAddress,
@@ -255,7 +255,7 @@ export function createGateway(cfg) {
   // wallet shows real context and the signature can't be replayed.
   const claimMessage = (addr, nonce) =>
     [
-      `Merrymen AI — prove you hold $MERRYMEN`,
+      `AgentCap AI — prove you hold $AGENTCAP`,
       `Domain: ${domain}`,
       `Address: ${addr}`,
       `Nonce: ${nonce}`,
@@ -272,7 +272,7 @@ export function createGateway(cfg) {
    * `setBal(key, ok, BALANCE_TTL_SEC)` as a successful read. So one transient
    * RPC error persisted "not a holder" for the whole TTL, and every request in
    * that window was refused with a 403 telling a genuine holder that their
-   * wallet "no longer meets the $MERRYMEN holding requirement" — about tokens
+   * wallet "no longer meets the $AGENTCAP holding requirement" — about tokens
    * they still held. Their strategist stopped proposing anything meanwhile.
    *
    * Failing closed and REMEMBERING a failure are different things. Only a read
@@ -348,10 +348,10 @@ export function createGateway(cfg) {
     // A read that did not happen is a 503, not a verdict about their wallet.
     if (!claimHolder.read) {
       // The nonce is already spent above, so "try again" means a new one.
-      return { status: 503, json: { error: "we couldn't read your $MERRYMEN balance just now — that's our chain read failing, not your wallet. Refresh the page and sign again." } };
+      return { status: 503, json: { error: "we couldn't read your $AGENTCAP balance just now — that's our chain read failing, not your wallet. Refresh the page and sign again." } };
     }
     if (!claimHolder.ok) {
-      return { status: 403, json: { error: `this wallet doesn't hold at least ${minTokens} $MERRYMEN — join the Circle, then claim.` } };
+      return { status: 403, json: { error: `this wallet doesn't hold at least ${minTokens} $AGENTCAP — join the Circle, then claim.` } };
     }
     await store.setBal(address.toLowerCase(), true, T.BALANCE_TTL_SEC);
     return { status: 200, json: { token: issueToken(address), expiresInDays: T.TOKEN_TTL_SEC / 86400, model: brandModel } };
@@ -362,7 +362,7 @@ export function createGateway(cfg) {
    *
    * Not a menu — a fact. `clampPayload` forces `model` server-side, which is
    * the whole point of the proxy, so a client cannot pick anything else. This
-   * exists only because every OpenAI-compatible client asks: merrymen's own
+   * exists only because every OpenAI-compatible client asks: agentcap's own
    * settings page fetches `<baseUrl>/models` for any openai-transport provider,
    * got the catch-all 404, and printed "Could not load AI models. Check your
    * provider and key" beside a key that was perfectly good. Two testers
@@ -374,22 +374,22 @@ export function createGateway(cfg) {
   function models() {
     return {
       status: 200,
-      json: { object: "list", data: [{ id: brandModel, object: "model", owned_by: "merrymen" }] },
+      json: { object: "list", data: [{ id: brandModel, object: "model", owned_by: "agentcap" }] },
     };
   }
 
   async function chat({ token, body, ip }) {
     const addr = verifyToken(token);
-    if (!addr) return { status: 401, json: { error: { message: "invalid or expired Merrymen AI token — re-claim at /claim" } } };
+    if (!addr) return { status: 401, json: { error: { message: "invalid or expired AgentCap AI token — re-claim at /claim" } } };
     if (!(await store.rateHit(addr, T.RATE_PER_MIN, 60))) return { status: 429, json: { error: { message: "rate limit — slow down (holder quota)" } } };
     const chatHolder = await isHolder(addr);
     if (!chatHolder.read) {
       // 503, not 403. This caller already proved the balance once to get the
       // token; an unread balance is our outage, and the openai transport the
       // brain uses retries a 503 and gives up on a 403.
-      return { status: 503, json: { error: { message: "could not check the $MERRYMEN balance for this wallet right now — try again shortly" } } };
+      return { status: 503, json: { error: { message: "could not check the $AGENTCAP balance for this wallet right now — try again shortly" } } };
     }
-    if (!chatHolder.ok) return { status: 403, json: { error: { message: "this wallet no longer meets the $MERRYMEN holding requirement" } } };
+    if (!chatHolder.ok) return { status: 403, json: { error: { message: "this wallet no longer meets the $AGENTCAP holding requirement" } } };
     if (!body || typeof body !== "object") return { status: 400, json: { error: { message: "bad request body" } } };
     clampPayload(body);
     try {
@@ -542,7 +542,7 @@ export function createGateway(cfg) {
       return { status: 503, json: { error: "this gateway has no Bitquery key configured" } };
     }
     const addr = verifyToken(token);
-    if (!addr) return { status: 401, json: { error: "invalid or expired Merrymen token — re-claim at /claim" } };
+    if (!addr) return { status: 401, json: { error: "invalid or expired AgentCap token — re-claim at /claim" } };
     // A SEPARATE, tighter bucket from the chat route. Discovery is polled on a
     // timer rather than driven by a human typing, so it would otherwise quietly
     // consume the whole per-address allowance that the brain also depends on.
@@ -551,10 +551,10 @@ export function createGateway(cfg) {
     }
     const bqHolder = await isHolder(addr);
     if (!bqHolder.read) {
-      return { status: 503, json: { error: "could not check the $MERRYMEN balance for this wallet right now — try again shortly" } };
+      return { status: 503, json: { error: "could not check the $AGENTCAP balance for this wallet right now — try again shortly" } };
     }
     if (!bqHolder.ok) {
-      return { status: 403, json: { error: "this wallet no longer meets the $MERRYMEN holding requirement" } };
+      return { status: 403, json: { error: "this wallet no longer meets the $AGENTCAP holding requirement" } };
     }
     const name = body && typeof body === "object" ? body.query : null;
     const entry = Object.prototype.hasOwnProperty.call(BITQUERY_QUERIES, name)
@@ -731,7 +731,7 @@ export function createGateway(cfg) {
       if (!err?.budget) console.error(`[gateway] memescope upstream failed: ${err instanceof Error ? err.message : String(err)}`);
       else if (scopeBudgetSaid !== day) {
         scopeBudgetSaid = day;
-        console.error(`[gateway] memescope not refreshing: ${err.message} (MERRYMEN_GATEWAY_BITQUERY_POINTS_PER_DAY)`);
+        console.error(`[gateway] memescope not refreshing: ${err.message} (AGENTCAP_GATEWAY_BITQUERY_POINTS_PER_DAY)`);
       }
       // Serve stale rather than nothing: a scope that briefly stops updating is
       // far better than a page that breaks because a data provider blinked.

@@ -11,7 +11,7 @@
  *   about. `xHandle` is typed by the owner and nothing has ever checked they
  *   own it, which is why `packages/core/src/settings.ts` says it "renders
  *   disclaimed and never as a link". Linking an unverified handle makes
- *   merrymen vouch for an association it never checked, and lets an agent
+ *   agentcap vouch for an association it never checked, and lets an agent
  *   impersonate anyone by typing their name.
  *
  * So: `xProfileUrl` answers the first question only, and callers must ALSO
@@ -22,7 +22,7 @@
  *
  * The hosted settings PUT does apply the regex — but `worker/src/settings.ts`
  * resolves the same field from a self-hosted `settings.json` or
- * `MERRYMEN_X_HANDLE` with only a `.trim()`, no shape check at all, unlike its
+ * `AGENTCAP_X_HANDLE` with only a `.trim()`, no shape check at all, unlike its
  * neighbours which check `/^0x[0-9a-fA-F]{40}$/`. Arbitrary text — including a
  * `javascript:` payload — can therefore already sit in `agents.x_handle` and is
  * mirrored to the shared database. Rows also predate the current regex. A

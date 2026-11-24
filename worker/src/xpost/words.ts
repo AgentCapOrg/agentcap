@@ -24,7 +24,7 @@ const TAG_WORDS: ReadonlySet<string> = new Set((
   "fair fake fam far fast feel few find first flow fomo for fren frens fresh friend from fun full gain gas get give gm gn go going gone gonna good " +
   "got great guy guys had half happen hard has have he healthy hear hello help her here hey hi high his hold holder honest honestly hot how huge i " +
   "idea if in index into is it its just keep kind know last late lately launch launchpad least left legit less let life like little live liq " +
-  "liquidity lmao lol long look lot lots love low made make man many market maybe mcap me mean meme memecoin merrymen might mine mint model " +
+  "liquidity lmao lol long look lot lots love low made make man many market maybe mcap me mean meme memecoin agentcap might mine mint model " +
   "money month more morning most much must my name near need never new next nice night no none nope not nothing now number of off often oh ok okay " +
   "old on once one only onchain open opinion or other our out over owner own paper part people pick plan play please pls point pons pool position " +
   "post pretty price probably profit project pump question quick quiet rather real really reason recent recently right risk risky robinhood rug run " +
@@ -190,7 +190,7 @@ const CHAT_WORDS: ReadonlySet<string> = new Set((
   "yourself myself thanks welcome cheers glad nice sweet neat awesome solid legend legends champ ha haha hah heh hehe lol lmao oof ooh ahh hmm yay nah yep yup sure " +
   "obviously biased laid").split(/\s+/));
 // NOT, SINCE THE RED-TEAM REVIEW OF 2026-10-12: crypto, community, future,
-// proud, silly, goofy, cheeky, tune, tuning. With them, "merrymen is the
+// proud, silly, goofy, cheeky, tune, tuning. With them, "agentcap is the
 // future of crypto", "cooking something big for the community, stay tuned",
 // "pretty proud" of a backing it does not have and "you seem pretty silly"
 // were posted as chat. A draft that says one now names a word it was handed
@@ -200,7 +200,7 @@ const CHAT_WORDS: ReadonlySet<string> = new Set((
 // is joining" were posted as chat. Nor crew, company, family, build, ship,
 // shipping, panic, path, road, journey or adventure, which describe a project
 // as well as a bot: "no panic fren, the crew is on it and the money is safe"
-// under "did merrymen get hacked?" and "the crew is shipping it, stick around"
+// under "did agentcap get hacked?" and "the crew is shipping it, stick around"
 // under "wen token?" were posted (houseTalkIn reads the rest).
 // NOR, SINCE THE RED-TEAM REVIEW OF a964a74c (2026-10-12): count, counting,
 // history, memory, past, shift, shifts, hours, edge, home, corner, forever,
@@ -258,29 +258,29 @@ export function marketTalkIn(text: unknown): boolean {
 
 /**
  * THE ONE PLAIN TRUTH AN ANSWER MAY SAY OF THE HOUSE: who made it. "built by
- * merrymen", or "merrymen built (me)" at a clause's end, taken out before a
+ * agentcap", or "agentcap built (me)" at a clause's end, taken out before a
  * draft is read for what it says of the house (gate.ts houseClaimed,
  * houseTalkIn below).
  */
-const HOUSE_SELF_TRUTH = /\b(?:built|made|created)\s+by\s+merrymen\b|\bmerrymen\s+(?:built|made|created)(?:\s+(?:me|this\s+bot|this\s+agent|alan))?(?=\s*(?:[,.;:!?]|$))/gi;
+const HOUSE_SELF_TRUTH = /\b(?:built|made|created)\s+by\s+agentcap\b|\bagentcap\s+(?:built|made|created)(?:\s+(?:me|this\s+bot|this\s+agent|alan))?(?=\s*(?:[,.;:!?]|$))/gi;
 export function withoutHouseSelfTruth(text: string): string {
   return String(text ?? "").replace(HOUSE_SELF_TRUTH, " ");
 }
 
 /**
  * THE HOUSE, ITS PEOPLE, A TOKEN, A LAUNCH, SAFETY OR MONEY, IN AN ANSWER
- * HANDED NOTHING (red-team review, 2026-10-12). Under "did merrymen get
+ * HANDED NOTHING (red-team review, 2026-10-12). Under "did agentcap get
  * hacked?", "no panic fren, the crew is on it and the money is safe" was
- * posted; under "is merrymen launching a token?" and "wen token?", "it is
+ * posted; under "is agentcap launching a token?" and "wen token?", "it is
  * coming, the crew is building it" and "the crew is shipping it, stick
  * around". A draft handed no research and told none of its buys has nothing
- * to say of any of it: one that speaks of merrymen (beyond who made it),
+ * to say of any of it: one that speaks of agentcap (beyond who made it),
  * robinhood, a team, a crew, devs, founders or a company, a token, TGE, a
  * launch, an airdrop, a presale or a roadmap, safety, security, funds or
  * money, a hack or a refund is not posted. The orchestrator reads it beside
  * coinTalkIn, unknownWordIn and marketTalkIn.
  */
-const HOUSE_TALK = /\b(?:merrymen|robinhood|teams?|crews?|devs?|developers?|founders?|company|companies|staff|tokens?|tge|launch\w*|airdrops?|presales?|roadmap|listings?|safe|safety|secure|security|funds?|money|hack\w*|exploit\w*|stolen|refund\w*|insur\w*|backed|backing|partner\w*)\b/i;
+const HOUSE_TALK = /\b(?:agentcap|robinhood|teams?|crews?|devs?|developers?|founders?|company|companies|staff|tokens?|tge|launch\w*|airdrops?|presales?|roadmap|listings?|safe|safety|secure|security|funds?|money|hack\w*|exploit\w*|stolen|refund\w*|insur\w*|backed|backing|partner\w*)\b/i;
 export function houseTalkIn(text: unknown): boolean {
   if (typeof text !== "string") return false;
   return HOUSE_TALK.test(withoutHouseSelfTruth(text.normalize("NFKC").replace(/[’‘]/g, "'")));

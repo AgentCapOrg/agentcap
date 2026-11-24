@@ -1,7 +1,7 @@
 import { parseFleetId, unsupportedFleetIdLabel } from "./fleet-id";
 
 /** Operator-only process hold. It never edits a grant, settings or the ledger. */
-export const ACCOUNTING_HOLD_ENV = "MERRYMEN_ACCOUNTING_HOLD_TENANTS";
+export const ACCOUNTING_HOLD_ENV = "AGENTCAP_ACCOUNTING_HOLD_TENANTS";
 
 /**
  * The tenants held, or a throw: a hold that dropped one entry would leave

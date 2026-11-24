@@ -25,7 +25,7 @@
  * lens is withheld rather than trimmed, because a guard that edits its way
  * past a leak is a guard that will one day edit its way past the wrong one.
  *
- * NO THIRD-PARTY WORDS. Every sentence is Merrymen's own, built from topics,
+ * NO THIRD-PARTY WORDS. Every sentence is AgentCap's own, built from topics,
  * stances and counts. Thesis text, handles and token names are attacker-
  * writable and never appear here, not even quoted: the dossier's labelled
  * excerpt stays in the dossier for humans.
@@ -60,7 +60,7 @@ const BASE58_RUN = /[1-9A-HJ-NP-Za-km-z]{32,}/;
 const VENDOR = /fomo/i;
 
 const ATTRIBUTION =
-  "Source: trader activity and written theses reported by a third-party social-trading platform, grouped and counted by Merrymen. Theses are the traders' own claims, not findings.";
+  "Source: trader activity and written theses reported by a third-party social-trading platform, grouped and counted by AgentCap. Theses are the traders' own claims, not findings.";
 const NOT_LINE =
   "WHAT THIS IS NOT: independent market evidence. Trader activity is a reason to investigate, not a reason to buy, and separate wallets are not proven independent people.";
 

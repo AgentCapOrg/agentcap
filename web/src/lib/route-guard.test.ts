@@ -25,7 +25,7 @@ import { after, before, describe, it } from "node:test";
 import ts from "typescript";
 import { NO_STORE_HEADERS, perRouteLimiter, walletNotSupported, walletUnknown } from "./route-guard";
 
-const ORIGIN = "https://app.merrymen.dev";
+const ORIGIN = "https://app.agentcap.xyz";
 const at = (query: string) => ({ url: `${ORIGIN}/api/pnl${query}` });
 
 describe("walletNotSupported", () => {
@@ -754,14 +754,14 @@ describe("the sweep sees a handler however a route exports it", () => {
 // ── and it holds at run time, before anything is touched ────────────────────
 
 describe("a refused request reads and changes nothing", () => {
-  const ENV = ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_GRANT_FILE", "DATABASE_URL", "MERRYMEN_PERPS"] as const;
+  const ENV = ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_GRANT_FILE", "DATABASE_URL", "AGENTCAP_PERPS"] as const;
   const saved = Object.fromEntries(ENV.map((k) => [k, process.env[k]]));
   const SPOT_GRANT = JSON.stringify({ smartAccount: `0x${"22".repeat(20)}`, demoOwnerPrivateKey: `0x${"01".repeat(32)}` });
   let home = "";
   before(() => {
     home = mkdtempSync(path.join(tmpdir(), "mm-route-guard-"));
-    process.env.MERRYMEN_HOME = home;
-    for (const k of ["MERRYMEN_HOSTED", "MERRYMEN_GRANT_FILE", "DATABASE_URL", "MERRYMEN_PERPS"] as const) delete process.env[k];
+    process.env.AGENTCAP_HOME = home;
+    for (const k of ["AGENTCAP_HOSTED", "AGENTCAP_GRANT_FILE", "DATABASE_URL", "AGENTCAP_PERPS"] as const) delete process.env[k];
   });
   after(() => {
     for (const [k, v] of Object.entries(saved)) {
@@ -787,7 +787,7 @@ describe("a refused request reads and changes nothing", () => {
     writeFileSync(path.join(home, "grant.json"), SPOT_GRANT);
     const { POST } = await import("../app/api/paper-reset/route");
     // Wallet-aware since 5c: an unreadable wallet is refused 400, and a Perps
-    // reset where no Perps worker runs (MERRYMEN_PERPS unset here) 403. Neither
+    // reset where no Perps worker runs (AGENTCAP_PERPS unset here) 403. Neither
     // is ever served as the Spot wallet's reset.
     for (const [q, status] of [["?wallet=perps", 403], ["?wallet=nope", 400], ["?wallet=spot&wallet=perps", 400]] as const) {
       const res = await POST(new Request(`${ORIGIN}/api/paper-reset${q}`, { method: "POST" }));
@@ -804,7 +804,7 @@ describe("a refused request reads and changes nothing", () => {
   /**
    * ONE REFUSAL, ONE SHAPE, on every wallet-aware route. A client reads the
    * code: `wallet-unknown` for a `?wallet=` no route can read, and
-   * `perps-wallet-not-offered` where Perps are not on (MERRYMEN_PERPS is unset
+   * `perps-wallet-not-offered` where Perps are not on (AGENTCAP_PERPS is unset
    * here). The grants route kept copies of its own and answered the first
    * with no code at all and the second without `private, no-store`, so a
    * client handled three routes right and the one the desk asks first wrong.

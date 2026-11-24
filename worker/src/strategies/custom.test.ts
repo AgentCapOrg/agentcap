@@ -33,7 +33,7 @@ function snap(): Snapshot {
 }
 
 function tempDir(): string {
-  const dir = path.join(tmpdir(), `merrymen-custom-${process.pid}-${Math.random().toString(36).slice(2)}`);
+  const dir = path.join(tmpdir(), `agentcap-custom-${process.pid}-${Math.random().toString(36).slice(2)}`);
   mkdirSync(dir, { recursive: true });
   return dir;
 }

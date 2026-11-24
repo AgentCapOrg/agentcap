@@ -15,7 +15,7 @@
  * owner's caps and the policy, and the on-chain wall has the last word.
  */
 import { createPublicClient, erc20Abi, parseAbi, type PublicClient } from "viem";
-import { CASH, STOCK_TOKENS, SETTINGS_DEFAULTS, CASH_FEEDS, robinhoodChain, grantHasMultihop, grantHasV4 } from "@merrymen/core";
+import { CASH, STOCK_TOKENS, SETTINGS_DEFAULTS, CASH_FEEDS, robinhoodChain, grantHasMultihop, grantHasV4 } from "@agentcap/core";
 import { webChainRead } from "../chain-read";
 import { bestRoute, minOutWithSlippage, requoteRoute, type Quote } from "../../../../worker/src/venues/uniswap";
 import { impactBps, judgeImpact, probeAmountIn } from "../../../../worker/src/impact";
@@ -52,7 +52,7 @@ export interface TradeQuote {
   route: { venue: "uniswap-v3" | "uniswap-v4"; fee_tier_bps: number | null; hops: string[] } | null;
   routes_considered: { direct_v3: boolean; via_weth: boolean; v4: boolean; hooked_v4_pools: false; launchpad_curve: false };
   gas: { units_estimate: string | null; swap_leg_units: string | null; expected_usdg: number | null; note: string };
-  merrymen_trade_fee: { bps: number; usdg: number; note: string };
+  agentcap_trade_fee: { bps: number; usdg: number; note: string };
   block_number: string | null;
   quoted_at: string;
   source: string;
@@ -65,7 +65,7 @@ const WETH = CASH.WETH as `0x${string}`;
 
 let client: PublicClient | null = null;
 export function quoteClient(): PublicClient {
-  if (!client) client = createPublicClient({ chain: robinhoodChain, transport: webChainRead(process.env.MERRYMEN_RPC_MAINNET) }) as PublicClient;
+  if (!client) client = createPublicClient({ chain: robinhoodChain, transport: webChainRead(process.env.AGENTCAP_RPC_MAINNET) }) as PublicClient;
   return client;
 }
 /** Test seam: a fake chain for quotes. No test reaches a real RPC. */
@@ -120,10 +120,10 @@ export async function quoteTrade(input: QuoteInput, c: PublicClient = quoteClien
     route: null,
     routes_considered: { direct_v3: true, via_weth: multihop, v4, hooked_v4_pools: false, launchpad_curve: false },
     gas: { units_estimate: null, swap_leg_units: null, expected_usdg: null, note: "Paid in ETH by the agent's account unless the house sponsors it. Estimated for a whole operation from measured swaps on this chain." },
-    merrymen_trade_fee: {
+    agentcap_trade_fee: {
       bps: feeBps,
       usdg: Math.floor(input.amountUsdg * feeBps) / 10_000,
-      note: "Merrymen's per-trade fee on the notional, accrued in the ledger (not collected on chain today).",
+      note: "AgentCap's per-trade fee on the notional, accrued in the ledger (not collected on chain today).",
     },
     block_number: null,
     quoted_at: new Date(nowMs).toISOString(),

@@ -9,7 +9,7 @@ export const SOLANA_SLIPPAGE_BPS_MAX = 100;
 export const SOLANA_QUOTE_MAX_AGE_MS = 30_000;
 /**
  * Refused activation, for good: the vault's session epoch moved more than this registration's own
- * landing since it was prepared (a revocation landed before it, beside it or outside Merrymen). Epochs
+ * landing since it was prepared (a revocation landed before it, beside it or outside AgentCap). Epochs
  * only rise, so it is never activated: the page drops its session key. Here, not in the worker's trading
  * store (which says it), so the page can recognise it without importing the store.
  */
@@ -144,7 +144,7 @@ export function parseSolanaSwapIntent(value: unknown): SolanaSwapIntent {
  * SOLANA_VAULT_MAX_DAILY_OPS). A live session cannot be created above it.
  */
 export const SOLANA_MAX_OPS_PER_DAY = 96;
-/** The longest trading permission Merrymen grants: 168 hours. */
+/** The longest trading permission AgentCap grants: 168 hours. */
 export const SOLANA_MAX_PERMISSION_MS = 168 * 3_600_000;
 /** A duration picked against the browser's clock may run this far past the cap. */
 export const SOLANA_PERMISSION_CLOCK_SKEW_MS = 5 * 60_000;

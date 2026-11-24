@@ -57,8 +57,8 @@ test("recap candidates walk past the recent eight openers without loosening the 
 
 test("optional timeline mix is stable, weighted, and never repeats a type across days", () => {
   assert.equal(xpostEnv({}).variety, undefined);
-  assert.equal(xpostEnv({ MERRYMEN_XPOST_VARIETY: "true" }).variety, undefined);
-  assert.equal(xpostEnv({ MERRYMEN_XPOST_VARIETY: "1" }).variety, true);
+  assert.equal(xpostEnv({ AGENTCAP_XPOST_VARIETY: "true" }).variety, undefined);
+  assert.equal(xpostEnv({ AGENTCAP_XPOST_VARIETY: "1" }).variety, true);
   const counts = Object.fromEntries(["market", "hot", "day", "question", "habit", "thought"].map((kind) => [kind, TIMELINE_ROTATION.filter((k) => k === kind).length]));
   assert.deepEqual(counts, { market: 8, hot: 3, day: 3, question: 2, habit: 2, thought: 2 });
   for (const tenant of ["alan", "another-owner", "0xabc"]) {

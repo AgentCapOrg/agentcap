@@ -21,10 +21,10 @@ import { after, describe, it } from "node:test";
 
 import type { StockToken } from "../../packages/core/src/index";
 
-const scratch = mkdtempSync(path.join(os.tmpdir(), "merrymen-decision-name-"));
+const scratch = mkdtempSync(path.join(os.tmpdir(), "agentcap-decision-name-"));
 const isolatedCwd = path.join(scratch, "cwd");
 mkdirSync(isolatedCwd);
-process.env.MERRYMEN_HOME = path.join(scratch, "home");
+process.env.AGENTCAP_HOME = path.join(scratch, "home");
 delete process.env.DATABASE_URL;
 const originalCwd = process.cwd();
 const store = await import("./store");
@@ -366,7 +366,7 @@ describe("the row ensureDecision stamps a trade with, executed", () => {
   // checker put the name back on the ledger alone and every test passed.
   const readRow = async (id: string) => {
     const { DatabaseSync } = await import("node:sqlite");
-    const raw = new DatabaseSync(path.join(process.env.MERRYMEN_HOME!, "merrymen.db"));
+    const raw = new DatabaseSync(path.join(process.env.AGENTCAP_HOME!, "agentcap.db"));
     try {
       const r = raw.prepare("SELECT symbol, display_name, action, size_usdg, reason, provenance, source, evidence_json FROM decisions WHERE id = ?").get(id);
       return r ? { ...r } : undefined;

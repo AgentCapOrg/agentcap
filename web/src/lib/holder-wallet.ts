@@ -1,5 +1,5 @@
-import { effectiveHolder, isHolderProof } from "@merrymen/core";
-import { getSettingsStore } from "@merrymen/settings-store";
+import { effectiveHolder, isHolderProof } from "@agentcap/core";
+import { getSettingsStore } from "@agentcap/settings-store";
 
 /**
  * Whose wallet counts: an address and how it earned that, or — signed in, but
@@ -10,7 +10,7 @@ export type HolderWallet =
   | { address: null; source: null };
 
 /**
- * WHOSE $MERRYMEN BALANCE COUNTS FOR THIS ACCOUNT — decided once, here.
+ * WHOSE $AGENTCAP BALANCE COUNTS FOR THIS ACCOUNT — decided once, here.
  *
  * There were two answers and they had already begun to disagree. The worker
  * resolves the tier from a wallet the orchestrator writes into the child's

@@ -1,6 +1,6 @@
 /**
  * RETURNS AN OPERATOR HAS PUT UNDER REVIEW, from the web's
- * `MERRYMEN_RETURN_REVIEW`: smart-account addresses, separated by commas or
+ * `AGENTCAP_RETURN_REVIEW`: smart-account addresses, separated by commas or
  * whitespace.
  *
  * WHY A LIST AND NOT A RULE. A book whose gas is not all on record is withheld
@@ -52,11 +52,11 @@ function warnMalformed(raw: string): void {
   warnedFor = raw;
   const entries = raw.split(/[\s,]+/).filter(Boolean);
   const bad = entries.filter((entry) => !ADDRESS.test(entry)).length;
-  console.warn(`[return-review] MERRYMEN_RETURN_REVIEW has ${bad} of ${entries.length} entries that are not 0x smart-account addresses; every return is withheld as under review until it is corrected`);
+  console.warn(`[return-review] AGENTCAP_RETURN_REVIEW has ${bad} of ${entries.length} entries that are not 0x smart-account addresses; every return is withheld as under review until it is corrected`);
 }
 
 /** Whether this account's return is withheld for review. Address casing never decides. */
-export function underReturnReview(account: string, raw = process.env.MERRYMEN_RETURN_REVIEW): boolean {
+export function underReturnReview(account: string, raw = process.env.AGENTCAP_RETURN_REVIEW): boolean {
   const review = parseReturnReview(raw);
   if (review.all) warnMalformed(raw ?? "");
   return review.all || review.accounts.has(account.toLowerCase());

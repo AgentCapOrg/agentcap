@@ -740,7 +740,7 @@ test("summary: energy bought is said apart from withdrawals, and the arithmetic 
   const live = text!.split("\n").find((l) => l.startsWith("LIVE:"))!;
   assert.ok(live.includes("(1000.00 at the start, +130.00)."), live);
   assert.ok(live.includes("Deposits 200.00 USDG and withdrawals 50.00 USDG are inside that change."), live);
-  assert.ok(live.includes("So is 20.00 USDG set aside as energy ($MERRYMEN)"), live);
+  assert.ok(live.includes("So is 20.00 USDG set aside as energy ($AGENTCAP)"), live);
   assert.doesNotMatch(live, /withdrawals 70\.00/, "energy is not counted as a withdrawal");
 });
 
@@ -755,7 +755,7 @@ test("summary: an energy purchase alone is said on its own, never as 'withdrawal
   await f.pass();
   const [text] = texts(f);
   const live = text!.split("\n").find((l) => l.startsWith("LIVE:"))!;
-  assert.ok(live.includes("Inside that change is 20.00 USDG set aside as energy ($MERRYMEN)"), live);
+  assert.ok(live.includes("Inside that change is 20.00 USDG set aside as energy ($AGENTCAP)"), live);
   assert.doesNotMatch(live, /withdrawals|Deposits/);
   assert.doesNotMatch(live, /price|returns?\b|profit/i);
 });

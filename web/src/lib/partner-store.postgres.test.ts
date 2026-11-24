@@ -1,5 +1,5 @@
 /**
- * Actual PostgreSQL verification, opt-in with MERRYMEN_TEST_POSTGRES_URL.
+ * Actual PostgreSQL verification, opt-in with AGENTCAP_TEST_POSTGRES_URL.
  * Uses a unique schema and two independent pools to exercise cross-replica
  * locks. Never reads DATABASE_URL or permits a non-loopback database host.
  */
@@ -8,7 +8,7 @@ import { randomBytes } from "node:crypto";
 import test from "node:test";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { getActionSelector } from "@zerodev/sdk";
-import { buildWallPolicies, derivationOf, type StoredGrant } from "@merrymen/core";
+import { buildWallPolicies, derivationOf, type StoredGrant } from "@agentcap/core";
 import { makePgDb } from "../../../worker/src/db";
 import { partnerGrantDigest } from "../../../packages/core/src/partner-enrollment";
 import { SqlPartnerStore, PartnerStoreError, PARTNER_HISTORY_EXCHANGES, PARTNER_LOCK_HOLDERS, type PartnerConnection } from "./partner-store";
@@ -17,7 +17,7 @@ import { createPartnerService } from "./partner-service";
 import type { PartnerPrincipal } from "./partner-bridge";
 import type { PartnerRuntime } from "./partner-runtime";
 
-const url = process.env.MERRYMEN_TEST_POSTGRES_URL;
+const url = process.env.AGENTCAP_TEST_POSTGRES_URL;
 const A = `0x${"aa".repeat(20)}` as const;
 const B = `0x${"bb".repeat(20)}` as const;
 const SCOPES = ["read:agents", "chat:agents"];
@@ -77,7 +77,7 @@ test("PostgreSQL partner store: real transactions and independent-replica locks"
     const databases = await Promise.all([1, 2].map(async replica => {
       const scoped = new URL(target);
       scoped.searchParams.set("options", `-c search_path=${schema} -c statement_timeout=10000 -c lock_timeout=5000`);
-      scoped.searchParams.set("application_name", `merrymen-partner-test-${replica}`);
+      scoped.searchParams.set("application_name", `agentcap-partner-test-${replica}`);
       const db = await makePgDb(scoped.toString());
       assert.equal((await db.prepare("SELECT current_schema() AS schema").get() as { schema: string }).schema, schema);
       return db;

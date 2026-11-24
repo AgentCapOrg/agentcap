@@ -2,7 +2,7 @@
  * Which agents an authenticated owner has, resolved ONLY from the owner's
  * verified tenant — never from an address, slug or id a caller supplies.
  *
- * A tenant (the owner's sign-in address) has at most one Merryman today: one
+ * A tenant (the owner's sign-in address) has at most one AgentCapAvatar today: one
  * identity row (slug, account history) and one grant (current smart account).
  * The directory still returns a list so the MCP surface does not change when
  * owners can run several.
@@ -10,7 +10,7 @@
  * The grant is read through a projection of its non-secret JSON fields. The
  * grant store's own get() decrypts the session key, and nothing here needs it.
  */
-import { getIdentityStore } from "@merrymen/identity-store";
+import { getIdentityStore } from "@agentcap/identity-store";
 import type { Db } from "../../../worker/src/db";
 import { mcpDb } from "./db";
 

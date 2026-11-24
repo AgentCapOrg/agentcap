@@ -20,7 +20,7 @@
  * `source: "none"` into every first visit after a deploy (app/prerender.test.ts).
  *
  * HOSTED ONLY, AND ONLY WHILE SWITCHED ON. Self-hosted is one agent with no
- * fleet, so there is no room; `MERRYMEN_GROUPCHAT=0` switches a hosted room
+ * fleet, so there is no room; `AGENTCAP_GROUPCHAT=0` switches a hosted room
  * off. Both answer 404, which is what hides the entry links
  * (terminal/groupchat.ts, room.ts's `roomOpen`).
  *
@@ -201,7 +201,7 @@ function refusalWords(reason: string): string {
  * how's everyone" is conversation and gets a reply, not a chorus.
  */
 const GM_LINE =
-  /^(?:gm+|good\s+morning)(?:[\s,]+(?:gm+|all|everyone|everybody|y'?all|fam|frens?|friends|folks|guys|gang|team|room|chat|merrymen))*[^\p{L}\p{N}]*$/iu;
+  /^(?:gm+|good\s+morning)(?:[\s,]+(?:gm+|all|everyone|everybody|y'?all|fam|frens?|friends|folks|guys|gang|team|room|chat|agentcap))*[^\p{L}\p{N}]*$/iu;
 
 function kindOf(text: string): MessageKind {
   return GM_LINE.test(text.trim()) ? "gm" : "chat";
@@ -315,9 +315,9 @@ export async function POST(req: Request) {
   try {
     owned = await agentOf(tenant);
   } catch {
-    return refuse(503, "Couldn't check that you have a Merryman. Try again in a moment.");
+    return refuse(503, "Couldn't check that you have a AgentCapAvatar. Try again in a moment.");
   }
-  if (!owned) return refuse(403, "Only owners with a Merryman can post.");
+  if (!owned) return refuse(403, "Only owners with a AgentCapAvatar can post.");
   const agentId = owned;
 
   // A RESEND IS ANSWERED WITH THE LINE IT RESENDS, before the bucket and the

@@ -1,4 +1,4 @@
-import { REASON_MAX, clip } from "@merrymen/thesis";
+import { REASON_MAX, clip } from "@agentcap/thesis";
 import type { Thesis } from "./live";
 
 export type WhyView =

@@ -1,14 +1,14 @@
 /**
  * Agent history for the dashboard: events + equity series, read from the
- * shared SQLite file the worker writes (.data/merrymen.db).
+ * shared SQLite file the worker writes (.data/agentcap.db).
  */
 
 import { readFileSync } from "node:fs";
 import { NextResponse } from "next/server";
-import { homePaths } from "@merrymen/home";
-import { isHostedMode, sameBookAsLatest } from "@merrymen/core";
-import { getSettingsStore } from "@merrymen/settings-store";
-import { getIdentityStore } from "@merrymen/identity-store";
+import { homePaths } from "@agentcap/home";
+import { isHostedMode, sameBookAsLatest } from "@agentcap/core";
+import { getSettingsStore } from "@agentcap/settings-store";
+import { getIdentityStore } from "@agentcap/identity-store";
 import { tenantOf } from "@/lib/auth";
 import { withReadDb, fmtEpoch } from "@/lib/ledger";
 import { readDeskPositions } from "@/lib/desk-positions";
@@ -322,7 +322,7 @@ export async function GET(req: Request) {
        * ENOUGH ROWS TO REACH BACK A DAY, WHATEVER THE CADENCE.
        *
        * This was 288, which is twenty-four hours only if a row lands every
-       * five minutes. Production ticks every 240s (MERRYMEN_TICK_SECONDS), so
+       * five minutes. Production ticks every 240s (AGENTCAP_TICK_SECONDS), so
        * 288 rows spans 19.2 hours — and `chg24` needs a point at or before
        * twenty-four hours ago (terminal/live.ts, equityDayAgo). It never
        * found one. "Daily change unavailable" on a working, funded account was

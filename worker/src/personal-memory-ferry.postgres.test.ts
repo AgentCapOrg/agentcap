@@ -13,7 +13,7 @@ import {
   recordPersonalMemoryForget, restorePersonalMemory,
 } from './personal-memory-ferry';
 interface Client { connect():Promise<void>; end():Promise<void>; query(sql:string,params?:unknown[]):Promise<{rows:Record<string,unknown>[];rowCount:number|null}> }
-const url=process.env.MERRYMEN_TEST_PG_URL;
+const url=process.env.AGENTCAP_TEST_PG_URL;
 const pg=url ? createRequire(import.meta.url)('pg') as {Client:new(config:{connectionString:string})=>Client}:null;
 const A=`0x${'ab'.repeat(20)}`, B=`0x${'cd'.repeat(20)}`;
 function adapter(client:Client):Db {

@@ -1,6 +1,6 @@
 import SwiftUI
 import PrivySDK
-import MerrymenPolicy
+import AgentCapPolicy
 
 enum Tab: String, CaseIterable { case home = "Home", chat = "Chat", feed = "Feed", alpha = "Alpha", profile = "Profile"
     var icon: String { switch self { case .home: "chart.xyaxis.line"; case .chat: "bubble.left.and.bubble.right"; case .feed: "leaf.fill"; case .alpha: "sparkles"; case .profile: "person.crop.circle" } }
@@ -38,18 +38,18 @@ final class AppStore: ObservableObject {
     init() {
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-ui-testing"), ProcessInfo.processInfo.arguments.contains("-reset-chat") {
-            try? SecureStore.remove("dev.merrymen.chat", "0x1111111111111111111111111111111111111111")
+            try? SecureStore.remove("dev.agentcap.chat", "0x1111111111111111111111111111111111111111")
             UserDefaults.standard.removeObject(forKey: "uiTest.settingsSaved")
         }
         if ProcessInfo.processInfo.arguments.contains("-ui-testing"), ProcessInfo.processInfo.arguments.contains("-reset-tour") {
-            for key in UserDefaults.standard.dictionaryRepresentation().keys where key.hasPrefix("merrymen.native.tour.") { UserDefaults.standard.removeObject(forKey: key) }
+            for key in UserDefaults.standard.dictionaryRepresentation().keys where key.hasPrefix("agentcap.native.tour.") { UserDefaults.standard.removeObject(forKey: key) }
             UserDefaults.standard.set("en", forKey: "language")
         }
         if ProcessInfo.processInfo.arguments.contains("-ui-testing"), ProcessInfo.processInfo.arguments.contains("-order-timeout") {
             path = [.trade("NVDA")]
             if ProcessInfo.processInfo.arguments.contains("-reset-order") {
                 UserDefaults.standard.removeObject(forKey: "uiTest.orderPlaced")
-                try? SecureStore.remove("dev.merrymen.orders", "pendingOrder.0x1111111111111111111111111111111111111111")
+                try? SecureStore.remove("dev.agentcap.orders", "pendingOrder.0x1111111111111111111111111111111111111111")
             }
         }
         if ProcessInfo.processInfo.arguments.contains("-ui-testing"), ProcessInfo.processInfo.arguments.contains("-approval-test") {
@@ -67,7 +67,7 @@ final class AppStore: ObservableObject {
         if ProcessInfo.processInfo.arguments.contains("-ui-testing"), ProcessInfo.processInfo.arguments.contains("-snipe-test") {
             path = [.snipe("NEON", "5.00")]
             UserDefaults.standard.removeObject(forKey: "uiTest.orderPlaced")
-            try? SecureStore.remove("dev.merrymen.orders", "pendingOrder.0x1111111111111111111111111111111111111111")
+            try? SecureStore.remove("dev.agentcap.orders", "pendingOrder.0x1111111111111111111111111111111111111111")
         }
         #endif
         #if DEBUG
@@ -111,7 +111,7 @@ final class AppStore: ObservableObject {
         let challenge = try await api.request("/api/auth/privy")
         guard let message = challenge["message"].string, let nonce = challenge["nonce"].string,
               nonce.range(of: "^[A-Za-z0-9_.-]{1,512}$", options: .regularExpression) != nil,
-              message == ["\(API.origin.absoluteString) wants you to sign in with your merrymen wallet.", "",
+              message == ["\(API.origin.absoluteString) wants you to sign in with your agentcap wallet.", "",
                           "This proves you control the owner key. It moves no funds and grants no permissions.", "",
                           "URI: \(API.origin.absoluteString)", "Nonce: \(nonce)"].joined(separator: "\n")
         else { throw APIError(status: 0, message: "The sign-in challenge is invalid.") }

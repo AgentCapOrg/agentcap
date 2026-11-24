@@ -17,7 +17,7 @@ import { overlayHistory } from "./history-overlay";
 import { KEY_INSTALL_KIND, loadTradeViews, renderTradeList, when, type TradeViewOpts } from "./trade-rows";
 import { heldSqlSync, isHeld, measuredMarks, readMeasuredMarkSync } from "../held-marks";
 import { rejectRuleLabel, rejectRuleRemedy } from "../thesis-policy";
-// RELATIVE import only — the "@merrymen/core" alias exists solely in dev (see
+// RELATIVE import only — the "@agentcap/core" alias exists solely in dev (see
 // the note in service.ts). isHostedMode decides whether a missing agent id may
 // fall back to the single-tenant guess, or must refuse.
 import { liveBlockerText, priceSourceNote, priceSourceTag, isHostedMode, ENERGY, idFamily, redactSolanaIds } from "../../../packages/core/src/index";
@@ -40,7 +40,7 @@ function usd(n: number): string {
 }
 
 /**
- * Whose numbers these are. merrymen is one agent per install, but re-granting
+ * Whose numbers these are. agentcap is one agent per install, but re-granting
  * mints a NEW smart account and leaves the old one's rows in the same tables —
  * and every figure in this file used to read the lot, unfiltered, so two
  * agents' equity curves interleaved and last-minus-first spanned both.
@@ -190,7 +190,7 @@ export interface StatusContext {
    * tenant's book off another's screen once the ledger is shared.
    */
   agentId?: string | null;
-  /** The merryman's user-given name (soul IDENTITY.md). */
+  /** The agentcapavatar's user-given name (soul IDENTITY.md). */
   name: string;
   strategy: string;
   venue: string;
@@ -229,7 +229,7 @@ export function admissionStatusLine(admission: StatusContext["admission"]): stri
  *
  * Read-only by design: Telegram tells the owner where energy stands and where
  * to fix it, and never buys it. The buy is a money path an owner confirms with
- * the amount in front of them, in the Merrymen app's chat; a bearer link code
+ * the amount in front of them, in the AgentCap app's chat; a bearer link code
  * is not that (design D6).
  *
  * WHAT IT MUST NEVER DO, whichever arm it takes:
@@ -254,22 +254,22 @@ export function energyStatusLine(e: EnergyStatus | null | undefined, nowSec: num
   // ON ANOTHER NETWORK ONLY THE OWNER'S OWN WALLET COUNTS, in every arm that
   // could lead to a remedy: the chat model reads this line, and without the
   // marker it falls back to "/wallet shows my address" — an account whose
-  // $MERRYMEN is never read (ENERGY_WORDS says the same).
+  // $AGENTCAP is never read (ENERGY_WORDS says the same).
   const ownWallet =
     e.buy === "not-mainnet"
-      ? `Full strength: ${countTokens(ENERGY.fullTokens)} $MERRYMEN in your own wallet on Robinhood Chain — my account is on another network, so only your own wallet counts`
+      ? `Full strength: ${countTokens(ENERGY.fullTokens)} $AGENTCAP in your own wallet on Robinhood Chain — my account is on another network, so only your own wallet counts`
       : null;
   if (e.spent) {
     const unread =
-      e.level === "unread" ? " I couldn't read the $MERRYMEN balances, so I'm on the reduced allowance (our read, not your wallet)." : "";
-    const where = ownWallet ?? "/wallet shows my address for $MERRYMEN";
+      e.level === "unread" ? " I couldn't read the $AGENTCAP balances, so I'm on the reduced allowance (our read, not your wallet)." : "";
+    const where = ownWallet ?? "/wallet shows my address for $AGENTCAP";
     return (
       `• energy: spent for today — back at 00:00 UTC. ${STILL_RUNS.charAt(0).toUpperCase()}${STILL_RUNS.slice(1)}; ` +
       `my own AI reviews, including of my open positions, are paced.${unread} ${where}`
     );
   }
   if (e.level === "unread") {
-    return `• energy: couldn't read the $MERRYMEN balances — on the reduced allowance until I can (our read, not your wallet)${ownWallet ? `. ${ownWallet}` : ""}`;
+    return `• energy: couldn't read the $AGENTCAP balances — on the reduced allowance until I can (our read, not your wallet)${ownWallet ? `. ${ownWallet}` : ""}`;
   }
   // LOW, NOT YET SPENT. A meter the worker did not report (no paid reviewer,
   // or not throttled) is left out, so this never reads "— of — AI reviews".
@@ -297,7 +297,7 @@ export function readStatus(ctx: StatusContext): string {
       // there always return 0, and practice never spends those funds anyway.
       lines.push(`• chain: testnet 46630 — <b>simulated only</b> (no real swaps)`);
       lines.push(
-        `• ℹ️ testnet funds you send are <b>not used and not shown</b> — merrymen only knows mainnet ` +
+        `• ℹ️ testnet funds you send are <b>not used and not shown</b> — agentcap only knows mainnet ` +
           `token addresses, so a funded balance reads 0 here. It paper-trades a simulated ` +
           `${ctx.paperStartUsdg ?? 1000} USDG book at live prices. Real trades → switch to mainnet, ` +
           `add a bundler key, fund the smart account.`,
@@ -774,12 +774,12 @@ export function readBrag(ctx: StatusContext): string {
       /* no trades */
     }
     return [
-      `🏹 <b>my merryman's scorecard</b>`,
+      `🏹 <b>my agentcapavatar's scorecard</b>`,
       `${bar}`,
       `• P&amp;L: <b>${usd(delta)}</b> (${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%) over ${days}d`,
       `• equity: ${last.equity_usdg.toFixed(2)} USDG · strategy: ${esc(ctx.strategy)}${best}`,
       ``,
-      `self-hosted on merrymen — your keys, your caps 🌳`,
+      `self-hosted on agentcap — your keys, your caps 🌳`,
     ].join("\n");
   } finally {
     db.close();
@@ -932,7 +932,7 @@ export function readWhyEvidence(agentId?: string | null): { text: string; hasTra
  *
  * Events are written for the owner, and some carry addresses in full: the
  * energy notice names the agent's account and the owner's own holder wallet
- * ("send $MERRYMEN … to my account 0x…"), policy refusals name recipients.
+ * ("send $AGENTCAP … to my account 0x…"), policy refusals name recipients.
  * Handed to a model verbatim, those sit in its context, and a model given an
  * address will sooner or later retype it — one wrong character and whatever
  * is sent to it is gone for good (agent-chat.ts has the same rule for the web
@@ -1052,12 +1052,12 @@ export async function readLlmState(ctx: StatusContext): Promise<string> {
 const WALLET_TEXT_LINES = [
   "🏹 <b>your wallet lives in the dashboard</b> — not in chat.",
   "",
-  "Open <b>http://localhost:3100/grant</b> on the machine running merrymen:",
+  "Open <b>http://localhost:3100/grant</b> on the machine running agentcap:",
   "• <b>new wallet</b> — create an agent wallet, then fund it. on <b>mainnet</b>: ETH (gas) + USDG (trading capital). on <b>testnet</b>: gas only — USDG sent to a testnet account is never shown and never traded",
-  "• <b>restore a funded wallet</b> — paste your owner key to bring an already-funded wallet back: same address, same funds, no gas (on testnet the USDG figure still reads 0 — merrymen only knows mainnet token addresses; the ETH figure is real)",
+  "• <b>restore a funded wallet</b> — paste your owner key to bring an already-funded wallet back: same address, same funds, no gas (on testnet the USDG figure still reads 0 — agentcap only knows mainnet token addresses; the ETH figure is real)",
   "• if it says <i>“this wallet isn’t active”</i> → hit <b>re-arm this wallet</b> (one click, no key needed)",
   "",
-  "To move funds <b>out</b>: the dashboard’s <b>recover funds</b> panel, or run <code>merrymen recover</code> in your terminal.",
+  "To move funds <b>out</b>: the dashboard’s <b>recover funds</b> panel, or run <code>agentcap recover</code> in your terminal.",
   "",
   "Heads-up: the address you funded is a <b>smart account</b>, not a MetaMask wallet — importing your owner key into MetaMask shows a different, empty address. That’s normal; your funds are safe at the account address.",
   "",
@@ -1095,13 +1095,13 @@ export const WALLET_TEXT = WALLET_TEXT_LINES.join("\n");
  * agent" is the single commonest thing anyone is ever told to do.
  *
  * Order: an explicit env override wins, then hosted-mode (the orchestrator sets
- * MERRYMEN_HOSTED on every child), then the self-hosted default — which stays
+ * AGENTCAP_HOSTED on every child), then the self-hosted default — which stays
  * exactly what it was, because for a self-hosted operator it was always right.
  */
 export function dashboardBase(): string {
-  const override = process.env.MERRYMEN_DASHBOARD_URL?.trim();
+  const override = process.env.AGENTCAP_DASHBOARD_URL?.trim();
   if (override) return override.replace(/\/+$/, "");
-  return isHostedMode() ? "https://app.merrymen.dev" : "http://localhost:3100";
+  return isHostedMode() ? "https://app.agentcap.xyz" : "http://localhost:3100";
 }
 
 export function readWallet(agentId?: string | null, dashboardUrl?: string): string {

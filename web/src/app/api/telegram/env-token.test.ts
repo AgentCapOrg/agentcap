@@ -1,7 +1,7 @@
 /**
  * A SELF-HOSTED BOT CONFIGURED BY ENVIRONMENT STILL SHOWS ITS LINK CODE.
  *
- * README documents MERRYMEN_TELEGRAM_BOT_TOKEN, and the worker falls back to
+ * README documents AGENTCAP_TELEGRAM_BOT_TOKEN, and the worker falls back to
  * it when settings.json has no token (worker/src/settings.ts str()). The
  * worker binds that bot and writes its id beside the code in telegram.json.
  * This route read the token from settings.json alone, so for such an install
@@ -20,7 +20,7 @@ import { after, before, beforeEach, describe, it } from "node:test";
 
 import type { TelegramStatus } from "./route";
 
-const KEYS = ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_TELEGRAM_BOT_TOKEN"] as const;
+const KEYS = ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_TELEGRAM_BOT_TOKEN"] as const;
 const original = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
 const realFetch = globalThis.fetch;
 const ENV_TOKEN = "111:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw";
@@ -30,9 +30,9 @@ let POST: (req: Request) => Promise<Response>;
 let asked: string[] = [];
 
 before(async () => {
-  home = mkdtempSync(path.join(tmpdir(), "merrymen-telegram-env-token-"));
-  process.env.MERRYMEN_HOME = home;
-  delete process.env.MERRYMEN_HOSTED;
+  home = mkdtempSync(path.join(tmpdir(), "agentcap-telegram-env-token-"));
+  process.env.AGENTCAP_HOME = home;
+  delete process.env.AGENTCAP_HOSTED;
   globalThis.fetch = (async (input: string | URL | Request) => {
     const url = String(input instanceof Request ? input.url : input);
     const m = /^https:\/\/api\.telegram\.org\/bot(.+)\/getMe$/.exec(url);
@@ -46,7 +46,7 @@ before(async () => {
 });
 beforeEach(() => {
   asked = [];
-  process.env.MERRYMEN_TELEGRAM_BOT_TOKEN = ENV_TOKEN;
+  process.env.AGENTCAP_TELEGRAM_BOT_TOKEN = ENV_TOKEN;
   writeFileSync(path.join(home, "settings.json"), JSON.stringify({ telegramEnabled: true }));
   // What the worker writes once it has bound the environment's bot.
   writeFileSync(path.join(home, "telegram.json"), JSON.stringify({ botId: "111", linkCode: "ABCDEF", ownerId: null }));
@@ -87,7 +87,7 @@ describe("GET /api/telegram, self-hosted, token from the environment", () => {
   });
 
   it("an environment token for another bot than the one on file shows no code: it would not link this one", async () => {
-    process.env.MERRYMEN_TELEGRAM_BOT_TOKEN = "  333:other-secret  ";
+    process.env.AGENTCAP_TELEGRAM_BOT_TOKEN = "  333:other-secret  ";
     const s = await status();
     assert.equal(s.linkCode, null);
     assert.equal(s.linkPending, true);
@@ -95,7 +95,7 @@ describe("GET /api/telegram, self-hosted, token from the environment", () => {
   });
 
   it("no token anywhere: nothing, and no call to Telegram", async () => {
-    delete process.env.MERRYMEN_TELEGRAM_BOT_TOKEN;
+    delete process.env.AGENTCAP_TELEGRAM_BOT_TOKEN;
     const s = await status();
     assert.equal(s.hasToken, false);
     assert.equal(s.linkCode, null);

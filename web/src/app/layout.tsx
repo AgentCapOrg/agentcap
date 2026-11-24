@@ -45,7 +45,7 @@ const geistPixel = localFont({
 // The old pair described a tool you deploy. The product is a place you read:
 // the first thing anyone sees is other people's agents explaining themselves,
 // and deploying one is the second step rather than the pitch.
-const OG_TITLE = "merrymen — agents that trade, and say why";
+const OG_TITLE = "agentcap — agents that trade, and say why";
 //
 // AND IT DESCRIBES WHAT IS BUILT. This sold following and wiring for three weeks
 // while neither existed in any form, and was cut back to what the product could
@@ -58,19 +58,19 @@ const OG_DESC =
 export const metadata: Metadata = {
   // Absolute base for og:image + other relative metadata URLs (link previews
   // need a full URL). The hosted product lives at the bare domain.
-  metadataBase: new URL("https://app.merrymen.dev"),
+  metadataBase: new URL("https://app.agentcap.xyz"),
   title: OG_TITLE,
   description: OG_DESC,
   manifest: "/manifest.webmanifest",
-  applicationName: "merrymen",
-  // The share card — what a pasted app.merrymen.dev link unfurls to.
+  applicationName: "agentcap",
+  // The share card — what a pasted app.agentcap.xyz link unfurls to.
   openGraph: {
     type: "website",
-    siteName: "merrymen",
+    siteName: "agentcap",
     title: OG_TITLE,
     description: OG_DESC,
     url: "/",
-    images: [{ url: "/og.png", width: 1200, height: 630, alt: "merrymen — agents that trade, and say why" }],
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "agentcap — agents that trade, and say why" }],
   },
   twitter: {
     card: "summary_large_image",
@@ -87,7 +87,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    title: "merrymen",
+    title: "agentcap",
     // The status bar sits over the app in standalone mode, so it has to match
     // the dashboard's own background or it reads as a white bar on dark chrome.
     statusBarStyle: "black-translucent",

@@ -7,7 +7,7 @@
  * and nothing is written.
  *
  * A Perps WALLET is a different thing (perps slice 5b): it may be made where
- * MERRYMEN_PERPS is paper, but a paper one carries no Lighter key either, so
+ * AGENTCAP_PERPS is paper, but a paper one carries no Lighter key either, so
  * the same refusal holds for it; where perps is off, it is refused as a wallet
  * not offered before its block is even read.
  *
@@ -24,9 +24,9 @@ import path from "node:path";
 import { after, before, beforeEach, describe, it, mock } from "node:test";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import type { LocalAccount } from "viem";
-import { bindingMessage, carriesOwnerKey, type StoredGrant } from "@merrymen/core";
+import { bindingMessage, carriesOwnerKey, type StoredGrant } from "@agentcap/core";
 
-const saved = { home: process.env.MERRYMEN_HOME, hosted: process.env.MERRYMEN_HOSTED, grant: process.env.MERRYMEN_GRANT_FILE, perps: process.env.MERRYMEN_PERPS };
+const saved = { home: process.env.AGENTCAP_HOME, hosted: process.env.AGENTCAP_HOSTED, grant: process.env.AGENTCAP_GRANT_FILE, perps: process.env.AGENTCAP_PERPS };
 let home = "";
 let POST: (req: Request) => Promise<Response>;
 const A = "0x00000000000000000000000000000000000000a1";
@@ -34,14 +34,14 @@ const KEY = `0x${"1a".repeat(40)}`;
 
 before(async () => {
   home = mkdtempSync(path.join(tmpdir(), "mm-grants-perps-off-"));
-  process.env.MERRYMEN_HOME = home;
-  delete process.env.MERRYMEN_HOSTED;
-  delete process.env.MERRYMEN_GRANT_FILE;
-  delete process.env.MERRYMEN_PERPS;
+  process.env.AGENTCAP_HOME = home;
+  delete process.env.AGENTCAP_HOSTED;
+  delete process.env.AGENTCAP_GRANT_FILE;
+  delete process.env.AGENTCAP_PERPS;
   ({ POST } = await import("./route"));
 });
 after(() => {
-  for (const [k, v] of [["MERRYMEN_HOME", saved.home], ["MERRYMEN_HOSTED", saved.hosted], ["MERRYMEN_GRANT_FILE", saved.grant], ["MERRYMEN_PERPS", saved.perps]] as const) {
+  for (const [k, v] of [["AGENTCAP_HOME", saved.home], ["AGENTCAP_HOSTED", saved.hosted], ["AGENTCAP_GRANT_FILE", saved.grant], ["AGENTCAP_PERPS", saved.perps]] as const) {
     if (v === undefined) delete process.env[k];
     else process.env[k] = v;
   }
@@ -125,8 +125,8 @@ describe("POST /api/grants refuses perps until the intake slice lands", () => {
   const perpsWallet = (g: Record<string, unknown>) =>
     POST(new Request("http://localhost/api/grants?wallet=perps", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...g, purpose: "perps", grantFeatures: [] }) }));
   for (const [ceiling, code] of [["paper", "perp-not-offered"], [undefined, "perps-wallet-not-offered"]] as const) {
-    it(`a Perps wallet carrying a Lighter key, MERRYMEN_PERPS ${ceiling ?? "unset"}: 403 ${code}, nothing written`, async () => {
-      if (ceiling) process.env.MERRYMEN_PERPS = ceiling;
+    it(`a Perps wallet carrying a Lighter key, AGENTCAP_PERPS ${ceiling ?? "unset"}: 403 ${code}, nothing written`, async () => {
+      if (ceiling) process.env.AGENTCAP_PERPS = ceiling;
       try {
         writeFileSync(grantFile(), KEPT);
         for (const g of [{ ...base, perp }, { ...base, perpRecovery }]) {
@@ -137,7 +137,7 @@ describe("POST /api/grants refuses perps until the intake slice lands", () => {
         assert.equal(readFileSync(grantFile(), "utf8"), KEPT);
         assert.equal(existsSync(path.join(home, "accounts")), false);
       } finally {
-        delete process.env.MERRYMEN_PERPS;
+        delete process.env.AGENTCAP_PERPS;
       }
     });
   }
@@ -149,9 +149,9 @@ describe("hosted: the refusal lands before the nonce, the ownership read and the
   // nonce store records whether a claim got far enough to spend its single-use
   // nonce; the grant store records the ownership read (which then fails, as the
   // last stop before a write) and any write at all.
-  const ORIGIN = "https://app.merrymen.dev";
+  const ORIGIN = "https://app.agentcap.xyz";
   const OWNERSHIP_UNREADABLE = "couldn't check this account's ownership — please try again";
-  const HOSTED_ENV = ["MERRYMEN_HOSTED", "MERRYMEN_SESSION_SECRET", "MERRYMEN_STORE_DEK", "DATABASE_URL", "MERRYMEN_PUBLIC_ORIGIN"] as const;
+  const HOSTED_ENV = ["AGENTCAP_HOSTED", "AGENTCAP_SESSION_SECRET", "AGENTCAP_STORE_DEK", "DATABASE_URL", "AGENTCAP_PUBLIC_ORIGIN"] as const;
   const prior = Object.fromEntries(HOSTED_ENV.map((k) => [k, process.env[k]]));
   let auth: typeof import("@/lib/auth");
   let fixture: typeof import("@/lib/canonical-wall-fixture");
@@ -162,11 +162,11 @@ describe("hosted: the refusal lands before the nonce, the ownership read and the
   let writes = 0;
 
   before(async () => {
-    process.env.MERRYMEN_HOSTED = "1";
-    process.env.MERRYMEN_SESSION_SECRET = "test-secret-at-least-thirty-two-characters-long";
-    process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
+    process.env.AGENTCAP_HOSTED = "1";
+    process.env.AGENTCAP_SESSION_SECRET = "test-secret-at-least-thirty-two-characters-long";
+    process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
     process.env.DATABASE_URL = "postgres://127.0.0.1:1/never-connected";
-    delete process.env.MERRYMEN_PUBLIC_ORIGIN;
+    delete process.env.AGENTCAP_PUBLIC_ORIGIN;
     auth = await import("@/lib/auth");
     fixture = await import("@/lib/canonical-wall-fixture");
     ({ checkCanonicalWall } = await import("@/lib/canonical-wall"));

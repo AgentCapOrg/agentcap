@@ -4,7 +4,7 @@
  * Moved off Home, where it sat under the balance and the leaderboard as the
  * third dense section of a screen a newcomer opens first. It is the same
  * table — the same ranking, the same coins-first sort key, the same phone
- * list — now one of Explore's views, so Home can be the merryman and the
+ * list — now one of Explore's views, so Home can be the agentcapavatar and the
  * money and nothing else.
  */
 import { Search } from "lucide-react";

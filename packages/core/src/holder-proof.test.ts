@@ -1,5 +1,5 @@
 /**
- * ONE $MERRYMEN WALLET POWERS ONE AGENT — the rule, as a table.
+ * ONE $AGENTCAP WALLET POWERS ONE AGENT — the rule, as a table.
  *
  * A proof bound a wallet to an account and nothing bound it back: any number
  * of accounts could link the same 100,000-token wallet, and a login wallet

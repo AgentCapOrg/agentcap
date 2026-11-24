@@ -54,7 +54,7 @@ interface Seam {
   /** X, scripted. Absent means the real fetch, which a test never wants. */
   fetch?: FetchLike;
   now?: () => number;
-  /** The X app's configuration (MERRYMEN_X_*, MERRYMEN_PUBLIC_ORIGIN) instead of process.env. */
+  /** The X app's configuration (AGENTCAP_X_*, AGENTCAP_PUBLIC_ORIGIN) instead of process.env. */
   env?: Record<string, string | undefined>;
 }
 
@@ -115,20 +115,20 @@ export function xpostAvailable(hosted: boolean): boolean {
 
 /**
  * MAY THIS OWNER TURN REPLIES ON? Only after the operator has enabled the
- * feature (MERRYMEN_XPOST_REPLIES_APPROVED), and only within its scope: "1" is
- * every owner, "active" only the owners MERRYMEN_XPOST_ACTIVE_TENANTS names.
+ * feature (AGENTCAP_XPOST_REPLIES_APPROVED), and only within its scope: "1" is
+ * every owner, "active" only the owners AGENTCAP_XPOST_ACTIVE_TENANTS names.
  * Read with the orchestrator's own parser (worker/src/xpost/scope.ts), so the
  * switch is offered to exactly the owners it will poll and answer for.
  */
 export function xpostRepliesAvailable(hosted: boolean, tenant: string): boolean {
   if (!xpostAvailable(hosted)) return false;
   const env = seam?.env ?? process.env;
-  const { scope } = repliesScopeOf(env.MERRYMEN_XPOST_REPLIES_APPROVED);
-  return repliesAllowedFor(scope, activeTenantsOf(env.MERRYMEN_XPOST_ACTIVE_TENANTS).tenants, tenant);
+  const { scope } = repliesScopeOf(env.AGENTCAP_XPOST_REPLIES_APPROVED);
+  return repliesAllowedFor(scope, activeTenantsOf(env.AGENTCAP_XPOST_ACTIVE_TENANTS).tenants, tenant);
 }
 
 /**
- * IS THIS OWNER'S AGENT ONE THE OPERATOR MADE ACTIVE (MERRYMEN_XPOST_ACTIVE_TENANTS)?
+ * IS THIS OWNER'S AGENT ONE THE OPERATOR MADE ACTIVE (AGENTCAP_XPOST_ACTIVE_TENANTS)?
  * Read with the orchestrator's own parser (worker/src/xpost/scope.ts), because
  * the reply warning must say what the orchestrator will do: an active agent
  * also answers posts that tag it, right away, in a lane of its own. The
@@ -136,7 +136,7 @@ export function xpostRepliesAvailable(hosted: boolean, tenant: string): boolean 
  * describes comment replies only.
  */
 export function xpostActiveAgent(tenant: string): boolean {
-  return activeTenantsOf((seam?.env ?? process.env).MERRYMEN_XPOST_ACTIVE_TENANTS).tenants.has(String(tenant).trim().toLowerCase());
+  return activeTenantsOf((seam?.env ?? process.env).AGENTCAP_XPOST_ACTIVE_TENANTS).tenants.has(String(tenant).trim().toLowerCase());
 }
 
 /**
@@ -172,16 +172,16 @@ export const X_COPY = {
   unavailable: "Posting on X isn't available right now.",
   repliesUnavailable: "Comment replies aren’t available yet.",
   repliesNeedPosting: "Turn posting on for this X account before enabling comment replies.",
-  storeDown: "Couldn't reach merrymen just now — try again in a moment.",
+  storeDown: "Couldn't reach agentcap just now — try again in a moment.",
   expired: "That sign-in link expired or was already used — start again.",
   wrongOwner:
-    "This X connection was started from a different merrymen account, so it wasn't saved. Sign in with the account you started from and connect again.",
+    "This X connection was started from a different agentcap account, so it wasn't saved. Sign in with the account you started from and connect again.",
   xFailed: "X didn't accept the connection — try again.",
   accountChanged: "The connected X account changed — check which account is connected and try again.",
   alreadySending: "That post is already on its way.",
   notConnected: "Connect an X account first.",
   signedOut: "Sign in to change this.",
-  noOwner: "Say which merrymen account this is for.",
+  noOwner: "Say which agentcap account this is for.",
   tooLarge: "That request is too large.",
   badJson: "expected JSON",
 } as const;
@@ -245,7 +245,7 @@ function placeless(zone: string): boolean {
 
 /**
  * THE ZONE AN OWNER TURNED POSTING ON FROM, as the store may keep it: a
- * canonical IANA name, or null. The Merryman's quiet hours fall back to it
+ * canonical IANA name, or null. The AgentCapAvatar's quiet hours fall back to it
  * when the room has no zone for this owner (store.ts XAccount.tz); without
  * one, the owner is never asleep and their account can post at 4am.
  *

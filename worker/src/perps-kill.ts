@@ -7,7 +7,7 @@
  * (solana-kill.ts): the web's "Kill all agents" (DELETE /api/grants,
  * delete-agent, which the phone apps send too), the orchestrator's honourKill
  * for a hosted Telegram /kill, the self-hosted Telegram /kill (index.ts) and
- * `merrymen kill` (perps-kill-cli.ts). From the moment a Perps wallet can
+ * `agentcap kill` (perps-kill-cli.ts). From the moment a Perps wallet can
  * exist, a kill must reach it, so this lands before anything can make one.
  *
  * IT REVOKES THE PERPS GRANT. Hosted, the tenant's row in the Perps grant
@@ -39,7 +39,7 @@
  *  - a retry is safe: each answer is a fact about what is stored now;
  *  - every completed kill writes a disabled settings revision, even with no
  *    current grant, so a delayed enable cannot undo a kill or its retry;
- *  - it runs whatever MERRYMEN_PERPS says. A flag limits trading, never a kill.
+ *  - it runs whatever AGENTCAP_PERPS says. A flag limits trading, never a kill.
  */
 import { statSync, rmSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -48,7 +48,7 @@ import { isHostedMode } from "../../packages/core/src/hosted";
 import { writeFileAtomicSync, fsyncDirSync } from "./atomic-write";
 import { getGrantStore, type GrantStore } from "./grant-store";
 import { archiveGrantFile } from "./grant";
-import { liftKillPause, pauseForKeptGrant, purposeHome, merrymenHome } from "./home";
+import { liftKillPause, pauseForKeptGrant, purposeHome, agentcapHome } from "./home";
 import { errorText } from "./redact-urls";
 import { readSettingsFileAt } from "./settings";
 import { withSettingsFileLock } from "./settings-file-lock";
@@ -173,7 +173,7 @@ export async function stopLocalPerpsWallet(): Promise<{ grant: "revoked" | "none
   // Every completed kill advances a revision, including retries after the
   // grant was removed but the first settings write failed. A stale page must
   // never reuse the old absent-settings revision to re-enable entries.
-  return withLocalStateLock(merrymenHome(), async () => stopLocalPerpsWalletLocked(home));
+  return withLocalStateLock(agentcapHome(), async () => stopLocalPerpsWalletLocked(home));
 }
 
 async function stopLocalPerpsWalletLocked(home: string): Promise<{ grant: "revoked" | "none"; paper: "disabled" | "none" }> {
@@ -228,7 +228,7 @@ function revokeLocalPerpsGrant(home: string, beforeRemove?: () => void): "revoke
 export async function stopLocalPerpsGrantForRenewal(expectedAccount: string, expectedSession: string): Promise<"stopped" | "none" | "changed"> {
   if (isHostedMode()) throw new Error("A hosted renewal names its tenant.");
   if (![expectedAccount, expectedSession].every(value => typeof value === "string" && /^0x[0-9a-fA-F]{40}$/.test(value))) throw new Error("The permission being replaced is not identified");
-  return withLocalStateLock(merrymenHome(), async () => {
+  return withLocalStateLock(agentcapHome(), async () => {
     const home = purposeHome("perps");
     let grant: unknown;
     try { grant = JSON.parse(readFileSync(path.join(home, "grant.json"), "utf8").replace(/^\ufeff/, "")); }
@@ -248,7 +248,7 @@ export async function stopLocalPerpsGrantForRenewal(expectedAccount: string, exp
 /**
  * stopLocalPerpsWallet, as one answer: "stopped" when it revoked a grant,
  * which is what a kill answer then says. A paper strategy turned off with no
- * grant beside it is "none": nothing could trade on it. (`merrymen kill` says
+ * grant beside it is "none": nothing could trade on it. (`agentcap kill` says
  * each part, from stopLocalPerpsWallet.)
  */
 export async function stopLocalPerpsForKill(): Promise<"stopped" | "none"> {

@@ -29,7 +29,7 @@
 import { statSync } from "node:fs";
 import type { DatabaseSync, SQLInputValue } from "node:sqlite";
 
-import { merrymenHome } from "../home";
+import { agentcapHome } from "../home";
 import { historyFilePath, readHistory, type HistoryTrade, type TradeHistory } from "../history-files";
 import { isRestartCopy } from "../token-label";
 import { UNCONFIRMED } from "./trade-rows";
@@ -130,7 +130,7 @@ let parsed: { key: string; file: TradeHistory } | null = null;
 
 /** Which history file is on disk right now (size, mtime, inode), or null when there is none. */
 export function historyFileKey(): string | null {
-  const home = merrymenHome();
+  const home = agentcapHome();
   try {
     const st = statSync(historyFilePath(home));
     return `${home}\n${st.size}\n${st.mtimeMs}\n${st.ino}`;
@@ -149,7 +149,7 @@ function historyFor(agentId: string): TradeHistory | null {
   // kept, a passing failure would stand until the orchestrator next rewrote the
   // file — the whole life of a child. A rejected file is read again next time,
   // as every lookup did before there was a cache.
-  const read = readHistory(merrymenHome(), agentId);
+  const read = readHistory(agentcapHome(), agentId);
   parsed = read ? { key, file: read } : null;
   return read;
 }

@@ -16,7 +16,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { isWallTooWide, WALL_TOO_WIDE, wallShape, wallSignable } from "@merrymen/core";
+import { isWallTooWide, WALL_TOO_WIDE, wallShape, wallSignable } from "@agentcap/core";
 import { buildCallPermissions } from "../../../packages/core/src/wall";
 
 const read = (p: string) => readFileSync(new URL(p, import.meta.url), "utf8");

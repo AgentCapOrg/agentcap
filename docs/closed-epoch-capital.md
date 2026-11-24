@@ -264,9 +264,9 @@ refused for changed evidence, the tenant's newest decision is no longer a
 chain refusal (so this tool no longer runs for it), and a later approval
 seeds the stale basis anyway.
 
-The drain skips a home with no `merrymen.db`, and a home behind a source
+The drain skips a home with no `agentcap.db`, and a home behind a source
 barrier (`ledger-source-blocked.json`). A home admission archived no longer
-holds its book: the archive does not carry `merrymen.db` back. This tool
+holds its book: the archive does not carry `agentcap.db` back. This tool
 cannot read the volume, so it proves which case applies from what admission
 recorded about the anchor (the tenant's newest decision, its chain refusal):
 
@@ -361,14 +361,14 @@ does not apply: preview again on the deployed build.
 ## Before you start
 
 - **The tenant is held** on admission's chain refusal, out of
-  `MERRYMEN_FLEET_ROLLOUT`, with no approval open, exactly as for the booking
+  `AGENTCAP_FLEET_ROLLOUT`, with no approval open, exactly as for the booking
   tool ([chain-gap-booking.md](chain-gap-booking.md#which-tenants-it-books)).
   The same proof (`holdOf`) is applied here.
 - **Where to run it:** a shell that can reach the shared Postgres, such as
   `/app` in the orchestrator container. `DATABASE_URL` comes from the existing
   private mechanism; the tool never prints it or the RPC URL.
 - **The RPC:** the public Robinhood Chain RPC by default;
-  `MERRYMEN_CHAIN_GAP_RPC` selects another. The transport admits only
+  `AGENTCAP_CHAIN_GAP_RPC` selects another. The transport admits only
   `eth_chainId`, `eth_blockNumber`, `eth_getLogs`, `eth_getTransactionReceipt`,
   `eth_getBlockByNumber` and `eth_call` for `balanceOf` of one address at a
   block number. The full read is about fifty log calls plus one receipt per
@@ -543,7 +543,7 @@ prints one of:
     through, or the server has not yet noticed that the apply's session is
     gone. Run the check again in a minute. If it stays `in-progress`, look in
     `pg_stat_activity` for an `application_name` of
-    `merrymen-closed-epoch-apply`. The server ends that session when its
+    `agentcap-closed-epoch-apply`. The server ends that session when its
     connection is found dead. Ending it yourself (`pg_terminate_backend`)
     rolls the transaction back if it has not committed, and the check then
     says `NOT COMMITTED`.
@@ -747,7 +747,7 @@ from another database before connecting, names a cut-short report, and
 keeps each outcome's code when the console breaks after it is settled.
 
 The opt-in real-Postgres tests need a disposable **loopback** server in
-`MERRYMEN_TEST_PG_URL` and the `pg` driver resolvable (`NODE_PATH` works).
+`AGENTCAP_TEST_PG_URL` and the `pg` driver resolvable (`NODE_PATH` works).
 One holds a `COMMIT` on the server with a deferred trigger and drops the
 client 300 ms after sending it. While the backend is still in its `COMMIT`,
 the check says `STILL UNKNOWN`, from the report and from the repair id, and
@@ -758,6 +758,6 @@ transaction aborted. Each test creates its own database and drops it, and
 never reads `DATABASE_URL`:
 
 ```sh
-MERRYMEN_TEST_PG_URL=postgres://postgres@127.0.0.1:<port>/postgres \
+AGENTCAP_TEST_PG_URL=postgres://postgres@127.0.0.1:<port>/postgres \
   node --import tsx --test worker/src/closed-epoch-capital.postgres.test.ts
 ```

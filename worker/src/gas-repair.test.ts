@@ -275,7 +275,7 @@ describe("applyGasRepair and revertGasRepair", () => {
   });
 
   it("refuses a report that does not verify", () => {
-    assert.throws(() => parseApplyReport(JSON.stringify({ format: "merrymen.gas-repair.apply.v1", rows: [] })), (e: unknown) => e instanceof GasRepairRefused);
+    assert.throws(() => parseApplyReport(JSON.stringify({ format: "agentcap.gas-repair.apply.v1", rows: [] })), (e: unknown) => e instanceof GasRepairRefused);
   });
 });
 

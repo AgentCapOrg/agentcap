@@ -17,7 +17,7 @@
  *           refused WITHOUT redeeming the code: that is the account-binding
  *           CSRF, where an attacker gets a victim to approve the attacker's
  *           authorize URL (or the reverse) and an X account lands on the
- *           wrong merrymen owner. Then the code is exchanged at once (X codes
+ *           wrong agentcap owner. Then the code is exchanged at once (X codes
  *           live about thirty seconds), X is asked which account the token
  *           posts as, and the sealed tokens are stored. The answer is
  *           {ok, username, postingEnabled}: whether posting is on NOW.
@@ -39,7 +39,7 @@
  * Hosted only: self-hosted answers 404, like every /api/x/* route.
  */
 import { NextResponse } from "next/server";
-import { isHostedMode } from "@merrymen/core";
+import { isHostedMode } from "@agentcap/core";
 import { tenantOf } from "@/lib/auth";
 import { OWNER_CHANGED_SETTING, ownerMismatch } from "@/lib/order-owner";
 import {

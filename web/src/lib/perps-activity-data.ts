@@ -1,5 +1,5 @@
 /** Owner-scoped ledger reader. No venue account reads and no inferred decimals. */
-import { perpMarketByKey, perpMarketById, type PerpMarketSpec } from "@merrymen/core";
+import { perpMarketByKey, perpMarketById, type PerpMarketSpec } from "@agentcap/core";
 import type { Db } from "../../../worker/src/db";
 import type { PerpsActivityItem, PerpsActivityQuery, PerpsActivityResponse } from "./perps-activity";
 const integer = (x: unknown): bigint | null => typeof x === "string" && x.length <= 100 && /^-?\d+$/.test(x) ? BigInt(x) : null;

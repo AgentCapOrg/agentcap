@@ -14,8 +14,8 @@ import {
   chainForId,
   explorerFor,
   type StoredGrant,
-} from "@merrymen/core";
-import { runWallBattery } from "@merrymen/wall-battery";
+} from "@agentcap/core";
+import { runWallBattery } from "@agentcap/wall-battery";
 import { walletNotSupported } from "@/lib/route-guard";
 
 export interface WallInfo {

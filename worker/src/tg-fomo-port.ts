@@ -15,7 +15,7 @@
  * The asker's words reach only the deterministic planner, as data.
  *
  * WHAT A GROUP NEVER HEARS. The planner deflects a question about the
- * owner's own research state, or who Merrymen watches, before anything is
+ * owner's own research state, or who AgentCap watches, before anything is
  * spent; the renderer gives a group coin-level aggregates (no wallets,
  * addresses, links, cashtags or quoted third-party text, money in short
  * form) and scrubs the result. A coin's theses asked for themselves ("list
@@ -27,7 +27,7 @@
  * ones: the leaderboard's handles and their P&L, and ONE NAMED TRADER'S
  * PUBLIC DATA, for anyone who asks, the owner included (who they are, what
  * they hold, what they traded, what they made or lost money on,
- * provider-reported), never as @mentions and never whether Merrymen watches
+ * provider-reported), never as @mentions and never whether AgentCap watches
  * or follows them (Milla's calls, 2026-10-07). A group answer carries no source line and no
  * skill caveat: the room has had a post about where the data comes from
  * (Milla, 2026-10-07), so the renderer leaves both to the owner's answers.
@@ -61,7 +61,7 @@ import type { FomoEnvelope, ResolvedSubject, TokenIdentity, TokenLabel } from ".
 import { admitTgLine, quoteNotEnglish, tgLineReadings, tgQuoteLeetReadings } from "./telegram/tg-groups/gate";
 import { chainExcluded, chainIn } from "./telegram/tg-groups/route";
 import {
-  ABOUT_MERRYMEN,
+  ABOUT_AGENTCAP,
   AT_THE_READER,
   CONTACT_LURE,
   CTA_PLACEHOLDER,
@@ -93,7 +93,7 @@ export const TG_FOMO_NOT_PERMISSION = "This is research, not a signal to buy or 
 
 /**
  * A question a group never hears answered: the owner's own research state,
- * who Merrymen watches, or a trader's own theses. GROUP_DM_DEFLECTION says
+ * who AgentCap watches, or a trader's own theses. GROUP_DM_DEFLECTION says
  * "I'll answer that in a direct message", and nothing here sends that
  * message, so the room is told where the question belongs instead of being
  * promised an answer.
@@ -512,7 +512,7 @@ export const THESES_SAMPLE_CHARS = 160;
 export const THESES_SAMPLES_MIN = 3;
 
 /*
- * INJECTION_SHAPED, AT_THE_READER, LURE, SPELLED_DOMAIN, ABOUT_MERRYMEN and
+ * INJECTION_SHAPED, AT_THE_READER, LURE, SPELLED_DOMAIN, ABOUT_AGENTCAP and
  * NON_LATIN live in tg-groups/third-party.ts (moved unchanged, 2026-10-09),
  * shared with the paraphrase's checks and the gate's `quote` kind.
  */
@@ -538,7 +538,7 @@ export function thesesSample(text: unknown): string | null {
   // characters gone, spelled-out letters joined), so "frее tоkens" with
   // Cyrillic letters or "instruc\u200btions" is the row it is (review r4).
   const reads = [s, ...tgLineReadings(s)];
-  if ([INJECTION_SHAPED, AT_THE_READER, LURE, ABOUT_MERRYMEN, SPELLED_DOMAIN].some((re) => reads.some((r) => re.test(r)))) return null;
+  if ([INJECTION_SHAPED, AT_THE_READER, LURE, ABOUT_AGENTCAP, SPELLED_DOMAIN].some((re) => reads.some((r) => re.test(r)))) return null;
   if (s.length > THESES_SAMPLE_CHARS) s = `${s.slice(0, THESES_SAMPLE_CHARS - 1).replace(/\s+\S*$/, "")}…`;
   return s;
 }
@@ -600,7 +600,7 @@ const QUOTE_SENTENCES = 3;
  * lure either.
  * The coin's dev's own posts, a call to action beside a link taken out, any
  * row a link or an address was taken out of, and anything the sample cleaner drops (links, addresses, handles and $tags out;
- * injection shapes, rows at the reader, lures, Merrymen, spelled domains and
+ * injection shapes, rows at the reader, lures, AgentCap, spelled domains and
  * other scripts dropped) never become one. What is left is cut (three
  * sentences, QUOTE_CHARS: a length cut, judged as cut), checked against the
  * third-party clauses, framed with a sayable handle or "a trader" and its age,
@@ -663,9 +663,9 @@ function quoteOf(v: ThesisView, coin: string, now: number): { who: string; age: 
 
 /**
  * Words a quote's author handle may never wear, read with its joins spaced
- * out ("fomo_support", "MerrymenOfficial", "refund_bot"): support, a help
+ * out ("fomo_support", "AgentCapOfficial", "refund_bot"): support, a help
  * desk, an admin or mod, "official", a team, a dev, a bot, a refund or
- * recovery, Merrymen, Fomo, Telegram; or a helper's word fused to a name
+ * recovery, AgentCap, Fomo, Telegram; or a helper's word fused to a name
  * ("autonrecovery", "dm_autonhelp"). Such an author is "a trader".
  */
 const IMPERSONATES = /\b(?:support|help\s*desk|admins?|mods?|moderators?|official|team|devs?|bot|refunds?|recovery|merrym[ae]n|fomo|telegram)\b|(?<=[\p{L}\p{N}])(?:recovery|support|help(?:desk)?|rescue)\b/iu;
@@ -673,7 +673,7 @@ const IMPERSONATES = /\b(?:support|help\s*desk|admins?|mods?|moderators?|officia
 const HANDLE_LEET: Readonly<Record<string, string>> = { "0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t" };
 const foldedHandle = (handle: string): string =>
   handle.normalize("NFKC").toLowerCase().replace(/[013457]/g, (d) => HANDLE_LEET[d] ?? d).replace(/[^\p{L}]+/gu, "");
-/** What a handle read as one word may never hold anywhere in it: staff, Merrymen, Fomo, a lure, a crime, harm. */
+/** What a handle read as one word may never hold anywhere in it: staff, AgentCap, Fomo, a lure, a crime, harm. */
 const IMPERSONATES_FOLDED =
   /fomo|merrym[ae]n|telegram|support|admin|official|staff|helpdesk|customer(?:care|service)|refund|recover|verified|moderator|airdrop|giveaway|kill(?:your|ur|the|them|him|her)|kys|hangthe|rapist|scam|^buy|^sell|sendsol|sendeth|doubleyour/u;
 /** The lines code says around the quotes, or the agent of the room cited ("the agent in this group said…"; review r2): a thesis that echoes one is dressing as the answer itself. */
@@ -696,7 +696,7 @@ function quoteHandleOk(handle: string): boolean {
     .trim();
   if (IMPERSONATES.test(spaced)) return false;
   // Read as one word too, digits as letters (review r2): "fomoadmin",
-  // "merrymenofficial", "telegramsupport", "f0m0admin", "killyourself" never
+  // "agentcapofficial", "telegramsupport", "f0m0admin", "killyourself" never
   // split at a case or an underscore. Short words (dev, bot, mod, team) stay
   // with the word-edged test above: as substrings they hide in real names.
   if (IMPERSONATES_FOLDED.test(foldedHandle(handle))) return false;

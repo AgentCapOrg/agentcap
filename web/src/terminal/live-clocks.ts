@@ -75,7 +75,7 @@ export const CHANGES_EVERY_MS = 5 * 60_000;
 /**
  * Whether a public read's answer counts as read — and, when nothing answered
  * at all, a throw that says so, which is the only case the outage line may
- * call "Can't reach merrymen" (refresh-loop.ts nothingAnswered).
+ * call "Can't reach agentcap" (refresh-loop.ts nothingAnswered).
  */
 function verdict(raw: RawRead): boolean {
   if (parseRead(raw).read === "ok") return true;

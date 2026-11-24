@@ -32,7 +32,7 @@
  * Pyth's 2026-08-26 Core upgrade added a second generation of programs on
  * Solana with their own feed accounts, and Pyth recommends it for new
  * integrations. Both generations are pinned in `SOLANA_PYTH_FEEDS`, and
- * MERRYMEN_SOLANA_PYTH_GENERATION ("current" or "upgraded"; unset is
+ * AGENTCAP_SOLANA_PYTH_GENERATION ("current" or "upgraded"; unset is
  * `SOLANA_PYTH_DEFAULT_GENERATION`) picks the one every read and every stored
  * bound must come from. It switches all three addresses together; there is no
  * fallback from one generation to the other, and configuration cannot name an
@@ -80,7 +80,7 @@ export const SOLANA_PYTH_FEEDS: Readonly<Record<SolanaPythGeneration, Readonly<S
     priceFeedProgram: "pyt2F414BA6dPttK6RddPZUdHfapoBN24GL5wbrPCou", account: "7AviUf9nL62mcxNbQGKm4nKDQnPjswo6c5MX4D57HmyE" }),
 } satisfies Record<SolanaPythGeneration, SolanaPythFeed>);
 /**
- * The generation read when MERRYMEN_SOLANA_PYTH_GENERATION is unset, and by
+ * The generation read when AGENTCAP_SOLANA_PYTH_GENERATION is unset, and by
  * any caller that passes no generation: "current", the conservative choice and
  * the owner's to change. It is the generation this module was first built and
  * checked against, and the tests replay a recorded read of it. The alternative, "upgraded", is the one Pyth recommends for new
@@ -145,12 +145,12 @@ function safe(value: unknown, reason: SolanaReferenceRefusal): number {
 
 type Env = Readonly<Record<string, string | undefined>>;
 /**
- * MERRYMEN_SOLANA_PYTH_GENERATION: "current" or "upgraded", exactly; unset or
+ * AGENTCAP_SOLANA_PYTH_GENERATION: "current" or "upgraded", exactly; unset or
  * empty is SOLANA_PYTH_DEFAULT_GENERATION. Anything else refuses every live
  * trade rather than guess which oracle was meant.
  */
 export function solanaPythGeneration(env: Env): SolanaPythGeneration {
-  const raw = env.MERRYMEN_SOLANA_PYTH_GENERATION;
+  const raw = env.AGENTCAP_SOLANA_PYTH_GENERATION;
   if (raw === undefined || raw === "") return SOLANA_PYTH_DEFAULT_GENERATION;
   if (raw === "current" || raw === "upgraded") return raw;
   return fail("config");
@@ -161,7 +161,7 @@ export function solanaPythFeed(generation: SolanaPythGeneration): Readonly<Solan
   return SOLANA_PYTH_FEEDS[generation];
 }
 /*
- * Nothing here reads process.env. MERRYMEN_SOLANA_PYTH_GENERATION is read only
+ * Nothing here reads process.env. AGENTCAP_SOLANA_PYTH_GENERATION is read only
  * by `solanaPythGeneration`/`requireSolanaPythGeneration`, from the env a
  * caller hands them: the app runtime's own, which it then passes to every
  * read and check. A caller that passes no generation gets
@@ -274,7 +274,7 @@ export function createSolanaReferenceAlerts(sink: SolanaReferenceAlertSink = {
       // The remedy fits the reason: a refused read clears with the next good price, a
       // setting that names no generation only when an operator corrects it.
       const remedy = error.reason === "config"
-        ? `MERRYMEN_SOLANA_PYTH_GENERATION must be current or upgraded (unset is ${SOLANA_PYTH_DEFAULT_GENERATION}); ` +
+        ? `AGENTCAP_SOLANA_PYTH_GENERATION must be current or upgraded (unset is ${SOLANA_PYTH_DEFAULT_GENERATION}); ` +
           "no live Solana trade is admitted until the setting is fixed"
         // The age limit alone: how many Pyth posts it spans differs by generation (see SOLANA_REFERENCE_MAX_AGE_MS).
         : `no live Solana trade is admitted until a fresh, fully verified SOL/USD price is read (max age ${SOLANA_REFERENCE_MAX_AGE_MS / 1000} s)`;
@@ -338,7 +338,7 @@ export async function readSolanaReferencePrice(read: SolanaLiveRead, minContextS
 }
 
 export function solanaReferenceToleranceBps(env: Env): number {
-  const raw = env.MERRYMEN_SOLANA_REFERENCE_TOLERANCE_BPS;
+  const raw = env.AGENTCAP_SOLANA_REFERENCE_TOLERANCE_BPS;
   if (raw === undefined || raw === "") return SOLANA_REFERENCE_DEFAULT_TOLERANCE_BPS;
   const value = Number(raw);
   if (!/^[0-9]+$/.test(raw) || value < SOLANA_REFERENCE_MIN_TOLERANCE_BPS || value > SOLANA_REFERENCE_MAX_TOLERANCE_BPS) return fail("config");
@@ -402,7 +402,7 @@ export function solanaLowestReferenceBound(bounds: readonly SolanaReferenceBound
  * translated.
  *
  * `toleranceBps`: the tolerance the bound must have been built with, the app
- * runtime's MERRYMEN_SOLANA_REFERENCE_TOLERANCE_BPS (the executor and the store
+ * runtime's AGENTCAP_SOLANA_REFERENCE_TOLERANCE_BPS (the executor and the store
  * pass it, by default SOLANA_REFERENCE_DEFAULT_TOLERANCE_BPS). A bound carrying
  * any other tolerance is refused, so evidence cannot widen its own floor. Left
  * out, any tolerance in the allowed range is recomputed as before (the owner's

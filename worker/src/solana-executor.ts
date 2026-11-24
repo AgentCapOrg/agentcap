@@ -288,9 +288,9 @@ export interface SolanaExecutorOptions {
     slot: number; observedAtMs: number }): Promise<SolanaLiveRiskEvidence>;
   now?: () => number;
   signal?: AbortSignal;
-  /** The Pyth generation `assessRisk`'s reference must come from: the app runtime's MERRYMEN_SOLANA_PYTH_GENERATION. Default: SOLANA_PYTH_DEFAULT_GENERATION. */
+  /** The Pyth generation `assessRisk`'s reference must come from: the app runtime's AGENTCAP_SOLANA_PYTH_GENERATION. Default: SOLANA_PYTH_DEFAULT_GENERATION. */
   pythGeneration?: SolanaPythGeneration;
-  /** The tolerance `assessRisk`'s bound must carry: the app runtime's MERRYMEN_SOLANA_REFERENCE_TOLERANCE_BPS. Default: SOLANA_REFERENCE_DEFAULT_TOLERANCE_BPS. */
+  /** The tolerance `assessRisk`'s bound must carry: the app runtime's AGENTCAP_SOLANA_REFERENCE_TOLERANCE_BPS. Default: SOLANA_REFERENCE_DEFAULT_TOLERANCE_BPS. */
   referenceToleranceBps?: number;
   /**
    * The lowest slot the vault snapshot a swap is signed against may come from:
@@ -543,7 +543,7 @@ export interface SolanaObservationOptions {
   /**
    * The operator's resolution tool only (solana-resolve.ts): when the vault's
    * sequence has moved past the signed one for some other reason (an owner
-   * withdrawal made outside Merrymen takes no expected sequence), prove from the
+   * withdrawal made outside AgentCap takes no expected sequence), prove from the
    * vault's own debit log that these bytes never ran ("sequence-consumed"). The
    * worker's automatic reconciliation never asks this: it keeps such a trade
    * pending for an operator to review.

@@ -1,5 +1,5 @@
 /**
- * MERRYMEN_PERPS HAS ONE PARSER, and it only ever takes capability away.
+ * AGENTCAP_PERPS HAS ONE PARSER, and it only ever takes capability away.
  *
  * The worker, the orchestrator and the web all read the lever through
  * perps-ceiling.ts, so a value means one thing everywhere. Unset is off,

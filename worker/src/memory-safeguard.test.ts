@@ -29,7 +29,7 @@ function fixture(t: { after(fn: () => void): void }) {
   writeFileSync(path.join(home, "soul", "UNLISTED.md"), SECRET);
   writeFileSync(path.join(home, "grant.json"), SECRET);
   writeFileSync(path.join(home, "settings.json"), SECRET);
-  const local = new DatabaseSync(path.join(home, "merrymen.db"));
+  const local = new DatabaseSync(path.join(home, "agentcap.db"));
   local.exec("CREATE TABLE chat_turns(id INTEGER PRIMARY KEY, chat_id INTEGER, role TEXT, content TEXT, memory_ids TEXT, at INTEGER); CREATE TABLE signing_secrets(value TEXT)");
   local.prepare("INSERT INTO signing_secrets VALUES (?)").run(SECRET);
   const turn = local.prepare("INSERT INTO chat_turns VALUES (?, ?, ?, ?, ?, ?)");
@@ -177,7 +177,7 @@ test("reviewed bootstrap bundle verifies an encrypted fixture from the repositor
   t.after(() => rmSync(bundle, { force: true }));
   execFileSync(path.join(repo, "node_modules", ".bin", "esbuild"), ["worker/src/memory-safeguard-cli.ts", "--bundle", "--platform=node",
     "--format=esm", "--packages=external", `--outfile=${bundle}`], { cwd: repo, stdio: "pipe" });
-  const env: NodeJS.ProcessEnv = { ...process.env, MERRYMEN_STORE_DEK: DEK.toString("base64") };
+  const env: NodeJS.ProcessEnv = { ...process.env, AGENTCAP_STORE_DEK: DEK.toString("base64") };
   delete env.DATABASE_URL;
   const result = spawnSync(process.execPath, [bundle, "verify", "--artifact", artifact], { cwd: repo, env, encoding: "utf8", timeout: 10_000 });
   assert.equal(result.status, 0, result.stderr);

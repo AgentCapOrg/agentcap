@@ -13,10 +13,10 @@ import { OWNER_HANDLE_OPS_ABI, seedOwnerRevocations } from "./receipt-attestatio
 import { readReceiptAttestation } from "./receipt-attestation-state";
 import { canonicalJson } from "./store";
 
-const holds = process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS;
-afterEach(() => { if (holds === undefined) delete process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS; else process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS = holds; });
+const holds = process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS;
+afterEach(() => { if (holds === undefined) delete process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS; else process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS = holds; });
 async function fixture(count = 2) {
-  process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS = TEST_TENANT;
+  process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS = TEST_TENANT;
   const f = await receiptFixture();
   return { ...f, owner: await seedOwnerRevocations(f, count) };
 }
@@ -231,7 +231,7 @@ test("pending plan refuses changed public owner receipt and retains barriers unt
 });
 
 test("legacy v1 empty-owner pending plan resumes with its original digest and a fresh empty operation scan", async () => {
-  process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS = TEST_TENANT;
+  process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS = TEST_TENANT;
   const f = await receiptFixture();
   try {
     const preview = await attestOriginalReceipt(f.options);
@@ -250,7 +250,7 @@ test("legacy v1 empty-owner pending plan resumes with its original digest and a 
 });
 
 test("an empty-owner approval cannot authorize owner history added after its pending audit", async () => {
-  process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS = TEST_TENANT;
+  process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS = TEST_TENANT;
   const f = await receiptFixture();
   try {
     const preview = await attestOriginalReceipt(f.options);

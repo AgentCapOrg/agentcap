@@ -98,16 +98,16 @@ describe("every read goes through the governor", () => {
 
 describe("the breaker is shared across the container", () => {
   it("THE ORCHESTRATOR PASSES THE FLEET HOME, so children do not each get a private file", () => {
-    // A child's own MERRYMEN_HOME is <fleet>/children/<tenant>. Writing the
+    // A child's own AGENTCAP_HOME is <fleet>/children/<tenant>. Writing the
     // cooldown there gives every child its own copy and the appearance of a
     // working breaker that coordinates with nobody.
     const orch = src("./orchestrator.ts");
-    assert.match(orch, /env\.MERRYMEN_FLEET_HOME = merrymenHome\(\);/);
+    assert.match(orch, /env\.AGENTCAP_FLEET_HOME = agentcapHome\(\);/);
   });
 
   it("and the cooldown file prefers it over the child's private home", () => {
     const cool = src("./rpc-cooldown.ts");
-    assert.match(cool, /process\.env\.MERRYMEN_FLEET_HOME/);
+    assert.match(cool, /process\.env\.AGENTCAP_FLEET_HOME/);
   });
 
   it("AND IT IS NOT A SECRET, so it must not be stripped from the child env", () => {
@@ -115,7 +115,7 @@ describe("the breaker is shared across the container", () => {
     // of them, and stripping it would silently un-share the breaker.
     const orch = src("./orchestrator.ts");
     const strip = orch.slice(orch.indexOf("const CHILD_SECRET_STRIP"), orch.indexOf("] as const;"));
-    assert.ok(!strip.includes("MERRYMEN_FLEET_HOME"));
+    assert.ok(!strip.includes("AGENTCAP_FLEET_HOME"));
   });
 
   it("and a read of the shared file can only ever fail to null", () => {

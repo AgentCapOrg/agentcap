@@ -33,7 +33,7 @@ export const HELP = `In-kind capital preview — PREVIEW ONLY. There is no apply
 
 node --import tsx scripts/in-kind-preview/preview.mjs --account 0xFULL_ACCOUNT [--account 0xFULL_ACCOUNT] [--from-block N] --output /absolute/new-preview.json
 
-Required environment: DATABASE_URL. Optional: MERRYMEN_IN_KIND_RPC (defaults to public Robinhood mainnet).
+Required environment: DATABASE_URL. Optional: AGENTCAP_IN_KIND_RPC (defaults to public Robinhood mainnet).
 Requires Node 22.13+, the repository dependencies, and the external runtime pg driver. 1-32 full account addresses; prefixes are refused.
 The output is created once with owner-only file permissions (0600). Existing files are never overwritten.
 Provenance is read from each UserOperation's nonce, never from whether a trades row exists.
@@ -176,7 +176,7 @@ export async function buildPreview({ snapshot, accounts, rpc, deps, target, sour
   const every = out.flatMap(a => a.movements);
   const count = kind => every.filter(m => m.classification.kind === kind).length;
   const preview = {
-    format: 'merrymen.in-kind-preview.v1',
+    format: 'agentcap.in-kind-preview.v1',
     mode: 'preview-only',
     source,
     databaseTargetDigest: target,
@@ -252,7 +252,7 @@ export async function main(args = process.argv.slice(2), env = process.env) {
   const Client = pg.Client ?? pg.default?.Client;
   if (typeof Client !== 'function') throw new Error('postgres-read-driver-unavailable');
   const client = new Client({ connectionString: env.DATABASE_URL, connectionTimeoutMillis: 10000,
-    statement_timeout: 30000, application_name: 'merrymen-in-kind-preview-readonly',
+    statement_timeout: 30000, application_name: 'agentcap-in-kind-preview-readonly',
     options: '-c default_transaction_read_only=on' });
   let connected = false;
   try {
@@ -263,7 +263,7 @@ export async function main(args = process.argv.slice(2), env = process.env) {
     // session stays open across the slow public chain reads below.
     await client.end();
     connected = false;
-    const rpc = deps.value.createReadOnlyRpc(env.MERRYMEN_IN_KIND_RPC || 'https://rpc.mainnet.chain.robinhood.com');
+    const rpc = deps.value.createReadOnlyRpc(env.AGENTCAP_IN_KIND_RPC || 'https://rpc.mainnet.chain.robinhood.com');
     const preview = await buildPreview({ snapshot, accounts: options.accounts, rpc, deps, target, source, fromBlock: options.fromBlock });
     await savePreview(options.output, preview);
     process.stdout.write(plainSummary(preview));

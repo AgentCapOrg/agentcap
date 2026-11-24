@@ -1,7 +1,7 @@
 /**
  * The live runtime holds its configured vault to the release pin: once
- * SOLANA_VAULT_RELEASES lists a release, MERRYMEN_SOLANA_VAULT_PROGRAM and
- * MERRYMEN_SOLANA_VAULT_SHA256 must be one listed pair, the program the owner
+ * SOLANA_VAULT_RELEASES lists a release, AGENTCAP_SOLANA_VAULT_PROGRAM and
+ * AGENTCAP_SOLANA_VAULT_SHA256 must be one listed pair, the program the owner
  * recovery tool trusts. config() refuses anything else as configuration,
  * before any RPC read, for status and for every owner action. Status still
  * names such a program and the owner's vault on it, so the recovery card can
@@ -23,7 +23,7 @@ const OWNER = key(23), PROGRAM = key(77), OTHER_PROGRAM = key(78);
 const HASH = "a".repeat(64), OTHER_HASH = "b".repeat(64);
 const limits = { perTradeUsdg: "10000000", dailyUsdg: "50000000", maxOpsPerDay: 10, maxDrawdownBps: 2000, expiresAtMs: 4_600_000,
   perTradeWsol: "100000000", dailyWsol: "500000000" };
-const NOT_RELEASED = /not a released Merrymen vault program/;
+const NOT_RELEASED = /not a released AgentCap vault program/;
 const NOT_RELEASED_HASH = /binary hash is not the released hash of that program/;
 
 async function fixture() {
@@ -39,7 +39,7 @@ async function fixture() {
     createSolanaAppRuntime({ db, rpc, env, now, localTestDeployment: false, ...extra });
   return { raw, calls, runtime, scope: { tenant: TENANT, owner: OWNER } };
 }
-const configured = (programId: string, hash: string) => ({ MERRYMEN_SOLANA_VAULT_PROGRAM: programId, MERRYMEN_SOLANA_VAULT_SHA256: hash });
+const configured = (programId: string, hash: string) => ({ AGENTCAP_SOLANA_VAULT_PROGRAM: programId, AGENTCAP_SOLANA_VAULT_SHA256: hash });
 const releases = [{ programId: PROGRAM, sha256: HASH }];
 
 test("with a release pinned, a configured program or binary hash that is not a listed pair is refused before any RPC", async () => {
@@ -54,7 +54,7 @@ test("with a release pinned, a configured program or binary hash that is not a l
       assert.match(status.live.blockers.join(" "), refusal);
       // Shown, never used: the program and the owner's vault on it, for the recovery card;
       // nothing was read from it (no balances, no token account).
-      const programId = env.MERRYMEN_SOLANA_VAULT_PROGRAM;
+      const programId = env.AGENTCAP_SOLANA_VAULT_PROGRAM;
       assert.deepEqual([status.live.programId, status.live.vault], [programId, await deriveSolanaVaultAddress(programId, OWNER)]);
       assert.deepEqual([status.live.balances, status.live.cashTokenAccount, status.live.feePayer, status.live.ownerWallet, status.live.recoverable],
         [null, null, null, null, null]);
@@ -97,7 +97,7 @@ test("only a local test harness skips the release check, and the local test id i
     // Only the release refusal shows the program: the local test id, an invalid id or a missing
     // hash shows none, and derives no vault.
     assert.deepEqual([local.live.programId, local.live.vault], [null, null]);
-    for (const env of [configured("not-a-key", HASH), { MERRYMEN_SOLANA_VAULT_PROGRAM: PROGRAM }, configured(PROGRAM, "A".repeat(64))]) {
+    for (const env of [configured("not-a-key", HASH), { AGENTCAP_SOLANA_VAULT_PROGRAM: PROGRAM }, configured(PROGRAM, "A".repeat(64))]) {
       const status = await f.runtime(env, { vaultReleases: releases }).status(f.scope);
       assert.match(status.live.blockers.join(" "), /must be configured|invalid/);
       assert.deepEqual([status.live.programId, status.live.vault], [null, null]);

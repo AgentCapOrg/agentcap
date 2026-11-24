@@ -38,8 +38,8 @@ resume), and after any change to backup settings.
 
    ```sh
    # bash: paste the fork's connection URL; it is not echoed or kept in history
-   read -rs MERRYMEN_RESTORE_FORK_URL && export MERRYMEN_RESTORE_FORK_URL
-   MERRYMEN_RESTORE_SOURCE_URL="$DATABASE_URL" \
+   read -rs AGENTCAP_RESTORE_FORK_URL && export AGENTCAP_RESTORE_FORK_URL
+   AGENTCAP_RESTORE_SOURCE_URL="$DATABASE_URL" \
      node scripts/pg-backup/verify-restore.mjs --restore-point 2026-10-05T02:00:00Z
    ```
 
@@ -182,6 +182,6 @@ The verifier's tests are in `cli/pg-backup-verify.test.mjs`. Their opt-in case
 runs the real SQL against a disposable local Postgres:
 
 ```sh
-MERRYMEN_TEST_PG_URL=postgres://merrymen@127.0.0.1:55432/postgres \
+AGENTCAP_TEST_PG_URL=postgres://agentcap@127.0.0.1:55432/postgres \
   NODE_PATH=<a directory holding pg@8> npx tsx --test cli/pg-backup-verify.test.mjs
 ```

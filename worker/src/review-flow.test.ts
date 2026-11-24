@@ -39,7 +39,7 @@ function silentPort(): FlowPort & { sent: unknown[] } {
 
 describe("reviewFlowClient — no question unless the orchestrator said a broker answers", () => {
   it("is null without the flag, whatever the channel", () => {
-    assert.equal(FLOW_BROKER_ENV, "MERRYMEN_FLOW_BROKER");
+    assert.equal(FLOW_BROKER_ENV, "AGENTCAP_FLOW_BROKER");
     assert.equal(reviewFlowClient({}, () => silentPort()), null);
     for (const v of ["0", "true", "yes", " 1", ""]) assert.equal(reviewFlowClient({ [FLOW_BROKER_ENV]: v }, () => silentPort()), null, JSON.stringify(v));
   });

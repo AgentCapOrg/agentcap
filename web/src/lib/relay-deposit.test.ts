@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { CASH } from "@merrymen/core";
+import { CASH } from "@agentcap/core";
 import { DEPOSIT_SOURCES, type DepositSource } from "./deposit-math";
 import {
   PRICE_SENDER,

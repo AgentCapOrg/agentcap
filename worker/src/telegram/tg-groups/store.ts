@@ -1,5 +1,5 @@
 /**
- * Telegram groups — the durable per-agent store, `<MERRYMEN_HOME>/tg-groups.json`.
+ * Telegram groups — the durable per-agent store, `<AGENTCAP_HOME>/tg-groups.json`.
  * Contract: docs/tg-groups.md, "Memory" and "Storage and the ferry".
  *
  * ONE FILE, ONE WRITER. The child that polls Telegram is the only process that

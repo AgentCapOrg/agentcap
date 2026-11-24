@@ -10,7 +10,7 @@ code.
 **A round trip costs 199 bps in curve fees alone.** 100 bps per side, measured
 exactly — 0.980100 to six decimal places, across three curves and four sizes
 spanning three orders of magnitude. That is before gas, and before the
-USDG→quote-asset leg you need to reach most curves. merrymen's whole existing
+USDG→quote-asset leg you need to reach most curves. agentcap's whole existing
 cost floor is about 47 bps, so one Pons round trip costs more than four times
 what the rest of the system budgets for an entire trade. A strategy has to beat
 2% before it breaks even.
@@ -76,7 +76,7 @@ and the npm script carries it inside the command rather than in an environment
 variable, because the `VAR=x cmd` prefix form is bash-only and silently does
 nothing in PowerShell: you get the identical error and no hint as to why.
 
-The deployer key comes from `MERRYMEN_DEPLOYER_PRIVATE_KEY` in the shell that
+The deployer key comes from `AGENTCAP_DEPLOYER_PRIVATE_KEY` in the shell that
 runs it, is never logged or written, and should be unset afterwards. The script
 refuses any chain that is not 46630 or 4663, refuses to run with no balance, and
 post-verifies that the deployed ABI is the one the wall pins — one non-payable

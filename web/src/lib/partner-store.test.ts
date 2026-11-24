@@ -13,7 +13,7 @@ const B = "0x00000000000000000000000000000000000000b2" as const;
 const SECRET = "test-only-partner-bridge-secret-32-or-more-characters";
 const fixtures: Array<{ store: FilePartnerStore; home: string }> = [];
 function fixture() {
-  const home = mkdtempSync(join(tmpdir(), "merrymen-partner-store-"));
+  const home = mkdtempSync(join(tmpdir(), "agentcap-partner-store-"));
   let now = 1_800_000_000;
   const store = new FilePartnerStore(home, () => now, () => SECRET);
   fixtures.push({ store, home });
@@ -341,13 +341,13 @@ test("records and history survive store reopen", async () => {
 });
 
 test("hosted deployment fails closed without a shared database", () => {
-  const saved = { MERRYMEN_HOSTED: process.env.MERRYMEN_HOSTED, DATABASE_URL: process.env.DATABASE_URL, MERRYMEN_HOME: process.env.MERRYMEN_HOME };
+  const saved = { AGENTCAP_HOSTED: process.env.AGENTCAP_HOSTED, DATABASE_URL: process.env.DATABASE_URL, AGENTCAP_HOME: process.env.AGENTCAP_HOME };
   // This is the one test that reaches getPartnerStore(), and the branch it does NOT
-  // take opens a database at merrymenHome(). Point that at a disposable directory so
-  // a regression in the guard can never write into the developer's real ~/.merrymen.
-  const home = mkdtempSync(join(tmpdir(), "merrymen-partner-hosted-"));
-  process.env.MERRYMEN_HOME = home;
-  process.env.MERRYMEN_HOSTED = "true";
+  // take opens a database at agentcapHome(). Point that at a disposable directory so
+  // a regression in the guard can never write into the developer's real ~/.agentcap.
+  const home = mkdtempSync(join(tmpdir(), "agentcap-partner-hosted-"));
+  process.env.AGENTCAP_HOME = home;
+  process.env.AGENTCAP_HOSTED = "true";
   delete process.env.DATABASE_URL;
   try { assert.throws(() => getPartnerStore(), /require DATABASE_URL/); }
   finally {

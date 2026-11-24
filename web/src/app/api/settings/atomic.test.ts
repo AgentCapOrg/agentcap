@@ -8,7 +8,7 @@ import { after, before, describe, it } from "node:test";
  * SELF-HOSTED, THE WEB UI REPLACES settings.json WHOLE — AND NEVER OVER A FILE
  * IT COULD NOT READ.
  *
- * The worker re-reads ~/.merrymen/settings.json every tick. This route wrote it
+ * The worker re-reads ~/.agentcap/settings.json every tick. This route wrote it
  * with fs/promises writeFile — O_TRUNC, then write — so a tick that read in
  * between got an empty or half file and ran on the defaults: paper, the default
  * strategy, an empty Telegram allowlist. The race itself, and a control proving
@@ -42,7 +42,7 @@ describe("the settings route's self-hosted write is atomic", () => {
   });
 
   it("writes through writeFileAtomic, owner-only", () => {
-    assert.match(ROUTE, /import \{ writeFileAtomic \} from "@merrymen\/atomic-write";/);
+    assert.match(ROUTE, /import \{ writeFileAtomic \} from "@agentcap\/atomic-write";/);
     assert.match(ROUTE, /await writeFileAtomic\(SETTINGS_FILE, JSON\.stringify\(next, null, 2\), 0o600\);/);
   });
 
@@ -51,26 +51,26 @@ describe("the settings route's self-hosted write is atomic", () => {
     const strict = put.indexOf("await readStoredStrict(tenant)");
     assert.ok(strict > 0, "PUT must read with readStoredStrict — readStored turns a broken file into {}");
     assert.doesNotMatch(put, /await readStored\(/, "the lenient reader is for display only");
-    assert.ok(strict < put.indexOf("const next: MerrymenSettings = { ...stored };"), "the refusal comes before the merge");
+    assert.ok(strict < put.indexOf("const next: AgentCapSettings = { ...stored };"), "the refusal comes before the merge");
   });
 });
 
 describe("PUT /api/settings against a real settings.json", () => {
   let home: string;
   let PUT: (req: Request) => Promise<Response>;
-  const saved = { home: process.env.MERRYMEN_HOME, hosted: process.env.MERRYMEN_HOSTED };
+  const saved = { home: process.env.AGENTCAP_HOME, hosted: process.env.AGENTCAP_HOSTED };
   const file = () => path.join(home, "settings.json");
   const leftovers = () => readdirSync(home).filter((n) => n.endsWith(".tmp"));
 
   before(async () => {
     home = mkdtempSync(path.join(tmpdir(), "mm-settings-atomic-"));
-    process.env.MERRYMEN_HOME = home;
-    delete process.env.MERRYMEN_HOSTED;
+    process.env.AGENTCAP_HOME = home;
+    delete process.env.AGENTCAP_HOSTED;
     // After the env: the route resolves its settings path when it loads.
     ({ PUT } = await import("./route"));
   });
   after(() => {
-    for (const [key, value] of [["MERRYMEN_HOME", saved.home], ["MERRYMEN_HOSTED", saved.hosted]] as const) {
+    for (const [key, value] of [["AGENTCAP_HOME", saved.home], ["AGENTCAP_HOSTED", saved.hosted]] as const) {
       if (value === undefined) delete process.env[key];
       else process.env[key] = value;
     }

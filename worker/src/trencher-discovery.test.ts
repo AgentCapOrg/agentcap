@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { keccak256, type PublicClient } from "viem";
-import { CASH, UNISWAP, GRANT_TRENCHER, MERRYMEN_TOKEN, type StoredGrant } from "../../packages/core/src/index";
+import { CASH, UNISWAP, GRANT_TRENCHER, AGENTCAP_TOKEN, type StoredGrant } from "../../packages/core/src/index";
 import { EARLY_VERIFY_MAX, NOMINATED_VERIFY_MAX, discoverTrencherUniverse, regularEntryPools } from "./trencher-discovery";
 import { earlyEntryPools } from "./early-candidates";
 import { emptyGeckoBuckets, type GeckoPool } from "./venues/geckoterminal";
@@ -55,18 +55,18 @@ test("automatic discovery verifies pool provenance and recovers held tokens with
   await assert.rejects(discoverTrencherUniverse(client(),grant,[pool]),/bytecode/);
 });
 test("the energy reserve is never a trencher candidate, and held tokens are not narrowed", async (t) => {
-  // $MERRYMEN is held as energy — never watched, bought or sold as a coin. A
-  // Uniswap v3 MERRYMEN pool does not exist today, but discovery must not
+  // $AGENTCAP is held as energy — never watched, bought or sold as a coin. A
+  // Uniswap v3 AGENTCAP pool does not exist today, but discovery must not
   // depend on that staying true.
   const prior = process.env.TRENCHER_FACTORY_CODE_HASH;
   process.env.TRENCHER_FACTORY_CODE_HASH = keccak256("0x6000");
   t.after(() => { if (prior === undefined) delete process.env.TRENCHER_FACTORY_CODE_HASH; else process.env.TRENCHER_FACTORY_CODE_HASH = prior; });
-  const merrymen = MERRYMEN_TOKEN.address;
-  const reservePool = { ...pool, tokenAddress: merrymen, name: "MERRYMEN / USDG" } as GeckoPool;
-  const shouted = { ...reservePool, tokenAddress: `0x${merrymen.slice(2).toUpperCase()}` } as GeckoPool;
+  const agentcap = AGENTCAP_TOKEN.address;
+  const reservePool = { ...pool, tokenAddress: agentcap, name: "AGENTCAP / USDG" } as GeckoPool;
+  const shouted = { ...reservePool, tokenAddress: `0x${agentcap.slice(2).toUpperCase()}` } as GeckoPool;
   for (const p of [reservePool, shouted]) {
-    const result = await discoverTrencherUniverse(client({ token1: merrymen }), grant, [p]);
-    assert.equal(result.qualified.length, 0, "a qualifying MERRYMEN pool is excluded");
+    const result = await discoverTrencherUniverse(client({ token1: agentcap }), grant, [p]);
+    assert.equal(result.qualified.length, 0, "a qualifying AGENTCAP pool is excluded");
     assert.equal(result.tokens.length, 0);
   }
   // An ordinary pool beside it still qualifies.
@@ -211,7 +211,7 @@ test("a nominated pool still has to pass highVolumePools, the v3 venue and the e
   const v4 = { ...tape[20]!, dex: "uniswap-v4-robinhood" } as GeckoPool;
   // Busy enough for highVolumePools, below every top-slice pool: only the
   // energy exclusion can keep it out.
-  const reserve = { ...pool, tokenAddress: MERRYMEN_TOKEN.address, poolAddress: `0x${"c".repeat(40)}`, poolId: `0x${"c".repeat(40)}`, volume24hUsd: 200_000 } as GeckoPool;
+  const reserve = { ...pool, tokenAddress: AGENTCAP_TOKEN.address, poolAddress: `0x${"c".repeat(40)}`, poolId: `0x${"c".repeat(40)}`, volume24hUsd: 200_000 } as GeckoPool;
   const all = [...tape.slice(0, 20), v4, quiet, reserve];
   const reads: string[] = [];
   const c = chain(new Set(all.map(p => p.tokenAddress.toLowerCase())), reads);
@@ -291,7 +291,7 @@ test("an early coin still needs the canonical factory, the v3 route, two-sided f
   const lookalike = mk(1);
   const v4 = mk(2, { dex: "uniswap-v4-robinhood" });
   const oneSided = mk(3, { sells24h: 0 });
-  const reserve = mk(4, { tokenAddress: MERRYMEN_TOKEN.address });
+  const reserve = mk(4, { tokenAddress: AGENTCAP_TOKEN.address });
   const all = [lookalike, v4, oneSided, reserve];
   const reads: string[] = [];
   const c = chain(new Set([v4, oneSided, reserve].map(p => p.tokenAddress.toLowerCase())), reads); // the factory does not know `lookalike`

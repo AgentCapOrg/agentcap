@@ -269,10 +269,10 @@ afterEach(async () => {
 // ─── A fake model behind the real gate ───────────────────────────────────────
 
 const MODEL_ENV = {
-  MERRYMEN_TG_GROUPS_LLM_KEY: "k-test",
-  MERRYMEN_TG_GROUPS_LLM_PROVIDER: "openai",
-  MERRYMEN_TG_GROUPS_LLM_BASE_URL: "https://llm.test/v1",
-  MERRYMEN_TG_GROUPS_MODEL: "fake",
+  AGENTCAP_TG_GROUPS_LLM_KEY: "k-test",
+  AGENTCAP_TG_GROUPS_LLM_PROVIDER: "openai",
+  AGENTCAP_TG_GROUPS_LLM_BASE_URL: "https://llm.test/v1",
+  AGENTCAP_TG_GROUPS_MODEL: "fake",
 };
 
 /** Answer every model call with `reply()`, recording each prompt. */
@@ -772,7 +772,7 @@ describe("membership", () => {
   });
 
   it("the operator switch: membership is recorded, nothing is said, asked or remembered", async () => {
-    envVars = { MERRYMEN_TG_GROUPS: "0" };
+    envVars = { AGENTCAP_TG_GROUPS: "0" };
     privacy = false;
     make();
     groups.onMember(member());
@@ -832,11 +832,11 @@ describe("answering", () => {
     assert.equal(tg.sends(CHAT).length, 2);
   });
 
-  it("its names as the room says them: the soul name, its first or last word as a call, the Telegram display name, 'merryman'", async () => {
+  it("its names as the room says them: the soul name, its first or last word as a call, the Telegram display name, 'agentcapavatar'", async () => {
     self = { ...BOT, name: "Amber Heron", aliases: ["Robinbot"] };
     make();
     approveRoom();
-    const called = ["amber heron you there", "heron, thoughts?", "hey amber", "robinbot what's up", "merryman you alive"].map((t, i) =>
+    const called = ["amber heron you there", "heron, thoughts?", "hey amber", "robinbot what's up", "agentcapavatar you alive"].map((t, i) =>
       msg(t, { fromId: 9_000 + i, fromFirstName: `P${i}` }),
     );
     for (const m of called) await said(m);
@@ -1973,7 +1973,7 @@ describe("an addressed line that gets nothing says why, and only why", () => {
     await said(msg("@pinebot hello?"));
     assert.deepEqual(quietLogs(), ["[tg-groups] addressed line got nothing (room-not-approved)"]);
     approveRoom();
-    envVars.MERRYMEN_TG_GROUPS = "0";
+    envVars.AGENTCAP_TG_GROUPS = "0";
     await said(msg("@pinebot hello??"));
     assert.deepEqual(quietLogs().slice(1), ["[tg-groups] addressed line got nothing (off)"]);
     // Not addressed: nothing to explain.
@@ -2223,7 +2223,7 @@ describe("forgetting and the owner's controls", () => {
   it("/forgetme, /forget and the Forget button reach the memory even when this store is not holding it", async () => {
     // A hosted child whose memory could not be restored: groups held off, an
     // empty store. The sealed copy holds everything.
-    envVars = { MERRYMEN_TG_GROUPS: "0" };
+    envVars = { AGENTCAP_TG_GROUPS: "0" };
     make();
     await groups.forgetMe(CHAT, ANN, 5);
     groups.forgetChat(OTHER, 6);
@@ -2376,7 +2376,7 @@ describe("forgetting what is still in flight", () => {
     clock = T0;
     store.addLine(CHAT, { messageId: 1, fromId: ANN, name: "Ann", text: "old", atMs: clock - 15 * DAY });
     store.addLine(CHAT, { messageId: 2, fromId: ANN, name: "Ann", text: "new", atMs: clock - HOUR });
-    envVars.MERRYMEN_TG_GROUPS = "0";
+    envVars.AGENTCAP_TG_GROUPS = "0";
     await groups.sweep();
     assert.equal(store.room(OTHER), undefined, "a group left 31 days ago is deleted");
     assert.deepEqual(store.room(CHAT)?.lines.map((l) => l.text), ["new"]);

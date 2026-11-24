@@ -5,8 +5,8 @@
  * tenant is not brought back all at once either: first it runs and is watched
  * (`observe`), then it may close what it holds (`exits-only`), and only then
  * may it trade (`trade`). The orchestrator decides which, per tenant, and
- * hands the answer to the child it spawns as MERRYMEN_ADMISSION_LEVEL
- * (orchestrator.ts childEnv, from MERRYMEN_FLEET_ROLLOUT — fleet-rollout.ts,
+ * hands the answer to the child it spawns as AGENTCAP_ADMISSION_LEVEL
+ * (orchestrator.ts childEnv, from AGENTCAP_FLEET_ROLLOUT — fleet-rollout.ts,
  * the rollout scope's half, which accepts a level only once this file obeys
  * it: WORKER_ENFORCED_LEVELS there is ADMISSION_LEVELS here). This file is the
  * child's half: it reads that answer, and judges every intent against it at
@@ -47,7 +47,7 @@ import { isExitIntent, type AgentLimits, type TradeIntent } from "./policy";
  * Defined here, once, with the levels below: fleet-rollout.ts imports both
  * rather than keep a copy that could drift from what the gate reads.
  */
-export const ADMISSION_LEVEL_ENV = "MERRYMEN_ADMISSION_LEVEL";
+export const ADMISSION_LEVEL_ENV = "AGENTCAP_ADMISSION_LEVEL";
 
 /**
  * The three levels, least to most — the ones this file obeys, and so the only

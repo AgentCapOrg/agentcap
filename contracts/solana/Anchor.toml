@@ -2,7 +2,7 @@
 anchor_version = "0.32.1"
 
 [programs.localnet]
-merrymen_vault = "EUzYVniKtgNNgFweMtRA9vciTWtE8MDTRfh6ai6VvXoU"
+agentcap_vault = "EUzYVniKtgNNgFweMtRA9vciTWtE8MDTRfh6ai6VvXoU"
 
 [provider]
 cluster = "Localnet"

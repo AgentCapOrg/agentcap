@@ -123,7 +123,7 @@ export type TelegramRow =
       botUsername: string | null;
     }
   /**
-   * THE BOT IS CONNECTED TO ANOTHER MERRYMEN AGENT: its claim names another
+   * THE BOT IS CONNECTED TO ANOTHER AGENTCAP AGENT: its claim names another
    * account, so this agent is not handed its token and will never pick it
    * up. No code, and nothing about which agent. Saving the token again here
    * offers to move it (the settings save's 409).
@@ -212,7 +212,7 @@ export function heldNotice(tg: TelegramStatus | null | undefined, row: TelegramR
  * and can be incomplete for a self-hosted install configured by environment
  * variable: `GET /api/settings` returns stored values only, and its `defaults`
  * field is the static core table rather than anything env-aware. So an install
- * running on `MERRYMEN_TRENCHER_LIVE=1` with nothing stored reads here as off.
+ * running on `AGENTCAP_TRENCHER_LIVE=1` with nothing stored reads here as off.
  *
  * That is why the copy this feeds says what the SETTINGS say and links to them,
  * rather than claiming what the agent is doing. A row that promised "live" or

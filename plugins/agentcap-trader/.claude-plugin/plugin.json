@@ -1,0 +1,14 @@
+{
+  "name": "agentcap-trader",
+  "displayName": "AgentCap Day Trader",
+  "version": "1.0.0",
+  "description": "The day-trader skill pack, trading through your own AgentCap agent instead of Alpaca: scan charts, track news, time the entry and exit, replay the odds, size to your max loss and the agent's signed limits, then propose the trade for you to approve in AgentCap. Paper by default; Claude never moves funds on its own.",
+  "author": {
+    "name": "AgentCap",
+    "url": "https://agentcap.xyz"
+  },
+  "homepage": "https://github.com/millw14/agentcap/tree/main/plugins/agentcap-trader",
+  "repository": "https://github.com/millw14/agentcap",
+  "license": "MIT",
+  "keywords": ["agentcap", "day-trading", "stock-tokens", "robinhood-chain", "paper-trading", "claude-skills"]
+}

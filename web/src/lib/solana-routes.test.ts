@@ -21,10 +21,10 @@ let refusals: Record<string, Error>;
 const routes: Record<string, (req: Request) => Promise<Response>> = {};
 const methods = ["setupPaper", "writeOffPaper", "preview", "trade", "prepareLive", "submitSetup", "activateLive", "prepareOwnerAction", "submitOwnerAction", "checkLiveSettings"];
 // These exercise a deployment that offers Solana; solana-enabled.test.ts covers one that does not.
-const flag = process.env.MERRYMEN_SOLANA;
-after(() => { if (flag === undefined) delete process.env.MERRYMEN_SOLANA; else process.env.MERRYMEN_SOLANA = flag; });
+const flag = process.env.AGENTCAP_SOLANA;
+after(() => { if (flag === undefined) delete process.env.AGENTCAP_SOLANA; else process.env.AGENTCAP_SOLANA = flag; });
 before(() => {
-  process.env.MERRYMEN_SOLANA = "1";
+  process.env.AGENTCAP_SOLANA = "1";
   const directory = fileURLToPath(new URL("../app/api/solana/", import.meta.url));
   const loader = Module as unknown as { _load: (id: string, parent: { filename?: string }, isMain: boolean) => unknown };
   const original = loader._load;

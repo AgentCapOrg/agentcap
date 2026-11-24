@@ -3,14 +3,14 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSyn
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, before, beforeEach, describe, it } from "node:test";
-import { KILL_PAUSE_NOTE } from "@merrymen/home";
+import { KILL_PAUSE_NOTE } from "@agentcap/home";
 
 /**
  * SELF-HOSTED, THE OUTGOING GRANT IS KEPT — ON DISK, BYTE FOR BYTE — BEFORE
  * grant.json CHANGES; AND THE KILL SWITCH DOES NOT DELETE WHAT IT COULD NOT KEEP.
  *
  * grant.json holds the owner key, and POST replaces it and DELETE removes it.
- * Both copy it to ~/.merrymen/grants/<account>.json first; the copy used to be
+ * Both copy it to ~/.agentcap/grants/<account>.json first; the copy used to be
  * a plain writeFile that nothing synced, and a copy that failed outright was
  * ignored — so the kill switch deleted the only key on a full or read-only disk.
  * Driven through the real handlers against a real home. The durability steps
@@ -25,18 +25,18 @@ const canLock = posix && process.getuid?.() !== 0;
 let home = "";
 let POST: (req: Request) => Promise<Response>;
 let DELETE: (req: Request) => Promise<Response>;
-const saved = { home: process.env.MERRYMEN_HOME, hosted: process.env.MERRYMEN_HOSTED, grant: process.env.MERRYMEN_GRANT_FILE };
+const saved = { home: process.env.AGENTCAP_HOME, hosted: process.env.AGENTCAP_HOSTED, grant: process.env.AGENTCAP_GRANT_FILE };
 
 before(async () => {
   home = mkdtempSync(path.join(tmpdir(), "mm-grants-archive-"));
-  process.env.MERRYMEN_HOME = home;
-  delete process.env.MERRYMEN_HOSTED;
-  delete process.env.MERRYMEN_GRANT_FILE;
+  process.env.AGENTCAP_HOME = home;
+  delete process.env.AGENTCAP_HOSTED;
+  delete process.env.AGENTCAP_GRANT_FILE;
   // After the env: the route resolves its paths when it loads.
   ({ POST, DELETE } = await import("./route"));
 });
 after(() => {
-  for (const [key, value] of [["MERRYMEN_HOME", saved.home], ["MERRYMEN_HOSTED", saved.hosted], ["MERRYMEN_GRANT_FILE", saved.grant]] as const) {
+  for (const [key, value] of [["AGENTCAP_HOME", saved.home], ["AGENTCAP_HOSTED", saved.hosted], ["AGENTCAP_GRANT_FILE", saved.grant]] as const) {
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
   }

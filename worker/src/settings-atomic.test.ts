@@ -54,7 +54,7 @@ function body(src: string, head: string): string {
 
 const IN_PLACE_WRITE = /\b(?:writeFileSync|writeFile|appendFileSync|appendFile|createWriteStream|openSync|copyFileSync)\s*\(/;
 const posix = process.platform !== "win32";
-const tmpDir = () => mkdtempSync(path.join(os.tmpdir(), "merrymen-atomic-"));
+const tmpDir = () => mkdtempSync(path.join(os.tmpdir(), "agentcap-atomic-"));
 const leftovers = (dir: string) => readdirSync(dir).filter((n) => n.endsWith(".tmp"));
 
 describe("neither settings.json writer truncates the file in place", () => {
@@ -73,7 +73,7 @@ describe("neither settings.json writer truncates the file in place", () => {
   it("and nothing else in either file writes a settings.json directly", () => {
     for (const [name, src] of [["orchestrator.ts", ORCH], ["settings.ts", SETTINGS]] as const) {
       for (const m of src.matchAll(/\bwriteFileSync\(([^;]*)/g)) {
-        assert.doesNotMatch(m[1] ?? "", /settings\.json|homePaths\.settings|MERRYMEN_SETTINGS_FILE/, `${name}: ${m[0].slice(0, 120)}`);
+        assert.doesNotMatch(m[1] ?? "", /settings\.json|homePaths\.settings|AGENTCAP_SETTINGS_FILE/, `${name}: ${m[0].slice(0, 120)}`);
       }
     }
     assert.doesNotMatch(SETTINGS, /\bwriteFileSync\b/, "settings.ts has no reason to hold a non-atomic writer");
@@ -247,15 +247,15 @@ describe("the rename is retried, briefly, on Windows' transient refusals", () =>
 describe("patchSettingsFile", () => {
   let dir = "";
   let file = "";
-  const saved = { home: process.env.MERRYMEN_HOME, file: process.env.MERRYMEN_SETTINGS_FILE };
+  const saved = { home: process.env.AGENTCAP_HOME, file: process.env.AGENTCAP_SETTINGS_FILE };
   before(() => {
     dir = tmpDir();
     file = path.join(dir, "settings.json");
-    process.env.MERRYMEN_HOME = dir;
-    process.env.MERRYMEN_SETTINGS_FILE = file;
+    process.env.AGENTCAP_HOME = dir;
+    process.env.AGENTCAP_SETTINGS_FILE = file;
   });
   after(() => {
-    for (const [k, v] of [["MERRYMEN_HOME", saved.home], ["MERRYMEN_SETTINGS_FILE", saved.file]] as const) {
+    for (const [k, v] of [["AGENTCAP_HOME", saved.home], ["AGENTCAP_SETTINGS_FILE", saved.file]] as const) {
       if (v === undefined) delete process.env[k];
       else process.env[k] = v;
     }
@@ -406,18 +406,18 @@ describe("a reader racing a settings.json write never gets a file that does not 
   }
 
   it("patchSettingsFile, the child's writer: the same", async () => {
-    const saved = { home: process.env.MERRYMEN_HOME, file: process.env.MERRYMEN_SETTINGS_FILE };
+    const saved = { home: process.env.AGENTCAP_HOME, file: process.env.AGENTCAP_SETTINGS_FILE };
     const home = tmpDir();
-    process.env.MERRYMEN_HOME = home;
+    process.env.AGENTCAP_HOME = home;
     try {
       const r = await race((file, v) => {
-        process.env.MERRYMEN_SETTINGS_FILE = file;
+        process.env.AGENTCAP_SETTINGS_FILE = file;
         patchSettingsFile(payload(v) as never);
       }, 150);
       assert.equal(r.torn, 0, `${r.torn} of ${r.reads} reads failed — last: ${r.lastError}`);
       assert.ok(r.versions >= 3, `the reader saw ${r.versions} version(s) in ${r.reads} reads — it never raced the writes`);
     } finally {
-      for (const [k, v] of [["MERRYMEN_HOME", saved.home], ["MERRYMEN_SETTINGS_FILE", saved.file]] as const) {
+      for (const [k, v] of [["AGENTCAP_HOME", saved.home], ["AGENTCAP_SETTINGS_FILE", saved.file]] as const) {
         if (v === undefined) delete process.env[k];
         else process.env[k] = v;
       }

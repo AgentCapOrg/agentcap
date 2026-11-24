@@ -20,10 +20,10 @@ import type { ShadowInputs } from "./brain-shadow";
 import { TRENCHER_FAST } from "./strategies/trencher";
 import { trencherStrategyTerms } from "./strategy-terms";
 
-const scratch = mkdtempSync(path.join(os.tmpdir(), "merrymen-shadow-terms-"));
+const scratch = mkdtempSync(path.join(os.tmpdir(), "agentcap-shadow-terms-"));
 const isolatedCwd = path.join(scratch, "cwd");
 mkdirSync(isolatedCwd);
-process.env.MERRYMEN_HOME = path.join(scratch, "home");
+process.env.AGENTCAP_HOME = path.join(scratch, "home");
 delete process.env.DATABASE_URL;
 const originalCwd = process.cwd();
 const store = await import("./store");
@@ -81,7 +81,7 @@ const inputs = (agentId: string, over: Partial<ShadowInputs> = {}): ShadowInputs
 });
 
 function signalsOf(id: string): Record<string, unknown> {
-  const raw = new DatabaseSync(path.join(process.env.MERRYMEN_HOME!, "merrymen.db"));
+  const raw = new DatabaseSync(path.join(process.env.AGENTCAP_HOME!, "agentcap.db"));
   try {
     const row = raw.prepare("SELECT signals_json FROM decisions WHERE id = ?").get(id) as { signals_json: string } | undefined;
     return JSON.parse(row!.signals_json) as Record<string, unknown>;

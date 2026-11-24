@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 import { classifyBalance, nativeSweep, sweepList } from "./recover";
-import { CASH, MERRYMEN_TOKEN, MORPHO, STOCK_TOKENS, robinhoodChain, robinhoodTestnet } from "../../packages/core/src/index";
+import { CASH, AGENTCAP_TOKEN, MORPHO, STOCK_TOKENS, robinhoodChain, robinhoodTestnet } from "../../packages/core/src/index";
 
 /**
  * The escape hatch, which had no tests at all.
  *
- * `merrymen recover` is what an owner runs when everything else has failed —
+ * `agentcap recover` is what an owner runs when everything else has failed —
  * after a kill switch, after a lost session key, when the funded address turns
  * out to be a smart account their wallet cannot see. It swept a token list
  * frozen at ship time, which meant it stranded two whole categories of money:
@@ -36,38 +36,38 @@ test("the builtin floor includes the vault — a fully-parked agent is not an em
 });
 
 test("the energy reserve is swept where it is deployed — it is on no list the owner configures", () => {
-  // $MERRYMEN is kept out of every watch set and every token list on purpose,
+  // $AGENTCAP is kept out of every watch set and every token list on purpose,
   // so recovery cannot rely on one to find it.
-  const row = sweepList(MAINNET).find((t) => t.address.toLowerCase() === MERRYMEN_TOKEN.address.toLowerCase());
-  assert.ok(row, "MERRYMEN must be swept by the escape hatch");
+  const row = sweepList(MAINNET).find((t) => t.address.toLowerCase() === AGENTCAP_TOKEN.address.toLowerCase());
+  assert.ok(row, "AGENTCAP must be swept by the escape hatch");
   assert.equal(row!.decimals, 18);
-  assert.equal(row!.symbol, "MERRYMEN");
+  assert.equal(row!.symbol, "AGENTCAP");
 });
 
-test("TESTNET: no reserve row, so an owner's own testnet MERRYMEN is swept under its own name", () => {
+test("TESTNET: no reserve row, so an owner's own testnet AGENTCAP is swept under its own name", () => {
   // The mainnet address has no code on 46630. A row for it read `absent` and
-  // took the name, so the owner's token called MERRYMEN was dropped as a
+  // took the name, so the owner's token called AGENTCAP was dropped as a
   // collision and they were told nothing was left while it sat in the account.
-  const mine = { symbol: "MERRYMEN", address: addr("3"), decimals: 18 };
+  const mine = { symbol: "AGENTCAP", address: addr("3"), decimals: 18 };
   const list = sweepList(TESTNET, [mine]);
-  assert.ok(!list.some((t) => t.address.toLowerCase() === MERRYMEN_TOKEN.address.toLowerCase()), "no codeless reserve row");
+  assert.ok(!list.some((t) => t.address.toLowerCase() === AGENTCAP_TOKEN.address.toLowerCase()), "no codeless reserve row");
   const found = list.find((t) => t.address.toLowerCase() === mine.address);
   assert.ok(found, "the owner's token reaches the sweep");
-  assert.equal(found.symbol, "MERRYMEN");
+  assert.equal(found.symbol, "AGENTCAP");
 });
 
-test("MAINNET: a token merely CALLED MERRYMEN at another address is swept too, labelled by its address", () => {
+test("MAINNET: a token merely CALLED AGENTCAP at another address is swept too, labelled by its address", () => {
   // DELIBERATE CHANGE: builtins used to win on SYMBOL, which stranded this
   // token on the one path meant to rescue it. Same address is the same token
   // (skipped, already swept); same name elsewhere is a different token.
-  const mine = { symbol: "MERRYMEN", address: addr("3"), decimals: 9 };
-  const list = sweepList(MAINNET, [mine, { symbol: "ALIAS", address: MERRYMEN_TOKEN.address, decimals: 18 }]);
+  const mine = { symbol: "AGENTCAP", address: addr("3"), decimals: 9 };
+  const list = sweepList(MAINNET, [mine, { symbol: "ALIAS", address: AGENTCAP_TOKEN.address, decimals: 18 }]);
   const found = list.find((t) => t.address.toLowerCase() === mine.address);
   assert.ok(found, "swept");
   assert.equal(found.decimals, 9);
-  assert.equal(found.symbol, "MERRYMEN (0x3333…3333)");
-  assert.equal(list.filter((t) => t.address.toLowerCase() === MERRYMEN_TOKEN.address.toLowerCase()).length, 1, "the reserve itself once");
-  assert.equal(list.filter((t) => t.symbol === "MERRYMEN").length, 1, "and it alone carries the bare name");
+  assert.equal(found.symbol, "AGENTCAP (0x3333…3333)");
+  assert.equal(list.filter((t) => t.address.toLowerCase() === AGENTCAP_TOKEN.address.toLowerCase()).length, 1, "the reserve itself once");
+  assert.equal(list.filter((t) => t.symbol === "AGENTCAP").length, 1, "and it alone carries the bare name");
 });
 
 test("owner-added tokens are swept — that is the whole defect", () => {
@@ -248,7 +248,7 @@ test("THE COLLAPSE: a failed probe and a codeless address must not be the same v
  * the sweep's own gas. That is true on testnet and wrong the moment someone
  * funds a real account — and worse, an account holding ETH and no tokens was
  * reported as having nothing to recover, which is the exact shape of "I funded
- * it and merrymen says it's empty".
+ * it and agentcap says it's empty".
  *
  * The reserve is the load-bearing number. Too small and the operation cannot be
  * paid for, so nothing moves at all — tokens included. Too large and some dust

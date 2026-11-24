@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ArrowUpRight, ChartNoAxesCombined, RefreshCw, ShieldCheck, Wallet } from "lucide-react";
-import { LIGHTER_MARKETS_V1 } from "@merrymen/core";
+import { LIGHTER_MARKETS_V1 } from "@agentcap/core";
 import { readPerpsActivity, type PerpsActivityResponse } from "../lib/perps-activity";
 import { readChartResponse } from "../lib/perps-chart-response";
 import type { ChartResponse, ChartWindow } from "../lib/perps-chart-data";

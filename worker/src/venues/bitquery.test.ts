@@ -15,7 +15,7 @@ import path from "node:path";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import {
-  MERRYMEN_GATEWAY_BITQUERY,
+  AGENTCAP_GATEWAY_BITQUERY,
   parsePoolEvent,
   resolveBitquery,
   bitqueryAuthHeaders,
@@ -26,27 +26,27 @@ import {
 
 describe("resolveBitquery — whose quota is this?", () => {
   it("prefers the owner's own key over the shared gateway", () => {
-    const c = resolveBitquery({ bitqueryApiKey: "personal", merrymenToken: "mmk_x" })!;
+    const c = resolveBitquery({ bitqueryApiKey: "personal", agentcapToken: "mmk_x" })!;
     assert.equal(c.apiKey, "personal");
     assert.equal(c.viaGateway, undefined, "no third party in the path when they brought a key");
     assert.equal(c.endpoint, undefined, "straight to Bitquery");
   });
 
   it("falls back to the holder gateway when there's no personal key", () => {
-    const c = resolveBitquery({ merrymenToken: "mmk_x" })!;
+    const c = resolveBitquery({ agentcapToken: "mmk_x" })!;
     assert.equal(c.apiKey, "mmk_x");
     assert.equal(c.viaGateway, true);
-    assert.equal(c.endpoint, MERRYMEN_GATEWAY_BITQUERY);
+    assert.equal(c.endpoint, AGENTCAP_GATEWAY_BITQUERY);
   });
 
   it("honours a self-hosted gateway URL", () => {
-    const c = resolveBitquery({ merrymenToken: "mmk_x", gatewayUrl: "http://localhost:8787/bitquery" })!;
+    const c = resolveBitquery({ agentcapToken: "mmk_x", gatewayUrl: "http://localhost:8787/bitquery" })!;
     assert.equal(c.endpoint, "http://localhost:8787/bitquery");
   });
 
   it("returns null with neither — no discovery is honest, a broken client isn't", () => {
     assert.equal(resolveBitquery({}), null);
-    assert.equal(resolveBitquery({ bitqueryApiKey: "", merrymenToken: "" }), null);
+    assert.equal(resolveBitquery({ bitqueryApiKey: "", agentcapToken: "" }), null);
   });
 });
 
@@ -250,7 +250,7 @@ describe("bitqueryQuery — the header that reaches whoever answers", () => {
   });
 
   it("a Merry Circle token goes in Authorization: Bearer, and the gateway reads it back intact", async () => {
-    const creds = resolveBitquery({ merrymenToken: "mmk_eyJhIjoiMHgxIn0.sig" })!;
+    const creds = resolveBitquery({ agentcapToken: "mmk_eyJhIjoiMHgxIn0.sig" })!;
     const { headers, result } = await captured(creds);
     assert.equal(result.ok, true);
     assert.equal(gatewayToken(headers), "mmk_eyJhIjoiMHgxIn0.sig", "the token the gateway verifies is the one we hold");
@@ -282,8 +282,8 @@ describe("bitqueryQuery — the header that reaches whoever answers", () => {
 describe("bitqueryHttpHint — a refusal tells the owner what is actually wrong", () => {
   it("a gateway 401 is about the token, a 403 about the wallet, a 503 about neither", () => {
     assert.match(bitqueryHttpHint(401, true), /did not accept your Merry Circle token/);
-    assert.doesNotMatch(bitqueryHttpHint(401, true), /wallet|\$MERRYMEN/, "a 401 is not a holdings verdict");
-    assert.match(bitqueryHttpHint(403, true), /no longer holds enough \$MERRYMEN/);
+    assert.doesNotMatch(bitqueryHttpHint(401, true), /wallet|\$AGENTCAP/, "a 401 is not a holdings verdict");
+    assert.match(bitqueryHttpHint(403, true), /no longer holds enough \$AGENTCAP/);
     assert.doesNotMatch(bitqueryHttpHint(403, true), /expired|claim a fresh/, "a 403 is not a token problem");
     assert.match(bitqueryHttpHint(503, true), /this is not your token/);
     assert.match(bitqueryHttpHint(503, true), /daily allowance/, "the gateway's fleet-wide cap is one of the 503s");
@@ -301,7 +301,7 @@ describe("bitqueryHttpHint — a refusal tells the owner what is actually wrong"
     const real = globalThis.fetch;
     globalThis.fetch = (async () => new Response("{}", { status: 401 })) as typeof fetch;
     try {
-      const r = await bitqueryQuery(resolveBitquery({ merrymenToken: "mmk_x" })!, "ping");
+      const r = await bitqueryQuery(resolveBitquery({ agentcapToken: "mmk_x" })!, "ping");
       assert.equal(r.ok, false);
       assert.match(r.error!, /^bitquery HTTP 401 — the gateway did not accept/);
       assert.doesNotMatch(r.error!, /wallet no longer qualifies/);

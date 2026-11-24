@@ -51,7 +51,7 @@ import { addressTopic, getLogsAdaptive, type RawLog, type ReconcileChain } from 
 // The one rule that decides whether a USDG movement is the owner's capital or
 // the agent trading. Imported rather than restated so the scanner and the
 // accounting backfill cannot reach different answers about the same transfer.
-import { classifyUsdgMovement, energyReserveTokens, MERRYMEN_TOKEN, type TransferLeg } from "../../packages/core/src/index";
+import { classifyUsdgMovement, energyReserveTokens, AGENTCAP_TOKEN, type TransferLeg } from "../../packages/core/src/index";
 import type { ReceiptLog } from "./fills";
 // Which logs of a trade's transaction are the owner's own execution (a root
 // operation bundled beside the agent's swap), read off the receipt as the
@@ -97,7 +97,7 @@ export function scannerClassifyContext(o: { custodyAddresses?: readonly string[]
   custodyAddresses: readonly string[] | undefined;
   reserveTokens: readonly string[];
 } {
-  return { custodyAddresses: o.custodyAddresses, reserveTokens: energyReserveTokens(o.chainId ?? MERRYMEN_TOKEN.chainId) };
+  return { custodyAddresses: o.custodyAddresses, reserveTokens: energyReserveTokens(o.chainId ?? AGENTCAP_TOKEN.chainId) };
 }
 
 /** The ERC-20 event. `value` is not indexed, so it is read from `data`. */

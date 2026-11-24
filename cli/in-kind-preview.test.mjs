@@ -16,7 +16,7 @@ const run = promisify(execFile);
  * green. The receipt gas preview carries the same shim for the same reason.
  */
 it('standalone in-kind preview typechecks and its synthetic safety suite runs in ordinary CI', async () => {
-  const env = { ...process.env, DATABASE_URL: '', MERRYMEN_IN_KIND_RPC: '' };
+  const env = { ...process.env, DATABASE_URL: '', AGENTCAP_IN_KIND_RPC: '' };
   delete env.NODE_TEST_CONTEXT;
   await run(process.execPath, [resolve(root, 'node_modules/typescript/bin/tsc'),
     '--noEmit', '--strict', '--noUncheckedIndexedAccess', '--target', 'ES2022', '--module', 'ESNext',

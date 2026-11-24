@@ -24,7 +24,7 @@ import { CliError, connectBooking, pgClientDb, type PgClient } from "./chain-gap
 import { auditExitCode, auditReport, auditRpc, AuditRefused, readAuditChain, readAuditSnapshot } from "./owner-op-audit";
 import { AUDIT_APPLICATION_NAME, failureLine, main, parseAuditArgs } from "./owner-op-audit-cli";
 
-const dir = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-owner-op-audit-")));
+const dir = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-owner-op-audit-")));
 const handles: DatabaseSync[] = [];
 after(() => { for (const h of handles) h.close(); rmSync(dir, { recursive: true, force: true }); });
 
@@ -225,10 +225,10 @@ describe("what the audit may touch", () => {
     const fakePg = { Client: class { constructor(c: Record<string, unknown>) { config = c; } async connect() {} async query() { return { rows: [], rowCount: 0 }; } async end() {} },
       types: { setTypeParser() {} } };
     await connectBooking(DATABASE_URL, true, async () => fakePg, AUDIT_APPLICATION_NAME);
-    assert.equal(config!.application_name, "merrymen-owner-op-audit-readonly");
+    assert.equal(config!.application_name, "agentcap-owner-op-audit-readonly");
     assert.match(String(config!.options), /default_transaction_read_only=on/);
     await connectBooking(DATABASE_URL, true, async () => fakePg);
-    assert.equal(config!.application_name, "merrymen-chain-gap-preview-readonly", "the booking tool's own name is unchanged");
+    assert.equal(config!.application_name, "agentcap-chain-gap-preview-readonly", "the booking tool's own name is unchanged");
     const db = pgClientDb({ async query() { return { rows: [], rowCount: 0 }; }, async end() {} }, { readOnly: true });
     assert.throws(() => db.prepare("INSERT INTO trades (agent_id) VALUES ('x')"), (e: unknown) => e instanceof CliError && e.code === "non-read-query-refused");
   });
@@ -276,7 +276,7 @@ describe("the shell, through one whole run", () => {
     const said: string[] = [], lines: string[] = [];
     const before = raw.prepare("SELECT (SELECT COUNT(*) FROM trades) AS t, (SELECT COUNT(*) FROM flows) AS f, (SELECT COUNT(*) FROM owner_operations) AS o").get();
     const output = path.join(dir, "audit.json");
-    const code = await main(["--output", output], { DATABASE_URL, MERRYMEN_CHAIN_GAP_RPC: RPC_URL }, {
+    const code = await main(["--output", output], { DATABASE_URL, AGENTCAP_CHAIN_GAP_RPC: RPC_URL }, {
       connect: async () => pgOverSqlite(raw, said), rpc: chainRpc(), nowMs: () => NOW * 1000, out: (l) => lines.push(l), source: { files: "test" }, sleep: async () => {},
     });
     assert.equal(code, 2);

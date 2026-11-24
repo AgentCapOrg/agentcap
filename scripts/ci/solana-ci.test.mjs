@@ -80,7 +80,7 @@ function appTestCommand() {
   return /^ {8}run: (npx tsx --test --test-shard=\$\{\{ matrix\.shard \}\}\/4 .*)$/m.exec(shards)?.[1] ?? "";
 }
 
-const scratch = mkdtempSync(join(tmpdir(), "merrymen-solana-ci-"));
+const scratch = mkdtempSync(join(tmpdir(), "agentcap-solana-ci-"));
 after(() => rmSync(scratch, { recursive: true, force: true }));
 let n = 0;
 const fresh = label => {
@@ -137,13 +137,13 @@ describe("the CI jobs", () => {
       "uses: actions/cache@",
       "contracts/solana/test.sh 2>&1 | tee \"$RUNNER_TEMP/solana-test.log\"",
       "run: node scripts/ci/solana-runtime-tests.mjs \"$RUNNER_TEMP/solana-test.log\" contracts/solana/runtime-tests",
-      "node scripts/ci/solana-program-record.mjs contracts/solana contracts/solana/target/deploy/merrymen_vault.so ",
+      "node scripts/ci/solana-program-record.mjs contracts/solana contracts/solana/target/deploy/agentcap_vault.so ",
       "contracts/solana/build.sh --record\n",
       "node scripts/ci/solana-linux-manifest.mjs verify contracts/solana ",
       // After every cargo-build-sbf run, --record's second build included.
       "run: scripts/ci/solana-toolchain.sh check",
       // The outcome names the artifact, so it comes before the upload.
-      "release=$(node scripts/ci/solana-linux-manifest.mjs report contracts/solana contracts/solana/target/deploy/merrymen_vault.build.json)",
+      "release=$(node scripts/ci/solana-linux-manifest.mjs report contracts/solana contracts/solana/target/deploy/agentcap_vault.build.json)",
       "uses: actions/upload-artifact@",
       // Last: a manifest that differs from the committed one is uploaded first.
       "run: node scripts/ci/solana-linux-manifest.mjs compare contracts/solana",
@@ -189,8 +189,8 @@ describe("the CI jobs", () => {
     // before app has checked the rebuild's hash, so only solana · release,
     // after app, does. The record step, which cannot know the outcome, gives no label.
     const label = steps(test).find(s => s.includes("id: linux-manifest")) ?? "";
-    assert.match(label, /^ {10}release=\$\(node scripts\/ci\/solana-linux-manifest\.mjs report contracts\/solana contracts\/solana\/target\/deploy\/merrymen_vault\.build\.json\)\n {10}case "\$release" in candidate-unconfirmed\|not-a-release\) ;; \*\) echo "::error::[^"]*"; exit 1 ;; esac\n {10}echo "release=\$release" >> "\$GITHUB_OUTPUT"\n {10}echo "artifact=merrymen-vault-sbf-\$release-\$GITHUB_SHA-run\$GITHUB_RUN_ID\.\$GITHUB_RUN_ATTEMPT" >> "\$GITHUB_OUTPUT"$/m);
-    assert.equal(candidateArtifactName(CANDIDATE_LABEL, { commit: "c", runId: "7", runAttempt: "2" }), "merrymen-vault-sbf-candidate-unconfirmed-c-run7.2",
+    assert.match(label, /^ {10}release=\$\(node scripts\/ci\/solana-linux-manifest\.mjs report contracts\/solana contracts\/solana\/target\/deploy\/agentcap_vault\.build\.json\)\n {10}case "\$release" in candidate-unconfirmed\|not-a-release\) ;; \*\) echo "::error::[^"]*"; exit 1 ;; esac\n {10}echo "release=\$release" >> "\$GITHUB_OUTPUT"\n {10}echo "artifact=agentcap-vault-sbf-\$release-\$GITHUB_SHA-run\$GITHUB_RUN_ID\.\$GITHUB_RUN_ATTEMPT" >> "\$GITHUB_OUTPUT"$/m);
+    assert.equal(candidateArtifactName(CANDIDATE_LABEL, { commit: "c", runId: "7", runAttempt: "2" }), "agentcap-vault-sbf-candidate-unconfirmed-c-run7.2",
       "solana-release.mjs expects the name this step writes");
     assert.match(test, /^ {4}outputs:\n {6}sha256: \$\{\{ steps\.record\.outputs\.sha256 \}\}\n(?: {6}#.*\n)* {6}release: \$\{\{ steps\.linux-manifest\.outputs\.release \}\}\n {6}artifact: \$\{\{ steps\.linux-manifest\.outputs\.artifact \}\}$/m);
     const record = steps(test).find(s => s.includes("id: record")) ?? "";
@@ -203,8 +203,8 @@ describe("the CI jobs", () => {
     assert.match(upload, /if-no-files-found: error/);
     const files = [...upload.matchAll(/^ {12}(\S+)$/gm)].map(m => m[1]);
     assert.deepEqual(files, [
-      "contracts/solana/target/deploy/merrymen_vault.so",
-      "contracts/solana/target/deploy/merrymen_vault.build.json",
+      "contracts/solana/target/deploy/agentcap_vault.so",
+      "contracts/solana/target/deploy/agentcap_vault.build.json",
       "contracts/solana/build-manifests/Linux-x86_64.json",
     ]);
   });
@@ -237,10 +237,10 @@ describe("the CI jobs", () => {
       "        id: linux-manifest",
       "        if: needs.solana-paths.outputs.run == 'true'",
       "        run: |",
-      "          release=$(node scripts/ci/solana-linux-manifest.mjs report contracts/solana contracts/solana/target/deploy/merrymen_vault.build.json)",
+      "          release=$(node scripts/ci/solana-linux-manifest.mjs report contracts/solana contracts/solana/target/deploy/agentcap_vault.build.json)",
       "          case \"$release\" in candidate-unconfirmed|not-a-release) ;; *) echo \"::error::the comparison gave no release label\"; exit 1 ;; esac",
       "          echo \"release=$release\" >> \"$GITHUB_OUTPUT\"",
-      "          echo \"artifact=merrymen-vault-sbf-$release-$GITHUB_SHA-run$GITHUB_RUN_ID.$GITHUB_RUN_ATTEMPT\" >> \"$GITHUB_OUTPUT\"",
+      "          echo \"artifact=agentcap-vault-sbf-$release-$GITHUB_SHA-run$GITHUB_RUN_ID.$GITHUB_RUN_ATTEMPT\" >> \"$GITHUB_OUTPUT\"",
     ].join("\n"));
     // The same environment as the Test step, so --record's in-place build is
     // the build test.sh made, not a rebuild with other settings.
@@ -407,7 +407,7 @@ describe("the CI jobs", () => {
       .map(st => ({ id, name: /^ {10}name: (.*)$/m.exec(st)?.[1] ?? "" })));
     assert.deepEqual(uploads, [
       { id: "solana-test", name: "${{ steps.linux-manifest.outputs.artifact }}" },
-      { id: "solana-release", name: "merrymen-vault-release-${{ github.sha }}-run${{ github.run_id }}.${{ github.run_attempt }}" },
+      { id: "solana-release", name: "agentcap-vault-release-${{ github.sha }}-run${{ github.run_id }}.${{ github.run_attempt }}" },
     ]);
     for (const { id, name } of uploads) {
       if (id === "solana-test") continue;
@@ -415,7 +415,7 @@ describe("the CI jobs", () => {
       assert.ok(upstream(id).has("app"), `${id} uploads ${name} without waiting for app`);
     }
     assert.equal(upstream("solana-test").has("app"), false);
-    assert.equal(releaseArtifactName({ commit: "c", runId: "7", runAttempt: "2" }), "merrymen-vault-release-c-run7.2", "the name the summary prints is the one uploaded");
+    assert.equal(releaseArtifactName({ commit: "c", runId: "7", runAttempt: "2" }), "agentcap-vault-release-c-run7.2", "the name the summary prints is the one uploaded");
     const [notice, ...rest] = steps(release);
     assert.match(notice, /^ {6}- name: Not a release\n {8}if: needs\.solana-test\.outputs\.release != 'candidate-unconfirmed'\n {8}run: echo "[^"$`]*"$/, notice);
     assert.equal(rest.length, 4);
@@ -424,14 +424,14 @@ describe("the CI jobs", () => {
       assert.deepEqual(conditions, ["needs.solana-test.outputs.release == 'candidate-unconfirmed'"], step);
     }
     const record = rest.find(st => st.includes("- name: Release record")) ?? "";
-    assert.match(record, /^ {8}run: node scripts\/ci\/solana-release\.mjs "\$RUNNER_TEMP\/merrymen_vault\.release\.json"$/m);
+    assert.match(record, /^ {8}run: node scripts\/ci\/solana-release\.mjs "\$RUNNER_TEMP\/agentcap_vault\.release\.json"$/m);
     for (const [k, v] of [
       ["VAULT_RELEASE_LABEL", "needs.solana-test.outputs.release"], ["VAULT_ARTIFACT", "needs.solana-test.outputs.artifact"],
       ["VAULT_TESTED_SHA256", "needs.solana-test.outputs.sha256"], ["VAULT_REBUILT_SHA256", "needs.solana-rebuild.outputs.sha256"],
     ]) assert.ok(record.includes(`          ${k}: \${{ ${v} }}`), `${k} from ${v}`);
     // The record is what is uploaded, and it is required to exist.
     const upload = rest.at(-1);
-    assert.match(upload, /^ {10}path: \$\{\{ runner\.temp \}\}\/merrymen_vault\.release\.json\n {10}if-no-files-found: error$/m);
+    assert.match(upload, /^ {10}path: \$\{\{ runner\.temp \}\}\/agentcap_vault\.release\.json\n {10}if-no-files-found: error$/m);
     assert.ok(rest.indexOf(record) < rest.length - 1);
   });
 
@@ -501,7 +501,7 @@ describe("solana-paths.mjs", () => {
 
   it("counts the vault, its CI and the Solana worker and core sources, nothing else", () => {
     const relevant = [
-      "contracts/solana/programs/merrymen-vault/src/risk.rs",
+      "contracts/solana/programs/agentcap-vault/src/risk.rs",
       "contracts/solana/runtime-tests/fixtures/ts-instructions.json",
       "contracts/solana/build-manifests/Linux-x86_64.json",
       "scripts/ci/solana-toolchain.env",
@@ -524,7 +524,7 @@ describe("solana-paths.mjs", () => {
       ".gitattributes",
       "contracts/.gitattributes",
       "contracts/solana/.gitattributes",
-      "contracts/solana/programs/merrymen-vault/src/.gitattributes",
+      "contracts/solana/programs/agentcap-vault/src/.gitattributes",
     ];
     const unrelated = [
       "README.md",
@@ -601,7 +601,7 @@ describe("solana-paths.mjs", () => {
     gitIn(origin, "init", "-q");
     put("README.md", "readme\n");
     put("docs/guide.md", "guide\n");
-    put("contracts/solana/programs/merrymen-vault/src/lib.rs", "// vault\n");
+    put("contracts/solana/programs/agentcap-vault/src/lib.rs", "// vault\n");
     put("contracts/solana/Cargo.toml", "[workspace]\n");
     gitIn(origin, "add", "-A");
     gitIn(origin, "commit", "-q", "-m", "base");
@@ -631,17 +631,17 @@ describe("solana-paths.mjs", () => {
     const docs = decideFor(() => put("docs/guide.md", "better guide\n"));
     assert.equal(docs.output, "run=false\n");
     assert.match(docs.stdout, /^run=false \(none of the 1 changed path\(s\) is Solana-relevant\)$/m);
-    const vault = decideFor(() => put("contracts/solana/programs/merrymen-vault/src/lib.rs", "// changed\n"));
+    const vault = decideFor(() => put("contracts/solana/programs/agentcap-vault/src/lib.rs", "// changed\n"));
     assert.equal(vault.output, "run=true\n");
-    assert.match(vault.stdout, /contracts\/solana\/programs\/merrymen-vault\/src\/lib\.rs/);
+    assert.match(vault.stdout, /contracts\/solana\/programs\/agentcap-vault\/src\/lib\.rs/);
     // A file moved out of contracts/solana is a vault change, so renames count on both sides.
-    const moved = decideFor(() => gitIn(origin, "mv", "contracts/solana/programs/merrymen-vault/src/lib.rs", "docs/lib.rs"));
+    const moved = decideFor(() => gitIn(origin, "mv", "contracts/solana/programs/agentcap-vault/src/lib.rs", "docs/lib.rs"));
     assert.equal(moved.output, "run=true\n");
     // A pull request that changes only the attributes git applies to the
     // vault: export-ignore drops a source file from solana-rebuild.sh's
     // `git archive HEAD contracts/solana`, so the rebuild would build other
     // source than the tested checkout. Both must build, on the pull request.
-    const lib = "contracts/solana/programs/merrymen-vault/src/lib.rs";
+    const lib = "contracts/solana/programs/agentcap-vault/src/lib.rs";
     /** The files `git archive <ref> contracts/solana` holds, in a fresh clone of that branch. */
     const archived = branch => {
       const clone = fresh("archive");
@@ -729,10 +729,10 @@ describe("test.sh, the one vault test recipe", () => {
     writeFileSync(join(dir, "test.sh"), testSh); chmodSync(join(dir, "test.sh"), 0o755);
     stub(dir, "build.sh", "exit 0");
     const calls = join(root, "cargo-calls"), bin = stub(join(root, "bin"), "cargo",
-      `printf '%s | %s\\n' "$*" "\${MERRYMEN_JUPITER_FORK_PROGRAMS-unset}" >> "${calls}"`);
+      `printf '%s | %s\\n' "$*" "\${AGENTCAP_JUPITER_FORK_PROGRAMS-unset}" >> "${calls}"`);
     const testShRun = (extra = {}) => {
       rmSync(calls, { force: true });
-      const base = Object.fromEntries(Object.entries(env()).filter(([k]) => k !== "MERRYMEN_JUPITER_FORK_PROGRAMS"));
+      const base = Object.fromEntries(Object.entries(env()).filter(([k]) => k !== "AGENTCAP_JUPITER_FORK_PROGRAMS"));
       const r = spawnSync(join(dir, "test.sh"), [], { cwd: root, encoding: "utf8",
         env: { ...base, PATH: `${bin}:${process.env.PATH}`, CARGO_HOME: join(root, "cargo-home"), ...extra } });
       const lines = existsSync(calls) ? readFileSync(calls, "utf8").trim().split("\n") : [];
@@ -747,17 +747,17 @@ describe("test.sh, the one vault test recipe", () => {
       assert.ok(!r.calls.some(forkCall), label);
     };
     skippedRun(testShRun(), "nothing supplied");
-    skippedRun(testShRun({ MERRYMEN_JUPITER_FORK_PROGRAMS: "" }), "an empty setting");
+    skippedRun(testShRun({ AGENTCAP_JUPITER_FORK_PROGRAMS: "" }), "an empty setting");
     writeFileSync(join(fixtures, "jupiter_v6.so"), "elf");
     skippedRun(testShRun(), "only one of the two copies here");
     // The setting: made absolute (the test runs from runtime-tests/) and passed to cargo.
     const supplied = join(root, "programs"); mkdirSync(supplied);
-    const viaSetting = testShRun({ MERRYMEN_JUPITER_FORK_PROGRAMS: "programs" });
+    const viaSetting = testShRun({ AGENTCAP_JUPITER_FORK_PROGRAMS: "programs" });
     assert.equal(viaSetting.status, 0, viaSetting.stderr); assert.equal(viaSetting.skips, 0);
     assert.equal(viaSetting.calls.length, 3); assert.ok(forkCall(viaSetting.calls[2]), viaSetting.calls[2]);
     assert.ok(viaSetting.calls[2].endsWith(` | ${supplied}`), viaSetting.calls[2]);
     // A setting that names no directory fails; it never turns into a skip.
-    const missing = testShRun({ MERRYMEN_JUPITER_FORK_PROGRAMS: join(root, "nowhere") });
+    const missing = testShRun({ AGENTCAP_JUPITER_FORK_PROGRAMS: join(root, "nowhere") });
     assert.notEqual(missing.status, 0); assert.equal(missing.skips, 0); assert.ok(!missing.calls.some(forkCall));
     // Both copies in the fixture directory: it runs from there, with no setting.
     writeFileSync(join(fixtures, "whirlpool.so"), "elf");
@@ -778,13 +778,13 @@ describe("build.sh, run against a stub toolchain", () => {
   function workspace() {
     const root = fresh("build");
     const dir = join(root, "repo/contracts/solana");
-    mkdirSync(join(dir, "programs/merrymen-vault/src"), { recursive: true });
+    mkdirSync(join(dir, "programs/agentcap-vault/src"), { recursive: true });
     writeFileSync(join(dir, "build.sh"), readFileSync(join(repo, "contracts/solana/build.sh")));
     chmodSync(join(dir, "build.sh"), 0o755);
     writeFileSync(join(dir, "Cargo.toml"), "[workspace]\nmembers = [\"programs/*\"]\n");
     writeFileSync(join(dir, "Cargo.lock"), "version = 4\n");
-    writeFileSync(join(dir, "programs/merrymen-vault/Cargo.toml"), "[package]\nname = \"merrymen-vault\"\n");
-    writeFileSync(join(dir, "programs/merrymen-vault/src/lib.rs"), `declare_id!("${declared}");\n`);
+    writeFileSync(join(dir, "programs/agentcap-vault/Cargo.toml"), "[package]\nname = \"agentcap-vault\"\n");
+    writeFileSync(join(dir, "programs/agentcap-vault/src/lib.rs"), `declare_id!("${declared}");\n`);
     const tools = join(root, "platform-tools");
     mkdirSync(join(tools, "rust"), { recursive: true });
     writeFileSync(join(tools, "version.md"), "293a1b6c60a0b8d92593843c373539e21e3ba087  https://github.com/anza-xyz/rust.git\n");
@@ -794,7 +794,7 @@ describe("build.sh, run against a stub toolchain", () => {
       `if [ "$1" = --version ]; then echo "solana-cargo-build-sbf 2.3.13"; exit 0; fi`,
       `echo "$*" >> "${root}/builds"`,
       `while [ $# -gt 0 ]; do if [ "$1" = --sbf-out-dir ]; then out="$2"; fi; shift; done`,
-      `mkdir -p "$out" && printf '\\177ELF stub vault' > "$out/merrymen_vault.so"`,
+      `mkdir -p "$out" && printf '\\177ELF stub vault' > "$out/agentcap_vault.so"`,
     ].join("\n"));
     const cargoHome = join(root, "cargo-home");
     mkdirSync(cargoHome);
@@ -842,7 +842,7 @@ describe("build.sh, run against a stub toolchain", () => {
     const profile = "[profile.release]\noverflow-checks = false\n";
     const w = workspace();
     const places = [
-      join(w.dir, "programs/merrymen-vault/.cargo/config.toml"),
+      join(w.dir, "programs/agentcap-vault/.cargo/config.toml"),
       join(w.dir, ".cargo/config.toml"),
       join(w.dir, ".cargo/config"),
       join(w.root, "repo/contracts/.cargo/config.toml"),
@@ -943,7 +943,7 @@ describe("solana-runtime-tests.mjs", () => {
     const fork = { name: "jupiter_fork", path: "tests/jupiter_fork.rs" }, all = [...targets, fork];
     const withFork = { ...sources, "tests/jupiter_fork.rs": "#[test]\nfn e() {}\n#[tokio::test]\nasync fn f() {}\n" };
     const skip = OPTIONAL_TARGETS.jupiter_fork;
-    assert.equal(skip, "jupiter_fork: skipped, set MERRYMEN_JUPITER_FORK_PROGRAMS (release gate)");
+    assert.equal(skip, "jupiter_fork: skipped, set AGENTCAP_JUPITER_FORK_PROGRAMS (release gate)");
     assert.deepEqual(Object.keys(OPTIONAL_TARGETS), ["jupiter_fork"], "custody and recovery are never optional");
     const skipped = checkRuntimeTests({ log: `${good}\n${skip}\n`, targets: all, sources: withFork });
     assert.deepEqual(skipped.map(c => [c.name, c.passed, c.skipped]), [["custody", 2, false], ["recovery", 1, false], ["jupiter_fork", 0, true]]);
@@ -958,7 +958,7 @@ describe("solana-runtime-tests.mjs", () => {
       "the skip line inside another line": [`${good}\nnote: ${skip}`, /jupiter_fork \(tests\/jupiter_fork\.rs\) never ran/],
       "custody missing, the fork skipped": [[...lib, target("tests/recovery.rs", result(1)), skip].join("\n"), /custody \(custody\.rs\) never ran/],
       "recovery short, the fork skipped": [[...lib, target("custody.rs", result(2)), target("tests/recovery.rs", result(0, { filtered: 1 })), skip].join("\n"), /1 filtered out/],
-      "a skip line for custody": [[...lib, "custody: skipped, set MERRYMEN_JUPITER_FORK_PROGRAMS (release gate)", target("tests/recovery.rs", result(1)), skip].join("\n"),
+      "a skip line for custody": [[...lib, "custody: skipped, set AGENTCAP_JUPITER_FORK_PROGRAMS (release gate)", target("tests/recovery.rs", result(1)), skip].join("\n"),
         /custody \(custody\.rs\) never ran/],
     };
     for (const [label, [log, error]] of Object.entries(cases)) {
@@ -994,7 +994,7 @@ describe("solana-runtime-tests.mjs", () => {
     assert.equal(skipped.status, 0, skipped.stderr);
     assert.match(skipped.stdout, /^custody: all 2 runtime tests in custody\.rs ran and passed$/m);
     assert.match(skipped.stdout, /^recovery: all 1 runtime tests in tests\/recovery\.rs ran and passed$/m);
-    assert.match(skipped.stdout, /^::warning::jupiter_fork: not run here, its 1 runtime tests in tests\/jupiter_fork\.rs are a release gate \(jupiter_fork: skipped, set MERRYMEN_JUPITER_FORK_PROGRAMS \(release gate\)\)$/m);
+    assert.match(skipped.stdout, /^::warning::jupiter_fork: not run here, its 1 runtime tests in tests\/jupiter_fork\.rs are a release gate \(jupiter_fork: skipped, set AGENTCAP_JUPITER_FORK_PROGRAMS \(release gate\)\)$/m);
   });
 });
 
@@ -1003,7 +1003,7 @@ describe("the program's session cap", () => {
   // program refuses a create_session ending later than 7 days plus its clock
   // allowance. If the two drifted, either the program would accept longer
   // sessions than the server means to, or refuse ones the server prepared.
-  const risk = readFileSync(join(repo, "contracts/solana/programs/merrymen-vault/src/risk.rs"), "utf8");
+  const risk = readFileSync(join(repo, "contracts/solana/programs/agentcap-vault/src/risk.rs"), "utf8");
   const core = readFileSync(join(repo, "packages/core/src/solana.ts"), "utf8");
   /** A product of integer literals and constants already read, as these files write them. */
   const product = (text, known) => text.split("*").map(t => t.trim()).reduce((n, t) => {
@@ -1035,7 +1035,7 @@ describe("the program's session cap", () => {
   });
 
   it("is applied by create_session, not by every trade", () => {
-    const lib = readFileSync(join(repo, "contracts/solana/programs/merrymen-vault/src/lib.rs"), "utf8");
+    const lib = readFileSync(join(repo, "contracts/solana/programs/agentcap-vault/src/lib.rs"), "utf8");
     const create = /pub fn create_session\([\s\S]*?\n {4}\}\n/.exec(lib)?.[0] ?? "";
     assert.match(create, /require!\(risk::session\(&limits, now\)\.is_ok\(\), VaultError::RiskLimit\);/);
     assert.equal((lib.match(/risk::session\(/g) ?? []).length, 1);
@@ -1104,10 +1104,10 @@ describe("solana-toolchain.sh", () => {
     const home = fresh("home");
     const tools = join(home, ".cache/solana/v1.48/platform-tools");
     mkdirSync(join(tools, "rust/bin"), { recursive: true });
-    writeFileSync(join(tools, ".merrymen-ci-verified-sha256"), `${pins.PLATFORM_TOOLS_SHA256}\n`);
+    writeFileSync(join(tools, ".agentcap-ci-verified-sha256"), `${pins.PLATFORM_TOOLS_SHA256}\n`);
     const criterion = join(home, `.cache/solana/${pins.CRITERION_VERSION}/criterion`);
     mkdirSync(join(criterion, "include"), { recursive: true });
-    writeFileSync(join(criterion, ".merrymen-ci-verified-sha256"), `${pins.CRITERION_SHA256}\n`);
+    writeFileSync(join(criterion, ".agentcap-ci-verified-sha256"), `${pins.CRITERION_SHA256}\n`);
     return home;
   };
 
@@ -1121,10 +1121,10 @@ describe("solana-toolchain.sh", () => {
       "another platform-tools version": h => mkdirSync(join(h, ".cache/solana/v1.51/platform-tools"), { recursive: true }),
       "a criterion download": h => mkdirSync(join(h, ".cache/solana/v1.48/criterion"), { recursive: true }),
       "another Criterion version": h => mkdirSync(join(h, ".cache/solana/v2.3.2/criterion"), { recursive: true }),
-      "Criterion reinstalled without the marker": h => rmSync(join(h, `.cache/solana/${pins.CRITERION_VERSION}/criterion/.merrymen-ci-verified-sha256`)),
-      "a Criterion marker for other bytes": h => writeFileSync(join(h, `.cache/solana/${pins.CRITERION_VERSION}/criterion/.merrymen-ci-verified-sha256`), `${"2".repeat(64)}\n`),
-      "a reinstall that dropped the marker": h => rmSync(join(h, ".cache/solana/v1.48/platform-tools/.merrymen-ci-verified-sha256")),
-      "a marker for other bytes": h => writeFileSync(join(h, ".cache/solana/v1.48/platform-tools/.merrymen-ci-verified-sha256"), `${"1".repeat(64)}\n`),
+      "Criterion reinstalled without the marker": h => rmSync(join(h, `.cache/solana/${pins.CRITERION_VERSION}/criterion/.agentcap-ci-verified-sha256`)),
+      "a Criterion marker for other bytes": h => writeFileSync(join(h, `.cache/solana/${pins.CRITERION_VERSION}/criterion/.agentcap-ci-verified-sha256`), `${"2".repeat(64)}\n`),
+      "a reinstall that dropped the marker": h => rmSync(join(h, ".cache/solana/v1.48/platform-tools/.agentcap-ci-verified-sha256")),
+      "a marker for other bytes": h => writeFileSync(join(h, ".cache/solana/v1.48/platform-tools/.agentcap-ci-verified-sha256"), `${"1".repeat(64)}\n`),
     };
     for (const [label, spoil] of Object.entries(cases)) {
       const home = verifiedHome();
@@ -1172,7 +1172,7 @@ describe("solana-rebuild.sh", () => {
     'while [ $# -gt 0 ]; do case $1 in --sbf-out-dir) out=$2; shift 2 ;; --manifest-path) manifest=$2; shift 2 ;; *) shift ;; esac; done',
     'test -f "$manifest" || { echo "no manifest at $manifest" >&2; exit 3; }',
     'echo "compiling (stdout of the build)"',
-    'mkdir -p "$out" && printf "\\177ELFfake" > "$out/merrymen_vault.so"',
+    'mkdir -p "$out" && printf "\\177ELFfake" > "$out/agentcap_vault.so"',
   ].join("\n"));
 
   it("builds HEAD's tracked source at another path with a fresh canonical CARGO_HOME and the pinned flags", () => {
@@ -1181,10 +1181,10 @@ describe("solana-rebuild.sh", () => {
     const r = run("bash", [script, work], { PATH: `${bin}:${process.env.PATH}`, SBF_LOG: log });
     assert.equal(r.status, 0, r.stderr);
     const src = join(work, "src/contracts/solana");
-    assert.equal(r.stdout, `${src}/target/deploy/merrymen_vault.so\n`, "stdout carries only the artifact path");
+    assert.equal(r.stdout, `${src}/target/deploy/agentcap_vault.so\n`, "stdout carries only the artifact path");
     const logged = readFileSync(log, "utf8");
     assert.match(logged, new RegExp(`^CARGO_HOME=${work}/cargo-home$`, "m"));
-    assert.ok(logged.includes(`ARGS=--tools-version ${pins.PLATFORM_TOOLS_VERSION} --arch ${pins.SBF_ARCH} --manifest-path ${src}/programs/merrymen-vault/Cargo.toml --sbf-out-dir ${src}/target/deploy -- --locked\n`), logged);
+    assert.ok(logged.includes(`ARGS=--tools-version ${pins.PLATFORM_TOOLS_VERSION} --arch ${pins.SBF_ARCH} --manifest-path ${src}/programs/agentcap-vault/Cargo.toml --sbf-out-dir ${src}/target/deploy -- --locked\n`), logged);
     assert.ok(!src.startsWith(realpathSync(repo)), "the rebuild must not run in the checkout");
 
     const tracked = run("git", ["ls-tree", "-r", "--name-only", "HEAD", "contracts/solana"]).stdout.trim().split("\n").sort();
@@ -1197,7 +1197,7 @@ describe("solana-rebuild.sh", () => {
       }
     };
     walk(join(work, "src"), "");
-    const built = "contracts/solana/target/deploy/merrymen_vault.so";
+    const built = "contracts/solana/target/deploy/agentcap_vault.so";
     assert.deepEqual(copied.filter(p => p !== built).sort(), tracked, "exactly the tracked files, nothing untracked or ignored");
   });
 
@@ -1214,8 +1214,8 @@ describe("solana-program-record.mjs", () => {
   const script = join(here, "solana-program-record.mjs");
   const TOKEN_PROGRAM = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
   const TOKEN_BYTES = Buffer.from("06ddf6e1d765a193d9cbe146ceeb79ac1cb485ed5f5b37913a8cf5857eff00a9", "hex");
-  const libRs = id => `use anchor_lang::prelude::*;\n\ndeclare_id!("${id}");\n\n#[program]\npub mod merrymen_vault {}\n`;
-  const anchorToml = id => `[toolchain]\nanchor_version = "0.32.1"\n\n[programs.localnet]\nmerrymen_vault = "${id}"\n`;
+  const libRs = id => `use anchor_lang::prelude::*;\n\ndeclare_id!("${id}");\n\n#[program]\npub mod agentcap_vault {}\n`;
+  const anchorToml = id => `[toolchain]\nanchor_version = "0.32.1"\n\n[programs.localnet]\nagentcap_vault = "${id}"\n`;
   const elf = (...parts) => Buffer.concat([Buffer.from([0x7f, 0x45, 0x4c, 0x46]), Buffer.alloc(60), ...parts, Buffer.alloc(16)]);
 
   it("decodes base58 keys", () => {
@@ -1235,7 +1235,7 @@ describe("solana-program-record.mjs", () => {
     assert.equal(r.toolchain.platformTools, "v1.48");
     // No local test ID given: the record says it was not compared, and is never a candidate.
     assert.deepEqual([r.localTestId, r.declaresLocalTestId], [null, null]);
-    const main = { repository: "millw14/merrymen", event: "push", ref: "refs/heads/main" };
+    const main = { repository: "millw14/agentcap", event: "push", ref: "refs/heads/main" };
     const named = programRecord({ libRs: libRs(TOKEN_PROGRAM), anchorToml: anchorToml(TOKEN_PROGRAM), so, localTestId: LOCAL, run: main });
     assert.deepEqual([named.localTestId, named.declaresLocalTestId], [LOCAL, false]);
     assert.equal(named.release.reason, "its Linux build manifest has not been compared yet");
@@ -1283,8 +1283,8 @@ describe("solana-program-record.mjs", () => {
       "built for another ID": [{ ...ok, so: elf(Buffer.alloc(32, 7)) }, /does not contain the declared program ID/],
       "not an ELF file": [{ ...ok, so: Buffer.concat([Buffer.from("MZ"), TOKEN_BYTES]) }, /not an ELF file/],
       "Anchor.toml names another ID": [{ ...ok, anchorToml: anchorToml("11111111111111111111111111111111") }, /Anchor.toml \[programs.localnet\] names/],
-      "a second cluster names another ID": [{ ...ok, anchorToml: `${anchorToml(TOKEN_PROGRAM)}\n[programs.mainnet]\nmerrymen_vault = "11111111111111111111111111111111"\n` }, /\[programs.mainnet\]/],
-      "Anchor.toml names none": [{ ...ok, anchorToml: "[toolchain]\n" }, /names no merrymen_vault/],
+      "a second cluster names another ID": [{ ...ok, anchorToml: `${anchorToml(TOKEN_PROGRAM)}\n[programs.mainnet]\nagentcap_vault = "11111111111111111111111111111111"\n` }, /\[programs.mainnet\]/],
+      "Anchor.toml names none": [{ ...ok, anchorToml: "[toolchain]\n" }, /names no agentcap_vault/],
       "two declarations": [{ ...ok, libRs: `${libRs(TOKEN_PROGRAM)}declare_id!("${TOKEN_PROGRAM}");\n` }, /exactly one program ID/],
       "a commented-out declaration only": [{ ...ok, libRs: `// declare_id!("${TOKEN_PROGRAM}");\n` }, /exactly one program ID/],
       "a short key": [{ ...ok, libRs: libRs("1111"), anchorToml: anchorToml("1111") }, /not 32/],
@@ -1294,15 +1294,15 @@ describe("solana-program-record.mjs", () => {
   });
 
   it("finds the committed source consistent: lib.rs and Anchor.toml declare the same 32-byte ID", () => {
-    const id = declaredProgramId(readFileSync(join(repo, "contracts/solana/programs/merrymen-vault/src/lib.rs"), "utf8"));
+    const id = declaredProgramId(readFileSync(join(repo, "contracts/solana/programs/agentcap-vault/src/lib.rs"), "utf8"));
     assert.equal(base58Decode(id).length, 32);
-    const named = anchorProgramIds(readFileSync(join(repo, "contracts/solana/Anchor.toml"), "utf8"), "merrymen_vault");
+    const named = anchorProgramIds(readFileSync(join(repo, "contracts/solana/Anchor.toml"), "utf8"), "agentcap_vault");
     assert.ok(named.length > 0);
     for (const { id: other } of named) assert.equal(other, id);
   });
 
-  it("marks a release candidate only for a push or manual run on refs/heads/main of millw14/merrymen whose Linux build matched the committed manifest", () => {
-    const main = { repository: "millw14/merrymen", event: "push", ref: "refs/heads/main" };
+  it("marks a release candidate only for a push or manual run on refs/heads/main of millw14/agentcap whose Linux build matched the committed manifest", () => {
+    const main = { repository: "millw14/agentcap", event: "push", ref: "refs/heads/main" };
     const candidates = [main, { ...main, event: "workflow_dispatch" }];
     // The build record's program: another ID than the local test program.
     const program = { programId: PRODUCTION, localTestId: LOCAL };
@@ -1341,7 +1341,7 @@ describe("solana-program-record.mjs", () => {
     const others = [
       { ...main, event: "pull_request", ref: "refs/pull/7/merge" },
       { ...main, event: "pull_request", ref: "refs/heads/main" },
-      { ...main, repository: "someone/merrymen" },
+      { ...main, repository: "someone/agentcap" },
       { ...main, ref: "refs/heads/feature" },
       { ...main, ref: "refs/heads/main-old" },
       { ...main, event: "workflow_dispatch", ref: "refs/heads/release" },
@@ -1357,16 +1357,16 @@ describe("solana-program-record.mjs", () => {
     for (const p of others) {
       for (const named of [undefined, program]) {
         assert.deepEqual(releaseStatus(p, "matches", named), {
-          candidate: false, label: "not-a-release", reason: "not a push or manual run on refs/heads/main of millw14/merrymen", rule: RELEASE_RULE,
+          candidate: false, label: "not-a-release", reason: "not a push or manual run on refs/heads/main of millw14/agentcap", rule: RELEASE_RULE,
         }, JSON.stringify(p));
       }
     }
-    assert.match(RELEASE_RULE, /^A release artifact comes only from a CI run on refs\/heads\/main of millw14\/merrymen: a push to main, or a manual \(workflow_dispatch\) run on main, whose pinned Linux build matched the committed contracts\/solana\/build-manifests\/Linux-x86_64\.json and whose app check passed/);
+    assert.match(RELEASE_RULE, /^A release artifact comes only from a CI run on refs\/heads\/main of millw14\/agentcap: a push to main, or a manual \(workflow_dispatch\) run on main, whose pinned Linux build matched the committed contracts\/solana\/build-manifests\/Linux-x86_64\.json and whose app check passed/);
     assert.match(RELEASE_RULE, /CI never runs on a tag push, and a manual run on a tag or another branch is not a release candidate\./);
     assert.doesNotMatch(RELEASE_RULE, /or a tag of/);
     assert.match(RELEASE_RULE, /A build whose lib\.rs declares the local test program id \(SOLANA_VAULT_LOCAL_TEST_PROGRAM in packages\/core\/src\/solana-live\.ts\) is never a release: the live runtime refuses that id, so its Linux manifest is a reproducibility baseline only\./);
     // The verdict comes after app: solana · test's name is unconfirmed, the release record is solana · release's.
-    assert.match(RELEASE_RULE, /solana · test uploads such a run's bytes as merrymen-vault-sbf-candidate-unconfirmed-<commit>-run<id>\.<attempt>, before app has decided; solana · release, which runs only after app passed, confirms them with merrymen-vault-release-<commit>-run<id>\.<attempt>/);
+    assert.match(RELEASE_RULE, /solana · test uploads such a run's bytes as agentcap-vault-sbf-candidate-unconfirmed-<commit>-run<id>\.<attempt>, before app has decided; solana · release, which runs only after app passed, confirms them with agentcap-vault-release-<commit>-run<id>\.<attempt>/);
     assert.equal(CANDIDATE_LABEL, "candidate-unconfirmed");
     // No label releaseStatus can give says release on its own.
     for (const outcome of [null, "matches", "uncommitted", "differs", "removed"]) {
@@ -1428,11 +1428,11 @@ describe("solana-program-record.mjs", () => {
     const head = "1".repeat(40);
     writeFileSync(event, JSON.stringify({ pull_request: { head: { sha: head } } }));
     const p = provenance({
-      GITHUB_REPOSITORY: "millw14/merrymen", GITHUB_EVENT_NAME: "pull_request", GITHUB_REF: "refs/pull/7/merge", GITHUB_SHA: "2".repeat(40),
+      GITHUB_REPOSITORY: "millw14/agentcap", GITHUB_EVENT_NAME: "pull_request", GITHUB_REF: "refs/pull/7/merge", GITHUB_SHA: "2".repeat(40),
       GITHUB_EVENT_PATH: event, GITHUB_WORKFLOW_SHA: "3".repeat(40), GITHUB_RUN_ID: "123", GITHUB_RUN_ATTEMPT: "2",
     });
     assert.deepEqual(p, {
-      repository: "millw14/merrymen", event: "pull_request", ref: "refs/pull/7/merge", commit: "2".repeat(40), pullRequestHead: head,
+      repository: "millw14/agentcap", event: "pull_request", ref: "refs/pull/7/merge", commit: "2".repeat(40), pullRequestHead: head,
       workflowSha: "3".repeat(40), runId: "123", runAttempt: "2",
     });
     assert.equal(provenance({ GITHUB_EVENT_NAME: "push", GITHUB_EVENT_PATH: event }).pullRequestHead, null);
@@ -1441,10 +1441,10 @@ describe("solana-program-record.mjs", () => {
 
   it("as a command: writes the record, prints the SHA-256, and fails with exit 1 on a mismatch", () => {
     const root = fresh("program");
-    mkdirSync(join(root, "programs/merrymen-vault/src"), { recursive: true });
-    writeFileSync(join(root, "programs/merrymen-vault/src/lib.rs"), libRs(TOKEN_PROGRAM));
+    mkdirSync(join(root, "programs/agentcap-vault/src"), { recursive: true });
+    writeFileSync(join(root, "programs/agentcap-vault/src/lib.rs"), libRs(TOKEN_PROGRAM));
     writeFileSync(join(root, "Anchor.toml"), anchorToml(TOKEN_PROGRAM));
-    const so = join(root, "merrymen_vault.so");
+    const so = join(root, "agentcap_vault.so");
     writeFileSync(so, elf(TOKEN_BYTES));
     const out = join(root, "record.json");
     // Through a symlink: a main-module check that compared unresolved paths
@@ -1466,7 +1466,7 @@ describe("solana-program-record.mjs", () => {
     const summary = join(root, "summary.md");
     rmSync(out, { force: true });
     const pr = run(process.execPath, [script, root, so, out], {
-      GITHUB_SHA: "c0ffee", GITHUB_REPOSITORY: "millw14/merrymen", GITHUB_EVENT_NAME: "pull_request", GITHUB_REF: "refs/pull/7/merge",
+      GITHUB_SHA: "c0ffee", GITHUB_REPOSITORY: "millw14/agentcap", GITHUB_EVENT_NAME: "pull_request", GITHUB_REF: "refs/pull/7/merge",
       GITHUB_RUN_ID: "99", GITHUB_RUN_ATTEMPT: "1", GITHUB_STEP_SUMMARY: summary, ImageOS: "ubuntu24", ImageVersion: "20251012.1.0",
     });
     assert.equal(pr.status, 0, pr.stderr);
@@ -1475,42 +1475,42 @@ describe("solana-program-record.mjs", () => {
     assert.deepEqual([prRecord.provenance.event, prRecord.provenance.runId], ["pull_request", "99"]);
     assert.deepEqual(prRecord.runnerImage, { os: "ubuntu24", version: "20251012.1.0", digestPinned: false, note: RUNNER_IMAGE_NOTE });
     const text = readFileSync(summary, "utf8");
-    assert.match(text, /- run: 99 attempt 1, pull_request on refs\/pull\/7\/merge of millw14\/merrymen/);
+    assert.match(text, /- run: 99 attempt 1, pull_request on refs\/pull\/7\/merge of millw14\/agentcap/);
     assert.ok(text.includes(`- not the local test program ID \`${LOCAL}\`\n`), text);
     assert.ok(text.includes(`${runnerImageLine(runnerImage({ ImageOS: "ubuntu24", ImageVersion: "20251012.1.0" }))}\n`), text);
-    assert.match(text, /- release: \*\*not a release artifact\*\* \(not a push or manual run on refs\/heads\/main of millw14\/merrymen\)\. A release artifact comes only from a CI run on refs\/heads\/main of millw14\/merrymen: a push to main, or a manual \(workflow_dispatch\) run on main/);
+    assert.match(text, /- release: \*\*not a release artifact\*\* \(not a push or manual run on refs\/heads\/main of millw14\/agentcap\)\. A release artifact comes only from a CI run on refs\/heads\/main of millw14\/agentcap: a push to main, or a manual \(workflow_dispatch\) run on main/);
     // A run on main: still not a release here. Only the Linux manifest
     // comparison (solana-linux-manifest.mjs report) can make it one.
     const mainSummary = join(root, "main-summary.md");
     const mainRun = run(process.execPath, [script, root, so, out], {
-      GITHUB_REPOSITORY: "millw14/merrymen", GITHUB_EVENT_NAME: "push", GITHUB_REF: "refs/heads/main", GITHUB_STEP_SUMMARY: mainSummary, ImageOS: "", ImageVersion: "",
+      GITHUB_REPOSITORY: "millw14/agentcap", GITHUB_EVENT_NAME: "push", GITHUB_REF: "refs/heads/main", GITHUB_STEP_SUMMARY: mainSummary, ImageOS: "", ImageVersion: "",
     });
     assert.equal(mainRun.status, 0, mainRun.stderr);
     // Off a GitHub-hosted runner there is no image to name, and the record says so.
     assert.deepEqual([JSON.parse(readFileSync(out, "utf8")).runnerImage.os, JSON.parse(readFileSync(out, "utf8")).runnerImage.version], [null, null]);
     assert.match(readFileSync(mainSummary, "utf8"), /^- runner image: unknown \(no ImageOS or ImageVersion: not a GitHub-hosted runner\), not digest-pinned\./m);
     assert.deepEqual(JSON.parse(readFileSync(out, "utf8")).release,
-      releaseStatus({ repository: "millw14/merrymen", event: "push", ref: "refs/heads/main" }, null, { programId: TOKEN_PROGRAM, localTestId: LOCAL }));
+      releaseStatus({ repository: "millw14/agentcap", event: "push", ref: "refs/heads/main" }, null, { programId: TOKEN_PROGRAM, localTestId: LOCAL }));
     assert.equal(JSON.parse(readFileSync(out, "utf8")).release.label, "not-a-release");
     assert.match(readFileSync(mainSummary, "utf8"), /- release: \*\*not a release artifact\*\* \(its Linux build manifest has not been compared yet\)\./);
     assert.doesNotMatch(readFileSync(mainSummary, "utf8"), /\*\*release candidate/);
     // A manual run on a tag: the record says it is not a release.
-    const tagRun = run(process.execPath, [script, root, so, out], { GITHUB_REPOSITORY: "millw14/merrymen", GITHUB_EVENT_NAME: "workflow_dispatch", GITHUB_REF: "refs/tags/vault-v1" });
+    const tagRun = run(process.execPath, [script, root, so, out], { GITHUB_REPOSITORY: "millw14/agentcap", GITHUB_EVENT_NAME: "workflow_dispatch", GITHUB_REF: "refs/tags/vault-v1" });
     assert.equal(tagRun.status, 0, tagRun.stderr);
     assert.deepEqual(JSON.parse(readFileSync(out, "utf8")).release, {
-      candidate: false, label: "not-a-release", reason: "not a push or manual run on refs/heads/main of millw14/merrymen", rule: RELEASE_RULE,
+      candidate: false, label: "not-a-release", reason: "not a push or manual run on refs/heads/main of millw14/agentcap", rule: RELEASE_RULE,
     });
 
     // A build of the local test program ID: the record and the summary say it is never a release.
     const testRoot = fresh("program-local");
-    mkdirSync(join(testRoot, "programs/merrymen-vault/src"), { recursive: true });
-    writeFileSync(join(testRoot, "programs/merrymen-vault/src/lib.rs"), libRs(LOCAL));
+    mkdirSync(join(testRoot, "programs/agentcap-vault/src"), { recursive: true });
+    writeFileSync(join(testRoot, "programs/agentcap-vault/src/lib.rs"), libRs(LOCAL));
     writeFileSync(join(testRoot, "Anchor.toml"), anchorToml(LOCAL));
-    const testSo = join(testRoot, "merrymen_vault.so");
+    const testSo = join(testRoot, "agentcap_vault.so");
     writeFileSync(testSo, elf(base58Decode(LOCAL)));
     const testSummary = join(testRoot, "summary.md");
     const testRun = run(process.execPath, [script, testRoot, testSo, out], {
-      GITHUB_REPOSITORY: "millw14/merrymen", GITHUB_EVENT_NAME: "push", GITHUB_REF: "refs/heads/main", GITHUB_STEP_SUMMARY: testSummary,
+      GITHUB_REPOSITORY: "millw14/agentcap", GITHUB_EVENT_NAME: "push", GITHUB_REF: "refs/heads/main", GITHUB_STEP_SUMMARY: testSummary,
     });
     assert.equal(testRun.status, 0, testRun.stderr);
     const testRecord = JSON.parse(readFileSync(out, "utf8"));
@@ -1531,13 +1531,13 @@ describe("solana-release.mjs", () => {
   const commit = "c".repeat(40);
   const hash = "a".repeat(64);
   const main = {
-    GITHUB_REPOSITORY: "millw14/merrymen", GITHUB_EVENT_NAME: "push", GITHUB_REF: "refs/heads/main", GITHUB_SHA: commit,
+    GITHUB_REPOSITORY: "millw14/agentcap", GITHUB_EVENT_NAME: "push", GITHUB_REF: "refs/heads/main", GITHUB_SHA: commit,
     GITHUB_RUN_ID: "123", GITHUB_RUN_ATTEMPT: "1",
   };
   const candidate = {
     ...main,
     VAULT_RELEASE_LABEL: "candidate-unconfirmed",
-    VAULT_ARTIFACT: `merrymen-vault-sbf-candidate-unconfirmed-${commit}-run123.1`,
+    VAULT_ARTIFACT: `agentcap-vault-sbf-candidate-unconfirmed-${commit}-run123.1`,
     VAULT_TESTED_SHA256: hash,
     VAULT_REBUILT_SHA256: hash,
   };
@@ -1546,9 +1546,9 @@ describe("solana-release.mjs", () => {
   /** A repository root holding just what releaseSource reads: lib.rs and solana-live.ts. */
   const checkout = declared => {
     const root = fresh("release-source");
-    mkdirSync(join(root, "contracts/solana/programs/merrymen-vault/src"), { recursive: true });
+    mkdirSync(join(root, "contracts/solana/programs/agentcap-vault/src"), { recursive: true });
     mkdirSync(join(root, "packages/core/src"), { recursive: true });
-    writeFileSync(join(root, "contracts/solana/programs/merrymen-vault/src/lib.rs"), `use anchor_lang::prelude::*;\ndeclare_id!("${declared}");\n`);
+    writeFileSync(join(root, "contracts/solana/programs/agentcap-vault/src/lib.rs"), `use anchor_lang::prelude::*;\ndeclare_id!("${declared}");\n`);
     writeFileSync(join(root, "packages/core/src/solana-live.ts"), solanaLive(LOCAL));
     return root;
   };
@@ -1573,17 +1573,17 @@ describe("solana-release.mjs", () => {
       "a pull request": [{ ...candidate, GITHUB_EVENT_NAME: "pull_request", GITHUB_REF: "refs/pull/7/merge" }, /not a push or manual run on refs\/heads\/main/],
       "a branch": [{ ...candidate, GITHUB_REF: "refs/heads/feature" }, /not a push or manual run/],
       "a tag": [{ ...candidate, GITHUB_EVENT_NAME: "workflow_dispatch", GITHUB_REF: "refs/tags/vault-v1" }, /not a push or manual run/],
-      "a fork": [{ ...candidate, GITHUB_REPOSITORY: "someone/merrymen" }, /not a push or manual run/],
+      "a fork": [{ ...candidate, GITHUB_REPOSITORY: "someone/agentcap" }, /not a push or manual run/],
       "a schedule": [{ ...candidate, GITHUB_EVENT_NAME: "schedule" }, /not a push or manual run/],
       "no commit": [{ ...candidate, GITHUB_SHA: "" }, /no commit, run id or attempt/],
       "no attempt": [{ ...candidate, GITHUB_RUN_ATTEMPT: "" }, /no commit, run id or attempt/],
       "not a candidate": [{ ...candidate, VAULT_RELEASE_LABEL: "not-a-release" }, /labelled this run's artifact "not-a-release", not candidate-unconfirmed/],
       "the old label": [{ ...candidate, VAULT_RELEASE_LABEL: "release-candidate" }, /not candidate-unconfirmed/],
       "no vault build": [{ ...candidate, VAULT_RELEASE_LABEL: "", VAULT_ARTIFACT: "", VAULT_TESTED_SHA256: "", VAULT_REBUILT_SHA256: "" }, /not candidate-unconfirmed/],
-      "another commit's artifact": [{ ...candidate, VAULT_ARTIFACT: `merrymen-vault-sbf-candidate-unconfirmed-${"d".repeat(40)}-run123.1` }, /is not merrymen-vault-sbf-candidate-unconfirmed-c{40}-run123\.<attempt> of this run/],
-      "another run's artifact": [{ ...candidate, VAULT_ARTIFACT: `merrymen-vault-sbf-candidate-unconfirmed-${commit}-run124.1` }, /of this run/],
-      "a later attempt's artifact": [{ ...candidate, VAULT_ARTIFACT: `merrymen-vault-sbf-candidate-unconfirmed-${commit}-run123.2` }, /of this run/],
-      "a not-a-release artifact": [{ ...candidate, VAULT_ARTIFACT: `merrymen-vault-sbf-not-a-release-${commit}-run123.1` }, /of this run/],
+      "another commit's artifact": [{ ...candidate, VAULT_ARTIFACT: `agentcap-vault-sbf-candidate-unconfirmed-${"d".repeat(40)}-run123.1` }, /is not agentcap-vault-sbf-candidate-unconfirmed-c{40}-run123\.<attempt> of this run/],
+      "another run's artifact": [{ ...candidate, VAULT_ARTIFACT: `agentcap-vault-sbf-candidate-unconfirmed-${commit}-run124.1` }, /of this run/],
+      "a later attempt's artifact": [{ ...candidate, VAULT_ARTIFACT: `agentcap-vault-sbf-candidate-unconfirmed-${commit}-run123.2` }, /of this run/],
+      "a not-a-release artifact": [{ ...candidate, VAULT_ARTIFACT: `agentcap-vault-sbf-not-a-release-${commit}-run123.1` }, /of this run/],
       "no artifact": [{ ...candidate, VAULT_ARTIFACT: "" }, /of this run/],
       "no tested hash": [{ ...candidate, VAULT_TESTED_SHA256: "", VAULT_REBUILT_SHA256: "" }, /no vault artifact hash from solana · test/],
       "a short hash": [{ ...candidate, VAULT_TESTED_SHA256: "abc", VAULT_REBUILT_SHA256: "abc" }, /no vault artifact hash/],
@@ -1602,16 +1602,16 @@ describe("solana-release.mjs", () => {
 
   it("as a command: writes the record and the summary, or exits 1 having written nothing", () => {
     const dir = fresh("release");
-    const out = join(dir, "merrymen_vault.release.json");
+    const out = join(dir, "agentcap_vault.release.json");
     const summary = join(dir, "summary.md");
     const released = checkout(PRODUCTION);
     assert.deepEqual(releaseSource(released), source);
     const ok = run(process.execPath, [script, out, released], { ...candidate, GITHUB_STEP_SUMMARY: summary });
     assert.equal(ok.status, 0, ok.stderr);
     assert.deepEqual(JSON.parse(readFileSync(out, "utf8")), releaseRecord(candidate, source));
-    assert.equal(ok.stdout, `merrymen-vault-release-${commit}-run123.1: ${candidate.VAULT_ARTIFACT} holds the release, SHA-256 ${hash}\n`);
+    assert.equal(ok.stdout, `agentcap-vault-release-${commit}-run123.1: ${candidate.VAULT_ARTIFACT} holds the release, SHA-256 ${hash}\n`);
     const text = readFileSync(summary, "utf8");
-    assert.match(text, /^### merrymen_vault release\n\n- record: `merrymen-vault-release-c{40}-run123\.1`\n- program ID: `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA` \(not the local test program ID\)\n- bytes: `merrymen-vault-sbf-candidate-unconfirmed-c{40}-run123\.1` \(target\/deploy\/merrymen_vault\.so\)\n- SHA-256: `a{64}` \(tested and rebuilt\)\n- release: \*\*release\*\* /);
+    assert.match(text, /^### agentcap_vault release\n\n- record: `agentcap-vault-release-c{40}-run123\.1`\n- program ID: `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA` \(not the local test program ID\)\n- bytes: `agentcap-vault-sbf-candidate-unconfirmed-c{40}-run123\.1` \(target\/deploy\/agentcap_vault\.so\)\n- SHA-256: `a{64}` \(tested and rebuilt\)\n- release: \*\*release\*\* /);
     rmSync(out);
     // A source that declares the local test program ID: exit 1, nothing written.
     const local = run(process.execPath, [script, out, checkout(LOCAL)], candidate);
@@ -1620,13 +1620,13 @@ describe("solana-release.mjs", () => {
     assert.equal(existsSync(out), false);
     // By default it reads this checkout: refused exactly while lib.rs declares the local test ID.
     const own = releaseSource();
-    assert.deepEqual(own, { programId: declaredProgramId(readFileSync(join(repo, "contracts/solana/programs/merrymen-vault/src/lib.rs"), "utf8")), localTestId: LOCAL });
+    assert.deepEqual(own, { programId: declaredProgramId(readFileSync(join(repo, "contracts/solana/programs/agentcap-vault/src/lib.rs"), "utf8")), localTestId: LOCAL });
     const here = run(process.execPath, [script, out], candidate);
     assert.equal(here.status, own.programId === LOCAL ? 1 : 0, here.stderr);
     rmSync(out, { force: true });
     const pr = run(process.execPath, [script, out, released], { ...candidate, GITHUB_EVENT_NAME: "pull_request", GITHUB_REF: "refs/pull/7/merge" });
     assert.equal(pr.status, 1);
-    assert.match(pr.stderr, /^::error::not a push or manual run on refs\/heads\/main of millw14\/merrymen/m);
+    assert.match(pr.stderr, /^::error::not a push or manual run on refs\/heads\/main of millw14\/agentcap/m);
     assert.equal(existsSync(out), false);
     const differs = run(process.execPath, [script, out, released], { ...candidate, VAULT_REBUILT_SHA256: "b".repeat(64) });
     assert.equal(differs.status, 1);
@@ -1794,14 +1794,14 @@ describe("solana-linux-manifest.mjs", () => {
     gitIn("add", "contracts/solana/build-manifests");
     gitIn("commit", "-q", "-m", "no Linux manifest yet");
     const manifest = join(dir, LINUX_MANIFEST);
-    const recordPath = join(dir, "target/deploy/merrymen_vault.build.json");
-    const mainRun = { GITHUB_REPOSITORY: "millw14/merrymen", GITHUB_EVENT_NAME: "push", GITHUB_REF: "refs/heads/main", GITHUB_SHA: "c".repeat(40) };
-    const prRun = { GITHUB_REPOSITORY: "millw14/merrymen", GITHUB_EVENT_NAME: "pull_request", GITHUB_REF: "refs/pull/7/merge" };
+    const recordPath = join(dir, "target/deploy/agentcap_vault.build.json");
+    const mainRun = { GITHUB_REPOSITORY: "millw14/agentcap", GITHUB_EVENT_NAME: "push", GITHUB_REF: "refs/heads/main", GITHUB_SHA: "c".repeat(40) };
+    const prRun = { GITHUB_REPOSITORY: "millw14/agentcap", GITHUB_EVENT_NAME: "pull_request", GITHUB_REF: "refs/pull/7/merge" };
     /** What the job holds after build.sh --record: this build's manifest, and the record step's record (its release not yet decided). */
     const build = (bytes, programId = PRODUCTION) => {
       writeFileSync(join(dir, ARTIFACT), bytes);
       writeFileSync(manifest, text(linux({ "artifact.sha256": sha256(bytes), "artifact.bytes": bytes.length })));
-      writeFileSync(recordPath, `${JSON.stringify({ program: "merrymen_vault", programId, localTestId: LOCAL, sha256: sha256(bytes), release: releaseStatus({}) }, null, 2)}\n`);
+      writeFileSync(recordPath, `${JSON.stringify({ program: "agentcap_vault", programId, localTestId: LOCAL, sha256: sha256(bytes), release: releaseStatus({}) }, null, 2)}\n`);
     };
     const report = (extra, summary = join(fresh("summary"), "summary.md")) => {
       const r = run(process.execPath, [script, "report", dir, recordPath], { ...extra, GITHUB_STEP_SUMMARY: summary });
@@ -1816,13 +1816,13 @@ describe("solana-linux-manifest.mjs", () => {
     assert.match(none.stderr, /^::notice title=Linux build manifest::No build-manifests\/Linux-x86_64\.json is committed.*The artifact is uploaded as not-a-release \(no Linux build manifest is committed yet\)\.$/m);
     // The line to end the manifest's commit message with: the run and image that built it, which the artifact's expiry would lose.
     const noneTrailer = manifestTrailer({ manifest: JSON.parse(readFileSync(manifest, "utf8")), run: provenance(mainRun), image: null });
-    assert.equal(noneTrailer, `${MANIFEST_TRAILER}: run unknown.unknown of millw14/merrymen (push on refs/heads/main at ${"c".repeat(40)}), `
+    assert.equal(noneTrailer, `${MANIFEST_TRAILER}: run unknown.unknown of millw14/agentcap (push on refs/heads/main at ${"c".repeat(40)}), `
       + `runner image unknown unknown, artifact ${soSha} (${so.length} bytes), source digest ${darwin.source.digest}`);
     assert.deepEqual(none.record.linuxManifest, { file: LINUX_MANIFEST, status: "uncommitted", problem: null, commitTrailer: noneTrailer });
     assert.match(none.stderr, new RegExp(`^If this manifest is committed \\(after review, never just to make the comparison pass\\), end that commit's message with this line, .*: ${MANIFEST_TRAILER}: run unknown`, "m"));
     assert.ok(none.summary.includes(`\n\n    ${noneTrailer}\n`), none.summary);
     assert.equal(none.record.release.label, "not-a-release");
-    assert.equal(none.record.program, "merrymen_vault", "the rest of the record is kept");
+    assert.equal(none.record.program, "agentcap_vault", "the rest of the record is kept");
 
     // Committed and matching: candidate-unconfirmed on main, not-a-release on a pull request.
     gitIn("add", "contracts/solana/build-manifests/Linux-x86_64.json");
@@ -1831,7 +1831,7 @@ describe("solana-linux-manifest.mjs", () => {
     const matches = report(mainRun);
     assert.equal(matches.status, 0, matches.stderr);
     assert.equal(matches.stdout, "candidate-unconfirmed\n");
-    assert.deepEqual(matches.record.release, releaseStatus({ repository: "millw14/merrymen", event: "push", ref: "refs/heads/main" }, "matches", { programId: PRODUCTION, localTestId: LOCAL }));
+    assert.deepEqual(matches.record.release, releaseStatus({ repository: "millw14/agentcap", event: "push", ref: "refs/heads/main" }, "matches", { programId: PRODUCTION, localTestId: LOCAL }));
     assert.equal(matches.record.release.candidate, true);
     assert.match(matches.summary, /^### Linux build manifest\n\nThe pinned Linux build matches the committed build-manifests\/Linux-x86_64\.json: /);
     assert.match(matches.summary, /^- release: \*\*release candidate, unconfirmed until app passes\*\* \(a run on main whose pinned Linux build matched the committed manifest\)\. A release artifact comes only/m);
@@ -1920,9 +1920,9 @@ describe("solana-linux-manifest.mjs", () => {
 
   it("manifestTrailer names the run, runner image and artifact on one line, unknown parts as unknown", () => {
     const m = linux({ "artifact.sha256": soSha, "artifact.bytes": so.length });
-    const run = { repository: "millw14/merrymen", event: "push", ref: "refs/heads/main", commit: "d".repeat(40), runId: "123", runAttempt: "2" };
+    const run = { repository: "millw14/agentcap", event: "push", ref: "refs/heads/main", commit: "d".repeat(40), runId: "123", runAttempt: "2" };
     assert.equal(manifestTrailer({ manifest: m, run, image: runnerImage({ ImageOS: "ubuntu24", ImageVersion: "20251012.1.0" }) }),
-      `Vault-Linux-Manifest: run 123.2 of millw14/merrymen (push on refs/heads/main at ${"d".repeat(40)}), runner image ubuntu24 20251012.1.0, `
+      `Vault-Linux-Manifest: run 123.2 of millw14/agentcap (push on refs/heads/main at ${"d".repeat(40)}), runner image ubuntu24 20251012.1.0, `
       + `artifact ${soSha} (${so.length} bytes), source digest ${m.source.digest}`);
     assert.equal(manifestTrailer({ manifest: m }),
       `Vault-Linux-Manifest: run unknown.unknown of unknown (unknown on unknown at unknown), runner image unknown unknown, `

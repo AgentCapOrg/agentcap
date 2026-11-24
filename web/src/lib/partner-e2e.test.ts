@@ -39,8 +39,8 @@ import { NextRequest } from "next/server";
 import type { Address } from "viem";
 import { generatePrivateKey, privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
 import { getActionSelector } from "@zerodev/sdk";
-import { buildWallPolicies, derivationOf, isHostedMode, type MerrymenSettings, type StoredGrant } from "@merrymen/core";
-import { partnerGrantDigest, signMerrymanAuthorization } from "../../../sdk/browser";
+import { buildWallPolicies, derivationOf, isHostedMode, type AgentCapSettings, type StoredGrant } from "@agentcap/core";
+import { partnerGrantDigest, signAgentCapAvatarAuthorization } from "../../../sdk/browser";
 import { hashSecret, makeKey } from "../../../gateway/lib/partners.mjs";
 import { checkCanonicalWall } from "./canonical-wall";
 import { createPartnerEnrollmentService } from "./partner-enrollment";
@@ -61,7 +61,7 @@ const REQUEST_ID = /^req_[0-9a-f]{12}$/;
 // ── the injected worker side: what activation wrote, and what chat cost ─────
 const accounts = new Map<string, Address>();
 const savedGrants = new Map<string, StoredGrant>();
-const savedSettings = new Map<string, MerrymenSettings>();
+const savedSettings = new Map<string, AgentCapSettings>();
 const runtimeReads: string[] = [];
 const replies: Array<{ tenant: string; message: string }> = [];
 const runtimeOf = (tenant: string): PartnerRuntime => ({
@@ -184,15 +184,15 @@ async function startGateway(dataDir: string) {
         PATH: process.env.PATH,
         NODE_ENV: "test", // unread by the gateway; Next's ProcessEnv type requires it
         PORT: String(port),
-        MERRYMEN_DATA_DIR: dataDir,
-        MERRYMEN_PARTNER_KEYS: JSON.stringify([{ keyId: PARTNER.keyId, appId: APP_ID, name: APP_NAME,
+        AGENTCAP_DATA_DIR: dataDir,
+        AGENTCAP_PARTNER_KEYS: JSON.stringify([{ keyId: PARTNER.keyId, appId: APP_ID, name: APP_NAME,
           hash: hashSecret(GATEWAY_SECRET, PARTNER.secret), scopes: ["read:agents", "write:agents", "chat:agents"], status: "active" }]),
-        MERRYMEN_PARTNER_BRIDGE_SECRET: BRIDGE_SECRET,
-        MERRYMEN_PARTNER_APP_ORIGIN: webOrigin,
-        MERRYMEN_GATEWAY_UPSTREAM_KEY: "unused-by-partner-routes",
-        MERRYMEN_GATEWAY_SECRET: GATEWAY_SECRET,
+        AGENTCAP_PARTNER_BRIDGE_SECRET: BRIDGE_SECRET,
+        AGENTCAP_PARTNER_APP_ORIGIN: webOrigin,
+        AGENTCAP_GATEWAY_UPSTREAM_KEY: "unused-by-partner-routes",
+        AGENTCAP_GATEWAY_SECRET: GATEWAY_SECRET,
         // Partner routes never read the chain; nothing listens here.
-        MERRYMEN_GATEWAY_RPC: "http://127.0.0.1:9",
+        AGENTCAP_GATEWAY_RPC: "http://127.0.0.1:9",
       },
     });
     child.stderr!.on("data", chunk => { gatewayLog += chunk; });
@@ -233,14 +233,14 @@ before(async () => {
 
   // Production's configuration (the partner route answers only in hosted mode),
   // set before the import because the middleware reads it once, at load.
-  process.env.MERRYMEN_HOSTED = "1";
-  process.env.MERRYMEN_PUBLIC_ORIGIN = webOrigin;
-  process.env.MERRYMEN_PARTNER_BRIDGE_SECRET = BRIDGE_SECRET;
-  delete process.env.MERRYMEN_OAUTH_ISSUER;
-  delete process.env.MERRYMEN_MCP_RESOURCE_URL;
+  process.env.AGENTCAP_HOSTED = "1";
+  process.env.AGENTCAP_PUBLIC_ORIGIN = webOrigin;
+  process.env.AGENTCAP_PARTNER_BRIDGE_SECRET = BRIDGE_SECRET;
+  delete process.env.AGENTCAP_OAUTH_ISSUER;
+  delete process.env.AGENTCAP_MCP_RESOURCE_URL;
   ({ middleware } = await import("../middleware"));
 
-  const home = mkdtempSync(join(tmpdir(), "merrymen-partner-e2e-web-"));
+  const home = mkdtempSync(join(tmpdir(), "agentcap-partner-e2e-web-"));
   cleanup.push(home);
   // Defaults everywhere route.ts relies on them: the clock, and the bridge
   // secret read from the environment by the store, service and enrollment.
@@ -271,7 +271,7 @@ before(async () => {
     },
   });
 
-  const dataDir = mkdtempSync(join(tmpdir(), "merrymen-partner-e2e-gateway-"));
+  const dataDir = mkdtempSync(join(tmpdir(), "agentcap-partner-e2e-gateway-"));
   cleanup.push(dataDir);
   await startGateway(dataDir);
 });
@@ -351,7 +351,7 @@ async function authorize(id: string, externalUserId: string, owner: PrivateKeyAc
     owner: owner.address, smart_account: grant.smartAccount, chain_id: grant.chainId, grant_hash: partnerGrantDigest(grant), settings: SETTINGS,
   }), 200);
   // Pinned to what the partner itself knows, never to identifiers the challenge reports.
-  return signMerrymanAuthorization({
+  return signAgentCapAvatarAuthorization({
     owner, grant, challenge, settings: SETTINGS,
     expectedAppId: APP_ID, expectedAgentId: id, expectedExternalUserId: externalUserId, expectedScopes: SCOPES,
   });
@@ -383,7 +383,7 @@ test("the embedded flow, end to end: create, authorize with the SDK, activate, c
   // the shape the outage refused: Fetch Metadata with no Origin to check.
   const post = arrivals.find(a => a.method === "POST" && a.path === "/api/partner/agents");
   assert.ok(post, "the gateway's POST reached the web app");
-  assert.match(post.headers.get("x-merrymen-partner-signature") ?? "", /^[a-f0-9]{64}$/);
+  assert.match(post.headers.get("x-agentcap-partner-signature") ?? "", /^[a-f0-9]{64}$/);
   assert.equal(post.headers.get("sec-fetch-mode"), "cors");
   assert.equal(post.headers.get("origin"), null);
   // Repeating the create is answered with the same pending connection.
@@ -495,12 +495,12 @@ test("a grant sealing the partner's own adapter is refused through the gateway, 
 });
 
 test("a web app outside hosted mode is the platform's outage, not the partner's 404", async () => {
-  // route.ts refuses everything when MERRYMEN_HOSTED is off, the same way the
+  // route.ts refuses everything when AGENTCAP_HOSTED is off, the same way the
   // middleware did in the outage. The partner must hear that the runtime is
   // down, with a request_id, not that its agents do not exist.
-  delete process.env.MERRYMEN_HOSTED;
+  delete process.env.AGENTCAP_HOSTED;
   let answer: Answer;
-  try { answer = await partner("GET", "/agents"); } finally { process.env.MERRYMEN_HOSTED = "1"; }
+  try { answer = await partner("GET", "/agents"); } finally { process.env.AGENTCAP_HOSTED = "1"; }
   expectStatus(answer, 503);
   assert.equal(answer.body.error.code, "upstream_unavailable");
   assert.deepEqual(refusals, [], "the middleware let it through; the route refused it");

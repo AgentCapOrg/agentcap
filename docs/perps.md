@@ -1,6 +1,6 @@
 # Perpetuals (Lighter on Robinhood Chain)
 
-An owner can let their Merryman trade perpetual futures — long or short, with
+An owner can let their AgentCapAvatar trade perpetual futures — long or short, with
 leverage — on the markets Lighter lists on Robinhood Chain (BTC, ETH, SOL, large
 US stocks, SPY/QQQ, gold…). Collateral is USDG, posted from the login's **Perps
 wallet** into Lighter's settlement contract on chain 4663, and every withdrawal
@@ -27,14 +27,14 @@ the finished product; this table says how much of it main carries.
 |---|---|---|
 | 1. Core and permission wall | the Lighter route, market and ABI constants, the `perp-lighter-v1` wall option, the canonical-wall marker, the signers' carry-forward. `POST /api/grants` refuses every perps grant (`perp-not-offered`) | merged (#359) |
 | 2. Two wallets per login | wallet purpose and the Kernel index 1 derivation, the Perps grant and settings stores, wallet-aware revocation and renewal, and **the Perps half of every kill**. No route creates, renews, funds or shows a Perps wallet (`perps-wallet-not-offered`) | merged (#361) |
-| 3. Worker engine, paper only | `worker/src/perps`, the vendored signer, the perp ledger and budgets, the paper venue and the paper lane, run only by a Perps wallet's worker; the kill also stands paper books down. `MERRYMEN_PERPS=live` is off in this build | merged (#362) |
-| 4. Orchestrator and hosted operation, paper only | a Perps worker per login (`0x<owner>:perps`, home `children-perps/<owner>`) run only at `MERRYMEN_PERPS=paper`; the paper perp book in the mirror, the checkpoint and the handover specs; one public Lighter feed per orchestrator; the kill and `/pause` reaching both wallets' workers. The **live** stand-down is not in it (see below) | merged (#365) |
+| 3. Worker engine, paper only | `worker/src/perps`, the vendored signer, the perp ledger and budgets, the paper venue and the paper lane, run only by a Perps wallet's worker; the kill also stands paper books down. `AGENTCAP_PERPS=live` is off in this build | merged (#362) |
+| 4. Orchestrator and hosted operation, paper only | a Perps worker per login (`0x<owner>:perps`, home `children-perps/<owner>`) run only at `AGENTCAP_PERPS=paper`; the paper perp book in the mirror, the checkpoint and the handover specs; one public Lighter feed per orchestrator; the kill and `/pause` reaching both wallets' workers. The **live** stand-down is not in it (see below) | merged (#365) |
 | 5. Web API, desk and CLI | PR 1 (5a–5c): the foundation, Perps wallet intake and status, settings, owner paper exits and practice reset. PR 2: read routes, recover and CLI. PR 3: desk, entry points and onboarding. Funding follows slice 5 in its own PR | PR 1–3 implemented in this branch; final combined review/verification and deployment remain pending |
 | 6. Other surfaces | Telegram, MCP, the partner API, then the phone clients | Paper web companion surfaces are being completed in this branch; full Perps phone UI remains later |
 
 Slice 5 PR 1 adds Perps wallet creation and renewal, gated by
-`MERRYMEN_PERPS=paper`. Every kill path already reaches the Perps wallet
-(rule 13). An unset `MERRYMEN_PERPS` means off (rule 1), and merging this PR
+`AGENTCAP_PERPS=paper`. Every kill path already reaches the Perps wallet
+(rule 13). An unset `AGENTCAP_PERPS` means off (rule 1), and merging this PR
 does not turn it on. The hosted-paper rollout remains web first: it follows
 slice 5 and slice 6a (Telegram, MCP and partner API); the phone clients in
 slice 6b follow that launch. Phone builds carrying #358's kill request are
@@ -57,7 +57,7 @@ shared-store bootstrap, replica rollout, capacity and release evidence.
 **What slice 3 carries, and what it does not.** The engine is the perps
 branch's paper engine (codex/perps-mode-samples at c7071662, before its live
 executor), reconciled with main. A worker serves one wallet: whatever starts a
-Perps wallet's worker sets `MERRYMEN_WALLET_PURPOSE=perps` (slices 4 and 5;
+Perps wallet's worker sets `AGENTCAP_WALLET_PURPOSE=perps` (slices 4 and 5;
 unset is Spot), and the worker refuses a grant whose signed `purpose` is the
 other wallet's. Only a Perps worker arms the perp lane, and it runs no spot
 producer (`perps-only`). A Spot worker never starts the lane or its feed and
@@ -65,7 +65,7 @@ shows its strategist no perps; its budget readers and paper reset touch the
 perp tables, which hold nothing for it, so they add nothing. Nothing on main
 starts a Perps worker without the paper flag and a Perps grant; slice 4 supplies
 the hosted supervisor, and 5b supplies grant creation. There is no live executor, reconciler or on-chain leg in this build:
-`MERRYMEN_PERPS=live` is off, and a live account with perps on is refused
+`AGENTCAP_PERPS=live` is off, and a live account with perps on is refused
 `perp-live-not-yet`. The signer is vendored and hash-checked but loaded only by
 its own tests. The hosted checkpoint of paper perp state and the mirror of the
 perp ledger are slice 4's (below). The style profiles (`perpsStyle`) and the Brain
@@ -81,16 +81,16 @@ Perps workers, and nothing live:
 - *A worker per wallet.* The orchestrator keeps each login's Perps worker under
   the key `0x<owner>:perps` (`worker-key.ts`) with its home at
   `children-perps/<owner>`, so no Spot path moves. It reads the Perps grant and
-  settings stores by owner, hands the child `MERRYMEN_WALLET_PURPOSE=perps`,
+  settings stores by owner, hands the child `AGENTCAP_WALLET_PURPOSE=perps`,
   its own pinned grant and settings files and no venue key, and gives it no
   Telegram, groups, DM memory, Fomo or flow broker, IPC channel, public id or
   public roster (rule 17). Its holder status is the owner's, read-only. It is
   held as its owner is (accounting hold, rollout, chain check), never through
   the new-tenant route, and spawned after every Spot worker. That route proves
   a login new only through an unexpired Spot grant, so under an explicit
-  `MERRYMEN_FLEET_ROLLOUT` a login with none (Perps-only, or a Spot grant
+  `AGENTCAP_FLEET_ROLLOUT` a login with none (Perps-only, or a Spot grant
   that expired before the route admitted it) runs its Perps worker only once
-  named, whatever `MERRYMEN_ROLLOUT_NEW_TENANTS` says. Held, no Close, Close
+  named, whatever `AGENTCAP_ROLLOUT_NEW_TENANTS` says. Held, no Close, Close
   all or practice reset is carried out: each is refused while its book has not
   reported, and queued and left to expire once it has. The owner's kill still
   stops the wallet, and settings and renewals are still saved. The
@@ -106,7 +106,7 @@ Perps workers, and nothing live:
   lease, so a login is never split across replicas. That is checked at every
   start and restart, on every pass and the moment the Spot lease drops. One
   that loses the lease is stood down, final-passed and released.
-- *Only at `MERRYMEN_PERPS=paper`.* The Perps roster is read whatever the flag
+- *Only at `AGENTCAP_PERPS=paper`.* The Perps roster is read whatever the flag
   says (being listed is what keeps a Perps book, lease and home from every
   cleanup), but a Perps worker is started only at `paper`. Turned off, a
   running one is stood down as a kill stands one down, its last rows mirrored
@@ -146,7 +146,7 @@ Perps workers, and nothing live:
   `perps_grants`, its mirror tenant `<owner>:perps`), on its own wallet's
   tick, so a wedged one shows as stale rather than as a retired account
   (`staff-diagnostics.ts`). Where Perps workers do not run (this service's
-  `MERRYMEN_PERPS` is not paper) the fleet stands them all down and keeps
+  `AGENTCAP_PERPS` is not paper) the fleet stands them all down and keeps
   their grants, so they are counted without a current grant, with a warning,
   never as stale workers crowding a wedged Spot worker out of the list.
 - *One feed.* `perps/fleet-feed.ts` publishes the public Lighter feed every
@@ -199,7 +199,7 @@ are on it; the handover already refuses.
 
 **What 5a carries: the foundation, inert.** Nothing a Spot owner or a caller
 who names no wallet can do changes, and no Perps capability is added, with
-`MERRYMEN_PERPS` set or not. It lands the pieces the rest of slice 5 stands on:
+`AGENTCAP_PERPS` set or not. It lands the pieces the rest of slice 5 stands on:
 
 - the core wall's `perpsOnly` option (`WallOptions.perpsOnly`), set only from
   a grant's signed `purpose` (`grantWallOptions`): a Perps wall carries no Spot
@@ -207,7 +207,7 @@ who names no wallet can do changes, and no Perps capability is added, with
   perp route when a perp block is sealed and the energy buy when asked for. A
   paper Perps grant seals neither, so its wall is empty. Spot walls rebuild
   byte for byte as before. No signer makes a Perps grant yet;
-- one perps gate: `MERRYMEN_PERPS`'s parser moved to
+- one perps gate: `AGENTCAP_PERPS`'s parser moved to
   `packages/core/src/perps-ceiling.ts` (the worker re-exports it), read by the
   web as `perpsOffered` (not off) and `perpsCreationAllowed` (paper)
   (`web/src/lib/perps-enabled.ts`), which no route asks yet;
@@ -256,7 +256,7 @@ signer that makes one.** No screen calls the signer for Perps yet: the desk
 and `/create?for=perps` are PR 3.
 
 - `POST /api/grants?wallet=perps` makes or renews a Perps wallet only at
-  `MERRYMEN_PERPS=paper` (`perpsCreationAllowed`); otherwise 403
+  `AGENTCAP_PERPS=paper` (`perpsCreationAllowed`); otherwise 403
   `perps-wallet-not-offered` with nothing read or written. A renewal's first
   step, `DELETE /api/grants?wallet=perps` with `purpose:
   "permission-replacement"`, is refused the same way before the store or the
@@ -335,7 +335,7 @@ and `/create?for=perps` are PR 3.
   heartbeat and settings tick, through core's `publicGrantView` (Spot keeps
   its denylist view, D3), with the worker's `agents.perps` report and no
   energy; every GET answer is `private, no-store`. It is answered whatever
-  `MERRYMEN_PERPS` says (D1).
+  `AGENTCAP_PERPS` says (D1).
 - `renewalSkipsRevocation` (`web/src/lib/perps-renewal.ts`): the one rule by
   which a renewal may skip the on-chain revocation, true only for a Perps grant
   whose wall rebuilds empty (D6). The empty wall is the whole safety case: a
@@ -359,14 +359,14 @@ and `/create?for=perps` are PR 3.
   `accountIndexForPurpose("perps")`, or refused before the stop; D6 decided
   from the page's own copy when the server holds none (an interrupted renewal),
   as well as from the server's view when it holds one; and a decline before
-  the stop when `MERRYMEN_PERPS` is not paper (the stop is refused 403 then).
+  the stop when `AGENTCAP_PERPS` is not paper (the stop is refused 403 then).
 - The browser signer (`web/src/lib/session.ts`): `MintOptions.purpose` (absent
   is Spot) picks the Kernel index (`accountIndexForPurpose`, at both
   derivations), the wall (`perpsOnly`, no Spot spender, no energy buy, no
   scoped-spenders marker, no `tradeable-v2`: the empty wall the server
   expects), the grant's own `purpose`, the claim it signs (`bindingMessage`
-  with the purpose), the storage slot (`merrymen.grant.perps.v1`; Spot's stays
-  `merrymen.grant.v1`) and the handoff URL (`walletUrl`, so
+  with the purpose), the storage slot (`agentcap.grant.perps.v1`; Spot's stays
+  `agentcap.grant.v1`) and the handoff URL (`walletUrl`, so
   `/api/grants?wallet=perps`). A Perps signature refuses, before the owner
   signs anything, every Spot opt-in, any Lighter key (new, carried, dropped or
   recovered), and any network but mainnet. The storage helpers
@@ -468,7 +468,7 @@ nothing reaches a venue, a key or real money.
   come to an owner who never pressed one (`resetHaltSentence`). Its
   condition is the owner's own Close all ("if you pressed Close all before
   asking for this reset"), never what the report shows: the operator's
-  `MERRYMEN_HALT_PERP_ENTRIES` shows the same pause, and no reset lifts it. A Spot
+  `AGENTCAP_HALT_PERP_ENTRIES` shows the same pause, and no reset lifts it. A Spot
   worker's lane is never armed, so its reset keeps no pause and reads no perp
   account.
   A Perps reset expires with the Perps order window, so a reset can never lift
@@ -509,7 +509,7 @@ nothing reaches a venue, a key or real money.
   since, but a position the strategy opened since if one was, which the owner
   never asked to close (`lane.test.ts` pins both). It can only ever reduce;
   it is not harmless to run twice.
-- A Perps worker under any `MERRYMEN_PERPS` but paper claims no command
+- A Perps worker under any `AGENTCAP_PERPS` but paper claims no command
   (`settings.ts perpsWorkerStoodDown`, D19); hosted, it is not running at all.
   Its rows wait unclaimed, and are answered when a worker next drains under
   paper: run inside their window, expired with nothing sent after it. Only
@@ -529,7 +529,7 @@ Spot wallet's answers are what they were; no screen calls the Perps ones yet
 (the desk and `/create?for=perps` are PR 3).
 
 - `GET /api/settings?wallet=perps` answers from the Perps store (hosted) or
-  `accounts/perps/settings.json` (self-hosted), whatever `MERRYMEN_PERPS` says
+  `accounts/perps/settings.json` (self-hosted), whatever `AGENTCAP_PERPS` says
   (D1), with `strategy` `perps-only`, `private, no-store` and `Vary: Cookie`.
   A store or file that cannot be read is 503 `settings-unreadable`, never the
   defaults.
@@ -571,7 +571,7 @@ Spot wallet's answers are what they were; no screen calls the Perps ones yet
   Perps settings in this build, and the desk (PR 3) should send `perpsEnabled`
   only when the owner flips the switch. Self-hosted, the look-and-write is
   pinned with the kill written inside the save's read-to-write window
-  (`settings-if-unchanged.test.ts`, `perps-kill-race.test.ts`); a `merrymen
+  (`settings-if-unchanged.test.ts`, `perps-kill-race.test.ts`); a `agentcap
   kill` or Telegram `/kill` in another process now takes the same short SQLite
   OS lock as the comparison and rename (`settings-file-lock.test.ts`). The
   file-backed hosted store's conditional save and kill use it too. A contended
@@ -646,7 +646,7 @@ Spot wallet's answers are what they were; no screen calls the Perps ones yet
   the owner (`reportFleetSource` records no hold for a Perps worker). Once the
   `agents` row is there it is history itself, so a command beside it changes
   nothing (`perps-not-reported.postgres.test.ts`). Where no Perps worker runs
-  (`perpsWorkersRun`: `MERRYMEN_PERPS` is not paper; it answers as the
+  (`perpsWorkersRun`: `AGENTCAP_PERPS` is not paper; it answers as the
   orchestrator's spawn rule `orchestrator.ts perpsSpawnable`, exported so
   `perps-enabled.test.ts` asks both, and a self-hosted worker's stand-down
   `settings.ts perpsWorkerStoodDown` do, over the same lever values, odd
@@ -773,7 +773,7 @@ as one; the Spot text is unchanged, byte for byte.
 always; Perps in `perps_grants` and `perps_tenant_settings`. The file backend
 (tests and the single-service deploy): `tenants/` and `tenant-settings/` for
 Spot, `tenants-perps/` and `tenant-settings-perps/` for Perps. Self-hosted, the
-Perps wallet is a complete home of its own at `$MERRYMEN_HOME/accounts/perps`
+Perps wallet is a complete home of its own at `$AGENTCAP_HOME/accounts/perps`
 (`purposeHome`): its `grant.json`, its archive under `grants/`, its pause
 marker, and later its settings and ledger. Nothing creates a Perps table or
 directory until the first Perps write: until then every Perps read answers
@@ -858,10 +858,10 @@ are recorded beside the constants in `packages/core/src/perps.ts`.
    leverage, liquidation, funding, the venue and its terms, the excluded
    regions, that the venue publishes the account's positions, and what the
    wall does not bound (rule 4). The operator may only *restrict*:
-   `MERRYMEN_PERPS=off|paper|live` (**unset is off, hosted and self-hosted**,
-   as `MERRYMEN_SOLANA` is; an operator sets `paper` or `live` explicitly),
-   `MERRYMEN_PERPS_LIVE_TENANTS` (hosted allowlist of Perps wallets), and
-   `MERRYMEN_HALT_PERP_ENTRIES=1` (entries off, exits and protection on). These
+   `AGENTCAP_PERPS=off|paper|live` (**unset is off, hosted and self-hosted**,
+   as `AGENTCAP_SOLANA` is; an operator sets `paper` or `live` explicitly),
+   `AGENTCAP_PERPS_LIVE_TENANTS` (hosted allowlist of Perps wallets), and
+   `AGENTCAP_HALT_PERP_ENTRIES=1` (entries off, exits and protection on). These
    limit trading, never a kill: every kill reaches the Perps wallet whatever
    they say (rule 13).
 
@@ -922,7 +922,7 @@ are recorded beside the constants in `packages/core/src/perps.ts`.
    key's custody or better.** `POST /api/perps/keygen` (owner-authenticated,
    POST-only, `Cache-Control: no-store`, rate-limited, never logged) generates
    the pair with the official signer. Self-hosted it writes
-   `$MERRYMEN_HOME/perp-keys/<pubkey>.json` (0600) and returns the public key;
+   `$AGENTCAP_HOME/perp-keys/<pubkey>.json` (0600) and returns the public key;
    hosted it returns the public key plus `AES-256-GCM(DEK, privateKey, AAD =
    tenant|smartAccount|pubkey|keyIndex)`. The grant carries only
    `perp = { route, apiKeyIndex, apiPublicKey, apiKeySealed? }`. No HTTP
@@ -1075,7 +1075,7 @@ are recorded beside the constants in `packages/core/src/perps.ts`.
     (`DELETE /api/grants`, `delete-agent`, hosted and self-hosted, which the
     phone apps' Stop sends too), the orchestrator's `honourKill` for a hosted
     Telegram /kill or a recorded one, the self-hosted Telegram /kill, and
-    `merrymen kill` (through `perps-kill-cli.ts`). Start over
+    `agentcap kill` (through `perps-kill-cli.ts`). Start over
     (`/api/grants/discard`) calls it too, because owners are told it is the
     kill switch (the MCP control list, the hosted Telegram kill's fallback); it
     still does not stop Solana, which it never did. A self-hosted Spot
@@ -1086,7 +1086,7 @@ are recorded beside the constants in `packages/core/src/perps.ts`.
     a half that fails is reported incomplete, never done, and the kill stays
     pending; a retry is safe; an owner with no Perps wallet costs the kill a
     read-only look, so it takes no lock and writes no schema, and its answer is
-    what it always was; it runs whatever `MERRYMEN_PERPS` says. A Telegram kill
+    what it always was; it runs whatever `AGENTCAP_PERPS` says. A Telegram kill
     carried out later revokes only a Perps grant stored at or before it, as the
     Spot half does: one signed after the kill is the owner's later decision.
     The half revokes the Perps grant (slice 2; self-hosted, archived first so
@@ -1340,7 +1340,7 @@ All perp money is TEXT integer micro-USDG (aggregated in application BigInt or
   upserts). Live positions and orders are re-read from the venue at arm, never
   seeded from shared storage; pending transfers are seeded and checked against
   `getPendingBalance`. Paper perp state rides `paper_checkpoints.perp_json`.
-- **Verify.** Export format `merrymen-journal-v2` with the venue identity
+- **Verify.** Export format `agentcap-journal-v2` with the venue identity
   (venue, L2 chain id, proxy, account index). `reconstruct` knows every kind
   and refuses an unknown one (never skips it); perp fills and funding are
   a separate **venue-attested** evidence class — never chain-verified, never
@@ -1553,7 +1553,7 @@ required before claiming the live venue lifecycle has been verified.
   even when there is no Spot grant; slice 3: it also turns that home's paper
   strategy off, and says each part; with the live stand-down it will write the
   stand-down request and wait); `recover` has a venue leg, selected with
-  `MERRYMEN_HOME="$HOME/.merrymen/accounts/perps" MERRYMEN_WALLET_PURPOSE=perps`.
+  `AGENTCAP_HOME="$HOME/.agentcap/accounts/perps" AGENTCAP_WALLET_PURPOSE=perps`.
 - **Recover** — every platform shows a read-only venue disclosure (fetch and
   `eth_call` only, each field unreadable-not-zero). The owner-key unwind is L1
   priority requests in one sudo UserOp: `cancelAllOrders`, `changePubKey` to a
@@ -1635,7 +1635,7 @@ The concrete internal-pilot policy and unresolved deployment evidence live in
   funding, protected orders, withdrawal, kill and recovery drills, before
   enabling real-money owners. Hosted live also requires Solana's live
   guardrails and the unresolved custody/operating decisions below. Admission
-  remains explicit through `MERRYMEN_PERPS_LIVE_TENANTS`.
+  remains explicit through `AGENTCAP_PERPS_LIVE_TENANTS`.
 - **General availability** additionally requires isolation of hosted workers
   by OS user, a fleet request budget if the venue limits by IP, and replay
   evidence before any performance claim.

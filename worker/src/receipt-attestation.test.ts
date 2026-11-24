@@ -12,9 +12,9 @@ import { canonicalJson, journalHash, JOURNAL_GENESIS } from "./store";
 import { deriveBootstrapAccounting } from "./bootstrap-source";
 import { accountingLicence, BOOTSTRAP_SCHEMA_VERSION, classifyAnchor } from "./bootstrap-state";
 
-const holds = process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS;
-afterEach(() => { if (holds === undefined) delete process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS; else process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS = holds; });
-async function fixture() { process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS = TEST_TENANT; return receiptFixture(); }
+const holds = process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS;
+afterEach(() => { if (holds === undefined) delete process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS; else process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS = holds; });
+async function fixture() { process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS = TEST_TENANT; return receiptFixture(); }
 
 test("dry run writes no schema, file, journal, source metadata or shared row", async () => {
   const f = await fixture();
@@ -152,9 +152,9 @@ test("hold, live-process, missing/changed lease and approval refusals cannot wri
   const f = await fixture();
   try {
     const preview = await attestOriginalReceipt(f.options), before = readFileSync(f.file);
-    delete process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS;
+    delete process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS;
     await assert.rejects(attestOriginalReceipt(f.options), /explicitly held/);
-    process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS = TEST_TENANT;
+    process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS = TEST_TENANT;
     f.setQuiet(false); await assert.rejects(attestOriginalReceipt(f.options), /process/); f.setQuiet(true);
     f.setHealthy(false); await assert.rejects(attestOriginalReceipt(f.options), /lease/); f.setHealthy(true);
     await assert.rejects(attestOriginalReceipt({ ...f.options, mode: "commit", approvedDigest: "0".repeat(64) }), /approval/);
@@ -182,16 +182,16 @@ for (const [description, mutate] of [
 
 test("operator request defaults to dry run and never infers a commit approval", () => {
   assert.equal(receiptAttestationRequest({}), null);
-  assert.deepEqual(receiptAttestationRequest({ MERRYMEN_RECEIPT_ATTEST_ACCOUNT: TEST_ACCOUNT, MERRYMEN_RECEIPT_ATTEST_TENANT: TEST_TENANT }), { account: TEST_ACCOUNT.toLowerCase(), tenant: TEST_TENANT, mode: "dry-run" });
+  assert.deepEqual(receiptAttestationRequest({ AGENTCAP_RECEIPT_ATTEST_ACCOUNT: TEST_ACCOUNT, AGENTCAP_RECEIPT_ATTEST_TENANT: TEST_TENANT }), { account: TEST_ACCOUNT.toLowerCase(), tenant: TEST_TENANT, mode: "dry-run" });
   for (const env of [
-    { MERRYMEN_RECEIPT_ATTEST_MODE: "commit" },
-    { MERRYMEN_RECEIPT_ATTEST_ACCOUNT: TEST_ACCOUNT, MERRYMEN_RECEIPT_ATTEST_MODE: "commit" },
-    { MERRYMEN_RECEIPT_ATTEST_ACCOUNT: TEST_ACCOUNT, MERRYMEN_RECEIPT_ATTEST_MODE: "yes" },
-    { MERRYMEN_RECEIPT_ATTEST_ACCOUNT: `${TEST_ACCOUNT},${TEST_ACCOUNT}` },
-    { MERRYMEN_RECEIPT_ATTEST_ACCOUNT: TEST_ACCOUNT, MERRYMEN_RECEIPT_ATTEST_APPROVAL: "a".repeat(64) },
+    { AGENTCAP_RECEIPT_ATTEST_MODE: "commit" },
+    { AGENTCAP_RECEIPT_ATTEST_ACCOUNT: TEST_ACCOUNT, AGENTCAP_RECEIPT_ATTEST_MODE: "commit" },
+    { AGENTCAP_RECEIPT_ATTEST_ACCOUNT: TEST_ACCOUNT, AGENTCAP_RECEIPT_ATTEST_MODE: "yes" },
+    { AGENTCAP_RECEIPT_ATTEST_ACCOUNT: `${TEST_ACCOUNT},${TEST_ACCOUNT}` },
+    { AGENTCAP_RECEIPT_ATTEST_ACCOUNT: TEST_ACCOUNT, AGENTCAP_RECEIPT_ATTEST_APPROVAL: "a".repeat(64) },
   ]) assert.throws(() => receiptAttestationRequest(env));
-  assert.equal(receiptAttestationRequest({ MERRYMEN_RECEIPT_ATTEST_ACCOUNT: TEST_ACCOUNT, MERRYMEN_RECEIPT_ATTEST_TENANT: TEST_TENANT, MERRYMEN_RECEIPT_ATTEST_MODE: "commit", MERRYMEN_RECEIPT_ATTEST_APPROVAL: "a".repeat(64) })!.mode, "commit");
-  const request = receiptAttestationRequest({ MERRYMEN_RECEIPT_ATTEST_ACCOUNT: TEST_ACCOUNT, MERRYMEN_RECEIPT_ATTEST_TENANT: TEST_TENANT })!;
+  assert.equal(receiptAttestationRequest({ AGENTCAP_RECEIPT_ATTEST_ACCOUNT: TEST_ACCOUNT, AGENTCAP_RECEIPT_ATTEST_TENANT: TEST_TENANT, AGENTCAP_RECEIPT_ATTEST_MODE: "commit", AGENTCAP_RECEIPT_ATTEST_APPROVAL: "a".repeat(64) })!.mode, "commit");
+  const request = receiptAttestationRequest({ AGENTCAP_RECEIPT_ATTEST_ACCOUNT: TEST_ACCOUNT, AGENTCAP_RECEIPT_ATTEST_TENANT: TEST_TENANT })!;
   assert.equal(receiptAttestationTenant(request, [{ account: TEST_ACCOUNT, tenant: TEST_TENANT }]), TEST_TENANT);
   for (const roster of [[], [{ account: TEST_ACCOUNT, tenant: "0x00000000000000000000000000000000000000a9" }],
     [{ account: TEST_ACCOUNT, tenant: TEST_TENANT }, { account: TEST_ACCOUNT, tenant: TEST_TENANT }]]) assert.throws(() => receiptAttestationTenant(request, roster), /declared tenant/);

@@ -69,8 +69,8 @@ describe("the status carries energy", () => {
 
   it("it is a column read, not a chain read or a guess", () => {
     // Nothing in the route may work energy out for itself: no balanceOf of
-    // $MERRYMEN, no allowance arithmetic. The child's report is the answer.
-    assert.ok(!/MERRYMEN_TOKEN/.test(CODE), "the route must not read $MERRYMEN balances itself");
+    // $AGENTCAP, no allowance arithmetic. The child's report is the answer.
+    assert.ok(!/AGENTCAP_TOKEN/.test(CODE), "the route must not read $AGENTCAP balances itself");
     assert.ok(!/parseEnergyStatus/.test(CODE), "parsing lives in the one reader, lib/agent-energy.ts");
   });
 });

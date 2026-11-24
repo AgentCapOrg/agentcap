@@ -276,7 +276,7 @@ describe("the policy cannot drift from the strategies", () => {
 });
 
 /**
- * A MERRYMAN THAT CANNOT TRADE MUST NOT SAY IT IS TRADING.
+ * A AGENTCAPAVATAR THAT CANNOT TRADE MUST NOT SAY IT IS TRADING.
  *
  * Brain runs in shadow: it thinks, its decision is persisted, and there is no
  * path from it into `proposalsToIntents` or the executor — a separate test
@@ -359,7 +359,7 @@ describe("shadow decisions say the conditional out loud", () => {
     // The fail-closed default is not weakened by the existence of a shadow arm.
     //
     // `brain` USED TO BE ONE OF THESE and is now classified, deliberately: an
-    // agent the owner enrolled in MERRYMEN_BRAIN_LIVE files its thinking under
+    // agent the owner enrolled in AGENTCAP_BRAIN_LIVE files its thinking under
     // that source and its decisions CAN reach a trade, so an owner watching a
     // feed is owed the reasoning behind a trade that spent their money at least
     // as much as one that did not. The property this test is about — an

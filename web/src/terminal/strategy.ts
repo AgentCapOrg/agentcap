@@ -151,7 +151,7 @@ export function ownerTag(handle: string | null | undefined): string {
 }
 
 /**
- * The strategies the WORKER will only run for a $MERRYMEN holder.
+ * The strategies the WORKER will only run for a $AGENTCAP holder.
  *
  * Mirrors CIRCLE_STRATEGIES in worker/src/strategies/registry.ts. Kept here
  * rather than imported because every consumer is a client component, and

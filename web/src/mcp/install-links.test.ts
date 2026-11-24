@@ -7,26 +7,26 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { CONNECTOR_NAME, SERVER_KEY, installCommands, installLinks } from "./install-links";
 
-const URL_ = "https://mcp.merrymen.dev/mcp";
-/** base64('{"url":"https://mcp.merrymen.dev/mcp"}'), percent-encoded. */
+const URL_ = "https://mcp.agentcap.xyz/mcp";
+/** base64('{"url":"https://mcp.agentcap.xyz/mcp"}'), percent-encoded. */
 const B64_CONFIG = "eyJ1cmwiOiJodHRwczovL21jcC5tZXJyeW1lbi5kZXYvbWNwIn0%3D";
 
 test("the names an assistant stores and shows", () => {
-  assert.equal(CONNECTOR_NAME, "Merrymen");
-  assert.equal(SERVER_KEY, "merrymen");
+  assert.equal(CONNECTOR_NAME, "AgentCap");
+  assert.equal(SERVER_KEY, "agentcap");
 });
 
 test("every install link for the production address, exactly", () => {
   const l = installLinks(URL_);
   // Opened live on 2026-09-25: claude.ai's Add custom connector dialog, pre-filled.
-  assert.equal(l.claude, "https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=Merrymen&connectorUrl=https%3A%2F%2Fmcp.merrymen.dev%2Fmcp");
-  assert.equal(l.claudeOrg, "https://claude.ai/admin-settings/connectors?modal=add-custom-connector&connectorName=Merrymen&connectorUrl=https%3A%2F%2Fmcp.merrymen.dev%2Fmcp");
-  assert.equal(l.cursor, `https://cursor.com/en/install-mcp?name=merrymen&config=${B64_CONFIG}`);
-  assert.equal(l.vscode, "https://vscode.dev/redirect/mcp/install?name=merrymen&config=%7B%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A%2F%2Fmcp.merrymen.dev%2Fmcp%22%7D");
-  assert.equal(l.vscodeInsiders, "https://vscode.dev/redirect/mcp/install?name=merrymen&config=%7B%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A%2F%2Fmcp.merrymen.dev%2Fmcp%22%7D&quality=insiders");
-  assert.equal(l.kiro, "https://kiro.dev/launch/mcp/add?name=merrymen&config=%7B%22url%22%3A%22https%3A%2F%2Fmcp.merrymen.dev%2Fmcp%22%7D");
-  assert.equal(l.lmstudio, `lmstudio://add_mcp?name=merrymen&config=${B64_CONFIG}`);
-  assert.equal(l.goose, "goose://extension?url=https%3A%2F%2Fmcp.merrymen.dev%2Fmcp&type=streamable_http&id=merrymen&name=Merrymen&description=Your%20Merrymen%20trading%20agent&timeout=300");
+  assert.equal(l.claude, "https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=AgentCap&connectorUrl=https%3A%2F%2Fmcp.agentcap.xyz%2Fmcp");
+  assert.equal(l.claudeOrg, "https://claude.ai/admin-settings/connectors?modal=add-custom-connector&connectorName=AgentCap&connectorUrl=https%3A%2F%2Fmcp.agentcap.xyz%2Fmcp");
+  assert.equal(l.cursor, `https://cursor.com/en/install-mcp?name=agentcap&config=${B64_CONFIG}`);
+  assert.equal(l.vscode, "https://vscode.dev/redirect/mcp/install?name=agentcap&config=%7B%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A%2F%2Fmcp.agentcap.xyz%2Fmcp%22%7D");
+  assert.equal(l.vscodeInsiders, "https://vscode.dev/redirect/mcp/install?name=agentcap&config=%7B%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A%2F%2Fmcp.agentcap.xyz%2Fmcp%22%7D&quality=insiders");
+  assert.equal(l.kiro, "https://kiro.dev/launch/mcp/add?name=agentcap&config=%7B%22url%22%3A%22https%3A%2F%2Fmcp.agentcap.xyz%2Fmcp%22%7D");
+  assert.equal(l.lmstudio, `lmstudio://add_mcp?name=agentcap&config=${B64_CONFIG}`);
+  assert.equal(l.goose, "goose://extension?url=https%3A%2F%2Fmcp.agentcap.xyz%2Fmcp&type=streamable_http&id=agentcap&name=AgentCap&description=Your%20AgentCap%20trading%20agent&timeout=300");
   assert.equal(l.chatgpt, "https://chatgpt.com/plugins");
   assert.equal(l.grok, "https://grok.com/connectors");
 });
@@ -41,11 +41,11 @@ test("the base64 configs decode to the address and nothing else", () => {
 
 test("every command for the production address, exactly", () => {
   assert.deepEqual(installCommands(URL_), {
-    claudeCode: ["claude mcp add --transport http --scope user merrymen https://mcp.merrymen.dev/mcp", "claude mcp login merrymen"],
-    codex: ["codex mcp add merrymen --url https://mcp.merrymen.dev/mcp"],
-    gemini: ["gemini mcp add -s user -t http merrymen https://mcp.merrymen.dev/mcp"],
-    devin: ["devin mcp add -s user merrymen https://mcp.merrymen.dev/mcp", "devin mcp login merrymen"],
-    grok: ["grok mcp add --transport http merrymen https://mcp.merrymen.dev/mcp"],
+    claudeCode: ["claude mcp add --transport http --scope user agentcap https://mcp.agentcap.xyz/mcp", "claude mcp login agentcap"],
+    codex: ["codex mcp add agentcap --url https://mcp.agentcap.xyz/mcp"],
+    gemini: ["gemini mcp add -s user -t http agentcap https://mcp.agentcap.xyz/mcp"],
+    devin: ["devin mcp add -s user agentcap https://mcp.agentcap.xyz/mcp", "devin mcp login agentcap"],
+    grok: ["grok mcp add --transport http agentcap https://mcp.agentcap.xyz/mcp"],
   });
 });
 
@@ -88,8 +88,8 @@ test("an address with a query, a fragment or odd characters is fully encoded in 
 test("a command quotes an address a shell would act on, and leaves a plain one bare", () => {
   const odd = "https://mcp.example.test/mcp?a=1&b=it's";
   const c = installCommands(odd);
-  assert.equal(c.codex[0], `codex mcp add merrymen --url 'https://mcp.example.test/mcp?a=1&b=it'\\''s'`);
-  assert.equal(c.claudeCode[0], `claude mcp add --transport http --scope user merrymen 'https://mcp.example.test/mcp?a=1&b=it'\\''s'`);
-  assert.equal(c.grok[0], `grok mcp add --transport http merrymen 'https://mcp.example.test/mcp?a=1&b=it'\\''s'`);
-  assert.equal(installCommands("http://localhost:3000/mcp").codex[0], "codex mcp add merrymen --url http://localhost:3000/mcp");
+  assert.equal(c.codex[0], `codex mcp add agentcap --url 'https://mcp.example.test/mcp?a=1&b=it'\\''s'`);
+  assert.equal(c.claudeCode[0], `claude mcp add --transport http --scope user agentcap 'https://mcp.example.test/mcp?a=1&b=it'\\''s'`);
+  assert.equal(c.grok[0], `grok mcp add --transport http agentcap 'https://mcp.example.test/mcp?a=1&b=it'\\''s'`);
+  assert.equal(installCommands("http://localhost:3000/mcp").codex[0], "codex mcp add agentcap --url http://localhost:3000/mcp");
 });

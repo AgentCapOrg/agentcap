@@ -16,7 +16,7 @@
 import { NextResponse } from "next/server";
 import { withReadDb } from "@/lib/ledger";
 import { readAgentSearchWindow } from "@/lib/agent-search";
-import { getIdentityStore } from "@merrymen/identity-store";
+import { getIdentityStore } from "@agentcap/identity-store";
 import { fetchMarket } from "@/lib/market";
 import { walletNotSupported } from "@/lib/route-guard";
 

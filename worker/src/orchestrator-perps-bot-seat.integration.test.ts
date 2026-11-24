@@ -10,11 +10,11 @@ import { privateKeyToAccount } from "viem/accounts";
 import type { StoredGrant } from "../../packages/core/src/index";
 
 const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "perps-bot-seat-")));
-process.env.MERRYMEN_HOME = fleet;
-process.env.MERRYMEN_HOSTED = "1";
-process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 31).toString("base64");
-for (const key of ["DATABASE_URL", "MERRYMEN_ACCOUNTING_HOLD_TENANTS", "MERRYMEN_FLEET_RECOVERY_REPORT_ONLY",
-  "MERRYMEN_PERSISTENT_HOME_REQUIRED", "MERRYMEN_FLEET_ROLLOUT", "MERRYMEN_ROLLOUT_NEW_TENANTS", "MERRYMEN_PERPS_PAPER_TENANTS"]) delete process.env[key];
+process.env.AGENTCAP_HOME = fleet;
+process.env.AGENTCAP_HOSTED = "1";
+process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 31).toString("base64");
+for (const key of ["DATABASE_URL", "AGENTCAP_ACCOUNTING_HOLD_TENANTS", "AGENTCAP_FLEET_RECOVERY_REPORT_ONLY",
+  "AGENTCAP_PERSISTENT_HOME_REQUIRED", "AGENTCAP_FLEET_ROLLOUT", "AGENTCAP_ROLLOUT_NEW_TENANTS", "AGENTCAP_PERPS_PAPER_TENANTS"]) delete process.env[key];
 for (const key of Object.keys(process.env)) if (key.startsWith("RAILWAY_")) delete process.env[key];
 
 const orch = await import("./orchestrator");
@@ -50,8 +50,8 @@ class FakeProc extends EventEmitter {
 }
 const spawned: FakeProc[] = [];
 const key = (owner: string) => `${owner}:perps`;
-const running = (owner: string) => spawned.filter(p => !p.gone && p.env.MERRYMEN_HOME === orch.childHome(owner));
-const seats = (owner: string) => running(owner).filter(p => p.env.MERRYMEN_PERPS_BOT_SEAT === "1");
+const running = (owner: string) => spawned.filter(p => !p.gone && p.env.AGENTCAP_HOME === orch.childHome(owner));
+const seats = (owner: string) => running(owner).filter(p => p.env.AGENTCAP_PERPS_BOT_SEAT === "1");
 const settle = async () => { for (let i = 0; i < 35; i++) await new Promise(resolve => setImmediate(resolve)); };
 orch.setSpawnForTest((_c: string, args: readonly string[], options: SpawnOptions) => {
   const proc = new FakeProc(args, options.env ?? {}); spawned.push(proc); return proc as unknown as ChildProcess;
@@ -87,7 +87,7 @@ async function owner(expiresAt?: number) {
   return { tenant, account, spotAccount };
 }
 
-beforeEach(() => { process.env.MERRYMEN_PERPS = "paper"; });
+beforeEach(() => { process.env.AGENTCAP_PERPS = "paper"; });
 afterEach(async () => {
   refused.clear(); orch.setPhantomProcessesForTest(0);
   for (const proc of spawned) { proc.autoExit = true; if (proc.signals.length) proc.die(); }
@@ -113,9 +113,9 @@ test("Perps-only bot has the owner's lease and no signing grant, ledger, or data
   const seat = seats(o.tenant)[0]!;
   assert.ok(seat.args.some(arg => arg.endsWith("telegram-hold.ts")));
   assert.equal(seat.env.DATABASE_URL, undefined);
-  assert.equal(seat.env.MERRYMEN_STORE_DEK, undefined);
-  assert.equal(seat.env.MERRYMEN_TG_GROUPS, "0");
-  for (const name of ["grant.json", "merrymen.db"]) assert.equal(existsSync(path.join(orch.childHome(o.tenant), name)), false);
+  assert.equal(seat.env.AGENTCAP_STORE_DEK, undefined);
+  assert.equal(seat.env.AGENTCAP_TG_GROUPS, "0");
+  for (const name of ["grant.json", "agentcap.db"]) assert.equal(existsSync(path.join(orch.childHome(o.tenant), name)), false);
   assert.doesNotMatch(readFileSync(path.join(orch.childHome(o.tenant), "perps-bot-view.json"), "utf8"), /demoSessionPrivateKey|serialized|seat-test-token/);
   const tradingSettings = JSON.parse(readFileSync(path.join(orch.childHome(key(o.tenant)), "settings.json"), "utf8"));
   assert.equal(tradingSettings.telegramEnabled, false);
@@ -144,7 +144,7 @@ test("the process cap includes the bot seat, which gets the last slot before its
 });
 
 test("a cold Perps-only owner retains bot access while paper trading is off", async () => {
-  const o = await owner(); process.env.MERRYMEN_PERPS = "off";
+  const o = await owner(); process.env.AGENTCAP_PERPS = "off";
   await orch.reconcile(); await settle();
   assert.equal(seats(o.tenant).length, 1, "read and stop controls remain available when trading is disabled");
   assert.equal(running(key(o.tenant)).length, 0);
@@ -161,7 +161,7 @@ test("expired Perps permission retains the bot but cannot start a trading worker
 test("switching paper trading off keeps an existing bot seat and its owner's control home", async () => {
   const o = await owner(); await orch.reconcile(); await settle();
   const seat = seats(o.tenant)[0]!;
-  process.env.MERRYMEN_PERPS = "off";
+  process.env.AGENTCAP_PERPS = "off";
   await orch.reconcile(); await settle();
   assert.deepEqual(seats(o.tenant), [seat]);
   assert.equal(running(key(o.tenant)).length, 0);

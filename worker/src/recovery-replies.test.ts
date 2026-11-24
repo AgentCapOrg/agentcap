@@ -17,7 +17,7 @@ import { createRecoveryPublicReply, RECOVERY_PUBLIC_CONTEXT, RECOVERY_PUBLIC_GRE
 import type { Db } from "./db";
 import type { TelegramOpts, TgMessage } from "./telegram/api";
 
-const URL = process.env.MERRYMEN_TEST_PG_URL;
+const URL = process.env.AGENTCAP_TEST_PG_URL;
 const DEK = Buffer.alloc(32, 13);
 const address = (n: number) => `0x${n.toString(16).padStart(40, "0")}` as `0x${string}`;
 type Query = { rows: Record<string, unknown>[]; rowCount?: number | null };
@@ -56,7 +56,7 @@ async function fixture(t: TestContext, count = 1) {
   // fails loudly if it does not.
   (pool as unknown as { on(event: "error", fn: () => void): void }).on("error", () => {});
   const clients: Client[] = [];
-  const parent = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-reply-entry-"))), home = path.join(parent, "volume"); mkdirSync(home, { mode: 0o700 });
+  const parent = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-reply-entry-"))), home = path.join(parent, "volume"); mkdirSync(home, { mode: 0o700 });
   t.after(async () => { await pool.end(); await Promise.allSettled(clients.map(c => c.end())); await admin.query(`DROP SCHEMA ${schema} CASCADE`); await admin.end(); rmSync(parent, { recursive: true, force: true }); });
   const connect = async () => { const c = new pg.Client({ connectionString: localUrl }); clients.push(c); await c.connect(); return c; };
   await pool.query(readFileSync(new globalThis.URL("./testdata/shared-schema-75995697.sql", import.meta.url), "utf8"));
@@ -90,13 +90,13 @@ async function fixture(t: TestContext, count = 1) {
     await pool.query("INSERT INTO mirror_state(tenant,table_name,last_id,last_stamp) VALUES($1,'trades',73,1073)", [a.tenant]);
     await pool.query("INSERT INTO tenant_ledger_import VALUES($1,'original-book-import-receipt')", [a.tenant]);
     const child = path.join(home, "children", a.tenant); mkdirSync(child, { recursive: true, mode: 0o700 });
-    for (const [name, text] of [["merrymen.db", "original-book-must-not-open"], ["merrymen.db-wal", "original-WAL"], ["merrymen.db-shm", "original-SHM"], ["grant.json", "original-private-grant"], [".source-required", "immutable original-source hold"]] as const) writeFileSync(path.join(child, name), text, { mode: 0o600 });
+    for (const [name, text] of [["agentcap.db", "original-book-must-not-open"], ["agentcap.db-wal", "original-WAL"], ["agentcap.db-shm", "original-SHM"], ["grant.json", "original-private-grant"], [".source-required", "immutable original-source hold"]] as const) writeFileSync(path.join(child, name), text, { mode: 0o600 });
     mkdirSync(path.join(child, "soul"), { mode: 0o700 }); writeFileSync(path.join(child, "soul", "OWNER.md"), "private local memory remains held", { mode: 0o600 });
   }
   const halt = path.join(home, "FLEET_HALT"); writeFileSync(halt, "operator halt\n", { mode: 0o600 });
   const st = lstatSync(home, { bigint: true }), major = ((st.dev >> 8n) & 0xfffn) | ((st.dev >> 32n) & 0xfffff000n), minor = (st.dev & 0xffn) | ((st.dev >> 12n) & 0xffffff00n);
   const mount = `40 20 ${major}:${minor} / ${home} rw - ext4 /dev/fixture rw\n`;
-  const env: NodeJS.ProcessEnv = { MERRYMEN_HOME: home, RAILWAY_VOLUME_MOUNT_PATH: home, MERRYMEN_HOME_VOLUME_ID: "d6481580-14af-430c-af4a-f3540dfb833d", MERRYMEN_HOSTED: "1", MERRYMEN_PERSISTENT_HOME_REQUIRED: "1", MERRYMEN_FLEET_RECOVERY_REPORT_ONLY: "1", MERRYMEN_FLEET_RECOVERY_REPLIES: "1", DATABASE_URL: localUrl };
+  const env: NodeJS.ProcessEnv = { AGENTCAP_HOME: home, RAILWAY_VOLUME_MOUNT_PATH: home, AGENTCAP_HOME_VOLUME_ID: "d6481580-14af-430c-af4a-f3540dfb833d", AGENTCAP_HOSTED: "1", AGENTCAP_PERSISTENT_HOME_REQUIRED: "1", AGENTCAP_FLEET_RECOVERY_REPORT_ONLY: "1", AGENTCAP_FLEET_RECOVERY_REPLIES: "1", DATABASE_URL: localUrl };
   const tables = (await pool.query("SELECT tablename FROM pg_tables WHERE schemaname=$1 ORDER BY tablename", [schema])).rows.map(r => String(r.tablename));
   const original = async (except: string[] = ["tenant_telegram"]) => { const rows: unknown[] = []; for (const table of tables.filter(name => !except.includes(name))) rows.push([table, (await pool.query(`SELECT * FROM ${table} ORDER BY ctid`)).rows]); return rows; };
   // health.tenant/bot fail every lease at once; health.lost fails one lease OBJECT
@@ -277,7 +277,7 @@ test("actual reply entry: local PostgreSQL authority, deadlines, cursor handoff 
 
   await t.test("missing/malformed modes and unsafe halt refuse before any shared SQL", async s => {
     for (const mode of [undefined, "0", "true", " 1", ""]) {
-      const f = await fixture(s); f.env.MERRYMEN_FLEET_RECOVERY_REPLIES = mode;
+      const f = await fixture(s); f.env.AGENTCAP_FLEET_RECOVERY_REPLIES = mode;
       await assert.rejects(f.run()); assert.equal(f.audit.length, 0);
     }
     const f = await fixture(s); chmodSync(f.halt, 0o644); await assert.rejects(f.run()); assert.equal(f.audit.length, 0);
@@ -286,14 +286,14 @@ test("actual reply entry: local PostgreSQL authority, deadlines, cursor handoff 
 
   await t.test("an explicit empty accounting hold list replies under the unchanged global halt", async s => {
     const f = await fixture(s);
-    f.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS = "";
+    f.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS = "";
     f.transport.getUpdates = async () => updates([f.msg(1)], 2);
     const rows = await f.original(), files = fileFacts(f.home);
     await f.run();
     assert.equal(f.sends.length, 1); assert.equal(Number((await f.offset())!.offset_id), 2);
-    assert.equal(f.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS, "");
-    assert.equal(f.env.MERRYMEN_FLEET_RECOVERY_REPORT_ONLY, "1");
-    assert.equal(f.env.MERRYMEN_FLEET_RECOVERY_REPLIES, "1");
+    assert.equal(f.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS, "");
+    assert.equal(f.env.AGENTCAP_FLEET_RECOVERY_REPORT_ONLY, "1");
+    assert.equal(f.env.AGENTCAP_FLEET_RECOVERY_REPLIES, "1");
     assert.deepEqual(await f.original(), rows); assert.deepEqual(fileFacts(f.home), files);
   });
 
@@ -405,7 +405,7 @@ test("actual reply entry: local PostgreSQL authority, deadlines, cursor handoff 
   await t.test("sealed and operator group toggles suppress public scope while keeping direct replies and actual privacy erasure", async s => {
     for (const flag of ["telegramGroupsEnabled", "telegramGroupCoinsEnabled", "operator-0", "operator-false"] as const) {
       const f = await fixture(s), a = f.actors[0]!, ca = address(888);
-      if (flag === "operator-0" || flag === "operator-false") f.env.MERRYMEN_TG_GROUPS = flag.slice("operator-".length);
+      if (flag === "operator-0" || flag === "operator-false") f.env.AGENTCAP_TG_GROUPS = flag.slice("operator-".length);
       else await f.pool.query("UPDATE tenant_settings SET sealed=$1", [sealSecret(JSON.stringify({ telegramEnabled: true, telegramBotToken: a.token, telegramAllowlist: [a.ownerId, a.room], [flag]: false }), DEK)]);
       const original = await f.original(["tenant_telegram", "tenant_tg_groups"]), files = fileFacts(f.home);
       f.transport.getUpdates = async () => updates([

@@ -3,11 +3,11 @@
  * or { address: null } when not logged in. Read-only, safe to poll.
  *
  * `fomo` says whether this deployment runs Fomo research (hosted only with
- * MERRYMEN_FOMO_ENABLED=1; self-hosted unless it is "0"), so the Settings page
+ * AGENTCAP_FOMO_ENABLED=1; self-hosted unless it is "0"), so the Settings page
  * shows its switches only where they do something.
  */
 import { NextResponse } from "next/server";
-import { isHostedMode } from "@merrymen/core";
+import { isHostedMode } from "@agentcap/core";
 import { tenantOf } from "@/lib/auth";
 import { fomoEnabledFor } from "@/lib/fomo-switch";
 import { walletNotSupported } from "@/lib/route-guard";

@@ -53,7 +53,7 @@ const inconclusive = (gap) => gap >= SOLANA_WORKER_REPEAT_MS / 2
   ? `inconclusive: this process sent the two copies ${Math.round(gap)} ms apart, too close to the ${SOLANA_WORKER_REPEAT_MS} ms window` : null;
 
 /**
- * The real `merrymen solana-agent` command and its real TypeScript worker, with
+ * The real `agentcap solana-agent` command and its real TypeScript worker, with
  * a temporary home, no bindings, no keys and every network call refused.
  */
 function startAgent(t, { detached = false, wedge = false, stall = false, linger = false, holdStart = false, direct = null } = {}) {
@@ -109,9 +109,9 @@ net.Socket.prototype.connect = function (...args) {
 syncBuiltinESMExports();
 `);
   const env = {
-    MERRYMEN_HOME: home, NO_COLOR: "1", NODE_OPTIONS: `--import=${pathToFileURL(guard).href}`, MERRYMEN_SOLANA: "1",
+    AGENTCAP_HOME: home, NO_COLOR: "1", NODE_OPTIONS: `--import=${pathToFileURL(guard).href}`, AGENTCAP_SOLANA: "1",
     // Configured but never contacted: the worker has no bindings to trade.
-    MERRYMEN_SOLANA_RPC_MAINNET: "https://rpc.example.invalid/",
+    AGENTCAP_SOLANA_RPC_MAINNET: "https://rpc.example.invalid/",
   };
   for (const key of ["PATH", "SystemRoot", "WINDIR", "TEMP", "TMP", "TMPDIR"]) {
     if (process.env[key] !== undefined) env[key] = process.env[key];
@@ -307,7 +307,7 @@ test("a worker whose command is killed before the worker's own code runs never o
 });
 
 test("worker stop: the parent named by the command is parsed strictly, and anything else matches no parent", () => {
-  assert.equal(solanaWorkerParentPid({}), undefined, "not started by merrymen solana-agent");
+  assert.equal(solanaWorkerParentPid({}), undefined, "not started by agentcap solana-agent");
   assert.equal(solanaWorkerParentPid({ [SOLANA_WORKER_IPC_ENV]: "4242" }), 4242);
   for (const value of ["", "0", "-1", "01", "1.5", "4242 ", "abc", "99999999999"]) {
     assert.equal(solanaWorkerParentPid({ [SOLANA_WORKER_IPC_ENV]: value }), -1, JSON.stringify(value));

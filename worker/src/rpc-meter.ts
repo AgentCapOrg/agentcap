@@ -22,7 +22,7 @@
  */
 import { createPublicClient, http, type Chain, type Transport } from "viem";
 import { DECLINED_MARKER, QUOTA_MARKER, classifyRpcError, saysQuotaExhausted, type RpcErrorKind } from "./rpc-error";
-import { merrymenHome } from "./home";
+import { agentcapHome } from "./home";
 import { clearCooldown, publishCooldown, readCooldown } from "./rpc-cooldown";
 import {
   DEFAULT_LIMITS,
@@ -305,11 +305,11 @@ export function chainRead(url: string | undefined, label = "read", limits: { tim
     const chainDefault = opts?.chain?.rpcUrls.default.http[0];
     const configured = url || chainDefault;
     if (configured) {
-      // MERRYMEN_RPC_FAILOVER=off keeps every read on the configured endpoint —
+      // AGENTCAP_RPC_FAILOVER=off keeps every read on the configured endpoint —
       // the operator's escape hatch, and how a test models a chain that is
       // unreachable everywhere rather than just at one URL. Read when the client
       // is built, like the URL itself; children inherit it from the orchestrator.
-      const off = /^(0|off|false|no)$/i.test(process.env.MERRYMEN_RPC_FAILOVER?.trim() ?? "");
+      const off = /^(0|off|false|no)$/i.test(process.env.AGENTCAP_RPC_FAILOVER?.trim() ?? "");
       // viem normalizes URLs before fetching (including a root trailing slash)
       // and moves Basic credentials into a header. Register that same URL.
       const primary = transportUrl(configured);
@@ -328,7 +328,7 @@ export function chainRead(url: string | undefined, label = "read", limits: { tim
  * THE SAME READ PATH, AS ONE BARE JSON-RPC CALL — for a tool that speaks raw
  * methods (chain-capital.ts RpcCall) rather than a viem client.
  *
- * The orchestrator's accounting tools posted straight to MERRYMEN_RPC_MAINNET
+ * The orchestrator's accounting tools posted straight to AGENTCAP_RPC_MAINNET
  * with fetch, so the house endpoint's spent quota (2026-10-15 on) left the
  * reconstruction short of every window it read: a repair that fails closed
  * for want of a read the chain's public RPC would have served. This goes
@@ -570,14 +570,14 @@ function markUp(ep: Endpoint): void {
 
 function shared(ep: Endpoint, now: number): number | null {
   if (now - ep.sharedSeen.at < SHARED_POLL_MS) return ep.sharedSeen.until;
-  ep.sharedSeen = { until: readCooldown(merrymenHome(), ep.key), at: now };
+  ep.sharedSeen = { until: readCooldown(agentcapHome(), ep.key), at: now };
   return ep.sharedSeen.until;
 }
 
 function publishIfNew(ep: Endpoint): void {
   const s = shared(ep, Date.now());
   if (!shouldPublish(ep.state, s)) return;
-  publishCooldown(merrymenHome(), ep.state.coolUntil, process.env.MERRYMEN_HOME ?? "worker", ep.key);
+  publishCooldown(agentcapHome(), ep.state.coolUntil, process.env.AGENTCAP_HOME ?? "worker", ep.key);
   ep.sharedSeen = { until: ep.state.coolUntil, at: Date.now() };
 }
 
@@ -628,8 +628,8 @@ export function resetGovernorForTest(): void {
   // previous case's warning to the rest of the fleet — and finding that out is
   // how the cap in `adoptShared` came to exist.
   const urls = new Set<string>([...endpoints.keys(), ...[...routes.values()].flat()]);
-  for (const u of urls) clearCooldown(merrymenHome(), endpointKey(u));
-  clearCooldown(merrymenHome());
+  for (const u of urls) clearCooldown(agentcapHome(), endpointKey(u));
+  clearCooldown(agentcapHome());
   endpoints.clear();
   // Routes too: they are registered when a client is built, so a case builds
   // its clients after this — and must not inherit a previous case's route.

@@ -12,7 +12,7 @@ import { readDurablePause } from "../telegram-store";
 import { applyPerpsBotControl } from "./telegram-controls";
 import type { PerpsBotRequest } from "./telegram-bridge";
 
-const url = process.env.MERRYMEN_TEST_PG_URL ?? process.env.MERRYMEN_TEST_POSTGRES_URL;
+const url = process.env.AGENTCAP_TEST_PG_URL ?? process.env.AGENTCAP_TEST_POSTGRES_URL;
 interface Client {
   connect(): Promise<void>;
   end(): Promise<void>;

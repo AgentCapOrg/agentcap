@@ -19,7 +19,7 @@ const validName = n => typeof n === "string" && !!n.trim() && n.length <= 48 && 
  * Only the first-party portal's server may call this wallet-authenticated surface.
  *
  * TWO SECRETS, TWO JOBS. The portal secret is the site's Bearer credential: it
- * proves a request came through merrymen.dev, and (hashed into the session key)
+ * proves a request came through agentcap.xyz, and (hashed into the session key)
  * rotating it signs developers out; it cannot sign anyone in. Challenges and
  * sessions are MAC'd with a key only this gateway can derive. They used to be
  * MAC'd with the portal secret itself, so anyone holding the site's environment
@@ -30,7 +30,7 @@ const validName = n => typeof n === "string" && !!n.trim() && n.length <= 48 && 
  * ACCOUNTS AND PLANS are lib/billing.mjs's (`billing`, built once by server.mjs
  * and shared with the partner gate). A signed-in wallet creates one account,
  * which new keys then require while billing is on, chooses a plan and submits the hash of a
- * $MERRYMEN transfer it sent. Payment checks read the chain through billing's
+ * $AGENTCAP transfer it sent. Payment checks read the chain through billing's
  * own client; sign-in still never asks a chain anything (see refusal()).
  */
 export function createDeveloperApi({ portalSecret, gatewaySecret, partners, partnerApi, store, billing = null,
@@ -48,7 +48,7 @@ export function createDeveloperApi({ portalSecret, gatewaySecret, partners, part
   // the derivation needs the gateway secret too.
   const sessionKey = gatewaySecret && Buffer.byteLength(gatewaySecret) >= 32 && portalSecret
     ? createHmac("sha256", gatewaySecret)
-      .update(`merrymen:developer-session:v1:${createHash("sha256").update(portalSecret).digest("hex")}`).digest()
+      .update(`agentcap:developer-session:v1:${createHash("sha256").update(portalSecret).digest("hex")}`).digest()
     : null;
   const macOf = encoded => createHmac("sha256", sessionKey).update(`developer-v1:${encoded}`).digest("base64url");
   // WHERE A REVOCATION LIVES DECIDES HOW LONG A SESSION MAY. A durable store
@@ -78,7 +78,7 @@ export function createDeveloperApi({ portalSecret, gatewaySecret, partners, part
     return s && s.expires > now() && s.epoch === epoch && typeof s.sid === "string"
       && !await store.isRevoked(`developer-session:${s.sid}`) ? s : null;
   }
-  const message = c => `Sign in to Merrymen Developers\n\nWebsite: https://merrymen.dev/api\nWallet: ${c.address}\n\nManage API keys for your applications. This does not authorize trading or move funds.\n\nNonce: ${c.nonce}\nExpires: ${new Date(c.expires).toISOString()}`;
+  const message = c => `Sign in to AgentCap Developers\n\nWebsite: https://agentcap.xyz/api\nWallet: ${c.address}\n\nManage API keys for your applications. This does not authorize trading or move funds.\n\nNonce: ${c.nonce}\nExpires: ${new Date(c.expires).toISOString()}`;
   // Codes are for the console and for tests; messages are for the person reading.
   const error = (status, code, message) => ({ status, json: { error: { code, message } } });
   const noBilling = () => error(503, "billing_unavailable", "Billing is temporarily unavailable. Try again later.");
@@ -95,7 +95,7 @@ export function createDeveloperApi({ portalSecret, gatewaySecret, partners, part
    * other people's agents, so a smart wallet signs in with a standard wallet's key.
    */
   async function refusal(address, text, signature) {
-    if (signature.length !== 132) return error(401, "wallet_unsupported", "Smart-contract wallets cannot sign in to Merrymen Developers. Sign in with a standard wallet (an EOA).");
+    if (signature.length !== 132) return error(401, "wallet_unsupported", "Smart-contract wallets cannot sign in to AgentCap Developers. Sign in with a standard wallet (an EOA).");
     try { if (await verify({ address, message: text, signature })) return null; } catch { /* Not this key. */ }
     return error(401, "signature_invalid", "That is not this wallet's signature of the sign-in message. Sign the exact message shown with a standard wallet and paste the result unchanged.");
   }

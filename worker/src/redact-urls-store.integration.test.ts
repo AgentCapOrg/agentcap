@@ -1,13 +1,13 @@
 /**
  * WHAT THE STORE KEEPS NEVER CARRIES AN RPC KEY, proven against a real sqlite
- * file (a throwaway MERRYMEN_HOME) — same discipline as the budget tests.
+ * file (a throwaway AGENTCAP_HOME) — same discipline as the budget tests.
  *
  * The rows are the durable half of the 2026-10-17 leak: an event is the
  * owner's dashboard and the desk's mirror of it, and a `couldn't submit: …`
  * reject_rule is what the orchestrator's `autonomy| 1h refusals` line reads
  * back every few seconds. Both were a viem error's text, URL and key included.
  *
- * MERRYMEN_HOME is set before any store import runs getDb(); node's --test runs
+ * AGENTCAP_HOME is set before any store import runs getDb(); node's --test runs
  * each file in its own process, so the override never leaks.
  */
 import assert from "node:assert/strict";
@@ -17,8 +17,8 @@ import os from "node:os";
 import path from "node:path";
 import { HttpRequestError } from "viem";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-redact-"));
-process.env.MERRYMEN_HOME = HOME;
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-redact-"));
+process.env.AGENTCAP_HOME = HOME;
 // sqlite, whatever the shell running the suite points at.
 delete process.env.DATABASE_URL;
 
@@ -60,7 +60,7 @@ function rows<T>(sql: string, ...args: (string | number)[]): T[] {
 describe("the store's free text", () => {
   it("an event made of a viem error keeps the host and loses the key", async () => {
     await initStore();
-    const e = new HttpRequestError({ url: KEYED, details: "merrymen-rpc-declined: not sent" });
+    const e = new HttpRequestError({ url: KEYED, details: "agentcap-rpc-declined: not sent" });
     // Raw, as a caller that never heard of redact-urls.ts would write it.
     await addEvent(AGENT, "err", `tick failed: ${e.message}`);
     const [ev] = rows<{ message: string }>("SELECT message FROM events WHERE agent_id = ?", AGENT);
@@ -70,7 +70,7 @@ describe("the store's free text", () => {
   });
 
   it("a couldn't-submit reject_rule loses the key, and the refusals line never shows it", async () => {
-    const e = new HttpRequestError({ url: KEYED, details: "merrymen-rpc-declined: not sent" });
+    const e = new HttpRequestError({ url: KEYED, details: "agentcap-rpc-declined: not sent" });
     // index.ts's own construction, from the RAW message — the store must hold
     // even if the call site's redaction is ever lost.
     const raw = e.message;
@@ -100,7 +100,7 @@ describe("the store's free text", () => {
   });
 
   it("a decision's reason and a command's receipt lose the key too", async () => {
-    const e = new HttpRequestError({ url: KEYED, details: "merrymen-rpc-declined: not sent" });
+    const e = new HttpRequestError({ url: KEYED, details: "agentcap-rpc-declined: not sent" });
     await addDecision({ id: "d-redact", agent_id: AGENT, source: "brain-shadow", reason: `no decision (provider): ${e.message}`, dropped_rule: `couldn't submit: ${e.message}` });
     const [d] = rows<{ reason: string; dropped_rule: string }>("SELECT reason, dropped_rule FROM decisions WHERE id = ?", "d-redact");
     assert.ok(d, "the decision was written");

@@ -7,9 +7,9 @@ import { test } from "node:test";
 import { assertBuildOnlyBundled, buildOnlyPackages, packRuntime, runtimeBundlePlan } from "./pack-runtime.mjs";
 
 function fixture(t) {
-  const root = mkdtempSync(path.join(tmpdir(), "merrymen-runtime-test-"));
+  const root = mkdtempSync(path.join(tmpdir(), "agentcap-runtime-test-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
-  const manifest = { name: "merrymen-runtime-fixture", version: "1.0.0", files: ["cli"], dependencies: { wrapper: "^1.0.0" }, scripts: { prepack: "exit 19", prepare: "exit 20" }, overrides: { leaf: "2.0.0" } };
+  const manifest = { name: "agentcap-runtime-fixture", version: "1.0.0", files: ["cli"], dependencies: { wrapper: "^1.0.0" }, scripts: { prepack: "exit 19", prepare: "exit 20" }, overrides: { leaf: "2.0.0" } };
   const wrapper = { name: "wrapper", version: "1.0.0", dependencies: { leaf: "1.0.0" }, optionalDependencies: { "platform-addon": "1.0.0" } };
   const leaf = { name: "leaf", version: "2.0.0" };
   const lock = { name: manifest.name, version: manifest.version, lockfileVersion: 3, packages: { "": { ...manifest }, "node_modules/wrapper": { ...wrapper }, "node_modules/leaf": { ...leaf }, "node_modules/platform-addon": { version: "1.0.0", optional: true, os: ["linux"], cpu: ["x64"] } } };

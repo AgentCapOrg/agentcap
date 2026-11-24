@@ -1,7 +1,7 @@
 /**
  * THE ENERGY BUY'S ARITHMETIC AND ITS SENTENCES — the pure half.
  *
- * An owner asks their agent to buy the $MERRYMEN it is short ("get my energy").
+ * An owner asks their agent to buy the $AGENTCAP it is short ("get my energy").
  * This file decides whether it may, how much ONE confirmation spends, and what
  * the owner is told — from reads the caller made fresh, never from a remembered
  * goal and never from a number a model supplied. index.ts's submitEnergyBuy
@@ -37,12 +37,12 @@
  * inputs).
  *
  * STANCE: utility only. Energy is how much the agent may do on its own; every
- * sentence here speaks of energy, USDG spent, and $MERRYMEN held — never of the
+ * sentence here speaks of energy, USDG spent, and $AGENTCAP held — never of the
  * token's price, where it is going, or what it might return. No tax or fee
  * percentage is printed: the tax is its owner's to change.
  */
 
-import { ENERGY, ENERGY_FULL_RAW, MERRYMEN_TOKEN, isEnergyReserveToken, wholeTokens } from "../../packages/core/src/index";
+import { ENERGY, ENERGY_FULL_RAW, AGENTCAP_TOKEN, isEnergyReserveToken, wholeTokens } from "../../packages/core/src/index";
 import { energyPreTradeGate, type EnergyGateRule } from "./energy-accounting";
 import { count } from "./energy-copy";
 import type { LedgerFacts } from "./order-receipt";
@@ -62,7 +62,7 @@ const CENT = 10_000n;
 /** Where the balances stand, as the caller read them — pinned to one block. */
 export interface EnergyReads {
   /**
-   * Raw $MERRYMEN per counted address (circle.ts HolderParts): a bigint was
+   * Raw $AGENTCAP per counted address (circle.ts HolderParts): a bigint was
    * read, `null` is a read that FAILED, `undefined` is no such address (no
    * wallet configured, or the account IS the wallet and was counted once).
    */
@@ -95,7 +95,7 @@ export interface EnergyCaps {
  * floor on what arrives (energyMinOut at the re-quote), never part of the size.
  */
 export interface EnergyPricing {
-  /** $MERRYMEN's buy tax, bps, read now; null = unreadable. */
+  /** $AGENTCAP's buy tax, bps, read now; null = unreadable. */
   taxBps: number | null;
   amountInFor(grossOut: bigint): Promise<bigint | null>;
 }
@@ -133,9 +133,9 @@ export type EnergyPlan =
       kind: "buy";
       /** Raw USDG this confirmation spends. Never above any cap. */
       amountInRaw: bigint;
-      /** Raw $MERRYMEN still missing for full energy before this buy. */
+      /** Raw $AGENTCAP still missing for full energy before this buy. */
       shortRaw: bigint;
-      /** Raw $MERRYMEN held (both parts) before this buy. */
+      /** Raw $AGENTCAP held (both parts) before this buy. */
       heldRaw: bigint;
       /** Raw USDG the whole shortfall would cost now, cent-rounded up. */
       needInRaw: bigint;
@@ -153,7 +153,7 @@ const ceilCent = (v: bigint) => (v % CENT === 0n ? v : v + (CENT - (v % CENT)));
 const floorCent = (v: bigint) => (v <= 0n ? 0n : v - (v % CENT));
 
 /**
- * THE ONE SIZING RULE: how much $MERRYMEN to price for a shortfall. What must
+ * THE ONE SIZING RULE: how much $AGENTCAP to price for a shortfall. What must
  * arrive is the shortfall plus its margin (ENERGY_BUFFER_BPS); grossNeededFor
  * inverts the token's buy tax on top, at the EXPECTED rate — zero slippage,
  * because the owner's tolerance is the router's floor (energyMinOut), never
@@ -177,24 +177,24 @@ export const usdgText = (v: bigint) => (Number(v) / 1e6).toFixed(2);
 const tokens = (raw: bigint) => count(wholeTokens(raw));
 const FULL = count(ENERGY.fullTokens);
 
-const WAY_ROUND = "You can also send $MERRYMEN to my account on Robinhood Chain directly — it counts the moment it lands.";
+const WAY_ROUND = "You can also send $AGENTCAP to my account on Robinhood Chain directly — it counts the moment it lands.";
 
 // ── the fixed sentences — each a refusal before anything is read or sized ──
 
 /**
- * Is this order about $MERRYMEN? Case-insensitive, and a leading "$" is the
+ * Is this order about $AGENTCAP? Case-insensitive, and a leading "$" is the
  * way owners write it. Compared with the registry's own symbol, never a typed
  * literal.
  */
 export function isEnergySymbol(symbol: string | null | undefined): boolean {
-  return (symbol ?? "").trim().replace(/^\$/, "").toUpperCase() === MERRYMEN_TOKEN.symbol.toUpperCase();
+  return (symbol ?? "").trim().replace(/^\$/, "").toUpperCase() === AGENTCAP_TOKEN.symbol.toUpperCase();
 }
 
 /**
  * WHICH TOKEN AN ORDINARY ORDER MEANS — the watch set first, the reserve only
  * when nothing there answers to the name.
  *
- * submitChatTrade used to refuse any symbol reading MERRYMEN before it looked
+ * submitChatTrade used to refuse any symbol reading AGENTCAP before it looked
  * at the watch set, so a coin the owner holds or watches at ANOTHER address
  * under that name (a lookalike added in Settings, one a snipe resolved, one
  * the Trencher found — none of them the reserve, all kept in the watch set on
@@ -219,7 +219,7 @@ export function resolveOrderToken(
   // THE NAME AS THE WATCH SET SPELLS IT, whatever case it was asked in. The
   // app's sell card and Telegram upper-case the symbol before it gets here,
   // and Settings keeps an owner-typed symbol as typed — so a watched
-  // lookalike called "MerryMen" missed an exact match, fell through to the
+  // lookalike called "AgentCap" missed an exact match, fell through to the
   // reserve's name, and its owner was told "I never sell it" about a coin
   // they held. Folding case is safe: watchTokensFor keeps one token per
   // case-folded symbol. `symbol` comes back as the watch set spells it, which
@@ -242,19 +242,19 @@ export function resolveOrderToken(
  * it; it never says "add it in /settings", which would not help.
  */
 export const ENERGY_NOT_AN_ORDER =
-  "$MERRYMEN is my energy, not something I trade — I never sell it, and I buy it only when you ask me to " +
-  "\"get my energy\" in the Merrymen app chat, where you see the most it would spend and confirm before anything " +
+  "$AGENTCAP is my energy, not something I trade — I never sell it, and I buy it only when you ask me to " +
+  "\"get my energy\" in the AgentCap app chat, where you see the most it would spend and confirm before anything " +
   `moves. ${WAY_ROUND}`;
 
 /** A get-energy order that arrived as a SELL. The key has no way to sell the reserve; recover moves it. */
 export const ENERGY_NO_SELL =
-  "My key can't sell $MERRYMEN — it's my energy, not a position, and nothing I do ever sells it. " +
-  "`merrymen recover` with your owner key can move it if you need to.";
+  "My key can't sell $AGENTCAP — it's my energy, not a position, and nothing I do ever sells it. " +
+  "`agentcap recover` with your owner key can move it if you need to.";
 
 /** The account is not on Robinhood Chain: tokens sent to it there would not be this agent's. */
 export const ENERGY_NOT_MAINNET =
-  "My account is on another network, where $MERRYMEN doesn't count toward my energy and the route I'd buy it on " +
-  "doesn't exist. Keep $MERRYMEN in your own wallet on Robinhood Chain instead — it counts the moment it lands.";
+  "My account is on another network, where $AGENTCAP doesn't count toward my energy and the route I'd buy it on " +
+  "doesn't exist. Keep $AGENTCAP in your own wallet on Robinhood Chain instead — it counts the moment it lands.";
 
 /** A mainnet grant signed without the energy route (GRANT_ENERGY). */
 export const ENERGY_RESIGN =
@@ -265,7 +265,7 @@ export const ENERGY_RESIGN =
 export function energyNeedsLiveLine(blocker: string | null): string {
   return (
     `I buy my own energy only while trading live, and I'm not${blocker ? `: ${blocker}` : ""}. ` +
-    `Turn on Live trading, or send $MERRYMEN to my account on Robinhood Chain directly — it counts the moment it lands.`
+    `Turn on Live trading, or send $AGENTCAP to my account on Robinhood Chain directly — it counts the moment it lands.`
   );
 }
 
@@ -308,8 +308,8 @@ export async function planEnergyBuy(
 
   // 1. READS. A half that failed is not a half that holds nothing.
   const unread: string[] = [];
-  if (reads.holder === null) unread.push("your wallet's $MERRYMEN");
-  if (reads.account === null) unread.push("my account's $MERRYMEN");
+  if (reads.holder === null) unread.push("your wallet's $AGENTCAP");
+  if (reads.account === null) unread.push("my account's $AGENTCAP");
   if (reads.cashUsdg === null) unread.push("my USDG");
   if (unread.length > 0) {
     return refuse(
@@ -341,7 +341,7 @@ export async function planEnergyBuy(
     return {
       kind: "full",
       heldRaw: held,
-      line: `I already have full energy — ${tokens(held)} $MERRYMEN between your wallet and my account, and ${FULL} is full. Nothing bought.`,
+      line: `I already have full energy — ${tokens(held)} $AGENTCAP between your wallet and my account, and ${FULL} is full. Nothing bought.`,
     };
   }
   const shortRaw = ENERGY_FULL_RAW - held;
@@ -350,13 +350,13 @@ export async function planEnergyBuy(
   if (pricing.taxBps === null) {
     return refuse(
       "energy-tax-unreadable",
-      `I could not read $MERRYMEN's own buy tax, so I could not set a safe floor and bought nothing. Ask again in a minute. ${WAY_ROUND}`,
+      `I could not read $AGENTCAP's own buy tax, so I could not set a safe floor and bought nothing. Ask again in a minute. ${WAY_ROUND}`,
     );
   }
   if (!Number.isInteger(pricing.taxBps) || pricing.taxBps < 0 || pricing.taxBps > ENERGY.maxTaxBps) {
     return refuse(
       "energy-tax",
-      `$MERRYMEN's own buy tax is higher than my energy buy is built to accept, so I bought nothing. ${WAY_ROUND}`,
+      `$AGENTCAP's own buy tax is higher than my energy buy is built to accept, so I bought nothing. ${WAY_ROUND}`,
     );
   }
   const taxBps = pricing.taxBps;
@@ -375,7 +375,7 @@ export async function planEnergyBuy(
   if (quoted === null || quoted <= 0n) {
     return refuse(
       "energy-no-quote",
-      `The USDG → VIRTUAL → $MERRYMEN route would not quote that size just now, so I bought nothing. Ask again shortly. ${WAY_ROUND}`,
+      `The USDG → VIRTUAL → $AGENTCAP route would not quote that size just now, so I bought nothing. Ask again shortly. ${WAY_ROUND}`,
     );
   }
   const needInRaw = ceilCent(quoted);
@@ -454,7 +454,7 @@ export function sayEnergyPlan(plan: EnergyPlan): string {
   if (plan.kind !== "buy") return plan.line;
   return (
     `energy buy: spend ${usdgText(plan.amountInRaw)} USDG of ${usdgText(plan.needInRaw)} needed for ` +
-    `${tokens(plan.shortRaw)} $MERRYMEN short` +
+    `${tokens(plan.shortRaw)} $AGENTCAP short` +
     (plan.coversShortfall ? "" : ` (${plan.binding ?? "cap"} binds; ≈${plan.asksLeft} more ask${plan.asksLeft === 1 ? "" : "s"})`)
   );
 }
@@ -489,7 +489,7 @@ export function sayEnergyOutcome(
         typeof outcome.amountUsdg === "number" && Number.isFinite(outcome.amountUsdg) && outcome.amountUsdg > 0
           ? `${outcome.amountUsdg.toFixed(2)} USDG`
           : planned;
-      const head = `✅ bought energy — ${spent} of my USDG went into $${MERRYMEN_TOKEN.symbol} in my account.`;
+      const head = `✅ bought energy — ${spent} of my USDG went into $${AGENTCAP_TOKEN.symbol} in my account.`;
       if (heldAfter === null) {
         return { ok: true, line: `${head} I couldn't re-read the balance just now; it will show on my next check.` };
       }

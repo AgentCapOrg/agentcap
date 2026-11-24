@@ -346,7 +346,7 @@ function whenAddressed(i: PaceInput, person: TgPerson | undefined): PaceDecision
     return roll(i.rand) < YAWN_ODDS ? react("🥱") : skip("roast-cap");
   }
   if (s.greeting) return { act: "greet", word: s.greeting };
-  // "hey there merryman", "thanks merryman!": small talk gets small talk,
+  // "hey there agentcapavatar", "thanks agentcapavatar!": small talk gets small talk,
   // never a "good question" to a line that asked nothing.
   if (s.smallTalk) return { act: "smalltalk", what: s.smallTalk };
   return answer("normal");

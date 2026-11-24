@@ -214,11 +214,11 @@ async function sourceBookSet(home: string, rows: HandoverRosterEntry[], shared: 
   for (const name of names) {
     if (!ADDRESS.test(name)) throw refuse();
     const child = path.join(children, name); plainDirectory(child);
-    if (present(path.join(child, "merrymen.db")) && !tenants.has(name)) throw refuse();
+    if (present(path.join(child, "agentcap.db")) && !tenants.has(name)) throw refuse();
   }
   const books: string[] = [], withoutBook: string[] = [], historicalGapTenants: string[] = [];
   for (const r of rows) {
-    const child = path.join(children, r.tenant), file = path.join(child, "merrymen.db");
+    const child = path.join(children, r.tenant), file = path.join(child, "agentcap.db");
     if (present(child)) plainDirectory(child);
     if (present(file)) {
       if (!lstatSync(file).isFile()) throw refuse();
@@ -232,7 +232,7 @@ async function sourceBookSet(home: string, rows: HandoverRosterEntry[], shared: 
   return { books, withoutBook, historicalGapTenants };
 }
 async function finalCursor(home: string, tenant: string, shared: Db): Promise<void> {
-  const raw = new DatabaseSync(path.join(home, "merrymen.db"), { readOnly: true });
+  const raw = new DatabaseSync(path.join(home, "agentcap.db"), { readOnly: true });
   try {
     for (const [table, stamp] of [["events", "created_at"], ["posts", "created_at"], ["trades", "created_at"], ["equity", "at"], ["flows", "at"], ["fee_accruals", "at"]] as const) {
       const tail = raw.prepare(`SELECT id,${stamp} AS stamp FROM ${table} ORDER BY id DESC LIMIT 1`).get() as { id: number; stamp: number } | undefined;
@@ -287,7 +287,7 @@ async function verifyTargetMemory(backup: MemoryBackup, home: string, shared: Db
   }
 }
 function emptyFinancialTarget(home: string): void {
-  const file = path.join(home, "merrymen.db");
+  const file = path.join(home, "agentcap.db");
   if (!present(file)) return;
   if (!lstatSync(file).isFile()) throw refuse();
   const raw = new DatabaseSync(file, { readOnly: true });
@@ -361,7 +361,7 @@ function argumentsFor(argv: string[]): { mode: string; values: Map<string, strin
 /** Only bounded public counts/hash/process identities leave this runner. */
 export async function runLedgerHandoverCli(argv: string[], dependencies: LedgerHandoverDependencies = {}): Promise<Record<string, unknown>> {
   const { mode, values, flags } = argumentsFor(argv), env = dependencies.env ?? process.env;
-  const home = env.MERRYMEN_HOME;
+  const home = env.AGENTCAP_HOME;
   if (!home || !path.isAbsolute(home) || path.resolve(home) !== home || (!dependencies.shared && !env.DATABASE_URL)) throw refuse();
   plainDirectory(home);
   // A PERPS PAPER BOOK IS NOT COVERED YET, so none of this runs while one
@@ -373,7 +373,7 @@ export async function runLedgerHandoverCli(argv: string[], dependencies: LedgerH
   const opts = { home, expectedDeployment: values.get("--expected-deployment") ?? "", expectedCommit: values.get("--expected-commit") ?? "",
     orchestratorPid: Number(values.get("--orchestrator-pid")), quiescent: flags.has("--quiescent"), singleReplicaConfirmed: true };
   const current = inspectMemorySource(opts, env, dependencies.procRoot), targetMode = mode === "restore" || mode === "complete";
-  const dek = dependencies.dek ?? Buffer.from(env.MERRYMEN_STORE_DEK ?? "", "base64");
+  const dek = dependencies.dek ?? Buffer.from(env.AGENTCAP_STORE_DEK ?? "", "base64");
   if (dek.length !== 32) throw refuse();
   const shared = dependencies.shared ?? await makePgDb(env.DATABASE_URL!), dialect = dependencies.dialect ?? "postgres";
   if (mode === "preflight") {
@@ -451,7 +451,7 @@ export async function runLedgerHandoverCli(argv: string[], dependencies: LedgerH
       } else if (canonical(set) !== canonical({ books: backup.books.map(a => a.tenant), withoutBook: backup.withoutBook,
         historicalGapTenants: backup.historicalGaps.map(g => g.tenant) })) throw refuse();
       for (const gap of backup.historicalGaps) {
-        if (present(path.join(home, "children", gap.tenant, "merrymen.db"))
+        if (present(path.join(home, "children", gap.tenant, "agentcap.db"))
             || canonical(await gapProof(gap, shared, dialect, assertRuntime, leases.get(gap.tenant)!)) !== canonical(gap)) throw refuse();
       }
       const currentMemory = await captureFleetMemory({ childrenDir: path.join(home, "children"), shared, dek, source: current, assertSource: assertRuntime });
@@ -483,7 +483,7 @@ export async function runLedgerHandoverCli(argv: string[], dependencies: LedgerH
     }
     const volume = verifyPersistentHome(env, dependencies.persistentOptions);
     if (!volume || volume.id !== backup.target.volumeId || volume.mountPath !== backup.target.mountPath
-        || current.gitCommit !== backup.target.gitCommit || env.MERRYMEN_INITIAL_HANDOVER !== backup.target.operationToken) throw refuse();
+        || current.gitCommit !== backup.target.gitCommit || env.AGENTCAP_INITIAL_HANDOVER !== backup.target.operationToken) throw refuse();
     const prepared = preparePersistentHomeForHandover(env, dependencies.persistentOptions);
     if (!prepared) throw refuse();
     // Complete-receipt crash retries may still have the original owned hold.

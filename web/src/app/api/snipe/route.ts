@@ -24,11 +24,11 @@ import {
   resolveSnipeTarget,
   shortAddress,
   type SnipeCandidate,
-} from "@merrymen/core";
-import { isHostedMode } from "@merrymen/core";
+} from "@agentcap/core";
+import { isHostedMode } from "@agentcap/core";
 import { tenantOf } from "@/lib/auth";
 import { OWNER_CHANGED, ownerMismatch } from "@/lib/order-owner";
-import { getSettingsStore } from "@merrymen/settings-store";
+import { getSettingsStore } from "@agentcap/settings-store";
 import { sharedRead } from "@/lib/read-discoveries";
 import { usd } from "@/lib/format";
 import { snipeEnergyAnswer } from "@/lib/energy-reserve";
@@ -172,7 +172,7 @@ export async function POST(req: Request) {
   }
 
   const t = resolved.target;
-  // $MERRYMEN IS ENERGY, NOT A COIN TO SNIPE — covered or not. Uncovered, the
+  // $AGENTCAP IS ENERGY, NOT A COIN TO SNIPE — covered or not. Uncovered, the
   // answer below would say "add it and re-sign", which no signature can ever
   // satisfy; covered (an old grant), a snipe card would place an energy buy
   // under words that never said so. It has one way in: get-energy.

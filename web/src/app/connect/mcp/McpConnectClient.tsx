@@ -29,11 +29,11 @@ interface ConnectionLite { clientName: string | null; clientHost: string | null;
 const STATUS_TIMEOUT_MS = 10_000;
 
 /**
- * merrymen.dev's static copy of the production setup text, the one a search
+ * agentcap.xyz's static copy of the production setup text, the one a search
  * finds (assistant-setup.test.ts pins it to llmsTxt()). Any other server
  * serves its own at <app>/llms.txt.
  */
-const SITE_LLMS_TXT = "https://merrymen.dev/llms.txt";
+const SITE_LLMS_TXT = "https://agentcap.xyz/llms.txt";
 
 /** "last used 5 min ago", from epoch seconds. */
 export function lastUsedWords(lastUsedAt: number | null, nowSec: number): string {
@@ -219,14 +219,14 @@ export function McpConnectClient({ url, app, enabled, disabledWhy }: { url: stri
       <main className="connect-main">
         <div className="connect-context">
           <span className="connect-eyebrow">YOUR AGENT, IN YOUR ASSISTANT</span>
-          <h1>Your Merryman,<br />in your assistant.</h1>
+          <h1>Your AgentCapAvatar,<br />in your assistant.</h1>
           <p>Ask about its trades, your portfolio and the market in plain words. Your assistant only gets what you allow, and it can never move your money.</p>
         </div>
         <div className="connect-panel mcp-hub">
           {!enabled ? <>
             <h2>Assistant connections are switched off on this server</h2>
             {disabledWhy && <p className="mcp-hub-fine">Reason: {disabledWhy}.</p>}
-            <a className="connect-cancel" href="/">Back to Merrymen</a>
+            <a className="connect-cancel" href="/">Back to AgentCap</a>
           </> : <>
             {connected && (
               <p className="mcp-hub-status">
@@ -240,12 +240,12 @@ export function McpConnectClient({ url, app, enabled, disabledWhy }: { url: stri
               {connected?.claude && <p className="mcp-hub-fine">Claude is already connected. You only need this again for another Claude account.</p>}
               <Out className="flow-primary" href={links.claude}>Add to Claude <ArrowUpRight size={16} aria-hidden /></Out>
               <ol className="mcp-hub-steps">
-                <li>Claude opens with Merrymen already filled in. Click <b>Continue</b>, then <b>Connect</b>.</li>
-                <li>Merrymen opens. Sign in if asked, then click <b>Allow</b>.</li>
+                <li>Claude opens with AgentCap already filled in. Click <b>Continue</b>, then <b>Connect</b>.</li>
+                <li>AgentCap opens. Sign in if asked, then click <b>Allow</b>.</li>
                 <li>Back in Claude, ask “Why hasn’t my agent traded?”</li>
               </ol>
               <p className="mcp-hub-fine">Add it once and it works on claude.ai and in the Claude desktop and mobile apps. Claude Code signed in to the same account gets it too.</p>
-              <p className="mcp-hub-fine">On a Team or Enterprise plan? Your organisation’s owner adds it once: <Out href={links.claudeOrg}>add Merrymen for your organisation</Out>. Everyone else then finds Merrymen in Claude under Customize → Connectors and clicks Connect. Claude’s free plan allows one custom connector.</p>
+              <p className="mcp-hub-fine">On a Team or Enterprise plan? Your organisation’s owner adds it once: <Out href={links.claudeOrg}>add AgentCap for your organisation</Out>. Everyone else then finds AgentCap in Claude under Customize → Connectors and clicks Connect. Claude’s free plan allows one custom connector.</p>
             </section>
 
             <section className="mcp-hub-section" aria-labelledby="mcp-hub-others">
@@ -256,12 +256,12 @@ export function McpConnectClient({ url, app, enabled, disabledWhy }: { url: stri
                     <p>In Claude Code, run these one at a time:</p>
                     <Command lines={[plugin[0]]} label="Copy the first Claude Code command" />
                     <Command lines={[plugin[1]]} label="Copy the second Claude Code command" />
-                    <p>Then type <code>/mcp</code>, choose Merrymen and Authenticate. You get <code>/merrymen:status</code>, <code>/merrymen:why</code>, <code>/merrymen:portfolio</code> and more, or just ask.</p>
-                    <p className="mcp-hub-fine">Added Merrymen to Claude already? Claude Code signed in to the same account has it too. Without the plugin, from a terminal:</p>
+                    <p>Then type <code>/mcp</code>, choose AgentCap and Authenticate. You get <code>/agentcap:status</code>, <code>/agentcap:why</code>, <code>/agentcap:portfolio</code> and more, or just ask.</p>
+                    <p className="mcp-hub-fine">Added AgentCap to Claude already? Claude Code signed in to the same account has it too. Without the plugin, from a terminal:</p>
                   </> : <p>Added it to Claude already? It’s in Claude Code too. Otherwise:</p>}
                   <Command lines={commands.claudeCode} label="Copy both Claude Code terminal commands" />
                   <p className="mcp-hub-fine">Or just tell Claude Code:</p>
-                  <Command lines={[`Set up the Merrymen MCP server. Instructions: ${llms}`]} label="Copy the sentence to tell Claude Code" />
+                  <Command lines={[`Set up the AgentCap MCP server. Instructions: ${llms}`]} label="Copy the sentence to tell Claude Code" />
                 </Row>
                 <Row name="ChatGPT">
                   <p>Turn on Developer mode (Settings → Security and login), then create an app with the address below.</p>
@@ -271,32 +271,32 @@ export function McpConnectClient({ url, app, enabled, disabledWhy }: { url: stri
                   </div>
                 </Row>
                 <Row name="Grok" id="grok">
-                  <p>One-time setup in Grok: open <b>Plugins → Connectors → New Connector → Custom</b>. Set <b>Name</b> to <b>Merrymen</b>, paste this address into <b>Server URL</b>, then choose <b>Add Connector</b>.</p>
+                  <p>One-time setup in Grok: open <b>Plugins → Connectors → New Connector → Custom</b>. Set <b>Name</b> to <b>AgentCap</b>, paste this address into <b>Server URL</b>, then choose <b>Add Connector</b>.</p>
                   <div className="mcp-hub-actions">
                     <CopyButton text={url} target={addressId} label="Copy address for Grok">Copy address</CopyButton>
                     <Out className="mcp-hub-action" href={links.grok}>Open Grok connectors <ArrowUpRight size={14} aria-hidden /></Out>
                   </div>
-                  <p>Asking Grok chat to “connect Merrymen” by name does not install this unlisted custom connector. Add it manually once, then complete the Merrymen sign-in and choose what to allow.</p>
-                  <p>After connecting, ask “Help me set up my Merryman and check whether it is running.” If you need a new Merryman, allow setup drafts when connecting. Review its setup and approve its wallet permissions in Merrymen, then return to Grok to check its actual status.</p>
+                  <p>Asking Grok chat to “connect AgentCap” by name does not install this unlisted custom connector. Add it manually once, then complete the AgentCap sign-in and choose what to allow.</p>
+                  <p>After connecting, ask “Help me set up my AgentCapAvatar and check whether it is running.” If you need a new AgentCapAvatar, allow setup drafts when connecting. Review its setup and approve its wallet permissions in AgentCap, then return to Grok to check its actual status.</p>
                   <p className="mcp-hub-fine">No model API key needed. Business and Enterprise accounts may need an administrator to provision the connector. <Out href="https://docs.x.ai/grok/connectors">Grok’s connector guide</Out></p>
                 </Row>
                 <Row name="Grok Bot" id="grok-bot">
-                  <p>Give your Bot this setup prompt. It guides the connection, your Merryman’s setup and the final status check:</p>
+                  <p>Give your Bot this setup prompt. It guides the connection, your AgentCapAvatar’s setup and the final status check:</p>
                   <SetupPrompt text={grokBotSetupPrompt({ server: url, app })} />
                   <p>Open sign-in, setup and approval links on <b>your own device</b>. Keep wallet signing in your own browser; Grok Bot’s cloud computer is shared with its bots.</p>
                   <details className="mcp-hub-more">
                     <summary>Manual connection options <ChevronDown size={16} aria-hidden /></summary>
                     <p>Grok Bot supports Cursor-compatible MCP servers. If its settings ask for MCP configuration, use:</p>
                     <Command lines={[grokMcpConfig(url)]} label="Copy the Grok Bot MCP configuration" />
-                    <p>Using Grok CLI on your own computer? Add Merrymen with:</p>
+                    <p>Using Grok CLI on your own computer? Add AgentCap with:</p>
                     <Command lines={commands.grok} label="Copy the Grok CLI command" />
-                    <p>Grok CLI opens OAuth in your browser when the server needs it. Use <code>/mcps</code> to manage servers; select Merrymen and press <code>i</code> to authenticate if needed.</p>
+                    <p>Grok CLI opens OAuth in your browser when the server needs it. Use <code>/mcps</code> to manage servers; select AgentCap and press <code>i</code> to authenticate if needed.</p>
                   </details>
                   <p className="mcp-hub-fine">Connect inside the Bot separately; don’t assume a grok.com connection carries over. If cards are unavailable, ask for the status in text and open approval links yourself. <Out href="https://x.ai/bot/guides/grok-bot-101">Grok Bot guide</Out></p>
                 </Row>
                 <Row name="Codex">
                   <Command lines={commands.codex} label="Copy the Codex command" />
-                  <p>It opens Merrymen to sign in by itself. The Codex app and IDE extension pick it up too.</p>
+                  <p>It opens AgentCap to sign in by itself. The Codex app and IDE extension pick it up too.</p>
                 </Row>
                 <Row name="Cursor">
                   <div className="mcp-hub-actions">
@@ -315,7 +315,7 @@ export function McpConnectClient({ url, app, enabled, disabledWhy }: { url: stri
                 <ul className="mcp-hub-rows">
                   <Row name="Gemini CLI">
                     <Command lines={commands.gemini} label="Copy the Gemini CLI command" />
-                    <p>Then type <code>/mcp auth merrymen</code> inside Gemini CLI to sign in.</p>
+                    <p>Then type <code>/mcp auth agentcap</code> inside Gemini CLI to sign in.</p>
                   </Row>
                   <Row name="Kiro">
                     <div className="mcp-hub-actions"><Out className="mcp-hub-action" href={links.kiro}>Add to Kiro <ArrowUpRight size={14} aria-hidden /></Out></div>
@@ -348,19 +348,19 @@ export function McpConnectClient({ url, app, enabled, disabledWhy }: { url: stri
             <section className="mcp-hub-section mcp-hub-know" aria-labelledby="mcp-hub-know">
               <h2 id="mcp-hub-know" className="mcp-hub-h2">Good to know</h2>
               <ul>
-                <li>Claude asks before each action. To stop it asking for read-only look-ups, open Claude → Customize → Connectors → Merrymen and set Read-only tools to Always allow.</li>
+                <li>Claude asks before each action. To stop it asking for read-only look-ups, open Claude → Customize → Connectors → AgentCap and set Read-only tools to Always allow.</li>
                 <li>It only sees the agent and permissions you allow when you connect. Disconnect it any time on <a href="/connect/apps">Connected apps</a>.</li>
-                <li>It can suggest trades or setting changes only if you allow that, and nothing happens until you approve them in Merrymen.</li>
+                <li>It can suggest trades or setting changes only if you allow that, and nothing happens until you approve them in AgentCap.</li>
                 <li>It can never move your funds, see your keys, turn on live trading or loosen your signed limits.</li>
                 <li>Paper (practice) results are always kept apart from real money.</li>
               </ul>
             </section>
 
-            {/* Small print for an assistant that fetched this page while setting Merrymen up: llms.txt in brief. */}
+            {/* Small print for an assistant that fetched this page while setting AgentCap up: llms.txt in brief. */}
             <section className="mcp-hub-section mcp-hub-ai" aria-labelledby="mcp-hub-ai">
               <h2 id="mcp-hub-ai">For AI assistants</h2>
               <ul>
-                <li>Claude Code: run <code>claude mcp list</code> first; an entry at <code>{url}</code> means it is already set up. Otherwise run <code>{commands.claudeCode[0]}</code>, then ask the user to type <code>/mcp</code>, choose Merrymen and Authenticate (do not run <code>claude mcp login</code> yourself). No API key or token is needed; never ask for one.</li>
+                <li>Claude Code: run <code>claude mcp list</code> first; an entry at <code>{url}</code> means it is already set up. Otherwise run <code>{commands.claudeCode[0]}</code>, then ask the user to type <code>/mcp</code>, choose AgentCap and Authenticate (do not run <code>claude mcp login</code> yourself). No API key or token is needed; never ask for one.</li>
                 <li>claude.ai, Claude Desktop or Claude mobile: you cannot add it from a chat. Give the user the <Out href={links.claude}>Add to Claude link</Out>.</li>
                 <li>Full instructions: <a href={llms}>{llms}</a></li>
               </ul>
@@ -368,7 +368,7 @@ export function McpConnectClient({ url, app, enabled, disabledWhy }: { url: stri
           </>}
         </div>
       </main>
-      <footer className="connect-footer">Merrymen · <a href="/connect/apps">Connected apps</a></footer>
+      <footer className="connect-footer">AgentCap · <a href="/connect/apps">Connected apps</a></footer>
     </div>
   );
 }

@@ -22,7 +22,7 @@ const WALLET = '0x1111111111111111111111111111111111111111';
 const TREASURY = '0x3333333333333333333333333333333333333333';
 const live = (mode: 'off' | 'observe' | 'enforce' = 'enforce', over: Record<string, unknown> = {}) => normalizePlans({
   billing: { mode, enforced: mode === 'enforce' }, period_days: 30, treasury: TREASURY,
-  currency: { symbol: 'MERRYMEN', address: TOKEN.address, chain_id: 4663, decimals: 18, explorer_url: '' }, confirmations: { blocks: 64, min_age_sec: 120 },
+  currency: { symbol: 'AGENTCAP', address: TOKEN.address, chain_id: 4663, decimals: 18, explorer_url: '' }, confirmations: { blocks: 64, min_age_sec: 120 },
   plans: FALLBACK_PLANS.plans, ...over,
 })!;
 const view = (over: Record<string, unknown> = {}) => normalizeAccount({
@@ -41,9 +41,9 @@ const BANNED = /burn|buyback|buy back|deflation|circulation|supports the token|w
 test('Pay with wallet is drawn only when the check passed; every refusal says why and offers the fix', () => {
   const amount = 40_000n * UNIT;
   const draw = (check: PayCheck | null, balance: bigint | null = null) => html(WalletPay, { check, amount, busy: '', balance, onConnect: noop, onSwitch: noop, onPay: noop });
-  assert.match(draw({ ok: true }), /Pay 40,000 MERRYMEN with wallet/);
-  assert.match(draw({ ok: true }, 250_000n * UNIT), /holds 250,000 MERRYMEN; after this payment it holds 210,000/);
-  assert.match(draw({ ok: true }, 10_000n * UNIT), /holds 10,000 MERRYMEN, less than this payment/);
+  assert.match(draw({ ok: true }), /Pay 40,000 AGENTCAP with wallet/);
+  assert.match(draw({ ok: true }, 250_000n * UNIT), /holds 250,000 AGENTCAP; after this payment it holds 210,000/);
+  assert.match(draw({ ok: true }, 10_000n * UNIT), /holds 10,000 AGENTCAP, less than this payment/);
   assert.match(draw(null), /Checking your browser wallet/); assert.doesNotMatch(draw(null), /<button/);
   const refusals: [PayCheck, RegExp | null][] = [
     [{ ok: false, reason: 'no_provider', message: 'No browser wallet on this page.' }, null],
@@ -61,15 +61,15 @@ test('Pay with wallet is drawn only when the check passed; every refusal says wh
 
 test('the payment panel asks for the amount due rounded up, from the signed-in wallet, with manual steps', () => {
   const page = panel({ kind: 'ready', view: view() });
-  assert.match(page, /Pay 40,000 MERRYMEN/);
+  assert.match(page, /Pay 40,000 AGENTCAP/);
   assert.ok(page.includes(TREASURY)); assert.ok(page.includes(TOKEN.address));
-  assert.match(page, /Merrymen payments wallet/); assert.match(page, /Robinhood Chain \(chain ID 4663\)/);
+  assert.match(page, /AgentCap payments wallet/); assert.match(page, /Robinhood Chain \(chain ID 4663\)/);
   assert.match(page, /Send only from 0x1111…1111\. A transfer from any other wallet, an exchange, a smart account or a swap cannot be credited/);
   assert.match(page, /Already sent\? Paste the transaction hash\./);
-  assert.match(page, /Paying moves MERRYMEN out of your wallet\. Merry Circle tiers and hosted energy follow the balance you hold\./);
+  assert.match(page, /Paying moves AGENTCAP out of your wallet\. Merry Circle tiers and hosted energy follow the balance you hold\./);
   // Named for assistive technology: the panel is a region with its heading, and each Copy says what it copies.
-  assert.match(page, /<section class="dev-pay" aria-labelledby="dev-pay-title"><h3 id="dev-pay-title"[^>]*>Pay 40,000 MERRYMEN<\/h3>/);
-  assert.match(page, /aria-label="Copy amount"/); assert.match(page, /aria-label="Copy Merrymen payments wallet address"/);
+  assert.match(page, /<section class="dev-pay" aria-labelledby="dev-pay-title"><h3 id="dev-pay-title"[^>]*>Pay 40,000 AGENTCAP<\/h3>/);
+  assert.match(page, /aria-label="Copy amount"/); assert.match(page, /aria-label="Copy AgentCap payments wallet address"/);
   // The usage meter, per-key use and history.
   assert.match(page, /120 of 1,000 requests/); assert.match(page, /Prism backend/); assert.match(page, /aria-valuenow="120"/);
   assert.match(page, /Choose a plan/); assert.match(page, /Payment received/); assert.match(page, /\+60,000/);
@@ -122,19 +122,19 @@ test('no payment panel without a live treasury, and nothing at all to pay when b
   // that is owed when this period ends, not now, and must not read as a bill for the payment just made.
   const running = { id: 'crumbs', name: 'Crumbs', starts_at: '2026-10-01T00:00:00.000Z', ends_at: '2026-10-31T00:00:00.000Z', selected: 'crumbs', renews_on_next_request: false };
   const renewal = panel({ kind: 'ready', view: view({ plan: running, credit_raw: '0', due_raw: (100_000n * UNIT).toString(), due_for: 'renewal' }) });
-  assert.match(renewal, /To renew on 31 Oct 2026: 100,000 MERRYMEN/); assert.doesNotMatch(renewal, /Due: |Pay 100,000 MERRYMEN/);
-  assert.match(renewal, /Renewal on 31 Oct 2026: 100,000 MERRYMEN<\/h3>/); assert.match(renewal, /runs until 31 Oct 2026 either way, and nothing is owed before then/);
+  assert.match(renewal, /To renew on 31 Oct 2026: 100,000 AGENTCAP/); assert.doesNotMatch(renewal, /Due: |Pay 100,000 AGENTCAP/);
+  assert.match(renewal, /Renewal on 31 Oct 2026: 100,000 AGENTCAP<\/h3>/); assert.match(renewal, /runs until 31 Oct 2026 either way, and nothing is owed before then/);
   // Folded: paying ahead is a step of its own, and a hash sent from elsewhere can still be added.
   assert.match(renewal, /Pay ahead for the next period/); assert.ok(!renewal.includes(TREASURY)); assert.match(renewal, /Already sent\? Paste the transaction hash\./);
   // Activation is due now, as is a renewal once the plan has lapsed to Free.
   for (const due_for of ['activation', 'renewal', undefined]) {
     const now = panel({ kind: 'ready', view: view({ credit_raw: '0', due_raw: (100_000n * UNIT).toString(), due_for }) });
-    assert.match(now, /Due: 100,000 MERRYMEN/, String(due_for)); assert.match(now, /<h3 id="dev-pay-title"[^>]*>Pay 100,000 MERRYMEN<\/h3>/, String(due_for));
+    assert.match(now, /Due: 100,000 AGENTCAP/, String(due_for)); assert.match(now, /<h3 id="dev-pay-title"[^>]*>Pay 100,000 AGENTCAP<\/h3>/, String(due_for));
   }
   // Nothing due, nothing to pay.
   assert.doesNotMatch(panel({ kind: 'ready', view: view({ due_raw: null }) }), /Pay |Paste the transaction hash/);
   // A shortfall is said plainly.
-  assert.match(panel({ kind: 'ready', view: view({ credit_raw: (-5n * UNIT).toString(), due_raw: null }) }), /-5 <small>MERRYMEN<\/small>[\s\S]*A reversed payment left a shortfall/);
+  assert.match(panel({ kind: 'ready', view: view({ credit_raw: (-5n * UNIT).toString(), due_raw: null }) }), /-5 <small>AGENTCAP<\/small>[\s\S]*A reversed payment left a shortfall/);
 });
 
 test('without an account the console asks for one, and key creation waits for it', () => {
@@ -191,8 +191,8 @@ test('account loading tells a missing account from a gateway without accounts, a
 test('nothing the console imports reads a server secret', () => {
   for (const file of ['./DeveloperConsole.tsx', './AccountPanel.tsx', './PlansSection.tsx', './developer-client.ts', '../../lib/developer-billing.ts', '../../lib/pending-payments.ts']) {
     const source = readFileSync(new URL(file, import.meta.url), 'utf8');
-    // DeveloperConsole's sample code mentions process.env.MERRYMEN_API_KEY as text for the reader's backend; that is not a read.
-    assert.ok(!/from ["'][^"']*developer-gateway["']|process\.env\.(?!MERRYMEN_API_KEY\b)/.test(source), file);
+    // DeveloperConsole's sample code mentions process.env.AGENTCAP_API_KEY as text for the reader's backend; that is not a read.
+    assert.ok(!/from ["'][^"']*developer-gateway["']|process\.env\.(?!AGENTCAP_API_KEY\b)/.test(source), file);
   }
 });
 

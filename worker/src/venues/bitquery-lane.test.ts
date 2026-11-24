@@ -83,7 +83,7 @@ const byQuery = (call: Call): Response =>
         : fixture("v3-pools.json"),
   );
 
-const tmp = (): string => mkdtempSync(path.join(os.tmpdir(), "merrymen-bq-lane-"));
+const tmp = (): string => mkdtempSync(path.join(os.tmpdir(), "agentcap-bq-lane-"));
 const config = (over: Partial<BitqueryLaneConfig> = {}): BitqueryLaneConfig => ({ apiKey: "ory_at_test", pointsPerDay: 25_000, rpm: 60, ...over });
 
 describe("bitqueryLaneSetup — off unless a key is set, and the key is never said", () => {
@@ -94,14 +94,14 @@ describe("bitqueryLaneSetup — off unless a key is set, and the key is never sa
     assert.match(s.lines[0]!, /orchestrator only/);
   });
 
-  it("MERRYMEN_BITQUERY_LANE=0 turns it off with the key still set", () => {
-    const s = bitqueryLaneSetup({ MERRYMEN_BITQUERY_API_KEY: "ory_at_secret", MERRYMEN_BITQUERY_LANE: "0" });
+  it("AGENTCAP_BITQUERY_LANE=0 turns it off with the key still set", () => {
+    const s = bitqueryLaneSetup({ AGENTCAP_BITQUERY_API_KEY: "ory_at_secret", AGENTCAP_BITQUERY_LANE: "0" });
     assert.equal(s.off, true);
     assert.equal(s.config, null);
   });
 
   it("defaults: 25,000 points a day, 60 a minute, 3 at once", () => {
-    const s = bitqueryLaneSetup({ MERRYMEN_BITQUERY_API_KEY: "ory_at_secret" });
+    const s = bitqueryLaneSetup({ AGENTCAP_BITQUERY_API_KEY: "ory_at_secret" });
     assert.equal(s.off, false);
     assert.deepEqual(s.config, { apiKey: "ory_at_secret", pointsPerDay: 25_000, rpm: 60 });
     assert.equal(BITQUERY_LANE_DEFAULTS.maxConcurrency, 3);
@@ -110,9 +110,9 @@ describe("bitqueryLaneSetup — off unless a key is set, and the key is never sa
 
   it("knobs are clamped to the plan's ceilings and a bad value is described, never echoed", () => {
     const s = bitqueryLaneSetup({
-      MERRYMEN_BITQUERY_API_KEY: "ory_at_secret",
-      MERRYMEN_BITQUERY_POINTS_PER_DAY: "ory_at_pasted_into_the_wrong_box",
-      MERRYMEN_BITQUERY_RPM: "500",
+      AGENTCAP_BITQUERY_API_KEY: "ory_at_secret",
+      AGENTCAP_BITQUERY_POINTS_PER_DAY: "ory_at_pasted_into_the_wrong_box",
+      AGENTCAP_BITQUERY_RPM: "500",
     });
     assert.equal(s.config!.pointsPerDay, 25_000);
     assert.equal(s.config!.rpm, 90, "never above the plan's 90/min");
@@ -120,7 +120,7 @@ describe("bitqueryLaneSetup — off unless a key is set, and the key is never sa
     assert.doesNotMatch(said, /ory_at_/, "neither the key nor a key-shaped knob value reaches the log");
     assert.match(said, /not a positive whole number \(32 characters\)/);
     assert.match(said, /above the ceiling of 90/);
-    assert.equal(bitqueryLaneSetup({ MERRYMEN_BITQUERY_API_KEY: "k", MERRYMEN_BITQUERY_POINTS_PER_DAY: "0" }).config!.pointsPerDay, 25_000, "zero is not a budget");
+    assert.equal(bitqueryLaneSetup({ AGENTCAP_BITQUERY_API_KEY: "k", AGENTCAP_BITQUERY_POINTS_PER_DAY: "0" }).config!.pointsPerDay, 25_000, "zero is not a budget");
   });
 });
 
@@ -539,7 +539,7 @@ describe("the lane — budget, cache, rate and cooldown", () => {
     clock.advance(10 * 60_000);
     assert.deepEqual(await lane.tokenFlow(TOKEN_B), { ok: false, failure: "provider-cooldown" });
     assert.equal(calls.length, 1);
-    assert.match(logs.join("\n"), /check MERRYMEN_BITQUERY_API_KEY/);
+    assert.match(logs.join("\n"), /check AGENTCAP_BITQUERY_API_KEY/);
     assert.doesNotMatch(logs.join("\n"), /ory_at_test/);
     lane.close();
     const fresh = new BitqueryLane({ dir, config: config({ apiKey: "ory_at_new" }), fetch: stubFetch(byQuery).fetch, clock });

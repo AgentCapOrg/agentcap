@@ -15,7 +15,7 @@
  * rail, and the moment the rail healed the agent went live.
  *
  * MEASURED, by executing the real functions against his real inputs before this
- * change (gasSponsored true — MERRYMEN_SPONSOR_GAS and a bundler key are both
+ * change (gasSponsored true — AGENTCAP_SPONSOR_GAS and a bundler key are both
  * set on the orchestrator — and paperTradingEnabled true):
  *
  *     mainnet + owner wants paper + funded 500 USDG  ->  {"mode":"live"}
@@ -380,7 +380,7 @@ describe("the consent gate stands down while its migration is still running", ()
   it("A DRY RUN MUST NOT CHANGE BEHAVIOUR — the report cannot un-gate the fleet", () => {
     /**
      * This used to assert the OPPOSITE, and was right at the time: standing
-     * down was tied to `MERRYMEN_BACKFILL_LIVE_INTENT=report` so the two could
+     * down was tied to `AGENTCAP_BACKFILL_LIVE_INTENT=report` so the two could
      * not disagree about whether the migration had run.
      *
      * That reasoning expired the moment the migration ran. With consent now
@@ -405,10 +405,10 @@ describe("the consent gate stands down while its migration is still running", ()
     assert.ok(line, "enforceLiveIntent must still be resolved in settings.ts");
     assert.doesNotMatch(
       line,
-      /MERRYMEN_BACKFILL_LIVE_INTENT/,
+      /AGENTCAP_BACKFILL_LIVE_INTENT/,
       "asking the migration to report must not decide whether the gate is enforced",
     );
-    assert.match(line, /env\.MERRYMEN_LIVE_INTENT_STAND_DOWN/);
+    assert.match(line, /env\.AGENTCAP_LIVE_INTENT_STAND_DOWN/);
   });
 
   it("and consent itself still has no env override", () => {

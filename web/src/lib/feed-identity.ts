@@ -8,7 +8,7 @@
  * route, which runs only on the server, is the one place that knows whether
  * this is the hosted deploy (client-env.test.ts keeps isHostedMode there).
  */
-import { DEFAULT_AGENT_NAME, SETTINGS_DEFAULTS, type MerrymenSettings } from "@merrymen/core";
+import { DEFAULT_AGENT_NAME, SETTINGS_DEFAULTS, type AgentCapSettings } from "@agentcap/core";
 
 // The basket the WORKER actually defaults to when none is configured.
 // TRADEABLE_SYMBOLS (14) was the registry of what CAN be traded, not the
@@ -55,7 +55,7 @@ export const IDENTITY_FALLBACK: IdentitySettings = {
 };
 
 /** The three identity fields out of a settings blob, whatever store it came from. */
-function pickIdentity(s: MerrymenSettings): IdentitySettings {
+function pickIdentity(s: AgentCapSettings): IdentitySettings {
   return {
     strategy: typeof s.strategy === "string" && s.strategy ? s.strategy : "steady-basket",
     basket: Array.isArray(s.basketSymbols) && s.basketSymbols.length ? s.basketSymbols : DEFAULT_BASKET,
@@ -68,7 +68,7 @@ function pickIdentity(s: MerrymenSettings): IdentitySettings {
 export interface IdentitySources {
   hosted: () => boolean;
   /** The tenant's sealed settings; null when they have saved none. */
-  settingsOf: (tenant: `0x${string}`) => Promise<MerrymenSettings | null | undefined>;
+  settingsOf: (tenant: `0x${string}`) => Promise<AgentCapSettings | null | undefined>;
   /** The self-hosted settings file's text. Throws as readFileSync does. */
   settingsFile: () => string;
   slugOf: (tenant: `0x${string}`) => Promise<string | null>;
@@ -81,7 +81,7 @@ export interface IdentitySources {
  * THE BUG THIS EXISTS TO FIX, because it made a working feature look broken.
  * Hosted, a tenant's settings are written to the per-tenant sealed store
  * (`getSettingsStore("spot").put(tenant, …)` in api/settings), and NOTHING ever writes
- * the web container's own `~/.merrymen/settings.json`. This function used to
+ * the web container's own `~/.agentcap/settings.json`. This function used to
  * read that file unconditionally, so on the hosted deploy the read always threw
  * and every tenant got the fallback below: name null → the console fell back to
  * the ledger's "Robin", and strategy/basket were the defaults no matter what
@@ -116,7 +116,7 @@ export async function readIdentitySettings(
   }
   try {
     // BOM-strip: hand-edited or PowerShell-written files may carry a UTF-8 BOM.
-    return pickIdentity(JSON.parse(raw.replace(/^﻿/, "")) as MerrymenSettings);
+    return pickIdentity(JSON.parse(raw.replace(/^﻿/, "")) as AgentCapSettings);
   } catch {
     return IDENTITY_FALLBACK;
   }

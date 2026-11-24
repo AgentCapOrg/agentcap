@@ -174,9 +174,9 @@ describe("classifyStage maps the existing vocabularies, keeping the original rea
 
 describe("the real take() drops read to their codes", () => {
   const input = (over: Partial<ShadowInputs["market"]> = {}) =>
-    ({ agentId: AGENT, positions: [], market: { instrumentId: "merrymen:meme", symbol: "MEME", priceUsd: "0.01", ...over } }) as unknown as ShadowInputs;
+    ({ agentId: AGENT, positions: [], market: { instrumentId: "agentcap:meme", symbol: "MEME", priceUsd: "0.01", ...over } }) as unknown as ShadowInputs;
   const answer = (over = {}) => ({ ran: true, result: { ok: true, decision: {
-    decision_id: "decision-1", agent_id: AGENT, instrument_id: "merrymen:meme", symbol: "MEME", action: "buy", suggested_delta_usdg: 5e6, gate_verdict: "proceed", ...over,
+    decision_id: "decision-1", agent_id: AGENT, instrument_id: "agentcap:meme", symbol: "MEME", action: "buy", suggested_delta_usdg: 5e6, gate_verdict: "proceed", ...over,
   } } }) as unknown as ShadowOutcome;
   async function dropOf(take: (r: TrenchBrainReview) => unknown, opts: { over?: object; market?: Partial<ShadowInputs["market"]>; clock?: { t: number } } = {}) {
     const clock = opts.clock ?? { t: 1000 };

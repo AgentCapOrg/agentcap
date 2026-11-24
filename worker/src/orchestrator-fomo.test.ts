@@ -600,7 +600,7 @@ describe("child files", () => {
       event(4, STAR, Z1, T0 - 2 * MIN), // nobody's
       event(5, STAR, X1, T0 - 6 * MIN), // a stranger on T1's coin
     ]);
-    await seedDossier(db, X1, "Merrymen's own quote: liquidity is thin.", T0 - 10 * MIN);
+    await seedDossier(db, X1, "AgentCap's own quote: liquidity is thin.", T0 - 10 * MIN);
     const r = await rig({
       db,
       serve: {},
@@ -1170,7 +1170,7 @@ describe("tails", () => {
     const off = await rig({ db: db2, serve: {}, access: { [T1]: ACCESS.monitoring }, knobs: { tailsEnabled: false } });
     await off.run([T1]);
     assert.equal(off.last(T1).tails, undefined);
-    assert.deepEqual(off.last(T1).signals, [], "MERRYMEN_FOMO_TAILS=0: no tailed coins either");
+    assert.deepEqual(off.last(T1).signals, [], "AGENTCAP_FOMO_TAILS=0: no tailed coins either");
     off.pass.stop();
   });
 
@@ -1594,7 +1594,7 @@ describe("shared ingestion", () => {
 describe("publication drafts", () => {
   it("end blocked by policy, stay visible, and the sender is never called", async () => {
     const db = await freshDb();
-    await seedDossier(db, PONS, "Merrymen's own quote: liquidity is thin.", T0 - HOUR);
+    await seedDossier(db, PONS, "AgentCap's own quote: liquidity is thin.", T0 - HOUR);
     await store.insertAssessment(db, assessment("as-1", T1, "WATCH", T0 - 30 * MIN));
     await store.insertAssessment(db, assessment("as-2", T2, "WATCH", T0 - 30 * MIN));
     await store.insertAssessment(db, assessment("as-3", T1, "REJECT_SETUP", T0 - 20 * MIN, X1));
@@ -1615,7 +1615,7 @@ describe("publication drafts", () => {
     assert.equal((await store.recentPublications(db, T1, 10)).length, 1);
 
     // A dossier that moved forward is.
-    await seedDossier(db, PONS, "Merrymen's own quote: liquidity is deeper now.", T0 + 90_000);
+    await seedDossier(db, PONS, "AgentCap's own quote: liquidity is deeper now.", T0 + 90_000);
     await store.insertAssessment(db, assessment("as-5", T1, "WATCH", T0 + 100_000));
     await r.run([T1, T2], T0 + 122_000);
     mine = await store.recentPublications(db, T1, 10);
@@ -1790,7 +1790,7 @@ describe("adapters", () => {
 
   it("a misfiled stored dossier is absent, not trusted", async () => {
     const db = await freshDb();
-    const { dossier } = await seedDossier(db, PONS, "Merrymen's own quote: liquidity is thin.", T0);
+    const { dossier } = await seedDossier(db, PONS, "AgentCap's own quote: liquidity is thin.", T0);
     assert.ok(dossierFromStored(dossier, PONS));
     assert.equal(dossierFromStored({ ...dossier, tokenKey: X1 }, X1), null);
     assert.equal(dossierFromStored({ ...dossier, dossier: { nonsense: true } }, PONS), null);
@@ -2091,61 +2091,61 @@ describe("the orchestrator's wiring", () => {
   });
 
   it("reads the switches once: off unless opted in, off without a database, the key by either name, never logged", async () => {
-    process.env.MERRYMEN_HOME ??= path.join(tmpdir(), "mm-orchestrator-fomo-test-home");
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOME ??= path.join(tmpdir(), "mm-orchestrator-fomo-test-home");
+    process.env.AGENTCAP_HOSTED = "1";
     const { childEnv, fomoSetup } = await import("./orchestrator");
-    const ON = { MERRYMEN_FOMO_ENABLED: "1", DATABASE_URL: "postgres://x" };
-    assert.equal(fomoSetup({ MERRYMEN_FOMO_ENABLED: "0", DATABASE_URL: "postgres://x", MERRYMEN_FOMO_API_KEY: KEY }).off, true);
-    assert.equal(fomoSetup({ MERRYMEN_FOMO_ENABLED: "1", MERRYMEN_FOMO_API_KEY: KEY }).off, true, "no shared database, no pass");
-    const on = fomoSetup({ ...ON, MERRYMEN_FOMO_API_KEY: ` ${KEY} `, MERRYMEN_FOMO_PLAN_CREDITS: "1000000" });
+    const ON = { AGENTCAP_FOMO_ENABLED: "1", DATABASE_URL: "postgres://x" };
+    assert.equal(fomoSetup({ AGENTCAP_FOMO_ENABLED: "0", DATABASE_URL: "postgres://x", AGENTCAP_FOMO_API_KEY: KEY }).off, true);
+    assert.equal(fomoSetup({ AGENTCAP_FOMO_ENABLED: "1", AGENTCAP_FOMO_API_KEY: KEY }).off, true, "no shared database, no pass");
+    const on = fomoSetup({ ...ON, AGENTCAP_FOMO_API_KEY: ` ${KEY} `, AGENTCAP_FOMO_PLAN_CREDITS: "1000000" });
     assert.deepEqual([on.off, on.apiKey, on.planCredits], [false, KEY, 1_000_000]);
     assert.equal(fomoSetup({ ...ON, FOMO_API_KEY: KEY }).apiKey, KEY, "the provider's own name works too");
-    assert.equal(fomoSetup({ ...ON, MERRYMEN_FOMO_API_KEY: " ", FOMO_API_KEY: KEY }).apiKey, KEY, "a blank house name falls through");
+    assert.equal(fomoSetup({ ...ON, AGENTCAP_FOMO_API_KEY: " ", FOMO_API_KEY: KEY }).apiKey, KEY, "a blank house name falls through");
     const keyless = fomoSetup(ON);
     assert.deepEqual([keyless.off, keyless.apiKey], [false, null], "opted in without a key still runs: files and the broker answer honestly");
     assert.match(keyless.lines.join(" "), /without a provider key/);
-    assert.equal(fomoSetup({ ...ON, MERRYMEN_FOMO_PLAN_CREDITS: "lots" }).planCredits, undefined);
+    assert.equal(fomoSetup({ ...ON, AGENTCAP_FOMO_PLAN_CREDITS: "lots" }).planCredits, undefined);
     // The research caps (D9): unset, the defaults and no override; set, passed to the runtime and said once at boot.
     assert.deepEqual(keyless.budget, {});
     assert.match(keyless.lines.join("\n"), /fomo: research budget \d+ credits\/day shared; per owner \d+\/h and \d+\/day; per group 2500\/h/);
-    const capped = fomoSetup({ ...ON, MERRYMEN_FOMO_PLAN_CREDITS: "37500000", MERRYMEN_FOMO_GROUP_HOURLY_CREDITS: "6500", MERRYMEN_FOMO_TENANT_HOURLY_CREDITS: "13000", MERRYMEN_FOMO_TENANT_DAILY_CREDITS: "26000" });
+    const capped = fomoSetup({ ...ON, AGENTCAP_FOMO_PLAN_CREDITS: "37500000", AGENTCAP_FOMO_GROUP_HOURLY_CREDITS: "6500", AGENTCAP_FOMO_TENANT_HOURLY_CREDITS: "13000", AGENTCAP_FOMO_TENANT_DAILY_CREDITS: "26000" });
     assert.deepEqual(capped.budget, { groupHourlyCredits: 6_500, tenantHourlyCredits: 13_000, tenantDailyCredits: 26_000 });
     assert.match(capped.lines.join("\n"), /per owner 13000\/h and 26000\/day; per group 6500\/h/);
-    const badCap = fomoSetup({ ...ON, MERRYMEN_FOMO_GROUP_HOURLY_CREDITS: KEY });
+    const badCap = fomoSetup({ ...ON, AGENTCAP_FOMO_GROUP_HOURLY_CREDITS: KEY });
     assert.deepEqual(badCap.budget, {});
-    assert.ok(badCap.lines.includes("fomo: MERRYMEN_FOMO_GROUP_HOURLY_CREDITS is not a whole number of credits; its default applies"));
+    assert.ok(badCap.lines.includes("fomo: AGENTCAP_FOMO_GROUP_HOURLY_CREDITS is not a whole number of credits; its default applies"));
     assert.ok(!badCap.lines.join(" ").includes(KEY.slice(0, 6)), "a key pasted into a cap is never logged");
     assert.ok(!JSON.stringify([on.lines, keyless.lines]).includes(KEY), "a boot line carries the key");
     // A key pasted into the switch is never written to the log.
-    const pasted = fomoSetup({ DATABASE_URL: "postgres://x", MERRYMEN_FOMO_ENABLED: KEY });
+    const pasted = fomoSetup({ DATABASE_URL: "postgres://x", AGENTCAP_FOMO_ENABLED: KEY });
     assert.equal(pasted.off, true);
     assert.ok(!pasted.lines.join(" ").includes(KEY.slice(0, 6)), "not even its first characters");
     assert.match(pasted.lines.join(" "), new RegExp(`${KEY.length}-character value`));
-    assert.match(fomoSetup({ MERRYMEN_FOMO_ENABLED: "true" }).lines.join(" "), /is "true", and only "1" turns it on/);
+    assert.match(fomoSetup({ AGENTCAP_FOMO_ENABLED: "true" }).lines.join(" "), /is "true", and only "1" turns it on/);
     // OPT-IN. A deployment that never set the switch — even one holding the
     // shared database AND a provider key — runs no pass.
     for (const value of [undefined, "", " ", "true", "yes", "on", "01", "1 "]) {
-      const boot = fomoSetup({ DATABASE_URL: "postgres://x", MERRYMEN_FOMO_API_KEY: KEY, MERRYMEN_FOMO_ENABLED: value });
-      assert.deepEqual([boot.off, boot.apiKey], [true, null], `MERRYMEN_FOMO_ENABLED=${JSON.stringify(value)} is off`);
+      const boot = fomoSetup({ DATABASE_URL: "postgres://x", AGENTCAP_FOMO_API_KEY: KEY, AGENTCAP_FOMO_ENABLED: value });
+      assert.deepEqual([boot.off, boot.apiKey], [true, null], `AGENTCAP_FOMO_ENABLED=${JSON.stringify(value)} is off`);
       assert.match(boot.lines.join(" "), /fomo: off/);
       assert.ok(!boot.lines.join(" ").includes(KEY));
     }
-    process.env.MERRYMEN_FOMO_API_KEY = KEY;
+    process.env.AGENTCAP_FOMO_API_KEY = KEY;
     process.env.FOMO_API_KEY = KEY;
-    const savedSwitch = process.env.MERRYMEN_FOMO_ENABLED;
-    process.env.MERRYMEN_FOMO_ENABLED = "1";
+    const savedSwitch = process.env.AGENTCAP_FOMO_ENABLED;
+    process.env.AGENTCAP_FOMO_ENABLED = "1";
     try {
       const env = childEnv(T1);
-      assert.equal(env.MERRYMEN_FOMO_API_KEY, undefined);
+      assert.equal(env.AGENTCAP_FOMO_API_KEY, undefined);
       assert.equal(env.FOMO_API_KEY, undefined);
       // The switch is not a secret and must reach the child: a hosted child is
       // Fomo-on only with the channel AND this value (fomo-child.ts childFomoOff).
-      assert.equal(env.MERRYMEN_FOMO_ENABLED, "1");
+      assert.equal(env.AGENTCAP_FOMO_ENABLED, "1");
     } finally {
-      delete process.env.MERRYMEN_FOMO_API_KEY;
+      delete process.env.AGENTCAP_FOMO_API_KEY;
       delete process.env.FOMO_API_KEY;
-      if (savedSwitch === undefined) delete process.env.MERRYMEN_FOMO_ENABLED;
-      else process.env.MERRYMEN_FOMO_ENABLED = savedSwitch;
+      if (savedSwitch === undefined) delete process.env.AGENTCAP_FOMO_ENABLED;
+      else process.env.AGENTCAP_FOMO_ENABLED = savedSwitch;
     }
   });
 
@@ -2160,20 +2160,20 @@ describe("the orchestrator's wiring", () => {
   });
 
   it("tells each child which tenant it is, and nothing on the IPC side ever trusts that", async () => {
-    process.env.MERRYMEN_HOME ??= path.join(tmpdir(), "mm-orchestrator-fomo-test-home");
+    process.env.AGENTCAP_HOME ??= path.join(tmpdir(), "mm-orchestrator-fomo-test-home");
     const { childEnv } = await import("./orchestrator");
     const mixed = `0x${"Ab".repeat(20)}`;
-    assert.equal(childEnv(mixed).MERRYMEN_TENANT, mixed.toLowerCase());
-    assert.equal(childEnv(T2).MERRYMEN_TENANT, T2);
+    assert.equal(childEnv(mixed).AGENTCAP_TENANT, mixed.toLowerCase());
+    assert.equal(childEnv(T2).AGENTCAP_TENANT, T2);
     // The broker is stamped from the tenant THIS process spawned, never from a variable the child holds.
     const attach = SRC.slice(SRC.indexOf("function attachFomoBroker("), SRC.indexOf("function noteFomoFailure("));
-    assert.ok(!/MERRYMEN_TENANT/.test(attach));
+    assert.ok(!/AGENTCAP_TENANT/.test(attach));
     const code = (f: string) =>
       readFileSync(path.join(HERE, f), "utf8")
         .replace(/\/\*[\s\S]*?\*\//g, "")
         .replace(/(^|[^:"'`])\/\/.*$/gm, "$1");
-    for (const f of ["fomo/broker.ts", "fomo/service.ts", "orchestrator-fomo.ts"]) assert.ok(!/MERRYMEN_TENANT/.test(code(f)), `${f} reads the child's tenant variable`);
-    const uses = code("orchestrator.ts").match(/MERRYMEN_TENANT/g) ?? [];
+    for (const f of ["fomo/broker.ts", "fomo/service.ts", "orchestrator-fomo.ts"]) assert.ok(!/AGENTCAP_TENANT/.test(code(f)), `${f} reads the child's tenant variable`);
+    const uses = code("orchestrator.ts").match(/AGENTCAP_TENANT/g) ?? [];
     assert.equal(uses.length, 1, "set once, in childEnv, and read nowhere in the orchestrator");
   });
 
@@ -2191,7 +2191,7 @@ describe("the orchestrator's wiring", () => {
   });
 
   it("its own failure line scrubs every key name the pass's scrub does, api-key included", async () => {
-    process.env.MERRYMEN_HOME ??= path.join(tmpdir(), "mm-orchestrator-fomo-test-home");
+    process.env.AGENTCAP_HOME ??= path.join(tmpdir(), "mm-orchestrator-fomo-test-home");
     const { fomoFailureText } = await import("./orchestrator");
     for (const name of ["key", "apikey", "api_key", "api-key", "API-KEY", "Api_Key"]) {
       const line = fomoFailureText(`pass failed — fetch https://mainnet.helius-rpc.com/?${name}=${KEY}&x=1 for ${T1}`);
@@ -2204,7 +2204,7 @@ describe("the orchestrator's wiring", () => {
     }
     assert.equal(fomoFailureText(`connect failed for ${STREAM_URL} (owner ${T1})`), "connect failed for wss://stream.test/[redacted] (owner 0x…)");
     // A key in the URL's path, which no ?key= scrub reaches: Alchemy's /v2/<key>, Triton's and Syndica's.
-    for (const url of ["https://eth-mainnet.g.alchemy.com/v2/AbCdEf0123456789GhIjKlMn", "https://merrymen.mainnet.rpcpool.com/0b7c4a1e-2f3d-4c5b-9a8e-1d2c3b4a5f6e",
+    for (const url of ["https://eth-mainnet.g.alchemy.com/v2/AbCdEf0123456789GhIjKlMn", "https://agentcap.mainnet.rpcpool.com/0b7c4a1e-2f3d-4c5b-9a8e-1d2c3b4a5f6e",
       "https://solana-mainnet.api.syndica.io/api-key/2xYzAbCdEf0123456789"]) {
       const line = fomoFailureText(`pass failed — fetch ${url} timed out`);
       assert.equal(line, `pass failed — fetch ${url.slice(0, url.indexOf("/", 8))}/[redacted] timed out`, url);

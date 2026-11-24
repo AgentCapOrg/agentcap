@@ -944,7 +944,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "merrymen-vault"
+name = "agentcap-vault"
 version = "0.1.0"
 dependencies = [
  "anchor-lang",

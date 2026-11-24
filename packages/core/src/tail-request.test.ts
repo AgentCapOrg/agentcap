@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { TAIL_DEFAULT_HOURS, TAIL_MAX_HOURS, parseTailArgs, parseTailRequest, saysTail, tailAsksToTake, tailHoursIn } from "./tail-request";
 
-const SELF = ["Shogun", "@merrymanme_bot"];
+const SELF = ["Shogun", "@agentcapavatarme_bot"];
 
 test("a tail asked for in words: the trader as written, and the hours", () => {
   const starts: [string, { handle: string; hours: number; clamped: boolean }][] = [
@@ -142,7 +142,7 @@ test("never a tail: copy, mirror and follow keep their meaning; coins, her own t
     "tail him",
     "keep an eye on it",
     "can you tail shogun",
-    "tail @merrymanme_bot for 2h",
+    "tail @agentcapavatarme_bot for 2h",
     "i love the tail on that chart",
     "what are the theses on PONS",
     "",
@@ -161,7 +161,7 @@ test("/tail NAME [hours]: the command's own argument", () => {
   assert.deepEqual(parseTailArgs("unipcs 30", SELF), { handle: "unipcs", hours: 12, clamped: true });
   assert.deepEqual(parseTailArgs("@unipcs 2 hours", SELF), { handle: "unipcs", hours: 2, clamped: false });
   assert.deepEqual(parseTailArgs("unipcs 90 minutes", SELF), { handle: "unipcs", hours: 2, clamped: false });
-  for (const bad of ["", "   ", "unipcs please", "it 3h", "him", "shogun 2h", "@merrymanme_bot", "a b c d", "123", "uni.pcs"]) {
+  for (const bad of ["", "   ", "unipcs please", "it 3h", "him", "shogun 2h", "@agentcapavatarme_bot", "a b c d", "123", "uni.pcs"]) {
     assert.equal(parseTailArgs(bad, SELF), null, bad);
   }
   assert.equal(parseTailArgs(null, SELF), null);

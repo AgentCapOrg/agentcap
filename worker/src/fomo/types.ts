@@ -70,7 +70,7 @@ export interface TokenLabel {
 }
 
 /**
- * Whether Merrymen could act on a researched token at all. Research is
+ * Whether AgentCap could act on a researched token at all. Research is
  * available for every value; execution only for the first.
  */
 export type ExecutionAvailability =
@@ -111,7 +111,7 @@ export type ActivityKind =
  * Who stands behind an observation:
  *   provider-reported      the provider says so; nobody checked
  *   provider-verified      the provider says IT matched it on chain
- *   independently-verified Merrymen read the chain/venue itself
+ *   independently-verified AgentCap read the chain/venue itself
  */
 export type ObservationBasis = "provider-reported" | "provider-verified" | "independently-verified";
 
@@ -166,7 +166,7 @@ export interface TraderEvent {
   sourceEventAt: number | null;
   /** Block time of the matched fill, set ONLY when the provider matched an exact fill. */
   execAt: number | null;
-  /** When Merrymen received it. */
+  /** When AgentCap received it. */
   observedAt: number;
   verification: ObservationBasis;
   /** Sanitised, capped alert/thesis text. Untrusted data, never instructions. */
@@ -302,7 +302,7 @@ export interface Thesis {
   postedAt: number | null;
   /**
    * Evidence family. Copies, reposts and near-duplicates of one underlying
-   * thesis share a family and count ONCE (dossier.ts). Merrymen's own posts
+   * thesis share a family and count ONCE (dossier.ts). AgentCap's own posts
    * are a family that never counts as independent confirmation.
    */
   familyKey: string;
@@ -516,7 +516,7 @@ export type EvidenceKind =
 
 /**
  * An opaque, traceable reference: `fomo:<kind>/<id>[@<retrievedAt>]`.
- * `sourceUrl` is set ONLY when the provider supplied a verified link; Merrymen
+ * `sourceUrl` is set ONLY when the provider supplied a verified link; AgentCap
  * never invents a permalink.
  */
 export interface EvidenceRef {
@@ -544,7 +544,7 @@ export interface SubjectCandidate {
   match: string;
 }
 
-/** The registered read-only tool names (tools.ts). Merrymen names, not provider routes. */
+/** The registered read-only tool names (tools.ts). AgentCap names, not provider routes. */
 export type FomoReadToolName =
   | "fomo_resolve_subject"
   | "fomo_get_trader_context"
@@ -680,7 +680,7 @@ export type ClaimSupport = "source-statement" | "observed-action" | "verified-fa
 export interface DossierClaim {
   claimKey: string;
   stance: "supporting" | "opposing" | "neutral";
-  /** Merrymen's paraphrase, sanitised and short; never a copied third-party thesis. */
+  /** AgentCap's paraphrase, sanitised and short; never a copied third-party thesis. */
   summary: string;
   support: ClaimSupport;
   /** Distinct evidence families behind the claim (independent confirmations). */
@@ -797,7 +797,7 @@ export interface FollowAssessment {
   researchDelayMs: number | null;
   /** Price move since the triggering trader's event, when measurable. */
   priceMovePct: number | null;
-  /** The quote this assessment was judged at (8dp USD string), from Merrymen's own pricing. */
+  /** The quote this assessment was judged at (8dp USD string), from AgentCap's own pricing. */
   decisionQuote: { price8: string; at: number; source: string } | null;
   setupExpiresAt: number | null;
   horizon: string | null;
@@ -849,7 +849,7 @@ export type CapabilityStatus =
   | "UNSUPPORTED";
 
 export interface CapabilityRecord {
-  /** Merrymen's name for the capability (e.g. "leaderboard", "ws-alerts"). */
+  /** AgentCap's name for the capability (e.g. "leaderboard", "ws-alerts"). */
   capability: string;
   /** Provider route/stream it relies on, for operators. */
   route: string;

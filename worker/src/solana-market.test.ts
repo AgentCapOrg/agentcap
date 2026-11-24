@@ -10,7 +10,7 @@ const OTHER = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 const SECRET = "fixture-market-secret";
 const PRIMARY = `https://rpc.example.test/?api-key=${SECRET}`;
 const FALLBACK = "https://backup.example.test/?api-key=independent-fixture-key";
-const ENV = { MERRYMEN_SOLANA_RPC_MAINNET: PRIMARY, MERRYMEN_JUPITER_API_KEY: SECRET };
+const ENV = { AGENTCAP_SOLANA_RPC_MAINNET: PRIMARY, AGENTCAP_JUPITER_API_KEY: SECRET };
 const INTENT: SolanaSwapIntent = { kind: "spl-swap", chain: CHAINS.solana, mode: "paper", requestId: "market_test_1",
   inputMint: SOLANA_USDG_MINT, outputMint: TOKEN, amountRaw: "1000000", slippageBps: 100 };
 const NOW = 1_800_000_000_000;
@@ -243,13 +243,13 @@ describe("Jupiter paper quotes", () => {
     assert.ok(!JSON.stringify(result).includes(SECRET));
   });
   it("requires a private API key and accepts no live-mode or arbitrary-instruction intents", async () => {
-    const { market, calls } = fixture({ env: { MERRYMEN_SOLANA_RPC_MAINNET: PRIMARY } });
+    const { market, calls } = fixture({ env: { AGENTCAP_SOLANA_RPC_MAINNET: PRIMARY } });
     await assert.rejects(market.quote(INTENT), marketError("missing-jupiter-key"));
     for (const raw of [{ ...INTENT, mode: "live" }, { ...INTENT, slippageBps: 101 }, { ...INTENT, instructions: [SECRET] }]) {
       await assert.rejects(market.quote(raw as SolanaSwapIntent), safeError);
     }
     assert.equal(calls.length, 0);
-    await assert.rejects(fixture({ env: { ...ENV, MERRYMEN_JUPITER_API_KEY: "secret\nheader" } }).market.quote(INTENT), marketError("invalid-jupiter-key"));
+    await assert.rejects(fixture({ env: { ...ENV, AGENTCAP_JUPITER_API_KEY: "secret\nheader" } }).market.quote(INTENT), marketError("invalid-jupiter-key"));
   });
   it("rejects mismatched mints, amounts, mode, slippage, malformed amounts and missing provenance", async () => {
     for (const override of [

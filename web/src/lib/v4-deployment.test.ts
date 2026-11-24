@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { type Address, type PublicClient } from "viem";
-import { UNISWAP, V4_SELF_SWAP } from "@merrymen/core";
+import { UNISWAP, V4_SELF_SWAP } from "@agentcap/core";
 import { assertV4Deployment } from "./v4-deployment";
 
 const DEPLOYED = V4_SELF_SWAP[4663] as Address;

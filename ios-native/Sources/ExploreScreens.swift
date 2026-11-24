@@ -144,7 +144,7 @@ struct ThesisCard: View {
             if let id = thesis["postId"].string {
                 Button { Task { await store.toggleLike(id) } } label: { Image(systemName: store.likes.contains(id) ? "heart.fill" : "heart") }.disabled(store.owner == nil).accessibilityLabel(store.likes.contains(id) ? "Unlike thesis" : "Like thesis")
             }
-            if let slug = thesis["slug"].string, let url = URL(string: "https://app.merrymen.dev/a/\(escaped(slug))") { ShareLink(item: url).labelStyle(.iconOnly) }
+            if let slug = thesis["slug"].string, let url = URL(string: "https://app.agentcap.xyz/a/\(escaped(slug))") { ShareLink(item: url).labelStyle(.iconOnly) }
         }
     } }
 }
@@ -182,7 +182,7 @@ struct AgentScreen: View {
     let slug: String
     @State private var allDecisions = false
     var body: some View { Page { Remote(path: "/api/agents/\(escaped(slug))") { a in
-        AsyncImage(url: URL(string: "https://app.merrymen.dev/api/agent-image/\(escaped(slug))/banner?v=\(store.imageRevision.uuidString)")) { image in image.resizable().scaledToFill().frame(height: 140).clipped() } placeholder: { Brand.heroFill.frame(height: 110) }
+        AsyncImage(url: URL(string: "https://app.agentcap.xyz/api/agent-image/\(escaped(slug))/banner?v=\(store.imageRevision.uuidString)")) { image in image.resizable().scaledToFill().frame(height: 140).clipped() } placeholder: { Brand.heroFill.frame(height: 110) }
             .clipShape(RoundedRectangle(cornerRadius: 20)).overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(Brand.stroke))
         HStack(spacing: 14) {
             Avatar(slug: slug, size: 68, name: a["name"].string).overlay(RoundedRectangle(cornerRadius: 68 * 0.3, style: .continuous).strokeBorder(Brand.background, lineWidth: 3)).padding(.top, -44)

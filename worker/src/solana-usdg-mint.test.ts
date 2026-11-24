@@ -143,7 +143,7 @@ async function workerVerdict(account: unknown): Promise<Verdict> {
     const result = body.method === "getGenesisHash" ? SOLANA_MAINNET_GENESIS_HASH : body.method === "getSlot" ? slot : { context: { slot }, value: account };
     return new Response(JSON.stringify({ jsonrpc: "2.0", id: body.id, result }));
   };
-  const market = createSolanaMarket({ env: { MERRYMEN_SOLANA_RPC_MAINNET: "https://rpc.example.test/" }, fetch: fetcher, now: () => 1_800_000_000_000 });
+  const market = createSolanaMarket({ env: { AGENTCAP_SOLANA_RPC_MAINNET: "https://rpc.example.test/" }, fetch: fetcher, now: () => 1_800_000_000_000 });
   try {
     const mint = await market.readMint(SOLANA_USDG_MINT);
     assert.deepEqual([mint.address, mint.program, mint.decimals], [SOLANA_USDG_MINT, TOKEN_2022_PROGRAM, 6]);

@@ -4,7 +4,7 @@
  * `xHandle` has always been display metadata — `packages/core/src/settings.ts`
  * says it "renders disclaimed and never as a link", because we store what the
  * owner typed and nothing checks they own it. That rule is right for an
- * UNVERIFIED handle: a link makes merrymen vouch for an association it never
+ * UNVERIFIED handle: a link makes agentcap vouch for an association it never
  * checked, and lets an agent impersonate anyone by typing their name.
  *
  * This route is how a handle stops being unverified. Same three-step shape as
@@ -32,8 +32,8 @@
  *   re-checks a balance. What was true when we looked is what we recorded.
  */
 import { NextResponse } from "next/server";
-import { isHostedMode } from "@merrymen/core";
-import { getSettingsStore } from "@merrymen/settings-store";
+import { isHostedMode } from "@agentcap/core";
+import { getSettingsStore } from "@agentcap/settings-store";
 import { consumeChallengeNonce, issueChallengeNonce, requestOrigin, tenantOf } from "@/lib/auth";
 import { normaliseXHandle } from "@/lib/x-handle";
 import { walletNotSupported } from "@/lib/route-guard";
@@ -63,7 +63,7 @@ function requireTenant(req: Request): `0x${string}` | null {
  * moves to `@/lib/x-handle` rather than being exported from here again.
  */
 function xProofMessage(nonce: string): string {
-  return `Verifying my merrymen agent. ${nonce}`;
+  return `Verifying my agentcap agent. ${nonce}`;
 }
 
 /**
@@ -148,7 +148,7 @@ export async function POST(req: Request) {
   let post: Syndicated;
   try {
     const res = await fetch(
-      `https://cdn.syndication.twimg.com/tweet-result?id=${tweetId}&token=merrymen`,
+      `https://cdn.syndication.twimg.com/tweet-result?id=${tweetId}&token=agentcap`,
       { signal: AbortSignal.timeout(10_000), headers: { accept: "application/json" } },
     );
     if (!res.ok) {

@@ -7,9 +7,9 @@ afterEach(() => {
   if (descriptor) Object.defineProperty(globalThis, "localStorage", descriptor);
   else Reflect.deleteProperty(globalThis, "localStorage");
 });
-const key = "merrymen.grant.v1";
+const key = "agentcap.grant.v1";
 const address = `0x${"a".repeat(40)}`;
-const archive = `merrymen.grant.archive.${address}`;
+const archive = `agentcap.grant.archive.${address}`;
 // Synthetic recovery material, never a funded account or a real user key.
 const raw = JSON.stringify({ smartAccount: address, demoOwnerPrivateKey: `0x${"1".repeat(64)}` });
 
@@ -18,7 +18,7 @@ function installStorage(value: string, refuseArchive = false) {
   Object.defineProperty(globalThis, "localStorage", { configurable: true, value: {
     getItem: (name: string) => entries.get(name) ?? null,
     setItem: (name: string, data: string) => {
-      if (refuseArchive && name.startsWith("merrymen.grant.archive.")) throw new Error("QuotaExceededError");
+      if (refuseArchive && name.startsWith("agentcap.grant.archive.")) throw new Error("QuotaExceededError");
       entries.set(name, data);
     },
     removeItem: (name: string) => entries.delete(name),
@@ -42,26 +42,26 @@ it("discard preserves unreadable recovery data instead of silently deleting it",
 
 it("a successful discard keeps the recovery copy and cannot clobber another wallet's archive", () => {
   const storage = installStorage(raw);
-  storage.set("merrymen.grant.archive.other", "other-wallet");
+  storage.set("agentcap.grant.archive.other", "other-wallet");
   clearGrant("spot");
   assert.equal(storage.has(key), false);
   assert.equal(storage.get(archive), raw);
-  assert.equal(storage.get("merrymen.grant.archive.other"), "other-wallet");
+  assert.equal(storage.get("agentcap.grant.archive.other"), "other-wallet");
 });
 
 it("clearing one wallet's slot archives and clears that slot alone: Spot's key is the one it always was", () => {
   const perpsAccount = `0x${"b".repeat(40)}`;
   const perps = JSON.stringify({ purpose: "perps", smartAccount: perpsAccount });
   const storage = installStorage(raw);
-  storage.set("merrymen.grant.perps.v1", perps);
+  storage.set("agentcap.grant.perps.v1", perps);
   clearGrant("perps");
-  assert.equal(storage.has("merrymen.grant.perps.v1"), false);
-  assert.equal(storage.get(`merrymen.grant.archive.${perpsAccount}`), perps, "the Perps grant is archived under its own account");
-  assert.equal(storage.get(key), raw, "the Spot grant, under merrymen.grant.v1, is untouched");
+  assert.equal(storage.has("agentcap.grant.perps.v1"), false);
+  assert.equal(storage.get(`agentcap.grant.archive.${perpsAccount}`), perps, "the Perps grant is archived under its own account");
+  assert.equal(storage.get(key), raw, "the Spot grant, under agentcap.grant.v1, is untouched");
   clearGrant("spot");
   assert.equal(storage.has(key), false);
   assert.equal(storage.get(archive), raw);
-  assert.equal(storage.get(`merrymen.grant.archive.${perpsAccount}`), perps, "and Spot's clear leaves the Perps archive alone");
+  assert.equal(storage.get(`agentcap.grant.archive.${perpsAccount}`), perps, "and Spot's clear leaves the Perps archive alone");
   // A wallet this build does not know clears nothing.
   storage.set(key, raw);
   assert.throws(() => clearGrant("solana" as never));

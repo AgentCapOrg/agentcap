@@ -75,7 +75,7 @@ configured afterwards would fail its own first buy, every time.
 ### Right now the seed is the LAST word, not the first
 
 The contract has `setQuoteCaps`, it is owner-only, and it never moves the vault's
-address. **But nothing off chain can call it.** There is no `merrymen vault
+address. **But nothing off chain can call it.** There is no `agentcap vault
 set-caps`, and no other code path anywhere in this repo builds that operation —
 `grep -rn setQuoteCaps` outside the contract and its tests returns nothing. The
 caller has to be the smart account itself, via a sudo UserOperation, and that
@@ -128,7 +128,7 @@ Do this before anything else, and confirm it landed.
 address. It is not an upgrade and there is no migration: nothing moves from one
 to the other by itself.
 
-Leaving a balance behind is recoverable — `merrymen recover` derives a vault from
+Leaving a balance behind is recoverable — `agentcap recover` derives a vault from
 a factory and your owner key alone, with no grant needed, and the v1 factory
 stays pinned in `packages/core/src/protocols.ts` for exactly this reason. But
 recovering is a manual errand with your owner key in a shell, and it is cheaper
@@ -144,7 +144,7 @@ non-contract. It now refuses that chain by name rather than dying at the first
 ### Seed USDG only
 
 ```
-MERRYMEN_V2_SEED="USDG:250"
+AGENTCAP_V2_SEED="USDG:250"
 ```
 
 `250` is not merely a small number: `250_000_000` raw is **exactly v1's
@@ -181,7 +181,7 @@ dollar is a dollar, so it short-circuits to a price of exactly 1.0.
 ### Rehearse it first — no key, no gas
 
 ```bash
-MERRYMEN_V2_DRY_RUN=1 MERRYMEN_V2_SEED="USDG:250" npm run --prefix contracts deploy:classfactoryv2:mainnet
+AGENTCAP_V2_DRY_RUN=1 AGENTCAP_V2_SEED="USDG:250" npm run --prefix contracts deploy:classfactoryv2:mainnet
 ```
 
 Same code path, same reads, same refusals. It prints the raw caps it *would* seal
@@ -205,8 +205,8 @@ needs the factory to exist, so it only runs for real.
 PowerShell has no inline environment prefix, so set each as its own statement:
 
 ```bash
-$env:MERRYMEN_DEPLOYER_PRIVATE_KEY = "0x..."
-$env:MERRYMEN_V2_SEED = "USDG:250"
+$env:AGENTCAP_DEPLOYER_PRIVATE_KEY = "0x..."
+$env:AGENTCAP_V2_SEED = "USDG:250"
 npm run --prefix contracts deploy:classfactoryv2:mainnet
 ```
 
@@ -364,7 +364,7 @@ what makes the second a proof rather than a coincidence.
 
 ## If something goes wrong
 
-`merrymen recover` takes your owner key and reaches a vault with no grant. It
+`agentcap recover` takes your owner key and reaches a vault with no grant. It
 probes **both** factories and reports what each holds, separately and labelled by
 version, because a v1 vault may hold a position while new grants point at v2. A
 factory that will not answer is named rather than collapsed into a single "class

@@ -35,7 +35,7 @@ import {
 import { PAPER_CHECKPOINT_SCHEMA } from "./paper-checkpoint";
 import { applyLedgerSchema } from "./store";
 
-const root = mkdtempSync(path.join(os.tmpdir(), "merrymen-new-tenant-"));
+const root = mkdtempSync(path.join(os.tmpdir(), "agentcap-new-tenant-"));
 const handles: DatabaseSync[] = [];
 after(() => {
   for (const h of handles) h.close();

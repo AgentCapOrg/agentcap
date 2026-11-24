@@ -1,14 +1,14 @@
 /** This URL is also the Android App Link. No caller chooses a return origin. */
-export const ANDROID_AUTH_URL = "https://app.merrymen.dev/auth/android";
+export const ANDROID_AUTH_URL = "https://app.agentcap.xyz/auth/android";
 const RETURN_KEYS = ["privy_oauth_code", "privy_oauth_state", "privy_oauth_provider"];
 
 export function androidOAuthEnabled(origin: string, enabled: string | undefined, privyReady: boolean): boolean {
-  return origin === "https://app.merrymen.dev" && enabled === "1" && privyReady;
+  return origin === "https://app.agentcap.xyz" && enabled === "1" && privyReady;
 }
 
 /** Only presentation differs for the native WebView; this does not authenticate anybody. */
 export function isAndroidAuthWebView(userAgent: string): boolean {
-  return /(?:^|\s)MerrymenAndroid\/1(?:\s|$)/.test(userAgent);
+  return /(?:^|\s)AgentCapAndroid\/1(?:\s|$)/.test(userAgent);
 }
 
 /** A browser may display a manual App Link, never consume the native PKCE flow itself. */

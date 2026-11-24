@@ -32,11 +32,11 @@
  */
 import { webChainRead } from "@/lib/chain-read";
 import { NextResponse } from "next/server";
-import { isEnergyReserveToken, isHostedMode } from "@merrymen/core";
-import { getGrantStore } from "@merrymen/grant-store";
-import { getSettingsStore } from "@merrymen/settings-store";
+import { isEnergyReserveToken, isHostedMode } from "@agentcap/core";
+import { getGrantStore } from "@agentcap/grant-store";
+import { getSettingsStore } from "@agentcap/settings-store";
 import { createPublicClient, erc20Abi } from "viem";
-import { robinhoodChain } from "@merrymen/core";
+import { robinhoodChain } from "@agentcap/core";
 
 import { tenantOf } from "@/lib/auth";
 import { sharedRead } from "@/lib/read-discoveries";
@@ -190,7 +190,7 @@ export async function GET(req: Request) {
   const vetted = payload.rows.filter((r) => r.verdict);
   if (!vetted.length) return answer("nothing-vetted", [], covered.size);
 
-  // NEVER THE ENERGY RESERVE. $MERRYMEN has a real pool and the scout may well
+  // NEVER THE ENERGY RESERVE. $AGENTCAP has a real pool and the scout may well
   // rate it, but approving it would add a token every signer drops from the
   // sealed extras: a re-sign that covers nothing, proposed again after every
   // one. The agent buys it only through get-energy.

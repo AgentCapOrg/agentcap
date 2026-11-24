@@ -67,21 +67,21 @@ export function parsePress(data: unknown): ManagerPress | null {
 
 /**
  * EVERYTHING THE MANAGER SAYS ABOUT A SETUP, in one place. `home` is this
- * deployment's public origin, for the Back to Merrymen button; without one the
+ * deployment's public origin, for the Back to AgentCap button; without one the
  * button is left off. Usernames are Telegram's own, already validated; no
  * message carries a token, a challenge, a tenant or a link code.
  */
-const back = (home: string | null): InlineButton[][] => home ? [[{ text: "Back to Merrymen", url: home }]] : [];
+const back = (home: string | null): InlineButton[][] => home ? [[{ text: "Back to AgentCap", url: home }]] : [];
 export const managerNotices = {
   /** A bot was just made for a setup underway: connect it from here, or say it is the wrong one. */
   ready: (bot: ManagedBotIdentity, intentId: string): ManagerNotice => ({
-    text: `✅ @${bot.username} is ready.\nConnect it to your Merrymen agent?`,
+    text: `✅ @${bot.username} is ready.\nConnect it to your AgentCap agent?`,
     buttons: [[{ text: `Connect @${bot.username}`, callback_data: pressData("connect", intentId, bot.id) }],
       [{ text: "Not this bot", callback_data: pressData("cancel", intentId, bot.id) }]],
   }),
   /** A bot made with no setup underway for its maker: nothing was connected, and they are told so. */
   unmatched: (username: string, home: string | null): ManagerNotice => ({
-    text: `Your bot @${username} was created, but no Merrymen setup is waiting for it, so it wasn't connected. To connect a new bot, start again from Merrymen and create it within 30 minutes.`,
+    text: `Your bot @${username} was created, but no AgentCap setup is waiting for it, so it wasn't connected. To connect a new bot, start again from AgentCap and create it within 30 minutes.`,
     buttons: back(home),
   }),
   /**
@@ -92,27 +92,27 @@ export const managerNotices = {
    * the bot waits for rather than promising when it will answer.
    */
   connected: (username: string, home: string | null): ManagerNotice => ({
-    text: `✅ Connected @${username} to your Merrymen agent.\n@${username} replies once your agent is running. Merrymen then shows "Open my bot" to link your chat with it. If your agent is paused for recovery, that waits until it resumes.`,
+    text: `✅ Connected @${username} to your AgentCap agent.\n@${username} replies once your agent is running. AgentCap then shows "Open my bot" to link your chat with it. If your agent is paused for recovery, that waits until it resumes.`,
     buttons: back(home),
   }),
-  expired: (home: string | null): ManagerNotice => ({ text: "This setup expired. Start again from Merrymen.", buttons: back(home) }),
+  expired: (home: string | null): ManagerNotice => ({ text: "This setup expired. Start again from AgentCap.", buttons: back(home) }),
   cancelled: (username: string, home: string | null): ManagerNotice => ({
-    text: `Cancelled. Start again from Merrymen when you're ready.\nIf you don't need @${username}, you can delete it in @BotFather.`,
+    text: `Cancelled. Start again from AgentCap when you're ready.\nIf you don't need @${username}, you can delete it in @BotFather.`,
     buttons: back(home),
   }),
   /** complete() refused: the agent's settings already hold a bot token (this one or another). */
   alreadyHasBot: (username: string, home: string | null): ManagerNotice => ({
-    text: `Your Merrymen agent already has a Telegram bot, so @${username} wasn't connected. To use @${username} instead, replace the bot in Settings on Merrymen.`,
+    text: `Your AgentCap agent already has a Telegram bot, so @${username} wasn't connected. To use @${username} instead, replace the bot in Settings on AgentCap.`,
     buttons: back(home),
   }),
   /** complete() refused: another agent holds the bot. Whose is never said (lib/telegram-claims.ts). */
   claimed: (username: string, home: string | null): ManagerNotice => ({
-    text: `@${username} is already connected to another Merrymen agent, so it wasn't connected to yours.`,
+    text: `@${username} is already connected to another AgentCap agent, so it wasn't connected to yours.`,
     buttons: back(home),
   }),
-  /** Anything else: the buttons stay, to try again, and Merrymen can still connect it. */
+  /** Anything else: the buttons stay, to try again, and AgentCap can still connect it. */
   failed: (bot: ManagedBotIdentity, intentId: string): ManagerNotice => ({
-    text: "Couldn't connect right now. Try again, or connect from Merrymen.",
+    text: "Couldn't connect right now. Try again, or connect from AgentCap.",
     buttons: managerNotices.ready(bot, intentId).buttons,
   }),
 };
@@ -176,17 +176,17 @@ export class TelegramManager {
    * generic managed_bot event, so the link instructions ask the user to keep it.
    */
   async offerCreation(userId: number, suggestedUsername: string): Promise<void> {
-    if (!/^merrymen_[0-9a-f]{16}_bot$/.test(suggestedUsername)) throw new TelegramManagerError();
+    if (!/^agentcap_[0-9a-f]{16}_bot$/.test(suggestedUsername)) throw new TelegramManagerError();
     await this.call(this.config.token, "sendMessage", {
       chat_id: userId,
-      text: "Create your Merrymen bot below. Telegram will ask you to approve its name. Then confirm here, or in Merrymen, which bot to connect.",
+      text: "Create your AgentCap bot below. Telegram will ask you to approve its name. Then confirm here, or in AgentCap, which bot to connect.",
       reply_markup: { keyboard: [[{ text: "Create my Telegram bot", request_managed_bot: {
-        request_id: 1, suggested_name: "My Merrymen", suggested_username: suggestedUsername,
+        request_id: 1, suggested_name: "My AgentCap", suggested_username: suggestedUsername,
       } }]], resize_keyboard: true, one_time_keyboard: true },
     });
     await this.send(userId, {
-      text: "On iPhone or iPad, use the button below. Keep the suggested username so Merrymen can recognize your bot. You can change its display name.",
-      buttons: [[{ text: "Create my bot on iPhone or iPad", url: `https://t.me/newbot/${encodeURIComponent(this.config.username)}/${suggestedUsername}?name=My%20Merrymen` }]],
+      text: "On iPhone or iPad, use the button below. Keep the suggested username so AgentCap can recognize your bot. You can change its display name.",
+      buttons: [[{ text: "Create my bot on iPhone or iPad", url: `https://t.me/newbot/${encodeURIComponent(this.config.username)}/${suggestedUsername}?name=My%20AgentCap` }]],
     });
   }
   /** A private message from the manager. */

@@ -32,7 +32,7 @@ import {
 import type { TenantLease } from "./tenant-lease";
 import { workerKey } from "./worker-key";
 
-const root = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-perps-import-")));
+const root = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-perps-import-")));
 const handles: DatabaseSync[] = [];
 after(() => { for (const raw of handles) raw.close(); rmSync(root, { recursive: true, force: true }); });
 const addr = (n: number) => `0x${n.toString(16).padStart(40, "0")}`;
@@ -51,7 +51,7 @@ async function fixture(o: { perps?: boolean; empty?: boolean } = {}) {
   const st = lstatSync(mountPath, { bigint: true });
   const volume: LedgerImportVolume = { id: `vol_perps_${id}`, mountPath, homeRoot, device: String(st.dev), inode: String(st.ino) };
   const home = o.perps ? path.join(homeRoot, "children-perps", owner) : path.join(homeRoot, "children", owner);
-  const raw = new DatabaseSync(path.join(sourceHome, "merrymen.db")), sharedRaw = new DatabaseSync(":memory:"); handles.push(raw, sharedRaw);
+  const raw = new DatabaseSync(path.join(sourceHome, "agentcap.db")), sharedRaw = new DatabaseSync(":memory:"); handles.push(raw, sharedRaw);
   const local = wrapSqlite(raw), shared = wrapSqlite(sharedRaw);
   await applyLedgerSchema(local); await applyLedgerSchema(shared); await shared.exec(MIRROR_STATE_DDL); await shared.exec(PAPER_CHECKPOINT_SCHEMA);
   const grant = JSON.stringify({ smartAccount: account, owner, chainId: 4663 });
@@ -111,7 +111,7 @@ it("a Perps paper book — a gapped stop's recorded level included — is captur
   assert.equal(verified.tables, 21 + 7, "every Spot table, and each perp table that holds a row");
   assert.equal(await restoreLedgerImport(f.options), "restored");
   assert.deepEqual(await verifyRestoredLedgerImport({ ...f.options, artifact, assertSource() {} }), verified);
-  const imported = new DatabaseSync(path.join(f.home, "merrymen.db")); handles.push(imported);
+  const imported = new DatabaseSync(path.join(f.home, "agentcap.db")); handles.push(imported);
   for (const table of PERP_TABLES) {
     assert.deepEqual(imported.prepare(`SELECT * FROM ${table}`).all(), f.raw.prepare(`SELECT * FROM ${table}`).all(), table);
   }
@@ -201,7 +201,7 @@ it("a persistent Spot book last opened before the perp tables passes existingBoo
   // with existingBookIdentity before the worker runs its schema.
   const f = await fixture({ empty: true });
   await registerLedgerSource(f.options);
-  const book = new DatabaseSync(path.join(f.home, "merrymen.db"));
+  const book = new DatabaseSync(path.join(f.home, "agentcap.db"));
   try {
     book.prepare("INSERT INTO agents(smart_account,owner_address,session_key_address,chain_id,caps,granted_at,expires_at) VALUES(?,?,?,4663,'{}',1,9999999999)").run(f.account, f.owner, addr(7));
     for (const table of PERP_TABLES) book.exec(`DROP TABLE ${table}`);

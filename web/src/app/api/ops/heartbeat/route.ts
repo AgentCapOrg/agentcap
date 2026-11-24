@@ -7,7 +7,7 @@
  * been left halted or deployed from the wrong commit is noticed by something
  * other than a person who already suspected it.
  *
- * INERT UNLESS MERRYMEN_OPS_TOKEN IS SET. Without it — every self-hosted
+ * INERT UNLESS AGENTCAP_OPS_TOKEN IS SET. Without it — every self-hosted
  * install, and the hosted web until an operator opts in — the route answers
  * exactly as a route that does not exist would: 404, no body. A token shorter
  * than 32 characters counts as unset, because a guessable token on a public
@@ -44,7 +44,7 @@ export interface OpsHeartbeatResponse {
 }
 
 function opsToken(): string | null {
-  const token = (process.env.MERRYMEN_OPS_TOKEN ?? "").trim();
+  const token = (process.env.AGENTCAP_OPS_TOKEN ?? "").trim();
   return token.length >= MIN_TOKEN_LENGTH ? token : null;
 }
 

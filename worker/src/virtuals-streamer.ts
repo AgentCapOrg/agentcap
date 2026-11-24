@@ -1,5 +1,5 @@
 /**
- * Virtuals Terminal streamer — the merryman's activity, live on its Virtuals page.
+ * Virtuals Terminal streamer — the agentcapavatar's activity, live on its Virtuals page.
  *
  * An independent, self-scheduling loop (same discipline as the notifier — NEVER
  * inside the trading tick). When streaming is ON (settings.virtualsEnabled + a key):
@@ -11,7 +11,7 @@
  * them ("the wall held N times"), which is the honest headline anyway.
  *
  * Strictly outbound + read-only: reads the ledger read-only, keeps its own cursor
- * in ~/.merrymen/virtuals.json, and can only post logs — never trade, never move
+ * in ~/.agentcap/virtuals.json, and can only post logs — never trade, never move
  * funds, never change settings. Decoupled from Telegram entirely.
  */
 
@@ -25,7 +25,7 @@ import { clampTitle, exchangeToken, postLog, type FetchLike, type TerminalLog } 
 
 const LOOP_GAP_MS = 20_000;
 const IDLE_GAP_MS = 60_000;
-const FRAMEWORK = "merrymen";
+const FRAMEWORK = "agentcap";
 
 interface Cursor {
   lastTradeId: number;

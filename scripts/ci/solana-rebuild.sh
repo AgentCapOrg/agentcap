@@ -32,13 +32,13 @@ repo="$(git -C "$here" rev-parse --show-toplevel)"
 mkdir -- "$work/src" "$work/cargo-home"
 git -C "$repo" archive --format=tar HEAD contracts/solana | tar -xf - -C "$work/src"
 src="$work/src/contracts/solana"
-[ -f "$src/programs/merrymen-vault/Cargo.toml" ] || die "HEAD has no contracts/solana/programs/merrymen-vault"
+[ -f "$src/programs/agentcap-vault/Cargo.toml" ] || die "HEAD has no contracts/solana/programs/agentcap-vault"
 
 CARGO_HOME="$work/cargo-home" cargo-build-sbf \
   --tools-version "$PLATFORM_TOOLS_VERSION" --arch "$SBF_ARCH" \
-  --manifest-path "$src/programs/merrymen-vault/Cargo.toml" \
+  --manifest-path "$src/programs/agentcap-vault/Cargo.toml" \
   --sbf-out-dir "$src/target/deploy" -- --locked >&2
 
-so="$src/target/deploy/merrymen_vault.so"
+so="$src/target/deploy/agentcap_vault.so"
 [ -s "$so" ] || die "the rebuild produced no $so"
 printf '%s\n' "$so"

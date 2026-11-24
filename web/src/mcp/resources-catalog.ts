@@ -17,19 +17,19 @@ import { APP_RESOURCES } from "./apps";
 function capabilitiesDoc(profile: McpProfile = "full"): string {
   const scopes = SCOPES.filter((s) => s.level !== "staff" && scopeAllowedIn(profile, s.id)).map((s) => `- \`${s.id}\` (${s.level}): ${s.title}. ${s.detail}`).join("\n");
   const errors = Object.entries(ERROR_CODES).map(([code, e]) => `- \`${code}\` (HTTP-like ${e.http}${e.retryable ? ", retryable" : ""}): ${e.what}`).join("\n");
-  return `# Merrymen MCP: scopes and errors
+  return `# AgentCap MCP: scopes and errors
 
 ## Scopes
 ${scopes}
 
-A connection only ever sees the agents its owner chose on the consent screen. No scope can move funds: trade and setting proposals take effect only after the owner approves them in Merrymen.
+A connection only ever sees the agents its owner chose on the consent screen. No scope can move funds: trade and setting proposals take effect only after the owner approves them in AgentCap.
 
 ## Error codes
 ${errors}
 `;
 }
 
-const METRICS_DOC = `# Merrymen metrics
+const METRICS_DOC = `# AgentCap metrics
 
 - **Book**: "paper" (simulated funds) or "live" (real funds on chain). Figures are never combined across books.
 - **Equity**: cash + savings (Morpho vault, valued at its share price) + positions at their last price + tokens carried at cost when they cannot be priced. Gas ETH is excluded.
@@ -49,18 +49,18 @@ export const DOC_RESOURCES: ResourceDef[] = [
     description: "What each scope allows, and the stable error codes tools return.",
     mimeType: "text/markdown",
     capability: null,
-    uri: "merrymen://docs/capabilities",
+    uri: "agentcap://docs/capabilities",
     async read(_uri, _vars, ctx) {
       return { mimeType: "text/markdown", text: capabilitiesDoc(ctx?.principal?.profile) };
     },
   },
   {
     name: "metrics",
-    title: "How Merrymen measures performance",
+    title: "How AgentCap measures performance",
     description: "Definitions of equity, P&L, returns, drawdown, confirmed trades and freshness.",
     mimeType: "text/markdown",
     capability: null,
-    uri: "merrymen://docs/metrics",
+    uri: "agentcap://docs/metrics",
     async read() {
       return { mimeType: "text/markdown", text: METRICS_DOC };
     },

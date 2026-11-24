@@ -6,7 +6,7 @@
  * point on — nothing the client sends may override it.
  */
 import { NextResponse } from "next/server";
-import { isHostedMode } from "@merrymen/core";
+import { isHostedMode } from "@agentcap/core";
 import { SESSION_COOKIE, mintSession, sessionCookieOptions, verifySignedChallenge } from "@/lib/auth";
 import { walletNotSupported } from "@/lib/route-guard";
 
@@ -14,7 +14,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 function originOf(req: Request): string {
-  const configured = process.env.MERRYMEN_PUBLIC_ORIGIN;
+  const configured = process.env.AGENTCAP_PUBLIC_ORIGIN;
   if (configured) return configured.replace(/\/$/, "");
   return new URL(req.url).origin;
 }

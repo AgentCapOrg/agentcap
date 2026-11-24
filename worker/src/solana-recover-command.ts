@@ -1,4 +1,4 @@
-/** `merrymen solana-recover`: argument parsing and key input for the owner recovery tool. */
+/** `agentcap solana-recover`: argument parsing and key input for the owner recovery tool. */
 import { readFileSync, statSync } from "node:fs";
 import { base58Decode } from "../../packages/core/src/ids";
 import { redactUrls } from "./redact-urls";
@@ -9,14 +9,14 @@ import {
 } from "./solana-recover";
 
 /** Where the owner's RPC URL is read from: an environment variable keeps a provider key out of shell history and ps. */
-export const SOLANA_RECOVER_RPC_ENV = "MERRYMEN_SOLANA_RECOVER_RPC";
+export const SOLANA_RECOVER_RPC_ENV = "AGENTCAP_SOLANA_RECOVER_RPC";
 /** Printed (to stderr, never with the URL) when --rpc carries what looks like a provider key. */
 export const SOLANA_RECOVER_RPC_ARG_WARNING = `Warning: the --rpc URL looks like it carries an API key. It is not printed, but `
   + `command-line arguments stay in your shell history and other users of this machine can see them while the command runs. `
   + `Next time put the URL in ${SOLANA_RECOVER_RPC_ENV} instead, and consider rotating that key.`;
 
-export const SOLANA_RECOVER_HELP = `Solana vault recovery: withdraw everything from your Merrymen Solana vault
-with your own wallet key, without the Merrymen app or server.
+export const SOLANA_RECOVER_HELP = `Solana vault recovery: withdraw everything from your AgentCap Solana vault
+with your own wallet key, without the AgentCap app or server.
 
 First put your RPC URL in ${SOLANA_RECOVER_RPC_ENV}, without typing it into a
 command (it may carry your provider's API key). For example, in bash or zsh:
@@ -27,19 +27,19 @@ solana-recover --program PROGRAM_ID --owner PUBLIC_KEY
     Show the plan: vault, balances and the transactions it would send.
 solana-recover --program PROGRAM_ID --key-file PATH --send
     Sign and send. Use --key-file - to read the key from standard input,
-    for example: pbpaste | merrymen solana-recover ... --key-file - --send
+    for example: pbpaste | agentcap solana-recover ... --key-file - --send
 Options: --program-sha256 HEX checks the deployed program binary first.
 --rpc HTTPS_URL gives the RPC on the command line instead, for a URL with no
 API key in it (a public endpoint). Give one or the other, not both.
 
---send signs only for a released Merrymen vault program, whose immutable
+--send signs only for a released AgentCap vault program, whose immutable
 binary is checked against its released hash first. Your key signs every
 instruction of the program you name, and a look-alike program could take
 the SOL in your wallet and the tokens in its USDG and WSOL accounts. For a
 program you deployed or audited yourself, add --program-sha256 HEX and
 --unlisted-program: the binary must match, and the tool warns and waits
 before signing. If someone sent you a command with --unlisted-program,
-stop: Merrymen never asks for it.
+stop: AgentCap never asks for it.
 
 Steps: (1) revoke_all, alone, waiting until it is finalized, so no session
 key can trade; (2) from finalized balances, withdraw the vault's spare SOL,
@@ -57,7 +57,7 @@ solana-keygen JSON file). It is read only from the file or standard input,
 never from the command line, and is never printed, logged or sent anywhere.
 --owner takes the wallet's address (its public key), never a secret.
 Delete the key file when you are done. PROGRAM_ID is the program shown
-next to your vault in Merrymen (the owner of the vault account). The RPC
+next to your vault in AgentCap (the owner of the vault account). The RPC
 must be a mainnet-beta HTTPS endpoint you trust; the owner pays the fees.`;
 
 /**
@@ -129,7 +129,7 @@ async function readKeyText(source: string, deps: SolanaRecoverCommandDeps): Prom
   const tooLarge = () => { throw new SolanaRecoverError("The key input is too large to be a Solana secret key."); };
   if (source === "-") {
     const stdin = deps.stdin ?? process.stdin;
-    if (stdin.isTTY) throw new SolanaRecoverError("Standard input is a terminal. Pipe the key in (for example: pbpaste | merrymen solana-recover ... --key-file -) or pass a file path.");
+    if (stdin.isTTY) throw new SolanaRecoverError("Standard input is a terminal. Pipe the key in (for example: pbpaste | agentcap solana-recover ... --key-file -) or pass a file path.");
     let text = "";
     for await (const chunk of stdin) {
       text += typeof chunk === "string" ? chunk : chunk.toString("utf8");
@@ -154,7 +154,7 @@ export async function runSolanaRecoverCommand(args: readonly string[], deps: Sol
   const text = (key: string) => typeof flags[key] === "string" ? flags[key] as string : undefined;
   const programId = text("program"), rpcArg = text("rpc"), keyFile = text("key-file"), expectedOwner = text("owner");
   const send = flags.send === true;
-  if (!programId) throw new SolanaRecoverError("--program is required: the program shown next to your vault in Merrymen.");
+  if (!programId) throw new SolanaRecoverError("--program is required: the program shown next to your vault in AgentCap.");
   // The RPC URL from the environment, the documented path: a provider key in it stays out of
   // shell history and the process list. --rpc remains for a keyless URL. Neither is ever echoed.
   const rpcEnv = (deps.env ?? process.env)[SOLANA_RECOVER_RPC_ENV]?.trim() || undefined;
@@ -181,7 +181,7 @@ export async function runSolanaRecoverCommand(args: readonly string[], deps: Sol
   // Refuse an unverifiable program before the key is read or the RPC is contacted.
   solanaRecoveryProgramTrust({ programId, send, programSha256: sha, allowUnlistedProgram, releases: deps.releases });
   // The RPC URL can carry an API key: it is validated, used, and never printed.
-  const rpc = createSolanaLiveRpc({ env: { MERRYMEN_SOLANA_RPC_MAINNET: rpcUrl }, fetch: deps.fetch, timeoutMs: 15_000, singleEndpoint: true,
+  const rpc = createSolanaLiveRpc({ env: { AGENTCAP_SOLANA_RPC_MAINNET: rpcUrl }, fetch: deps.fetch, timeoutMs: 15_000, singleEndpoint: true,
     ...(deps.sleep ? { sleep: deps.sleep } : {}) });
 
   let key: Awaited<ReturnType<typeof readSolanaOwnerKey>> | undefined;

@@ -26,8 +26,8 @@
  * reaches the database.
  */
 import { NextResponse } from "next/server";
-import { getIdentityStore, SLUG_RE } from "@merrymen/identity-store";
-import { getImageStore, isImageKind } from "@merrymen/image-store";
+import { getIdentityStore, SLUG_RE } from "@agentcap/identity-store";
+import { getImageStore, isImageKind } from "@agentcap/image-store";
 import { walletNotSupported } from "@/lib/route-guard";
 
 export const runtime = "nodejs";

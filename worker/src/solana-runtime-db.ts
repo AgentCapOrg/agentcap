@@ -3,12 +3,12 @@ import { closeSync, chmodSync, mkdirSync, openSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { isHostedMode } from "../../packages/core/src/hosted";
-import { merrymenHome } from "./home";
+import { agentcapHome } from "./home";
 import { makePgDb, wrapSqlite, type Db } from "./db";
 
 const databases = new Map<string, Promise<Db>>();
 /** The self-hosted accounts file; hosted installs use DATABASE_URL instead. */
-export function solanaRuntimeDbFile(): string { return path.join(merrymenHome(), "solana-accounts.sqlite"); }
+export function solanaRuntimeDbFile(): string { return path.join(agentcapHome(), "solana-accounts.sqlite"); }
 export function getSolanaRuntimeDb(): Promise<Db> {
   const url = process.env.DATABASE_URL;
   if (!url && isHostedMode()) throw new Error("Hosted Solana trading requires a shared database.");

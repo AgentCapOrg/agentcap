@@ -1,5 +1,5 @@
 [package]
-name = "merrymen-vault-runtime-tests"
+name = "agentcap-vault-runtime-tests"
 version = "0.1.0"
 edition = "2021"
 publish = false
@@ -12,7 +12,7 @@ path = "custody.rs"
 
 [dependencies]
 base64 = "=0.22.1"
-merrymen-vault = { path = "../programs/merrymen-vault", features = ["no-entrypoint"] }
+agentcap-vault = { path = "../programs/agentcap-vault", features = ["no-entrypoint"] }
 anchor-lang = "=0.32.1"
 anchor-spl = "=0.32.1"
 serde_json = "=1.0.154"

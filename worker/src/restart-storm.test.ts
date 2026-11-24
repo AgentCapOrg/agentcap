@@ -321,7 +321,7 @@ describe("a stood-down tenant's access is cleared while its original source stay
     assert.match(loop, /const slot = slotOf\(tenant\);\s*const retained = \(await getGrantStore\(slot\.purpose\)\.listTenants\(\)\)\.some\(t => t\.toLowerCase\(\) === slot\.owner\);/);
     assert.match(loop, /if \(retained \|\| localMemoryWriterPresent\(tenant\)\) continue;/);
     assert.match(loop, /if \(current \|\| localMemoryWriterPresent\(tenant\)\) continue;/);
-    const keepBook = loop.indexOf('if (existsSync(path.join(home, "merrymen.db")))');
+    const keepBook = loop.indexOf('if (existsSync(path.join(home, "agentcap.db")))');
     const noBook = loop.indexOf("} else {", keepBook);
     const bookBranch = loop.slice(keepBook, noBook);
     assert.ok(keepBook > clear && noBook > keepBook);

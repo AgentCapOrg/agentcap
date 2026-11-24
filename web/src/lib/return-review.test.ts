@@ -44,19 +44,19 @@ test("a malformed list is logged once, with a count and never the entries", () =
     console.warn = real;
   }
   assert.equal(said.length, 1, said.join("\n"));
-  assert.match(said[0]!, /MERRYMEN_RETURN_REVIEW has 2 of 3 entries that are not 0x smart-account addresses; every return is withheld/);
+  assert.match(said[0]!, /AGENTCAP_RETURN_REVIEW has 2 of 3 entries that are not 0x smart-account addresses; every return is withheld/);
   assert.doesNotMatch(said[0]!, /johnny|sirsendit|0xaaaa/i);
 });
 
 test("read from the environment on every call, not at import", () => {
-  const saved = process.env.MERRYMEN_RETURN_REVIEW;
+  const saved = process.env.AGENTCAP_RETURN_REVIEW;
   try {
-    delete process.env.MERRYMEN_RETURN_REVIEW;
+    delete process.env.AGENTCAP_RETURN_REVIEW;
     assert.equal(underReturnReview(A), false);
-    process.env.MERRYMEN_RETURN_REVIEW = A;
+    process.env.AGENTCAP_RETURN_REVIEW = A;
     assert.equal(underReturnReview(A), true);
   } finally {
-    if (saved === undefined) delete process.env.MERRYMEN_RETURN_REVIEW;
-    else process.env.MERRYMEN_RETURN_REVIEW = saved;
+    if (saved === undefined) delete process.env.AGENTCAP_RETURN_REVIEW;
+    else process.env.AGENTCAP_RETURN_REVIEW = saved;
   }
 });

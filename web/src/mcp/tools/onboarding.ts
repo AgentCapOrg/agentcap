@@ -1,6 +1,6 @@
 /** A read-only path from a connected assistant to an owner-authorized worker. */
 import * as z from "zod";
-import { RENEW_SOON_DAYS } from "@merrymen/core";
+import { RENEW_SOON_DAYS } from "@agentcap/core";
 import { readAgentEnergy } from "@/lib/agent-energy";
 import { blockerAdvice } from "@/lib/live-blocker";
 import { readAgentStatus } from "@/lib/services/agent-status";
@@ -35,9 +35,9 @@ const AGENT_VIEW = z.object({
   }).nullable(),
 }).nullable();
 
-const getMerrymanSetup = defineTool({
-  name: "get_merryman_setup",
-  title: "Merryman setup and next steps",
+const getAgentCapAvatarSetup = defineTool({
+  name: "get_agentcapavatar_setup",
+  title: "AgentCapAvatar setup and next steps",
   description: "Read the current connection's setup, authorized agent readiness and next steps: owner signing, permission renewal, funding, worker freshness, recovery and energy. Distinguishes an unshared agent from a missing trading permission. Includes links to existing owner controls; does not create a wallet, activate trading or change settings.",
   capability: "market.read",
   anyOf: ["market.read", "agents.read", "drafts.write"],
@@ -61,7 +61,7 @@ const getMerrymanSetup = defineTool({
   annotations: { readOnlyHint: true, openWorldHint: false },
   async handler({ agent: ref }, ctx) {
     const issuer = mcpConfig().issuer;
-    if (!issuer) throw new McpError("upstream_unavailable", "The Merrymen app address is not configured.");
+    if (!issuer) throw new McpError("upstream_unavailable", "The AgentCap app address is not configured.");
     // Fixed paths on the configured issuer; no client URL, tenant or key enters a link.
     const link = (path: string) => new URL(path, issuer).href;
     const links = { create: link("/create"), wallet: link("/grant"), settings: link("/settings"), funding: link("/deposit"), connected_apps: link("/connect/apps") };
@@ -86,8 +86,8 @@ const getMerrymanSetup = defineTool({
         step("select_agent", "Choose a shared agent", "Use the id returned by the shared-agent list.", null, false, "list_agents");
       } else {
         step("share_agent", "Check connected-app access", "For an existing agent, reconnect this app and allow agent status access and the agent you want to share. Creating a wallet does not expand an existing connection's permissions.", links.connected_apps);
-        if (canDraft) step("draft_setup", "Prepare an agent setup", "A setup proposal is reviewed by the owner in Merrymen; the owner still signs the wallet's trading permission.", null, false, "create_merryman");
-        step("create_agent", "Create an agent if needed", "The owner signs in with a protected signing wallet, reviews practice or live mode and limits, then signs in Merrymen. Existing wallets should be managed instead of replaced.", links.create);
+        if (canDraft) step("draft_setup", "Prepare an agent setup", "A setup proposal is reviewed by the owner in AgentCap; the owner still signs the wallet's trading permission.", null, false, "create_agentcapavatar");
+        step("create_agent", "Create an agent if needed", "The owner signs in with a protected signing wallet, reviews practice or live mode and limits, then signs in AgentCap. Existing wallets should be managed instead of replaced.", links.create);
       }
     } else {
       // ctx.agents/ctx.agent already checked current ownership AND this connection's sharing.
@@ -127,11 +127,11 @@ const getMerrymanSetup = defineTool({
       if (!selected.account) {
         phase = "permission_required";
         summary = "Your account is connected. Choose a name and strategy here, then confirm your wallet and trading limits in a secure step. If you already created a wallet, resume it instead.";
-        if (canDraft) step("draft_setup", "Prepare a first agent setup", "Prepare a setup if you have not created a wallet; resume the saved wallet otherwise. The owner reviews the setup and signs the trading permission in Merrymen.", null, false, "create_merryman");
-        step("sign_permission", "Review wallet and permission", "The owner reviews the saved wallet and signs its trading permission in Merrymen. Retry a saved activation instead of creating a second wallet.", links.wallet);
+        if (canDraft) step("draft_setup", "Prepare a first agent setup", "Prepare a setup if you have not created a wallet; resume the saved wallet otherwise. The owner reviews the setup and signs the trading permission in AgentCap.", null, false, "create_agentcapavatar");
+        step("sign_permission", "Review wallet and permission", "The owner reviews the saved wallet and signs its trading permission in AgentCap. Retry a saved activation instead of creating a second wallet.", links.wallet);
       } else if (recovery?.tradingPaused) {
         phase = "recovery_hold";
-        summary = "Trading remains paused while Merrymen reconciles the saved account history. A new signature or deposit does not clear this service hold.";
+        summary = "Trading remains paused while AgentCap reconciles the saved account history. A new signature or deposit does not clear this service hold.";
         step("review_recovery", "View recovery status", "Keep the existing wallet and permission; the service must verify the original history before trading can resume.", links.wallet, false);
       } else if (expired || selected.expiresAt === null) {
         phase = expired ? "permission_expired" : "permission_required";
@@ -140,7 +140,7 @@ const getMerrymanSetup = defineTool({
       } else if (stale) {
         phase = "worker_stale";
         summary = "The worker's last report is too old to confirm it is running. Its last mode is historical, not current readiness.";
-        step("check_worker", "Check worker status in Merrymen", "Recheck the hosted agent. Re-signing or funding is not a remedy for a stale worker report.", link("/agent"), false);
+        step("check_worker", "Check worker status in AgentCap", "Recheck the hosted agent. Re-signing or funding is not a remedy for a stale worker report.", link("/agent"), false);
       } else if (!fresh || !currentGrantSeen) {
         phase = "awaiting_worker";
         summary = "The permission is stored, but there is no fresh worker report for this permission yet. Activation is not confirmed.";
@@ -158,7 +158,7 @@ const getMerrymanSetup = defineTool({
       } else if (energyFresh && energy?.gated && energy.spent) {
         phase = "energy_limited";
         summary = "The worker reports that today's energy allowance for new autonomous entries is used up. This does not establish that protective exits are blocked.";
-        step("review_energy", "Review energy allowance", "Wait for the reported reset or review energy in Merrymen. This tool does not buy tokens or change the allowance.", link("/agent"), false);
+        step("review_energy", "Review energy allowance", "Wait for the reported reset or review energy in AgentCap. This tool does not buy tokens or change the allowance.", link("/agent"), false);
       } else {
         phase = status?.mode === "live" ? "live" : status?.mode === "paper" ? "paper" : "idle";
         summary = phase === "live" ? "The worker has a fresh live-mode report for this permission. Individual trades still pass its risk, budget and market checks."
@@ -167,13 +167,13 @@ const getMerrymanSetup = defineTool({
         if (phase !== "live" && !settings?.liveTradingEnabled) step("review_live_mode", "Review practice or live mode", "Practice can continue without real funds. Only the owner can enable live trading in Settings, after reviewing the permission and funding.", links.settings);
         if (selected.expiresAt - now <= RENEW_SOON_DAYS * 86_400) step("renew_soon", "Plan permission renewal", `The permission is still valid but expires within ${RENEW_SOON_DAYS} days; renewal remains an owner signature.`, links.wallet);
       }
-      if (canDraft) step("propose_settings", "Prepare a settings change", "Changes take effect only after the owner reviews and approves them in Merrymen. Signed limits and live activation are not changed by this tool.", null, false, "propose_settings_change");
+      if (canDraft) step("propose_settings", "Prepare a settings change", "Changes take effect only after the owner reviews and approves them in AgentCap. Signed limits and live activation are not changed by this tool.", null, false, "propose_settings_change");
     }
     // This is a UI affordance, never authorization. Each named tool repeats its
     // own scope and object checks when called; no catalogue import/cycle is needed.
-    const availableTools = ["get_merryman_setup"];
+    const availableTools = ["get_agentcapavatar_setup"];
     if (canRead) availableTools.push("list_agents");
-    if (canDraft && !agents.some(a => a.account !== null)) availableTools.push("create_merryman");
+    if (canDraft && !agents.some(a => a.account !== null)) availableTools.push("create_agentcapavatar");
     if (canDraft) availableTools.push("get_proposal", "list_proposals", "cancel_proposal");
     if (selected) {
       availableTools.push("get_agent_status", "get_agent_controls", "get_agent_settings");
@@ -186,7 +186,7 @@ const getMerrymanSetup = defineTool({
       phase, summary,
       connection: { id: ctx.principal.connectionId, profile: ctx.principal.profile ?? "full", can_read_agents: canRead, can_create_draft: canDraft, can_propose_settings: canDraft && selected !== null, shared_agent_count: agents.length, available_tools: availableTools },
       agent: view, next_steps: next, links,
-      runtime: { hosted: true as const, keep_chat_open: false as const, explanation: "Merrymen's hosted worker runs the agent after owner signing and activation. The assistant chat, browser and local terminal do not need to stay open. This assistant connection does not itself create trading authority or keep the worker alive." },
+      runtime: { hosted: true as const, keep_chat_open: false as const, explanation: "AgentCap's hosted worker runs the agent after owner signing and activation. The assistant chat, browser and local terminal do not need to stay open. This assistant connection does not itself create trading authority or keep the worker alive." },
       controls: selected ? agentControls(ctx.principal) : [],
       observed_at: new Date(ctx.now() * 1000).toISOString(),
     };
@@ -194,4 +194,4 @@ const getMerrymanSetup = defineTool({
   },
 });
 
-export const ONBOARDING_TOOLS = [getMerrymanSetup];
+export const ONBOARDING_TOOLS = [getAgentCapAvatarSetup];

@@ -2,7 +2,7 @@ import { openerKey } from "./memory";
 /**
  * THE DOOR EVERY X POST GOES THROUGH — docs/x-posting.md rule 2, as code.
  *
- * A post on somebody's personal X account is the most public thing a Merryman
+ * A post on somebody's personal X account is the most public thing a AgentCapAvatar
  * ever says, under a real person's name, with no badge, no card and no
  * context around it. So a draft passes TWO gates, in order:
  *
@@ -180,7 +180,7 @@ export interface XGateCtx {
    */
   drafted?: boolean;
   /**
-   * AN ACTIVE OWNER'S POST (MERRYMEN_XPOST_ACTIVE_TENANTS: the house's own
+   * AN ACTIVE OWNER'S POST (AGENTCAP_XPOST_ACTIVE_TENANTS: the house's own
    * agents), whatever its kind (the owner's teammate, 2026-10-13): it never
    * names a data provider, coingecko, geckoterminal or bitquery, nor the
    * chain by its name, robinhood chain (the owner, 2026-10-18), on its
@@ -231,7 +231,7 @@ export function tidyXPost(raw: unknown, agentName: string): string {
 /**
  * SHERWOOD-1 IS A NAME, NOT A NUMBER (the owner's ask, 2026-10-12). Asked
  * what model it runs on, an answer teases "the new sherwood-1": built by
- * merrymen, whose own model it is, and still cooking. Every other digit is
+ * agentcap, whose own model it is, and still cooking. Every other digit is
  * still refused: the base gate's has-digits rule is what keeps prices, sizes,
  * counts and P&L off X, and it does not move.
  *
@@ -256,7 +256,7 @@ export function tidyXPost(raw: unknown, agentName: string): string {
 export const SHERWOOD_NAME = "sherwood-1";
 const SHERWOOD_TOKEN = /(?<=^|[\s("“'‘])sherwood-1(?=$|[\s)"”]|[.,!?;:'’](?:$|[\s)"”]))/giu;
 /** A digit-free stand-in no draft would say; a draft that does say it gets no exception. */
-const SHERWOOD_STAND_IN = "sherwoodmerrymenname";
+const SHERWOOD_STAND_IN = "sherwoodagentcapname";
 const STAND_IN = new RegExp(SHERWOOD_STAND_IN, "gi");
 const HAS_STAND_IN = new RegExp(SHERWOOD_STAND_IN, "i");
 
@@ -302,14 +302,14 @@ const SHERWOOD_AFTER = /\bsherwood\b[^.!?\n]{0,40}?\b(?:runs|running|ran|powers|
  * picks my trades now", "my trades come from sherwood-1", "sherwood-1 is the
  * model behind this account" — none of which the verbs above name. So every
  * sentence that names sherwood must also tease it (cooking, in the oven, in
- * the works, coming, merrymen's own or house model…) and must say nothing
+ * the works, coming, agentcap's own or house model…) and must say nothing
  * about trading, deciding, what it does or who it is: no pick, trade, call,
  * decide, choose, handle, buy, sell, entry, coin, no me, my, i, we, you, no
  * account, agent, brain or behind, and nothing about now. A sentence that
  * does either is a claim.
  */
 const SHERWOOD_SAID = /\bsherwood/i;
-const SHERWOOD_TEASE = /\b(?:cook(?:s|ed|ing)?|oven|bak(?:e|es|ed|ing)|in\s+the\s+works|in\s+the\s+making|coming(?:\s+soon)?|soon|simmer(?:s|ed|ing)?|stove|kitchen|brew(?:s|ed|ing)?|workshop|working\s+on|merrymen'?s\s+own|their\s+own|own\s+model|house\s+model|homegrown|not\s+(?:done|ready|served|out)|isn'?t\s+(?:done|ready|out)|(?:done|ready)\s+yet|not\s+yet|next\s+up|give\s+it\s+time|no\s+peeking|in\s+progress|on\s+the\s+way|under\s+wraps)\b/i;
+const SHERWOOD_TEASE = /\b(?:cook(?:s|ed|ing)?|oven|bak(?:e|es|ed|ing)|in\s+the\s+works|in\s+the\s+making|coming(?:\s+soon)?|soon|simmer(?:s|ed|ing)?|stove|kitchen|brew(?:s|ed|ing)?|workshop|working\s+on|agentcap'?s\s+own|their\s+own|own\s+model|house\s+model|homegrown|not\s+(?:done|ready|served|out)|isn'?t\s+(?:done|ready|out)|(?:done|ready)\s+yet|not\s+yet|next\s+up|give\s+it\s+time|no\s+peeking|in\s+progress|on\s+the\s+way|under\s+wraps)\b/i;
 const SHERWOOD_AGENCY = new RegExp(
   "\\b(?:" +
     [
@@ -509,7 +509,7 @@ export function unreadableLetter(text: unknown): boolean {
  * the text's letters alone, so spacing, digits, zero-width characters and
  * look-alikes do not hide it. Errs toward finding it ("usher wood" counts):
  * a tag it finds gets no answer at all, which costs one answer, never a
- * screenshot of Merrymen's account confirming somebody's token. A letter it
+ * screenshot of AgentCap's account confirming somebody's token. A letter it
  * cannot read at all (unreadableLetter: Lisu, Cherokee, Armenian, an IPA
  * letter it has no mapping for) counts as finding it: what code cannot read
  * may spell it.
@@ -548,9 +548,9 @@ export function sherwoodMentioned(text: unknown): boolean {
 }
 
 /**
- * MERRYMEN NAMED, IN ANY SPELLING THE LETTERS ALLOW (red-team 2026-10-12):
+ * AGENTCAP NAMED, IN ANY SPELLING THE LETTERS ALLOW (red-team 2026-10-12):
  * "MERRIMEN", "MERYMEN", "MRYMN", "MEERYMEN", "MERR1MEN" were each shown as
- * a trending coin in code's line under Merrymen's own account, which reads
+ * a trending coin in code's line under AgentCap's own account, which reads
  * as the house naming a coin after itself. Read on the text's letters as
  * sherwood is (lettersOf, plain and leet): an m, then r, then m and n, with
  * any run of vowels or y between ("MARRYMEN", "MURRYMEN", "MIRRYMEN" were
@@ -559,10 +559,10 @@ export function sherwoodMentioned(text: unknown): boolean {
  * finding it ("MERMAN", "MORMON" count). Meant for a short text, a ticker:
  * across the words of a sentence its letters run together.
  */
-const MERRYMEN_LETTERS = /m+[aeiouy]*r+[aeiouy]*m+[aeiouy]*n|merr|t+[aeiouy]*r+[aeiouy]*n+[aeiouy]*c+h+[aeiouy]*r/;
-export function merrymenMentioned(text: unknown): boolean {
+const AGENTCAP_LETTERS = /m+[aeiouy]*r+[aeiouy]*m+[aeiouy]*n|merr|t+[aeiouy]*r+[aeiouy]*n+[aeiouy]*c+h+[aeiouy]*r/;
+export function agentcapMentioned(text: unknown): boolean {
   if (typeof text !== "string") return false;
-  return [lettersOf(text), lettersOf(text, { leet: true })].some((r) => MERRYMEN_LETTERS.test(r));
+  return [lettersOf(text), lettersOf(text, { leet: true })].some((r) => AGENTCAP_LETTERS.test(r));
 }
 
 /**
@@ -651,7 +651,7 @@ export function hidesCharacters(text: string): boolean {
 
 /**
  * ONLY CHARACTERS THAT ARE WHAT THEY LOOK LIKE, IN A REPLY (red-team review,
- * 2026-10-12). "sherwoo∂ is merrymen's own, still cooking", "§herwood",
+ * 2026-10-12). "sherwoo∂ is agentcap's own, still cooking", "§herwood",
  * "sher₩ood", "s|-|erwood", "sher\/\/ood" and "sherwoo|)" read as sherwood on
  * X, and every sherwood check read them as nothing: a symbol written for a
  * letter is dropped, and the letter with it. A list of look-alikes can never
@@ -1116,20 +1116,20 @@ const STOCK_PHRASE = new RegExp(
 /**
  * WHAT A DRAFTED ANSWER MAY NEVER SAY OF THE HOUSE, THE ASKER OR ITSELF
  * (red-team review, 2026-10-12). Under "how are you doing today?", "who are
- * you?" and "what's merrymen?", "the merrymen team has a big launch soon, stay
- * tuned", "built by merrymen and backed by robinhood, pretty proud",
- * "merrymen is the future of crypto", "merrymen built me, best team in
+ * you?" and "what's agentcap?", "the agentcap team has a big launch soon, stay
+ * tuned", "built by agentcap and backed by robinhood, pretty proud",
+ * "agentcap is the future of crypto", "agentcap built me, best team in
  * crypto, they never miss", "honestly you seem pretty silly, fren", "can't
- * share that yet, but stay tuned", "honestly every agent on merrymen makes
+ * share that yet, but stay tuned", "honestly every agent on agentcap makes
  * money", "the robinhood team trusts me with real money" and "i'm the best
  * trader on robinhood chain, not even close" were each posted from the
  * house's account. Refused, in a model's draft of an answer only
  * (XGateCtx.drafted):
  *
- *   - merrymen or robinhood as the subject of a claim ("merrymen is",
- *     "robinhood team trusts", "merrymen has"), or anyone backing, funding,
- *     partnering or trusting it; the one plain truth "built by merrymen" or
- *     "merrymen built me" at a clause's end is all it may say of who made it
+ *   - agentcap or robinhood as the subject of a claim ("agentcap is",
+ *     "robinhood team trusts", "agentcap has"), or anyone backing, funding,
+ *     partnering or trusting it; the one plain truth "built by agentcap" or
+ *     "agentcap built me" at a clause's end is all it may say of who made it
  *   - a tease: stay tuned, soon, coming soon, something cooking, in the
  *     works, big news, "can't share that yet"
  *   - a judgement of the asker: "you seem", "you look", "you're so", "you're
@@ -1141,7 +1141,7 @@ const STOCK_PHRASE = new RegExp(
  */
 const ANSWER_HOUSE_CLAIM = new RegExp([
   // the house as the subject of a claim, or someone vouching for it
-  String.raw`\b(?:merrymen|robinhood)(?:'s)?\s+(?:(?:team|crew|devs?|founders?|folks|people|community|guys|chain)\s+)?(?:\w+\s+){0,2}?(?:is|are|was|were|has|have|had|will|would|'ll|built|builds|building|backs|backed|back|trusts?|trusted|makes?|made|making|never|always|cooks?|cooking|ships?|shipping|launch\w*|plans?|planning|working|gets?|got|knows?|wants?|loves?|keeps?|pays?|paid|guarantees?|protects?|covers?)\b`,
+  String.raw`\b(?:agentcap|robinhood)(?:'s)?\s+(?:(?:team|crew|devs?|founders?|folks|people|community|guys|chain)\s+)?(?:\w+\s+){0,2}?(?:is|are|was|were|has|have|had|will|would|'ll|built|builds|building|backs|backed|back|trusts?|trusted|makes?|made|making|never|always|cooks?|cooking|ships?|shipping|launch\w*|plans?|planning|working|gets?|got|knows?|wants?|loves?|keeps?|pays?|paid|guarantees?|protects?|covers?)\b`,
   String.raw`\b(?:backed|funded|sponsored|supported|partnered|owned|approved|endorsed|trusted|audited|insured|regulated|licensed|blessed|vetted)\s+(?:by|with)\b|\bpartner(?:s|ed|ship|ships)?\b|\btrusts?\s+(?:me|us|alan)\b`,
   // a tease
   String.raw`\bstay\s+(?:tuned|posted)\b|\bsoon\b|\bcoming\s+(?:up|your\s+way|next|shortly)\b|\b(?:something|things|stuff|more|it)\s+(?:big\s+)?(?:is\s+|are\s+)?(?:coming|cooking|brewing|in\s+the\s+works|on\s+the\s+way)\b|\bin\s+the\s+works\b|\bcooking\b|\bwatch\s+this\s+space\b` +
@@ -1198,7 +1198,7 @@ export function houseClaimed(text: unknown): boolean {
  */
 const DECIDER_CLAIM = new RegExp([
   String.raw`\bowners?\b`,
-  String.raw`\b(?:someone|somebody|some\s+one|people|folks|ppl|friends?|frens?|boss(?:es)?|humans?|a\s+human|team|devs?|developers?|creators?|operators?|admins?|merrymen|robinhood|the\s+crowd|the\s+timeline|followers?|users?|holders?|you\s+guys|y'?all|anyone|anybody|everyone|everybody|whoever|others|replies|the\s+replies|my\s+mentions|the\s+mentions)(?:'s|')?\s+(?:else\s+)?(?:(?:usually|just|always|mostly|actually|really|still|basically)\s+)?(?:picks?|picked|picking|tells?|told|telling|asks?|asked|asking|decides?|decided|deciding|chooses?|chose|chosen|choosing|selects?|selected|calls?\s+(?:the\s+)?(?:shots?|trades?)|controls?|controlled|steers?|steered|directs?|directed|runs?\s+my|ran\s+my|makes?\s+(?:the\s+)?(?:calls?|picks?|choices?|decisions?)|sets?\s+my|has\s+me|have\s+me|had\s+me|lets?\s+me|made\s+me|makes\s+me|wants?\s+me|want\s+me)\b`,
+  String.raw`\b(?:someone|somebody|some\s+one|people|folks|ppl|friends?|frens?|boss(?:es)?|humans?|a\s+human|team|devs?|developers?|creators?|operators?|admins?|agentcap|robinhood|the\s+crowd|the\s+timeline|followers?|users?|holders?|you\s+guys|y'?all|anyone|anybody|everyone|everybody|whoever|others|replies|the\s+replies|my\s+mentions|the\s+mentions)(?:'s|')?\s+(?:else\s+)?(?:(?:usually|just|always|mostly|actually|really|still|basically)\s+)?(?:picks?|picked|picking|tells?|told|telling|asks?|asked|asking|decides?|decided|deciding|chooses?|chose|chosen|choosing|selects?|selected|calls?\s+(?:the\s+)?(?:shots?|trades?)|controls?|controlled|steers?|steered|directs?|directed|runs?\s+my|ran\s+my|makes?\s+(?:the\s+)?(?:calls?|picks?|choices?|decisions?)|sets?\s+my|has\s+me|have\s+me|had\s+me|lets?\s+me|made\s+me|makes\s+me|wants?\s+me|want\s+me)\b`,
   String.raw`\b(?:buy|buys|bought|buying|grab|grabs|ape|apes|trade|trades|pick|picks|snipe|snipes)\s+(?:whatever|anything|any\s+coin|any\s+token)\b`,
   String.raw`\b(?:buy|buys|bought|buying|grab|grabs|ape|apes|trade|trades|pick|picks|snipe|snipes)\s+what(?:ever)?\s+(?:people|folks|you|u|ya|they|my|others|the\s+crowd|everyone|everybody|anyone|anybody|someone|somebody|replies|the\s+replies|gets|i'?m\s+told|i\s+am\s+told|i'?m\s+asked)\b`,
   String.raw`\b(?:tells?|told|asks?|asked)\s+me\s+(?:what|which|when)\s+(?:to\s+)?(?:buy|trade|pick|grab|ape|sell)\b|\b(?:for|on\s+behalf\s+of)\s+(?:my|the)\s+(?:followers|friends|holders|users|community)\b`,
@@ -1608,7 +1608,7 @@ const SAYS_TRADING = /\btrad(?:e|es|ed|ing|er)\b/i;
  * for it, and a bare intro left with nothing but "hey" matched every other.
  */
 const INTRO_DISCLOSURE =
-  /\b(?:ai|agents?|bots?|trad(?:e|es|ed|ing|er)|merrymen|accounts?|owners?|posts?|posting|buys?|bought|why|paper|practice|real|money|here|whoever|runs|doing|human|behind|set|see|share|pop|check|once|hey|hello)\b/gi;
+  /\b(?:ai|agents?|bots?|trad(?:e|es|ed|ing|er)|agentcap|accounts?|owners?|posts?|posting|buys?|bought|why|paper|practice|real|money|here|whoever|runs|doing|human|behind|set|see|share|pop|check|once|hey|hello)\b/gi;
 
 /** How alike two intros must be, weighed whole, when one says nothing but the disclosure: a near copy, not a shared vocabulary. */
 const BARE_INTRO_LIMIT = 0.9;
@@ -1829,7 +1829,7 @@ const DEFLECTIONS: readonly RegExp[] = [
  * own name (whole, or any word of it of three letters or more: "alan",
  * "dale"), "this account", "the agent", "the bot" or its owner is itself.
  */
-const SPEAKS_OF_ITSELF_AS_ANOTHER = /\b(?:this\s+(?:account|agent|bot|page|profile)|the\s+(?:agent|bot|account)\s+here|the\s+agent|(?:the|its|their)\s+owner|merrymen'?s?\s+(?:agent|bot|account))\b/iu;
+const SPEAKS_OF_ITSELF_AS_ANOTHER = /\b(?:this\s+(?:account|agent|bot|page|profile)|the\s+(?:agent|bot|account)\s+here|the\s+agent|(?:the|its|their)\s+owner|agentcap'?s?\s+(?:agent|bot|account))\b/iu;
 function selfNamed(text: string, agentName: string): boolean {
   const name = agentName.trim();
   if (!name) return false;
@@ -2225,9 +2225,9 @@ function admitMasked(tidied: string, ctx: XGateCtx, baseGate: BaseGate, agentNam
   // its own left to tell it apart, and weighed as nothing it would pass any
   // fleet: then the two are weighed whole, so the same intro under another
   // name is still the same intro. Whole, any two intros share the disclosure's
-  // own words ("ai", "agent", "trading", "account", "merrymen"), so only a
+  // own words ("ai", "agent", "trading", "account", "agentcap"), so only a
   // near copy counts: at the ordinary limit a bare "…the AI trading agent for
-  // this account, on merrymen. i'll check in here once in a while." was
+  // this account, on agentcap. i'll check in here once in a while." was
   // refused next to an unrelated intro that happened to disclose too.
   const echoes = (prev: string): boolean => {
     if (ctx.kind === "reply") return similarity(mine, withoutReplyOptOut(prev)) >= REPEAT_LIMIT;

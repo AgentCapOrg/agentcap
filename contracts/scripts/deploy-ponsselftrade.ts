@@ -7,7 +7,7 @@
  * The key is read from the environment by hardhat.config.ts and is never
  * logged, written, or echoed by this script — only the ADDRESS it derives to.
  *
- *   $env:MERRYMEN_DEPLOYER_PRIVATE_KEY = "0x…"   # shell-only; close it after
+ *   $env:AGENTCAP_DEPLOYER_PRIVATE_KEY = "0x…"   # shell-only; close it after
  *   npm run deploy:pons:testnet
  *   npm run deploy:pons:mainnet
  *
@@ -73,7 +73,7 @@ async function main() {
   const wallets = await hre.viem.getWalletClients();
   if (wallets.length === 0) {
     throw new Error(
-      "no deployer account. Set MERRYMEN_DEPLOYER_PRIVATE_KEY in this shell " +
+      "no deployer account. Set AGENTCAP_DEPLOYER_PRIVATE_KEY in this shell " +
         "(it is read by hardhat.config.ts and never logged), then re-run.",
     );
   }
@@ -143,7 +143,7 @@ async function main() {
   console.log(`  1. paste ${adapter.address} into /settings as "Pons adapter contract" (ponsAdapterAddress)`);
   console.log("  2. RE-SIGN the grant at /grant — the address is sealed into the signature,");
   console.log("     so the setting alone changes nothing");
-  console.log("  3. unset MERRYMEN_DEPLOYER_PRIVATE_KEY / close this shell");
+  console.log("  3. unset AGENTCAP_DEPLOYER_PRIVATE_KEY / close this shell");
   console.log("");
   console.log("what this does NOT unlock, so it is not a surprise later:");
   console.log("  - native-ETH-quoted curves (~47% of launches, measured over 5,730 across four");

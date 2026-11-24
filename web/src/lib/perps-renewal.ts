@@ -52,7 +52,7 @@
  * every Perps key the server accepted had an empty wall. A revocation it does
  * make derives at accountIndexForPurpose("perps").
  */
-import { buildCallPermissions, grantPurpose, grantWallOptions, type GrantCaps } from "@merrymen/core";
+import { buildCallPermissions, grantPurpose, grantWallOptions, type GrantCaps } from "@agentcap/core";
 
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
 

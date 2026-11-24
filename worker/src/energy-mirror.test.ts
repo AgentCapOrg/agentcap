@@ -6,7 +6,7 @@ import {
   CASH,
   ENERGY_ROUTE_V1,
   GRANT_ENERGY,
-  MERRYMEN_TOKEN,
+  AGENTCAP_TOKEN,
   buildCallPermissions,
   grantWallOptions,
   usdgUnits,
@@ -62,7 +62,7 @@ const buy = (amount: bigint, over: Partial<Extract<TradeIntent, { kind: "energy-
   kind: "energy-buy",
   target: ENERGY_ROUTE_V1.router,
   sellToken: CASH.USDG as `0x${string}`,
-  buyToken: MERRYMEN_TOKEN.address as `0x${string}`,
+  buyToken: AGENTCAP_TOKEN.address as `0x${string}`,
   sellAmountRaw: amount,
   notionalUsdg: amount,
   ...over,
@@ -86,7 +86,7 @@ test("marker on 4663: the wall seals the swap AND the mirror admits an honest bu
   assert.equal(routerPerms(wallOf(grant)).length, 1, "the chain half: exactly one energy permission");
   const limits = limitsFromGrant(grant);
   assert.deepEqual(limits.energy, { router: ENERGY_ROUTE_V1.router, token: ENERGY_ROUTE_V1.path[2] });
-  assert.equal(limits.energy!.token, MERRYMEN_TOKEN.address.toLowerCase());
+  assert.equal(limits.energy!.token, AGENTCAP_TOKEN.address.toLowerCase());
   assert.deepEqual(checkPolicy(buy(usdgUnits(CAPS.perTradeUsdg)), limits, CALM), { ok: true });
 });
 
@@ -124,7 +124,7 @@ test("THE ROUTER IS NEVER A GENERIC TARGET: a `swap` aimed at it is target-allow
         kind: "swap",
         target: ENERGY_ROUTE_V1.router,
         sellToken: CASH.USDG as `0x${string}`,
-        buyToken: MERRYMEN_TOKEN.address as `0x${string}`,
+        buyToken: AGENTCAP_TOKEN.address as `0x${string}`,
         sellAmountRaw: 1_000_000n,
         notionalUsdg: 1_000_000n,
       },
@@ -149,9 +149,9 @@ test("the budgets bind: per-trade, daily, ops; and the size must be a size", () 
   assert.equal(rule(buy(1_000_000n, { notionalUsdg: 999_999n })), "non-positive");
 });
 
-test("no asset-allowlist from the watch set and no no-exit: $MERRYMEN is neither watched nor sellable", () => {
+test("no asset-allowlist from the watch set and no no-exit: $AGENTCAP is neither watched nor sellable", () => {
   const limits = limitsFromGrant(grantWith({}), []);
-  assert.ok(!limits.allowedAssets.map((a) => a.toLowerCase()).includes(MERRYMEN_TOKEN.address.toLowerCase()));
-  assert.ok(!(limits.sellableAssets ?? []).map((a) => a.toLowerCase()).includes(MERRYMEN_TOKEN.address.toLowerCase()));
+  assert.ok(!limits.allowedAssets.map((a) => a.toLowerCase()).includes(AGENTCAP_TOKEN.address.toLowerCase()));
+  assert.ok(!(limits.sellableAssets ?? []).map((a) => a.toLowerCase()).includes(AGENTCAP_TOKEN.address.toLowerCase()));
   assert.deepEqual(checkPolicy(buy(1_000_000n), limits, CALM), { ok: true });
 });

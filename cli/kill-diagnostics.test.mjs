@@ -12,7 +12,7 @@ const keyed = `https://robinhood-mainnet.g.alchemy.com/v2/${key}`;
 const lighterKey = `0x${"9f".repeat(40)}`;
 
 function fixture(t, source) {
-  const dir = mkdtempSync(path.join(tmpdir(), "merrymen kill diagnostics "));
+  const dir = mkdtempSync(path.join(tmpdir(), "agentcap kill diagnostics "));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   for (const folder of ["cli", "worker/src", "node_modules", "home/accounts/perps"]) {
     mkdirSync(path.join(dir, folder), { recursive: true });
@@ -24,7 +24,7 @@ function fixture(t, source) {
   writeFileSync(path.join(dir, "worker/src/perps-kill.ts"), source);
   writeFileSync(path.join(dir, "home/.welcomed"), "1");
   writeFileSync(path.join(dir, "home/accounts/perps/grant.json"), "{}");
-  const env = { ...process.env, MERRYMEN_HOME: path.join(dir, "home"), MERRYMEN_HOSTED: "", DATABASE_URL: "", MERRYMEN_NO_ANIM: "1", NO_COLOR: "1" };
+  const env = { ...process.env, AGENTCAP_HOME: path.join(dir, "home"), AGENTCAP_HOSTED: "", DATABASE_URL: "", AGENTCAP_NO_ANIM: "1", NO_COLOR: "1" };
   delete env.NODE_TEST_CONTEXT;
   delete env.NODE_OPTIONS;
   const child = spawnSync(process.execPath, [path.join(dir, "cli/bin.mjs"), "kill"], {
@@ -67,7 +67,7 @@ for (const status of [1, 2]) {
       process.stderr.write(${JSON.stringify(`native failure at ${keyed}\n`)});
       process.exit(${status});
     `);
-    assert.match(output, /Kill incomplete: your Perps wallet's grant could not be revoked and it may still sign\. Rerun: merrymen kill/);
+    assert.match(output, /Kill incomplete: your Perps wallet's grant could not be revoked and it may still sign\. Rerun: agentcap kill/);
     assert.doesNotMatch(output, /native failure at/);
     assert.ok(!output.includes(key), output);
   });
@@ -89,7 +89,7 @@ for (const [name, status, raw] of [
         process.exit(${status});
       }
     `);
-    assert.match(output, /Kill incomplete: your Perps wallet's grant could not be revoked and it may still sign\. Rerun: merrymen kill/);
+    assert.match(output, /Kill incomplete: your Perps wallet's grant could not be revoked and it may still sign\. Rerun: agentcap kill/);
     assert.doesNotMatch(output, /Unverified|its grant was revoked/);
   });
 }

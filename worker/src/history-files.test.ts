@@ -95,7 +95,7 @@ describe("loadHistoryFromShared", () => {
   });
 
   it("the file round-trips, and is only ever read for the agent it was written for", async () => {
-    const home = mkdtempSync(path.join(os.tmpdir(), "merrymen-histfile-"));
+    const home = mkdtempSync(path.join(os.tmpdir(), "agentcap-histfile-"));
     try {
       const { raw, db, t } = await ledger();
       t(A, { sell_token: USDG, buy_token: COIN, user_op_hash: "0xf", fill_side: "buy", created_at: NOW - DAY });
@@ -280,7 +280,7 @@ describe("loadAccountFromShared", () => {
 
   it("round-trips through the file, and a malformed account costs only the account", async () => {
     const { acct } = await account();
-    const home = mkdtempSync(path.join(os.tmpdir(), "merrymen-histacct-"));
+    const home = mkdtempSync(path.join(os.tmpdir(), "agentcap-histacct-"));
     try {
       const base = { schema: 1 as const, agentId: A, writtenAt: NOW, since: NOW - 30 * 86_400, decisionsFrom: NOW, trades: [], decisions: [] };
       writeHistoryFile(home, { ...base, account: acct });

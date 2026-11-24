@@ -65,7 +65,7 @@ const coin = (n: number) => `0x${(0x7a000 + n).toString(16).padStart(40, "0")}`;
 const tok = (address: string): TokenIdentity => tokenIdentity(robinhoodChain(), address)!;
 const MINT = "So11111111111111111111111111111111111111112";
 const SOL = tokenIdentity(chainFromProvider(1_399_811_149, "solana"), MINT)!;
-const LENS = "Source: trader activity grouped by Merrymen. Two distinct buyers in the window. [ref:dabc123r3c1]";
+const LENS = "Source: trader activity grouped by AgentCap. Two distinct buyers in the window. [ref:dabc123r3c1]";
 
 const homes: string[] = [];
 after(() => {
@@ -513,9 +513,9 @@ describe("no permission, no offer", () => {
 
   it("live follow is a separate operator consent, empty by default", () => {
     assert.equal(fomoFollowLiveEnabledFor("0xabc", {}), false);
-    assert.equal(fomoFollowLiveEnabledFor("0xabc", { MERRYMEN_FOMO_FOLLOW_LIVE: "0xab" }), true);
-    assert.equal(fomoFollowLiveEnabledFor("0xabc", { MERRYMEN_FOMO_FOLLOW_LIVE: "all" }), true);
-    assert.equal(fomoFollowLiveEnabledFor("0xabc", { MERRYMEN_FOMO_FOLLOW_LIVE: "0xdd" }), false);
+    assert.equal(fomoFollowLiveEnabledFor("0xabc", { AGENTCAP_FOMO_FOLLOW_LIVE: "0xab" }), true);
+    assert.equal(fomoFollowLiveEnabledFor("0xabc", { AGENTCAP_FOMO_FOLLOW_LIVE: "all" }), true);
+    assert.equal(fomoFollowLiveEnabledFor("0xabc", { AGENTCAP_FOMO_FOLLOW_LIVE: "0xdd" }), false);
     const h = harness();
     h.state.rail = "live";
     h.tick();
@@ -611,10 +611,10 @@ describe("fomo.json trust", () => {
     assert.equal(h.book.active().length, 0);
   });
 
-  it("no trusted tenant (hosted without MERRYMEN_TENANT) means no file at all", () => {
+  it("no trusted tenant (hosted without AGENTCAP_TENANT) means no file at all", () => {
     assert.equal(childFomoTenant({}, true), null);
-    assert.equal(childFomoTenant({ MERRYMEN_TENANT: " 0xAbC " }, true), "0xabc");
-    assert.equal(childFomoTenant({ MERRYMEN_TENANT: "0xabc" }, false), "self", "self-hosted is always the fixed tenant");
+    assert.equal(childFomoTenant({ AGENTCAP_TENANT: " 0xAbC " }, true), "0xabc");
+    assert.equal(childFomoTenant({ AGENTCAP_TENANT: "0xabc" }, false), "self", "self-hosted is always the fixed tenant");
     const h = harness({ tenant: null });
     h.tick();
     assert.equal(h.child.health().read, "tenant-unknown");
@@ -724,7 +724,7 @@ describe("the entry gate", () => {
     // One cohort buyer and one tailed buyer: both count in the review (the
     // follow path is unchanged), but only the cohort trader keeps routing
     // after the fill. A tailed trader must not become a 14-day, fleet-wide
-    // dependency that outlives Stop, the tail's end and MERRYMEN_FOMO_TAILS=0.
+    // dependency that outlives Stop, the tail's end and AGENTCAP_FOMO_TAILS=0.
     const t1 = tok(coin(1));
     const tailed = ev(t1, 7, { sourceEventAt: T0 - 30_000 });
     const cohort = ev(t1, 1, { sourceEventAt: T0 - 60_000 });
@@ -1335,14 +1335,14 @@ describe("an entry is recorded before it is sent", () => {
 describe("FOMO OFF IN THIS PROCESS (a hosted child spawned without the channel)", () => {
   it("is decided from the process alone: hosted needs the channel AND the opt-in; self-hosted only its own off switch", () => {
     const port = fakePort();
-    const ON = { MERRYMEN_FOMO_ENABLED: "1" };
+    const ON = { AGENTCAP_FOMO_ENABLED: "1" };
     assert.equal(childFomoOff(true, null, ON), true, "no channel: the orchestrator's pass is off");
     assert.equal(childFomoOff(true, port, ON), false);
     assert.equal(childFomoOff(true, port, {}), true, "a channel some other launcher gave is not a pass");
-    assert.equal(childFomoOff(true, port, { MERRYMEN_FOMO_ENABLED: "true" }), true);
+    assert.equal(childFomoOff(true, port, { AGENTCAP_FOMO_ENABLED: "true" }), true);
     assert.equal(childFomoOff(false, null, {}, "own-key"), false, "self-hosted with its own key builds its own runtime");
     assert.equal(childFomoOff(false, port, {}, "own-key"), false);
-    assert.equal(childFomoOff(false, null, { MERRYMEN_FOMO_ENABLED: "0" }, "own-key"), true, "an install that switched it off");
+    assert.equal(childFomoOff(false, null, { AGENTCAP_FOMO_ENABLED: "0" }, "own-key"), true, "an install that switched it off");
     assert.equal(childFomoOff(false, null, {}, null), true, "no key: nothing to look up, so as before Fomo");
     assert.equal(childFomoOff(false, null, {}, "  "), true, "a blank key is no key");
   });
@@ -1718,7 +1718,7 @@ describe("reports", () => {
 
   describe("review candidates (fomo/review-candidates.ts)", () => {
     const AGENT = `0x${"5e".repeat(20)}`;
-    const LISTED = { MERRYMEN_DECISION_RESEARCH_ACCOUNTS: `0x${"aa".repeat(20)}, ${AGENT.toUpperCase().replace("0X", "0x")}` };
+    const LISTED = { AGENTCAP_DECISION_RESEARCH_ACCOUNTS: `0x${"aa".repeat(20)}, ${AGENT.toUpperCase().replace("0X", "0x")}` };
     const sent = (h: ReturnType<typeof harness>) =>
       h.reports().filter((r): r is Extract<BrokerReport, { kind: "review-candidates" }> => r.kind === "review-candidates");
     const liveAgent = () => harness({ agentId: AGENT, live: { rail: "live" } });
@@ -1798,7 +1798,7 @@ describe("reports", () => {
     it("send nothing off the allowlist, on paper, off a fast Trencher, with research off, without a broker, or with Fomo off", () => {
       const cases: [string, ReturnType<typeof harness>, NodeJS.ProcessEnv][] = [];
       cases.push(["not listed", liveAgent(), {}]);
-      cases.push(["another account listed", liveAgent(), { MERRYMEN_DECISION_RESEARCH_ACCOUNTS: `0x${"aa".repeat(20)}` }]);
+      cases.push(["another account listed", liveAgent(), { AGENTCAP_DECISION_RESEARCH_ACCOUNTS: `0x${"aa".repeat(20)}` }]);
       cases.push(["paper", harness({ agentId: AGENT, live: { rail: "paper" } }), LISTED]);
       const notFast = liveAgent();
       notFast.state.settings.trencherFast = false;
@@ -1985,7 +1985,7 @@ describe("index.ts wires the follow path's money rules", () => {
 
   it("the money state is the tenant's durable store, with the home's files as caches", () => {
     assert.match(CODE, /const fomoDurable = brokerDurableState\(\(\) => fomoBroker\);/);
-    assert.match(CODE, /counters: childDurableFollowCounters\(merrymenHome\(\), fomoDurable,/);
+    assert.match(CODE, /counters: childDurableFollowCounters\(agentcapHome\(\), fomoDurable,/);
     assert.match(CODE, /durable: fomoDurable,/);
     assert.doesNotMatch(CODE, /counters: childFollowCounters\(/, "the home-only counter is not the record");
   });

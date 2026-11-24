@@ -9,7 +9,7 @@ import { useTrend, type Trend } from "./motion";
 // terminal's faces and components/AgentAvatar's could drift with nothing to
 // notice — and changing the seed would have meant changing both.
 import { avatarGradient, faceSeed, initialsOf } from "@/lib/agent-avatar";
-import { FaceFigure } from "@/merryman/Merryman";
+import { FaceFigure } from "@/agentcapavatar/AgentCapAvatar";
 
 export function Face({
   name,
@@ -25,7 +25,7 @@ export function Face({
   small?: boolean;
   pin?: boolean;
   /**
-   * Draw the agent's MERRYMAN under the picture instead of its initials. Opt
+   * Draw the agent's AGENTCAPAVATAR under the picture instead of its initials. Opt
    * in, per surface: the leaderboard, where every agent is meant to be met as a
    * character. Everywhere else the gradient and initials stay, unchanged.
    */
@@ -80,7 +80,7 @@ export function Face({
  *   that account, so the association is one we verified. See /api/x-proof.
  *
  *   UNPROVEN HANDLE, or an address → PLAIN TEXT. `xHandle` is typed by the
- *   owner and nothing checks they own it, so linking it would make merrymen
+ *   owner and nothing checks they own it, so linking it would make agentcap
  *   vouch for an association it never made — and would let an agent
  *   impersonate anyone by typing their name. An address has nowhere honest to
  *   link to at all.
@@ -431,7 +431,7 @@ export function TabIcon({ id }: { id: import("./live").Tab }) {
 export function TopBar({ onSearch, onDeposit }: { onSearch: () => void; onDeposit: () => void }) {
   return (
     <div className="top-row">
-      <a href="/" aria-label="Merrymen feed"><LogoMark size={26} /></a>
+      <a href="/" aria-label="AgentCap feed"><LogoMark size={26} /></a>
       <div className="top-actions">
         <button type="button" className="icon-btn" aria-label="Search" onClick={onSearch}>
           <SearchIcon />

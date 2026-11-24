@@ -7,7 +7,7 @@ import "../../connect.css";
 import "./setup.css";
 
 export const metadata: Metadata = {
-  title: "Review your Merryman · merrymen",
+  title: "Review your AgentCapAvatar · agentcap",
   description: "Review your assistant’s setup and trading limits, sign with your wallet, then return to your chat.",
   robots: { index: false, follow: false },
   referrer: "no-referrer",

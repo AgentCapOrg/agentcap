@@ -213,7 +213,7 @@ describe("a read's own schedule", () => {
     assert.equal(release.length, 1, "a stopped loop asks for nothing more");
   });
 
-  it("says whether a failure was nothing answering, or merrymen answering badly", async () => {
+  it("says whether a failure was nothing answering, or agentcap answering badly", async () => {
     const reports: LoopState[] = [];
     const results: Array<() => Promise<boolean>> = [
       async () => {
@@ -366,7 +366,7 @@ describe("the one line over every clock", () => {
     assert.equal(retrying.inFlight, true);
   });
 
-  it("a read that is not on the line — the owner's book — neither raises it nor vouches that merrymen answered", () => {
+  it("a read that is not on the line — the owner's book — neither raises it nor vouches that agentcap answered", () => {
     const book = (state: Partial<LoopState>) => ({ ...view("feed", "account", state), outageLine: false });
     assert.equal(bannerOf([view("theses", "market", { lastOkAt: 1 }), book({ failuresInARow: 4, nextAt: 5 })]), null);
     const allSilent = [
@@ -376,7 +376,7 @@ describe("the one line over every clock", () => {
     assert.equal(bannerOf([...allSilent, book({ lastOkAt: 3 })])!.unreachable, true);
   });
 
-  it("'Can't reach merrymen' only when every clock, in both halves, heard nothing", () => {
+  it("'Can't reach agentcap' only when every clock, in both halves, heard nothing", () => {
     const allSilent = [
       view("theses", "market", { failuresInARow: 1, silent: true }),
       view("account", "account", { failuresInARow: 1, silent: true }),
@@ -385,12 +385,12 @@ describe("the one line over every clock", () => {
     assert.equal(
       bannerOf([...allSilent, view("board", "market", { failuresInARow: 1, silent: false })])!.unreachable,
       false,
-      "a 500 is merrymen answering",
+      "a 500 is agentcap answering",
     );
     assert.equal(
       bannerOf([...allSilent, view("market", "market", { lastOkAt: 3 })])!.unreachable,
       false,
-      "one read coming back means merrymen is there",
+      "one read coming back means agentcap is there",
     );
     assert.equal(
       bannerOf([view("theses", "market", { failuresInARow: 1, silent: true })])!.unreachable,

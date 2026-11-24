@@ -8,7 +8,7 @@ import {
   STORED_AGENT_NAME_RE as CORE_STORED_AGENT_NAME_RE,
   TRADEABLE_SYMBOLS,
   normalizeAgentName as coreNormalizeAgentName,
-} from "@merrymen/core";
+} from "@agentcap/core";
 import { identityOf, type IdentitySources } from "@/lib/feed-identity";
 import { AGENT_NAME_RE, STORED_AGENT_NAME_RE, normalizeAgentName } from "@/lib/agent-name-rule";
 
@@ -20,7 +20,7 @@ import { AGENT_NAME_RE, STORED_AGENT_NAME_RE, normalizeAgentName } from "@/lib/a
  *
  * Hosted, a tenant's settings are written to the per-tenant sealed store
  * (`getSettingsStore("spot").put(tenant, …)` in api/settings). The web container's own
- * `~/.merrymen/settings.json` is written by nothing, and could not hold a
+ * `~/.agentcap/settings.json` is written by nothing, and could not hold a
  * particular tenant's settings even if it existed — it is one file per
  * container, shared by every tenant. /api/feed read exactly that file, so the
  * read always threw and every hosted tenant got the fallback: the name went

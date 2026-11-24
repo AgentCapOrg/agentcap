@@ -16,7 +16,7 @@ export function PlansSection({ plans }: { plans: PlansView }) {
   const counted = plans.source === "live" && plans.billing.mode !== "off", shared = plans.billing.enforced;
   return <section id="plans" className="dev-section" aria-labelledby="plans-title">
     <div className="dev-section-heading"><div><p className="dev-eyebrow">02 / PLANS</p><h2 id="plans-title">Start free. Grow into a plan.</h2></div><span className="dev-pill">{ready ? `PER ${days} DAYS` : "PAID PLANS COMING SOON"}</span></div>
-    <p className="dev-description">{counted ? <>Every API request counts toward your plan; <code>/meta</code> is free.</> : <>Once plans open, every API request counts toward your plan; <code>/meta</code> stays free.</>} Paid plans are paid in $MERRYMEN on Robinhood Chain from the wallet you sign in with.</p>
+    <p className="dev-description">{counted ? <>Every API request counts toward your plan; <code>/meta</code> is free.</> : <>Once plans open, every API request counts toward your plan; <code>/meta</code> stays free.</>} Paid plans are paid in $AGENTCAP on Robinhood Chain from the wallet you sign in with.</p>
     <div className="dev-plans">{plans.plans.map(plan => <article className="dev-plan" key={plan.id} aria-label={`${plan.name} plan`}>
       <h3>{plan.name}</h3>
       <p className="dev-plan-price">{priceLabel(plan)}<small>{plan.price_raw === "0" ? "no payment" : `per ${days} days`}</small></p>
@@ -29,6 +29,6 @@ export function PlansSection({ plans }: { plans: PlansView }) {
         ? <p className="dev-plans-note" role="note">Paid plans are coming soon. Until payments open there is nothing to send; a plan chosen in your workspace waits until it can be paid.</p>
         : <p className="dev-plans-note" role="note">Paid plans are coming soon. Until they open, nothing is charged and there is nothing to send.{plans.source === "fallback" ? " These are the published plans; live details could not be loaded just now." : ""}</p>}
     {ready && !plans.billing.enforced && <p className="dev-plans-note" role="note">Requests are counted against each plan but not yet refused when a plan runs out.</p>}
-    <p className="dev-small-print">API plans are paid, unlike the Merry Circle, which you join by holding. Paying moves MERRYMEN out of your wallet, and Merry Circle tiers and hosted energy follow the balance you hold. <a href={`${EXPLORER}/token/${TOKEN.address}`} target="_blank" rel="noreferrer">$MERRYMEN token contract ↗</a></p>
+    <p className="dev-small-print">API plans are paid, unlike the Merry Circle, which you join by holding. Paying moves AGENTCAP out of your wallet, and Merry Circle tiers and hosted energy follow the balance you hold. <a href={`${EXPLORER}/token/${TOKEN.address}`} target="_blank" rel="noreferrer">$AGENTCAP token contract ↗</a></p>
   </section>;
 }

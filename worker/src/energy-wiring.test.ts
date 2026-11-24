@@ -142,7 +142,7 @@ describe("THE OWNER'S PATHS ARE UNTOUCHED BY THE GATE", () => {
 });
 
 describe("deciding and telling", () => {
-  it("THE PLAN IS DECIDED FROM THE $MERRYMEN READ, before anything this tick could spend it", () => {
+  it("THE PLAN IS DECIDED FROM THE $AGENTCAP READ, before anything this tick could spend it", () => {
     const read = CODE.indexOf("const holderRead = await readHolderStatusResult(cfg.rpcMainnet, cfg.holderAddress, energyAccount);");
     const refresh = CODE.indexOf("await refreshEnergy(agentId, grant, holderRead.parts, holderStanding);");
     const guard = CODE.indexOf("plan.brain && energyNow.reviews.open");
@@ -162,7 +162,7 @@ describe("deciding and telling", () => {
   });
 
   it("the agent's account counts only on Robinhood Chain", () => {
-    assert.match(CODE, /const energyAccount = grant\.chainId === MERRYMEN_TOKEN\.chainId \? \(grant\.smartAccount as `0x\$\{string\}`\) : undefined;/);
+    assert.match(CODE, /const energyAccount = grant\.chainId === AGENTCAP_TOKEN\.chainId \? \(grant\.smartAccount as `0x\$\{string\}`\) : undefined;/);
   });
 
   it("the report is published every tick, whatever the mode, on its own statement", () => {
@@ -175,7 +175,7 @@ describe("deciding and telling", () => {
 
   it("the estimate is priced over the tick's own client, and only for a Robinhood Chain grant not at full", () => {
     const refresh = body("refreshEnergy");
-    assert.match(refresh, /grant\.chainId === MERRYMEN_TOKEN\.chainId && level !== "full"/);
+    assert.match(refresh, /grant\.chainId === AGENTCAP_TOKEN\.chainId && level !== "full"/);
     assert.match(refresh, /now - energyEstimate\.at < ENERGY\.estimateEverySec/);
     assert.match(refresh, /estimateEnergyUsdg\(client, parts\)/);
   });
@@ -222,10 +222,10 @@ describe("deciding and telling", () => {
   });
 
   it("THE CIRCLE LINES NAME THE COMBINED BALANCE, and keep their pinned halves", () => {
-    assert.match(CODE, /Merry Circle — no \$MERRYMEN between your wallet and my account; standard platform fee applies/);
+    assert.match(CODE, /Merry Circle — no \$AGENTCAP between your wallet and my account; standard platform fee applies/);
     // The Circle note is written in circle-gate.ts now (run in circle-gate.test.ts).
     const gate = readFileSync(new URL("./circle-gate.ts", import.meta.url), "utf8");
-    assert.match(gate, /hold \$\{count\(ENERGY\.fullTokens\)\} \$MERRYMEN \$\{where\} /);
+    assert.match(gate, /hold \$\{count\(ENERGY\.fullTokens\)\} \$AGENTCAP \$\{where\} /);
     assert.match(gate, /"between your wallet and my account"/);
     // The gate unlocks on the exact tier OR the standing energy reads (a
     // restart's failed first read must not lock a Merry Man out — the pins

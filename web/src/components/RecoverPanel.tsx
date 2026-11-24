@@ -2,7 +2,7 @@
 
 import { privyEnabled } from "@/lib/privy-client";
 import { walletUrl } from "@/lib/wallet-param";
-import type { GrantPurpose } from "@merrymen/core";
+import type { GrantPurpose } from "@agentcap/core";
 import { useState } from "react";
 import { listSavedWallets, loadGrant } from "@/lib/session";
 import { isAddr, normalizeAddr } from "@/lib/address";
@@ -10,7 +10,7 @@ import { planFromBrowser, sweepFromBrowser, redact, type BrowserWallet } from "@
 import { usePrivyOwner, type PrivyOwner } from "@/terminal/usePrivyOwner";
 
 /**
- * "Get my money out" — the one-click counterpart to `merrymen recover`.
+ * "Get my money out" — the one-click counterpart to `agentcap recover`.
  *
  * Funds sit in a counterfactual smart account, not a plain wallet, so users
  * can't reach them by importing the owner key into MetaMask. This sweeps the
@@ -254,7 +254,7 @@ export function RecoverPanelView({
     const w = browserWallet();
     if (!w) {
       setError(
-        "this browser doesn't hold that wallet, so it can't withdraw here. Use `merrymen recover` on the machine with your key.",
+        "this browser doesn't hold that wallet, so it can't withdraw here. Use `agentcap recover` on the machine with your key.",
       );
       return;
     }
@@ -597,7 +597,7 @@ export function RecoverPanelView({
           {ctx && !ctx.hasStoredKey && !plan && privyOwner && (
             <p className="recover-sub">
               Recovery will be authorised by your signed-in wallet. There is no key to enter — your
-              embedded wallet signs it, and merrymen never sees it.
+              embedded wallet signs it, and agentcap never sees it.
             </p>
           )}
           {ctx && !ctx.hasStoredKey && !plan && !privyOwner && (
@@ -747,7 +747,7 @@ export function RecoverPanelView({
 
           <p className="recover-note">
             Signed by your <b>owner key</b> (not the capped session key), so it works after a kill and
-            isn&apos;t bound by trade limits. Same engine as <span className="mono">merrymen recover</span>.
+            isn&apos;t bound by trade limits. Same engine as <span className="mono">agentcap recover</span>.
           </p>
         </>
       )}

@@ -255,7 +255,7 @@ describe("LIGHTER_ROUTE_V1 is the venue as probed, frozen", () => {
     assert.equal(LIGHTER_ROUTE_V1.minDepositMicro, 1_000_000n);
   });
 
-  it("collateral is the same USDG the rest of merrymen holds", () => {
+  it("collateral is the same USDG the rest of agentcap holds", () => {
     // Two spellings of one address are two chances to disagree; this is the
     // one place perps and spot must agree on what cash is.
     assert.equal(LIGHTER_ROUTE_V1.usdg, CASH.USDG.toLowerCase());
@@ -1123,7 +1123,7 @@ describe("custodySentence never says the money is home unless it is", () => {
     assert.doesNotMatch(s, HOME);
     assert.match(s, /Still on Lighter: 2 open positions, 2 resting orders, 29\.13 USDG of collateral\./);
     assert.match(s, /stops/);
-    assert.match(s, /merrymen recover/);
+    assert.match(s, /agentcap recover/);
   });
 
   it("amounts round UP to the cent — never understated", () => {
@@ -1152,7 +1152,7 @@ describe("custodySentence never says the money is home unless it is", () => {
     assert.match(s, /12\.00 USDG/);
     assert.match(s, /about 22 min/);
     assert.match(s, /too much slippage/);
-    assert.match(s, /merrymen recover/);
+    assert.match(s, /agentcap recover/);
   });
 
   it("known and empty is said plainly — still not as 'your funds stay'", () => {
@@ -1167,7 +1167,7 @@ describe("custodySentence never says the money is home unless it is", () => {
       ...NOTHING_ELSE, collateralMicro: 0n, openPositions: 0, openOrders: 0, pendingWithdrawalsMicro: 5_000_000n, withdrawalDelaySec: null });
     assert.doesNotMatch(s, HOME);
     assert.match(s, /5\.00 USDG is on its way back/);
-    assert.match(s, /merrymen recover/);
+    assert.match(s, /agentcap recover/);
   });
 
   it("money on its way IN, pool shares, spot balances and other accounts are all still on Lighter — never 'reads empty'", () => {
@@ -1185,7 +1185,7 @@ describe("custodySentence never says the money is home unless it is", () => {
       assert.doesNotMatch(s, /reads empty/, why);
       assert.doesNotMatch(s, HOME, why);
       assert.match(s, said, why);
-      assert.match(s, /merrymen recover/, why);
+      assert.match(s, /agentcap recover/, why);
     }
   });
 
@@ -1193,7 +1193,7 @@ describe("custodySentence never says the money is home unless it is", () => {
     const s = custodySentence({ kind: "unread" });
     assert.doesNotMatch(s, HOME);
     assert.match(s, /could not be read/);
-    assert.match(s, /merrymen recover/);
+    assert.match(s, /agentcap recover/);
     assert.match(custodySentence({ kind: "unread" }, { recover: "open Recover in the app" }), /open Recover in the app/);
   });
 

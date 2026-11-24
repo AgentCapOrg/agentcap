@@ -2,7 +2,7 @@
  * What a trade's gas actually cost, in the currency the book is kept in.
  *
  * Gas leaves the account in ETH; the book is denominated in USDG; and before
- * this the worker had no ETH price at all. So every P&L figure merrymen had
+ * this the worker had no ETH price at all. So every P&L figure agentcap had
  * produced was GROSS OF GAS — which at the 6.25 USDG trade size in the July
  * ledger was ~55 bps of an ~89 bps round trip, i.e. most of the cost.
  *

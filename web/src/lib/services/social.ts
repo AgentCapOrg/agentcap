@@ -31,7 +31,7 @@
  * Read-only on the ledger and no MCP imports; the only write is the follow
  * store's own.
  */
-import { chainForId } from "@merrymen/core";
+import { chainForId } from "@agentcap/core";
 import type { Db } from "../../../../worker/src/db";
 import { admitOwnerLine } from "../../../../worker/src/groupchat/policy";
 import {
@@ -492,7 +492,7 @@ async function shareOne(db: Db, input: ShareInput): Promise<ShareSummary | null>
       refused: "it was refused before anything was sent",
       landed_without_tx_hash: "it has no transaction hash on record, so it cannot be checked on chain",
     };
-    throw new NotShareable(`Trade ${t.id} cannot be shared as verified: ${why[t.status] ?? "its ledger status is not one Merrymen can verify"}.`);
+    throw new NotShareable(`Trade ${t.id} cannot be shared as verified: ${why[t.status] ?? "its ledger status is not one AgentCap can verify"}.`);
   }
   return { ...s, real: tally([t], true, publicBook), practice: emptyBook(true), excluded: null, trades: [shareTradeOf(t, publicBook)], tradesTotal: 1 };
 }
@@ -586,7 +586,7 @@ function tradeLine(t: ShareTrade, links: boolean): string {
  * one the structured summary carries; it adds words, never numbers.
  */
 export function renderShareText(s: ShareSummary, o: { name: string | null; links: boolean }): string {
-  const who = oneLine(o.name, 48) ?? "My Merrymen agent";
+  const who = oneLine(o.name, 48) ?? "My AgentCap agent";
   const where = s.realMoney ? s.chainName : `${s.chainName} (test funds)`;
   const lines: string[] = [];
   const privateLine = "Dollar amounts are not shown: this agent's book is private.";
@@ -609,7 +609,7 @@ export function renderShareText(s: ShareSummary, o: { name: string | null; links
   }
 
   const r = s.real;
-  lines.push(`${who} on Merrymen: ${PERIOD_WORDS[s.period!]} (to ${when(s.until)})`);
+  lines.push(`${who} on AgentCap: ${PERIOD_WORDS[s.period!]} (to ${when(s.until)})`);
   if (r.trades === 0) {
     // A cut-short read that found no trades has not shown there were none.
     lines.push(r.complete
@@ -652,7 +652,7 @@ function postCoin(t: ShareTrade): string {
  * words, never numbers, and it keeps dollars out of a private book.
  */
 export function renderPostLine(s: ShareSummary, o: { name: string | null }): string | null {
-  const who = oneLine(o.name, 48) ?? "My Merrymen agent";
+  const who = oneLine(o.name, 48) ?? "My AgentCap agent";
   const where = s.realMoney ? s.chainName : `${s.chainName} (test funds)`;
   let line: string;
   if (s.kind === "trade") {

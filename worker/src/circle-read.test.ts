@@ -7,7 +7,7 @@
  * retryCount 0, a shared circuit breaker — two things then happened on the same
  * tick:
  *
- *   the owner was told "no $MERRYMEN at your holder wallet", a confident claim
+ *   the owner was told "no $AGENTCAP at your holder wallet", a confident claim
  *   about an address nobody had managed to read; and
  *
  *   effectivePerfFeeBps took the UNDISCOUNTED rate, so a tick that also set a
@@ -28,7 +28,7 @@ const read = (p: string) => readFileSync(new URL(p, import.meta.url), "utf8");
 // URL alone no longer models "the chain would not answer" — the real public RPC
 // would answer from inside a test. These cases are about what a FAILED read
 // renders as, so failover is off for this file.
-process.env.MERRYMEN_RPC_FAILOVER = "off";
+process.env.AGENTCAP_RPC_FAILOVER = "off";
 
 describe("the read says whether it read", () => {
   it("NO ADDRESS AND NO ANSWER ARE DIFFERENT ARMS", async () => {
@@ -78,7 +78,7 @@ describe("the tick charges nobody for our outage", () => {
   });
 
   it("AND THE IDLE NOTICE NAMES WHICH NO IT IS", async () => {
-    // Telling a holder to go and hold $MERRYMEN because our read failed is
+    // Telling a holder to go and hold $AGENTCAP because our read failed is
     // advice they cannot act on — they already did it. The note is written in
     // circle-gate.ts (circleNote) and chosen by whether the read answered.
     const src = read("./index.ts");
@@ -87,7 +87,7 @@ describe("the tick charges nobody for our outage", () => {
     assert.match(src, /circleNoteStep\(circleNoted, \{ short: circleShort, readOk: circle\.known \}\)/);
     const { circleNote } = await import("./circle-gate");
     const unread = circleNote("unread", { strategyName: "even-keel", accountCounts: true });
-    assert.match(unread, /could not read your \$MERRYMEN balance this tick/);
+    assert.match(unread, /could not read your \$AGENTCAP balance this tick/);
     assert.match(unread, /our read failing, not your wallet/);
     assert.doesNotMatch(unread, /hold 100,000/);
   });
@@ -104,7 +104,7 @@ describe("the old shape survives for callers that only want a floor", () => {
 /**
  * ── THE COMBINED BALANCE: THE OWNER'S WALLET PLUS THE AGENT'S ACCOUNT ──────
  *
- * $MERRYMEN an agent buys, or is sent, lands in its own account — so the tier
+ * $AGENTCAP an agent buys, or is sent, lands in its own account — so the tier
  * and energy both count holder + account (core energy.ts, D1). Two reads, one
  * client, one metered transport; and the tier is still EXACT: a sum with a
  * missing term is not a balance, so either read failing is ok:false, with the
@@ -150,7 +150,7 @@ describe("the combined read", () => {
       const r = await readHolderStatusResult(chain.url, HOLDER, ACCOUNT);
       assert.equal(r.ok, true);
       assert.equal(r.status.rawBalance, tok(100_000));
-      assert.equal(r.status.tier.id, "merryman", "neither half alone reaches the Merry Man tier; together they do");
+      assert.equal(r.status.tier.id, "agentcapavatar", "neither half alone reaches the Merry Man tier; together they do");
       assert.deepEqual(r.parts, { holder: tok(60_000), account: tok(40_000) });
       assert.deepEqual([...chain.calls].sort(), [HOLDER, ACCOUNT].sort());
       assert.equal(chain.requests(), 1, "two balanceOf calls, one HTTP request");

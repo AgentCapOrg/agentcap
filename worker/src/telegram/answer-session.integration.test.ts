@@ -12,9 +12,9 @@ import os from "node:os";
 import path from "node:path";
 import { after, before, describe, it } from "node:test";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-session-"));
-process.env.MERRYMEN_HOME = HOME;
-process.env.MERRYMEN_HOSTED = "1";
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-session-"));
+process.env.AGENTCAP_HOME = HOME;
+process.env.AGENTCAP_HOSTED = "1";
 
 const { closeStoreForTest, initStore } = await import("../store");
 const { toolByName, toolSessionStatsForTest } = await import("./chat-tools");

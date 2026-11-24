@@ -1,7 +1,7 @@
 /** Public agent identities and lifecycle only; no book, trade or settings reads. */
 import type { Db } from "../../../worker/src/db";
 import { readPerpsWallets } from "../../../worker/src/perps-wallets";
-import { getIdentityStore } from "@merrymen/identity-store";
+import { getIdentityStore } from "@agentcap/identity-store";
 import { withReadDb } from "./ledger";
 import { isRetired, type AgentLifecycle } from "./retired-agent";
 import { discoveryTiming, type DiscoveryMeasure, type DiscoveryTiming } from "./discovery-timing";

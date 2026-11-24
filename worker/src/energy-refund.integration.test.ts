@@ -27,11 +27,11 @@ import { energyPlan, utcDay } from "./energy";
 import { seedEnergyDays } from "./energy-seed";
 import { MIRROR_STATE_DDL, mirrorTenant } from "./ledger-mirror";
 
-const scratch = mkdtempSync(path.join(os.tmpdir(), "merrymen-energy-refund-"));
+const scratch = mkdtempSync(path.join(os.tmpdir(), "agentcap-energy-refund-"));
 const HOME = path.join(scratch, "child");
 const isolatedCwd = path.join(scratch, "cwd");
 mkdirSync(isolatedCwd);
-process.env.MERRYMEN_HOME = HOME;
+process.env.AGENTCAP_HOME = HOME;
 delete process.env.DATABASE_URL;
 const originalCwd = process.cwd();
 const store = await import("./store");
@@ -42,7 +42,7 @@ try {
   process.chdir(originalCwd);
 }
 // The orchestrator's read-side handle on the child's ledger, as the mirror opens it.
-const childRaw = new DatabaseSync(path.join(HOME, "merrymen.db"), { readOnly: true });
+const childRaw = new DatabaseSync(path.join(HOME, "agentcap.db"), { readOnly: true });
 const child = wrapSqlite(childRaw);
 // Shared, migrated by the same schema and ALTERs the mirror applies to Postgres every pass.
 const sharedRaw = new DatabaseSync(":memory:");
@@ -64,7 +64,7 @@ const armed = (raw: DatabaseSync, account: string) =>
     .prepare("INSERT INTO agents (smart_account, owner_address, session_key_address, chain_id, caps, granted_at, expires_at) VALUES (?, '0xo', '0xs', 4663, '{}', 1, 2)")
     .run(account);
 {
-  const w = new DatabaseSync(path.join(HOME, "merrymen.db"));
+  const w = new DatabaseSync(path.join(HOME, "agentcap.db"));
   armed(w, AGENT);
   w.close();
 }
@@ -130,7 +130,7 @@ describe("the claim counts the day's USE", () => {
     assert.equal(await store.claimEnergy(a, TODAY, "entries", 2), true);
     await Promise.all(Array.from({ length: 5 }, () => store.refundEnergy(a, TODAY, "entries")));
     assert.equal((await store.getEnergyDay(a, TODAY))!.entries, 0);
-    const raw = new DatabaseSync(path.join(HOME, "merrymen.db"), { readOnly: true });
+    const raw = new DatabaseSync(path.join(HOME, "agentcap.db"), { readOnly: true });
     try {
       assert.deepEqual({ ...(raw.prepare("SELECT entries, entries_refunded FROM energy_days WHERE agent_id = ?").get(a) as object) }, { entries: 1, entries_refunded: 1 });
     } finally {

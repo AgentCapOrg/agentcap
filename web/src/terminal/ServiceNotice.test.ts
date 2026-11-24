@@ -23,14 +23,14 @@ const NOTICE: Notice = {
   body: "We are finishing a recovery.\nWe will update this notice when trading resumes.",
   updatedAt: "2026-10-05T18:00:00.000Z",
   tradingPaused: false,
-  links: [{ label: "Your account", href: "https://app.merrymen.dev/you" }],
+  links: [{ label: "Your account", href: "https://app.agentcap.xyz/you" }],
 };
 const SCRIPT = "<script>alert(1)</script>";
 const view = (notice: Notice) => renderToStaticMarkup(createElement(ServiceNoticeView, { notice, onDismiss: () => {} }));
 
 describe("what the banner draws", () => {
   it("draws <script> as text, wherever the operator put it", () => {
-    const html = view({ ...NOTICE, title: SCRIPT, body: SCRIPT, links: [{ label: SCRIPT, href: "https://merrymen.dev/" }] });
+    const html = view({ ...NOTICE, title: SCRIPT, body: SCRIPT, links: [{ label: SCRIPT, href: "https://agentcap.xyz/" }] });
     assert.doesNotMatch(html, /<script/i);
     assert.equal(html.split("&lt;script&gt;alert(1)&lt;/script&gt;").length - 1, 3, "title, body and link label are all escaped");
   });
@@ -42,7 +42,7 @@ describe("what the banner draws", () => {
 
   it("links only to the validated href, in the same tab", () => {
     const html = view(NOTICE);
-    assert.match(html, /<a href="https:\/\/app\.merrymen\.dev\/you" rel="noopener noreferrer">Your account<\/a>/);
+    assert.match(html, /<a href="https:\/\/app\.agentcap\.xyz\/you" rel="noopener noreferrer">Your account<\/a>/);
     assert.doesNotMatch(html, /target=/);
     assert.doesNotMatch(view({ ...NOTICE, links: [] }), /<ul|<a /);
   });
@@ -98,7 +98,7 @@ describe("the banner in the shell", () => {
   });
 
   it("re-checks the answer: a refused link hides the notice even if the route sent it", async () => {
-    for (const href of ["javascript:alert(1)", "http://app.merrymen.dev/you", "https://evil.example/"]) {
+    for (const href of ["javascript:alert(1)", "http://app.agentcap.xyz/you", "https://evil.example/"]) {
       answer = async () => json({ notice: { ...NOTICE, links: [{ label: "Claim", href }] } });
       await mount();
       assert.equal(shown(), null, href);

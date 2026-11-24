@@ -1,5 +1,5 @@
 import { createPublicClient, http } from "viem";
-import { robinhoodChain, robinhoodTestnet, PONS_SELF_TRADE } from "@merrymen/core";
+import { robinhoodChain, robinhoodTestnet, PONS_SELF_TRADE } from "@agentcap/core";
 
 /** Only an explicitly selected, supported deployment may become a token spender. */
 export async function verifiedAdapter(

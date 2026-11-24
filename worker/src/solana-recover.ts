@@ -1,5 +1,5 @@
 /**
- * Owner-run recovery of a Solana custody vault, independent of the Merrymen
+ * Owner-run recovery of a Solana custody vault, independent of the AgentCap
  * server: no database, no session, no environment hash, no worker. The owner
  * signs with their own exported key; only signed transactions leave this
  * process, and only to the mainnet RPC the owner names.
@@ -62,7 +62,7 @@ const SYNC_NATIVE = 17;
 const CREATE_IDEMPOTENT = 1;
 export const SOLANA_RECOVER_KEY_MAX_BYTES = 4096;
 
-/** A released Merrymen vault program and the SHA-256 of its deployed binary (ProgramData bytes after the 45-byte header). */
+/** A released AgentCap vault program and the SHA-256 of its deployed binary (ProgramData bytes after the 45-byte header). */
 export type SolanaVaultRelease = (typeof SOLANA_VAULT_RELEASES)[number];
 /**
  * Released vault programs, verified by default: the shared pin in
@@ -93,9 +93,9 @@ export function solanaRecoveryProgramTrust(options: { programId: string; send: b
     return { listed: true, sha256: release.sha256 };
   }
   if (options.send && (options.programSha256 === undefined || !options.allowUnlistedProgram)) {
-    fail(`Program ${options.programId} is not a released Merrymen vault program${releases.length ? "" : " (none is released yet)"}. `
+    fail(`Program ${options.programId} is not a released AgentCap vault program${releases.length ? "" : " (none is released yet)"}. `
       + "Nothing was signed or sent. The owner key signs every instruction of the program you name, so a look-alike program could take "
-      + "the SOL in this wallet and the tokens in its USDG and WSOL accounts. If someone sent you this command, stop: Merrymen never asks for it. "
+      + "the SOL in this wallet and the tokens in its USDG and WSOL accounts. If someone sent you this command, stop: AgentCap never asks for it. "
       + "To recover from a program you deployed or audited yourself, add --program-sha256 with its binary hash and --unlisted-program.");
   }
   return { listed: false, sha256: options.programSha256 };
@@ -229,11 +229,11 @@ export async function readSolanaRecoveryState(rpc: SolanaLiveRpc, programId: str
       fail("The Solana RPC returned malformed account data.");
     }
     const [vaultRaw, usdgRaw, wsolRaw, ownerRaw, ownerUsdgRaw, ownerWsolRaw] = result.value.map(rawAccount);
-    if (!vaultRaw) fail(`No Merrymen vault exists for owner ${owner} under program ${programId}. Check the program ID shown next to your vault.`);
+    if (!vaultRaw) fail(`No AgentCap vault exists for owner ${owner} under program ${programId}. Check the program ID shown next to your vault.`);
     if (vaultRaw.owner !== programId || vaultRaw.executable) fail("The vault address is not an account of the given program.");
     let vaultState: SolanaVaultState;
     try { vaultState = decodeSolanaVaultAccount(new Uint8Array(vaultRaw.data)); }
-    catch { return fail("The vault account is not a Merrymen vault this tool understands."); }
+    catch { return fail("The vault account is not a AgentCap vault this tool understands."); }
     if (vaultState.owner !== owner) fail("The vault belongs to a different owner.");
     const reserve = BigInt(integer(await read("getMinimumBalanceForRentExemption", [vaultRaw.data.length, { commitment: "finalized" }])));
     const usdg = usdgRaw ? tokenAccount(usdgRaw, TOKEN_2022_PROGRAM, SOLANA_USDG_MINT, vault) : null;
@@ -358,7 +358,7 @@ export function describeSolanaRecovery(state: SolanaRecoveryState, sending: bool
     sending ? "Solana vault recovery: sending (each step waits for finalization)." : "Solana vault recovery: PLAN ONLY. Nothing was signed or sent; add --send to submit.",
     "Network:   mainnet-beta (genesis verified on the RPC you supplied)",
     `Owner:     ${state.owner}`,
-    `Program:   ${state.programId}   (compare it with the program shown next to your vault in Merrymen)`,
+    `Program:   ${state.programId}   (compare it with the program shown next to your vault in AgentCap)`,
     `Vault:     ${state.vault}`,
     vaultState.session === NO_SESSION ? "Session:   none (already revoked)"
       : `Session:   ${vaultState.session}, expires ${when(vaultState.expiresAt)}${vaultState.paused ? ", buys paused" : ""}`,
@@ -560,18 +560,18 @@ export async function runSolanaRecovery(options: SolanaRecoveryOptions, io: Sola
     if (trust.listed && !deployment.declaresProgramId) {
       fail("The released binary at that address is not built for this program id (its declare_id differs), so it cannot run any instruction. Nothing was signed or sent.");
     }
-    io.log(trust.listed ? "Program binary verified: the released Merrymen vault program, immutable, SHA-256 matches."
-      : "Program binary verified against the given SHA-256 (immutable). It is NOT a released Merrymen vault program.");
+    io.log(trust.listed ? "Program binary verified: the released AgentCap vault program, immutable, SHA-256 matches."
+      : "Program binary verified against the given SHA-256 (immutable). It is NOT a released AgentCap vault program.");
   } else {
-    io.log("Program binary NOT VERIFIED: not a released Merrymen vault program and no --program-sha256 given. This plan only reads; --send refuses it.");
+    io.log("Program binary NOT VERIFIED: not a released AgentCap vault program and no --program-sha256 given. This plan only reads; --send refuses it.");
   }
   const plan = await readSolanaRecoveryState(rpc, programId, owner);
   for (const line of describeSolanaRecovery(plan, options.send)) io.log(line);
   if (!options.send) return { sent: false, plan };
   if (plan.ownerLamports === 0n) fail(`The owner wallet has no SOL for fees. Send a little SOL (0.01 is plenty) to ${owner} and run again.`);
   if (!trust.listed) {
-    io.log(`WARNING: ${programId} is not a released Merrymen vault program. Your key is about to sign instructions of this program,`);
-    io.log("which can take the SOL in this wallet and the tokens in its USDG and WSOL accounts. Merrymen support never asks you to");
+    io.log(`WARNING: ${programId} is not a released AgentCap vault program. Your key is about to sign instructions of this program,`);
+    io.log("which can take the SOL in this wallet and the tokens in its USDG and WSOL accounts. AgentCap support never asks you to");
     io.log(`use --unlisted-program. Continue only if you deployed or audited this program yourself. Press Ctrl+C now to stop;`);
     io.log(`signing starts in ${SOLANA_RECOVER_UNLISTED_DELAY_MS / 1000} seconds.`);
     await io.sleep(SOLANA_RECOVER_UNLISTED_DELAY_MS);

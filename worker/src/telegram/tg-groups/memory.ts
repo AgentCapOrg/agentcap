@@ -214,7 +214,7 @@ const VERDICT_WORDS: Record<CoinVerdict, string> = {
   "coins-off": "you didn't look at it",
   own: "it was not a coin",
   cash: "it was just cash, not a memecoin",
-  energy: "it was the merrymen coin, which you don't trade",
+  energy: "it was the agentcap coin, which you don't trade",
   stock: "it was a stock token, not a memecoin",
   wallet: "it was a wallet, not a coin",
   "not-token": "it was not a token",

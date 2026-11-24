@@ -1,5 +1,5 @@
 import { parseAbi, type Address, type PublicClient } from "viem";
-import { robinhoodChain, UNISWAP } from "@merrymen/core";
+import { robinhoodChain, UNISWAP } from "@agentcap/core";
 
 const POOL_MANAGER_ABI = parseAbi(["function poolManager() view returns (address)"]);
 const readableCode = (code: unknown): code is `0x${string}` =>

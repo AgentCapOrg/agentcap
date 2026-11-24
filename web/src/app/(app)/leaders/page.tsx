@@ -2,7 +2,7 @@
 // the terminal and ignores `children`, and nav.ts maps /leaders to Explore's
 // leaderboard. It has to exist, or the view 404s on refresh and on every link
 // anybody shares.
-export const metadata = { title: "Leaders — merrymen" };
+export const metadata = { title: "Leaders — agentcap" };
 export default function Page() {
   return null;
 }

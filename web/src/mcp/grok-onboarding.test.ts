@@ -15,7 +15,7 @@ import {
   type Era, type TestDb,
 } from "./testing";
 
-const ENV_KEYS = ["MERRYMEN_PUBLIC_ORIGIN", "MERRYMEN_OAUTH_ISSUER"] as const;
+const ENV_KEYS = ["AGENTCAP_PUBLIC_ORIGIN", "AGENTCAP_OAUTH_ISSUER"] as const;
 const originalEnv = Object.fromEntries(ENV_KEYS.map(key => [key, process.env[key]]));
 let restore: (() => void) | null = null;
 let database: TestDb | null = null;
@@ -98,24 +98,24 @@ for (const era of ["legacy", "modern"] as Era[]) {
     assert.equal(connected.rpc.error, undefined);
     const serverInfo = era === "legacy" ? connected.rpc.result?.serverInfo
       : (connected.rpc.result?._meta as Record<string, unknown>)?.["io.modelcontextprotocol/serverInfo"];
-    assert.equal((serverInfo as { name: string } | undefined)?.name, "merrymen");
+    assert.equal((serverInfo as { name: string } | undefined)?.name, "agentcap");
     assert.equal(connected.response.headers.get("mcp-session-id"), null, "later requests do not need a sticky session");
     const listed = (await rpc("tools/list")).result?.tools as Array<{ name: string }>;
-    for (const name of ["get_merryman_setup", "create_merryman", "get_proposal"]) {
+    for (const name of ["get_agentcapavatar_setup", "create_agentcapavatar", "get_proposal"]) {
       assert.ok(listed.some(item => item.name === name), name);
     }
     for (const name of ["approve_proposal", "enable_live_trading", "sign_transaction", "get_private_key"]) {
       assert.ok(!listed.some(item => item.name === name), `${name} is not an assistant authority`);
     }
 
-    const before = textData(await tool("get_merryman_setup"));
+    const before = textData(await tool("get_agentcapavatar_setup"));
     assert.equal(before.phase, "no_shared_agent");
     assert.equal(before.agent, null);
     const next = before.next_steps as Array<{ tool: string | null }>;
-    assert.ok(next.some(step => step.tool === "create_merryman"));
+    assert.ok(next.some(step => step.tool === "create_agentcapavatar"));
     assert.equal((before.runtime as { keep_chat_open: boolean }).keep_chat_open, false);
 
-    const draft = textData(await tool("create_merryman", DRAFT));
+    const draft = textData(await tool("create_agentcapavatar", DRAFT));
     assert.equal(draft.status, "awaiting_approval");
     assert.equal(draft.created, true);
     assert.equal(draft.approval_url, `https://app.test/connect/approve/${draft.proposal_id}`);
@@ -124,7 +124,7 @@ for (const era of ["legacy", "modern"] as Era[]) {
     assert.equal(draft.diff, null);
 
     // A resumed chat can repeat the same request without making another proposal.
-    const repeated = textData(await tool("create_merryman", DRAFT));
+    const repeated = textData(await tool("create_agentcapavatar", DRAFT));
     assert.equal(repeated.proposal_id, draft.proposal_id);
     assert.equal(repeated.created, false);
     const status = textData(await tool("get_proposal", { proposal_id: draft.proposal_id }));
@@ -132,7 +132,7 @@ for (const era of ["legacy", "modern"] as Era[]) {
     assert.equal(status.approval_url, draft.approval_url);
     assert.equal(status.order_id, null);
     assert.equal(status.decided_at, null);
-    assert.equal(textData(await tool("get_merryman_setup")).phase, "no_shared_agent");
+    assert.equal(textData(await tool("get_agentcapavatar_setup")).phase, "no_shared_agent");
 
     const stored = d.raw.prepare("SELECT tenant, connection_id, status, binding_json FROM mcp_proposals WHERE id = ?").get(String(draft.proposal_id)) as {
       tenant: string; connection_id: string; status: string; binding_json: string;
@@ -150,10 +150,10 @@ for (const era of ["legacy", "modern"] as Era[]) {
 
   test(`${era}: read-only consent cannot discover or invoke setup writes by naming them`, async () => {
     const { rpc, tool, count } = await setup(era, ["market:read"]);
-    const setupView = textData(await tool("get_merryman_setup"));
+    const setupView = textData(await tool("get_agentcapavatar_setup"));
     assert.equal((setupView.connection as { can_create_draft: boolean }).can_create_draft, false);
     const listed = (await rpc("tools/list")).result?.tools as Array<{ name: string }>;
-    for (const name of ["create_merryman", "get_proposal", "cancel_proposal", "propose_settings_change"]) {
+    for (const name of ["create_agentcapavatar", "get_proposal", "cancel_proposal", "propose_settings_change"]) {
       assert.ok(!listed.some(item => item.name === name), name);
       const denied = await tool(name, DRAFT);
       assert.equal(denied.error?.code, -32602, JSON.stringify(denied));
@@ -164,7 +164,7 @@ for (const era of ["legacy", "modern"] as Era[]) {
 
   test(`${era}: another owner cannot read or cancel a setup proposal or discover its agent`, async () => {
     const { deps, tool, count } = await setup(era);
-    const draft = textData(await tool("create_merryman", DRAFT));
+    const draft = textData(await tool("create_agentcapavatar", DRAFT));
     const b = await connectAs(deps, OWNER_B, { scopes: ["market:read", "drafts:write"], agents: [] });
     for (const name of ["get_proposal", "cancel_proposal"]) {
       const denied = await tool(name, { proposal_id: draft.proposal_id }, b.tokens.access_token);
@@ -174,7 +174,7 @@ for (const era of ["legacy", "modern"] as Era[]) {
       assert.ok(!JSON.stringify(denied).includes("Robin"), "no other owner's setup is disclosed");
     }
     assert.deepEqual(textData(await tool("list_proposals", {}, b.tokens.access_token)).proposals, []);
-    const foreign = await tool("get_merryman_setup", { agent: SLUG_B });
+    const foreign = await tool("get_agentcapavatar_setup", { agent: SLUG_B });
     assert.equal(errorOf(foreign.result).code, "not_found");
     assert.ok(!JSON.stringify(foreign).includes(ACCOUNT_B));
     assert.equal(textData(await tool("get_proposal", { proposal_id: draft.proposal_id })).status, "awaiting_approval");
@@ -190,7 +190,7 @@ for (const era of ["legacy", "modern"] as Era[]) {
       { private_key: "synthetic-not-a-real-key" },
       { tenant: OWNER_B },
     ]) {
-      const denied = await tool("create_merryman", { ...DRAFT, ...extra });
+      const denied = await tool("create_agentcapavatar", { ...DRAFT, ...extra });
       assert.ok(denied.error || denied.result?.isError, JSON.stringify(denied));
       assert.equal(denied.result?.structuredContent, undefined);
     }

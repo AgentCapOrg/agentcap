@@ -1,5 +1,5 @@
 import SwiftUI
-import MerrymenPolicy
+import AgentCapPolicy
 
 struct TradeScreen: View {
     @EnvironmentObject var store: AppStore
@@ -33,7 +33,7 @@ struct TradeScreen: View {
                     Text(symbol).font(.largeTitle.bold())
                     if let address { Text(address).font(.caption.monospaced()).textSelection(.enabled) }
                     if purpose == "energy" {
-                        Text("Energy for your agent — it buys the $MERRYMEN it is short of, up to this amount, and keeps it. Its key can't sell or send it.").font(.caption).foregroundStyle(.secondary)
+                        Text("Energy for your agent — it buys the $AGENTCAP it is short of, up to this amount, and keeps it. Its key can't sell or send it.").font(.caption).foregroundStyle(.secondary)
                     } else {
                         Picker("Side", selection: $side) { Text("Buy").tag("buy"); Text("Sell").tag("sell") }.pickerStyle(.segmented)
                     }
@@ -65,7 +65,7 @@ struct TradeScreen: View {
             guard store.owner != nil, phase == .active else { return }
             do {
                 if let old = UserDefaults.standard.string(forKey: key) { try savePending(old, key: key); UserDefaults.standard.removeObject(forKey: key) }
-                if let data = try SecureStore.read("dev.merrymen.orders", key), let saved = String(data: data, encoding: .utf8) { attempted = true; orderId = saved == "unknown" ? nil : saved }
+                if let data = try SecureStore.read("dev.agentcap.orders", key), let saved = String(data: data, encoding: .utf8) { attempted = true; orderId = saved == "unknown" ? nil : saved }
             } catch { self.error = error.localizedDescription; attempted = true; return }
             // Detect an order placed on another device before enabling another request.
             await readStatus()
@@ -107,7 +107,7 @@ struct TradeScreen: View {
             self.error = error.localizedDescription
             // Validation/auth rejections are definitive; timeouts and server failures aren't.
             if let api = error as? APIError, [400, 401, 403].contains(api.status) {
-                do { try SecureStore.remove("dev.merrymen.orders", pendingKey); attempted = false }
+                do { try SecureStore.remove("dev.agentcap.orders", pendingKey); attempted = false }
                 catch { self.error = error.localizedDescription }
             }
         } }
@@ -131,9 +131,9 @@ struct TradeScreen: View {
             result = status; error = nil; statusReady = true
         } catch { self.error = error.localizedDescription }
     }
-    private func savePending(_ value: String, key: String) throws { try SecureStore.write("dev.merrymen.orders", key, Data(value.utf8)) }
+    private func savePending(_ value: String, key: String) throws { try SecureStore.write("dev.agentcap.orders", key, Data(value.utf8)) }
     private func clear() {
-        do { try SecureStore.remove("dev.merrymen.orders", key); attempted = false; orderId = nil; result = nil; error = nil; amount = ""; statusReady = false; Task { await readStatus() } }
+        do { try SecureStore.remove("dev.agentcap.orders", key); attempted = false; orderId = nil; result = nil; error = nil; amount = ""; statusReady = false; Task { await readStatus() } }
         catch { self.error = error.localizedDescription }
     }
 }

@@ -15,26 +15,26 @@
       // Type-only `@/` imports were fine, which is why nothing noticed until a
       // terminal module needed a value from web/src/lib.
       "@/*": ["web/src/*"],
-      "@merrymen/core": ["packages/core/src/index.ts"],
+      "@agentcap/core": ["packages/core/src/index.ts"],
       // Reached from web/src/lib/recover-client.ts, which RecoverPanel imports.
       // Same reason as `@/*` above: without it the panel cannot be imported by
       // a test at all, and the recovery flow is the one place where "it renders
       // but does nothing" costs somebody their money.
-      "@merrymen/recover": ["worker/src/recover.ts"],
-      "@merrymen/thesis": ["worker/src/thesis-policy.ts"],
-      "@merrymen/identity-store": ["worker/src/identity-store.ts"],
-      "@merrymen/home": ["worker/src/home.ts"],
+      "@agentcap/recover": ["worker/src/recover.ts"],
+      "@agentcap/thesis": ["worker/src/thesis-policy.ts"],
+      "@agentcap/identity-store": ["worker/src/identity-store.ts"],
+      "@agentcap/home": ["worker/src/home.ts"],
       // The settings route's writer (settings.json, replaced whole). Both
-      // tsconfigs, for the reason given above @merrymen/pnl-card below.
-      "@merrymen/atomic-write": ["worker/src/atomic-write.ts"],
-      "@merrymen/settings-store": ["worker/src/settings-store.ts"],
+      // tsconfigs, for the reason given above @agentcap/pnl-card below.
+      "@agentcap/atomic-write": ["worker/src/atomic-write.ts"],
+      "@agentcap/settings-store": ["worker/src/settings-store.ts"],
       // The grants route's store. web/tsconfig.json has it for the build; the
       // runner resolves against THIS file, so without it no test can import
       // web/src/app/api/grants/route.ts at all.
-      "@merrymen/grant-store": ["worker/src/grant-store.ts"],
+      "@agentcap/grant-store": ["worker/src/grant-store.ts"],
       // The P&L card, reached from web/src/app/api/pnl/route.ts. Registered in
       // BOTH tsconfigs: this one governs `tsx --test`, web/ governs the build.
-      "@merrymen/pnl-card": ["worker/src/pnl-card.ts"]
+      "@agentcap/pnl-card": ["worker/src/pnl-card.ts"]
     }
   },
   "include": ["worker/src", "packages/core/src"]

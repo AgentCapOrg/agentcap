@@ -122,8 +122,8 @@ export interface PassFailure {
   market: boolean;
   /**
    * True only when every half failed with nothing answering — the one case
-   * "Can't reach merrymen" is true. A 500, or a market read that half landed,
-   * means merrymen answered and could not load something.
+   * "Can't reach agentcap" is true. A 500, or a market read that half landed,
+   * means agentcap answered and could not load something.
    */
   unreachable: boolean;
 }

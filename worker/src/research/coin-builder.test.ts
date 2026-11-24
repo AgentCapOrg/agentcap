@@ -20,8 +20,8 @@ const recordOf = (over: Partial<BuilderRecord> = {}): BuilderRecord => ({
   address: ADDR,
   readAt: NOW,
   found: true,
-  name: "Merrymen",
-  symbol: "MERRYMEN",
+  name: "AgentCap",
+  symbol: "AGENTCAP",
   status: "Shipping",
   statusHelp: "Shipped something meaningful in the last 7 days.",
   verified: true,
@@ -36,7 +36,7 @@ const recordOf = (over: Partial<BuilderRecord> = {}): BuilderRecord => ({
   // and not the source, so a fixture naming a directory would put that name in
   // a file the boundary test does not allow it in — and would quietly stop
   // proving that this prose works for whatever the next supplier is.
-  url: "https://example.invalid/project/merrymen",
+  url: "https://example.invalid/project/agentcap",
   disclaimer: "Public, source-backed activity this directory recorded.",
   ...over,
 });
@@ -71,7 +71,7 @@ describe("a listed contract is quoted, and attributed in the same breath", () =>
       /directory/i,
       "attribution leads; a caveat at the end arrives after the block has been read as ours",
     );
-    assert.ok(out.includes("Merrymen"));
+    assert.ok(out.includes("AgentCap"));
     assert.ok(out.includes("Shipping"));
   });
 

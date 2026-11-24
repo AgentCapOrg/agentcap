@@ -37,7 +37,7 @@ const REPO = path.join(__dirname, "..", "..", "..");
 
 const TS = readFileSync(path.join(REPO, "web", "src", "lib", "chat-commands.ts"), "utf8");
 const KT = readFileSync(
-  path.join(REPO, "android-native", "app", "src", "main", "java", "dev", "merrymen", "app", "ui", "Commands.kt"),
+  path.join(REPO, "android-native", "app", "src", "main", "java", "dev", "agentcap", "app", "ui", "Commands.kt"),
   "utf8",
 );
 

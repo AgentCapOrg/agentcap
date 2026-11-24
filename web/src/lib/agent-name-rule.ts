@@ -12,7 +12,7 @@
  * owner is refused with (AGENT_NAME_RULE) and the rule they describe are found
  * in one place by anyone who opens this file.
  */
-import { AGENT_NAME_RE, STORED_AGENT_NAME_RE, normalizeAgentName } from "@merrymen/core";
+import { AGENT_NAME_RE, STORED_AGENT_NAME_RE, normalizeAgentName } from "@agentcap/core";
 
 export { AGENT_NAME_RE, STORED_AGENT_NAME_RE, normalizeAgentName };
 

@@ -2,11 +2,11 @@
 
 /**
  * POSTING ON X — the Settings section where an owner connects an X account and
- * decides whether their Merryman may post from it (docs/x-posting.md).
+ * decides whether their AgentCapAvatar may post from it (docs/x-posting.md).
  *
  * ── THE ONE RULE THIS SCREEN EXISTS TO KEEP ──────────────────────────────
  *
- * The Merryman posts from WHICHEVER X ACCOUNT IS CONNECTED — the one that was
+ * The AgentCapAvatar posts from WHICHEVER X ACCOUNT IS CONNECTED — the one that was
  * signed in on X when the owner approved, which may not be the one they think.
  * So turning posting on goes through a warning that says exactly that and
  * NAMES the account (@handle, as X itself reported it), and the confirm sends
@@ -23,18 +23,18 @@
  * THE SWITCH NEVER SHOWS A STATE THE SERVER HAS NOT CONFIRMED. No optimistic
  * flip: it moves when an answer says it moved (the BookSwitch pattern in
  * screens/Profile.tsx), because a switch that reads "on" for a write that
- * failed is an owner who believes their Merryman is posting, or has stopped.
+ * failed is an owner who believes their AgentCapAvatar is posting, or has stopped.
  *
  * AN UNREAD STATUS IS NOT "NOT CONNECTED". A failed or refused read says it
  * could not check, with a retry — never "Connect X account", which would tell
- * an owner whose Merryman is posting right now that nothing is connected. The
+ * an owner whose AgentCapAvatar is posting right now that nothing is connected. The
  * same mistake once told Telegram owners they had never saved their token
  * (see "AN UNREAD BRIDGE IS NOT A MISSING TOKEN" in screens/Settings.tsx).
  *
  * "UNAVAILABLE" ONLY STOPS WHAT NEEDS THIS SERVER'S X APP. `available` is
  * the web's own configuration; the orchestrator posts on its own, so an
  * owner connected on a web that lost (say) its public origin may still have a
- * Merryman posting. Unavailable hides Connect and Reconnect and refuses
+ * AgentCapAvatar posting. Unavailable hides Connect and Reconnect and refuses
  * turning posting ON; the off switch, Coming up with its Skip, Posted and
  * Disconnect stay, because every one of them works without the X app.
  *
@@ -82,15 +82,15 @@ import { Switch } from "./ui";
 
 const COPY = {
   blurb:
-    "Let your Merryman post on X in its own words — a hello when it starts, the odd casual thought, and now and then a coin it bought and why. Optional settings below add public addresses and completed sale results. No trade alerts, error messages or return promises.",
-  /** The same, for an agent merrymen made active (`repliesActive`): it posts on the active cadence. */
+    "Let your AgentCapAvatar post on X in its own words — a hello when it starts, the odd casual thought, and now and then a coin it bought and why. Optional settings below add public addresses and completed sale results. No trade alerts, error messages or return promises.",
+  /** The same, for an agent agentcap made active (`repliesActive`): it posts on the active cadence. */
   blurbActive:
-    "Let your Merryman post on X in its own words — a hello when it starts, a few reads on the market a day, and most coins it buys and why. Optional settings below add public addresses and completed sale results. No trade alerts, error messages or return promises.",
+    "Let your AgentCapAvatar post on X in its own words — a hello when it starts, a few reads on the market a day, and most coins it buys and why. Optional settings below add public addresses and completed sale results. No trade alerts, error messages or return promises.",
   connect: "Connect X account",
   reconnect: "Reconnect X account",
   caption:
-    "You'll approve it on X. Your Merryman will post from whichever X account you approve there, so check which account you're signed into on X first.",
-  toggle: "Let my Merryman post on X",
+    "You'll approve it on X. Your AgentCapAvatar will post from whichever X account you approve there, so check which account you're signed into on X first.",
+  toggle: "Let my AgentCapAvatar post on X",
   replyToggle: "Reply to comments",
   repliesUnavailable: "Comment replies aren’t available yet.",
   revoked: "X stopped accepting this connection. Reconnect to keep posting.",
@@ -115,31 +115,31 @@ const COPY = {
   casualHintActive: "Short lines in its own words, a few times a day.",
   perDay: "Posts a day, at most",
   perDayUsual: "Usual",
-  perDayHint: "The hello counts. Usual is merrymen's own number, and merrymen may allow fewer than you pick.",
-  notSaved: "merrymen didn't confirm that, so nothing changed.",
+  perDayHint: "The hello counts. Usual is agentcap's own number, and agentcap may allow fewer than you pick.",
+  notSaved: "agentcap didn't confirm that, so nothing changed.",
 } as const;
 
 const connectedAs = (handle: string) => `Connected as ${handle}`;
 const postingFrom = (handle: string) => `Posting from ${handle} — whichever X account is connected.`;
 const disconnectAsk = (handle: string) =>
-  `Disconnect ${handle}? Your Merryman stops posting and anything waiting to go out is cancelled.`;
+  `Disconnect ${handle}? Your AgentCapAvatar stops posting and anything waiting to go out is cancelled.`;
 
 /** THE WARNING. Every sentence is pinned by x-posting.test.ts; change them there too. */
 const warningTitle = (handle: string) => `Post on X as ${handle}?`;
 const warningLead = (handle: string) =>
-  `Your Merryman will post from whichever X account is connected — right now that's ${handle}.`;
+  `Your AgentCapAvatar will post from whichever X account is connected — right now that's ${handle}.`;
 const WARNING_BODY = [
   "It writes its own posts: a hello first, then the odd casual thought and now and then a coin it bought and why. It never posts trade alerts, error messages, prices or amounts. Your saved options can add public wallet or token addresses and completed sale results.",
   "Posts go out on their own, a few a day at most. Each one waits under Coming up for at least ten minutes first, and you can skip it there. Turn this off or disconnect X at any time.",
   "X may label accounts that post automatically, and may ask an account to verify itself the first time it posts about crypto.",
 ] as const;
 /**
- * AN ACTIVE AGENT POSTS MORE, AND ITS WARNING SAYS SO. An agent merrymen made
- * active (`repliesActive`, MERRYMEN_XPOST_ACTIVE_TENANTS) posts on the active
+ * AN ACTIVE AGENT POSTS MORE, AND ITS WARNING SAYS SO. An agent agentcap made
+ * active (`repliesActive`, AGENTCAP_XPOST_ACTIVE_TENANTS) posts on the active
  * cadence (worker/src/xpost/planner.ts ACTIVE_CADENCE): up to twelve a day,
  * passing thoughts through the day and a post for most coins it buys, with
  * no coin fold, seventy-five minutes apart. "A few a day at most" would
- * understate that. And its answers may carry market figures Merrymen renders
+ * understate that. And its answers may carry market figures AgentCap renders
  * from public data (worker/src/xpost/figures.ts), so "never prices or
  * amounts" would overstate what it leaves out (2026-10-12); and its casual
  * slots are reads on the market with those figures since 2026-10-13
@@ -156,8 +156,8 @@ const warningYes = (handle: string) => `Let it post as ${handle}`;
 /**
  * THE REPLY WARNING SAYS EXACTLY WHAT IT TURNS ON, and that depends on the
  * agent. Most owners' replies are comments on its coin posts, inside the
- * posting cadence and the ten-minute review. An agent merrymen made active
- * (`repliesActive`, MERRYMEN_XPOST_ACTIVE_TENANTS) answers posts that tag it,
+ * posting cadence and the ten-minute review. An agent agentcap made active
+ * (`repliesActive`, AGENTCAP_XPOST_ACTIVE_TENANTS) answers posts that tag it,
  * reply to it or quote it instead — comments on its own posts arrive the same
  * way — right away, in a lane of its own, so its warning promises no review
  * window it would not keep. Replying to it or quoting it is asking (the
@@ -167,15 +167,15 @@ const warningYes = (handle: string) => `Let it post as ${handle}`;
  */
 const replyWarningTitle = (handle: string) => `Reply to comments as ${handle}?`;
 const replyWarningLead = (handle: string, active: boolean) => active
-  ? `Your Merryman will reply as ${handle} to selected posts that tag it, reply to it or quote it.`
-  : `Your Merryman will reply as ${handle} to selected comments on its coin posts.`;
+  ? `Your AgentCapAvatar will reply as ${handle} to selected posts that tag it, reply to it or quote it.`
+  : `Your AgentCapAvatar will reply as ${handle} to selected comments on its coin posts.`;
 const REPLY_WARNING_BODY = [
   "It chooses which comments to answer; it won’t reply to every comment. Replies share the same daily limit as posts.",
   "Each reply waits under Coming up for at least ten minutes first, with a link to the comment, and you can skip it there. Turn replies off at any time to cancel waiting replies.",
 ] as const;
 /**
  * AN ACTIVE AGENT'S ANSWERS MAY CARRY MARKET FIGURES (2026-10-12): a coin's
- * rank, price, market cap, volume or recent change, rendered by Merrymen from
+ * rank, price, market cap, volume or recent change, rendered by AgentCap from
  * public data (CoinGecko, GeckoTerminal, Fomo, Bitquery) after the answer's
  * own words, which still never hold a number (worker/src/xpost/figures.ts).
  * So its warning says so; every other owner's is unchanged. Pinned by
@@ -184,12 +184,12 @@ const REPLY_WARNING_BODY = [
 const ANSWER_WARNING_BODY = [
   "It chooses which posts to answer; it won’t answer every one. Answers go out right away: they don’t wait under Coming up, so you can’t skip one first.",
   "It answers questions about the market, coins, how it trades and what it can do, and a hello, a thanks or a bit of chat in a short line of its own, from people who tag it, reply to it or quote it, a few times a day each: up to 60 answers a day on top of its posts, and at most six to one person a day. Answers carry no opt-out line, and it never answers someone who asked it to stop. Turn replies off at any time to stop answering.",
-  "Answers may include market figures from public data (CoinGecko, GeckoTerminal, Fomo and Bitquery), such as a coin’s price, market cap, volume or recent change. Merrymen adds them as the data showed them; they are never advice.",
+  "Answers may include market figures from public data (CoinGecko, GeckoTerminal, Fomo and Bitquery), such as a coin’s price, market cap, volume or recent change. AgentCap adds them as the data showed them; they are never advice.",
 ] as const;
 const replyWarningYes = (handle: string) => `Let it reply as ${handle}`;
 const replyHint = (handle: string, active: boolean) => active
-  ? `Selected posts that tag your Merryman, reply to it or quote it, answered as ${handle} right away, up to 60 a day on top of its posts.`
-  : `Selected comments on your Merryman’s coin posts, answered as ${handle}. Replies share the post limit and ten-minute review window.`;
+  ? `Selected posts that tag your AgentCapAvatar, reply to it or quote it, answered as ${handle} right away, up to 60 a day on top of its posts.`
+  : `Selected comments on your AgentCapAvatar’s coin posts, answered as ${handle}. Replies share the post limit and ten-minute review window.`;
 
 const KIND_LABEL: Record<XUpcomingPost["kind"], string> = { intro: "Hello post", casual: "Casual post", buy: "Buy post", sell: "Sale post", reply: "Comment reply", answer: "Answer to a tag", recap: "Trade recap" };
 const commentUrl = (post: XUpcomingPost | XRecentPost) => /^\d{1,25}$/.test(post.replyToTweetId ?? "")
@@ -234,7 +234,7 @@ type Read =
 
 type Sent = { ok: true; data: Record<string, unknown> } | { ok: false; status: number; message: string };
 
-const UNREACHABLE = "Couldn't reach merrymen just now. Try again in a moment.";
+const UNREACHABLE = "Couldn't reach agentcap just now. Try again in a moment.";
 const REFRESH_FAILED = "Couldn't refresh this just now.";
 
 /** The owner's choices, only when the answer carries all of them in shape. */
@@ -287,7 +287,7 @@ async function readAccount(): Promise<Read> {
 }
 
 /**
- * The zone this browser says it is in, sent with the consent so the Merryman
+ * The zone this browser says it is in, sent with the consent so the AgentCapAvatar
  * keeps quiet hours even for an owner the room never met. The route checks it
  * and drops a placeless one (UTC, Reykjavik) a privacy browser reports for
  * everybody; null when the browser will not say.
@@ -319,7 +319,7 @@ async function send(method: "POST" | "DELETE", url: string, body: Record<string,
   if (res.ok && data) return { ok: true, data };
   // The routes' sentences are written for owners: every 4xx, and a 5xx they marked.
   const said = typeof data?.error === "string" && data.error && (res.status < 500 || data.ownerFacing === true) ? data.error : null;
-  return { ok: false, status: res.status, message: said ?? `merrymen answered with an error (${res.status}). Try again in a moment.` };
+  return { ok: false, status: res.status, message: said ?? `agentcap answered with an error (${res.status}). Try again in a moment.` };
 }
 
 // ── the section ─────────────────────────────────────────────────────────────
@@ -482,7 +482,7 @@ export function XPosting({
       return;
     }
     setBusy(false);
-    setNote({ text: r.ok ? "merrymen didn't send a way to X. Try again in a moment." : r.message, alert: true });
+    setNote({ text: r.ok ? "agentcap didn't send a way to X. Try again in a moment." : r.message, alert: true });
   };
 
   const onSwitch = (next: boolean) => {
@@ -504,7 +504,7 @@ export function XPosting({
       const r = await send("POST", "/api/x/account", { action: "disable", owner });
       setBusy(false);
       if (!r.ok || r.data.postingEnabled !== false) {
-        setNote({ text: r.ok ? "merrymen didn't confirm that, so posting may still be on." : r.message, alert: true });
+        setNote({ text: r.ok ? "agentcap didn't confirm that, so posting may still be on." : r.message, alert: true });
         return;
       }
       patch({ postingEnabled: false, replyEnabled: false, upcoming: [] });
@@ -526,7 +526,7 @@ export function XPosting({
       const r = await send("POST", "/api/x/account", { action: "disable-replies", xUserId: account.xUserId, owner });
       setBusy(false);
       if (r.ok && r.data.replyEnabled === false) patch({ replyEnabled: false, upcoming: account.upcoming.filter((p) => p.kind !== "reply" && p.kind !== "answer") });
-      else setNote({ text: r.ok ? "merrymen didn't confirm that, so replies may still be on." : r.message, alert: true });
+      else setNote({ text: r.ok ? "agentcap didn't confirm that, so replies may still be on." : r.message, alert: true });
       void load(true);
     })();
   };
@@ -555,7 +555,7 @@ export function XPosting({
       afterEnable.current = setTimeout(() => void load(true), afterEnableMs);
       return;
     }
-    setNote({ text: r.ok ? `merrymen didn't confirm that, so ${named.replies ? "replies are" : "posting is"} still off.` : r.message, alert: true });
+    setNote({ text: r.ok ? `agentcap didn't confirm that, so ${named.replies ? "replies are" : "posting is"} still off.` : r.message, alert: true });
     // A 409 means the connected account is not the one the warning named: show the one that is.
     if (!r.ok && r.status === 409) void load(true);
   };
@@ -663,7 +663,7 @@ export function XPosting({
     return (
       <div className="xpost" ref={root}>
         <div className="xpost-row">
-          <span className="xpost-account">An X account is connected, but merrymen can&apos;t show which one. Disconnect it and connect again.</span>
+          <span className="xpost-account">An X account is connected, but agentcap can&apos;t show which one. Disconnect it and connect again.</span>
           <button type="button" className="mm-btn" disabled={busy} onClick={() => void disconnect()}>Disconnect</button>
         </div>
         {noteLine}

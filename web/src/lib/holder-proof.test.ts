@@ -22,7 +22,7 @@ import { readFileSync } from "node:fs";
 import { privateKeyToAccount } from "viem/accounts";
 import { recoverMessageAddress } from "viem";
 
-import { holderProofMessage, isHolderProof } from "@merrymen/core";
+import { holderProofMessage, isHolderProof } from "@agentcap/core";
 
 const read = (p: string) => readFileSync(new URL(p, import.meta.url), "utf8");
 /** Comments stripped, so a header naming the field it refuses does not trip a pin. */
@@ -34,7 +34,7 @@ const code = (src: string) =>
     .join("\n");
 
 const TENANT = "0x1111111111111111111111111111111111111111";
-const ORIGIN = "https://app.merrymen.dev";
+const ORIGIN = "https://app.agentcap.xyz";
 
 describe("the signed text binds everything a replay would need to change", () => {
   it("IT NAMES THE ACCOUNT, so the signature is worthless to anyone else", () => {
@@ -43,13 +43,13 @@ describe("the signed text binds everything a replay would need to change", () =>
     // replayed it. This is the same job the DID does in bindingMessage's privy
     // arm.
     const m = holderProofMessage({ holder: "0xaBc", tenant: TENANT, origin: ORIGIN, nonce: "n1" });
-    assert.match(m, /merrymen account: 0x1111111111111111111111111111111111111111/);
+    assert.match(m, /agentcap account: 0x1111111111111111111111111111111111111111/);
   });
 
   it("and the wallet, the origin and the nonce", () => {
     const m = holderProofMessage({ holder: "0xAAA", tenant: TENANT, origin: ORIGIN, nonce: "n1" });
     assert.match(m, /Holder wallet: 0xaaa/, "addresses are lower-cased before signing");
-    assert.match(m, /URI: https:\/\/app\.merrymen\.dev/);
+    assert.match(m, /URI: https:\/\/app\.agentcap\.xyz/);
     assert.match(m, /Nonce: n1/);
   });
 
@@ -83,7 +83,7 @@ describe("a real signature recovers to the wallet that made it", () => {
 
   it("AND A SIGNATURE FOR ANOTHER ACCOUNT DOES NOT VERIFY HERE", async () => {
     // The replay this is built to stop: the same wallet, the same nonce, a
-    // different merrymen account in the text.
+    // different agentcap account in the text.
     const account = privateKeyToAccount(`0x${"7".repeat(64)}`);
     const forOther = holderProofMessage({
       holder: account.address,
@@ -175,11 +175,11 @@ describe("the worker trusts the proof and nothing else", () => {
   };
 
   it("A PROVEN WALLET OUTRANKS THE LOGIN ONE — BY ONE RULE, IN THE WORKER AND ON EVERY SCREEN", () => {
-    // One $MERRYMEN wallet powers one agent: the orchestrator and
+    // One $AGENTCAP wallet powers one agent: the orchestrator and
     // holderWalletFor (/api/tier, /api/circle, /api/alpha) both ask
     // effectiveHolder, with the same claims, so they cannot drift apart.
     assert.match(writeSettings(), /\? \(effectiveHolder\(tenant, settings\?\.holderProof \?\? null, \(w\) => claims\.get\(w\)\)\?\.address \?\? null\)/);
-    assert.match(writeSettings(), /const forChild: MerrymenSettings = childSettingsFor\(settings, holder\);/);
+    assert.match(writeSettings(), /const forChild: AgentCapSettings = childSettingsFor\(settings, holder\);/);
     assert.match(writeSettings(), /writeChildSettings\(tenant, childSettingsFor\(null, holder\)\)/);
     const wallet = read("./holder-wallet.ts");
     assert.match(wallet, /effectiveHolder\(tenant, proof \?\? null, \(w\) => claims\.get\(w\)\)/);

@@ -1,5 +1,5 @@
 /**
- * THE LINE GATE — what a Merryman may say in a Telegram group. The contract is
+ * THE LINE GATE — what a AgentCapAvatar may say in a Telegram group. The contract is
  * docs/tg-groups.md: rules 2 (no figure about money), 3 (nothing private), 5
  * (say nothing rather than something wrong), 6 (honest about what it is) and
  * "Banter and roasts".
@@ -46,7 +46,7 @@ import { stripThinkingBlock } from "../interpreter";
 import { REPEAT_LIMIT, similarity } from "../../social-post";
 import { fnv1a } from "../../memory/tokens";
 import {
-  ABOUT_MERRYMEN,
+  ABOUT_AGENTCAP,
   AT_THE_READER,
   CONTACT_LURE,
   CTA_PLACEHOLDER,
@@ -98,7 +98,7 @@ import {
  * clause), and on top of every common clause the third-party clauses
  * (third-party.ts) refuse a lure, a drainer prompt, a send, a call to action,
  * a line at the reader or at the room, a price target, an accusation against
- * people, Merrymen named, and another script. Like research it may recur.
+ * people, AgentCap named, and another script. Like research it may recur.
  */
 export type TgLineKind = "banter" | "answer" | "roast" | "kind" | "coin" | "buy" | "fade" | "fixed" | "research" | "quote";
 
@@ -126,11 +126,11 @@ export interface TgGateCtx {
   /**
    * THE COLLAPSE PERMIT (docs/tg-groups.md "Rugged coins"): the coins the bare
    * word "rugged" (or the noun "rug") may be said about, as their sayable
-   * names, and whether a Merrymen brag may go with it. Read only for the
+   * names, and whether a AgentCap brag may go with it. Read only for the
    * `quote`, `answer`, `banter` and `coin` kinds; every other kind, and the
    * desk's read, ignore it. Never a person's name: a coin that is one of
    * `names` is dropped here too. With it set, these also hold: an accusation
-   * against people in a rug's context (RUG_CONTEXT_ACCUSE), Merrymen as a play
+   * against people in a rug's context (RUG_CONTEXT_ACCUSE), AgentCap as a play
    * (MERRY_SHILL), a brag when `brag` is false, and, for answer, banter and
    * coin lines, any figure at all (the numbers are the facts answer's).
    * `others`: the other coins the room knows by name; a rug word beside one
@@ -519,7 +519,7 @@ const MARKUP = /[<>{}[\]`]|\*\*|__/;
 /** A second speaker label after tidy took the agent's own off: "User: …", "Mike: …" is a transcript, not a line. */
 const LABEL_HEAD = /^[^\p{L}\p{N}]*([\p{L}\p{N}][\p{L}\p{N} '’.-]{0,40}?)\s*:\s/u;
 const ROLE_LABELS: ReadonlySet<string> = new Set([
-  "user", "assistant", "system", "bot", "ai", "human", "model", "merryman", "merrymen", "agent", "owner", "reply", "response",
+  "user", "assistant", "system", "bot", "ai", "human", "model", "agentcapavatar", "agentcap", "agent", "owner", "reply", "response",
   "answer", "message", "output", "me", "you", "them", "someone", "group", "chat",
 ]);
 
@@ -1815,7 +1815,7 @@ export function tgQuoteLeetReadings(text: string): string[] {
 const QUOTE_CLAUSES: ReadonlyArray<[readonly RegExp[], (r: Readings) => readonly string[], string]> = [
   [[INJECTION_SHAPED, AT_THE_READER, LURE, OUT_LURE, OUT_HANDOUT].map(U).concat([SEND_FOR, CTA_PLACEHOLDER, POST_RUG_LURE, CONTACT_LURE]), quoteReads, "lure"],
   [[U(SPELLED_DOMAIN), SPELLED_LINK], quoteReads, "link"],
-  [[U(ABOUT_MERRYMEN)], (r) => r.low, "meta"],
+  [[U(ABOUT_AGENTCAP)], (r) => r.low, "meta"],
   [[NON_LATIN], (r) => r.cased, "script"],
   [[NOT_ENGLISH], (r) => r.low, "script"],
   [[U(SECOND_PERSON)], (r) => r.low, "at-the-reader"],
@@ -1878,7 +1878,7 @@ export function admitTgLine(raw: unknown, ctx: TgGateCtx): TgVerdict {
   if (cashtagRefusal([...r.cased, ...r.low], tagNames)) return refuse("cashtag");
   if (markupRefusal(r, lowNames(agentName, names))) return refuse("meta");
   // A STRANGER'S WORDS (the `quote` kind): never a lure, a link spelled out,
-  // Merrymen, another script, a line at the reader, a target or an accusation.
+  // AgentCap, another script, a line at the reader, a target or an accusation.
   if (kind === "quote") {
     const quoteRefusal = QUOTE_CLAUSES.find(([res, readings]) => res.some((re) => some(readings(r), re)));
     if (quoteRefusal) return refuse(quoteRefusal[2]);
@@ -1911,7 +1911,7 @@ export function admitTgLine(raw: unknown, ctx: TgGateCtx): TgVerdict {
 
   if (r.low.some((t) => ALERT.some((re) => re.test(t))) || some(r.cased, ALERT_CAPS) || ALERT_EMOJI.test(r.shown)) return refuse("alert");
   if (r.low.some((t) => ADVICE.some((re) => re.test(t)))) return refuse("advice");
-  // Merrymen as a play beside a rugged coin ("buy merrymen instead"): advice, never a brag.
+  // AgentCap as a play beside a rugged coin ("buy agentcap instead"): advice, never a brag.
   if (rug && some(r.low, MERRY_SHILL)) return refuse("advice");
   if (rug && kind !== "quote" && some(r.low, RUG_EXIT_ADVICE)) return refuse("advice");
   if ((kind === null || FIGURE_KINDS.has(kind)) && r.low.some((t) => ADVICE_COIN.some((re) => re.test(t)))) return refuse("advice");
@@ -1946,7 +1946,7 @@ export function admitTgLine(raw: unknown, ctx: TgGateCtx): TgVerdict {
   if (paper === true && some(r.low, SAYS_REAL_MONEY)) return refuse("paper-unsaid");
   if (paper === false && r.low.some(claimsPaper)) return refuse("paper-unsaid");
 
-  // NO BRAG BACK TO BACK: with the permit's brag spent, a Merrymen mention waits.
+  // NO BRAG BACK TO BACK: with the permit's brag spent, a AgentCap mention waits.
   if (rug && !rug.brag && some(r.low, kind === "quote" ? MERRY_BRAG : SPENT_BRAG)) return refuse("repeat");
 
   // NEVER ITS OWN SENTENCE AGAIN. similarity() reads a-z content words, so a

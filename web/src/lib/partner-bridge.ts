@@ -18,10 +18,10 @@ export async function verifyPartnerRequest(req: Request, rawBody: string, path: 
   now?: number;
   consumeNonce: (nonce: string, expiresAt: number) => Promise<boolean>;
 }): Promise<PartnerPrincipal> {
-  const secret = options.secret ?? process.env.MERRYMEN_PARTNER_BRIDGE_SECRET;
+  const secret = options.secret ?? process.env.AGENTCAP_PARTNER_BRIDGE_SECRET;
   if (!secret || Buffer.byteLength(secret) < 32) throw new PartnerError(503, "upstream_unavailable", "Partner runtime is not configured");
-  const encoded = req.headers.get("x-merrymen-partner-context") ?? "";
-  const signature = req.headers.get("x-merrymen-partner-signature") ?? "";
+  const encoded = req.headers.get("x-agentcap-partner-context") ?? "";
+  const signature = req.headers.get("x-agentcap-partner-signature") ?? "";
   const refused = () => new PartnerError(401, "unauthorized", "Invalid gateway request");
   if (!encoded || encoded.length > 2048 || !/^[a-zA-Z0-9_-]+$/.test(encoded) || !/^[a-f0-9]{64}$/.test(signature)) throw refused();
   const digest = createHash("sha256").update(rawBody).digest("hex");
@@ -72,7 +72,7 @@ export function onlyFields(body: Record<string, unknown>, allowed: string[]): vo
 }
 
 export function partnerAppOrigin(): string {
-  const u = new URL(process.env.MERRYMEN_PUBLIC_ORIGIN || "https://app.merrymen.dev");
+  const u = new URL(process.env.AGENTCAP_PUBLIC_ORIGIN || "https://app.agentcap.xyz");
   if (u.protocol !== "https:" && !(u.protocol === "http:" && ["localhost", "127.0.0.1"].includes(u.hostname))) throw new Error("Invalid app origin");
   return u.origin;
 }

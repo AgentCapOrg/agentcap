@@ -219,13 +219,13 @@ test("buildAuthorizeRequest carries PKCE, state and the shared client id", () =>
 test("buildAuthorizeRequest accepts a mobile custom-scheme redirect unchanged", () => {
   // The phone cannot run a loopback listener; it gets the code back through a
   // registered URL scheme instead. The shared code must not assume http.
-  const req = buildAuthorizeRequest(META, "merrymen://oauth/callback");
-  assert.equal(new URL(req.url).searchParams.get("redirect_uri"), "merrymen://oauth/callback");
+  const req = buildAuthorizeRequest(META, "agentcap://oauth/callback");
+  assert.equal(new URL(req.url).searchParams.get("redirect_uri"), "agentcap://oauth/callback");
 });
 
 test("exchangeCode posts a form-encoded public-client grant with the verifier", async () => {
   const { impl, calls } = stubFetch({ body: JSON.stringify({ access_token: "at", token_type: "Bearer" }) });
-  const tok = await exchangeCode(META, { code: "c0de", verifier: "v3rif", redirectUri: "merrymen://cb" }, impl);
+  const tok = await exchangeCode(META, { code: "c0de", verifier: "v3rif", redirectUri: "agentcap://cb" }, impl);
   assert.equal(tok.access_token, "at");
   const sent = new URLSearchParams(String(calls[0]!.init.body));
   assert.equal(sent.get("grant_type"), "authorization_code");

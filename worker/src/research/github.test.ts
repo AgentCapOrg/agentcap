@@ -38,7 +38,7 @@ describe("a project's GitHub, read for activity", () => {
     assert.equal(r.record.pickedFromOwner, false);
     assert.match(g.calls[1]!.url, /since=2026-09-13/);
     assert.equal(g.calls[0]!.headers.authorization, "Bearer ghp_secret");
-    assert.equal(g.calls[0]!.headers["user-agent"], "merrymen-research");
+    assert.equal(g.calls[0]!.headers["user-agent"], "agentcap-research");
   });
 
   it("says a full page of commits is a floor, never an exact count", async () => {

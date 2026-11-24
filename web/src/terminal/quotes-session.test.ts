@@ -69,7 +69,7 @@ const refused = () =>
 function venue(answer: (symbol: string) => Response, delay: (symbol: string) => number = () => 0) {
   const asked: string[] = [];
   globalThis.fetch = (async (input: RequestInfo | URL) => {
-    const url = new URL(String(input), "http://merrymen.test");
+    const url = new URL(String(input), "http://agentcap.test");
     assert.equal(url.pathname, "/api/venue");
     assert.equal(url.searchParams.get("desk"), "chart");
     const symbol = url.searchParams.get("symbol")!;

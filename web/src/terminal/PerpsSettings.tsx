@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { LIGHTER_MARKETS_V1, SETTINGS_DEFAULTS, PERPS_NUM_BOUNDS } from "@merrymen/core";
+import { LIGHTER_MARKETS_V1, SETTINGS_DEFAULTS, PERPS_NUM_BOUNDS } from "@agentcap/core";
 import { walletUrl } from "../lib/wallet-param";
 import { fetchAccountForSession } from "./account-session";
 import { requestJson } from "./request-json";

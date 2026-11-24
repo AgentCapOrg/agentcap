@@ -1,6 +1,6 @@
 # Telegram groups
 
-A Merryman whose bot is added to a Telegram group behaves like one more person
+A AgentCapAvatar whose bot is added to a Telegram group behaves like one more person
 in it. It answers when it is called, now and then joins a conversation on its
 own, remembers each chat, and reacts to coins people post: it looks at the
 coin, tags whoever sent it, and either buys a little (when its Brain likes it
@@ -91,7 +91,7 @@ or `group-chat` (case-insensitive, so `GroupChat` fails too). Use `tgGroup`,
    what they traded, what they made or lost money on, provider-reported) may
    be answered in a group, for anyone who asks, the owner included (Milla,
    2026-10-07). Handles are said without the `@`. Still never in a room: who
-   Merrymen follows or watches (a board cut to its watched traders, whether a
+   AgentCap follows or watches (a board cut to its watched traders, whether a
    trader is among them, figures read from that record), the owner's own
    research state or watch list, a trader's own theses, and anything from her
    DM. By default a room hears a coin's theses (strangers' words) as a code
@@ -132,7 +132,7 @@ or `group-chat` (case-insensitive, so `GroupChat` fails too). Use `tgGroup`,
    and "their words, not facts", the same checks as when they were said in a
    room, so a DM she forwards carries no lure either. An address is never said whole, however it
    is split, within one quote or over several. An author whose handle
-   impersonates staff, Merrymen, Fomo, the agent or a lure (in any case, as
+   impersonates staff, AgentCap, Fomo, the agent or a lure (in any case, as
    one word, or with digits for letters: "fomoadmin", "sh0gun") is "a
    trader". The default is still the digest. A trader's own theses are
    never quoted.
@@ -174,7 +174,7 @@ or `group-chat` (case-insensitive, so `GroupChat` fails too). Use `tgGroup`,
 7. **Never spend trading's allowance, never block the owner.** Group lines use
    a dedicated model key when the operator sets one; a hosted agent never
    spends the house key on group chatter unless the operator says so. Brain
-   reads a group's market question only with `MERRYMEN_TG_GROUPS_BRAIN=1`.
+   reads a group's market question only with `AGENTCAP_TG_GROUPS_BRAIN=1`.
    Every group model call, Brain's included, is counted against a daily
    allowance that survives redeploys. Calls that are only nice to have (the
    router, a thesis paraphrase) spend only the first half of the day's and
@@ -258,7 +258,7 @@ name that is an everyday word, and the last word of a longer name, each only
 as a call ("hey heron", "heron, thoughts?", "thanks heron!", "what do you
 think, heron?" for an agent called Amber Heron; never "saw a heron today"),
 its Telegram display name (getMe's `first_name`) read the same way, or
-"merryman". A call needs no comma or hail: the name opening a question to it
+"agentcapavatar". A call needs no comma or hail: the name opening a question to it
 ("marian what do you think", "robin you there", "heron are you up") or ending
 one ("what do you think marian", "you there robin?") counts, for a word of
 three letters or more — never after a preposition or article ("what do you
@@ -327,7 +327,7 @@ heartbeat counts them: `… 2 coin posts (1 answered); …`. A coin that got
 silence always says why. Kinds, source names and codes only.
 
 **Small talk said to it** (a hail, thanks, a gm or gn with its name and
-nothing more: "hey there merryman", "thanks pine!", "merryman gm"; a room's
+nothing more: "hey there agentcapavatar", "thanks pine!", "agentcapavatar gm"; a room's
 "welcome to the group" counts) gets small talk back from a template, never a
 model call: "hey 👋", "np 🤝", "gm", or "all good, just lurking 👀" when it
 was asked how it is. When a normal answer has to come from a template (no
@@ -479,7 +479,7 @@ to someone in distress goes out shushed or not.
 
 * Teasing gets teasing back. An insult aimed at it gets a roast back: short,
   witty, confident, mild swearing allowed. That includes an insult that names
-  it in the third person ("merryman is trash", "pine sucks"), and one at a
+  it in the third person ("agentcapavatar is trash", "pine sucks"), and one at a
   bot ("stupid bot lol") posted right after its own line without replying to
   it; past the cap below, that second kind gets silence. Never slurs, never
   protected traits (race, ethnicity, nationality, religion, gender,
@@ -491,9 +491,9 @@ to someone in distress goes out shushed or not.
   mirror it: a 🤡 reaction or silence.
 * The owner gets affectionate roasts, never mean ones.
 * **Rugged coins** (Milla, 2026-10-09: "she should be able to say they rugged
-  cause they're not merrymen"). The persona may say a coin "rugged" (or call
-  it a rug) and add one playful Merrymen brag ("rugged cause it wasn't
-  merrymen 😤", "should've been one of ours") only under a **collapse
+  cause they're not agentcap"). The persona may say a coin "rugged" (or call
+  it a rug) and add one playful AgentCap brag ("rugged cause it wasn't
+  agentcap 😤", "should've been one of ours") only under a **collapse
   permit** for that coin, in that topic: `measured`, when a facts answer
   (below) measured it collapsed (at least 90% below its highest hourly close
   worth at least $100k, or down 90% in 24h), for 12 hours; or `room`, when a
@@ -530,8 +530,8 @@ to someone in distress goes out shushed or not.
   "auton dumped hard, rugged" stays); a crime laid at anyone's door ("the
   dev is a crook", "inside job", "rigged", "a con job"); scam, honeypot or
   fraud, in those words or as "can't even sell it"; "rugpull", "rugging", "soft
-  rug", "rugged us", "rugged by the dev"; Merrymen as a play ("buy merrymen
-  instead", "merrymen coins never rug", "stick to merrymen", and its own
+  rug", "rugged us", "rugged by the dev"; AgentCap as a play ("buy agentcap
+  instead", "agentcap coins never rug", "stick to agentcap", and its own
   token, holders, unlocking, a wallet, a payment or "ours only go up": HARD
   EXCLUSION); any figure
   beside it. A brag waits while one is among its last eight lines or went
@@ -829,7 +829,7 @@ contract identity or owner data.
    its own fleet-wide slot limit (`BRAIN_DESK_CONCURRENCY`, default 2) apart
    from `/v1/decide`'s per-agent lock, a slot never held past the desk tier's
    20 s, and a refused effort remembered apart from decide's reasoning hint —
-   only with `MERRYMEN_TG_GROUPS_BRAIN=1` (rule 7), time-boxed at most 18 s
+   only with `AGENTCAP_TG_GROUPS_BRAIN=1` (rule 7), time-boxed at most 18 s
    of the remaining composition budget;
 2. else the group's own model with the same instructions, only when at least
    6 s of composition time remains;
@@ -998,7 +998,7 @@ unknown action, a made-up name) is the persona's answer, exactly as before.
 **A row of the board, after it** ("what's the second one holding?", "#3?",
 "what did the top guy make money on", "and number two?"). The research
 remembers the public trader board the room was last shown (its ranks, user
-ids and public handles only; never one cut to Merrymen's watched traders),
+ids and public handles only; never one cut to AgentCap's watched traders),
 per room and topic, for 30 minutes, while the room keeps asking about it or
 one trader; any other question, the owner's forget or a new board replaces it
 (`fomo/subject-memory.ts board`). The planner reads a row reference against
@@ -1029,8 +1029,8 @@ trader X make money on on fomo this week?"); nothing can be watched or
 changed from a room. The room hears the trader by their public handle,
 without the `@`: what they hold and its value, the largest few; their buys
 and sells in the window and their positions; or their winners and losers,
-all provider-reported and in short money. Never whether Merrymen watches or
-follows them, and no P&L figures from Merrymen's own watched-trader record
+all provider-reported and in short money. Never whether AgentCap watches or
+follows them, and no P&L figures from AgentCap's own watched-trader record
 (whether a room saw them would say who it watches). Each is a lookup and
 spends one of the room's research answers when it reads from the provider;
 only answers that read from the provider (or call the model for a thesis
@@ -1057,7 +1057,7 @@ usage in her DM, anyone else's the owner-only line. The pick itself never names
 anyone. The handoff runs off the chat queue. A stop is read as narrowly as a start
 (docs/fomo.md "A stop is as narrow as a start"): "pine stop tracking $PONS" is no tail
 stop at all, and "pine stop tailing him" stops nothing and asks her which, in her DM.
-Where a tail cannot work (`MERRYMEN_FOMO_TAILS=0`, or no live feed on a self-hosted
+Where a tail cannot work (`AGENTCAP_FOMO_TAILS=0`, or no live feed on a self-hosted
 install: `TgOwnerPort.tailsState`), her start line is no tail and goes on to the
 research lane as before; with the switch off a stop is still read.
 
@@ -1088,7 +1088,7 @@ and a call that never ran (a busy slot), do not count. The log
 says which kind of pick it was (`[tg-groups] route fomo:leaderboard`), never
 the line.
 
-`MERRYMEN_TG_GROUPS_ROUTER=0` turns it off; lines go to the persona as
+`AGENTCAP_TG_GROUPS_ROUTER=0` turns it off; lines go to the persona as
 before.
 
 ## The coin flow
@@ -1255,7 +1255,7 @@ Per posted CA, in order:
    only what it can place decides: a Uniswap v3 pair, or only v4 pairs
    (`v4-only`). No pairs, pairs it cannot place, or DexScreener failing too, is
    `unknown`, never `no-pool` or `curve`. Kinds
-   `own` (its own wallet/vault), `cash` (USDG/WETH), `energy` ($MERRYMEN),
+   `own` (its own wallet/vault), `cash` (USDG/WETH), `energy` ($AGENTCAP),
    `stock` (a STOCK_TOKENS address), `wallet` (no code), `not-token`,
    `curve` (a Pons bonding-curve coin), `v4-only`, `no-pool`, `too-new`,
    `too-thin`, `too-quiet` (fails `highVolumePools`), `held` (already
@@ -1433,7 +1433,7 @@ Per chat, durable (survives hosted redeploys via the orchestrator ferry):
 
 ## Storage and the ferry
 
-Child side: one JSON file, `<MERRYMEN_HOME>/tg-groups.json`
+Child side: one JSON file, `<AGENTCAP_HOME>/tg-groups.json`
 (`tg-groups/store.ts`), holding `TgGroupsState` (types.ts): rooms, memory,
 coin claims, allowances. Written atomically (tmp file + rename) after every
 change that matters (a claim is written before it is acted on), debounced
@@ -1447,7 +1447,7 @@ not kept, and the bot leaves it when it is added. Raw lines never go
 anywhere else in the child (not `chat_turns`, not events, not the soul).
 
 Forget requests are kept apart from the memory they erase, in
-`<MERRYMEN_HOME>/tg-groups-forget.json`: one record per `/forget` or
+`<AGENTCAP_HOME>/tg-groups-forget.json`: one record per `/forget` or
 `/forgetme` (`{chatId, userId, atMs}`, `userId` `"*"` for `/forget`),
 appended and fsynced before the wipe, whatever the switches say and whether
 or not the store knows the chat. A record erases only what the chat
@@ -1466,7 +1466,7 @@ NULL)` in shared Postgres. At spawn, when the child home has no
 `tg-groups.json`, it restores the file from that row (opened with the DEK).
 If that restore fails (no file in the home, and the row could not be read
 or written down, or the home's forget requests could not be read), the
-child runs with `MERRYMEN_TG_GROUPS=0` and nothing is published for it
+child runs with `AGENTCAP_TG_GROUPS=0` and nothing is published for it
 until a later spawn restores the row, so an empty memory never overwrites
 the stored one (approvals, memory and today's allowances).
 
@@ -1540,21 +1540,21 @@ yet reflected keeps the file until a later write does).
 
 `tg-groups/model.ts` resolves creds for group lines:
 
-1. `MERRYMEN_TG_GROUPS_LLM_KEY` (+ `MERRYMEN_TG_GROUPS_LLM_PROVIDER` groq |
-   anthropic | openai, default groq; `MERRYMEN_TG_GROUPS_MODEL`, default
+1. `AGENTCAP_TG_GROUPS_LLM_KEY` (+ `AGENTCAP_TG_GROUPS_LLM_PROVIDER` groq |
+   anthropic | openai, default groq; `AGENTCAP_TG_GROUPS_MODEL`, default
    `qwen/qwen3.8-27b` on groq and `claude-opus-5` on anthropic) when set.
    `openai` has no default model and also needs
-   `MERRYMEN_TG_GROUPS_LLM_BASE_URL` (an OpenAI-compatible endpoint: https,
+   `AGENTCAP_TG_GROUPS_LLM_BASE_URL` (an OpenAI-compatible endpoint: https,
    or http on localhost / 127.0.0.1, no credentials in the URL).
    It is refused when it equals a fleet key (`GROQ_API_KEY`,
-   `MERRYMEN_LLM_API_KEY`, `ANTHROPIC_API_KEY`) unless
-   `MERRYMEN_TG_GROUPS_SHARE_HOUSE_KEY=1`. A refused or misconfigured
+   `AGENTCAP_LLM_API_KEY`, `ANTHROPIC_API_KEY`) unless
+   `AGENTCAP_TG_GROUPS_SHARE_HOUSE_KEY=1`. A refused or misconfigured
    dedicated key falls through to step 2 (never to the house key), and the
    boot log names the variable at fault, never its value.
 2. Else the owner's own key: in self-hosted mode `resolveLlm(cfg)`; hosted,
    only a key the owner saved in their own settings (never an env house key).
 3. Else, hosted, `resolveLlm(cfg)` only when
-   `MERRYMEN_TG_GROUPS_SHARE_HOUSE_KEY=1`.
+   `AGENTCAP_TG_GROUPS_SHARE_HOUSE_KEY=1`.
 4. Else no model: addressed answers, acks and outcomes come from templates;
    no ambient lines (reactions still happen).
 
@@ -1562,17 +1562,17 @@ The dedicated key is forwarded to children (they poll Telegram and need it),
 like the house LLM keys; it is not on `CHILD_SECRET_STRIP`. Its value is
 never printed; the boot line names only provider and model.
 
-Allowance: `MERRYMEN_TG_GROUPS_LLM_PER_DAY` model calls per agent per UTC day
+Allowance: `AGENTCAP_TG_GROUPS_LLM_PER_DAY` model calls per agent per UTC day
 (default 300 hosted, 1000 self-hosted), plus 40 per chat per hour, held in the
 durable store (so a redeploy does not hand out a fresh day). A 429 pauses the
 model 10 min; a daily-cap, rejected-key or unknown-model failure pauses it
 until UTC midnight. Every call is time-boxed at 20 s. At most 2 group model
 calls run at once per agent. A desk read (Market analysis) is one call — to
-Brain when `MERRYMEN_TG_GROUPS_BRAIN=1`, else to this model — and is counted
+Brain when `AGENTCAP_TG_GROUPS_BRAIN=1`, else to this model — and is counted
 the same way.
 
 **A coin's theses in its own words** (`theses.ts`, decision D5; OFF unless
-`MERRYMEN_TG_THESES_MODEL=1`: Milla, 2026-10-08, because its input is text
+`AGENTCAP_TG_THESES_MODEL=1`: Milla, 2026-10-08, because its input is text
 any Fomo trader can write and each review round found new ways past its
 checks). When the research
 answers what traders are saying about one coin, the room's answer is the code
@@ -1600,7 +1600,7 @@ no figure), no
 $, @, # or link, no domain spelled out with any ending ("ponsfi dot bet";
 a sample that spells one out is never read either), no quotation mark, no five-word run shared with any sample,
 nothing about instructions, nothing in the first person or naming the agent,
-Merrymen, this room or the room's own owner, admin, mod, bot or desk ("the
+AgentCap, this room or the room's own owner, admin, mod, bot or desk ("the
 group's bot is holding a bag", "the owner here is heavy in it"; "contract
 owner renounced" and "the agent posts on its own" stay), nothing waited on
 that is a claim, and in no
@@ -1653,7 +1653,7 @@ only.
 
 ## Operator switch
 
-`MERRYMEN_TG_GROUPS=0` in the environment turns the whole feature off for
+`AGENTCAP_TG_GROUPS=0` in the environment turns the whole feature off for
 every agent on that host (read by the child on each message): no group lines,
 no reactions, no coin looks, no memory writes. Membership changes are still
 recorded so switching it back on works, the age limits still apply, and
@@ -1662,16 +1662,16 @@ so a held child's forget reaches the stored copy too. Hosted, the
 orchestrator also sets it for one child whose group memory could not be
 restored at spawn (see Storage and the ferry).
 
-`MERRYMEN_TG_GROUPS_ROUTER=0` turns off only the router (What a line wants):
+`AGENTCAP_TG_GROUPS_ROUTER=0` turns off only the router (What a line wants):
 lines no rule knew go straight to the persona.
 
-`MERRYMEN_TG_THESES_MODEL=1` turns on the group model's paraphrase of a
+`AGENTCAP_TG_THESES_MODEL=1` turns on the group model's paraphrase of a
 coin's theses (The model); unset or anything else, rooms hear the code digest.
 
-`MERRYMEN_TG_GROUPS_DESK=0` turns off only the market desk: market and coin
+`AGENTCAP_TG_GROUPS_DESK=0` turns off only the market desk: market and coin
 questions go back to the voice and the public snapshot.
-`MERRYMEN_TG_GROUPS_BRAIN=1` lets desk reads use Brain (needs
-`MERRYMEN_BRAIN_URL` and `MERRYMEN_BRAIN_TOKEN`); unset, they never touch
+`AGENTCAP_TG_GROUPS_BRAIN=1` lets desk reads use Brain (needs
+`AGENTCAP_BRAIN_URL` and `AGENTCAP_BRAIN_TOKEN`); unset, they never touch
 Brain's key.
 
 ## After an outage, and while trading is held
@@ -1719,7 +1719,7 @@ expired." It keeps no group memory, so what it cannot do it writes down:
   copy within one mirror pass, and the child that ends the hold applies it
   to the memory it opens.
 * The bot's own `my_chat_member` updates in groups, supergroup migrations and
-  its own removal are kept in `<MERRYMEN_HOME>/telegram-held-groups.json`
+  its own removal are kept in `<AGENTCAP_HOME>/telegram-held-groups.json`
   (`telegram/held-groups.ts`: the newest 100, no names, each tied to the bot
   its token names). Joins and lines are not.
 * A Stay, Leave or Forget the owner presses in their DM is kept there too,
@@ -1829,7 +1829,7 @@ All three are dashboard-only (`DASHBOARD_ONLY.telegramGroups`, aliases
 | Chat dead | Says nothing (no lurker monologues) |
 | Two people going back and forth | Stays out |
 | "gm" / "gn" | Sometimes answers once per person per day (35%) or reacts |
-| "hey merryman" / "thanks pine!" / "merryman gm" | Small talk back ("hey 👋", "np 🤝", "gm"), from a template, no model call |
+| "hey agentcapavatar" / "thanks pine!" / "agentcapavatar gm" | Small talk back ("hey 👋", "np 🤝", "gm"), from a template, no model call |
 | New member joins | Sometimes a short welcome (25%, 3 a day max) |
 | Someone posts a Robinhood Chain coin, not trencher mode | Looked at first. A candidate: tags owner politely (12 h), DMs owner the reason + button. Any other kind: its grounded line, no ask, no DM |
 | Someone posts a Robinhood Chain coin, trencher ready | Tags sender, thinks out loud, Brain decides, then a casual buy line or a grounded fade |
@@ -1842,7 +1842,7 @@ All three are dashboard-only (`DASHBOARD_ONLY.telegramGroups`, aliases
 | "who's the top trader on fomo today?" / "who's the top on fomo today" | Fomo's public leaderboard: four handles with their money made on closed trades, short form; no source line or skill caveat (the room has had a post about both). Never who it follows |
 | "what can you do with fomo" / "is fomo working?" | A fixed list of what a room can ask / whether Fomo research is on here; no lookup |
 | "i'm sorry, who's been winning the most lately" / "what are people over there offloading this week" | No rule knew it: the router picks the leaderboard / the crowd's sells for this week, and the research answers it as the fixed question |
-| Anyone, the owner included: "do you know unipcs on fomo" / "who is trader unipcs on fomo?" / "what is @unipcs holding?" | One trader's public data, in the room, by handle without the `@`: what they hold and its value, or their trades, provider-reported, short money. Never whether Merrymen watches them; nothing goes to her DM |
+| Anyone, the owner included: "do you know unipcs on fomo" / "who is trader unipcs on fomo?" / "what is @unipcs holding?" | One trader's public data, in the room, by handle without the `@`: what they hold and its value, or their trades, provider-reported, short money. Never whether AgentCap watches them; nothing goes to her DM |
 | "who's the best trader on fomo today and what did he make money on" (live 23:04) | The board (a row fewer), then that row's trader, read by the user id the board gave: "… made the most on ROO +$4.2k; lost the most on plumber -$10.9k." For anyone. A row the board does not have is said |
 | After a board: "what's the second one holding?" / "#3?" / "and number two?" / "what did he make money on" | That row's trader, by the board's user id, in the room. "He" after "who's the best trader" is the 1st row; after a board of several, "Which one on the board: the 1st, 2nd or 3rd?" |
 | After a board in a room: "what's the last one holding?" / "the fifth one" | Only the rows the room heard are remembered (four, a row fewer with a chain note or a row's answer, and fewer again when the room's six lines cut rows for a reused copy's age line, her moves line or a row's answer: the handler tells the port which it said, `TgFomoPort.heard`): "the last one" is the last row it saw; one it never saw asks which |
@@ -1871,7 +1871,7 @@ All three are dashboard-only (`DASHBOARD_ONLY.telegramGroups`, aliases
 | "what are people saying about auton on fomo" when Fomo's thesis read comes back empty (live 2026-10-08), then "there has to be thesis." | "Fomo didn't return the theses on AUTON on solana just now (it lists 4,190)." when Fomo answers the page empty while marking it not available or still counting theses (never "no theses", and never a promise to ask again that the room's allowance may refuse: past it, the pushback hears "fomo lookups for this room are used up for now, try again after 17:00 UTC."); the pushback ("there has to be thesis", "check again", "are you sure?", "that's wrong", the whole line), in reply to the answer or right after it, reads again instead of serving the empty copy; under another of its lines it is about that line; a page with theses in it keeps the room's two hours, pushback or not; an empty copy is never reused past 2 min |
 | "what are they saying about anyps5" (live 23:00) | What they argue, never counts: "What traders on Fomo are saying about AnyPS5 on Solana (25 recent theses from 20 traders):", then the group model's checked gist, points for and worries, then "Their claims, not facts; newest 25 of 60." No model, or nothing of its passing: the code digest ("Mostly hype, with no case for or against that I can pick out." when no cue matches) |
 | "tell me what it's about from thesis" right after (live 23:00) | The same worded answer from the same copy: no provider read, no model call |
-| "fetch the thesis for merrymen on fomo" past the room's research allowance (live 23:05) | "fomo lookups for this room are used up for now, try again after 00:00 UTC." The same words for the room's cap and the owner's; never a credit, never "ask me in a direct message" |
+| "fetch the thesis for agentcap on fomo" past the room's research allowance (live 23:05) | "fomo lookups for this room are used up for now, try again after 00:00 UTC." The same words for the room's cap and the owner's; never a credit, never "ask me in a direct message" |
 | Live 2026-10-09: Milla's "can you list the last 10" under AUTON's digest | Her DM gets "The newest 10 theses on AUTON on Solana, in their words (not facts):", then up to ten "• kaleo, 5 min ago: “im holding, team is still building”" lines, newest first, each gated as a `quote`, then "Their words, not facts; 5 of these 10 left out; Fomo lists 4,199." The room hears only "sent them to your DMs 🤫" (or another line of that small pool). From the room's kept copy: no provider read, no model call, the slot given back |
 | The same ask from anyone else | The digest in the room: no quote, no DM. A stranger's words never land in the group |
 | Her DM fails, or the read left too little time for the DM and the room's line after it | The digest in the room, never a claim that the quotes went |
@@ -1883,7 +1883,7 @@ All three are dashboard-only (`DASHBOARD_ONLY.telegramGroups`, aliases
 | Live 2026-10-09: AUTON's activity on an empty feed | "No matching activity was returned for AUTON on solana in the last 24h." (never "activity were") |
 | "shogun what happened to auton" after AUTON's Fomo answer | "AUTON on Solana, from GeckoTerminal at 01:15 UTC:" / "About $36k now (fully diluted); its highest hourly close on its main pool was about $5.75M, Oct 7 at 05:00 UTC, so it is 99.4% below that." / "The biggest drop: about 95% in three hours from 13:00 UTC on Oct 8." / "Main pool liquidity about $16k; in the last 24h, 1,576 sellers and 1,157 buyers." / "I can't see who sold, why it fell, or whether liquidity was pulled." No Fomo credit (the coin from memory); the measured collapse permit is set |
 | "why did it rug?" / "did the dev dump?" then | The same facts, ending "The data shows when and how far it fell, not why; …" / with "GeckoTerminal lists its creator as holding about 4.8% of supply now (it doesn't say when that was last updated)." and "I can't see the creator's past sales, only what GeckoTerminal lists now." Never "dumped", "rug" or "scam", never an address |
-| "lmao auton" after a measured collapse | The persona may say "rugged cause it wasn't merrymen 😤"; the next brag ("should've been a merrymen coin") waits; "the dev rugged it" is never said; with no permit (another room, or a coin it holds) "rugged" is never said |
+| "lmao auton" after a measured collapse | The persona may say "rugged cause it wasn't agentcap 😤"; the next brag ("should've been a agentcap coin") waits; "the dev rugged it" is never said; with no permit (another room, or a coin it holds) "rugged" is never said |
 | A member says "auton rugged lol" about the room's Fomo coin | A room permit for 30 minutes ("did it rug?", "not a rug", "pepe rugged" set none); a facts answer that finds no collapse clears it |
 | "what are people saying about $PONS now" a minute after the last answer | The copy from a minute ago, labelled with its age: a room's "now" never buys a forced refresh. Theses are reused for 2 h in a room, boards 15 min |
 | A Fomo read that failed or could not be reached | "couldn't reach fomo just now, try again in a bit." |
@@ -1899,7 +1899,7 @@ All three are dashboard-only (`DASHBOARD_ONLY.telegramGroups`, aliases
 | The owner posting bonding-curve CA after CA | Every one gets its curve line; the lines recur rather than run dry |
 | A backlog of CAs while the reads hang, then the owner asks about one | Hers is looked at next and answered inside the send window; posts whose window ran out are not looked at |
 | A Telegram call that never answers | Given up after 10 s; that line is lost, the chat's next lines go out |
-| Its own address / USDG / $MERRYMEN / a stock | Casual one-liner, no look |
+| Its own address / USDG / $AGENTCAP / a stock | Casual one-liner, no look |
 | A wallet, or an Ethereum / BNB / Base token posted bare (no code on Robinhood Chain) | Silence: one presence probe, no GeckoTerminal read (one, under the full-look allowance, only while the chain cannot be asked), nothing remembered; ready or not, no owner ask |
 | A coin in another chain's link (Etherscan, BscScan, BaseScan, dexscreener.com/ethereum, geckoterminal.com/eth, gmgn.ai/bsc, pump.fun…) | Silence, ready or not, coins on or off: not claimed, looked at or remembered, and not counted in the first 2 |
 | Bonding-curve coin, v4-only, no pool, too thin, too quiet | Casual grounded fade, no Brain spend |
@@ -1936,7 +1936,7 @@ All three are dashboard-only (`DASHBOARD_ONLY.telegramGroups`, aliases
 * Privacy mode: without the owner turning it off (and re-adding the bot) or
   making it an admin, it only hears commands and replies to itself.
 * Telegram does not deliver other bots' messages (unless both owners enable
-  Bot-to-Bot mode), so two Merrymen in one group cannot banter and a CA posted
+  Bot-to-Bot mode), so two AgentCap in one group cannot banter and a CA posted
   by a scanner bot is invisible.
 * The owner is recognised by their user id; posting as an anonymous admin
   hides them.

@@ -348,7 +348,7 @@ describe("nothing that trades knows X exists", () => {
 });
 
 describe("the X client secret is read in exactly one file", () => {
-  const SECRET = "MERRYMEN_X_CLIENT_SECRET";
+  const SECRET = "AGENTCAP_X_CLIENT_SECRET";
   /**
    * A READ: `env.X` or `process.env.X` (not an assignment to it), `env["X"]`,
    * or `{ X } = env`. A string that merely lists the name — the strip list, a

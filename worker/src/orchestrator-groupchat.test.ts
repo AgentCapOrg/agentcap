@@ -16,10 +16,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 
-process.env.MERRYMEN_HOME = path.join(process.cwd(), ".test-orch-groupchat-home");
-process.env.MERRYMEN_HOSTED = "1";
+process.env.AGENTCAP_HOME = path.join(process.cwd(), ".test-orch-groupchat-home");
+process.env.AGENTCAP_HOSTED = "1";
 process.env.GROQ_API_KEY = "house-groq-key";
-process.env.MERRYMEN_GROUPCHAT_LLM_KEY = "gsk_room_only_key_never_to_a_child";
+process.env.AGENTCAP_GROUPCHAT_LLM_KEY = "gsk_room_only_key_never_to_a_child";
 
 const { childEnv, groupChatEnv, groupChatModelWarning } = await import("./orchestrator");
 const { SETTINGS_DEFAULTS } = await import("../../packages/core/src/index");
@@ -54,9 +54,9 @@ function within(node: ts.Node, ancestor: ts.Node): boolean {
 }
 
 describe("the room's key never reaches a child", () => {
-  it("childEnv strips MERRYMEN_GROUPCHAT_LLM_KEY and still passes the house keys", () => {
+  it("childEnv strips AGENTCAP_GROUPCHAT_LLM_KEY and still passes the house keys", () => {
     const env = childEnv("0xABCDef0000000000000000000000000000000001");
-    assert.equal(env.MERRYMEN_GROUPCHAT_LLM_KEY, undefined, "a child holding the room's key could spend it on anything");
+    assert.equal(env.AGENTCAP_GROUPCHAT_LLM_KEY, undefined, "a child holding the room's key could spend it on anything");
     assert.equal(env.GROQ_API_KEY, "house-groq-key", "the strip is of the room's key only, not the house keys");
   });
 });
@@ -117,52 +117,52 @@ describe("the room's profile is recorded before the early return", () => {
 describe("groupChatEnv reads the knobs the way an operator means them", () => {
   it("unset and set-but-blank are both the default", () => {
     assert.deepEqual(groupChatEnv({}), { off: null, perHour: undefined, llmPerDay: undefined, notes: [] });
-    const blank = groupChatEnv({ MERRYMEN_GROUPCHAT_PER_HOUR: "", MERRYMEN_GROUPCHAT_LLM_PER_DAY: "  " });
+    const blank = groupChatEnv({ AGENTCAP_GROUPCHAT_PER_HOUR: "", AGENTCAP_GROUPCHAT_LLM_PER_DAY: "  " });
     assert.equal(blank.llmPerDay, undefined, "a cleared LLM_PER_DAY must not read as 0 and switch the model off");
     assert.equal(blank.perHour, undefined);
     assert.deepEqual(blank.notes, []);
   });
 
   it("readable values pass through, padded or not", () => {
-    const k = groupChatEnv({ MERRYMEN_GROUPCHAT_PER_HOUR: " 60 ", MERRYMEN_GROUPCHAT_LLM_PER_DAY: "100" });
+    const k = groupChatEnv({ AGENTCAP_GROUPCHAT_PER_HOUR: " 60 ", AGENTCAP_GROUPCHAT_LLM_PER_DAY: "100" });
     assert.equal(k.perHour, 60);
     assert.equal(k.llmPerDay, 100);
     assert.equal(k.off, null);
     assert.deepEqual(k.notes, []);
-    assert.equal(groupChatEnv({ MERRYMEN_GROUPCHAT_LLM_PER_DAY: "0" }).llmPerDay, 0, "0 is a real budget: templates only");
+    assert.equal(groupChatEnv({ AGENTCAP_GROUPCHAT_LLM_PER_DAY: "0" }).llmPerDay, 0, "0 is a real budget: templates only");
   });
 
-  it("MERRYMEN_GROUPCHAT=0 is off, and says so", () => {
+  it("AGENTCAP_GROUPCHAT=0 is off, and says so", () => {
     for (const v of ["0", " 0 "]) {
-      const k = groupChatEnv({ MERRYMEN_GROUPCHAT: v });
-      assert.ok(k.off && /MERRYMEN_GROUPCHAT=0/.test(k.off), JSON.stringify(v));
+      const k = groupChatEnv({ AGENTCAP_GROUPCHAT: v });
+      assert.ok(k.off && /AGENTCAP_GROUPCHAT=0/.test(k.off), JSON.stringify(v));
     }
-    for (const v of ["", "1", "no", "false"]) assert.equal(groupChatEnv({ MERRYMEN_GROUPCHAT: v }).off, null, JSON.stringify(v));
+    for (const v of ["", "1", "no", "false"]) assert.equal(groupChatEnv({ AGENTCAP_GROUPCHAT: v }).off, null, JSON.stringify(v));
   });
 
   it("a ceiling of zero lines an hour is a silent room, not the default 240", () => {
     for (const v of ["0", "0.4"]) {
-      const k = groupChatEnv({ MERRYMEN_GROUPCHAT_PER_HOUR: v });
-      assert.ok(k.off && /MERRYMEN_GROUPCHAT_PER_HOUR=0/.test(k.off), v);
+      const k = groupChatEnv({ AGENTCAP_GROUPCHAT_PER_HOUR: v });
+      assert.ok(k.off && /AGENTCAP_GROUPCHAT_PER_HOUR=0/.test(k.off), v);
     }
   });
 
   it("an unreadable ceiling keeps the default and says so", () => {
     for (const v of ["1,000", "-5", "lots", "Infinity"]) {
-      const k = groupChatEnv({ MERRYMEN_GROUPCHAT_PER_HOUR: v });
+      const k = groupChatEnv({ AGENTCAP_GROUPCHAT_PER_HOUR: v });
       assert.equal(k.off, null, v);
       assert.equal(k.perHour, undefined, v);
       assert.equal(k.notes.length, 1, v);
-      assert.match(k.notes[0] ?? "", /^groupchat: ignoring MERRYMEN_GROUPCHAT_PER_HOUR=/);
+      assert.match(k.notes[0] ?? "", /^groupchat: ignoring AGENTCAP_GROUPCHAT_PER_HOUR=/);
     }
   });
 
   it("an unreadable model allowance fails closed and says so", () => {
     for (const v of ["1,200", "-1", "many", "NaN"]) {
-      const k = groupChatEnv({ MERRYMEN_GROUPCHAT_LLM_PER_DAY: v });
+      const k = groupChatEnv({ AGENTCAP_GROUPCHAT_LLM_PER_DAY: v });
       assert.equal(k.llmPerDay, 0, `${v}: a budget the room cannot read is spent as none`);
       assert.equal(k.notes.length, 1, v);
-      assert.match(k.notes[0] ?? "", /MERRYMEN_GROUPCHAT_LLM_PER_DAY=/);
+      assert.match(k.notes[0] ?? "", /AGENTCAP_GROUPCHAT_LLM_PER_DAY=/);
     }
   });
 
@@ -172,7 +172,7 @@ describe("groupChatEnv reads the knobs the way an operator means them", () => {
       (n) =>
         ts.isPropertyAccessExpression(n) &&
         n.expression.getText() === "process.env" &&
-        /^MERRYMEN_GROUPCHAT(?:_PER_HOUR|_LLM_PER_DAY)?$/.test(n.name.text),
+        /^AGENTCAP_GROUPCHAT(?:_PER_HOUR|_LLM_PER_DAY)?$/.test(n.name.text),
     );
     assert.deepEqual(direct.map((n) => n.getText()), [], "read by hand, a blank or a zero means something else again");
   });
@@ -183,7 +183,7 @@ describe("a room key in the house's Groq org is warned about", () => {
   // business and pinned in voice.test.ts. This pins only what the boot log says
   // about a key it accepted — a different string that may still be the house org.
   const ROOM = "gsk_a_different_string_same_org_maybe";
-  const house = { GROQ_API_KEY: "gsk_house", MERRYMEN_GROUPCHAT_LLM_KEY: ROOM };
+  const house = { GROQ_API_KEY: "gsk_house", AGENTCAP_GROUPCHAT_LLM_KEY: ROOM };
   const FLEET = SETTINGS_DEFAULTS.groqModel;
 
   it("warns when the room would run on the fleet's default trading model", () => {
@@ -195,20 +195,20 @@ describe("a room key in the house's Groq org is warned about", () => {
   });
 
   it("warns on the fleet's overridden model too, and not on the default it replaced", () => {
-    const env = { ...house, MERRYMEN_GROQ_MODEL: " llama-9-fast " };
+    const env = { ...house, AGENTCAP_GROQ_MODEL: " llama-9-fast " };
     assert.ok(groupChatModelWarning({ model: "llama-9-fast" }, env));
     assert.equal(groupChatModelWarning({ model: FLEET }, env), null);
   });
 
   it("is quiet when the models differ, when there is no house Groq key, or with no model at all", () => {
     assert.equal(groupChatModelWarning({ model: "some-other-model" }, house), null);
-    assert.equal(groupChatModelWarning({ model: FLEET }, { MERRYMEN_GROUPCHAT_LLM_KEY: ROOM }), null);
+    assert.equal(groupChatModelWarning({ model: FLEET }, { AGENTCAP_GROUPCHAT_LLM_KEY: ROOM }), null);
     assert.equal(groupChatModelWarning({ model: FLEET }, { ...house, GROQ_API_KEY: "  " }), null);
     assert.equal(groupChatModelWarning(null, house), null);
   });
 
   it("is quiet when the operator has said in so many words that the room may share", () => {
-    assert.equal(groupChatModelWarning({ model: FLEET }, { ...house, MERRYMEN_GROUPCHAT_SHARE_HOUSE_KEY: "1" }), null);
+    assert.equal(groupChatModelWarning({ model: FLEET }, { ...house, AGENTCAP_GROUPCHAT_SHARE_HOUSE_KEY: "1" }), null);
   });
 });
 

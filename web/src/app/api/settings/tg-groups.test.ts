@@ -19,21 +19,21 @@ import { after, before, beforeEach, describe, it } from "node:test";
 
 import { mintSession } from "@/lib/auth";
 import { projectSettings } from "@/lib/services/settings-view";
-import { getSettingsStore, resetSettingsStoreForTest } from "@merrymen/settings-store";
-import { HOSTED_FORBIDDEN_SETTING_FIELDS, SECRET_SETTING_KEYS, SETTINGS_DEFAULTS, TELEGRAM_GROUPS_CHATTINESS } from "@merrymen/core";
+import { getSettingsStore, resetSettingsStoreForTest } from "@agentcap/settings-store";
+import { HOSTED_FORBIDDEN_SETTING_FIELDS, SECRET_SETTING_KEYS, SETTINGS_DEFAULTS, TELEGRAM_GROUPS_CHATTINESS } from "@agentcap/core";
 
 const TENANT = "0xdddddddddddddddddddddddddddddddddddddddd";
-const KEYS = ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_SESSION_SECRET", "DATABASE_URL"] as const;
+const KEYS = ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_SESSION_SECRET", "DATABASE_URL"] as const;
 const original = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
 let dir: string;
 let PUT: (req: Request) => Promise<Response>;
 let GET: (req: Request) => Promise<Response>;
 
 before(async () => {
-  dir = mkdtempSync(path.join(tmpdir(), "merrymen-settings-tg-groups-"));
-  process.env.MERRYMEN_HOME = dir;
-  process.env.MERRYMEN_HOSTED = "1";
-  process.env.MERRYMEN_SESSION_SECRET = randomBytes(32).toString("hex");
+  dir = mkdtempSync(path.join(tmpdir(), "agentcap-settings-tg-groups-"));
+  process.env.AGENTCAP_HOME = dir;
+  process.env.AGENTCAP_HOSTED = "1";
+  process.env.AGENTCAP_SESSION_SECRET = randomBytes(32).toString("hex");
   delete process.env.DATABASE_URL;
   resetSettingsStoreForTest();
   // After the env: the route resolves its paths when it loads.

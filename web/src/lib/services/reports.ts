@@ -29,7 +29,7 @@
  * measurement.
  */
 import { randomBytes } from "node:crypto";
-import { isEvidencedFlow, RENEW_SOON_DAYS } from "@merrymen/core";
+import { isEvidencedFlow, RENEW_SOON_DAYS } from "@agentcap/core";
 import type { Db } from "../../../../worker/src/db";
 import { attributeBook, type BookFlow } from "../../../../worker/src/period-pnl";
 import { isRestartCopy, sideOf } from "../../../../worker/src/token-label";
@@ -524,14 +524,14 @@ function expiryBlockers(expiresAt: number | null, now: number): { blockers: Bloc
   if (expiresAt <= now) {
     return {
       blockers: [{ kind: "permission", code: "permission-expired", text: `The trading permission expired at ${iso(expiresAt)}.`, owner_can_fix: true }],
-      items: [{ action: "Re-sign the trading permission in Merrymen. Renewal revokes old permissions on-chain and requires network fees.", because: "permission-expired" }],
+      items: [{ action: "Re-sign the trading permission in AgentCap. Renewal revokes old permissions on-chain and requires network fees.", because: "permission-expired" }],
     };
   }
   if (expiresAt - now <= EXPIRY_WARN_SEC) {
     const days = Math.max(0, Math.floor((expiresAt - now) / 86_400));
     return {
       blockers: [{ kind: "permission", code: "permission-expiring", text: `The trading permission expires at ${iso(expiresAt)} (${days === 0 ? "within a day" : `in ${days} day(s)`}).`, owner_can_fix: true }],
-      items: [{ action: `Re-sign the trading permission in Merrymen before ${iso(expiresAt)} so the agent keeps running.`, because: "permission-expiring" }],
+      items: [{ action: `Re-sign the trading permission in AgentCap before ${iso(expiresAt)} so the agent keeps running.`, because: "permission-expiring" }],
     };
   }
   return { blockers: [], items: [] };
@@ -690,7 +690,7 @@ export async function readReportSummary(db: Db, input: SummaryInput, clean: Text
   let status: AgentStatusView | null = null;
   if (!input.currentAccount) {
     blockers.push({ kind: "permission", code: "no-permission", text: "No trading permission has been signed yet, so the agent cannot run.", owner_can_fix: true });
-    items.push({ action: "Sign a trading permission in Merrymen to start the agent.", because: "no-permission" });
+    items.push({ action: "Sign a trading permission in AgentCap to start the agent.", because: "no-permission" });
   } else {
     status = await readAgentStatus(db, input.currentAccount, input.settings, now);
     if (status.status === "killed") blockers.push({ kind: "status", code: "killed", text: "The kill switch is on: the agent can no longer sign anything. Funds stay in the owner's smart account.", owner_can_fix: false });
@@ -1006,7 +1006,7 @@ async function decisionsTable(db: Db, scope: Scope, since: number, until: number
     notes: [
       "Every decision the agent recorded, including dropped proposals and holds. Decisions belong to no book and moved no money by themselves.",
       "reason is the deciding model's or strategy's own words; dropped_rule can embed a symbol the model supplied.",
-      "reason_withheld is true when the stored text is a raw service error (a Brain run that could not reach or parse its service); it is not exported, and the agent's activity log in Merrymen shows it.",
+      "reason_withheld is true when the stored text is a raw service error (a Brain run that could not reach or parse its service); it is not exported, and the agent's activity log in AgentCap shows it.",
       "source market-review-private is a quiet market review the agent writes every few minutes when nothing changed.",
     ],
     untrusted: ["symbol", "name", "reason", "dropped_rule"],
@@ -1112,7 +1112,7 @@ export async function buildExport(db: Db, input: ExportInput, clean: TextCleaner
   const rendered = input.format === "csv"
     ? renderCsv(table)
     : renderJson(table, {
-      format: "merrymen-export",
+      format: "agentcap-export",
       version: 1,
       kind: input.kind,
       agent: input.agentSlug,
@@ -1122,7 +1122,7 @@ export async function buildExport(db: Db, input: ExportInput, clean: TextCleaner
   const notes = [...table.notes];
   if (rendered.truncated) notes.push(truncationText(rendered.rows));
   return {
-    filename: `merrymen-${input.agentSlug}-${input.kind}-${stamp(input.now)}.${input.format}`,
+    filename: `agentcap-${input.agentSlug}-${input.kind}-${stamp(input.now)}.${input.format}`,
     mimeType: exportMimeType(input.format),
     content: rendered.content,
     bytes: Buffer.byteLength(rendered.content),
@@ -1147,7 +1147,7 @@ export function newExportId(): string {
  * agents it was given; the filename is ours, so its shape is fixed.
  */
 export function exportAgentSlug(filename: string): string | null {
-  const m = /^merrymen-([0-9a-hjkmnp-tv-z]{16})-(?:trades|decisions|portfolio)-/.exec(filename);
+  const m = /^agentcap-([0-9a-hjkmnp-tv-z]{16})-(?:trades|decisions|portfolio)-/.exec(filename);
   return m ? m[1]! : null;
 }
 
@@ -1213,7 +1213,7 @@ export async function listExports(
     `SELECT id, tenant, connection_id, kind, format, filename, bytes, created_at, expires_at FROM mcp_exports
       WHERE tenant = ? AND expires_at > ? AND (${byAgent})${page}
       ORDER BY created_at DESC, id DESC LIMIT ?`,
-  ).all(tenant.toLowerCase(), now, ...slugs.map((s) => `merrymen-${s}-%`),
+  ).all(tenant.toLowerCase(), now, ...slugs.map((s) => `agentcap-${s}-%`),
     ...(o.before ? [o.before.created_at, o.before.created_at, o.before.id] : []), Math.max(1, Math.min(o.limit, 200)))) as Record<string, unknown>[];
   return rows.map((r) => recordOf(r, false)).filter((r): r is ExportRecord => r !== null);
 }

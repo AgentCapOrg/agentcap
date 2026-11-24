@@ -108,10 +108,10 @@ describe("new Trencher setup through the actual CreateAgent screen", () => {
     assert.match(text(), /\$10 per trade · \$50 per day/);
     assert.match(text(), /Renews every 30 days · 5% drawdown · 24 operations\/day/);
     assert.doesNotMatch(text(), /7 days/, "the review is rendered from the caps it signs, never a stale literal");
-    assert.equal(ui.container.querySelector<HTMLInputElement>("#agent-name")?.value, "My Merryman");
+    assert.equal(ui.container.querySelector<HTMLInputElement>("#agent-name")?.value, "My AgentCapAvatar");
     assert.equal(writes.length, 0); assert.equal(mints.length, 0);
     await ui.click("Go live with real money");
-    assert.deepEqual(writes, [{ owner: OWNER, agentName: "My Merryman", strategy: "trencher", paperTradingEnabled: true,
+    assert.deepEqual(writes, [{ owner: OWNER, agentName: "My AgentCapAvatar", strategy: "trencher", paperTradingEnabled: true,
       liveTradingEnabled: true, assetMode: "crypto", basketSymbols: [], customTokens: [], discoveryEnabled: true,
       officialCoinsEnabled: true, trencherFastEnabled: true, trencherLiveEnabled: true, tickSeconds: 15 }]);
     assert.equal(mints.length, 1);

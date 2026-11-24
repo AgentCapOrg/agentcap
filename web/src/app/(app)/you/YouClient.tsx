@@ -11,7 +11,7 @@ import { railNotices } from "@/lib/rail-notices";
 import { rankPnl, unrankedLabel, type Rank } from "@/lib/rank-pnl";
 import { pnlBasisOf, withheldWhy, type FeedMeasured } from "@/lib/feed-pnl";
 import { statusLine, type AgentSnapshot } from "@/lib/status-line";
-import { rejectRuleLabel } from "@merrymen/thesis";
+import { rejectRuleLabel } from "@agentcap/thesis";
 import { timeAgo } from "@/lib/time";
 import type { PublicThesis } from "@/lib/thesis";
 import { usd } from "@/lib/format";

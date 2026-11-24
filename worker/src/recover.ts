@@ -36,7 +36,7 @@ import { signerToEcdsaValidator } from "@zerodev/ecdsa-validator";
 import { accountIndexForPurpose, type GrantPurpose, assertDerivedAccount } from "../../packages/core/src/index";
 import {
   CASH,
-  MERRYMEN_TOKEN,
+  AGENTCAP_TOKEN,
   MORPHO,
   STOCK_TOKENS,
   USDG_DECIMALS,
@@ -193,7 +193,7 @@ export interface RecoverResult extends RecoverPlan {
  * question. The amount an owner confirms a sweep against must not be a number
  * we made up, so the vault row is priced in USDG instead (see planRecovery).
  *
- * $MERRYMEN IS SWEPT TOO, BUT ONLY WHERE IT EXISTS — see `reserveRows`.
+ * $AGENTCAP IS SWEPT TOO, BUT ONLY WHERE IT EXISTS — see `reserveRows`.
  */
 interface SweepToken {
   symbol: string;
@@ -227,15 +227,15 @@ const BUILTIN_SWEEPABLE: SweepToken[] = [
  * PER CHAIN, FROM `energyReserveTokens`, never a mainnet constant everywhere.
  * An unconditional row on testnet read `absent` (the mainnet address has no
  * code there) and, worse, TOOK THE NAME: an owner whose own custom token was
- * their testnet "MERRYMEN" had it dropped from the sweep as a symbol collision,
+ * their testnet "AGENTCAP" had it dropped from the sweep as a symbol collision,
  * and was told nothing was left while it sat in the account. The reserve IS
- * $MERRYMEN wherever it is listed, so its label and decimals are the token's.
+ * $AGENTCAP wherever it is listed, so its label and decimals are the token's.
  */
 function reserveRows(chainId: number): SweepToken[] {
   return energyReserveTokens(chainId).map((address) => ({
-    symbol: MERRYMEN_TOKEN.symbol,
+    symbol: AGENTCAP_TOKEN.symbol,
     address: address as Address,
-    decimals: MERRYMEN_TOKEN.decimals,
+    decimals: AGENTCAP_TOKEN.decimals,
   }));
 }
 
@@ -252,7 +252,7 @@ function reserveRows(chainId: number): SweepToken[] {
  * here → the same token, already swept, so it is skipped. Same SYMBOL at a
  * different address → a different token, and it is swept: dropping it would
  * strand the owner's money on the one path that exists to rescue it, which is
- * what a builtin $MERRYMEN row did to every other token called MERRYMEN. What
+ * what a builtin $AGENTCAP row did to every other token called AGENTCAP. What
  * symbol-dedupe was protecting still holds: no two rows carry the same label.
  * The first row keeps the bare symbol — builtins come first, so the curated
  * address always does — and a later one is labelled with its address, so the
@@ -376,7 +376,7 @@ export async function classifyBalance(io: {
  * WHO AUTHORISES A RECOVERY — a signer, not a key.
  *
  * This module took a raw `ownerPrivateKey` because there was only one kind of
- * owner: a keypair generated in a browser or written to ~/.merrymen. A hosted
+ * owner: a keypair generated in a browser or written to ~/.agentcap. A hosted
  * agent owned by a PRIVY EMBEDDED WALLET has no such key and never will — the
  * whole point of it — so those accounts were structurally unrecoverable by the
  * one path that exists to get money out. Measured 2026-09-12 on a funded
@@ -993,7 +993,7 @@ export async function recoverFunds(opts: {
   // would take the USDG and the ETH down with it.
   //
   // The window between the two ops is safe because the tokens land in an
-  // account the same key controls: if op 2 fails, rerunning `merrymen recover`
+  // account the same key controls: if op 2 fails, rerunning `agentcap recover`
   // sweeps them as ordinary account balances. That property is what makes two
   // ops safe and one op not.
   //
@@ -1057,7 +1057,7 @@ export async function recoverFunds(opts: {
    *
    * An APPROVED sweep is narrowed to the one vault that was approved. An
    * unapproved one (the CLI path) sweeps every vault that holds something,
-   * which is the behaviour an owner running `merrymen recover` expects: get my
+   * which is the behaviour an owner running `agentcap recover` expects: get my
    * money out of wherever it is.
    */
   const vaultsToSweep = approved

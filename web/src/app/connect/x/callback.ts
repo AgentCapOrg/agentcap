@@ -7,7 +7,7 @@
  * where a test executes it:
  *
  *   ios       the connect was started by the app (state "i.…"): hand the
- *             code to merrymen://x-connect, where ASWebAuthenticationSession
+ *             code to agentcap://x-connect, where ASWebAuthenticationSession
  *             is waiting. The app POSTs the finish through its own session.
  *   finish    started on the web (state "w.…") and approved: POST the finish
  *             same-origin, which carries the session cookie this navigation
@@ -52,7 +52,7 @@ export function callbackClient(state: unknown): "web" | "ios" | null {
 }
 
 /** The scheme the iOS app registered for the end of an X connect. */
-export const IOS_CALLBACK = "merrymen://x-connect";
+export const IOS_CALLBACK = "agentcap://x-connect";
 
 export function readCallback(search: string): XCallback {
   const q = new URLSearchParams(search);

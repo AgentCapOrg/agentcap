@@ -32,7 +32,7 @@
  * On top of that, and BEFORE any of it, this module refuses:
  *   • any perpetual market (a symbol ending `-PERP`) — Brain does not propose
  *     perps in v1 (docs/perps.md rule 15)
- *   • an agent the owner has not explicitly named in MERRYMEN_BRAIN_LIVE
+ *   • an agent the owner has not explicitly named in AGENTCAP_BRAIN_LIVE
  *   • a hold, or a decision whose word and number disagree
  *   • a size that is not a finite positive number
  *   • a size above the ceiling that already bounds the OTHER model-driven
@@ -40,7 +40,7 @@
  *
  * ── WHY A SEPARATE ALLOWLIST FROM THE SHADOW ONE ─────────────────────────
  *
- * MERRYMEN_BRAIN_SHADOW is "this agent may THINK". Reusing it would mean every
+ * AGENTCAP_BRAIN_SHADOW is "this agent may THINK". Reusing it would mean every
  * agent already enrolled for observation silently began trading the moment this
  * shipped — turning an opt-in to watch into an opt-in to spend, retroactively,
  * for people who agreed to the first thing. Shadow stays shadow.
@@ -73,7 +73,7 @@ export const BRAIN_MIN_TRADE_USDG = 5;
  * the fleet starts spending on model output, which is a different sentence.
  */
 export function brainLiveEnabledFor(agentId: string, env: NodeJS.ProcessEnv = process.env): boolean {
-  const raw = (env.MERRYMEN_BRAIN_LIVE ?? "").trim();
+  const raw = (env.AGENTCAP_BRAIN_LIVE ?? "").trim();
   if (!raw) return false;
   const want = agentId.trim().toLowerCase();
   if (!want) return false;
@@ -164,7 +164,7 @@ export function orderFromDecision(
 
   const symbol = String(d.symbol ?? "").trim().toUpperCase();
   // A ticker, not a sentence and not an address. `instrument_id` is
-  // `merrymen:<symbol>` by construction and Brain refuses address-shaped output
+  // `agentcap:<symbol>` by construction and Brain refuses address-shaped output
   // at two layers already; this is the third, and it is the one standing next
   // to a token lookup.
   if (!/^[A-Z0-9]{1,12}$/.test(symbol)) return { ok: false, why: `'${String(d.symbol)}' is not a symbol I can look up` };

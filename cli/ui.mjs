@@ -1,11 +1,11 @@
 /**
- * Zero-dependency terminal flair for the merrymen CLI — Sherwood green, an
+ * Zero-dependency terminal flair for the agentcap CLI — Sherwood green, an
  * arrow-flight banner, a bow-draw spinner, and a checklist. Everything is
  * TTY-guarded: piped/non-interactive output degrades to plain lines with no
  * escape codes and no timers, so logs stay clean and CI never hangs.
  */
 
-const TTY = process.stdout.isTTY && !process.env.NO_COLOR && !process.env.MERRYMEN_NO_ANIM;
+const TTY = process.stdout.isTTY && !process.env.NO_COLOR && !process.env.AGENTCAP_NO_ANIM;
 
 export const c = {
   green: (s) => (TTY ? `\x1b[32m${s}\x1b[0m` : s),
@@ -33,7 +33,7 @@ const LOGO = [
  */
 export async function banner(subtitle = "your band works Sherwood 24/7") {
   if (!TTY) {
-    console.log(`${c.arrow} merrymen — ${subtitle}`);
+    console.log(`${c.arrow} agentcap — ${subtitle}`);
     return;
   }
   const width = 34;

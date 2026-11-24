@@ -31,19 +31,19 @@ import { applyLedgerSchema } from "./store";
 import { MIRROR_STATE_DDL } from "./ledger-mirror";
 import { NEW_TENANT_ADMISSIONS_DDL } from "./new-tenant-admission";
 
-const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-fleet-id-")));
-process.env.MERRYMEN_HOME = fleet;
-process.env.MERRYMEN_HOSTED = "1";
+const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-fleet-id-")));
+process.env.AGENTCAP_HOME = fleet;
+process.env.AGENTCAP_HOSTED = "1";
 delete process.env.DATABASE_URL;
-delete process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS;
-delete process.env.MERRYMEN_FLEET_RECOVERY_REPORT_ONLY;
-delete process.env.MERRYMEN_PERSISTENT_HOME_REQUIRED;
-delete process.env.MERRYMEN_FLEET_ROLLOUT;
-delete process.env.MERRYMEN_ROLLOUT_NEW_TENANTS;
+delete process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS;
+delete process.env.AGENTCAP_FLEET_RECOVERY_REPORT_ONLY;
+delete process.env.AGENTCAP_PERSISTENT_HOME_REQUIRED;
+delete process.env.AGENTCAP_FLEET_ROLLOUT;
+delete process.env.AGENTCAP_ROLLOUT_NEW_TENANTS;
 // Not Railway: unset means `all` here, every 0x tenant admitted at trade.
 for (const key of Object.keys(process.env)) if (key.startsWith("RAILWAY_")) delete process.env[key];
 const dek = Buffer.alloc(32, 85);
-process.env.MERRYMEN_STORE_DEK = dek.toString("base64");
+process.env.AGENTCAP_STORE_DEK = dek.toString("base64");
 
 const {
   adoptChildForTest, childHome, forgetNewTenantAdmissionsForTest, honourPendingKills, newTenantAdmissionsForTest, reconcile,
@@ -140,8 +140,8 @@ after(() => {
   rmSync(fleet, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
 });
 afterEach(async () => {
-  delete process.env.MERRYMEN_FLEET_ROLLOUT;
-  delete process.env.MERRYMEN_ROLLOUT_NEW_TENANTS;
+  delete process.env.AGENTCAP_FLEET_ROLLOUT;
+  delete process.env.AGENTCAP_ROLLOUT_NEW_TENANTS;
   for (const tenant of granted) await store.remove(tenant);
   await reconcile();
   await settle();
@@ -165,8 +165,8 @@ describe("a tenant whose id is not 0x", () => {
       await honourPendingKills(); // the order ferry's clock, as well as reconcile's
       await settle();
     }
-    assert.deepEqual(spawned.map((p) => p.env.MERRYMEN_HOME), [childHome(evm)], "the 0x tenant beside it runs, as before");
-    assert.equal(spawned[0]!.env.MERRYMEN_ADMISSION_LEVEL, "trade");
+    assert.deepEqual(spawned.map((p) => p.env.AGENTCAP_HOME), [childHome(evm)], "the 0x tenant beside it runs, as before");
+    assert.equal(spawned[0]!.env.AGENTCAP_ADMISSION_LEVEL, "trade");
     assert.ok(!leaseAsks.includes(SOL_STORED), `never leased: ${leaseAsks.join(", ")}`);
     assert.equal(existsSync(path.join(children, SOL_STORED)), false, "no home is made for it");
     assert.deepEqual(rolloutCountsForTest(), { trade: 1, "exits-only": 0, observe: 0, held: 1, expired: 0, absent: 0 });
@@ -196,7 +196,7 @@ describe("a tenant whose id is not 0x", () => {
     const upperHome = path.join(children, address(0xabc121).toUpperCase().replace("0X", "0x"));
     mkdirSync(solHome, { recursive: true });
     mkdirSync(upperHome, { recursive: true });
-    writeFileSync(path.join(solHome, "merrymen.db"), "a book nobody here may open", { mode: 0o600 });
+    writeFileSync(path.join(solHome, "agentcap.db"), "a book nobody here may open", { mode: 0o600 });
     writeKillRequest(solHome, grant(address(0x124)), nowSec());
     const before = snapshot(solHome);
     try {
@@ -230,8 +230,8 @@ describe("a tenant whose id is not 0x", () => {
     for (const tenant of [SOL_AGENT, SOL_STORED]) {
       raw.prepare("INSERT INTO fleet_new_tenant_admissions VALUES (?, ?, 4663, 'trade', 1, 'd')").run(tenant, address(0x134));
     }
-    process.env.MERRYMEN_FLEET_ROLLOUT = `${named}:trade`;
-    process.env.MERRYMEN_ROLLOUT_NEW_TENANTS = "trade";
+    process.env.AGENTCAP_FLEET_ROLLOUT = `${named}:trade`;
+    process.env.AGENTCAP_ROLLOUT_NEW_TENANTS = "trade";
     for (let pass = 0; pass < 2; pass++) {
       await reconcile();
       await settle();
@@ -240,7 +240,7 @@ describe("a tenant whose id is not 0x", () => {
     assert.equal(saidOf(/\[alert\] new tenants: fleet_new_tenant_admissions records Solana id "sol:2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH", .*admits nobody/).length, 1,
       "named as the row holds it, once");
     assert.equal(saidOf(/\[alert\] new tenants: fleet_new_tenant_admissions records (Solana )?id "sol:2u1tszseqz/).length, 1);
-    assert.deepEqual(spawned.map((p) => p.env.MERRYMEN_HOME), [childHome(named)]);
+    assert.deepEqual(spawned.map((p) => p.env.AGENTCAP_HOME), [childHome(named)]);
     assert.ok(!leaseAsks.includes(SOL_STORED));
     assert.deepEqual(saidOf(/could not be (read|checked)|not admitted this pass/), [], "never put through the proof, so never a failed read");
     assert.deepEqual(rolloutCountsForTest(), { trade: 1, "exits-only": 0, observe: 0, held: 1, expired: 0, absent: 0, new: 0 });

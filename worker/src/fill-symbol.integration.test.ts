@@ -14,8 +14,8 @@ import os from "node:os";
 import path from "node:path";
 import { after, before, describe, it } from "node:test";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-fillsym-"));
-process.env.MERRYMEN_HOME = HOME;
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-fillsym-"));
+process.env.AGENTCAP_HOME = HOME;
 delete process.env.DATABASE_URL;
 
 const S = await import("./store");
@@ -31,7 +31,7 @@ const CLASS = "0x2222222222222222222222222222222222222222";
 const FAKE = "0x3333333333333333333333333333333333333333";
 const STOCK = STOCK_TOKENS[0]!;
 const op = (n: number) => `0x${n.toString(16).padStart(64, "0")}`;
-const file = () => new DatabaseSync(path.join(HOME, "merrymen.db"));
+const file = () => new DatabaseSync(path.join(HOME, "agentcap.db"));
 
 function row(hash: string): Record<string, unknown> {
   const db = file();

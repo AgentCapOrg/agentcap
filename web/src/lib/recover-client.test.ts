@@ -122,7 +122,7 @@ const g = globalThis as { window?: unknown };
 before(() => {
   // The page's origin, which `relayUrl` builds the bundler relay from. Without
   // one it is a relative URL, which only a browser can resolve.
-  g.window = { location: { origin: "https://app.merrymen.test" } };
+  g.window = { location: { origin: "https://app.agentcap.test" } };
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     // The relay ticket: a challenge to sign, then the account the server derived.

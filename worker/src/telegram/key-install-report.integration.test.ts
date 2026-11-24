@@ -5,9 +5,9 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { after, before, test } from "node:test";
 
-const taskHome = mkdtempSync(path.join(os.tmpdir(), "merrymen-install-report-"));
-process.env.MERRYMEN_HOME = taskHome;
-process.env.MERRYMEN_HOSTED = "1";
+const taskHome = mkdtempSync(path.join(os.tmpdir(), "agentcap-install-report-"));
+process.env.AGENTCAP_HOME = taskHome;
+process.env.AGENTCAP_HOSTED = "1";
 const { initStore, closeStoreForTest } = await import("../store");
 const { homePaths } = await import("../home");
 const { readReport, readBrag, readPnl } = await import("./reads");
@@ -68,7 +68,7 @@ test("an install-only ledger has no trade arrows or best shot; a subsequent real
     row(OWNER, "swap", "landed", 0, "0xCCCC");
     assert.match(readReport(ctx), /arrows today: 0 landed · 0 turned back by the wall/);
     const brag = readBrag(ctx);
-    assert.match(brag, /my merryman's scorecard/, "exercise the full report rather than an unavailable fallback");
+    assert.match(brag, /my agentcapavatar's scorecard/, "exercise the full report rather than an unavailable fallback");
     assert.doesNotMatch(brag, /best shot|key-install/);
     row(OWNER, "swap", "landed", 4.25);
     assert.match(readReport(ctx), /arrows today: 1 landed · 0 turned back by the wall/);

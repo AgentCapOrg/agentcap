@@ -1,5 +1,5 @@
 /**
- * THE MONITORED COHORT: which 150 traders Merrymen watches closely, and why.
+ * THE MONITORED COHORT: which 150 traders AgentCap watches closely, and why.
  *
  * Monitoring is the expensive part of this subsystem (stream attention,
  * profile refreshes, research runs), so the cohort decides where attention
@@ -13,7 +13,7 @@
  * 150 by P&L") is wrong in a specific way: one lucky coin puts a one-trade
  * account at rank 1 of the 24h board, and a dollar figure rewards size, not
  * judgement. So the score is built from things that predict whether WATCHING
- * this person helps Merrymen find and act on opportunities:
+ * this person helps AgentCap find and act on opportunities:
  *
  *   consistency        presence across several windows, not one big window
  *   relevant chain     how much of their activity is on the chain we trade
@@ -33,7 +33,7 @@
  * FOLLOWERS AND POPULARITY ARE NOT AN INPUT. A follower count is the one
  * number anyone can inflate for free (follow-store.ts writes the same rule
  * for our own followers), and the moment it moves selection, minting accounts
- * becomes a way to steer what Merrymen watches. `CohortCandidate.followers`
+ * becomes a way to steer what AgentCap watches. `CohortCandidate.followers`
  * exists only so a caller can pass a raw row through; normalisation drops it
  * before anything reads the candidate, and a test proves the output is
  * byte-identical whatever it says.
@@ -41,7 +41,7 @@
  * ── UNKNOWN IS NOT BAD, AND IT IS NOT GOOD EITHER ─────────────────────────
  *
  * Most candidates arrive with holes: no profile fetched, no thesis history,
- * no Merrymen measurement yet. A component without data is never scored as
+ * no AgentCap measurement yet. A component without data is never scored as
  * zero and never filled in with a guess. `raw` is the weighted mean of what
  * WAS measured; the design weight that was not measured sits at the prior.
  * Then the trade count decides how far that is trusted:
@@ -160,7 +160,7 @@ const RATE_K = 4;
 
 /**
  * Below this average hold, the trader's position is usually gone before
- * Merrymen has observed the buy, researched it and quoted. Useful for
+ * AgentCap has observed the buy, researched it and quoted. Useful for
  * narrative discovery, not for following.
  */
 export const MIN_FOLLOWABLE_HOLD_SECONDS = 30 * 60;
@@ -221,7 +221,7 @@ export interface CohortCandidate {
    * when both exist.
    */
   holding?: { averageHoldSeconds: number | null; sampleSize: number | null } | null;
-  /** Measured by Merrymen: coins bought before broad cohort participation, out of `sample` coins. */
+  /** Measured by AgentCap: coins bought before broad cohort participation, out of `sample` coins. */
   earlyDiscoveries?: { count: number; sample: number } | null;
   /** Reconstructed from positions: how closed and open positions ended up. */
   exits?: { closedWithGain: number | null; closedWithLoss: number | null; heldUnderwater: number | null } | null;
@@ -229,7 +229,7 @@ export interface CohortCandidate {
   concentration?: { topPositionShare: number | null } | null;
   /** Median position size in USD (provider float, research only). */
   executionCapacity?: { medianPositionUsd: number | null } | null;
-  /** Measured by Merrymen, prospectively: theses that held up when checked. */
+  /** Measured by AgentCap, prospectively: theses that held up when checked. */
   thesisUsefulness?: { useful: number; total: number } | null;
   lastActiveAt: number | null;
   /** IGNORED. Present so raw rows can pass through; dropped before anything reads it. */

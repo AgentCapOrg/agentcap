@@ -3,12 +3,12 @@
  * WAS ASKING.
  *
  * Two beta testers were stopped at the same step: token saved, "connected as
- * @merrymen_hosted_…_bot", "the bot is listening" ticked, and a placeholder
+ * @agentcap_hosted_…_bot", "the bot is listening" ticked, and a placeholder
  * where the six-character code belongs. "I'm stuck at this point, no code from
  * /link."
  *
  * `GET()` took no Request — so no tenant could be resolved even in principle —
- * and read `merrymenHome()`, the WEB container's home. Hosted, the child writes
+ * and read `agentcapHome()`, the WEB container's home. Hosted, the child writes
  * its telegram.json into `<childHome>` on the ORCHESTRATOR's disk. Different
  * service, different filesystem. The route therefore returned constants to
  * everyone: linkCode and ownerId null forever, enabled/hasToken/allowlist empty
@@ -64,7 +64,7 @@ describe("it knows who is asking", () => {
     // "test connection" button was answering about the operator's bot.
     const post = CODE.slice(CODE.indexOf("export async function POST"));
     assert.match(post, /tenantOf\(req\)/);
-    assert.ok(!/readJson<MerrymenSettings>\(SETTINGS_FILE\)/.test(post), "no direct file read in POST");
+    assert.ok(!/readJson<AgentCapSettings>\(SETTINGS_FILE\)/.test(post), "no direct file read in POST");
   });
 });
 
@@ -112,7 +112,7 @@ describe("a hosted request with no session gets nothing", () => {
   it("THE CLAIMS ARE ASKED ONLY ABOUT A BOT getMe HAS CONFIRMED, never the saved token's bare id", () => {
     // A token getMe does not confirm is saved as typed, and a bot id is
     // public: asking the claims about `<id>:anything` told any signed-in
-    // account whether a Merrymen agent held the bot. Run for real in
+    // account whether a AgentCap agent held the bot. Run for real in
     // bot-elsewhere.test.ts.
     const get = CODE.slice(CODE.indexOf("export async function GET"), CODE.indexOf("export async function POST"));
     assert.match(get, /const runtime = await runtimeFor\(tenant, confirmedBot\(token, bot\)\);/);

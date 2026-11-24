@@ -1,32 +1,32 @@
-# Merrymen AI gateway
+# AgentCap AI gateway
 
-The holder perk, done safely: a tiny server that lets **verified $MERRYMEN holders**
+The holder perk, done safely: a tiny server that lets **verified $AGENTCAP holders**
 run their agent's brain with **no API key and no signup** — while your upstream key
 stays server-side and never ships in the (open-source) client.
 
 ## Why a gateway (and not "just ship our key")
 
-merrymen is open source and self-hosted. Any key baked into the package is readable
+agentcap is open source and self-hosted. Any key baked into the package is readable
 by everyone who installs it — it would be scraped and abused within hours, blow your
 rate limits, and get banned. So the client never holds the key. Instead:
 
 ```
-holder ──GET /nonce──▶ single-use challenge ──sign──▶ /claim ──balanceOf──▶ token ──▶ paste into merrymen
-merrymen ──Bearer token──▶ /v1/chat/completions ──your key──▶ upstream LLM ──▶ reply
+holder ──GET /nonce──▶ single-use challenge ──sign──▶ /claim ──balanceOf──▶ token ──▶ paste into agentcap
+agentcap ──Bearer token──▶ /v1/chat/completions ──your key──▶ upstream LLM ──▶ reply
 ```
 
-- The upstream key lives only in `MERRYMEN_GATEWAY_UPSTREAM_KEY` (env). Never logged, never sent to the client.
+- The upstream key lives only in `AGENTCAP_GATEWAY_UPSTREAM_KEY` (env). Never logged, never sent to the client.
 - Access tokens are **HMAC-signed and expiring** (stateless — no database).
 - The claim uses a **server-issued, single-use, domain-bound nonce** (5-min TTL): the message a holder signs names the domain + a one-time nonce, so a captured signature **can't be replayed** or pre-collected, and responses carry **no wildcard CORS** so a phishing page can't read a minted token.
-- Every request **re-checks the wallet's on-chain $MERRYMEN balance** (cached 10 min, bounded size), so a holder who sells loses access.
+- Every request **re-checks the wallet's on-chain $AGENTCAP balance** (cached 10 min, bounded size), so a holder who sells loses access.
 - **Per-address rate limit** on `/v1`, **per-IP rate limit** on `/nonce` + `/claim`, a hard completion clamp (`max_tokens` + `max_completion_tokens`, `n`/`best_of` pinned), and a body-size cap bound cost and abuse.
-- The gateway **forces its own model** server-side — the client can't run up an expensive one and never even learns which model it is (it's branded `merrymen-fast`).
+- The gateway **forces its own model** server-side — the client can't run up an expensive one and never even learns which model it is (it's branded `agentcap-fast`).
 
-Signing is **read-only proof of control** — no transaction, no private key ever leaves the holder's wallet. Fully in keeping with merrymen's non-custodial stance.
+Signing is **read-only proof of control** — no transaction, no private key ever leaves the holder's wallet. Fully in keeping with agentcap's non-custodial stance.
 
 ## Discovery too: `POST /bitquery`
 
-Same perk, same claimed token, second upstream. Set `MERRYMEN_GATEWAY_BITQUERY_KEY`
+Same perk, same claimed token, second upstream. Set `AGENTCAP_GATEWAY_BITQUERY_KEY`
 and holders get Bitquery — which indexes Robinhood Chain from genesis and decodes
 **Uniswap v4**, where new pairs actually launch — without a Bitquery account of
 their own. Leave it unset and the route returns 503; nothing else changes.
@@ -40,7 +40,7 @@ knob here, because the expensive part *is* the query.
 So the client sends a **name**, not a query:
 
 ```bash
-curl -s https://ai.merrymen.dev/bitquery \
+curl -s https://ai.agentcap.xyz/bitquery \
   -H "authorization: Bearer mmk_…" \
   -H 'content-type: application/json' -d '{"query":"recentPools","variables":{"sinceMinutes":60,"limit":25}}'
 ```
@@ -54,7 +54,7 @@ curl -s https://ai.merrymen.dev/bitquery \
   so sharing the chat allowance would let a background feed starve the brain.
 - One **fleet-wide daily cap** bounds them all: every holder and the public
   memescope reserve each upstream call's points against
-  `MERRYMEN_GATEWAY_BITQUERY_POINTS_PER_DAY` (default 12,500 per UTC day,
+  `AGENTCAP_GATEWAY_BITQUERY_POINTS_PER_DAY` (default 12,500 per UTC day,
   ceiling 30,000) *before* calling, in two purses. The memescope spends only
   its own share (`MEMESCOPE_SHARE`, 80%: 10,000 a day) and refreshes at most
   every `MEMESCOPE_TTL_SEC` (45 s: at most 1,921 refreshes, 9,605 points), so
@@ -71,7 +71,7 @@ curl -s https://ai.merrymen.dev/bitquery \
   memescope serves its last rows. A cap below about 12,000 leaves the
   memescope's 80% short of its 45 s day: once that share is spent the page
   serves its last rows until 00:00 UTC. The orchestrator's Bitquery lane (`docs/bitquery-lane.md`)
-  counts separately, under its own `MERRYMEN_BITQUERY_POINTS_PER_DAY` (default
+  counts separately, under its own `AGENTCAP_BITQUERY_POINTS_PER_DAY` (default
   25,000); neither knob sees the other, so if the two keys share a plan, size
   both to it. With the in-memory store a restart forgets the day's count; set
   the KV store for a durable one.
@@ -84,17 +84,17 @@ hostile queries (including `__proto__`, `constructor`) rejected by name lookup,
 
 ## Which host is live right now
 
-**`https://ai.merrymen.dev`** serves the Railway gateway. TLS and
+**`https://ai.agentcap.xyz`** serves the Railway gateway. TLS and
 `GET /healthz` were verified on 2026-09-18; Railway reports the existing custom
 domain verified with a valid certificate. The alternate
-`https://merrymen-gateway-production.up.railway.app` hostname also remains usable.
+`https://agentcap-gateway-production.up.railway.app` hostname also remains usable.
 
-The partner API is at **`https://ai.merrymen.dev/partner/v1`**. It uses separate
+The partner API is at **`https://ai.agentcap.xyz/partner/v1`**. It uses separate
 server-only partner keys and supports agent authorization, status and chat; see
 [the integration guide](PARTNER-API.md). Developers issue those keys themselves
-at `https://merrymen.dev/api`, which reaches this gateway's `/developer/v1`
+at `https://agentcap.xyz/api`, which reaches this gateway's `/developer/v1`
 routes; operators can still issue keys with `partners-cli.mjs`. The browser SDK
-is served by hosted web at `https://app.merrymen.dev/sdk/merrymen-browser.js`
+is served by hosted web at `https://app.agentcap.xyz/sdk/agentcap-browser.js`
 after this revision is deployed.
 
 DNS is managed in Vercel, while the application and certificate are served by
@@ -109,16 +109,16 @@ The previous TLS failure was repaired by adding the missing ownership TXT,
 aligning the CNAME and requesting certificate issuance on the existing domain.
 Do not delete/recreate a working domain to refresh it. After DNS or service
 changes, check Railway's verification/certificate status and confirm
-`curl https://ai.merrymen.dev/healthz` returns `{"ok":true}` with ordinary TLS
+`curl https://ai.agentcap.xyz/healthz` returns `{"ok":true}` with ordinary TLS
 validation.
 
 Three hand-written client origins must agree when changing their preferred host:
 
 | where | constant |
 | --- | --- |
-| `packages/core/src/token.ts` | `MERRYMEN_GATEWAY_ORIGIN` — the merrymen client |
+| `packages/core/src/token.ts` | `AGENTCAP_GATEWAY_ORIGIN` — the agentcap client |
 | `site/lib/gateway.ts` | `GATEWAY_ORIGIN` — the memescope page |
-| `cli/bin.mjs` | the `merrymen` provider's `key` hint, shown during onboarding |
+| `cli/bin.mjs` | the `agentcap` provider's `key` hint, shown during onboarding |
 
 There is no shared import that could enforce that: the website doesn't compile
 the TS core and the CLI is plain ESM that can't import TypeScript at all. So
@@ -150,8 +150,8 @@ railway init && railway up
 ```
 
 That is the path for a **fresh** install, and it is still the fallback if a repo
-build ever goes wrong. The live `merrymen-gateway` service no longer uses it:
-it is sourced from `millw14/merrymen` on `main` and redeploys itself when
+build ever goes wrong. The live `agentcap-gateway` service no longer uses it:
+it is sourced from `millw14/agentcap` on `main` and redeploys itself when
 anything under `gateway/` changes. Three service settings make that work, and
 each of them fails silently if it is missing — `docs/hosted-deploy.md` §5b has
 the table and the reasoning:
@@ -168,13 +168,13 @@ while a fix looked shipped, so prefer a push. If you must, `railway up` from
 monorepo and build the dashboard image into this service.
 
 Then set the variables in the Railway dashboard (**not** in the repo):
-`MERRYMEN_GATEWAY_UPSTREAM_KEY`, `MERRYMEN_GATEWAY_SECRET` (32+ random bytes),
-`MERRYMEN_GATEWAY_RPC`, `MERRYMEN_GATEWAY_BITQUERY_KEY`, and
-`MERRYMEN_GATEWAY_DOMAIN` set to the host you actually serve on. The partner API
-and developer portal also need `MERRYMEN_PARTNER_BRIDGE_SECRET` and
-`MERRYMEN_DEVELOPER_PORTAL_SECRET`, each shared with one other service; the
+`AGENTCAP_GATEWAY_UPSTREAM_KEY`, `AGENTCAP_GATEWAY_SECRET` (32+ random bytes),
+`AGENTCAP_GATEWAY_RPC`, `AGENTCAP_GATEWAY_BITQUERY_KEY`, and
+`AGENTCAP_GATEWAY_DOMAIN` set to the host you actually serve on. The partner API
+and developer portal also need `AGENTCAP_PARTNER_BRIDGE_SECRET` and
+`AGENTCAP_DEVELOPER_PORTAL_SECRET`, each shared with one other service; the
 gateway logs at boot when either is unset or under 32 bytes, and
-`docs/hosted-deploy.md` §5c has the table. Point `ai.merrymen.dev` at the
+`docs/hosted-deploy.md` §5c has the table. Point `ai.agentcap.xyz` at the
 Railway service. Partner billing has its own variables, all optional and off
 by default: see [Partner billing](#partner-billing) below.
 
@@ -191,13 +191,13 @@ A `Dockerfile` (universal) and `render.yaml` (Render Blueprint) are included for
 connect-the-repo deploy. In-memory state is fine here (one process); set
 `KV_REST_API_URL`/`KV_REST_API_TOKEN` if you run multiple instances, or to keep
 developer portal sessions across deploys. `render.yaml` gives the service no
-persistent disk and does not set `MERRYMEN_DATA_DIR`: never turn partner
+persistent disk and does not set `AGENTCAP_DATA_DIR`: never turn partner
 billing on there.
 
 ### B) Vercel serverless (optional holder gateway runtime)
 
 This option serves the holder claim/inference endpoints. The `api/*.js`
-functions do not implement `/partner/v1`. Production `ai.merrymen.dev` uses
+functions do not implement `/partner/v1`. Production `ai.agentcap.xyz` uses
 Railway; managing its DNS in Vercel does not make it a Vercel deployment.
 
 Serverless isolates don't share memory, so the nonce/rate-limit/balance state MUST
@@ -205,12 +205,12 @@ live in a KV store — this is a hard requirement (the functions refuse to start
 without it). `vercel.json` maps the clean URLs (`/nonce`, `/claim`, `/v1/…`) to the
 functions in `api/`.
 
-1. Vercel → **New Project** → import `millw14/merrymen`, set **Root Directory = `gateway`**.
+1. Vercel → **New Project** → import `millw14/agentcap`, set **Root Directory = `gateway`**.
 2. Add a KV store: Vercel dashboard → **Storage → Upstash Redis** (or KV). It sets
    `KV_REST_API_URL` + `KV_REST_API_TOKEN` on the project automatically.
-3. Add the three secrets as env vars: `MERRYMEN_GATEWAY_UPSTREAM_KEY`,
-   `MERRYMEN_GATEWAY_SECRET` (≥32 bytes), `MERRYMEN_GATEWAY_RPC` (+ optional
-   `MERRYMEN_GATEWAY_DOMAIN=ai.merrymen.dev`).
+3. Add the three secrets as env vars: `AGENTCAP_GATEWAY_UPSTREAM_KEY`,
+   `AGENTCAP_GATEWAY_SECRET` (≥32 bytes), `AGENTCAP_GATEWAY_RPC` (+ optional
+   `AGENTCAP_GATEWAY_DOMAIN=ai.agentcap.xyz`).
 4. **Deploy.** Confirm against the host Vercel gives you:
    `curl https://<your-deployment>/healthz` → `{"ok":true}`. Configure a separate
    custom hostname if needed. Moving the production hostname away from Railway
@@ -220,18 +220,18 @@ functions in `api/`.
 - `GET /` or `/claim` — the claim page (holder connects wallet, signs, gets a token).
 - `GET /nonce?address=0x…` — mint a single-use, domain-bound challenge → `{nonce, message}` (sign `message` verbatim).
 - `POST /claim` — `{address, signature, nonce}` → `{token, expiresInDays}` after nonce + signature + balance checks.
-- `POST /v1/chat/completions` — OpenAI-compatible; `Authorization: Bearer <token>`. This is what merrymen calls.
+- `POST /v1/chat/completions` — OpenAI-compatible; `Authorization: Bearer <token>`. This is what agentcap calls.
 - `GET /healthz` — liveness.
 - `/partner/v1/*` — the partner API ([PARTNER-API.md](PARTNER-API.md)); `GET /partner/v1/health` is the gateway's own liveness and never calls hosted web.
-- `/developer/v1/*` — key management, developer accounts, plans and payment checks for the merrymen.dev portal, callable only with the portal's secret.
+- `/developer/v1/*` — key management, developer accounts, plans and payment checks for the agentcap.xyz portal, callable only with the portal's secret.
 
 The last two run only in `server.mjs`.
 
 ## Partner billing
 
-Developers pay for partner API plans in $MERRYMEN. They create a developer
-account at merrymen.dev/api, choose a plan (`lib/billing-plans.mjs`: Free, then
-Crumbs, Loaf and Feast per 30 days) and send $MERRYMEN **from the wallet they
+Developers pay for partner API plans in $AGENTCAP. They create a developer
+account at agentcap.xyz/api, choose a plan (`lib/billing-plans.mjs`: Free, then
+Crumbs, Loaf and Feast per 30 days) and send $AGENTCAP **from the wallet they
 signed in with** to a dedicated payments address, the treasury. The gateway
 checks each transfer on chain **read-only**: it never sends a transaction and
 holds no key. It keeps accounts, payments and charges in an append-only
@@ -243,22 +243,22 @@ hosted rollout is in
 
 **Before a production treasury is set, the owner must update the site's Terms
 of Use and Privacy Policy.** Setting the treasury opens the pay flow on
-merrymen.dev/api, and today both pages contradict it (Terms §6 says no money
+agentcap.xyz/api, and today both pages contradict it (Terms §6 says no money
 moves to us). §5d lists every conflict.
 
 ### Settings
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `MERRYMEN_BILLING` | `off` | `off`, `observe` or `enforce`. Any other value is off, and is logged. |
-| `MERRYMEN_DATA_DIR` | `/data` | Billing (observe or enforce) needs it **set explicitly** to a persistent, writable volume that is already there. Left to the default, missing, or on the container's own disk, billing is off. |
-| `MERRYMEN_DATA_DIR_PERSISTENT` | unset | `1` lets billing use a `MERRYMEN_DATA_DIR` on the same disk as `/` (a VM whose own disk survives a redeploy, or local development). Never set it on a container host: there that disk is wiped on every deploy. |
-| `MERRYMEN_PAYMENTS_TREASURY` | unset | The address payments go to. A **new address used for API billing and nothing else**: any $MERRYMEN transfer to it from a wallet that has, or later creates, a developer account, at or after the start block, can be credited to that account. The gateway never needs its key, so a multisig or cold wallet is fine. Not the zero address or the token contract (either is ignored, and logged). Unset: payments answer 503 `payments_unavailable` and `GET /developer/v1/plans` shows `treasury: null`. |
-| `MERRYMEN_PAYMENTS_START_BLOCK` | unset | Required with a treasury; without it (or with something that is not a block number) the treasury is ignored. Transfers in earlier blocks are never credited, so nothing that reached the address before payments opened can be claimed. Use the chain's current block when you first set the treasury. |
-| `MERRYMEN_PAYMENTS_PREVIOUS_TREASURIES` | empty | Comma-separated addresses still accepted as recipients after a rotation. Unusable entries are ignored (logged); duplicates and the current treasury are dropped; the list is ignored without a treasury. Each payment records the address it matched. |
-| `MERRYMEN_PAYMENTS_RPC` | `MERRYMEN_GATEWAY_RPC` | The RPC payment checks read: the receipt, the latest block and the receipt's block. |
-| `MERRYMEN_PAYMENTS_MIN_CONFIRMATIONS` | `64` | How many blocks deep a transfer must be (at least 1). |
-| `MERRYMEN_PAYMENTS_MIN_AGE_SEC` | `120` | How many seconds old a transfer must be, on this host's clock (at least 0). A transfer is credited only when both hold; Robinhood Chain makes about ten blocks a second, so the age usually decides. |
+| `AGENTCAP_BILLING` | `off` | `off`, `observe` or `enforce`. Any other value is off, and is logged. |
+| `AGENTCAP_DATA_DIR` | `/data` | Billing (observe or enforce) needs it **set explicitly** to a persistent, writable volume that is already there. Left to the default, missing, or on the container's own disk, billing is off. |
+| `AGENTCAP_DATA_DIR_PERSISTENT` | unset | `1` lets billing use a `AGENTCAP_DATA_DIR` on the same disk as `/` (a VM whose own disk survives a redeploy, or local development). Never set it on a container host: there that disk is wiped on every deploy. |
+| `AGENTCAP_PAYMENTS_TREASURY` | unset | The address payments go to. A **new address used for API billing and nothing else**: any $AGENTCAP transfer to it from a wallet that has, or later creates, a developer account, at or after the start block, can be credited to that account. The gateway never needs its key, so a multisig or cold wallet is fine. Not the zero address or the token contract (either is ignored, and logged). Unset: payments answer 503 `payments_unavailable` and `GET /developer/v1/plans` shows `treasury: null`. |
+| `AGENTCAP_PAYMENTS_START_BLOCK` | unset | Required with a treasury; without it (or with something that is not a block number) the treasury is ignored. Transfers in earlier blocks are never credited, so nothing that reached the address before payments opened can be claimed. Use the chain's current block when you first set the treasury. |
+| `AGENTCAP_PAYMENTS_PREVIOUS_TREASURIES` | empty | Comma-separated addresses still accepted as recipients after a rotation. Unusable entries are ignored (logged); duplicates and the current treasury are dropped; the list is ignored without a treasury. Each payment records the address it matched. |
+| `AGENTCAP_PAYMENTS_RPC` | `AGENTCAP_GATEWAY_RPC` | The RPC payment checks read: the receipt, the latest block and the receipt's block. |
+| `AGENTCAP_PAYMENTS_MIN_CONFIRMATIONS` | `64` | How many blocks deep a transfer must be (at least 1). |
+| `AGENTCAP_PAYMENTS_MIN_AGE_SEC` | `120` | How many seconds old a transfer must be, on this host's clock (at least 0). A transfer is credited only when both hold; Robinhood Chain makes about ten blocks a second, so the age usually decides. |
 
 A number that does not parse falls back to its default, and boot logs it.
 
@@ -274,8 +274,8 @@ What each mode does, and what it falls back to:
   get the quota headers and `/meta`'s `billing`, but no quota is refused, and
   each key keeps its own per-minute bucket at its own rate or its plan's,
   whichever is higher. New keys need an account (409 `account_required`), so
-  turn observe on only once the merrymen.dev build that creates accounts is
-  live: `GET https://merrymen.dev/api/developer/account`, signed in, must
+  turn observe on only once the agentcap.xyz build that creates accounts is
+  live: `GET https://agentcap.xyz/api/developer/account`, signed in, must
   answer 404 `account_missing` (or the account), not a bare `Not found`. An
   older site has no way to create one, and its developers could not mint a
   key. Without a treasury, payments answer 503 `payments_unavailable`.
@@ -291,11 +291,11 @@ What each mode does, and what it falls back to:
 `billing.jsonl` is the only record of who paid. On a disk a deploy wipes (the
 default `/data` with no volume, `render.yaml`'s service), every transfer ever
 credited could be credited again. So observe and enforce need
-`MERRYMEN_DATA_DIR` set explicitly, to a directory that already exists (billing
+`AGENTCAP_DATA_DIR` set explicitly, to a directory that already exists (billing
 never creates it), on another filesystem than `/` (a mounted volume, or a
-directory inside one) unless `MERRYMEN_DATA_DIR_PERSISTENT=1`, and writable
+directory inside one) unless `AGENTCAP_DATA_DIR_PERSISTENT=1`, and writable
 (boot writes a probe file); otherwise billing is off and boot says why. So
-`MERRYMEN_DATA_DIR=/data` copied onto a service whose volume is detached, or
+`AGENTCAP_DATA_DIR=/data` copied onto a service whose volume is detached, or
 onto a host with no disk, leaves billing off rather than writing a ledger the
 next deploy wipes; account creation is refused too (503 `billing_unavailable`)
 while billing was asked for and the storage refused it. Back the file up with
@@ -308,7 +308,7 @@ appending to the same ledger is noticed within 10 s (it writes record types
 the operator CLI never writes): its records are kept out of the index and
 billing writes stop until restart.
 
-### Files in `MERRYMEN_DATA_DIR`
+### Files in `AGENTCAP_DATA_DIR`
 
 | File | What it is |
 | --- | --- |
@@ -337,8 +337,8 @@ most 5 minutes ahead of the clock: check the host's clock.
 ### Payments: the treasury and the RPC
 
 - **Dedicated treasury.** Never reuse an address that receives anything else.
-- **Rotation.** Set `MERRYMEN_PAYMENTS_TREASURY` to the new address, move the
-  old one into `MERRYMEN_PAYMENTS_PREVIOUS_TREASURIES`, and leave the start
+- **Rotation.** Set `AGENTCAP_PAYMENTS_TREASURY` to the new address, move the
+  old one into `AGENTCAP_PAYMENTS_PREVIOUS_TREASURIES`, and leave the start
   block alone: it applies to every accepted address, and raising it would make
   transfers already sent to the old address uncreditable. Each boot where the
   treasury, the previous list or the start block changed appends a `config`
@@ -388,13 +388,13 @@ unusable, then one of:
 ```
 
 These go to stdout. The line goes to stderr instead, and says more, when the
-mode is not what `MERRYMEN_BILLING` asked for (`(MERRYMEN_BILLING="enforce";
+mode is not what `AGENTCAP_BILLING` asked for (`(AGENTCAP_BILLING="enforce";
 see the [billing] lines above)`), when payments are `UNAVAILABLE`, or when
 ledger writes are `REFUSED (<why>)`. Boot waits up to 10 s for the payments
 RPC's chain id; `railway.json`'s 30 s health-check timeout covers it.
 
-While running: `[billing] <wallet> paid N MERRYMEN in 0x…`, `[billing]
-<wallet> activate|renew|upgrade <tier>: N MERRYMEN of credit used`, and the
+While running: `[billing] <wallet> paid N AGENTCAP in 0x…`, `[billing]
+<wallet> activate|renew|upgrade <tier>: N AGENTCAP of credit used`, and the
 warnings above (`LEDGER CORRUPT`, `ANOTHER PROCESS APPENDED`, `PAYMENT
 REVERSED`, `CLOCK`, `ledger append failed`).
 
@@ -416,7 +416,7 @@ record is flushed by the append that wrote it.
 
 It ships in the image (the Dockerfile's `COPY` line; `image.test.mjs` fails
 if it is left off). Run it where the gateway runs, on its volume and with its
-environment, so it reads the same `$MERRYMEN_DATA_DIR/billing.jsonl` (on
+environment, so it reads the same `$AGENTCAP_DATA_DIR/billing.jsonl` (on
 Railway, `railway ssh` into the gateway service; the image's directory is
 `/app`):
 
@@ -431,14 +431,14 @@ node billing-cli.mjs reconcile [--all]                         # dry run of the 
 - Every write needs `--note` (one line, at most 500 characters). It stays in
   the ledger; the developer never sees it.
 - `adjust` and `comp` need the developer to have created an account at
-  merrymen.dev/api. Neither moves any tokens: an adjustment changes API
+  agentcap.xyz/api. Neither moves any tokens: an adjustment changes API
   credit only.
 - `comp` starts now and is refused while a period the developer paid for is
   running (it prints the tier and end date and writes nothing): comp after
   that date, or credit tokens with `adjust` instead. A comp longer than 30
   days gets one plan quota for its whole length. When a comp ends, its tier
   renews only if the developer selects it and has the credit.
-- `reconcile` needs `MERRYMEN_PAYMENTS_RPC` or `MERRYMEN_GATEWAY_RPC`; `--all`
+- `reconcile` needs `AGENTCAP_PAYMENTS_RPC` or `AGENTCAP_GATEWAY_RPC`; `--all`
   re-checks every payment, not only the last 30 minutes'. The gateway makes
   any reversal itself.
 - Writes go through the gateway's own ledger writer, under the same lock. The
@@ -447,19 +447,19 @@ node billing-cli.mjs reconcile [--all]                         # dry run of the 
 
 ## The holder experience
 
-1. Holder opens `https://ai.merrymen.dev/claim`, connects their wallet, signs (free).
-2. Gateway checks they hold ≥ `MERRYMEN_GATEWAY_MIN_TOKENS` and returns a key.
-3. In merrymen → **Settings → AI provider → Merrymen AI**, they paste the key. Done — chat + the strategist now run on your dime, no third-party signup.
+1. Holder opens `https://ai.agentcap.xyz/claim`, connects their wallet, signs (free).
+2. Gateway checks they hold ≥ `AGENTCAP_GATEWAY_MIN_TOKENS` and returns a key.
+3. In agentcap → **Settings → AI provider → AgentCap AI**, they paste the key. Done — chat + the strategist now run on your dime, no third-party signup.
 
 ## Costs & limits (read before you flip it on)
 
 You are paying for holders' inference. Protect yourself:
-- Keep `MERRYMEN_GATEWAY_MIN_TOKENS` meaningful, and `RATE_PER_MIN` / `MAX_COMPLETION_TOKENS` conservative (defaults in `lib/core.mjs`).
+- Keep `AGENTCAP_GATEWAY_MIN_TOKENS` meaningful, and `RATE_PER_MIN` / `MAX_COMPLETION_TOKENS` conservative (defaults in `lib/core.mjs`).
 - Groq's **free tier is per-key rate-limited** — a shared free key will throttle fast under many holders. Use a paid plan, or expect holders to queue.
 - State (nonces, rate limits, balance cache) lives in `lib/store.mjs`: in-memory for a single process, or a shared KV (Upstash/Vercel KV) when `KV_REST_API_URL`/`KV_REST_API_TOKEN` are set. On serverless the KV is **required** (isolates don't share memory), so rate limits and single-use nonces hold across invocations.
-- Rotating `MERRYMEN_GATEWAY_SECRET` invalidates every issued token (your kill-switch). It also invalidates every partner key, whose stored hash it peppers, and signs every developer out of the portal.
+- Rotating `AGENTCAP_GATEWAY_SECRET` invalidates every issued token (your kill-switch). It also invalidates every partner key, whose stored hash it peppers, and signs every developer out of the portal.
 
 ## Honesty note
 
-Call the *provider* "Merrymen AI" freely — white-labeling inference is normal. Just
+Call the *provider* "AgentCap AI" freely — white-labeling inference is normal. Just
 don't imply you trained a model; the blurb ("powers your agent's brain") stays true.

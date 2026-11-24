@@ -8,7 +8,7 @@ export function signPartnerRequest({ secret, key, method, path, body = "", now =
     name: key.name, scopes: key.scopes, iat: Math.floor(now / 1000), nonce })).toString("base64url");
   const digest = createHash("sha256").update(body).digest("hex");
   const signature = createHmac("sha256", secret).update(`${method}\n${path}\n${context}\n${digest}`).digest("hex");
-  return { "x-merrymen-partner-context": context, "x-merrymen-partner-signature": signature };
+  return { "x-agentcap-partner-context": context, "x-agentcap-partner-signature": signature };
 }
 
 /** Log-safe: printable ASCII only, bounded, so an upstream header cannot forge a log line. */
@@ -38,7 +38,7 @@ const isObject = v => !!v && typeof v === "object" && !Array.isArray(v);
  * THE RUNTIME REFUSING THE GATEWAY, NOT THE PARTNER. A request is forwarded
  * only after the gateway has accepted the partner's key, so these answers are
  * about the bridge: a 401 `unauthorized` comes only from the runtime's check of
- * this bridge's signature (MERRYMEN_PARTNER_BRIDGE_SECRET differs between the
+ * this bridge's signature (AGENTCAP_PARTNER_BRIDGE_SECRET differs between the
  * two services, their clocks disagree, or the request's nonce was already used;
  * a nonce store that cannot answer is a 503 there, relayed as such), and "Hosted
  * API only" from a web app not running in hosted mode. Relayed, they read as
@@ -47,7 +47,7 @@ const isObject = v => !!v && typeof v === "object" && !Array.isArray(v);
  */
 const ours = (status, error) => (status === 401 && error.code === "unauthorized") ||
   (status === 404 && error.message === "Hosted API only");
-export function createPartnerBridge({ secret, origin = "https://app.merrymen.dev", fetchImpl = fetch, log = console.error } = {}) {
+export function createPartnerBridge({ secret, origin = "https://app.agentcap.xyz", fetchImpl = fetch, log = console.error } = {}) {
   const target = new URL(origin);
   if (target.username || target.password || target.pathname !== "/" || target.search || target.hash ||
       (target.protocol !== "https:" && !(target.protocol === "http:" && ["localhost", "127.0.0.1"].includes(target.hostname)))) {
@@ -58,7 +58,7 @@ export function createPartnerBridge({ secret, origin = "https://app.merrymen.dev
     const where = `[gateway] partner bridge: ${method} ${path} ${clean(requestId, "-")} key ${clean(key.keyId, "-")}`;
     let headers;
     try { headers = signPartnerRequest({ secret, key, method, path, body }); } catch {
-      log(`${where} not sent: MERRYMEN_PARTNER_BRIDGE_SECRET is unset or under 32 bytes`);
+      log(`${where} not sent: AGENTCAP_PARTNER_BRIDGE_SECRET is unset or under 32 bytes`);
       return failure("upstream_unavailable", "Agent runtime is not configured");
     }
     let status, type, text, retryAfter;
@@ -88,7 +88,7 @@ export function createPartnerBridge({ secret, origin = "https://app.merrymen.dev
     }
     if (ok) return { status, json };
     if (ours(status, json.error)) {
-      log(`${where} answered HTTP ${status} ${clean(json.error.code, "-")}: the runtime refused this gateway, not the partner. Check MERRYMEN_PARTNER_BRIDGE_SECRET and the clocks on both services, and that the web app runs in hosted mode`);
+      log(`${where} answered HTTP ${status} ${clean(json.error.code, "-")}: the runtime refused this gateway, not the partner. Check AGENTCAP_PARTNER_BRIDGE_SECRET and the clocks on both services, and that the web app runs in hosted mode`);
       return failure("upstream_unavailable", "Agent runtime is temporarily unavailable");
     }
     // Relayed as the runtime wrote it, and still worth a line: a partner's

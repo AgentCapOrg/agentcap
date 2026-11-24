@@ -1,5 +1,5 @@
 /**
- * WHAT THE MERRYMAN CAN LOOK UP BEFORE IT ANSWERS.
+ * WHAT THE AGENTCAPAVATAR CAN LOOK UP BEFORE IT ANSWERS.
  *
  * The chat used to answer from a fixed summary pasted into its prompt: status,
  * positions, P&L, eight trades with no coin names and five raw log lines. Asked
@@ -35,7 +35,7 @@ import {
   renderConcepts,
   type StoredGrant,
 } from "../../../packages/core/src/index";
-import { merrymenHome } from "../home";
+import { agentcapHome } from "../home";
 import type { ToolSpec } from "../llm";
 import { renderBuilder } from "../research/coin-builder";
 import { readResearch } from "../research-files";
@@ -478,7 +478,7 @@ const listTrades: ChatTool = {
   },
 };
 /** Possessors that are still the owner's own book: a time ("today's trades") or the agent itself. */
-const OWN_BOOK_POSSESSORS = new Set(["today","yesterday","tonight","day","week","weekend","month","year","hour","morning","afternoon","evening","night","monday","tuesday","wednesday","thursday","friday","saturday","sunday","agent","bot","merryman","merrymen"]);
+const OWN_BOOK_POSSESSORS = new Set(["today","yesterday","tonight","day","week","weekend","month","year","hour","morning","afternoon","evening","night","monday","tuesday","wednesday","thursday","friday","saturday","sunday","agent","bot","agentcapavatar","agentcap"]);
 /**
  * A question about SOMEBODY ELSE's trades: "show their trades" after a Fomo
  * trader answer, "list @alice's buys", "show the trader's sells". The ledger
@@ -1066,7 +1066,7 @@ const tokenReport: ChatTool = {
 
         const research = (() => {
           try {
-            return readResearch(merrymenHome());
+            return readResearch(agentcapHome());
           } catch {
             return null;
           }
@@ -1286,7 +1286,7 @@ const permissionStatus: ChatTool = {
 const explainTerm: ChatTool = {
   spec: {
     name: "explain_term",
-    description: "What a merrymen word or on-screen message means (e.g. 'practice mode', 'loss breaker', 'graduation', 'slippage'). Use when the owner asks what something means.",
+    description: "What a agentcap word or on-screen message means (e.g. 'practice mode', 'loss breaker', 'graduation', 'slippage'). Use when the owner asks what something means.",
     schema: { type: "object", properties: { question: { type: "string" } }, required: ["question"] },
   },
   async run(input) {

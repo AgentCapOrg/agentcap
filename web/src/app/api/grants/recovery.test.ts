@@ -6,7 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { after, before, beforeEach, mock, test } from "node:test";
-import type { StoredGrant } from "@merrymen/core";
+import type { StoredGrant } from "@agentcap/core";
 import { FLEET_RECOVERY_SCHEMA } from "../../../../../worker/src/fleet-recovery";
 import type { AgentStatus } from "./route";
 
@@ -15,8 +15,8 @@ const B = `0x${"b".repeat(40)}` as `0x${string}`;
 const ACCOUNT_A = `0x${"c".repeat(40)}` as `0x${string}`;
 const ACCOUNT_B = `0x${"d".repeat(40)}` as `0x${string}`;
 const NOW = Date.parse("2026-10-04T12:00:00Z") / 1000;
-const ORIGIN = "https://app.merrymen.dev";
-const saved = new Map(["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_SESSION_SECRET", "DATABASE_URL", "MERRYMEN_STORE_DEK"]
+const ORIGIN = "https://app.agentcap.xyz";
+const saved = new Map(["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_SESSION_SECRET", "DATABASE_URL", "AGENTCAP_STORE_DEK"]
   .map(key => [key, process.env[key]]));
 let home: string, database: string, db: DatabaseSync;
 let auth: typeof import("@/lib/auth");
@@ -36,13 +36,13 @@ const grant = (account: `0x${string}`, chainId = 4663): StoredGrant => ({
 } as unknown as StoredGrant);
 
 before(async () => {
-  home = mkdtempSync(path.join(os.tmpdir(), "merrymen-grants-recovery-"));
-  database = path.join(home, "merrymen.db");
-  process.env.MERRYMEN_HOME = home;
-  process.env.MERRYMEN_HOSTED = "1";
-  process.env.MERRYMEN_SESSION_SECRET = "test-grants-recovery-secret-at-least-32-characters";
+  home = mkdtempSync(path.join(os.tmpdir(), "agentcap-grants-recovery-"));
+  database = path.join(home, "agentcap.db");
+  process.env.AGENTCAP_HOME = home;
+  process.env.AGENTCAP_HOSTED = "1";
+  process.env.AGENTCAP_SESSION_SECRET = "test-grants-recovery-secret-at-least-32-characters";
   delete process.env.DATABASE_URL;
-  delete process.env.MERRYMEN_STORE_DEK;
+  delete process.env.AGENTCAP_STORE_DEK;
   mock.method(Date, "now", () => NOW * 1000);
   mock.method(globalThis, "fetch", async () => { networkCalls++; throw new Error("Network forbidden in this fixture."); });
   auth = await import("@/lib/auth");

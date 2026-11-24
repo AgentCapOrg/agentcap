@@ -7,7 +7,7 @@ import {
   CASH,
   ENERGY_ROUTE_V1,
   ENERGY_SWAP_SELECTOR,
-  MERRYMEN_TOKEN,
+  AGENTCAP_TOKEN,
   MORPHO,
   RIALTO,
   STOCK_TOKENS,
@@ -331,9 +331,9 @@ test("the wall carries exactly the expected permission set — no more, no less"
   // THEIR ONE_OF would be an uncapped allowance over the whole book — inert
   // only while Router02 pulls from msg.sender alone, which is an argument, not
   // a construction. An owner extra rides along to prove the extras are spared
-  // too, and $MERRYMEN is listed as an extra to prove it is refused.
+  // too, and $AGENTCAP is listed as an extra to prove it is refused.
   const CUSTOM = { symbol: "MEME", address: "0x00000000000000000000000000000000000000dd" as const, decimals: 18 };
-  const MERRY = { symbol: "MERRYMEN", address: MERRYMEN_TOKEN.address, decimals: 18 };
+  const MERRY = { symbol: "AGENTCAP", address: AGENTCAP_TOKEN.address, decimals: 18 };
   const plain = buildCallPermissions(CAPS, SELF, { extraTokens: [CUSTOM, MERRY] }) as unknown as Perm[];
   const withEnergy = buildCallPermissions(CAPS, SELF, { extraTokens: [CUSTOM, MERRY], energyBuy: true }) as unknown as Perm[];
   assert.equal(withEnergy.length, plain.length + 1, "the energy buy is ONE permission");
@@ -356,16 +356,16 @@ test("the wall carries exactly the expected permission set — no more, no less"
     assert.ok(!spendersOf(withEnergy, target).includes(router), `${target} must never name the energy router`);
   }
   assert.ok(
-    !approvesOf(withEnergy).includes(MERRYMEN_TOKEN.address.toLowerCase()),
-    "$MERRYMEN has no approve anywhere — the reserve is buy-only",
+    !approvesOf(withEnergy).includes(AGENTCAP_TOKEN.address.toLowerCase()),
+    "$AGENTCAP has no approve anywhere — the reserve is buy-only",
   );
   const [single] = withEnergy.filter(
     (p) => p.target.toLowerCase() === UNISWAP.swapRouter02.toLowerCase() && p.functionName === "exactInputSingle",
   );
   for (const leg of (single!.args as { value?: string[] }[]).slice(0, 2)) {
     assert.ok(
-      !leg.value!.map((a) => a.toLowerCase()).includes(MERRYMEN_TOKEN.address.toLowerCase()),
-      "$MERRYMEN is not a v3 leg either — the energy route is its only way in",
+      !leg.value!.map((a) => a.toLowerCase()).includes(AGENTCAP_TOKEN.address.toLowerCase()),
+      "$AGENTCAP is not a v3 leg either — the energy route is its only way in",
     );
   }
 });
@@ -400,7 +400,7 @@ test("the session key may EXECUTE but may not SIGN (the ERC-1271 hole)", () => {
   // anyone, from their own EOA — drains tokens with no UserOp, no rate limit,
   // and no trace in the ledger.
   //
-  // This costs merrymen nothing: the whole trading path is UserOps, and v4
+  // This costs agentcap nothing: the whole trading path is UserOps, and v4
   // authorises Permit2 with a CALL (venues/uniswap-v4.ts), not a signed permit.
   assert.equal(WALL_POLICY_FLAG, PolicyFlags.NOT_FOR_VALIDATE_SIG);
   assert.notEqual(
@@ -857,12 +857,12 @@ test("the swap's pinned asset set IS the approve set — they cannot drift", () 
   };
   // The energy buy is in the loop because it is the one opt-in that touches an
   // APPROVE: it widens the USDG spender list. It must not add an approve target
-  // (the set) nor a swap leg — $MERRYMEN is reached only by its own pinned route.
+  // (the set) nor a swap leg — $AGENTCAP is reached only by its own pinned route.
   for (const opts of [
     {},
     { extraTokens: [CUSTOM] },
     { energyBuy: true },
-    { extraTokens: [CUSTOM, { symbol: "MERRYMEN", address: MERRYMEN_TOKEN.address, decimals: 18 }], energyBuy: true },
+    { extraTokens: [CUSTOM, { symbol: "AGENTCAP", address: AGENTCAP_TOKEN.address, decimals: 18 }], energyBuy: true },
   ]) {
     const list = buildCallPermissions(CAPS, SELF, opts) as unknown as Perm[];
     const approved = new Set(
@@ -1094,7 +1094,7 @@ test("ENERGY BUY opt-in: absent by default, one pinned permission when sealed, a
   assert.equal(typeof args[5]!.value, "bigint", "w5 must be a bigint");
   for (const i of [6, 7, 8]) assert.match(String(args[i]!.value), /^0x[0-9a-f]{40}$/, `w${i} must be a hex address`);
   // The route is the one the marker names, and it is the registry's today.
-  assert.deepEqual([...ROUTE.path], [CASH.USDG.toLowerCase(), VIRTUAL_TOKEN, MERRYMEN_TOKEN.address.toLowerCase()]);
+  assert.deepEqual([...ROUTE.path], [CASH.USDG.toLowerCase(), VIRTUAL_TOKEN, AGENTCAP_TOKEN.address.toLowerCase()]);
   assert.equal(ROUTE.router, UNISWAP.v2Router02.toLowerCase());
 
   // (b) PROVE THE WORDS against viem's encoder.
@@ -1295,18 +1295,18 @@ test("ENERGY BUY adversarial: every counterexample is refused, and every pin is 
   assert.ok(refused > 100, `and refused ones (${refused})`);
 });
 
-test("$MERRYMEN is never an owner extra — no approve, no swap leg, no curve leg, on any venue", () => {
+test("$AGENTCAP is never an owner extra — no approve, no swap leg, no curve leg, on any venue", () => {
   // The energy reserve's safety case is that NOTHING in the wall can spend it.
   // As an ordinary extra it would get an uncapped approve to every spender and
   // a place in curveAssets, where the Pons adapter's unpinnable curve and open
   // minAmountOut could take the whole balance for one wei.
-  const lower = { symbol: "MERRYMEN", address: MERRYMEN_TOKEN.address.toLowerCase() as `0x${string}`, decimals: 18 };
-  const upper = { ...lower, address: `0x${MERRYMEN_TOKEN.address.slice(2).toUpperCase()}` as `0x${string}` };
+  const lower = { symbol: "AGENTCAP", address: AGENTCAP_TOKEN.address.toLowerCase() as `0x${string}`, decimals: 18 };
+  const upper = { ...lower, address: `0x${AGENTCAP_TOKEN.address.slice(2).toUpperCase()}` as `0x${string}` };
   const OK = { symbol: "OK", address: "0x1111111111111111111111111111111111111111" as const, decimals: 18 };
   const usable = usableExtraTokens([lower, upper, OK]);
-  assert.deepEqual(usable.map((t) => t.symbol), ["OK"], "$MERRYMEN is dropped in any case; the owner's other token survives");
+  assert.deepEqual(usable.map((t) => t.symbol), ["OK"], "$AGENTCAP is dropped in any case; the owner's other token survives");
 
-  const MERRY = MERRYMEN_TOKEN.address.toLowerCase();
+  const MERRY = AGENTCAP_TOKEN.address.toLowerCase();
   const list = buildCallPermissions(CAPS, SELF, {
     extraTokens: [lower, upper, OK],
     v4AdapterAddress: "0x00000000000000000000000000000000000000d4",
@@ -1316,7 +1316,7 @@ test("$MERRYMEN is never an owner extra — no approve, no swap leg, no curve le
   }) as unknown as Perm[];
   assert.ok(
     !list.some((p) => p.target.toLowerCase() === MERRY),
-    "no permission of any kind targets $MERRYMEN — above all, no approve",
+    "no permission of any kind targets $AGENTCAP — above all, no approve",
   );
   // Every ONE_OF in the wall — swap legs, adapter legs, curve legs, the class
   // funding leg — must leave it out. Only the energy route's own EQUAL pin names it.
@@ -1325,7 +1325,7 @@ test("$MERRYMEN is never an owner extra — no approve, no swap leg, no curve le
       if (a?.condition !== ParamCondition.ONE_OF) continue;
       assert.ok(
         !(a.value as string[]).map((x) => x.toLowerCase()).includes(MERRY),
-        `${p.target}.${p.functionName} arg ${i} must not admit $MERRYMEN`,
+        `${p.target}.${p.functionName} arg ${i} must not admit $AGENTCAP`,
       );
     }
   }
@@ -1334,7 +1334,7 @@ test("$MERRYMEN is never an owner extra — no approve, no swap leg, no curve le
       (a) => a?.condition === ParamCondition.EQUAL && String(a.value).toLowerCase() === MERRY,
     ),
   );
-  assert.deepEqual(named.map((p) => p.functionName), [ENERGY_FN], "only the energy route names $MERRYMEN, as its output");
+  assert.deepEqual(named.map((p) => p.functionName), [ENERGY_FN], "only the energy route names $AGENTCAP, as its output");
 });
 
 /**

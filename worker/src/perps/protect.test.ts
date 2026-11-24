@@ -449,7 +449,7 @@ describe("P7 venue unread — alerts, never a close", () => {
     const { acts, memory } = passes(null, [NOW, NOW + 119, NOW + 120, NOW + 300, NOW + 600, NOW + 900]);
     assert.deepEqual(acts.map(kinds), [[], [], ["alert:perp-venue-unread"], [], ["alert:perp-venue-unread-recover"], []]);
     const recover = acts[4]![0]!;
-    assert.ok(recover.kind === "alert" && recover.text.includes("merrymen recover"));
+    assert.ok(recover.kind === "alert" && recover.text.includes("agentcap recover"));
     const back = run(mkView([pos()]), NOW + 915, memory);
     assert.equal(back.memory.unreadSince, null);
     assert.equal(back.memory.unreadAlerted, false);

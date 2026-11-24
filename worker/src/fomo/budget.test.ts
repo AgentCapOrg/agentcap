@@ -603,26 +603,26 @@ describe("refusalResetAt and the configured caps", () => {
 
   it("reads the three cap overrides as whole numbers only, one problem line per bad value, never echoing it", () => {
     assert.deepEqual(fomoBudgetFrom({}), { budget: {}, problems: [] });
-    assert.deepEqual(fomoBudgetFrom({ MERRYMEN_FOMO_GROUP_HOURLY_CREDITS: " 6500 ", MERRYMEN_FOMO_TENANT_HOURLY_CREDITS: "13000", MERRYMEN_FOMO_TENANT_DAILY_CREDITS: "26000" }), {
+    assert.deepEqual(fomoBudgetFrom({ AGENTCAP_FOMO_GROUP_HOURLY_CREDITS: " 6500 ", AGENTCAP_FOMO_TENANT_HOURLY_CREDITS: "13000", AGENTCAP_FOMO_TENANT_DAILY_CREDITS: "26000" }), {
       budget: { groupHourlyCredits: 6_500, tenantHourlyCredits: 13_000, tenantDailyCredits: 26_000 },
       problems: [],
     });
-    assert.deepEqual(fomoBudgetFrom({ MERRYMEN_FOMO_GROUP_HOURLY_CREDITS: "0" }).budget, { groupHourlyCredits: 0 }, "0 is a cap: no group research");
+    assert.deepEqual(fomoBudgetFrom({ AGENTCAP_FOMO_GROUP_HOURLY_CREDITS: "0" }).budget, { groupHourlyCredits: 0 }, "0 is a cap: no group research");
     for (const bad of ["6,500", "6500.5", "-1", "1e4", "lots", "0x10", "sk_live_pasted_key_123"]) {
-      const r = fomoBudgetFrom({ MERRYMEN_FOMO_GROUP_HOURLY_CREDITS: bad });
+      const r = fomoBudgetFrom({ AGENTCAP_FOMO_GROUP_HOURLY_CREDITS: bad });
       assert.deepEqual(r.budget, {}, bad);
-      assert.deepEqual(r.problems, ["fomo: MERRYMEN_FOMO_GROUP_HOURLY_CREDITS is not a whole number of credits; its default applies"], bad);
+      assert.deepEqual(r.problems, ["fomo: AGENTCAP_FOMO_GROUP_HOURLY_CREDITS is not a whole number of credits; its default applies"], bad);
     }
-    assert.equal(fomoBudgetFrom({ MERRYMEN_FOMO_TENANT_HOURLY_CREDITS: "x", MERRYMEN_FOMO_TENANT_DAILY_CREDITS: "y" }).problems.length, 2);
-    assert.equal(fomoBudgetFrom({ MERRYMEN_FOMO_GROUP_HOURLY_CREDITS: "  " }).problems.length, 0, "blank is unset");
+    assert.equal(fomoBudgetFrom({ AGENTCAP_FOMO_TENANT_HOURLY_CREDITS: "x", AGENTCAP_FOMO_TENANT_DAILY_CREDITS: "y" }).problems.length, 2);
+    assert.equal(fomoBudgetFrom({ AGENTCAP_FOMO_GROUP_HOURLY_CREDITS: "  " }).problems.length, 0, "blank is unset");
     // A nonzero group cap below a room's dearest read (a coin's thesis page, 1,250; a room never reads
     // the 2,500-credit profile route) can never answer it: said at boot (review r2).
-    assert.deepEqual(fomoBudgetFrom({ MERRYMEN_FOMO_GROUP_HOURLY_CREDITS: "1000" }).problems, ["fomo: MERRYMEN_FOMO_GROUP_HOURLY_CREDITS is below what one coin's thesis page costs (1250 credits), so a room can never hear a coin's theses"]);
-    assert.deepEqual(fomoBudgetFrom({ MERRYMEN_FOMO_GROUP_HOURLY_CREDITS: "2000" }).problems, [], "2,000 fits a page, and every trader read");
-    assert.deepEqual(fomoBudgetFrom({ MERRYMEN_FOMO_GROUP_HOURLY_CREDITS: "1250" }).problems, [], "exactly one page");
-    assert.equal(fomoBudgetFrom({ MERRYMEN_FOMO_TENANT_HOURLY_CREDITS: "1500" }).problems.length, 1, "1500 leaves an owner 1125 an hour");
-    assert.equal(fomoBudgetFrom({ MERRYMEN_FOMO_GROUP_HOURLY_CREDITS: "0" }).problems.length, 0, "0 is the documented off");
-    assert.equal(fomoBudgetFrom({ MERRYMEN_FOMO_GROUP_HOURLY_CREDITS: "2500" }).problems.length, 0, "the default fits one");
+    assert.deepEqual(fomoBudgetFrom({ AGENTCAP_FOMO_GROUP_HOURLY_CREDITS: "1000" }).problems, ["fomo: AGENTCAP_FOMO_GROUP_HOURLY_CREDITS is below what one coin's thesis page costs (1250 credits), so a room can never hear a coin's theses"]);
+    assert.deepEqual(fomoBudgetFrom({ AGENTCAP_FOMO_GROUP_HOURLY_CREDITS: "2000" }).problems, [], "2,000 fits a page, and every trader read");
+    assert.deepEqual(fomoBudgetFrom({ AGENTCAP_FOMO_GROUP_HOURLY_CREDITS: "1250" }).problems, [], "exactly one page");
+    assert.equal(fomoBudgetFrom({ AGENTCAP_FOMO_TENANT_HOURLY_CREDITS: "1500" }).problems.length, 1, "1500 leaves an owner 1125 an hour");
+    assert.equal(fomoBudgetFrom({ AGENTCAP_FOMO_GROUP_HOURLY_CREDITS: "0" }).problems.length, 0, "0 is the documented off");
+    assert.equal(fomoBudgetFrom({ AGENTCAP_FOMO_GROUP_HOURLY_CREDITS: "2500" }).problems.length, 0, "the default fits one");
   });
 
   it("the defaults are unchanged, and an override is still held under the shared pool", () => {
@@ -631,20 +631,20 @@ describe("refusalResetAt and the configured caps", () => {
     assert.deepEqual([growth.tenantHourlyCredits, growth.tenantDailyCredits, growth.groupHourlyCredits], [DEFAULT_TENANT_HOURLY_CREDITS, DEFAULT_TENANT_DAILY_CREDITS, DEFAULT_GROUP_HOURLY_CREDITS]);
     assert.deepEqual(budgetConfigFor(37_500_000, fomoBudgetFrom({}).budget), growth, "no variable set: exactly the defaults");
     assert.deepEqual([DEFAULT_TENANT_HOURLY_CREDITS, DEFAULT_TENANT_DAILY_CREDITS, DEFAULT_GROUP_HOURLY_CREDITS], [6_000, 20_000, 2_500]);
-    const big = budgetConfigFor(FREE_PLAN_CREDITS_PER_MONTH, fomoBudgetFrom({ MERRYMEN_FOMO_TENANT_DAILY_CREDITS: "99999999" }).budget);
+    const big = budgetConfigFor(FREE_PLAN_CREDITS_PER_MONTH, fomoBudgetFrom({ AGENTCAP_FOMO_TENANT_DAILY_CREDITS: "99999999" }).budget);
     assert.equal(big.tenantDailyCredits, big.sharedDailyCredits);
-    assert.equal(fomoPlanFrom({ MERRYMEN_FOMO_PLAN_CREDITS: "1000000" }), 1_000_000);
-    assert.equal(fomoPlanFrom({ MERRYMEN_FOMO_PLAN_CREDITS: "lots" }), undefined);
+    assert.equal(fomoPlanFrom({ AGENTCAP_FOMO_PLAN_CREDITS: "1000000" }), 1_000_000);
+    assert.equal(fomoPlanFrom({ AGENTCAP_FOMO_PLAN_CREDITS: "lots" }), undefined);
     assert.equal(describeBudget(growth), `fomo: research budget ${growth.sharedDailyCredits} credits/day shared; per owner 6000/h and 20000/day; per group 2500/h; per X account 3000/h, X answers at most 5000/day per owner`);
   });
 
   it("an X account's hourly cap has its own variable, default and boot line", () => {
     assert.equal(DEFAULT_X_HOURLY_CREDITS, 3_000);
     assert.equal(budgetConfigFor(37_500_000).xHourlyCredits, DEFAULT_X_HOURLY_CREDITS);
-    assert.deepEqual(fomoBudgetFrom({ MERRYMEN_FOMO_X_HOURLY_CREDITS: " 5000 " }), { budget: { xHourlyCredits: 5_000 }, problems: [] });
-    assert.deepEqual(fomoBudgetFrom({ MERRYMEN_FOMO_X_HOURLY_CREDITS: "lots" }).problems, ["fomo: MERRYMEN_FOMO_X_HOURLY_CREDITS is not a whole number of credits; its default applies"]);
-    assert.equal(fomoBudgetFrom({ MERRYMEN_FOMO_X_HOURLY_CREDITS: "1000" }).problems.length, 1, "below one thesis page is said at boot");
-    assert.equal(fomoBudgetFrom({ MERRYMEN_FOMO_X_HOURLY_CREDITS: "0" }).problems.length, 0, "0 is off");
+    assert.deepEqual(fomoBudgetFrom({ AGENTCAP_FOMO_X_HOURLY_CREDITS: " 5000 " }), { budget: { xHourlyCredits: 5_000 }, problems: [] });
+    assert.deepEqual(fomoBudgetFrom({ AGENTCAP_FOMO_X_HOURLY_CREDITS: "lots" }).problems, ["fomo: AGENTCAP_FOMO_X_HOURLY_CREDITS is not a whole number of credits; its default applies"]);
+    assert.equal(fomoBudgetFrom({ AGENTCAP_FOMO_X_HOURLY_CREDITS: "1000" }).problems.length, 1, "below one thesis page is said at boot");
+    assert.equal(fomoBudgetFrom({ AGENTCAP_FOMO_X_HOURLY_CREDITS: "0" }).problems.length, 0, "0 is off");
     assert.equal(budgetConfigFor(FREE_PLAN_CREDITS_PER_MONTH, { xHourlyCredits: 99_999_999 }).xHourlyCredits, budgetConfigFor(FREE_PLAN_CREDITS_PER_MONTH).sharedDailyCredits, "held under the shared pool");
   });
 });

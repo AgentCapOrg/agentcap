@@ -2,7 +2,7 @@
  * THE WEB'S PERPS GATE IS THE WORKER'S, READ THE SAME WAY.
  *
  * perpsOffered, perpsCreationAllowed and perpsWorkersRun answer from
- * MERRYMEN_PERPS through the one core parser, so the web cannot offer a wallet
+ * AGENTCAP_PERPS through the one core parser, so the web cannot offer a wallet
  * the deployment's workers would stand down, or queue for a worker that is not
  * running. Unset is off (rule 1), `live` is off in this build, and a typo is off.
  */
@@ -139,17 +139,17 @@ describe("the web's perps gate", () => {
 
   it("paper offers Perps, allows a paper wallet to be made, and runs its worker", () => {
     for (const v of ["paper", " Paper "]) {
-      assert.equal(perpsOffered({ MERRYMEN_PERPS: v }), true, v);
-      assert.equal(perpsCreationAllowed({ MERRYMEN_PERPS: v }), true, v);
-      assert.equal(perpsWorkersRun({ MERRYMEN_PERPS: v }), true, v);
+      assert.equal(perpsOffered({ AGENTCAP_PERPS: v }), true, v);
+      assert.equal(perpsCreationAllowed({ AGENTCAP_PERPS: v }), true, v);
+      assert.equal(perpsWorkersRun({ AGENTCAP_PERPS: v }), true, v);
     }
   });
 
   it("off, live (not in this build) and anything unrecognised are off for all three", () => {
     for (const v of ["off", "", "live", "LIVE", "lvie", "1", "true", "on", "paper,live"]) {
-      assert.equal(perpsOffered({ MERRYMEN_PERPS: v }), false, v);
-      assert.equal(perpsCreationAllowed({ MERRYMEN_PERPS: v }), false, v);
-      assert.equal(perpsWorkersRun({ MERRYMEN_PERPS: v }), false, v);
+      assert.equal(perpsOffered({ AGENTCAP_PERPS: v }), false, v);
+      assert.equal(perpsCreationAllowed({ AGENTCAP_PERPS: v }), false, v);
+      assert.equal(perpsWorkersRun({ AGENTCAP_PERPS: v }), false, v);
     }
   });
 
@@ -170,28 +170,28 @@ describe("the web's perps gate", () => {
     const { perpsSpawnable } = (await import(orchestrator)) as { perpsSpawnable(env: Record<string, string | undefined>): boolean };
     assert.equal(typeof perpsSpawnable, "function", "the orchestrator exports its spawn rule");
     for (const v of LEVERS) {
-      const env = v === undefined ? {} : { MERRYMEN_PERPS: v };
-      assert.equal(perpsWorkersRun(env), perpsSpawnable(env), `MERRYMEN_PERPS=${JSON.stringify(v)}`);
+      const env = v === undefined ? {} : { AGENTCAP_PERPS: v };
+      assert.equal(perpsWorkersRun(env), perpsSpawnable(env), `AGENTCAP_PERPS=${JSON.stringify(v)}`);
     }
     // And it reads the env it is handed, not this process's: with the process
     // saying paper, an env saying off is still off (and the reverse).
-    const saved = process.env.MERRYMEN_PERPS;
+    const saved = process.env.AGENTCAP_PERPS;
     try {
-      process.env.MERRYMEN_PERPS = "paper";
-      assert.equal(perpsSpawnable({ MERRYMEN_PERPS: "off" }), false);
-      delete process.env.MERRYMEN_PERPS;
-      assert.equal(perpsSpawnable({ MERRYMEN_PERPS: "paper" }), true);
+      process.env.AGENTCAP_PERPS = "paper";
+      assert.equal(perpsSpawnable({ AGENTCAP_PERPS: "off" }), false);
+      delete process.env.AGENTCAP_PERPS;
+      assert.equal(perpsSpawnable({ AGENTCAP_PERPS: "paper" }), true);
     } finally {
-      if (saved === undefined) delete process.env.MERRYMEN_PERPS;
-      else process.env.MERRYMEN_PERPS = saved;
+      if (saved === undefined) delete process.env.AGENTCAP_PERPS;
+      else process.env.AGENTCAP_PERPS = saved;
     }
   });
 
   it("perpsWorkersRun is a self-hosted Perps worker's stand-down, read the same way (D19)", async () => {
     const { mergeSettings, perpsWorkerStoodDown } = await import("../../../worker/src/settings");
     for (const v of LEVERS) {
-      const perpsWorker = mergeSettings({}, { MERRYMEN_WALLET_PURPOSE: "perps", ...(v === undefined ? {} : { MERRYMEN_PERPS: v }) });
-      assert.equal(perpsWorkersRun({ MERRYMEN_PERPS: v }), !perpsWorkerStoodDown(perpsWorker), `MERRYMEN_PERPS=${JSON.stringify(v)}`);
+      const perpsWorker = mergeSettings({}, { AGENTCAP_WALLET_PURPOSE: "perps", ...(v === undefined ? {} : { AGENTCAP_PERPS: v }) });
+      assert.equal(perpsWorkersRun({ AGENTCAP_PERPS: v }), !perpsWorkerStoodDown(perpsWorker), `AGENTCAP_PERPS=${JSON.stringify(v)}`);
     }
   });
 
@@ -207,28 +207,28 @@ describe("the web's perps gate", () => {
   });
 
   it("reads the process's own environment when none is passed", () => {
-    const saved = process.env.MERRYMEN_PERPS;
+    const saved = process.env.AGENTCAP_PERPS;
     try {
-      delete process.env.MERRYMEN_PERPS;
+      delete process.env.AGENTCAP_PERPS;
       assert.equal(perpsOffered(), false);
       assert.equal(perpsCreationAllowed(), false);
       assert.equal(perpsWorkersRun(), false);
-      process.env.MERRYMEN_PERPS = "paper";
+      process.env.AGENTCAP_PERPS = "paper";
       assert.equal(perpsOffered(), true);
       assert.equal(perpsCreationAllowed(), true);
       assert.equal(perpsWorkersRun(), true);
     } finally {
-      if (saved === undefined) delete process.env.MERRYMEN_PERPS;
-      else process.env.MERRYMEN_PERPS = saved;
+      if (saved === undefined) delete process.env.AGENTCAP_PERPS;
+      else process.env.AGENTCAP_PERPS = saved;
     }
   });
 
   it("is the worker's parser, not a second one that can drift", () => {
     // worker/src/settings.ts re-exports the core parser; the web imports the same file.
     for (const v of [undefined, "paper", "live", "off", "x"]) {
-      assert.equal(perpsOffered({ MERRYMEN_PERPS: v }), workerCeilingOf(v) !== "off", String(v));
-      assert.equal(perpsCreationAllowed({ MERRYMEN_PERPS: v }), workerCeilingOf(v) === "paper", String(v));
-      assert.equal(perpsWorkersRun({ MERRYMEN_PERPS: v }), workerCeilingOf(v) === "paper", String(v));
+      assert.equal(perpsOffered({ AGENTCAP_PERPS: v }), workerCeilingOf(v) !== "off", String(v));
+      assert.equal(perpsCreationAllowed({ AGENTCAP_PERPS: v }), workerCeilingOf(v) === "paper", String(v));
+      assert.equal(perpsWorkersRun({ AGENTCAP_PERPS: v }), workerCeilingOf(v) === "paper", String(v));
     }
   });
 

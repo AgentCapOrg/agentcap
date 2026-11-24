@@ -1,7 +1,7 @@
 /**
- * Bitquery — the eyes merrymen doesn't have.
+ * Bitquery — the eyes agentcap doesn't have.
  *
- * merrymen reads Uniswap **v3** directly: factory, pools, quoter. That is enough
+ * agentcap reads Uniswap **v3** directly: factory, pools, quoter. That is enough
  * to trade what already exists and blind to almost everything that's new. New
  * pairs on Robinhood Chain launch through Pons/Doppler on **Uniswap v4**, whose
  * pools live inside a singleton PoolManager with no per-pair contract to find by
@@ -26,7 +26,7 @@
  * caught, typed miss rather than a throw.
  */
 
-import { MERRYMEN_GATEWAY_ORIGIN } from "../../../packages/core/src/index";
+import { AGENTCAP_GATEWAY_ORIGIN } from "../../../packages/core/src/index";
 import { readBoundedJson } from "../bounded-read";
 
 /** Bitquery's V2 (streaming) GraphQL endpoint — the one carrying EVM(network:). */
@@ -36,7 +36,7 @@ export const BITQUERY_DEFAULT_ENDPOINT = "https://streaming.bitquery.io/graphql"
 export const BITQUERY_NETWORK = "robinhood";
 
 /**
- * The shared holder gateway. A merryman with a Merry Circle token needs no
+ * The shared holder gateway. A agentcapavatar with a Merry Circle token needs no
  * Bitquery account at all: the key lives server-side, exactly as the brain's
  * does, and the same claimed token opens both.
  *
@@ -46,7 +46,7 @@ export const BITQUERY_NETWORK = "robinhood";
  * runs it. So this client sends `{query: "<name>", variables}` when it's talking
  * to the gateway, and real GraphQL only when it's using the owner's own key.
  */
-export const MERRYMEN_GATEWAY_BITQUERY = `${MERRYMEN_GATEWAY_ORIGIN}/bitquery`;
+export const AGENTCAP_GATEWAY_BITQUERY = `${AGENTCAP_GATEWAY_ORIGIN}/bitquery`;
 
 export interface BitqueryCreds {
   apiKey: string;
@@ -69,14 +69,14 @@ export interface BitqueryCreds {
  */
 export function resolveBitquery(cfg: {
   bitqueryApiKey?: string;
-  merrymenToken?: string;
+  agentcapToken?: string;
   gatewayUrl?: string;
 }): BitqueryCreds | null {
   if (cfg.bitqueryApiKey) return { apiKey: cfg.bitqueryApiKey };
-  if (cfg.merrymenToken) {
+  if (cfg.agentcapToken) {
     return {
-      apiKey: cfg.merrymenToken,
-      endpoint: cfg.gatewayUrl || MERRYMEN_GATEWAY_BITQUERY,
+      apiKey: cfg.agentcapToken,
+      endpoint: cfg.gatewayUrl || AGENTCAP_GATEWAY_BITQUERY,
       viaGateway: true,
     };
   }
@@ -93,23 +93,23 @@ export function resolveBitquery(cfg: {
  * HOSTED, THE HOUSE'S BRAIN KEY IS NOT A DISCOVERY CREDENTIAL. A tenant may
  * bring its own brain key, and when that is its own holder token, discovery on
  * its own per-address quota is exactly right. But a child with no key of its
- * own inherits the house's MERRYMEN_LLM_API_KEY, and if the house ever ran its
+ * own inherits the house's AGENTCAP_LLM_API_KEY, and if the house ever ran its
  * brain through the gateway, every such child would poll /bitquery under one
  * holder's identity and share that holder's bucket — the fan-out
- * CHILD_SECRET_STRIP closes for MERRYMEN_TOKEN, reopened through a side door.
+ * CHILD_SECRET_STRIP closes for AGENTCAP_TOKEN, reopened through a side door.
  * Dormant while the gateway header bug made every call a 401; refused here now
  * that the header is fixed. Self-hosted, the house and the owner are one.
  */
 export function gatewayTokenForDiscovery(c: {
-  merrymenToken?: string;
+  agentcapToken?: string;
   llmProvider?: string;
   llmApiKey?: string;
   hosted: boolean;
-  /** The house's brain key as this process inherited it (MERRYMEN_LLM_API_KEY). */
+  /** The house's brain key as this process inherited it (AGENTCAP_LLM_API_KEY). */
   houseLlmKey?: string;
 }): string | undefined {
-  if (c.merrymenToken) return c.merrymenToken;
-  if (c.llmProvider !== "merrymen" || !c.llmApiKey) return undefined;
+  if (c.agentcapToken) return c.agentcapToken;
+  if (c.llmProvider !== "agentcap" || !c.llmApiKey) return undefined;
   if (c.hosted && c.houseLlmKey?.trim() && c.llmApiKey.trim() === c.houseLlmKey.trim()) return undefined;
   return c.llmApiKey;
 }
@@ -158,7 +158,7 @@ export function bitqueryAuthHeaders(key: string): Record<string, string> {
  * the 401 for free; now each one reaches the gateway's Bitquery key, at about
  * 720 points a holder a day on the default interval. The gateway's per-address
  * bucket bounds one holder and never all of them, so the same change gave the
- * gateway a fleet-wide daily cap (MERRYMEN_GATEWAY_BITQUERY_POINTS_PER_DAY,
+ * gateway a fleet-wide daily cap (AGENTCAP_GATEWAY_BITQUERY_POINTS_PER_DAY,
  * gateway/lib/core.mjs), counted apart from the orchestrator's lane, which
  * may spend from the same plan.
  */
@@ -179,7 +179,7 @@ export function bitqueryRequestHeaders(creds: Pick<BitqueryCreds, "apiKey" | "vi
 export function bitqueryHttpHint(status: number, viaGateway: boolean | undefined): string {
   if (viaGateway) {
     if (status === 401) return " — the gateway did not accept your Merry Circle token (unsigned, malformed or past its week); claim a fresh one";
-    if (status === 403) return " — the wallet behind your Merry Circle token no longer holds enough $MERRYMEN for the Circle";
+    if (status === 403) return " — the wallet behind your Merry Circle token no longer holds enough $AGENTCAP for the Circle";
     if (status === 429) return " — the shared holder quota is per-wallet; add your own Bitquery key in /settings to lift it";
     if (status === 503) return " — the gateway's discovery is unavailable right now (no Bitquery key there, its shared daily allowance spent, or a balance it could not read); this is not your token";
     return "";
@@ -255,7 +255,7 @@ export async function bitqueryQuery<T = unknown>(
 /**
  * Cheapest possible round-trip: is the key valid and is this chain indexed?
  *
- * Exists so an owner can find out their key is wrong from `merrymen doctor`,
+ * Exists so an owner can find out their key is wrong from `agentcap doctor`,
  * rather than from a discovery feed that is quietly always empty.
  */
 export async function bitqueryPing(creds: BitqueryCreds): Promise<BitqueryResult<{ blockHeight: number }>> {
@@ -315,7 +315,7 @@ export interface NewPair {
  *
  * Returns candidates, not recommendations. Everything downstream still has to
  * decide whether a pool minutes old can be priced at all — and by the standards
- * merrymen already applies, usually it cannot: a fresh pool has no TWAP history
+ * agentcap already applies, usually it cannot: a fresh pool has no TWAP history
  * and almost no depth, which is exactly the shape the guards refuse.
  */
 export async function recentPools(

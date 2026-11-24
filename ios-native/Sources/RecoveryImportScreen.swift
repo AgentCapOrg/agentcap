@@ -14,7 +14,7 @@ enum RecoveryBackup {
         return .object(["owner": grant["owner"], "smartAccount": grant["smartAccount"], "grantTokens": .array(tokens), "key": grant["demoOwnerPrivateKey"]])
     }
     static func address(_ text: String) -> Bool { text.range(of: "^0x[0-9a-fA-F]{40}$", options: .regularExpression) != nil && text.lowercased() != "0x" + String(repeating: "0", count: 40) }
-    static func invalid() -> APIError { APIError(status: 0, message: "Choose a Merrymen grant backup for Robinhood Chain (4663) with a valid owner, account and token list.") }
+    static func invalid() -> APIError { APIError(status: 0, message: "Choose a AgentCap grant backup for Robinhood Chain (4663) with a valid owner, account and token list.") }
 }
 
 struct RecoveryImportScreen: View {
@@ -32,8 +32,8 @@ struct RecoveryImportScreen: View {
         Page {
             Card {
                 Text("Recover an older account").font(.title.bold())
-                Text("Use the original owner recovery key or a saved Merrymen grant backup. This reads the account that key controls, including after an agent is stood down.")
-                Text("The key stays on this device for this recovery session. It is never sent to Merrymen, copied to the clipboard or saved in chat.").font(.caption)
+                Text("Use the original owner recovery key or a saved AgentCap grant backup. This reads the account that key controls, including after an agent is stood down.")
+                Text("The key stays on this device for this recovery session. It is never sent to AgentCap, copied to the clipboard or saved in chat.").font(.caption)
                 SecureField("Owner recovery key (0x…)", text: $key).textInputAutocapitalization(.never).autocorrectionDisabled().privacySensitive().accessibilityIdentifier("recovery-key")
                 Button("Import grant backup") { importFile = true }
                 if let backup { Text("Backup account: \(backup["smartAccount"].text)").font(.caption.monospaced()).textSelection(.enabled) }

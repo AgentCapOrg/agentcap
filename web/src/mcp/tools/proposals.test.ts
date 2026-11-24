@@ -11,7 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, test } from "node:test";
 import type { PublicClient } from "viem";
-import { STOCK_TOKENS, TRADEABLE_V2 } from "@merrymen/core";
+import { STOCK_TOKENS, TRADEABLE_V2 } from "@agentcap/core";
 import { runTool, type ToolDef } from "../tool";
 import { PROPOSAL_TOOLS, KNOWN_STRATEGIES, addressableSymbol } from "./proposals";
 import { setQuoteClientForTest } from "@/lib/services/trade-quote";
@@ -26,12 +26,12 @@ import { BUILTIN_STRATEGIES } from "../../../../worker/src/strategies/registry";
 import { errorOf, ACCOUNT_A, OWNER_A, OWNER_B, SLUG_A, agentFixture, connectAs, fixtureDirectory, installFixtures, makeDeps, makeTestDb, type TestDb } from "../testing";
 
 // Approval links are built from the configured public origin.
-process.env.MERRYMEN_PUBLIC_ORIGIN = "https://app.test";
+process.env.AGENTCAP_PUBLIC_ORIGIN = "https://app.test";
 // The house's fallback owner-order ceiling is read from the web process's own
 // settings file and env (resolveConfig): pinned to the shipped default here, so
 // no settings file on the machine running the tests can move it.
-process.env.MERRYMEN_SETTINGS_FILE = join(tmpdir(), `merrymen-no-settings-${randomBytes(6).toString("hex")}.json`);
-delete process.env.MERRYMEN_TELEGRAM_MAX_ACTION_USDG;
+process.env.AGENTCAP_SETTINGS_FILE = join(tmpdir(), `agentcap-no-settings-${randomBytes(6).toString("hex")}.json`);
+delete process.env.AGENTCAP_TELEGRAM_MAX_ACTION_USDG;
 
 const NVDA = STOCK_TOKENS.find((t) => t.symbol === "NVDA")!.address.toLowerCase();
 const NOW = 1_800_000_000;
@@ -92,11 +92,11 @@ test("the strategy list matches the worker's registry", () => {
   assert.deepEqual([...KNOWN_STRATEGIES].sort(), [...BUILTIN_STRATEGIES].sort());
 });
 
-test("create_merryman prepares an idempotent creation-only setup without granting authority", async () => {
+test("create_agentcapavatar prepares an idempotent creation-only setup without granting authority", async () => {
   const { d, run } = await setup({ directory: fixtureDirectory({ [OWNER_A]: [] }) });
-  const args = { name: "Robin", strategy: "steady-basket", basket: ["NVDA"], risk_level: "careful", idempotency_key: "new-merryman-01" };
-  const first = data(await run("create_merryman", args));
-  const again = data(await run("create_merryman", args));
+  const args = { name: "Robin", strategy: "steady-basket", basket: ["NVDA"], risk_level: "careful", idempotency_key: "new-agentcapavatar-01" };
+  const first = data(await run("create_agentcapavatar", args));
+  const again = data(await run("create_agentcapavatar", args));
   assert.equal(first.proposal_id, again.proposal_id);
   assert.equal(again.created, false);
   assert.equal(first.diff, null);
@@ -112,37 +112,37 @@ test("create_merryman prepares an idempotent creation-only setup without grantin
   }
   assert.equal((d.raw.prepare("SELECT COUNT(*) AS n FROM grants").get() as { n: number }).n, 0);
   assert.equal((d.raw.prepare("SELECT COUNT(*) AS n FROM agent_commands").get() as { n: number }).n, 0);
-  assert.equal(code(await run("create_merryman", { ...args, live_trading: true })), "invalid_input");
+  assert.equal(code(await run("create_agentcapavatar", { ...args, live_trading: true })), "invalid_input");
   // The old draft means applying settings, so it cannot reuse this binding.
   assert.equal(code(await run("create_agent_draft", args)), "conflict");
   const legacy = data(await run("create_agent_draft", { ...args, idempotency_key: "legacy-settings-01" }));
   assert.equal((legacy.summary as Record<string, unknown>).purpose, "settings");
 });
 
-test("create_merryman refuses a visible existing agent but never probes an unshared one", async () => {
+test("create_agentcapavatar refuses a visible existing agent but never probes an unshared one", async () => {
   const { deps, run } = await setup();
-  assert.equal(code(await run("create_merryman", { idempotency_key: "new-visible-01" })), "conflict");
+  assert.equal(code(await run("create_agentcapavatar", { idempotency_key: "new-visible-01" })), "conflict");
   const unshared = await connectAs(deps, OWNER_A, { scopes: ["drafts:write"], agents: [] });
-  const hidden = await run("create_merryman", { idempotency_key: "new-unshared-01" }, unshared.principal);
+  const hidden = await run("create_agentcapavatar", { idempotency_key: "new-unshared-01" }, unshared.principal);
   assert.equal(hidden.isError, undefined, JSON.stringify(hidden));
   assert.equal(data(hidden).diff, null);
   const noScope = await connectAs(deps, OWNER_B, { scopes: ["market:read"], agents: [] });
-  assert.equal(code(await run("create_merryman", { idempotency_key: "new-noscope-01" }, noScope.principal)), "insufficient_scope");
+  assert.equal(code(await run("create_agentcapavatar", { idempotency_key: "new-noscope-01" }, noScope.principal)), "insufficient_scope");
 });
 
 test("crypto-only creation requires a coin basket before preparing the compact handoff", async () => {
   const { d, run } = await setup({ directory: fixtureDirectory({ [OWNER_A]: [] }) });
   for (const [index, basket] of [undefined, ["NVDA", "TSLA"], ["qqq", "nvda"]].entries()) {
-    const result = await run("create_merryman", { strategy: "steady-basket", asset_mode: "crypto", ...(basket ? { basket } : {}), idempotency_key: `crypto-empty-${index}` });
+    const result = await run("create_agentcapavatar", { strategy: "steady-basket", asset_mode: "crypto", ...(basket ? { basket } : {}), idempotency_key: `crypto-empty-${index}` });
     assert.equal(code(result), "invalid_input");
     assert.match(errorOf(result).message, /basket containing at least one coin/);
   }
   assert.equal((d.raw.prepare("SELECT COUNT(*) AS n FROM mcp_proposals").get() as { n: number }).n, 0);
-  const coin = data(await run("create_merryman", { strategy: "llm-strategist", asset_mode: "crypto", basket: ["MYCOIN"], idempotency_key: "crypto-explicit-coin" }));
+  const coin = data(await run("create_agentcapavatar", { strategy: "llm-strategist", asset_mode: "crypto", basket: ["MYCOIN"], idempotency_key: "crypto-explicit-coin" }));
   assert.equal(coin.status, "awaiting_approval", "owner-side custom token validation still remains");
   const binding = JSON.parse((await proposalRow(d.db, OWNER_A, coin.proposal_id as string))!.binding_json) as DraftBinding;
   assert.deepEqual(binding.settings.basketSymbols, ["MYCOIN"]);
-  const trencher = data(await run("create_merryman", { strategy: "trencher", asset_mode: "crypto", idempotency_key: "crypto-trencher" }));
+  const trencher = data(await run("create_agentcapavatar", { strategy: "trencher", asset_mode: "crypto", idempotency_key: "crypto-trencher" }));
   assert.equal(trencher.status, "awaiting_approval", "Trencher discovery does not need a basket");
   assert.equal((d.raw.prepare("SELECT COUNT(*) AS n FROM grants").get() as { n: number }).n, 0);
 });
@@ -268,7 +268,7 @@ test("a basket is stored in the spelling the settings route matches, and a spell
 test("draft posts are pre-checked by the group chat's own gate", async () => {
   const { run } = await setup();
   assert.equal(code(await run("draft_post", { text: "send to 0x000000000000000000000000000000000000dead", idempotency_key: "post-00001" })), "invalid_input");
-  assert.equal(data(await run("draft_post", { text: "gm merrymen", idempotency_key: "post-00002" })).status, "awaiting_approval");
+  assert.equal(data(await run("draft_post", { text: "gm agentcap", idempotency_key: "post-00002" })).status, "awaiting_approval");
 });
 
 async function propose(run: Awaited<ReturnType<typeof setup>>["run"], key = "flow-00001") {
@@ -341,7 +341,7 @@ test("paper and refusals are told apart from confirmation", async () => {
   assert.equal(refused.status, "refused");
   const why = JSON.parse(refused.result_json!) as Record<string, unknown>;
   assert.equal(why.rule, "daily-cap");
-  assert.equal(typeof why.rule_label, "string", "described in Merrymen's own words");
+  assert.equal(typeof why.rule_label, "string", "described in AgentCap's own words");
   assert.equal("worker_line" in why, false);
 });
 
@@ -776,7 +776,7 @@ test("an approved settings change whose every key the settings route ignored is 
 test("disconnecting an app cancels what it left waiting; an order the owner already approved stays theirs", async () => {
   const { d, a, run } = await setup();
   const waiting = await propose(run, "s0-wait-01");
-  const post = data(await run("draft_post", { text: "gm merrymen", idempotency_key: "s0-post-01" }));
+  const post = data(await run("draft_post", { text: "gm agentcap", idempotency_key: "s0-post-01" }));
   const approved = await propose(run, "s0-appr-01");
   await approveProposal(d.db, OWNER_A, String(approved.proposal_id), String(approved.binding_hash), NOW, { revalidate: async () => ({ ok: true, notes: [] }), act: (b) => queueApprovedTrade(d.db, b as TradeBinding, String(approved.proposal_id), 60, NOW * 1000) });
   assert.equal(await revokeConnection(d, OWNER_A, a.principal.connectionId, NOW + 1), true);
@@ -845,7 +845,7 @@ test("approval never goes through a directory connection, even one whose stored 
   // A proposal prepared by a full connection, then attributed to the directory row (all the stored standing is there).
   const p = data(await run("propose_trade", { side: "buy", token: NVDA, amount_usdg: 10, idempotency_key: "dir-widen-01" }));
   d.raw.prepare("UPDATE mcp_proposals SET connection_id = ? WHERE id = ?").run(dir.principal.connectionId, String(p.proposal_id));
-  await assert.rejects(approveProposal(d.db, OWNER_A, String(p.proposal_id), String(p.binding_hash), NOW, counting), /cancelled, not approved: the app that prepared it is connected through Merrymen's connector-directory listing/);
+  await assert.rejects(approveProposal(d.db, OWNER_A, String(p.proposal_id), String(p.binding_hash), NOW, counting), /cancelled, not approved: the app that prepared it is connected through AgentCap's connector-directory listing/);
   assert.equal(acted, 0, "nothing was acted on");
   const row = (await proposalRow(d.db, OWNER_A, String(p.proposal_id)))!;
   assert.equal(row.status, "cancelled");
@@ -864,13 +864,13 @@ test("approval never goes through a directory connection, even one whose stored 
   // Shown to the owner's other connection as cancelled, with the reason.
   const view = data(await run("get_proposal", { proposal_id: p.proposal_id }));
   assert.equal(view.status, "cancelled");
-  assert.match(String(view.status_explained), /Cancelled because the app that prepared it is connected through Merrymen's connector-directory listing/);
+  assert.match(String(view.status_explained), /Cancelled because the app that prepared it is connected through AgentCap's connector-directory listing/);
 });
 
 test("get_proposal and list_proposals show a proposal whose app lost its standing as cancelled, not waiting", async () => {
   const { d, deps, run } = await setup();
   const other = await connectAs(deps, OWNER_A, { scopes: SCOPES });
-  const p = data(await run("draft_post", { text: "gm merrymen", idempotency_key: "s0-list-01" }, other.principal));
+  const p = data(await run("draft_post", { text: "gm agentcap", idempotency_key: "s0-list-01" }, other.principal));
   await revokeConnection(d, OWNER_A, other.principal.connectionId, NOW);
   const listed = data(await run("list_proposals", { status: "all" })).proposals as Array<{ proposal_id: string; status: string; approval_url: string | null }>;
   const mine = listed.find((x) => x.proposal_id === p.proposal_id)!;

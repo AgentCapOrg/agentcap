@@ -62,7 +62,7 @@ export async function checkpointFleetLedger(o: {
     if (!st.isDirectory() || String(st.dev) !== e.homeDev || String(st.ino) !== e.homeIno
         || o.accountingHolds?.has(e.tenant) || ["restore-blocked.json", "energy-unrestored.json", "telegram-held-groups.json", "ledger-source-blocked.json"]
           .some(file => present(path.join(home, file)))) throw refuse();
-    const file = path.join(home, "merrymen.db");
+    const file = path.join(home, "agentcap.db");
     if (!present(file)) { ready.push({ e, home, file, identity: null }); continue; }
     const ds = lstatSync(file, { bigint: true });
     if (!ds.isFile()) throw refuse();

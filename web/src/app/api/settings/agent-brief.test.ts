@@ -5,19 +5,19 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, before, beforeEach, describe, it } from "node:test";
 import { mintSession } from "@/lib/auth";
-import { getSettingsStore, resetSettingsStoreForTest } from "@merrymen/settings-store";
+import { getSettingsStore, resetSettingsStoreForTest } from "@agentcap/settings-store";
 
 const ALAN = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const OTHER = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-const KEYS = ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_SESSION_SECRET", "DATABASE_URL"] as const;
+const KEYS = ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_SESSION_SECRET", "DATABASE_URL"] as const;
 const original = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
 let dir: string;
 let PUT: (req: Request) => Promise<Response>;
 before(async () => {
-  dir = mkdtempSync(path.join(tmpdir(), "merrymen-agent-brief-settings-"));
-  process.env.MERRYMEN_HOME = dir;
-  process.env.MERRYMEN_HOSTED = "1";
-  process.env.MERRYMEN_SESSION_SECRET = randomBytes(32).toString("hex");
+  dir = mkdtempSync(path.join(tmpdir(), "agentcap-agent-brief-settings-"));
+  process.env.AGENTCAP_HOME = dir;
+  process.env.AGENTCAP_HOSTED = "1";
+  process.env.AGENTCAP_SESSION_SECRET = randomBytes(32).toString("hex");
   delete process.env.DATABASE_URL;
   resetSettingsStoreForTest();
   ({ PUT } = await import("./route"));
@@ -90,7 +90,7 @@ describe("agent-specific research and public posting preferences", () => {
     assert.deepEqual(await getSettingsStore("spot").get(ALAN), { strategy: "trencher", xPublicWalletIntro: false, xTokenAddresses: false, xTradeResults: false });
   });
   it("cannot grant an operator energy exemption through tenant settings", async () => {
-    await put({ energyExemptAccounts: [ALAN], MERRYMEN_ENERGY_EXEMPT_ACCOUNTS: ALAN });
+    await put({ energyExemptAccounts: [ALAN], AGENTCAP_ENERGY_EXEMPT_ACCOUNTS: ALAN });
     assert.deepEqual(await getSettingsStore("spot").get(ALAN), { strategy: "trencher" });
   });
 });

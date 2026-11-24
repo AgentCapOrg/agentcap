@@ -11,7 +11,7 @@ const HELP: readonly (readonly [string, Topic])[] = [
   ["can users signup now?", "onboarding"],
   ["how do i get started?", "onboarding"],
   ["where can i create an agent?", "onboarding"],
-  ["can i start using Merrymen with paper trading?", "onboarding"],
+  ["can i start using AgentCap with paper trading?", "onboarding"],
   ["how do i add funds?", "funding"],
   ["where is the deposit address?", "funding"],
   ["how do i top up my agent?", "funding"],
@@ -159,7 +159,7 @@ describe("fixed answers about itself (WP11): what it can do, its own agent, why 
   });
 
   it("'how do i get my own agent' is onboarding (g1 b13)", () => {
-    for (const q of ["shogun how do i get my own agent", "how can i get one of you?", "where do i get an agent like you", "how do i set up my own bot", "can i have my own merryman"]) {
+    for (const q of ["shogun how do i get my own agent", "how can i get one of you?", "where do i get an agent like you", "how do i set up my own bot", "can i have my own agentcapavatar"]) {
       assert.deepEqual(publicFactRequest(q, ["Shogun"]), { kind: "site", topic: "onboarding" }, q);
     }
     assert.equal(publicFactRequest("i get my own coffee"), null);

@@ -13,7 +13,7 @@ import { describe, it } from "node:test";
 import { encodeAbiParameters, encodeEventTopics, parseAbi, toHex, type Hex } from "viem";
 import { acquiredLegOf, addressTopic, DROP_PROOF_CONFIRMATIONS, findDroppedOps, findOrphanOps, findSoleAcquisition, pickAcquiredLeg, resolveSubmittedOps, type RawLog, type ReconcileChain } from "./inflight-reconcile";
 import { netTokenDeltas } from "./fills";
-import { MERRYMEN_TOKEN } from "../../packages/core/src/index";
+import { AGENTCAP_TOKEN } from "../../packages/core/src/index";
 import type { ReceiptLog } from "./fills";
 
 const EP_ABI = parseAbi([
@@ -478,21 +478,21 @@ describe("the same judgement, read from the other end", () => {
 /**
  * THE ENERGY RESERVE IS NEVER A FILL.
  *
- * An energy purchase is USDG out and $MERRYMEN in — exactly the shape a buy has.
+ * An energy purchase is USDG out and $AGENTCAP in — exactly the shape a buy has.
  * But the reserve is capital set aside, booked as an 'energy-buy' flow, never a
  * position. Read as a fill it would be counted twice (flow and purchase) and
  * handed a cost basis a stop-loss could act on.
  */
 describe("the energy reserve is never an acquired leg", () => {
-  const MERRYMEN = MERRYMEN_TOKEN.address;
+  const AGENTCAP = AGENTCAP_TOKEN.address;
   const PAIR = "0x00000000000000000000000000000000000000b2" as const;
-  const energyLogs = () => [transfer(USDG, ACCOUNT, ROUTER, 42_000000n), transfer(MERRYMEN, PAIR, ACCOUNT, 98_000n * 10n ** 18n)];
+  const energyLogs = () => [transfer(USDG, ACCOUNT, ROUTER, 42_000000n), transfer(AGENTCAP, PAIR, ACCOUNT, 98_000n * 10n ** 18n)];
 
-  it("pickAcquiredLeg returns null when the token acquired is MERRYMEN — in any case", () => {
+  it("pickAcquiredLeg returns null when the token acquired is AGENTCAP — in any case", () => {
     assert.equal(pickAcquiredLeg(netTokenDeltas(energyLogs(), ACCOUNT), USDG), null);
     const shouted = new Map([
       [USDG.toLowerCase(), -42_000000n],
-      [`0x${MERRYMEN.slice(2).toUpperCase()}`, 98n],
+      [`0x${AGENTCAP.slice(2).toUpperCase()}`, 98n],
     ]);
     assert.equal(pickAcquiredLeg(shouted, USDG), null);
   });

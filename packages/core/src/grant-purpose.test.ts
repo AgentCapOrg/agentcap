@@ -8,7 +8,7 @@ import { describe, it } from "node:test";
 import { accountIndexForPurpose, bindingMessage, grantPurpose, isGrantPurpose, publicGrantView, type BindingClaim } from "./grant";
 
 const claim = {
-  origin: "https://app.merrymen.dev",
+  origin: "https://app.agentcap.xyz",
   nonce: "n-1",
   owner: "0x00000000000000000000000000000000000000AA",
   smartAccount: "0x00000000000000000000000000000000000000BB",
@@ -44,14 +44,14 @@ describe("wallet purpose", () => {
     assert.equal(
       bindingMessage(claim),
       [
-        "https://app.merrymen.dev wants you to authorize a merrymen agent account.",
+        "https://app.agentcap.xyz wants you to authorize a agentcap agent account.",
         "",
         "You are linking the agent wallet below to this login. It moves no funds.",
         "",
         "Agent account: 0x00000000000000000000000000000000000000bb",
         "Owner key: 0x00000000000000000000000000000000000000aa",
         "Chain ID: 4663",
-        "URI: https://app.merrymen.dev",
+        "URI: https://app.agentcap.xyz",
         "Nonce: n-1",
       ].join("\n"),
     );

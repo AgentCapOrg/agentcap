@@ -16,9 +16,9 @@ export const LEDGER_IMPORT_GENERATIONS_SCHEMA = `CREATE TABLE IF NOT EXISTS tena
  * admission attested, and the archived pre-images of the cursor and snapshot
  * rows the new book replaces. Nothing here is ever deleted by the code.
  *
- *  - ledger_resume_preview_runs: one row per MERRYMEN_RESUME_PREVIEW run, the
+ *  - ledger_resume_preview_runs: one row per AGENTCAP_RESUME_PREVIEW run, the
  *    entries it printed, keyed by the run's own digest, so a batch approval
- *    (MERRYMEN_RESUME_APPROVE=run:<digest>) binds to exactly what was shown.
+ *    (AGENTCAP_RESUME_APPROVE=run:<digest>) binds to exactly what was shown.
  *    The digest binds each tenant, its evidence digest and its verdict, and
  *    nothing beside them, so a later preview that comes to the same digest
  *    replaces the entries: what is said beside the verdict (the last
@@ -26,9 +26,9 @@ export const LEDGER_IMPORT_GENERATIONS_SCHEMA = `CREATE TABLE IF NOT EXISTS tena
  *  - ledger_resume_approvals: one per (tenant, evidence digest). At most one
  *    OPEN approval per tenant (approved → archiving → archived → registered);
  *    applied, refused and revoked are terminal. `source` says who approved:
- *    `operator` (MERRYMEN_RESUME_APPROVE; null on a row from before the
+ *    `operator` (AGENTCAP_RESUME_APPROVE; null on a row from before the
  *    column) or `auto-paper` (the orchestrator's own approval of a re-signed
- *    paper tenant, MERRYMEN_RESUME_AUTO_PAPER). `chain_read_from_sec`, on a
+ *    paper tenant, AGENTCAP_RESUME_AUTO_PAPER). `chain_read_from_sec`, on a
  *    chain refusal, is the chain time of the first block the refused read
  *    covered: while that refusal is unanswered, admission and the chain-gap
  *    booking tool never read from later than it (ledger-resume.ts
@@ -39,7 +39,7 @@ export const LEDGER_IMPORT_GENERATIONS_SCHEMA = `CREATE TABLE IF NOT EXISTS tena
  *    the chain window read for it (chain_from_block..chain_head, both
  *    inclusive; null for a tenant that needed no chain read).
  *  - mirror_state_archive / ledger_snapshot_archive: the exact pre-images.
- *  - ledger_resume_grant_watch: under MERRYMEN_RESUME_AUTO_PAPER only, what
+ *  - ledger_resume_grant_watch: under AGENTCAP_RESUME_AUTO_PAPER only, what
  *    the orchestrator last saw of each tenant's grant row (a digest of its
  *    expiry and its server-stamped update time, nothing secret), whether a
  *    change is still owed an automatic preview, and what that preview came

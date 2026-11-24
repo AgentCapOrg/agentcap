@@ -1,7 +1,7 @@
 /**
  * THE CONTAINER'S START PATH: tini → /bin/sh scripts/container-start.sh → exec node.
  *
- * The hosted image used to start with `sh -c "npm run ${MERRYMEN_START…}"`,
+ * The hosted image used to start with `sh -c "npm run ${AGENTCAP_START…}"`,
  * which put a shell and npm between PID 1 and node. Whether Railway's SIGTERM
  * ever reached the orchestrator's stop handler — the one that calls the fleet
  * home and releases the tenant leases — rested on whether that shell exec'd
@@ -15,7 +15,7 @@
  *   - The script runs exactly package.json's `start:*` scripts — the same argv
  *     from the same directory — and it `exec`s them: the stub it runs reports
  *     the very PID the script was started as.
- *   - Unset MERRYMEN_START runs web, as it always did. SET BUT EMPTY, or any
+ *   - Unset AGENTCAP_START runs web, as it always did. SET BUT EMPTY, or any
  *     other value, is refused with 64 and runs nothing at all.
  *   - Every allowlisted role passes the deploy guard after its [start] line
  *     and before its exec, and a guard refusal ends the script with the
@@ -129,7 +129,7 @@ describe("the Dockerfile starts node under tini, through the script", () => {
 
   it("the image installs tini and carries the start-path marker", () => {
     assert.match(docker, /^RUN apt-get update[\s\S]*?apt-get install -y --no-install-recommends tini\b/m);
-    assert.match(docker, /^ENV MERRYMEN_IMAGE=dockerfile-v1$/m);
+    assert.match(docker, /^ENV AGENTCAP_IMAGE=dockerfile-v1$/m);
   });
 
   it("the build runs tini and parses the script, at the very paths the start uses", () => {
@@ -185,7 +185,7 @@ const GUARD_ARGS = (role: string) => `--import tsx worker/src/deploy-guard.ts --
  * becomes, and it stays out of the ran/arg lines compared against npm below.
  */
 function sandbox() {
-  const app = tempDir("merrymen-container-start-");
+  const app = tempDir("agentcap-container-start-");
   mkdirSync(join(app, "scripts"));
   mkdirSync(join(app, "web"));
   mkdirSync(join(app, "stub-bin"));
@@ -199,10 +199,10 @@ function sandbox() {
     chmodSync(stub, 0o755);
   }
   // Deliberately NOT process.env: nothing from the developer's shell (a
-  // DATABASE_URL, a MERRYMEN_START) may leak into what these runs decide.
+  // DATABASE_URL, a AGENTCAP_START) may leak into what these runs decide.
   const env = (extra: Record<string, string> = {}): NodeJS.ProcessEnv => ({ PATH: `${join(app, "stub-bin")}:${process.env.PATH}`, ...extra });
   // Started from somewhere else on purpose: the script must find its root itself.
-  const elsewhere = tempDir("merrymen-container-cwd-");
+  const elsewhere = tempDir("agentcap-container-cwd-");
   const run = (shell: string, extra?: Record<string, string>) => {
     const r = spawnSync(shell, [join(app, SCRIPT)], { cwd: elsewhere, env: env(extra), encoding: "utf8", timeout: 10_000 });
     return { status: r.status, pid: r.pid, stdout: r.stdout, stderr: r.stderr };
@@ -293,7 +293,7 @@ describe("the script runs package.json's start scripts, and only those", { skip:
       for (const port of [undefined, "4321"]) {
         it(`${shell}: ${role}${port ? ` (PORT=${port})` : ""} execs the same argv from the same directory as npm did`, () => {
           const box = sandbox();
-          const extra: Record<string, string> = { MERRYMEN_START: role, ...(port ? { PORT: port } : {}) };
+          const extra: Record<string, string> = { AGENTCAP_START: role, ...(port ? { PORT: port } : {}) };
           const r = box.run(shell, extra);
           assert.equal(r.status, 0, r.stderr);
           const expected = box.runNpmScript(scripts[role]!, extra);
@@ -310,7 +310,7 @@ describe("the script runs package.json's start scripts, and only those", { skip:
     for (const role of startRoles) {
       it(`${shell}: ${role} passes the deploy guard from the app root, after its [start] line and before its exec`, () => {
         const box = sandbox();
-        const r = box.run(shell, { MERRYMEN_START: role });
+        const r = box.run(shell, { AGENTCAP_START: role });
         assert.equal(r.status, 0, r.stderr);
         const lines = r.stdout.split("\n");
         const started = lines.indexOf(`[start] role=${role} commit=unknown`);
@@ -322,14 +322,14 @@ describe("the script runs package.json's start scripts, and only those", { skip:
       });
 
       it(`${shell}: ${role} stops with the guard's status when the guard refuses, having exec'd nothing`, () => {
-        const r = sandbox().run(shell, { MERRYMEN_START: role, STUB_GUARD_EXIT: "78" });
+        const r = sandbox().run(shell, { AGENTCAP_START: role, STUB_GUARD_EXIT: "78" });
         assert.equal(r.status, 78, `${r.stdout}${r.stderr}`);
         assert.doesNotMatch(r.stdout, /^ran=/m, `${role} started after a guard refusal:\n${r.stdout}`);
         assert.match(r.stdout, /^guard /m);
       });
     }
 
-    it(`${shell}: MERRYMEN_START unset runs the web role`, () => {
+    it(`${shell}: AGENTCAP_START unset runs the web role`, () => {
       const box = sandbox();
       const r = box.run(shell);
       assert.equal(r.status, 0, r.stderr);
@@ -338,21 +338,21 @@ describe("the script runs package.json's start scripts, and only those", { skip:
       assert.equal(stubPid(r.stdout), r.pid);
     });
 
-    it(`${shell}: MERRYMEN_START set but empty is refused with 64, and nothing runs`, () => {
-      const r = sandbox().run(shell, { MERRYMEN_START: "" });
+    it(`${shell}: AGENTCAP_START set but empty is refused with 64, and nothing runs`, () => {
+      const r = sandbox().run(shell, { AGENTCAP_START: "" });
       assert.equal(r.status, 64);
       assert.equal(r.stdout, "", "a refused role must not print a [start] line or run anything");
-      assert.match(r.stderr, /^\[start\] refused: MERRYMEN_START is set but empty/m);
+      assert.match(r.stderr, /^\[start\] refused: AGENTCAP_START is set but empty/m);
     });
 
     it(`${shell}: any other value is refused with 64, and is not echoed`, () => {
       for (const value of ["start", "build", "dev:web", "dev:worker", "start:orchestrator|dev:web", "start:web ", " start:web", "START:WEB", "start:web;id", "start:orchestrator\n", "$(id)", "start:*"]) {
-        const r = sandbox().run(shell, { MERRYMEN_START: value });
+        const r = sandbox().run(shell, { AGENTCAP_START: value });
         assert.equal(r.status, 64, `${JSON.stringify(value)} was not refused: ${r.stdout}${r.stderr}`);
         assert.equal(r.stdout, "", `${JSON.stringify(value)} ran something`);
-        assert.match(r.stderr, /^\[start\] refused: MERRYMEN_START is not one of: start:web start:orchestrator start:recovery-replies start:solana$/m);
+        assert.match(r.stderr, /^\[start\] refused: AGENTCAP_START is not one of: start:web start:orchestrator start:recovery-replies start:solana$/m);
       }
-      const r = sandbox().run(shell, { MERRYMEN_START: "$(id)" });
+      const r = sandbox().run(shell, { AGENTCAP_START: "$(id)" });
       assert.ok(!r.stderr.includes("$(id)") && !r.stderr.includes("uid="), r.stderr);
     });
 
@@ -376,7 +376,7 @@ describe("SIGTERM reaches the orchestrator's stop handler", { skip: !posix }, ()
    * touches no network and no database: the only question is what SIGTERM does.
    */
   it("prints \"[orchestrator] stopping\" and exits 0, rather than dying of the signal", { timeout: 90_000 }, async () => {
-    const dir = tempDir("merrymen-container-sigterm-");
+    const dir = tempDir("agentcap-container-sigterm-");
     const home = join(dir, "home");
     mkdirSync(home, { mode: 0o700 });
     writeFileSync(join(home, "FLEET_HALT"), "", { mode: 0o600 });
@@ -386,7 +386,7 @@ describe("SIGTERM reaches the orchestrator's stop handler", { skip: !posix }, ()
       cwd: dir,
       // Deliberately NOT process.env: a DATABASE_URL in the developer's shell
       // must never reach a supervisor started by a test.
-      env: { PATH: process.env.PATH, HOME: dir, MERRYMEN_HOME: home, MERRYMEN_HOSTED: "1", MERRYMEN_START: "start:orchestrator", RAILWAY_GIT_COMMIT_SHA: SHA },
+      env: { PATH: process.env.PATH, HOME: dir, AGENTCAP_HOME: home, AGENTCAP_HOSTED: "1", AGENTCAP_START: "start:orchestrator", RAILWAY_GIT_COMMIT_SHA: SHA },
       detached: true,
       stdio: ["ignore", "pipe", "pipe"],
     });

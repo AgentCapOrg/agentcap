@@ -8,14 +8,14 @@
  * is gone: the identity store still maps the session to its slug, the settings
  * keep its name, and the book is on file. The feed already answers with that
  * identity (feed-identity.ts identityOf), so `live.mine` names it. Every screen
- * keyed on `mine` treated that owner as a newcomer: "Create your merryman" on
+ * keyed on `mine` treated that owner as a newcomer: "Create your agentcapavatar" on
  * Home and Me, "Your agent starts here" beside every page, and "Private" on his
  * own profile (2026-11-18, a paper owner stopped for a re-signature and never
  * signed).
  *
  * A SLUG IS NOT AN AGENT. Every Privy sign-in claims one (identity-store.ts
  * resolveOrClaimDid, with no accounts), so the feed names a slug for a
- * newcomer who never made a Merryman too. "Stopped" needs evidence that a Spot
+ * newcomer who never made a AgentCapAvatar too. "Stopped" needs evidence that a Spot
  * agent existed: the Spot GET's `stored` (a record held for this tenant), or
  * the owner-only /own read answering with a book (it refuses a slug with no
  * Spot account on record, read-agent.ts readOwnBook). Without either it is a

@@ -1,6 +1,6 @@
 /** The editable settings projection for chat UIs; never the raw settings bag. */
 import * as z from "zod";
-import { STOCK_TOKENS } from "@merrymen/core";
+import { STOCK_TOKENS } from "@agentcap/core";
 import { settingsReader } from "@/lib/services/settings-view";
 import { SETTING_SPECS, formatSettingValue, validStoredSetting, type SettingKind } from "../../../../worker/src/telegram/setting-spec";
 import { McpError } from "../errors";

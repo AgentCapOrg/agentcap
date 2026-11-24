@@ -195,7 +195,7 @@ def test_anything_but_text_is_no_hit():
 
 def _decision(**over) -> dict:
     base = dict(
-        decision_id="dec_1", agent_id="agent-a", created_at=1, action="hold", instrument_id="merrymen:meme",
+        decision_id="dec_1", agent_id="agent-a", created_at=1, action="hold", instrument_id="agentcap:meme",
         symbol="MEME", confidence=0.5, suggested_delta_usdg=0, thesis="Buys are thinning into strength.",
         tier="pulse", cost=Cost(model_calls=0, tokens_in=0, tokens_out=0, usd=0.0),
     )
@@ -286,7 +286,7 @@ def test_the_desk_policy_cannot_carry_a_solana_id():
     "02D20BBD7E394AD5999A4CEBABAC9619732C343A4CAC99470C03E23BA2BDC2BC",
     "supply 63971511409728546707420640415976470808777281049430980144558505433936508649475518010444363585908687133263558897911835323323191563463575735092780586118530448",
     "$SOL $BONK $WIF $JUP and $USDG, #BuyTheDipAndHoldForeverBecauseSolanaIsTheFuture",
-    "read https://x.com/merrymen/status/1845123456789012345 and 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+    "read https://x.com/agentcap/status/1845123456789012345 and 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
 ])
 def test_prose_and_todays_ids_still_pass(text):
     d = BrainDecision(**_decision(thesis=text, risks=[text], evidence=[Evidence(source="s", ref=text, claim=text)]))

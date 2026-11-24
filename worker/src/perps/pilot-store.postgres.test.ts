@@ -7,7 +7,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { makePgDb } from "../db";
 import { SqlPerpsPilotStore } from "./pilot-store";
 
-const url = process.env.MERRYMEN_TEST_PG_URL ?? process.env.MERRYMEN_TEST_POSTGRES_URL;
+const url = process.env.AGENTCAP_TEST_PG_URL ?? process.env.AGENTCAP_TEST_POSTGRES_URL;
 const NOW = 1_900_000_000_000;
 const owner = (n: number) => `0x${n.toString(16).padStart(40, "0")}` as const;
 const ADMIN = owner(999);

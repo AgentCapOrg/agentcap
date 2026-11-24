@@ -16,11 +16,11 @@ import { installFixtures, makeTestDb } from "@/mcp/testing";
 import { GET } from "./route";
 
 before(() => {
-  process.env.MERRYMEN_HOSTED = "1";
+  process.env.AGENTCAP_HOSTED = "1";
   process.env.DATABASE_URL = "postgres://unused-in-tests";
-  process.env.MERRYMEN_PUBLIC_ORIGIN = "https://app.test";
-  process.env.MERRYMEN_MCP_RESOURCE_URL = "https://mcp.test/mcp";
-  process.env.MERRYMEN_SESSION_SECRET = "s".repeat(48);
+  process.env.AGENTCAP_PUBLIC_ORIGIN = "https://app.test";
+  process.env.AGENTCAP_MCP_RESOURCE_URL = "https://mcp.test/mcp";
+  process.env.AGENTCAP_SESSION_SECRET = "s".repeat(48);
 });
 
 let restore: (() => void) | null = null;

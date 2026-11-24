@@ -2,7 +2,7 @@
  * REAL POSTGRES: THE HEARTBEAT ROW AND THE FUNNEL'S QUERIES. Opt-in, like
  * fleet-recovery.postgres.test.ts:
  *
- *   MERRYMEN_TEST_PG_URL=postgres://merrymen@localhost:55432/merrymen_pgtest \
+ *   AGENTCAP_TEST_PG_URL=postgres://agentcap@localhost:55432/agentcap_pgtest \
  *     npx tsx --test worker/src/fleet-heartbeat.postgres.test.ts
  *
  * Skipped without it. A disposable LOCAL Postgres only, in a schema of its
@@ -21,7 +21,7 @@ import { makePgDb } from "./db";
 import { AUTONOMY_HOLDS_SQL, AUTONOMY_TRADE_FUNNEL_SQL, FLEET_RAILS_SQL } from "./autonomy-funnel";
 import { readFleetHeartbeats, writeFleetHeartbeat, type FleetHeartbeat } from "./fleet-heartbeat";
 
-const url = process.env.MERRYMEN_TEST_PG_URL;
+const url = process.env.AGENTCAP_TEST_PG_URL;
 
 test("Postgres: the heartbeat upsert and the funnel's grouped reads", { skip: !url, timeout: 40_000 }, async (t) => {
   const target = new URL(url!);

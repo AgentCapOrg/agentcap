@@ -1,7 +1,7 @@
 /**
  * A ONE-OFF PLATFORM ANNOUNCEMENT, SENT THROUGH EACH TENANT'S OWN BOT.
  *
- * There is no shared merrymen bot. Every tenant creates their own with
+ * There is no shared agentcap bot. Every tenant creates their own with
  * @BotFather and pastes the token in, so "message all users" means using ~43
  * people's private credentials to speak in their agent's chat. That is a
  * consent decision, not a technical one, and it is the operator's to make —
@@ -16,7 +16,7 @@
  *   (telegram/api.ts). A second reader silently breaks the tenant's bot.
  *   `sendMessage` alongside a running poll is safe; nothing else here is.
  * - Never write, log or return a bot token. They live sealed under
- *   MERRYMEN_STORE_DEK precisely so they never sit in the clear; a crash dump
+ *   AGENTCAP_STORE_DEK precisely so they never sit in the clear; a crash dump
  *   or a saved intermediate would leak a fleet of live credentials.
  * - Never send to a tenant who turned Telegram off. That is a setting, and an
  *   announcement is not an exception to it.
@@ -358,7 +358,7 @@ export function personalLine(blocker: string | null): string {
   const said = liveBlockerText(blocker as never) || blocker;
   return (
     `\n\n<b>Your agent, right now:</b> ${esc(said)}\n` +
-    `Open <b>app.merrymen.dev</b> — the banner on your agent names the button.`
+    `Open <b>app.agentcap.xyz</b> — the banner on your agent names the button.`
   );
 }
 

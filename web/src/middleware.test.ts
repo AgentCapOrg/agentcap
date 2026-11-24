@@ -2,9 +2,9 @@
  * The middleware on the dedicated MCP domain, through real NextRequests and
  * Next's own matcher compiler.
  *
- * mcp.merrymen.dev is the web service under a second domain. Seen in
+ * mcp.agentcap.xyz is the web service under a second domain. Seen in
  * production 2026-09-25: a browser there got the whole terminal, signed out
- * (the sign-in cookie lives on app.merrymen.dev), and an MCP client given the
+ * (the sign-in cookie lives on app.agentcap.xyz), and an MCP client given the
  * bare domain got 200 text/html for its POST, so OAuth never started. These
  * pin the fix and, as much, that nothing changes anywhere else: the app host,
  * a host nobody configured, and an install whose MCP URL is on the app host.
@@ -20,10 +20,10 @@ import { MCP_ROUTE_PATH, dedicatedMcpHost, isBrowserNavigation, mcpHostLanding }
 // production), so the environment is set first and the module imported after.
 let mw: typeof import("./middleware");
 before(async () => {
-  process.env.MERRYMEN_HOSTED = "1";
-  process.env.MERRYMEN_PUBLIC_ORIGIN = "https://app.test";
-  process.env.MERRYMEN_MCP_RESOURCE_URL = "https://mcp.test/mcp";
-  delete process.env.MERRYMEN_OAUTH_ISSUER;
+  process.env.AGENTCAP_HOSTED = "1";
+  process.env.AGENTCAP_PUBLIC_ORIGIN = "https://app.test";
+  process.env.AGENTCAP_MCP_RESOURCE_URL = "https://mcp.test/mcp";
+  delete process.env.AGENTCAP_OAUTH_ISSUER;
   mw = await import("./middleware");
 });
 
@@ -143,40 +143,40 @@ describe("every other host behaves exactly as before", () => {
   });
 
   it("an install whose MCP URL is on the app host has no MCP domain, and so no redirects", () => {
-    const sameHost = dedicatedMcpHost({ MERRYMEN_PUBLIC_ORIGIN: "https://app.test", MERRYMEN_MCP_RESOURCE_URL: "https://app.test/mcp" }, true);
+    const sameHost = dedicatedMcpHost({ AGENTCAP_PUBLIC_ORIGIN: "https://app.test", AGENTCAP_MCP_RESOURCE_URL: "https://app.test/mcp" }, true);
     assert.equal(sameHost, null);
-    assert.equal(dedicatedMcpHost({ MERRYMEN_PUBLIC_ORIGIN: "https://app.test" }, true), null, "the default resource is <origin>/mcp");
+    assert.equal(dedicatedMcpHost({ AGENTCAP_PUBLIC_ORIGIN: "https://app.test" }, true), null, "the default resource is <origin>/mcp");
     for (const [r, what] of [[page("https://app.test/"), "browser /"], [req("https://app.test/", { method: "POST", body: "{}" }), "POST /"]] as const) {
       assert.equal(mcpHostLanding(sameHost, { method: r.method, headers: r.headers, pathname: r.nextUrl.pathname, search: r.nextUrl.search }), null, what);
     }
   });
 
   it("self-hosted (not hosted) never has an MCP domain, whatever the variables say", () => {
-    assert.equal(dedicatedMcpHost({ MERRYMEN_PUBLIC_ORIGIN: "https://app.test", MERRYMEN_MCP_RESOURCE_URL: "https://mcp.test/mcp" }, false), null);
+    assert.equal(dedicatedMcpHost({ AGENTCAP_PUBLIC_ORIGIN: "https://app.test", AGENTCAP_MCP_RESOURCE_URL: "https://mcp.test/mcp" }, false), null);
   });
 
   it("a resource at any path but /mcp (the root included) is no endpoint at all: MCP is off, so nothing to route", () => {
     for (const r of ["https://mcp.test/", "https://mcp.test", "https://mcp.test/v2/mcp", "https://mcp.test/mcp/directory", "https://mcp.test/MCP"]) {
-      assert.equal(dedicatedMcpHost({ MERRYMEN_PUBLIC_ORIGIN: "https://app.test", MERRYMEN_MCP_RESOURCE_URL: r }, true), null, r);
+      assert.equal(dedicatedMcpHost({ AGENTCAP_PUBLIC_ORIGIN: "https://app.test", AGENTCAP_MCP_RESOURCE_URL: r }, true), null, r);
     }
   });
 });
 
 describe("the MCP domain comes from configuration exactly as config.ts reads it", () => {
   const envs: Array<Record<string, string>> = [
-    { MERRYMEN_PUBLIC_ORIGIN: "https://app.test", MERRYMEN_MCP_RESOURCE_URL: "https://mcp.test/mcp" },
-    { MERRYMEN_PUBLIC_ORIGIN: " https://app.test/ ", MERRYMEN_MCP_RESOURCE_URL: "https://MCP.test/mcp/" },
-    { MERRYMEN_OAUTH_ISSUER: "https://auth.test", MERRYMEN_PUBLIC_ORIGIN: "https://app.test", MERRYMEN_MCP_RESOURCE_URL: "https://mcp.test/mcp" },
-    { MERRYMEN_OAUTH_ISSUER: "https://auth.test", MERRYMEN_PUBLIC_ORIGIN: "https://app.test", MERRYMEN_MCP_RESOURCE_URL: "https://mcp.test/v1/mcp" },
-    { MERRYMEN_PUBLIC_ORIGIN: "https://app.test", MERRYMEN_MCP_RESOURCE_URL: "https://mcp.test/" },
-    { MERRYMEN_PUBLIC_ORIGIN: "https://app.test", MERRYMEN_MCP_RESOURCE_URL: "https://mcp.test/mcp/directory" },
-    { MERRYMEN_PUBLIC_ORIGIN: "https://app.test", MERRYMEN_MCP_RESOURCE_URL: "https://mcp.test:8443/mcp" },
-    { MERRYMEN_PUBLIC_ORIGIN: "http://localhost:3100", MERRYMEN_MCP_RESOURCE_URL: "http://127.0.0.1:3100/mcp" },
-    { MERRYMEN_PUBLIC_ORIGIN: "http://app.test", MERRYMEN_MCP_RESOURCE_URL: "https://mcp.test/mcp" },
-    { MERRYMEN_PUBLIC_ORIGIN: "https://user:pw@app.test", MERRYMEN_MCP_RESOURCE_URL: "https://mcp.test/mcp" },
-    { MERRYMEN_PUBLIC_ORIGIN: "https://app.test", MERRYMEN_MCP_RESOURCE_URL: "https://mcp.test/mcp?x=1" },
-    { MERRYMEN_PUBLIC_ORIGIN: "https://app.test", MERRYMEN_MCP_RESOURCE_URL: "http://mcp.test/mcp" },
-    { MERRYMEN_PUBLIC_ORIGIN: "not a url", MERRYMEN_MCP_RESOURCE_URL: "https://mcp.test/mcp" },
+    { AGENTCAP_PUBLIC_ORIGIN: "https://app.test", AGENTCAP_MCP_RESOURCE_URL: "https://mcp.test/mcp" },
+    { AGENTCAP_PUBLIC_ORIGIN: " https://app.test/ ", AGENTCAP_MCP_RESOURCE_URL: "https://MCP.test/mcp/" },
+    { AGENTCAP_OAUTH_ISSUER: "https://auth.test", AGENTCAP_PUBLIC_ORIGIN: "https://app.test", AGENTCAP_MCP_RESOURCE_URL: "https://mcp.test/mcp" },
+    { AGENTCAP_OAUTH_ISSUER: "https://auth.test", AGENTCAP_PUBLIC_ORIGIN: "https://app.test", AGENTCAP_MCP_RESOURCE_URL: "https://mcp.test/v1/mcp" },
+    { AGENTCAP_PUBLIC_ORIGIN: "https://app.test", AGENTCAP_MCP_RESOURCE_URL: "https://mcp.test/" },
+    { AGENTCAP_PUBLIC_ORIGIN: "https://app.test", AGENTCAP_MCP_RESOURCE_URL: "https://mcp.test/mcp/directory" },
+    { AGENTCAP_PUBLIC_ORIGIN: "https://app.test", AGENTCAP_MCP_RESOURCE_URL: "https://mcp.test:8443/mcp" },
+    { AGENTCAP_PUBLIC_ORIGIN: "http://localhost:3100", AGENTCAP_MCP_RESOURCE_URL: "http://127.0.0.1:3100/mcp" },
+    { AGENTCAP_PUBLIC_ORIGIN: "http://app.test", AGENTCAP_MCP_RESOURCE_URL: "https://mcp.test/mcp" },
+    { AGENTCAP_PUBLIC_ORIGIN: "https://user:pw@app.test", AGENTCAP_MCP_RESOURCE_URL: "https://mcp.test/mcp" },
+    { AGENTCAP_PUBLIC_ORIGIN: "https://app.test", AGENTCAP_MCP_RESOURCE_URL: "https://mcp.test/mcp?x=1" },
+    { AGENTCAP_PUBLIC_ORIGIN: "https://app.test", AGENTCAP_MCP_RESOURCE_URL: "http://mcp.test/mcp" },
+    { AGENTCAP_PUBLIC_ORIGIN: "not a url", AGENTCAP_MCP_RESOURCE_URL: "https://mcp.test/mcp" },
   ];
   for (const env of envs) {
     it(JSON.stringify(env), () => {
@@ -258,11 +258,11 @@ describe("the directory endpoint (/mcp/directory) passes the MCP-host middleware
     untouched(mw.middleware(req("https://mcp.test/mcp/directory", { headers: { accept: "text/event-stream" } })), "GET stream");
     untouched(mw.middleware(page("https://mcp.test/mcp/directory")), "page load: the route answers it with the help-page redirect");
     const lookup = { method: "POST", headers: new Headers({ host: "mcp.test", ...client }), pathname: "/mcp/directory", search: "" };
-    assert.equal(mcpHostLanding(dedicatedMcpHost({ MERRYMEN_PUBLIC_ORIGIN: "https://app.test", MERRYMEN_MCP_RESOURCE_URL: "https://mcp.test/mcp" }, true), lookup), null);
+    assert.equal(mcpHostLanding(dedicatedMcpHost({ AGENTCAP_PUBLIC_ORIGIN: "https://app.test", AGENTCAP_MCP_RESOURCE_URL: "https://mcp.test/mcp" }, true), lookup), null);
   });
 
   it("its host is one the endpoint answers on, and its first path segment is mcp", () => {
-    const cfg = mcpConfig({ MERRYMEN_PUBLIC_ORIGIN: "https://app.test", MERRYMEN_MCP_RESOURCE_URL: "https://mcp.test/mcp" } as unknown as NodeJS.ProcessEnv);
+    const cfg = mcpConfig({ AGENTCAP_PUBLIC_ORIGIN: "https://app.test", AGENTCAP_MCP_RESOURCE_URL: "https://mcp.test/mcp" } as unknown as NodeJS.ProcessEnv);
     const dir = new URL(cfg.directoryResource);
     assert.equal(dir.pathname.split("/")[1], "mcp");
     assert.ok(cfg.allowedHosts.has(dir.host));

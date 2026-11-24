@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { DatabaseSync } from "node:sqlite";
 import { wrapSqlite } from "./db";
 import { repairHistoricalFills } from "./history-fill-repair";
-import { CASH, MERRYMEN_TOKEN, STOCK_TOKENS } from "../../packages/core/src/index";
+import { CASH, AGENTCAP_TOKEN, STOCK_TOKENS } from "../../packages/core/src/index";
 import { addressTopic } from "./inflight-reconcile";
 
 test("receipt repair fills missing history, preserves known P&L and refuses duplicate execution rows",async()=>{
@@ -48,8 +48,8 @@ test("a second repair counts nothing — not even a coin whose name can never be
 });
 
 test("an energy purchase is never backfilled as a buy, and is counted for what it is",async()=>{
- // USDG out, $MERRYMEN in: the shape of a buy. But the reserve is capital set
- // aside (an 'energy-buy' flow), never a position — a 'buy MERRYMEN' fill on the
+ // USDG out, $AGENTCAP in: the shape of a buy. But the reserve is capital set
+ // aside (an 'energy-buy' flow), never a position — a 'buy AGENTCAP' fill on the
  // row would count the spend twice in every fill-derived reader, on every deploy.
  const raw=new DatabaseSync(':memory:');const db=wrapSqlite(raw);
  const account='0x'+'1'.repeat(40),pair='0x'+'2'.repeat(40);
@@ -59,7 +59,7 @@ test("an energy purchase is never backfilled as a buy, and is counted for what i
   await db.prepare(`INSERT INTO trades(id,agent_id,tx_hash,status,kind,created_at) VALUES(1,?,'0xee','landed','swap',1)`).run(account);
   const log=(token:string,from:string,to:string,qty:bigint)=>({address:token,topics:['0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',addressTopic(from),addressTopic(to)],data:'0x'+qty.toString(16)});
   let symbolReads=0;
-  const client={getTransactionReceipt:async()=>({status:'success',logs:[log(CASH.USDG,account,pair,42000000n),log(MERRYMEN_TOKEN.address,pair,account,98000n*10n**18n)]}),readContract:async()=>{symbolReads++;throw new Error('not read');}};
+  const client={getTransactionReceipt:async()=>({status:'success',logs:[log(CASH.USDG,account,pair,42000000n),log(AGENTCAP_TOKEN.address,pair,account,98000n*10n**18n)]}),readContract:async()=>{symbolReads++;throw new Error('not read');}};
   const result=await repairHistoricalFills(db,'unused',client as never);
   assert.equal(result.repaired,0);
   assert.equal(result.unavailable,1);

@@ -148,7 +148,7 @@ export const OFFICIAL_COINS: Readonly<Record<number, readonly OfficialCoin[]>> =
    * has the right architecture for it — the class route, which grants
    * permissions on a per-account vault rather than on token addresses, and can
    * therefore reach a coin that did not exist when the grant was signed. See
-   * MerrymenSettings.classSnipeEnabled and docs/owner-runbook-class.md.
+   * AgentCapSettings.classSnipeEnabled and docs/owner-runbook-class.md.
    *
    * An empty list is the honest state, and it is a different fact from "official
    * coins are turned off", which is a setting.

@@ -6,7 +6,7 @@
  * The ledger tables are READ through the same handle but never written: MCP
  * writes only its own tables (mcp_*, notify_*), plus the owner-order queue
  * through the existing order helper when an owner approves a trade on a
- * Merrymen page.
+ * AgentCap page.
  */
 import { makePgDb, type Db } from "../../../worker/src/db";
 import { ensureMcpSchema } from "../../../worker/src/mcp/schema";

@@ -3,7 +3,7 @@
  *
  * Read in the browser, from a public RPC for that one network. The read sends
  * only the address the owner chose to fill in, and only for Max. The server is
- * not involved: nothing here proxies through Merrymen. That leaves no endpoint
+ * not involved: nothing here proxies through AgentCap. That leaves no endpoint
  * a stranger could use to spend our provider credits.
  *
  * Each URL was checked on 2026-11-19 to answer a browser origin (CORS) for a
@@ -15,7 +15,7 @@
  * not read the balance and leaves Max off. A failed read never becomes 0, which
  * would read as "this wallet is empty".
  */
-import { robinhoodChain } from "@merrymen/core";
+import { robinhoodChain } from "@agentcap/core";
 import type { DepositSource, SourceId } from "./deposit-math";
 
 export const SOURCE_RPC: Readonly<Record<SourceId, string>> = Object.freeze({

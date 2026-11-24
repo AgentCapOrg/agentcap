@@ -1,5 +1,5 @@
 /**
- * ONE $MERRYMEN WALLET POWERS ONE AGENT — the claims record, both backends.
+ * ONE $AGENTCAP WALLET POWERS ONE AGENT — the claims record, both backends.
  *
  * Settings are sealed per tenant, so nothing could answer "who else linked this
  * wallet?" and one 100,000-token bag could power any number of agents. The
@@ -26,9 +26,9 @@ import { DatabaseSync } from "node:sqlite";
 import os from "node:os";
 import path from "node:path";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-claims-"));
-process.env.MERRYMEN_HOME = HOME;
-process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-claims-"));
+process.env.AGENTCAP_HOME = HOME;
+process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
 
 const { FileSettingsStore, PgSettingsStore } = await import("./settings-store");
 type Store = InstanceType<typeof FileSettingsStore> | InstanceType<typeof PgSettingsStore>;
@@ -365,7 +365,7 @@ function behavesAsAClaimsRecord(name: string, make: () => Store) {
 let fileRun = 0;
 behavesAsAClaimsRecord("FileSettingsStore", () => {
   // A fresh home per case, so each case starts from no claims.
-  process.env.MERRYMEN_HOME = path.join(HOME, `file-${++fileRun}`);
+  process.env.AGENTCAP_HOME = path.join(HOME, `file-${++fileRun}`);
   return new FileSettingsStore("spot");
 });
 
@@ -376,7 +376,7 @@ behavesAsAClaimsRecord("PgSettingsStore (its SQL on sqlite)", () => {
 
 describe("FileSettingsStore specifics", () => {
   it("claims live beside the settings, never among them — a wallet is not listed as a tenant", async () => {
-    process.env.MERRYMEN_HOME = path.join(HOME, "file-listing");
+    process.env.AGENTCAP_HOME = path.join(HOME, "file-listing");
     const s = new FileSettingsStore("spot");
     await s.put(A, { strategy: "trencher" });
     await s.claimHolder(W, A);
@@ -384,7 +384,7 @@ describe("FileSettingsStore specifics", () => {
   });
 
   it("no temp file is left behind, won or lost", async () => {
-    process.env.MERRYMEN_HOME = path.join(HOME, "file-temps");
+    process.env.AGENTCAP_HOME = path.join(HOME, "file-temps");
     const s = new FileSettingsStore("spot");
     await s.claimHolder(W, A);
     await s.claimHolder(W, B);
@@ -392,7 +392,7 @@ describe("FileSettingsStore specifics", () => {
   });
 
   it("…nor a lock or temp file after a move, a refused move, an undo or a release", async () => {
-    process.env.MERRYMEN_HOME = path.join(HOME, "file-move-temps");
+    process.env.AGENTCAP_HOME = path.join(HOME, "file-move-temps");
     const s = new FileSettingsStore("spot");
     await s.takeHolder(W, A, 1);
     const moved = await s.takeHolder(W, B, 2);
@@ -404,7 +404,7 @@ describe("FileSettingsStore specifics", () => {
   });
 
   it("A LOCK LEFT BY A PROCESS THAT DIED HOLDING IT IS BROKEN, never waited on for ever", async () => {
-    process.env.MERRYMEN_HOME = path.join(HOME, "file-stale-lock");
+    process.env.AGENTCAP_HOME = path.join(HOME, "file-stale-lock");
     const s = new FileSettingsStore("spot");
     await s.takeHolder(W, A, 1);
     const lock = path.join(HOME, "file-stale-lock", "holder-claims", `.${W}.lock`);
@@ -420,7 +420,7 @@ describe("FileSettingsStore specifics", () => {
     // first: it breaks the dead lock and takes a fresh one. What this store
     // then removes — by whatever means — must not be that fresh lock, or both
     // are inside at once (two moves past one day's check).
-    process.env.MERRYMEN_HOME = path.join(HOME, "file-stale-race");
+    process.env.AGENTCAP_HOME = path.join(HOME, "file-stale-race");
     const s = new FileSettingsStore("spot");
     await s.takeHolder(W, A, 1);
     const lock = path.join(HOME, "file-stale-race", "holder-claims", `.${W}.lock`);
@@ -467,7 +467,7 @@ describe("FileSettingsStore specifics", () => {
   it("…and a holder's own release removes only its own lock", async () => {
     // A holder that outlived CLAIM_LOCK_STALE_MS has had its lock broken and
     // taken by another process: its finally must not delete that one.
-    process.env.MERRYMEN_HOME = path.join(HOME, "file-own-release");
+    process.env.AGENTCAP_HOME = path.join(HOME, "file-own-release");
     const s = new FileSettingsStore("spot");
     await s.takeHolder(W, A, 1);
     const lock = path.join(HOME, "file-own-release", "holder-claims", `.${W}.lock`);
@@ -491,7 +491,7 @@ describe("FileSettingsStore specifics", () => {
     // "released" and returned; P2 then saw the lock was not the one it
     // judged and linked it back: a lock with a fresh mtime that nobody held,
     // and every claim, move or release of the wallet 'busy' (a 503) for 30 s.
-    process.env.MERRYMEN_HOME = path.join(HOME, "file-orphan");
+    process.env.AGENTCAP_HOME = path.join(HOME, "file-orphan");
     const s = new FileSettingsStore("spot");
     const dir = path.join(HOME, "file-orphan", "holder-claims");
     const C = tenantN(85);
@@ -548,7 +548,7 @@ describe("FileSettingsStore specifics", () => {
     // (it was not the lock it judged) or by deleting it (it was: the holder
     // outlived CLAIM_LOCK_STALE_MS).
     for (const ending of ["link-back", "delete"] as const) {
-      process.env.MERRYMEN_HOME = path.join(HOME, `file-break-${ending}`);
+      process.env.AGENTCAP_HOME = path.join(HOME, `file-break-${ending}`);
       const s = new FileSettingsStore("spot");
       const dir = path.join(HOME, `file-break-${ending}`, "holder-claims");
       await s.takeHolder(W, A, 1);
@@ -570,7 +570,7 @@ describe("FileSettingsStore specifics", () => {
   });
 
   it("…but a live one is waited on, and a release waits for the move holding it", async () => {
-    process.env.MERRYMEN_HOME = path.join(HOME, "file-live-lock");
+    process.env.AGENTCAP_HOME = path.join(HOME, "file-live-lock");
     const s = new FileSettingsStore("spot");
     await s.takeHolder(W, A, 1);
     const lock = path.join(HOME, "file-live-lock", "holder-claims", `.${W}.lock`);
@@ -585,7 +585,7 @@ describe("FileSettingsStore specifics", () => {
   });
 
   it("AN UNREADABLE CLAIM IS NOT A FREE WALLET — reading, claiming and releasing all throw", async () => {
-    process.env.MERRYMEN_HOME = path.join(HOME, "file-corrupt");
+    process.env.AGENTCAP_HOME = path.join(HOME, "file-corrupt");
     const s = new FileSettingsStore("spot");
     await s.claimHolder(W, A);
     writeFileSync(path.join(HOME, "file-corrupt", "holder-claims", `${W}.json`), "{ not json");
@@ -597,7 +597,7 @@ describe("FileSettingsStore specifics", () => {
   });
 
   it("the backfill record lives beside the claims, not among them, and a torn one throws", async () => {
-    process.env.MERRYMEN_HOME = path.join(HOME, "file-backfill");
+    process.env.AGENTCAP_HOME = path.join(HOME, "file-backfill");
     const s = new FileSettingsStore("spot");
     await s.saveHolderBackfill({ startedAt: 5, pending: [] });
     assert.deepEqual(readdirSync(path.join(HOME, "file-backfill")).sort(), ["holder-claims-backfill.json"], "no temp file left behind");
@@ -607,7 +607,7 @@ describe("FileSettingsStore specifics", () => {
   });
 
   it("with no claims directory yet, there are simply no claims", async () => {
-    process.env.MERRYMEN_HOME = path.join(HOME, "file-empty");
+    process.env.AGENTCAP_HOME = path.join(HOME, "file-empty");
     assert.equal((await new FileSettingsStore("spot").holderClaims()).size, 0);
   });
 });

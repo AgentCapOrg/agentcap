@@ -125,7 +125,7 @@ async function read<T>(key: string, route: string, parse: (body: unknown) => T[]
  *
  * (The legs now take the cache's EVIDENCE row, so they no longer queue behind
  * the tape burst; the second leg still waits one Pro spacing, which
- * MERRYMEN_COINGECKO_PRO_SPACING_MS now sets. The per-leg budget stays.)
+ * AGENTCAP_COINGECKO_PRO_SPACING_MS now sets. The per-leg budget stays.)
  *
  * So the budget is applied PER LEG, here, where the two are still separate. A
  * late leg degrades to a `budget` failure and the other leg's real data

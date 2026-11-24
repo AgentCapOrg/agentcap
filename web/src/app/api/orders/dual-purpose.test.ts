@@ -12,7 +12,7 @@
  *     required), and nothing the body carries beside the exit is queued;
  *   - anything but an exit is refused on Perps, an exit is refused on Spot;
  *   - each wallet has its own one-at-a-time slot and its own ceiling;
- *   - WHERE NO PERPS WORKER RUNS (MERRYMEN_PERPS not paper), nothing is queued
+ *   - WHERE NO PERPS WORKER RUNS (AGENTCAP_PERPS not paper), nothing is queued
  *     or read for the Perps wallet (D1).
  * And HOSTED, as far as one shared ledger read-only lets it go: the account is
  * resolved in the wallet the request names (hostedAgentFor(req, "perps")), so
@@ -27,10 +27,10 @@ import path from "node:path";
 import { after, afterEach, beforeEach, describe, it } from "node:test";
 
 import { DatabaseSync } from "node:sqlite";
-import type { StoredGrant } from "@merrymen/core";
-import { purposeHome } from "@merrymen/home";
-import { getGrantStore, resetGrantStoreForTest } from "@merrymen/grant-store";
-import { resetSettingsStoreForTest } from "@merrymen/settings-store";
+import type { StoredGrant } from "@agentcap/core";
+import { purposeHome } from "@agentcap/home";
+import { getGrantStore, resetGrantStoreForTest } from "@agentcap/grant-store";
+import { resetSettingsStoreForTest } from "@agentcap/settings-store";
 import { mintSession } from "@/lib/auth";
 import { wrapSqlite } from "../../../../../worker/src/db";
 import { applyLedgerSchema } from "../../../../../worker/src/store";
@@ -45,7 +45,7 @@ import { GET, POST } from "./route";
 import { POST as paperReset } from "../paper-reset/route";
 import { GET as ceiling } from "./ceiling/route";
 
-const KEYS = ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_SETTINGS_FILE", "DATABASE_URL", "MERRYMEN_SESSION_SECRET", "MERRYMEN_PERPS", "MERRYMEN_TICK_SECONDS"] as const;
+const KEYS = ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_SETTINGS_FILE", "DATABASE_URL", "AGENTCAP_SESSION_SECRET", "AGENTCAP_PERPS", "AGENTCAP_TICK_SECONDS"] as const;
 const saved = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
 const SPOT = `0x${"11".repeat(20)}`;
 const PERPS = `0x${"22".repeat(20)}`;
@@ -66,13 +66,13 @@ const filesIn = (h: string) => (existsSync(commandDir(h)) ? readdirSync(commandD
 beforeEach(() => {
   home = mkdtempSync(path.join(tmpdir(), "mm-dual-wallet-orders-"));
   homes.push(home);
-  process.env.MERRYMEN_HOME = home;
-  process.env.MERRYMEN_PERPS = "paper";
-  process.env.MERRYMEN_SETTINGS_FILE = path.join(home, "settings.json");
-  process.env.MERRYMEN_SESSION_SECRET = "a".repeat(64);
-  delete process.env.MERRYMEN_HOSTED;
+  process.env.AGENTCAP_HOME = home;
+  process.env.AGENTCAP_PERPS = "paper";
+  process.env.AGENTCAP_SETTINGS_FILE = path.join(home, "settings.json");
+  process.env.AGENTCAP_SESSION_SECRET = "a".repeat(64);
+  delete process.env.AGENTCAP_HOSTED;
   delete process.env.DATABASE_URL;
-  delete process.env.MERRYMEN_TICK_SECONDS;
+  delete process.env.AGENTCAP_TICK_SECONDS;
   resetSettingsStoreForTest();
   mkdirSync(purposeHome("perps"), { recursive: true });
   writeFileSync(path.join(home, "grant.json"), JSON.stringify({ smartAccount: SPOT, demoOwnerPrivateKey: `0x${"33".repeat(32)}` }));
@@ -260,7 +260,7 @@ describe("what the Perps wallet's queue refuses, with nothing queued in either h
     for (const body of [
       reviewed({ side: "buy", symbol: "TSLA", usdgAmount: 1 }),
       reviewed({ side: "sell", symbol: "TSLA", usdgAmount: 1 }),
-      reviewed({ side: "buy", symbol: "MERRYMEN", usdgAmount: 30, purpose: "energy" }),
+      reviewed({ side: "buy", symbol: "AGENTCAP", usdgAmount: 30, purpose: "energy" }),
       reviewed({ side: "sell", symbol: "BTC-PERP", usdgAmount: 0 }),
       reviewed({ ...CLOSE, book: "live" }),
       reviewed({ ...CLOSE, book: undefined }),
@@ -376,8 +376,8 @@ describe("each wallet's slot and ceiling are its own", () => {
 describe("where no Perps worker runs, nothing is queued or read for the Perps wallet (D1)", () => {
   it("an exit is refused 403 perps-wallet-not-offered, nothing is queued, and its orders are not read", async () => {
     for (const lever of [undefined, "off", "live", "lvie"]) {
-      if (lever === undefined) delete process.env.MERRYMEN_PERPS;
-      else process.env.MERRYMEN_PERPS = lever;
+      if (lever === undefined) delete process.env.AGENTCAP_PERPS;
+      else process.env.AGENTCAP_PERPS = lever;
       for (const body of [reviewed(CLOSE), reviewed(FLATTEN)]) {
         const res = await POST(req("orders?wallet=perps", body));
         assert.equal(res.status, 403, `${lever} ${JSON.stringify(body)}`);
@@ -398,10 +398,10 @@ describe("where no Perps worker runs, nothing is queued or read for the Perps wa
   });
 
   it("HOSTED, THE POSITIONS ARE SAID TO STAY EXACTLY AS THEY ARE: no Perps child runs there to move them (D18 keeps the orchestrator's lever the web's)", async () => {
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOSTED = "1";
     for (const lever of [undefined, "off", "live"]) {
-      if (lever === undefined) delete process.env.MERRYMEN_PERPS;
-      else process.env.MERRYMEN_PERPS = lever;
+      if (lever === undefined) delete process.env.AGENTCAP_PERPS;
+      else process.env.AGENTCAP_PERPS = lever;
       for (const res of [await POST(req("orders?wallet=perps", reviewed(CLOSE))), await GET(req("orders?wallet=perps&id=x"))]) {
         assert.equal(res.status, 403, String(lever));
         const out = (await res.json()) as { code?: string; error?: string };
@@ -452,7 +452,7 @@ describe("hosted: each wallet's orders are read for its own account, in the tabl
    * unless a test says otherwise.
    */
   const sharedLedger = async (rows: readonly (readonly [string, string, number])[], reported: readonly string[] = [PERPS]) => {
-    const file = path.join(home, "merrymen.db");
+    const file = path.join(home, "agentcap.db");
     const raw = new DatabaseSync(file);
     try {
       await applyLedgerSchema(wrapSqlite(raw));
@@ -467,11 +467,11 @@ describe("hosted: each wallet's orders are read for its own account, in the tabl
     } finally {
       raw.close();
     }
-    symlinkSync(file, path.join(purposeHome("perps"), "merrymen.db"));
+    symlinkSync(file, path.join(purposeHome("perps"), "agentcap.db"));
   };
 
   beforeEach(async () => {
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOSTED = "1";
     resetGrantStoreForTest();
     // A: both wallets, one owner key. B: a Spot wallet only.
     await getGrantStore("spot").put(A, grantOf(SPOT, A));

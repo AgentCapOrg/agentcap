@@ -42,7 +42,7 @@ describe("LinkedWallet — the linked wallet, and whether it counts", () => {
 
   it("CLAIMED ELSEWHERE: another account has it now, and a fresh signature moves it here (once every 24 hours)", () => {
     const t = text("claimed-elsewhere");
-    assert.match(t, /powers another merrymen account right now/);
+    assert.match(t, /powers another agentcap account right now/);
     assert.match(t, /move it here/);
     assert.match(t, /once every 24 hours/, "a rolling 24 hours from the last move, not a calendar day");
     assert.doesNotMatch(t, /once a day|midnight|UTC day/);
@@ -76,7 +76,7 @@ describe("unlinkedNote — what an unlink leaves the tier reading, from the PATC
     // no wallet at all.
     const t = unlinkedNote("none");
     assert.doesNotMatch(t, /reads the wallet you sign in with again/);
-    assert.match(t, /powers another merrymen account right now/);
+    assert.match(t, /powers another agentcap account right now/);
     assert.match(t, /reads no wallet/);
     assert.match(t, /link it below with a signature from it/);
     assert.doesNotMatch(t, /once a day|24 hours/, "its own sign-in account is never held to the move limit");

@@ -13,8 +13,8 @@ import {
 } from "../live";
 import { strategyName } from "../strategy";
 import { Coin, Switch } from "../ui";
-import { Merryman } from "@/merryman/Merryman";
-import { useOutfit } from "@/merryman/wardrobe-store";
+import { AgentCapAvatar } from "@/agentcapavatar/AgentCapAvatar";
+import { useOutfit } from "@/agentcapavatar/wardrobe-store";
 import { faceSeed } from "@/lib/agent-avatar";
 import { Allocation } from "../studio";
 import { unrankedLabel } from "@/lib/rank-pnl";
@@ -166,11 +166,11 @@ export function Profile({
         >
           <ArrowLeft size={18} strokeWidth={1.8} aria-hidden="true" />
         </button>
-        {/* EVERY AGENT IS SOMEBODY. The public page leads with its merryman —
+        {/* EVERY AGENT IS SOMEBODY. The public page leads with its agentcapavatar —
             the owner's chosen look in their own browser, the slug's seeded
             one for everyone else — practising, scouting or resting as its
             published mode says, and nothing more than that. */}
-        <ProfileMerryman name={agent.name} slug={agent.slug} mode={agent.mode} />
+        <ProfileAgentCapAvatar name={agent.name} slug={agent.slug} mode={agent.mode} />
         <div>
           <h1>{agent.name}</h1>
           <p>@{agent.slug}</p>
@@ -604,13 +604,13 @@ function BookSwitch({ on, onChanged }: { on: boolean; onChanged?: () => void }) 
   );
 }
 
-/** The public page's merryman: head and shoulders, his published mode only. */
-function ProfileMerryman({ name, slug, mode }: { name: string; slug: string; mode: string | null | undefined }) {
+/** The public page's agentcapavatar: head and shoulders, his published mode only. */
+function ProfileAgentCapAvatar({ name, slug, mode }: { name: string; slug: string; mode: string | null | undefined }) {
   const { outfit } = useOutfit(slug, faceSeed(name, slug));
   const clip = mode === "live" ? "scout" : mode === "paper" ? "aim" : "idle";
   return (
-    <div className="profile-merryman">
-      <Merryman outfit={outfit} base={clip} framing="portrait" ground={false} label={`${name}'s merryman`} />
+    <div className="profile-agentcapavatar">
+      <AgentCapAvatar outfit={outfit} base={clip} framing="portrait" ground={false} label={`${name}'s agentcapavatar`} />
     </div>
   );
 }

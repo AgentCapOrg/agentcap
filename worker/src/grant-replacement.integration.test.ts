@@ -9,11 +9,11 @@ import type { StoredGrant } from "../../packages/core/src/index";
 import { FileGrantStore, GRANT_STORE_LOCK_FILE, GrantReplacementConflict, MAX_RETIRED_SESSION_KEYS } from "./grant-store";
 
 const home = mkdtempSync(path.join(os.tmpdir(), "mm-replacement-store-"));
-const oldEnv = { home: process.env.MERRYMEN_HOME, dek: process.env.MERRYMEN_STORE_DEK };
-process.env.MERRYMEN_HOME = home;
-process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 31).toString("base64");
+const oldEnv = { home: process.env.AGENTCAP_HOME, dek: process.env.AGENTCAP_STORE_DEK };
+process.env.AGENTCAP_HOME = home;
+process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 31).toString("base64");
 after(() => {
-  for (const [key, value] of [["MERRYMEN_HOME", oldEnv.home], ["MERRYMEN_STORE_DEK", oldEnv.dek]]) {
+  for (const [key, value] of [["AGENTCAP_HOME", oldEnv.home], ["AGENTCAP_STORE_DEK", oldEnv.dek]]) {
     if (value === undefined) delete process.env[key!]; else process.env[key!] = value;
   }
   rmSync(home, { recursive: true, force: true });

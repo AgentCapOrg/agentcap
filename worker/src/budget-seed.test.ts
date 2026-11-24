@@ -40,13 +40,13 @@ import {
 import { checkPolicy, type AgentLimits, type TradeIntent } from "./policy";
 import { transferBudgetRefusal } from "./transfer-budget";
 
-// The child's home, as childEnv sets MERRYMEN_HOME for it. No DATABASE_URL:
+// The child's home, as childEnv sets AGENTCAP_HOME for it. No DATABASE_URL:
 // a child never holds one; its store is its own sqlite.
-const scratch = mkdtempSync(path.join(os.tmpdir(), "merrymen-budget-seed-"));
+const scratch = mkdtempSync(path.join(os.tmpdir(), "agentcap-budget-seed-"));
 const HOME = path.join(scratch, "child");
 const isolatedCwd = path.join(scratch, "cwd");
 mkdirSync(isolatedCwd);
-process.env.MERRYMEN_HOME = HOME;
+process.env.AGENTCAP_HOME = HOME;
 delete process.env.DATABASE_URL;
 const originalCwd = process.cwd();
 const store = await import("./store");
@@ -63,7 +63,7 @@ await openStore();
 /** The orchestrator's own handles on the child's ledger, opened the way seedBudgetForChild opens them. */
 const handles: DatabaseSync[] = [];
 const orchestratorHandle = (): Db => {
-  const raw = new DatabaseSync(path.join(HOME, "merrymen.db"));
+  const raw = new DatabaseSync(path.join(HOME, "agentcap.db"));
   raw.exec("PRAGMA busy_timeout = 250");
   handles.push(raw);
   return wrapSqlite(raw);
@@ -119,7 +119,7 @@ const caps = async (agent = AGENT) => ({
 
 /** Age one row in the child's ledger: when it was created, and when its outcome was observed. */
 const age = (hash: string, createdAgoSec: number, settledAgoSec: number | null) => {
-  const raw = new DatabaseSync(path.join(HOME, "merrymen.db"));
+  const raw = new DatabaseSync(path.join(HOME, "agentcap.db"));
   try {
     raw.prepare("UPDATE trades SET created_at = unixepoch() - ?, budget_settled_at = ? WHERE user_op_hash = ?")
       .run(createdAgoSec, settledAgoSec === null ? null : nowSec() - settledAgoSec, hash);
@@ -130,7 +130,7 @@ const age = (hash: string, createdAgoSec: number, settledAgoSec: number | null) 
 
 /** What the mirror carries up: the child's trade rows, as written, into shared. */
 const mirror = () => {
-  const raw = new DatabaseSync(path.join(HOME, "merrymen.db"));
+  const raw = new DatabaseSync(path.join(HOME, "agentcap.db"));
   try {
     const cols = ["agent_id", "kind", "target", "sell_token", "buy_token", "amount_usdg", "user_op_hash", "status", "reject_rule", "created_at", "budget_settled_at"];
     const rows = raw.prepare(`SELECT ${cols.join(", ")} FROM trades`).all() as Record<string, string | number | null>[];
@@ -145,7 +145,7 @@ const mirror = () => {
 const rebuild = async () => {
   closeHandles();
   store.closeStoreForTest();
-  for (const f of ["merrymen.db", "merrymen.db-wal", "merrymen.db-shm"]) rmSync(path.join(HOME, f), { force: true });
+  for (const f of ["agentcap.db", "agentcap.db-wal", "agentcap.db-shm"]) rmSync(path.join(HOME, f), { force: true });
   await openStore();
 };
 
@@ -232,7 +232,7 @@ describe("the cap after a rebuild equals the cap before it", () => {
   });
 
   it("and the seed ages out on the same clock as the child's own rows", async () => {
-    const raw = new DatabaseSync(path.join(HOME, "merrymen.db"));
+    const raw = new DatabaseSync(path.join(HOME, "agentcap.db"));
     try {
       raw.prepare("UPDATE budget_seed SET settled_at = unixepoch() - 86401 WHERE op_hash = ?").run(h(10));
       raw.prepare("UPDATE budget_seed SET pending = 0 WHERE op_hash = ?").run(h(10));
@@ -533,7 +533,7 @@ describe("the seed costs one seek per operation, never a scan of the agent's his
     } finally {
       fresh.close();
     }
-    const child = new DatabaseSync(path.join(HOME, "merrymen.db"));
+    const child = new DatabaseSync(path.join(HOME, "agentcap.db"));
     try {
       assert.ok(child.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'budget_seed'").get(), "the child's store makes it");
     } finally {
@@ -550,7 +550,7 @@ describe("the seed costs one seek per operation, never a scan of the agent's his
       params: [],
       seedFigure: "s.transfer_usdg",
     });
-    const raw = new DatabaseSync(path.join(HOME, "merrymen.db"));
+    const raw = new DatabaseSync(path.join(HOME, "agentcap.db"));
     try {
       const plan = (raw.prepare(`EXPLAIN QUERY PLAN ${q.sql}`).all(...(q.params as SQLInputValue[])) as { detail: string }[]).map((r) => r.detail);
       const lookups = plan.flatMap((d, i) => (d.startsWith("CORRELATED SCALAR SUBQUERY") ? [plan[i + 1] ?? ""] : []));
@@ -566,7 +566,7 @@ describe("the seed costs one seek per operation, never a scan of the agent's his
 
   it("and at a long history the answer is the same: thousands of hashed rows, the seed counted once, aged-out seed rows not at all", async () => {
     const Y = getAddress("0x9999999999999999999999999999999999990f0f");
-    const raw = new DatabaseSync(path.join(HOME, "merrymen.db"));
+    const raw = new DatabaseSync(path.join(HOME, "agentcap.db"));
     try {
       raw.exec("BEGIN");
       const ins = raw.prepare(

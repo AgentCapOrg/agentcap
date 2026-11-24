@@ -39,25 +39,25 @@
  *
  * THE SAME TOKENS THE WORKER COUNTS. The Circle gate and energy count the
  * owner's wallet and their agent's own account together, and so does this —
- * through lib/merrymen-standing.ts, shared with /api/tier and /api/circle, so
- * "send $MERRYMEN to my account" opens this desk the same moment it lifts the
+ * through lib/agentcap-standing.ts, shared with /api/tier and /api/circle, so
+ * "send $AGENTCAP to my account" opens this desk the same moment it lifts the
  * gate. Either half failing to read is `unreachable`, never a smaller number.
  */
 import { webChainRead } from "@/lib/chain-read";
 import { NextResponse } from "next/server";
 import {
   CIRCLE_TIERS,
-  MERRYMEN_TOKEN,
+  AGENTCAP_TOKEN,
   isHostedMode,
   robinhoodChain,
   tierForBalance,
-} from "@merrymen/core";
+} from "@agentcap/core";
 import { createPublicClient } from "viem";
 
 import { tenantOf } from "@/lib/auth";
 import { holderWalletFor } from "@/lib/holder-wallet";
 import { agentAccountFor } from "@/lib/agent-account";
-import { AGENT_BALANCE_TTL_MS, readStanding } from "@/lib/merrymen-standing";
+import { AGENT_BALANCE_TTL_MS, readStanding } from "@/lib/agentcap-standing";
 import { sharedAlpha, type AlphaExtras, type DiscoveryRow, type Payload } from "@/lib/read-discoveries";
 import { walletNotSupported } from "@/lib/route-guard";
 
@@ -65,8 +65,8 @@ export const runtime = "nodejs";
 /** Per-caller. Never cacheable — the answer depends on who is asking. */
 export const dynamic = "force-dynamic";
 
-/** Alpha requires the 100,000-token Merryman tier. */
-const ENTRY_TIER = CIRCLE_TIERS.find((t) => t.id === "merryman")!;
+/** Alpha requires the 100,000-token AgentCapAvatar tier. */
+const ENTRY_TIER = CIRCLE_TIERS.find((t) => t.id === "agentcapavatar")!;
 
 /**
  * A balance moves when somebody trades the token; a tier moves when it crosses
@@ -121,7 +121,7 @@ function locked(
         emoji: ENTRY_TIER.emoji,
         perks: ENTRY_TIER.perks,
       },
-      token: { symbol: MERRYMEN_TOKEN.symbol, address: MERRYMEN_TOKEN.address },
+      token: { symbol: AGENTCAP_TOKEN.symbol, address: AGENTCAP_TOKEN.address },
     },
     { headers: { "Cache-Control": "private, no-store" } },
   );

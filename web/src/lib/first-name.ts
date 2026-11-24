@@ -26,7 +26,7 @@
  * Never widens anything: a name is a display string and the soul's own rule
  * still applies to it downstream.
  */
-import { agentNameForSlug, type MerrymenSettings } from "@merrymen/core";
+import { agentNameForSlug, type AgentCapSettings } from "@agentcap/core";
 import type { Db } from "../../../worker/src/db";
 
 export interface FirstNameInputs {
@@ -40,8 +40,8 @@ export interface FirstNameInputs {
    */
   prior: { accounts: readonly string[] } | null | undefined;
   settings: {
-    get(): Promise<MerrymenSettings | null>;
-    put(settings: MerrymenSettings): Promise<void>;
+    get(): Promise<AgentCapSettings | null>;
+    put(settings: AgentCapSettings): Promise<void>;
   };
   /** True when the ledger already has a row for the account; null when unread. */
   ledgerHasAgent(account: string): Promise<boolean | null>;
@@ -76,7 +76,7 @@ export async function nameNewAgent(i: FirstNameInputs): Promise<FirstNameOutcome
     if (i.prior.accounts.some((a) => !perps?.has(a.toLowerCase()))) return { skipped: "not-new" };
   }
 
-  let stored: MerrymenSettings | null;
+  let stored: AgentCapSettings | null;
   try {
     stored = await i.settings.get();
   } catch {

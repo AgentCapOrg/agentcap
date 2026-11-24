@@ -15,7 +15,7 @@ import os from "node:os";
 import path from "node:path";
 import { describe, it } from "node:test";
 
-process.env.MERRYMEN_HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-launchpad-"));
+process.env.AGENTCAP_HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-launchpad-"));
 
 const { launchpadStillNeeded, toolByName, TOOL_OUTPUT_MAX } = await import("./chat-tools");
 const { GRANT_PONS_CLASS, SETTINGS_DEFAULTS } = await import("../../../packages/core/src/index");

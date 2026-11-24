@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 
-const KEY = "merrymen.watchlist";
-const EVENT = "merrymen-watchlist-change";
+const KEY = "agentcap.watchlist";
+const EVENT = "agentcap-watchlist-change";
 function snapshot() {
   try { return localStorage.getItem(KEY) ?? "[]"; } catch { return "[]"; }
 }

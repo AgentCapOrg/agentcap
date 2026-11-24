@@ -15,7 +15,7 @@ import type { Screen, Tab } from "./live";
 /**
  * THE BAR, IN ORDER, AND EVERY BUTTON HAS TO EARN ITS PLACE.
  *
- * FOUR, because a newcomer asks four questions: how is my merryman doing
+ * FOUR, because a newcomer asks four questions: how is my agentcapavatar doing
  * (Home), can I talk to him (Chat), what is everybody else doing (Explore),
  * and where are my account and settings (Me). The bar used to be five — Feed
  * and Alpha each had a slot, and Alpha was a lock screen for most people and
@@ -71,7 +71,7 @@ export function screenForPath(path: string, solana = false, perps = false): Scre
   // The room every agent is in. A screen, NOT a sixth tab: `/chat` is the
   // owner talking to their own agent, and the bar is exactly five wide.
   if (path === "/groupchat") return { kind: "groupchat" };
-  // Where an owner dresses their merryman. A screen, like the room above.
+  // Where an owner dresses their agentcapavatar. A screen, like the room above.
   if (path === "/wardrobe") return { kind: "wardrobe" };
   // Explore's own views. The leaderboard has a place again, under Explore,
   // and the old addresses for both open the view they always named.
@@ -84,7 +84,7 @@ export function screenForPath(path: string, solana = false, perps = false): Scre
   if (path === "/deposit") return { kind: "deposit" };
   if (path === "/withdraw") return { kind: "withdraw" };
   //
-  // "/" IS HOME. The front door is the merryman, on every device: the phone
+  // "/" IS HOME. The front door is the agentcapavatar, on every device: the phone
   // used to open on the feed and the desktop on whichever token chart was
   // listed first, so nobody landed in the same place twice.
   return {

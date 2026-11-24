@@ -1,21 +1,21 @@
 {
-  "name": "merrymen",
+  "name": "agentcap",
   "version": "0.21.0",
   "description": "Autonomous trading agents with signed on-chain call permissions and expiry, plus worker-enforced daily budgets and drawdown checks. For Robinhood Chain; hosted or self-hosted.",
   "license": "MIT",
-  "homepage": "https://merrymen.dev",
+  "homepage": "https://agentcap.xyz",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/millw14/merrymen.git"
+    "url": "git+https://github.com/millw14/agentcap.git"
   },
   "bugs": {
-    "url": "https://github.com/millw14/merrymen/issues"
+    "url": "https://github.com/millw14/agentcap/issues"
   },
   "engines": {
     "node": "^22.13.0 || >=23.4.0"
   },
   "bin": {
-    "merrymen": "cli/bin.mjs"
+    "agentcap": "cli/bin.mjs"
   },
   "files": [
     "cli",
@@ -30,7 +30,7 @@
     "!web/.next/cache",
     "!web/.next/trace",
     "!web/tsconfig.tsbuildinfo",
-    "!web/public/merrymenlogo.png",
+    "!web/public/agentcaplogo.png",
     "!**/.env",
     "!**/.env.*",
     "!**/*.test.ts",

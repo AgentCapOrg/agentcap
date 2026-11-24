@@ -4,7 +4,7 @@
  * wall. macOS sandbox-exec denies all networking except this test's loopback RPC.
  * The sandbox must prove external denial before the worker is started.
  *
- * MERRYMEN_TEST_PERPS_CHILD=1 node --import tsx --test worker/src/perps-child-process.test.ts
+ * AGENTCAP_TEST_PERPS_CHILD=1 node --import tsx --test worker/src/perps-child-process.test.ts
  * No user session, real chain, venue, bundler or production home is involved.
  */
 import assert from "node:assert/strict";
@@ -25,7 +25,7 @@ import { readLighterFeed, specToJson } from "./perps/feed-reader";
 import { parseOrderBookDetails } from "./perps/markets";
 import { candles, H4 } from "./perps/testkit-perps";
 
-const enabled = process.env.MERRYMEN_TEST_PERPS_CHILD === "1";
+const enabled = process.env.AGENTCAP_TEST_PERPS_CHILD === "1";
 const root = path.resolve(import.meta.dirname, "../..");
 const account = "0x00000000000000000000000000000000c11d0001" as const;
 const word = (n: bigint) => n.toString(16).padStart(64, "0");
@@ -36,7 +36,7 @@ test("real paper Perps child: isolated startup, durable commands, restart and st
 }, async t => {
   assert.equal(process.platform, "darwin", "this explicit drill needs the tested OS network sandbox");
   assert.ok(existsSync("/usr/bin/sandbox-exec"));
-  const scratch = mkdtempSync(path.join(os.tmpdir(), "merrymen-perps-child-"));
+  const scratch = mkdtempSync(path.join(os.tmpdir(), "agentcap-perps-child-"));
   chmodSync(scratch, 0o700);
   const installHome = path.join(scratch, "install");
   const home = path.join(installHome, "accounts", "perps");
@@ -102,9 +102,9 @@ test("real paper Perps child: isolated startup, durable commands, restart and st
   const profile = `(version 1) (allow default) (deny network*) (allow network-outbound (remote ip "localhost:${port}"))`;
   const env: NodeJS.ProcessEnv = {
     PATH: `${path.dirname(process.execPath)}:/usr/bin:/bin`, HOME: scratch, TMPDIR: scratch,
-    MERRYMEN_HOME: home, MERRYMEN_PERPS: "paper", MERRYMEN_WALLET_PURPOSE: "perps",
-    MERRYMEN_RPC_MAINNET: rpc, MERRYMEN_RPC_TESTNET: rpc,
-    MERRYMEN_HALT_PERP_ENTRIES: "1", NO_COLOR: "1",
+    AGENTCAP_HOME: home, AGENTCAP_PERPS: "paper", AGENTCAP_WALLET_PURPOSE: "perps",
+    AGENTCAP_RPC_MAINNET: rpc, AGENTCAP_RPC_TESTNET: rpc,
+    AGENTCAP_HALT_PERP_ENTRIES: "1", NO_COLOR: "1",
   };
   const spec = parseOrderBookDetails(JSON.parse(readFileSync(path.join(root, "worker/src/perps/fixtures/orderBookDetails.perp.json"), "utf8")))!.markets.get(1)!.spec;
   const feedFile = path.join(home, "lighter-feed.json");
@@ -165,7 +165,7 @@ test("real paper Perps child: isolated startup, durable commands, restart and st
   };
   const isolatedControl = async (code: string) => {
     const proc = spawn("/usr/bin/sandbox-exec", ["-p", profile, process.execPath, "--import", path.join(root, "node_modules/tsx/dist/loader.mjs"), "--input-type=module", "-e", code], {
-      cwd, env: { ...env, MERRYMEN_HOME: installHome, MERRYMEN_PERPS: "off" }, stdio: ["ignore", "pipe", "pipe"],
+      cwd, env: { ...env, AGENTCAP_HOME: installHome, AGENTCAP_PERPS: "off" }, stdio: ["ignore", "pipe", "pipe"],
     });
     let stdout = "", stderr = "";
     proc.stdout.on("data", chunk => { stdout += String(chunk); });
@@ -178,7 +178,7 @@ test("real paper Perps child: isolated startup, durable commands, restart and st
     return JSON.parse(stdout);
   };
   const rows = (sql: string) => {
-    const file = path.join(home, "merrymen.db");
+    const file = path.join(home, "agentcap.db");
     const db = new DatabaseSync(file, { readOnly: true });
     try { return db.prepare(sql).all(); } finally { db.close(); }
   };
@@ -204,7 +204,7 @@ test("real paper Perps child: isolated startup, durable commands, restart and st
     await step("the actual child arms paper with entries off and writes its own book", async () => {
       launch();
       await waitFor("paper book", () => {
-        if (!existsSync(path.join(home, "merrymen.db"))) return false;
+        if (!existsSync(path.join(home, "agentcap.db"))) return false;
         try { return rows("SELECT cash_usdg FROM paper_book").length === 1; }
         catch (e) { if (String(e).includes("no such table")) return false; throw e; }
       });
@@ -280,7 +280,7 @@ test("real paper Perps child: isolated startup, durable commands, restart and st
       const digest = (value: string) => createHash("sha256").update(value).digest("hex");
       assert.equal(digest(readFileSync(archive, "utf8")), digest(JSON.stringify(grant)), "archived permission is exact without printing its synthetic secret");
       const discover = pathToFileURL(path.join(root, "cli/recovery-wallets.mjs")).href;
-      const recovered = await isolatedControl(`import {recoveryWallets} from ${JSON.stringify(discover)};const r=await recoveryWallets(process.env.MERRYMEN_HOME);console.log(JSON.stringify({unread:r.unread.length,wallets:r.wallets.map(w=>({purpose:w.purpose,account:w.g.smartAccount,active:w.active}))}));`);
+      const recovered = await isolatedControl(`import {recoveryWallets} from ${JSON.stringify(discover)};const r=await recoveryWallets(process.env.AGENTCAP_HOME);console.log(JSON.stringify({unread:r.unread.length,wallets:r.wallets.map(w=>({purpose:w.purpose,account:w.g.smartAccount,active:w.active}))}));`);
       assert.deepEqual(recovered, { unread: 0, wallets: [{ purpose: "perps", account, active: false }] });
       const offset = output.length;
       launch();
@@ -301,7 +301,7 @@ test("real paper Perps child: isolated startup, durable commands, restart and st
     const remaining = child as ChildProcess | null;
     if (remaining && remaining.exitCode === null && remaining.signalCode === null) { remaining.kill("SIGKILL"); await new Promise(resolve => remaining.once("exit", resolve)); }
     server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve()));
-    if (process.env.MERRYMEN_TEST_KEEP_CHILD === "1") t.diagnostic(`Isolated drill evidence retained at ${scratch}`);
+    if (process.env.AGENTCAP_TEST_KEEP_CHILD === "1") t.diagnostic(`Isolated drill evidence retained at ${scratch}`);
     else rmSync(scratch, { recursive: true, force: true });
   }
 });

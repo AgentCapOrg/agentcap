@@ -14,7 +14,7 @@
  * rather than a promise. It did not exist for the three weeks this paragraph
  * described it in the present tense — the failure mode the rest of this module
  * exists to prevent, committed in a comment about it.
- * The worker cannot import from web/src (imports.test.ts forbids @merrymen/*
+ * The worker cannot import from web/src (imports.test.ts forbids @agentcap/*
  * under worker/src, and web/src is not aliased inward at all), so the choice
  * was to move the module or keep a second copy. A second copy of a PUBLICATION
  * POLICY is the worst option available: the two readers drift into different
@@ -311,7 +311,7 @@ const SOURCE_POLICY: Readonly<Record<string, "strategy" | "model">> = Object.fre
   // SHADOW_SOURCES.
   "brain-shadow": "model",
   // The same reasoner, on an agent whose owner has enrolled it in
-  // MERRYMEN_BRAIN_LIVE — so its decisions CAN reach a trade and must not be
+  // AGENTCAP_BRAIN_LIVE — so its decisions CAN reach a trade and must not be
   // filed under a source SHADOW_SOURCES lists as unable to. Publishable for
   // exactly the reason `brain-shadow` is: the words are the model's own,
   // address-scanned at two layers, and an owner watching a feed is owed the
@@ -1119,7 +1119,7 @@ export const WITHHELD_REJECT_RULES: Readonly<Record<string, { why: string; owner
         "Lighter shows activity on the agent's account that the agent did not sign, so every open is refused and open " +
         "positions are being closed",
       remedy:
-        "Treat the trading key as compromised: replace it with your owner key using `merrymen recover`, then clear the " +
+        "Treat the trading key as compromised: replace it with your owner key using `agentcap recover`, then clear the " +
         "alert on the dashboard.",
     },
     "perp-entries-halted": {
@@ -1307,20 +1307,20 @@ export function rejectRuleRemedy(rule: string | null | undefined): string | null
     case "live-not-enabled":
       return "Turn on Live trading in Settings when you want it to trade real funds.";
     // THE ENERGY BUY'S TWO OWNER ACTIONS, and both of them name the way round
-    // it: $MERRYMEN sent straight to the account counts the moment it lands,
+    // it: $AGENTCAP sent straight to the account counts the moment it lands,
     // whatever the key or the mode. The transient three (tax unreadable, no
     // quote, a tax above the ceiling) are the chain's to change, not the
     // owner's — except that sending the tokens directly is always open, which
     // is why `energy-tax` still says so.
     case "energy-not-granted":
-      return "Re-sign your trading permission at /grant — revocation requires network fees — or send $MERRYMEN to the agent's account on Robinhood Chain directly.";
+      return "Re-sign your trading permission at /grant — revocation requires network fees — or send $AGENTCAP to the agent's account on Robinhood Chain directly.";
     case "energy-needs-live":
-      return "Turn on Live trading in Settings, or send $MERRYMEN to the agent's account on Robinhood Chain directly.";
+      return "Turn on Live trading in Settings, or send $AGENTCAP to the agent's account on Robinhood Chain directly.";
     case "energy-tax":
     case "energy-too-small":
-      return "Send $MERRYMEN to the agent's account on Robinhood Chain directly — it counts the moment it lands.";
+      return "Send $AGENTCAP to the agent's account on Robinhood Chain directly — it counts the moment it lands.";
     case "would-exhaust-contributions":
-      return "Send USDG to the agent's account first, then ask for energy again — or send $MERRYMEN to the agent's account on Robinhood Chain directly.";
+      return "Send USDG to the agent's account first, then ask for energy again — or send $AGENTCAP to the agent's account on Robinhood Chain directly.";
     // TWO REMEDIES, BY WHERE THE COIN COMES FROM: a watched coin can be fixed
     // or unwatched; a coin from the Trencher vault's own token list cannot be
     // unwatched, so its owner is not sent looking for a control that is not

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-import * as core from "@merrymen/core";
+import * as core from "@agentcap/core";
 import {
   ENERGY_ROUTE_V1,
   GRANT_ENERGY,
@@ -14,13 +14,13 @@ import {
   grantHasTransfer,
   grantPerp,
   type StoredGrant,
-} from "@merrymen/core";
+} from "@agentcap/core";
 import { CANONICAL_GRANT_FEATURES, checkCanonicalWall } from "./canonical-wall";
 import { CallPolicyVersion, toCallPolicy, toTimestampPolicy } from "@zerodev/permissions/policies";
 import { CLASS_FACTORY, CLASS_VAULT, TRENCHER_FACTORY, TRENCHER_VAULT, resealed, sealWall, signerGrant } from "./canonical-wall-fixture";
 
 /**
- * THE SERVER STORES THE MERRYMEN WALL, AND NOTHING ELSE.
+ * THE SERVER STORES THE AGENTCAP WALL, AND NOTHING ELSE.
  *
  * Every grant here is built by the real packages. The ones that pass come out of
  * web/src/lib/session.ts prepareAgentGrant — the signer the dashboard, the iOS
@@ -125,7 +125,7 @@ describe("grants from the real signer pass", () => {
   });
 });
 
-describe("an owner-enabled permission that is not the Merrymen wall is refused", () => {
+describe("an owner-enabled permission that is not the AgentCap wall is refused", () => {
   it("an extra USDG transfer permission", async () => {
     const { grant, owner } = await signerGrant({ account: ACCOUNT });
     const drained = await resealed(grant, owner, { withdrawalAddresses: [ATTACKER] });
@@ -358,9 +358,9 @@ describe("perpetuals", () => {
 });
 
 /**
- * A SIGNER FROM BEFORE ENERGY, WITH $MERRYMEN IN THE OWNER'S CUSTOM TOKENS.
+ * A SIGNER FROM BEFORE ENERGY, WITH $AGENTCAP IN THE OWNER'S CUSTOM TOKENS.
  *
- * Before energy, an owner who wanted $MERRYMEN in view listed it as a custom
+ * Before energy, an owner who wanted $AGENTCAP in view listed it as a custom
  * token, and the signer of the day sealed it like any other: an uncapped approve
  * and a place in `grantTokens`. Every current signer drops it (core wall.ts
  * usableExtraTokens), so the canonical rebuild never contains that approve and
@@ -368,8 +368,8 @@ describe("perpetuals", () => {
  * which tells an owner whose grant is running out nothing they can act on.
  *
  * THE LEGACY WALL IS REBUILT EXACTLY. Today's core cannot seal the reserve, so
- * the wall is built with a stand-in address where $MERRYMEN goes and the
- * stand-in is then replaced by $MERRYMEN in the permission data. That is byte
+ * the wall is built with a stand-in address where $AGENTCAP goes and the
+ * stand-in is then replaced by $AGENTCAP in the permission data. That is byte
  * for byte what the base commit's buildWallPolicies sealed (checked against
  * 75995697's core, with the reserve first and last, with and without the class
  * vault): the old signer differed only in keeping the reserve. The control below
@@ -396,7 +396,7 @@ describe("a Perps wallet's grant (perps slice 5b): the Perps wall, and in this b
     const overSpot = await resealed(grant, owner, { perpsOnly: false });
     assert.notEqual(decode(overSpot).permissionParams.policies[1].policyParams.permissions.length, 0, "premise: a Spot wall was sealed");
     const v = refusedWith(overSpot, "invalid_wall");
-    assert.match(v.ok ? "" : v.why, /does not implement the advertised Merrymen limits/);
+    assert.match(v.ok ? "" : v.why, /does not implement the advertised AgentCap limits/);
     // And the same wall declared as Spot would have been fine: only the purpose differs.
     const { grant: spot, owner: spotOwner } = await signerGrant({ account: PERPS_ACCOUNT });
     assert.deepEqual(verdict(await resealed(spot, spotOwner)), { ok: true });
@@ -407,7 +407,7 @@ describe("a Perps wallet's grant (perps slice 5b): the Perps wall, and in this b
     refusedWith({ ...grant, purpose: "perps" }, "invalid_wall");
     // Even with its markers stripped, its wall is still the Spot one.
     const v = refusedWith({ ...grant, purpose: "perps", grantFeatures: [], grantTokens: undefined, ponsClassVaultAddress: undefined, ponsClassVaultFactoryAddress: undefined }, "invalid_wall");
-    assert.match(v.ok ? "" : v.why, /does not implement the advertised Merrymen limits/);
+    assert.match(v.ok ? "" : v.why, /does not implement the advertised AgentCap limits/);
   });
 
   it("D5: the paper Perps wall carries nothing — any marker, token, sealed address, perp block or energy buy is refused by name", async () => {
@@ -449,7 +449,7 @@ describe("a Perps wallet's grant (perps slice 5b): the Perps wall, and in this b
 });
 
 describe("a grant from a signer that predates energy", () => {
-  const MERRY = core.MERRYMEN_TOKEN.address;
+  const MERRY = core.AGENTCAP_TOKEN.address;
   const STANDIN = "0x000000000000000000000000000000000000beef";
   const swap = (v: unknown): unknown =>
     typeof v === "string"
@@ -491,12 +491,12 @@ describe("a grant from a signer that predates energy", () => {
     assert.deepEqual(verdict(await preEnergyGrant([EXTRA])), { ok: true });
   });
 
-  it("with $MERRYMEN sealed as a custom token: refused by name, with the way out that works", async () => {
-    const legacy = await preEnergyGrant([{ symbol: "MERRYMEN", address: MERRY, decimals: 18 }, EXTRA]);
+  it("with $AGENTCAP sealed as a custom token: refused by name, with the way out that works", async () => {
+    const legacy = await preEnergyGrant([{ symbol: "AGENTCAP", address: MERRY, decimals: 18 }, EXTRA]);
     assert.ok(legacy.grantTokens?.includes(MERRY.toLowerCase()), "premise: the old signer listed the reserve");
     const v = refusedWith(legacy, "invalid_wall");
     const why = v.ok ? "" : v.why;
-    assert.match(why, /\$MERRYMEN/);
+    assert.match(why, /\$AGENTCAP/);
     assert.match(why, /This page or app version is out of date/);
     assert.match(why, /Reload the page \(or update the app\) and sign again$/);
     // No screen shows the reserve as a custom token any more (GET /api/settings
@@ -512,7 +512,7 @@ describe("a grant from a signer that predates energy", () => {
     const { grant } = await signerGrant({ account: ACCOUNT, extraTokens: [EXTRA] });
     for (const address of [MERRY.toLowerCase(), `0x${MERRY.slice(2).toUpperCase()}`]) {
       const v = refusedWith({ ...grant, grantTokens: [...(grant.grantTokens ?? []), address] }, "invalid_wall");
-      assert.match(v.ok ? "" : v.why, /\$MERRYMEN is now its energy/);
+      assert.match(v.ok ? "" : v.why, /\$AGENTCAP is now its energy/);
     }
   });
 });

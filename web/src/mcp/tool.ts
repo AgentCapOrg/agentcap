@@ -27,7 +27,7 @@ import { bearerChallenge } from "./oauth/metadata";
 
 interface ToolAnnotationBase {
   idempotentHint?: boolean;
-  /** True when the tool reaches data sources outside Merrymen (market providers, the chain). */
+  /** True when the tool reaches data sources outside AgentCap (market providers, the chain). */
   openWorldHint: boolean;
 }
 
@@ -49,7 +49,7 @@ export interface ToolContext {
   traceId: string;
   signal: AbortSignal;
   now(): number;
-  /** Merrymen's own database. Refuses new statements once `signal` is aborted (see abortableDb). */
+  /** AgentCap's own database. Refuses new statements once `signal` is aborted (see abortableDb). */
   mcp(): Promise<McpDb>;
   /**
    * Run against the shared ledger (read side). A missing ledger is an outage,
@@ -265,7 +265,7 @@ function textOf(summary: string | undefined, data: unknown): string {
 }
 
 /** Where an error result carries its machine-readable envelope ({code, message, retryable, retry_after_s, trace_id}). */
-export const ERROR_META_KEY = "dev.merrymen/error";
+export const ERROR_META_KEY = "dev.agentcap/error";
 
 /**
  * An error result carries NO structuredContent: every tool declares an
@@ -286,7 +286,7 @@ function errorResult(e: McpError, traceId: string, def: ToolDef, principal: Prin
     typeof required === "string" && advertisedScopesFor(profile).includes(required)
     ? bearerChallenge(cfg, { profile, scope: [required],
       error: e.code === "unauthenticated" ? "invalid_token" : "insufficient_scope",
-      description: e.code === "unauthenticated" ? "Reconnect Merrymen to continue." : "Reconnect Merrymen and approve the required permission." }) : null;
+      description: e.code === "unauthenticated" ? "Reconnect AgentCap to continue." : "Reconnect AgentCap and approve the required permission." }) : null;
   return {
     content: [{ type: "text", text: `Error ${e.code}: ${e.message}${retry}\n\n${JSON.stringify(body)}` }],
     _meta: { [ERROR_META_KEY]: body.error, ...(challenge ? { "mcp/www_authenticate": [challenge] } : {}) },
@@ -326,7 +326,7 @@ export async function runTool(def: ToolDef, rawArgs: unknown, principal: Princip
   try {
     // The database first, so a refused call is audited like any other.
     d = await (deps.mcp ?? mcpDb)().catch(() => {
-      throw new McpError("upstream_unavailable", "Merrymen's database is not reachable right now.", { retryAfterSec: 15 });
+      throw new McpError("upstream_unavailable", "AgentCap's database is not reachable right now.", { retryAfterSec: 15 });
     });
     if (def.anyOf?.length) {
       if (!def.anyOf.some((c) => hasCapability(principal, c))) requireCapability(principal, def.anyOf[0]!);

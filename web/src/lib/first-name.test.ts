@@ -1,15 +1,15 @@
 import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
 import { describe, it } from "node:test";
-import { agentNameForSlug, type MerrymenSettings } from "@merrymen/core";
+import { agentNameForSlug, type AgentCapSettings } from "@agentcap/core";
 import { wrapSqlite } from "../../../worker/src/db";
 import { ledgerHasAgent, mintAndNameAgent, nameNewAgent, type FirstNameInputs } from "./first-name";
 
 const SLUG = "7y2kq0m4c1x9h3tb";
 const ACCOUNT = "0x00000000000000000000000000000000000000a1";
 
-function inputs(over: Partial<FirstNameInputs> & { stored?: MerrymenSettings | null } = {}) {
-  const writes: MerrymenSettings[] = [];
+function inputs(over: Partial<FirstNameInputs> & { stored?: AgentCapSettings | null } = {}) {
+  const writes: AgentCapSettings[] = [];
   const stored = "stored" in over ? over.stored : { strategy: "trencher", paperTradingEnabled: true };
   const base: FirstNameInputs = {
     slug: SLUG,
@@ -159,8 +159,8 @@ describe("what the grants route does once a grant is stored", () => {
     };
   }
   function settingsStore() {
-    let stored: MerrymenSettings | null = null;
-    return { get: async () => stored, put: async (s: MerrymenSettings) => void (stored = s), now: () => stored };
+    let stored: AgentCapSettings | null = null;
+    return { get: async () => stored, put: async (s: AgentCapSettings) => void (stored = s), now: () => stored };
   }
 
   it("a tenant's first grant mints its id and names the agent; its second names nothing", async () => {

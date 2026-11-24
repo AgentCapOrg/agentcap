@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# merrymen installer for macOS/Linux — installs Node (if needed) + merrymen.
+# agentcap installer for macOS/Linux — installs Node (if needed) + agentcap.
 #
-#   curl -fsSL https://raw.githubusercontent.com/millw14/merrymen/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/millw14/agentcap/main/install.sh | bash
 #
 # Safe to re-run. Installs Node only via a package manager you already have
 # (Homebrew / fnm); otherwise it points you to nodejs.org rather than guessing.
@@ -13,7 +13,7 @@ red() { printf "  \033[31m%s\033[0m\n" "$1"; }
 dim() { printf "  \033[2m%s\033[0m\n" "$1"; }
 
 echo
-grn "merrymen -- stand and deliver"
+grn "agentcap -- stand and deliver"
 dim "setting up your rig..."
 echo
 
@@ -25,7 +25,7 @@ node_ok() {
   [ "$maj" -gt 23 ] || { [ "$maj" -eq 23 ] && [ "$min" -ge 4 ]; } || { [ "$maj" -eq 22 ] && [ "$min" -ge 13 ]; }
 }
 
-RERUN="curl -fsSL https://raw.githubusercontent.com/millw14/merrymen/main/install.sh | bash"
+RERUN="curl -fsSL https://raw.githubusercontent.com/millw14/agentcap/main/install.sh | bash"
 
 if node_ok; then
   grn "[ok] node $(node -v) already installed"
@@ -49,14 +49,14 @@ else
   grn "[ok] node $(node -v) installed"
 fi
 
-ylw "[..] installing merrymen (global)..."
-npm install -g merrymen
+ylw "[..] installing agentcap (global)..."
+npm install -g agentcap
 
 echo
 grn "the band is ready. next:"
-dim "  merrymen setup     # confirm the rig"
-dim "  merrymen onboard   # keys, strategy, basket"
-dim "  merrymen start     # dashboard at localhost:3100 + the worker"
+dim "  agentcap setup     # confirm the rig"
+dim "  agentcap onboard   # keys, strategy, basket"
+dim "  agentcap start     # dashboard at localhost:3100 + the worker"
 echo
 
 # nudge about PATH if npm's global bin isn't on it (the "command not found" trap)

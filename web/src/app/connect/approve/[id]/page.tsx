@@ -7,7 +7,7 @@ import "../../mcp-connect.css";
 import "../../setup/[id]/setup.css";
 
 export const metadata: Metadata = {
-  title: "Approve a request · merrymen",
+  title: "Approve a request · agentcap",
   description: "Review and approve or decline something your AI assistant prepared.",
   robots: { index: false, follow: false },
   referrer: "no-referrer",

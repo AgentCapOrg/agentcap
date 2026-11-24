@@ -1,8 +1,8 @@
 /**
  * The gateway must not remember a balance it never read.
  *
- * A tester was locked out of Merrymen AI for ten minutes at a time and told his
- * wallet "no longer meets the $MERRYMEN holding requirement" — about tokens he
+ * A tester was locked out of AgentCap AI for ten minutes at a time and told his
+ * wallet "no longer meets the $AGENTCAP holding requirement" — about tokens he
  * still held. The read had thrown; the catch returned `false`; `false` was then
  * written into the balance cache with the full BALANCE_TTL, so one blink of the
  * mainnet RPC became a ten-minute confident lie about somebody's wallet. His
@@ -51,7 +51,7 @@ function gatewayWith(read: () => Promise<bigint>) {
     upstreamKey: "x",
     bitqueryKey: "test-bitquery-key",
     model: "test-model",
-    domain: "merrymen.dev",
+    domain: "agentcap.xyz",
     minTokens: 100000n,
     tokenAddress: "0x0000000000000000000000000000000000000000",
     publicClient: { readContract: () => read() },

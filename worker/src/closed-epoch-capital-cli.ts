@@ -71,7 +71,7 @@ export const HELP = `Closed-epoch capital repair — PREVIEW FIRST. docs/closed-
   node --import tsx worker/src/closed-epoch-capital-cli.ts --revert /absolute/apply-report.json --dry-run --output /absolute/new-receipts-report.json
   node --import tsx worker/src/closed-epoch-capital-cli.ts --revert-repair <repair id> --output /absolute/new-report.json [--dry-run]
 
-Required environment: DATABASE_URL. Optional: MERRYMEN_CHAIN_GAP_RPC (defaults to the public Robinhood Chain mainnet RPC).
+Required environment: DATABASE_URL. Optional: AGENTCAP_CHAIN_GAP_RPC (defaults to the public Robinhood Chain mainnet RPC).
 Only a held tenant, and only closed epoch 1: the epoch is proved closed from Postgres and the chain before anything is proposed.
 The preview reads Postgres read-only and the chain; it writes only its own report, created once with mode 0600.
 --apply recomputes the preview and, only when the digest is the one you confirm, files the chain-log rows, quarantines what they supersede and
@@ -176,7 +176,7 @@ export async function connectClosedEpoch(url: string, readOnly: boolean, loadPg:
   } catch { throw new CliError("postgres-driver-unavailable"); }
   pg.types.setTypeParser(20, (v) => (v === null ? null : Number(v)));
   const client = new pg.Client({
-    connectionString: url, connectionTimeoutMillis: 10_000, application_name: readOnly ? "merrymen-closed-epoch-preview-readonly" : "merrymen-closed-epoch-apply",
+    connectionString: url, connectionTimeoutMillis: 10_000, application_name: readOnly ? "agentcap-closed-epoch-preview-readonly" : "agentcap-closed-epoch-apply",
     options: `-c statement_timeout=30000 -c lock_timeout=5000${readOnly ? " -c default_transaction_read_only=on" : ""}`,
   });
   await client.connect();
@@ -292,7 +292,7 @@ export async function main(args: readonly string[] = process.argv.slice(2), env:
   targetDigest(env.DATABASE_URL);
   const full = {
     ...deps, connect: deps.connect ?? connectClosedEpoch, nowMs: deps.nowMs ?? (() => Date.now()),
-    rpc: deps.rpc ?? createClosedEpochRpc(env.MERRYMEN_CHAIN_GAP_RPC || DEFAULT_RPC),
+    rpc: deps.rpc ?? createClosedEpochRpc(env.AGENTCAP_CHAIN_GAP_RPC || DEFAULT_RPC),
   };
 
   if (options.mode === "receipts" || (options.mode === "revert-repair" && options.dryRun)) {
@@ -413,7 +413,7 @@ export async function main(args: readonly string[] = process.argv.slice(2), env:
   // does not unsay it.
   try {
     out(`APPLIED repair ${report.repairId} — ${report.actions.length} action(s) for tenant ${report.tenant}, epoch ${report.epoch}, under backup ${report.backupRef}; ` +
-      `the apply report (what --revert takes) is ${options.output}. Preview the tenant again with MERRYMEN_RESUME_PREVIEW before approving it.`);
+      `the apply report (what --revert takes) is ${options.output}. Preview the tenant again with AGENTCAP_RESUME_PREVIEW before approving it.`);
   } catch { throw new CliError("applied-but-not-printed"); }
   return 0;
 }

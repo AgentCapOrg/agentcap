@@ -23,7 +23,7 @@
  * never NOT COMMITTED; and a booked row changed or gone is diverged.
  *
  * Each run creates its own database and drops it. Run with
- * MERRYMEN_TEST_PG_URL=postgres://…@127.0.0.1:<port>/<db> and the `pg`
+ * AGENTCAP_TEST_PG_URL=postgres://…@127.0.0.1:<port>/<db> and the `pg`
  * driver resolvable (NODE_PATH works: it is loaded with require here).
  */
 import assert from "node:assert/strict";
@@ -44,7 +44,7 @@ import type { RpcCall } from "./chain-capital";
 import { applyBooking, BOOKINGS_TABLE, BookingRefused, digestOf, ensureBookingSchema, parseApplyReport, readBookingSnapshot, type BookingPlan, type StaleBasis } from "./chain-gap-booking";
 import { CliError, CommitOutcomeUnknown, connectBooking, main, pgClientDb, targetDigest, type PgClient } from "./chain-gap-booking-cli";
 
-const url = process.env.MERRYMEN_TEST_PG_URL ?? process.env.MERRYMEN_TEST_POSTGRES_URL;
+const url = process.env.AGENTCAP_TEST_PG_URL ?? process.env.AGENTCAP_TEST_POSTGRES_URL;
 const loadPg = async () => createRequire(import.meta.url)("pg") as unknown;
 
 const TENANT = "0x4b6dcd559c82ea897c34dacfb785fb0c8f85d4c5";

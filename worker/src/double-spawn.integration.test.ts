@@ -30,7 +30,7 @@
  * reconcile pass landing before every restart timer; and a stall after a
  * healthy run starts the ladder again rather than climbing it.
  *
- * MERRYMEN_HOME is per process (node --test forks per file), so this never
+ * AGENTCAP_HOME is per process (node --test forks per file), so this never
  * leaks into another test file.
  */
 import assert from "node:assert/strict";
@@ -43,16 +43,16 @@ import { after, beforeEach, describe, it, mock } from "node:test";
 import type { ChildProcess } from "node:child_process";
 import type { StoredGrant } from "../../packages/core/src/index";
 
-const FLEET = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-double-spawn-")));
-process.env.MERRYMEN_HOME = FLEET;
-process.env.MERRYMEN_HOSTED = "1";
+const FLEET = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-double-spawn-")));
+process.env.AGENTCAP_HOME = FLEET;
+process.env.AGENTCAP_HOSTED = "1";
 // The file stores and the no-op lease: no Postgres in this test.
 delete process.env.DATABASE_URL;
-process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
+process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
 // The tick every child here runs, so the watchdog's patience is known:
 // firstBeatGraceSec(60) = 150s for a first beat, staleThresholdSec(60) = 210s
 // between beats.
-process.env.MERRYMEN_TICK_SECONDS = "60";
+process.env.AGENTCAP_TICK_SECONDS = "60";
 const FIRST_BEAT_SEC = 150;
 const STALE_SEC = 210;
 
@@ -225,7 +225,7 @@ function accountingSnapshot(db: DatabaseSync): string {
 /** A stopped original book beside disposable access and private-memory copies. */
 function seedRemovalState(): { inode: number; accounting: string } {
   const home = childHome(TENANT);
-  const file = path.join(home, "merrymen.db");
+  const file = path.join(home, "agentcap.db");
   const db = new DatabaseSync(file);
   let accounting: string;
   try {
@@ -275,7 +275,7 @@ function seedRemovalState(): { inode: number; accounting: string } {
 
 function assertRemovedAccessAndRetainedBook(original: { inode: number; accounting: string }): void {
   const home = childHome(TENANT);
-  const file = path.join(home, "merrymen.db");
+  const file = path.join(home, "agentcap.db");
   assert.equal(statSync(file).ino, original.inode, "the original accounting file remains");
   const db = new DatabaseSync(file, { readOnly: true });
   try {

@@ -27,7 +27,7 @@ import { PAPER_CHECKPOINT_SCHEMA } from "./paper-checkpoint";
 import { ensureLedgerResumeSchema, LEDGER_IMPORT_SCHEMA } from "./ledger-import";
 import { gasFields } from "./key-install-accounting";
 import { CHAIN_REFUSAL, chainGapCheck, knownChainFacts, resumePreconditions } from "./ledger-resume";
-import { CASH, GRANT_PONS_CLASS, GRANT_TRENCHER, MERRYMEN_TOKEN } from "../../packages/core/src/index";
+import { CASH, GRANT_PONS_CLASS, GRANT_TRENCHER, AGENTCAP_TOKEN } from "../../packages/core/src/index";
 import type { RpcCall } from "./chain-capital";
 import {
   APPLY_FORMAT, applyBooking, BOOKINGS_TABLE, BookingRefused, canonical, commitEvidence, currentXact, digestOf, factsStillMissing, gapChainOf, holdingVerdict, isServerXact,
@@ -394,7 +394,7 @@ describe("0x4b6dcd's shape: an operation with no USDG leg", () => {
     assert.equal(p.items.find((i) => i.key === `log:${h32("home")}#2`)?.class, "unresolved");
     assert.match(p.items.find((i) => i.key === `op:${h32("odd")}`)!.why, /names no validator this tool reads/);
     // An energy purchase is a clean USDG-for-one-token receipt and still not a trade: its flow moves both peaks.
-    const reserve = MERRYMEN_TOKEN.address.toLowerCase();
+    const reserve = AGENTCAP_TOKEN.address.toLowerCase();
     const energy = await preview(await books(), fakeRpc({ txs: [fromFixture(CHAIN.buy), operation({ opHash: h32("energy"), nonce: SESSION_NONCE, block: SELL_BLOCK + 50n, tag: "energy",
       logs: [[USDG, [TR, topic(ACCOUNT), topic(addr(0x9001))], `0x${word(2_000_000n)}`, "0x2"], [reserve, [TR, topic(addr(0x9001)), topic(ACCOUNT)], `0x${word(77n)}`, "0x3"]] })] }).rpc);
     assert.equal(energy.verdict, "blocked");
@@ -556,7 +556,7 @@ describe("what is never booked, whatever its class", () => {
       VALUES ('a', ?, ?, 4663, ?, ?, '{}', 'r', 'approved', 1, 1)`).run(SHOGUN_TENANT, ACCOUNT, SHOGUN_TENANT, "e".repeat(64));
     const p = await preview(b, fakeRpc({ txs, decimals: { [COIN]: 18n } }).rpc);
     assert.equal(p.verdict, "blocked");
-    assert.ok(p.refusals.some((r) => r.includes(`MERRYMEN_RESUME_REVOKE=${SHOGUN_TENANT}:${"e".repeat(64)}`)), p.refusals.join("; "));
+    assert.ok(p.refusals.some((r) => r.includes(`AGENTCAP_RESUME_REVOKE=${SHOGUN_TENANT}:${"e".repeat(64)}`)), p.refusals.join("; "));
     const c = await books();
     c.raw.prepare("INSERT INTO cost_basis VALUES (?, 'live', 'COIN', '1', '1', 1)").run(ACCOUNT.toUpperCase().replace("0X", "0x"));
     assert.ok((await preview(c, fakeRpc({ txs }).rpc)).refusals.some((r) => /spelled 2 ways/.test(r)));
@@ -1778,7 +1778,7 @@ describe("revert, decided by what the database recorded", () => {
     await assert.rejects(revert(archived.b, archived.report), (e: unknown) => (e as BookingRefused).code === "admitted" && /went past approval \(now archived/.test((e as Error).message));
     const open = await applied();
     await admit(open.b, { atSec: NOW + 60, state: "approved", generation: null });
-    await assert.rejects(revert(open.b, open.report), (e: unknown) => (e as BookingRefused).code === "open-approval" && /MERRYMEN_RESUME_REVOKE/.test((e as Error).message));
+    await assert.rejects(revert(open.b, open.report), (e: unknown) => (e as BookingRefused).code === "open-approval" && /AGENTCAP_RESUME_REVOKE/.test((e as Error).message));
     const beat = await applied();
     beat.b.raw.prepare("UPDATE agents SET beat_at = ? WHERE smart_account = ?").run(NOW + 30, ACCOUNT);
     await assert.rejects(revert(beat.b, beat.report), (e: unknown) => (e as BookingRefused).code === "moved");

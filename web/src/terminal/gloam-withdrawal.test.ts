@@ -81,7 +81,7 @@ const oldFlag = process.env.NEXT_PUBLIC_GLOAM_WITHDRAWALS_ENABLED;
 
 before(async () => {
   dom = new JSDOM("<!doctype html><html><body><div id=root></div></body></html>", {
-    url: "https://app.merrymen.dev/withdraw", pretendToBeVisual: true,
+    url: "https://app.agentcap.xyz/withdraw", pretendToBeVisual: true,
   });
   function setGlobal(name: string, value: unknown) {
     originalGlobals.set(name, Object.getOwnPropertyDescriptor(globalThis, name));

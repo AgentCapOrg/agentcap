@@ -26,7 +26,7 @@ export async function POST(req: Request): Promise<Response> {
   } catch (error) {
     if (error instanceof OAuthError) {
       const headers: Record<string, string> = { ...PUBLIC_CORS };
-      if (error.status === 401) headers["WWW-Authenticate"] = 'Basic realm="merrymen"';
+      if (error.status === 401) headers["WWW-Authenticate"] = 'Basic realm="agentcap"';
       return jsonResponse(error.body(), error.status, headers);
     }
     logEvent("token_failed", { error: error instanceof Error ? `${error.name}: ${error.message}`.slice(0, 300) : "unknown" });

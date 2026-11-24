@@ -30,7 +30,7 @@ import {
   buildCallPermissions,
   grantWallOptions,
   robinhoodTestnet,
-} from "@merrymen/core";
+} from "@agentcap/core";
 import { checkCanonicalWall } from "./canonical-wall";
 import { deriveKernelAccountAddress } from "./derive-account";
 

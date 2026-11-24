@@ -1188,7 +1188,7 @@ export async function handleHistory(db: Db, userId: string): Promise<{ handle: s
 // ── trader evidence (cohort enrichment) ─────────────────────────────────────
 
 /**
- * What Merrymen MEASURED about a trader from their positions, for the cohort
+ * What AgentCap MEASURED about a trader from their positions, for the cohort
  * score (cohort.ts CohortCandidate's reconstructed inputs). Shared: it is a
  * fact about a public trader, not about any owner. Every figure is null when
  * the sample could not support it; nothing here is a provider body.
@@ -3581,7 +3581,7 @@ export interface AssessmentOutcome {
   assessmentId: string;
   horizonLabel: string;
   observedAtMs: number;
-  /** 8dp USD decimal from Merrymen's own pricing; null when no price could be read. */
+  /** 8dp USD decimal from AgentCap's own pricing; null when no price could be read. */
   price8: string | null;
   note: string | null;
 }

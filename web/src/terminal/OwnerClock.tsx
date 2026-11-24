@@ -38,7 +38,7 @@ import { noteMe } from "./groupchat";
  * the things that must not reach it. The answer — the owner's own settings —
  * is handed to the room's store, so its sleep panel is current if it is open.
  */
-const KEY = "merrymen.groupchat.tz.v1";
+const KEY = "agentcap.groupchat.tz.v1";
 /** Visibility flips constantly (every tab switch, every pane show); one ask a minute is plenty. */
 const MIN_GAP_MS = 60_000;
 

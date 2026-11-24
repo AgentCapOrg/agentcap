@@ -171,20 +171,20 @@ test('summary measures contiguous returns and sampled flow, never uses missing a
   assert.equal(summarizeEvidence(e,now+121000).latestFiveMinuteReturnPct,null);
 });
 test('detail reads authenticate only to fixed origin, coalesce callers and preserve partial failure',async()=>{
-  const old=globalThis.fetch,key=process.env.MERRYMEN_COINGECKO_PRO_API_KEY,home=process.env.MERRYMEN_FLEET_HOME;
-  process.env.MERRYMEN_COINGECKO_PRO_API_KEY='test-key';delete process.env.MERRYMEN_FLEET_HOME;
+  const old=globalThis.fetch,key=process.env.AGENTCAP_COINGECKO_PRO_API_KEY,home=process.env.AGENTCAP_FLEET_HOME;
+  process.env.AGENTCAP_COINGECKO_PRO_API_KEY='test-key';delete process.env.AGENTCAP_FLEET_HOME;
   let clock = Date.now();
   resetGeckoFeedsForTest({ now: () => clock, sleep: async ms => { clock += ms; await Promise.resolve(); } });
   const urls:string[]=[];
   globalThis.fetch=async(input,init)=>{const url=String(input);urls.push(url);assert.ok(url.startsWith('https://pro-api.coingecko.com/api/v3/onchain/'));assert.equal(init?.redirect,'error');assert.equal((init?.headers as Record<string,string>)['x-cg-pro-api-key'],'test-key');assert.ok(!url.includes('test-key'));return url.includes('/trades')?Response.json({data:[]}):new Response('',{status:401});};
   try{const [a,b]=await Promise.all([readPoolEvidence(quote,token),readPoolEvidence(quote,token)]);assert.equal(urls.length,2);assert.equal(a.candles.failure,'http-401');assert.equal(a.trades.failed,false);assert.deepEqual(a,b);await assert.rejects(readPoolEvidence('../evil',token));}
-  finally{resetGeckoFeedsForTest();globalThis.fetch=old;if(key===undefined)delete process.env.MERRYMEN_COINGECKO_PRO_API_KEY;else process.env.MERRYMEN_COINGECKO_PRO_API_KEY=key;if(home!==undefined)process.env.MERRYMEN_FLEET_HOME=home;}
+  finally{resetGeckoFeedsForTest();globalThis.fetch=old;if(key===undefined)delete process.env.AGENTCAP_COINGECKO_PRO_API_KEY;else process.env.AGENTCAP_COINGECKO_PRO_API_KEY=key;if(home!==undefined)process.env.AGENTCAP_FLEET_HOME=home;}
 });
 
 test('public fallback keeps exact-token evidence and never receives Pro credentials', async () => {
-  const oldFetch = globalThis.fetch, key = process.env.MERRYMEN_COINGECKO_PRO_API_KEY, home = process.env.MERRYMEN_FLEET_HOME;
-  process.env.MERRYMEN_COINGECKO_PRO_API_KEY = 'private-evidence-key';
-  delete process.env.MERRYMEN_FLEET_HOME;
+  const oldFetch = globalThis.fetch, key = process.env.AGENTCAP_COINGECKO_PRO_API_KEY, home = process.env.AGENTCAP_FLEET_HOME;
+  process.env.AGENTCAP_COINGECKO_PRO_API_KEY = 'private-evidence-key';
+  delete process.env.AGENTCAP_FLEET_HOME;
   let clock = Date.now();
   resetGeckoFeedsForTest({ now: () => clock, sleep: async ms => { clock += ms; await Promise.resolve(); } });
   const target = '0x' + '3'.repeat(40), pool = '0x' + '4'.repeat(40);
@@ -214,7 +214,7 @@ test('public fallback keeps exact-token evidence and never receives Pro credenti
     assert.doesNotMatch(JSON.stringify(evidence), /private-evidence-key|exhausted/);
   } finally {
     globalThis.fetch = oldFetch; resetGeckoFeedsForTest();
-    if (key === undefined) delete process.env.MERRYMEN_COINGECKO_PRO_API_KEY; else process.env.MERRYMEN_COINGECKO_PRO_API_KEY = key;
-    if (home === undefined) delete process.env.MERRYMEN_FLEET_HOME; else process.env.MERRYMEN_FLEET_HOME = home;
+    if (key === undefined) delete process.env.AGENTCAP_COINGECKO_PRO_API_KEY; else process.env.AGENTCAP_COINGECKO_PRO_API_KEY = key;
+    if (home === undefined) delete process.env.AGENTCAP_FLEET_HOME; else process.env.AGENTCAP_FLEET_HOME = home;
   }
 });

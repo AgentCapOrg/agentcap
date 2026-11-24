@@ -62,7 +62,7 @@ export const FLOW_BROKER_LIMITS = Object.freeze({
  * environment. Without it a child does not ask, so it never waits out a
  * timeout for a broker that was never attached.
  */
-export const FLOW_BROKER_ENV = "MERRYMEN_FLOW_BROKER";
+export const FLOW_BROKER_ENV = "AGENTCAP_FLOW_BROKER";
 
 export interface FlowRequest {
   flow: 1;

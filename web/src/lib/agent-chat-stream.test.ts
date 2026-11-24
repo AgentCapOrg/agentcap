@@ -233,7 +233,7 @@ describe("a failed call on the house's key", () => {
   const HELD =
     "groq 400 — organization_delinquent: Organization has been restricted because of overdue payment(s). " +
     "Please update the payment method at https://console.groq.com/settings/billing/manage and then contact support.";
-  const ENV = ["GROQ_API_KEY", "MERRYMEN_LLM_API_KEY", "ANTHROPIC_API_KEY"] as const;
+  const ENV = ["GROQ_API_KEY", "AGENTCAP_LLM_API_KEY", "ANTHROPIC_API_KEY"] as const;
   const saved = new Map(ENV.map((k) => [k, process.env[k]]));
   const groq = (apiKey: string) => (): LlmCreds => ({ provider: "groq", transport: "openai", baseUrl: "https://api.groq.com/openai/v1", model: "m", apiKey, vision: false });
   const failWith = (e: unknown): AgentChatOptions["stream"] => async () => {
@@ -244,7 +244,7 @@ describe("a failed call on the house's key", () => {
   before(() => {
     // As the deployment sets it — with the stray whitespace an env file carries.
     process.env.GROQ_API_KEY = ` ${HOUSE}\n`;
-    delete process.env.MERRYMEN_LLM_API_KEY;
+    delete process.env.AGENTCAP_LLM_API_KEY;
     delete process.env.ANTHROPIC_API_KEY;
     mock.method(console, "warn", (...args: unknown[]) => {
       warned.push(args.map(String).join(" "));
@@ -288,28 +288,28 @@ describe("a failed call on the house's key", () => {
 
   it("THE HOLDER GATEWAY'S UPSTREAM IS THE HOUSE'S: its hold and its model are ours, hosted or not; an expired claim is the holder's", async () => {
     // gateway/lib/core.mjs relays its upstream's status and body untouched,
-    // so the house Groq account's hold reached holders as "merrymen 400 — …",
+    // so the house Groq account's hold reached holders as "agentcap 400 — …",
     // and a holder token is no env key: by value it was the holder's bill.
-    const holder = (): LlmCreds => ({ provider: "merrymen", transport: "openai", baseUrl: "https://gateway.example/v1", model: "merrymen-fast", apiKey: "mm_holder_claim_token_0123456789", vision: false });
+    const holder = (): LlmCreds => ({ provider: "agentcap", transport: "openai", baseUrl: "https://gateway.example/v1", model: "agentcap-fast", apiKey: "mm_holder_claim_token_0123456789", vision: false });
     const said = async (line: string, hosted?: boolean) =>
       (await streamed("hi", failWith(new Error(line)), { credentials: holder, ...(hosted === undefined ? {} : { hosted }) })).out;
     for (const hosted of [undefined, false, true]) {
-      const held = await said(HELD.replace(/^groq /, "merrymen "), hosted);
+      const held = await said(HELD.replace(/^groq /, "agentcap "), hosted);
       assert.equal(held.kind, "billing");
       assert.equal(held.house, true, `hosted: ${hosted}`);
-      assert.equal(held.provider, "Merrymen AI");
-      const gone = await said("merrymen 404 — model_not_found: The model `merrymen-fast` does not exist or you do not have access to it.", hosted);
+      assert.equal(held.provider, "AgentCap AI");
+      const gone = await said("agentcap 404 — model_not_found: The model `agentcap-fast` does not exist or you do not have access to it.", hosted);
       assert.equal(gone.kind, "model-missing");
       assert.equal(gone.house, true, `the gateway forces its model (hosted: ${hosted})`);
     }
-    const expired = await said("merrymen 401 — invalid or expired Merrymen AI token — re-claim at /claim");
+    const expired = await said("agentcap 401 — invalid or expired AgentCap AI token — re-claim at /claim");
     assert.equal(expired.kind, "key-rejected");
     assert.equal(expired.house, false, "the gateway's own 401 is the holder's claim to renew");
-    assert.match(warned.find((l) => l.includes("(billing")) ?? "", /^\[chat\] model call failed \(billing, house\): merrymen 400/);
+    assert.match(warned.find((l) => l.includes("(billing")) ?? "", /^\[chat\] model call failed \(billing, house\): agentcap 400/);
   });
 
   it("onHouseKey: by value, against each of the deployment's three key variables, and only hosted", () => {
-    const env = { GROQ_API_KEY: "g-house-key-1", MERRYMEN_LLM_API_KEY: " l-house-key-2 ", ANTHROPIC_API_KEY: "a-house-key-3" };
+    const env = { GROQ_API_KEY: "g-house-key-1", AGENTCAP_LLM_API_KEY: " l-house-key-2 ", ANTHROPIC_API_KEY: "a-house-key-3" };
     for (const key of ["g-house-key-1", "l-house-key-2", "a-house-key-3", " g-house-key-1 "]) {
       assert.equal(onHouseKey(key, true, env), true, key);
       assert.equal(onHouseKey(key, false, env), false, `self-hosted: ${key}`);

@@ -183,7 +183,7 @@ function virtualClock(start = 1_000_000) {
  * That is the `candles=budget` outcome the evidence row exists to end.
  */
 describe("a leg past its budget gives up its place in the lane", () => {
-  const KNOBS = ["MERRYMEN_COINGECKO_PRO_API_KEY", "MERRYMEN_FLEET_HOME", "MERRYMEN_COINGECKO_PRO_SPACING_MS", "MERRYMEN_COINGECKO_MONTHLY_CREDITS"] as const;
+  const KNOBS = ["AGENTCAP_COINGECKO_PRO_API_KEY", "AGENTCAP_FLEET_HOME", "AGENTCAP_COINGECKO_PRO_SPACING_MS", "AGENTCAP_COINGECKO_MONTHLY_CREDITS"] as const;
   const realFetch = globalThis.fetch;
   let saved: Record<string, string | undefined> = {};
   let home = "";
@@ -191,8 +191,8 @@ describe("a leg past its budget gives up its place in the lane", () => {
     saved = Object.fromEntries(KNOBS.map((k) => [k, process.env[k]]));
     for (const k of KNOBS) delete process.env[k];
     home = mkdtempSync(path.join(tmpdir(), "evidence-budget-"));
-    process.env.MERRYMEN_FLEET_HOME = home;
-    process.env.MERRYMEN_COINGECKO_PRO_API_KEY = "evidence-budget-key";
+    process.env.AGENTCAP_FLEET_HOME = home;
+    process.env.AGENTCAP_COINGECKO_PRO_API_KEY = "evidence-budget-key";
   });
   afterEach(() => {
     globalThis.fetch = realFetch;

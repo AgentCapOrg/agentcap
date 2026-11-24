@@ -270,7 +270,7 @@ export const ONCHAIN_FLOW_LENS = "onchain-flow";
 const LENS_MAX = 1200;
 
 const ATTRIBUTION =
-  "Source: an on-chain indexer's record of DEX trades in this coin, aggregated by Merrymen. Indexer data, not a forecast.";
+  "Source: an on-chain indexer's record of DEX trades in this coin, aggregated by AgentCap. Indexer data, not a forecast.";
 const NOT_LINE =
   "WHAT THIS IS NOT: a price, a prediction or a reason to trade. Distinct addresses are not proven distinct people; a null is unknown, never zero.";
 

@@ -9,7 +9,7 @@
  * itself is chatOrderCeiling (lib/order-state.ts), which a test runs.
  *
  * RESOLVED FOR THE CALLER, NOT FOR THIS CONTAINER. `resolveConfig()` reads the
- * WEB process's own ~/.merrymen/settings.json merged with the server env —
+ * WEB process's own ~/.agentcap/settings.json merged with the server env —
  * hosted, that is the house's file and has nothing to do with this tenant,
  * whose settings live in the per-tenant store /api/settings reads.
  *
@@ -24,8 +24,8 @@
  * (client-env.test.ts).
  */
 import path from "node:path";
-import { isGrantPurpose, type GrantPurpose } from "@merrymen/core";
-import { getSettingsStore } from "@merrymen/settings-store";
+import { isGrantPurpose, type GrantPurpose } from "@agentcap/core";
+import { getSettingsStore } from "@agentcap/settings-store";
 import { purposeHome } from "../../../worker/src/home";
 import { mergeSettings, readSettingsFileAt, resolveConfig, type ResolvedConfig } from "../../../worker/src/settings";
 import { tenantOf } from "./auth";
@@ -36,13 +36,13 @@ import { chatOrderCeiling, orderTtlMs } from "./order-state";
  * process's home and env would run on, read for the fallbacks the order routes
  * apply when the caller stored nothing (the ceiling, the order window's tick).
  *
- * SPOT IS resolveConfig(), EXACTLY AS IT ALWAYS WAS: MERRYMEN_SETTINGS_FILE or
+ * SPOT IS resolveConfig(), EXACTLY AS IT ALWAYS WAS: AGENTCAP_SETTINGS_FILE or
  * the home's settings.json, over the env.
  *
  * PERPS IS THE PERPS HOME'S OWN FILE (`purposeHome("perps")/settings.json`, the
  * file the Perps settings PUT writes and the kill turns perps off in), merged
- * as a Perps worker merges it (MERRYMEN_WALLET_PURPOSE=perps). Never
- * MERRYMEN_SETTINGS_FILE, which names the Spot wallet's file, and never the
+ * as a Perps worker merges it (AGENTCAP_WALLET_PURPOSE=perps). Never
+ * AGENTCAP_SETTINGS_FILE, which names the Spot wallet's file, and never the
  * Spot home's. A Perps file that cannot be read is read as nothing stored —
  * the defaults, the same safe direction the ceiling's own fallback takes —
  * because these are fallbacks for a figure, not a save that could lose keys.
@@ -51,7 +51,7 @@ export function houseConfigFor(wallet: GrantPurpose): ResolvedConfig {
   if (!isGrantPurpose(wallet)) throw new Error("Unrecognised wallet purpose");
   if (wallet === "spot") return resolveConfig();
   const read = readSettingsFileAt(path.join(purposeHome("perps"), "settings.json"));
-  return mergeSettings(read.kind === "parsed" ? read.settings : {}, { ...process.env, MERRYMEN_WALLET_PURPOSE: "perps" });
+  return mergeSettings(read.kind === "parsed" ? read.settings : {}, { ...process.env, AGENTCAP_WALLET_PURPOSE: "perps" });
 }
 
 export function ceilingFor(req: Request, hosted: boolean, wallet: GrantPurpose): Promise<number> {

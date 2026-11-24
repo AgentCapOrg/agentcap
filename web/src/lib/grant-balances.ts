@@ -19,7 +19,7 @@
  * read `balances` at all, and no other client calls GET /api/grants.
  */
 import { parseAbi } from "viem";
-import { CASH, MORPHO } from "@merrymen/core";
+import { CASH, MORPHO } from "@agentcap/core";
 
 export interface GrantBalances {
   ethWei: string | null;

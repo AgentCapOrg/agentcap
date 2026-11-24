@@ -10,16 +10,16 @@
  */
 import { mkdir, readFile, rm } from "node:fs/promises";
 import path from "node:path";
-import { liftKillPause, pauseForKeptGrant, purposeHome, merrymenHome } from "@merrymen/home";
-import { fsyncDir, writeFileAtomic } from "@merrymen/atomic-write";
+import { liftKillPause, pauseForKeptGrant, purposeHome, agentcapHome } from "@agentcap/home";
+import { fsyncDir, writeFileAtomic } from "@agentcap/atomic-write";
 import { withLocalStateLock } from "../../../worker/src/local-state-lock";
 import { clearLocalPerpsBinding } from "../../../worker/src/local-perps-binding";
-import type { GrantPurpose, StoredGrant } from "@merrymen/core";
+import type { GrantPurpose, StoredGrant } from "@agentcap/core";
 
 /**
  * A WALLET'S GRANT FILE, ITS ARCHIVE, AND THE HOME THEY SIT IN, self-hosted.
  *
- * `purposeHome` names the home: Spot's is MERRYMEN_HOME itself, so these are
+ * `purposeHome` names the home: Spot's is AGENTCAP_HOME itself, so these are
  * exactly the grant.json and grants/ every install has always had; Perps's is
  * accounts/perps inside it, a complete home of its own (the same files
  * worker/src/perps-kill.ts archives and removes). No default, as the stores
@@ -94,7 +94,7 @@ export async function archiveCurrentGrant(wallet: GrantPurpose): Promise<
 /** An owner key that cannot be kept must not be deleted by either web route. */
 export class GrantArchiveError extends Error {
   /** `archive` is the directory the owner must fix, as they would type it: Spot's, unless told otherwise. */
-  constructor(why: string, public readonly paused: boolean, archive = "~/.merrymen/grants/") {
+  constructor(why: string, public readonly paused: boolean, archive = "~/.agentcap/grants/") {
     super(
       `The grant was NOT deleted: ${why}, and deleting it without a copy would lose your owner key for good. ` +
         (paused ? "Trading is paused instead. " : "Trading could not be paused either — stop the worker. ") +
@@ -112,11 +112,11 @@ export class GrantArchiveError extends Error {
  * worker/src/perps-kill.ts's stopLocalPerpsWallet, not this.)
  */
 export async function removeSelfHostedGrant(wallet: GrantPurpose): Promise<void> {
-  return withLocalStateLock(merrymenHome(), async () => {
+  return withLocalStateLock(agentcapHome(), async () => {
     const { home, grant } = grantFiles(wallet);
     const kept = await archiveCurrentGrant(wallet);
     if (kept.kind === "failed") {
-      throw new GrantArchiveError(kept.why, pauseForKeptGrant(home), wallet === "perps" ? "~/.merrymen/accounts/perps/grants/" : undefined);
+      throw new GrantArchiveError(kept.why, pauseForKeptGrant(home), wallet === "perps" ? "~/.agentcap/accounts/perps/grants/" : undefined);
     }
     await rm(grant, { force: true });
     try { await fsyncDir(home); }

@@ -1,5 +1,5 @@
 /**
- * /api/holder — link a wallet that holds $MERRYMEN, by proving you control it.
+ * /api/holder — link a wallet that holds $AGENTCAP, by proving you control it.
  *
  * THE CASE. Raised by a tester: "it can happen that you don't own tokens in
  * your privy based wallet and you have them somewhere else… the app should have
@@ -56,8 +56,8 @@
  */
 import { NextResponse } from "next/server";
 import { recoverMessageAddress } from "viem";
-import { getSettingsStore, type HolderTake } from "@merrymen/settings-store";
-import { effectiveHolder, holderProofMessage, isHolderProof, isHostedMode } from "@merrymen/core";
+import { getSettingsStore, type HolderTake } from "@agentcap/settings-store";
+import { effectiveHolder, holderProofMessage, isHolderProof, isHostedMode } from "@agentcap/core";
 import {
   consumeChallengeNonce,
   issueChallengeNonce,
@@ -204,8 +204,8 @@ export async function POST(req: Request) {
       {
         error:
           (claim.held
-            ? "This wallet powers another merrymen account, and it already moved in the last 24 hours"
-            : "Another merrymen account used this wallet recently, and it already moved in the last 24 hours") +
+            ? "This wallet powers another agentcap account, and it already moved in the last 24 hours"
+            : "Another agentcap account used this wallet recently, and it already moved in the last 24 hours") +
           " — a wallet can move between accounts once every 24 hours. " +
           `Sign again from ${utcStamp(claim.movableAt)} to ${claim.held ? "move it here" : "link it here"}.`,
         ownerFacing: true,

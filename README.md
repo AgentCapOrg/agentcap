@@ -1,24 +1,24 @@
 <p align="center">
-  <img src="site/public/favicon.svg" alt="merrymen — autonomous trading agents for Robinhood Chain" width="160" height="144" />
+  <img src="site/public/favicon.svg" alt="agentcap — autonomous trading agents for Robinhood Chain" width="160" height="144" />
 </p>
 
 <p align="center">
-  <a href="https://merrymen.dev"><b>Website</b></a> ·
-  <a href="https://app.merrymen.dev"><b>Open app</b></a> ·
-  <a href="https://merrymen.dev/docs">Docs</a> ·
-  <a href="https://x.com/MerrymenAI">X</a> ·
-  <a href="https://www.npmjs.com/package/merrymen">npm</a>
+  <a href="https://agentcap.xyz"><b>Website</b></a> ·
+  <a href="https://app.agentcap.xyz"><b>Open app</b></a> ·
+  <a href="https://agentcap.xyz/docs">Docs</a> ·
+  <a href="https://x.com/AgentCapAI">X</a> ·
+  <a href="https://www.npmjs.com/package/agentcap">npm</a>
 </p>
 
-# merrymen
+# AgentCap
 
 **Autonomous trading agents with signed limits and readable research.** Run
-merrymen in the [hosted app](https://app.merrymen.dev) or on your own machine.
+agentcap in the [hosted app](https://app.agentcap.xyz) or on your own machine.
 Create an agent, choose its markets and limits, and follow its decisions,
 positions and trade outcomes from the dashboard or Telegram.
 
-**Use it from Claude:** tell Claude “set up merrymen mcp”, or add it in one
-click: <https://merrymen.dev/claude> (hosted Merrymen).
+**Use it from Claude:** tell Claude “set up agentcap mcp”, or add it in one
+click: <https://agentcap.xyz/claude> (hosted AgentCap).
 
 The account contract enforces the permissions sealed into its session key:
 allowed calls and assets, per-call limits and expiry. The worker adds daily
@@ -39,7 +39,7 @@ protects account operations, not your operating system.
 ## What you can do
 
 - **Run hosted or self-hosted.** Use the web app, or keep your worker, settings,
-  memory and ledger in your own `MERRYMEN_HOME`.
+  memory and ledger in your own `AGENTCAP_HOME`.
 - **Start on paper, then enable live trading.** Simulated trades are labeled
   separately. Live execution requires explicit enablement, a usable signed
   grant, an executor, funding and passing market/policy checks.
@@ -63,9 +63,9 @@ below.
 ## Ownership and enforcement
 
 - **Your machine, if you self-host.** The agent, its memory and its ledger live
-  in `~/.merrymen`; configured RPC, inference and other providers can still be
+  in `~/.agentcap`; configured RPC, inference and other providers can still be
   external services. Hosted at
-  app.merrymen.dev the worker and the ledger are ours — what does not change is
+  app.agentcap.xyz the worker and the ledger are ours — what does not change is
   the next line.
 - **Owner authority and agent authority are separate.** New mainnet wallets use
   an embedded or external owner signer. Browser-generated owners are available
@@ -90,8 +90,8 @@ below.
   UserOp — see docs/.
 - **The numbers are auditable too, not just the wall.** Every fact that moves
   money is mirrored into a hash-chained journal, so an edited record breaks
-  every hash after it and a deleted one leaves a visible gap. `merrymen export`
-  writes it out; `merrymen verify <file>` checks it — and reads nothing but the
+  every hash after it and a deleted one leaves a visible gap. `agentcap export`
+  writes it out; `agentcap verify <file>` checks it — and reads nothing but the
   file it is handed, so it proves something to someone who does not trust you.
   Records that *cannot* be checked against a chain (a simulated fill, a deposit
   inferred from a balance change) are listed as such rather than quietly
@@ -104,7 +104,7 @@ You verify; it trades.
 ## Check it yourself
 
 Two commands. The second reads nothing but the file you hand it — not
-`~/.merrymen`, not the settings, not the machine that produced it — so it is
+`~/.agentcap`, not the settings, not the machine that produced it — so it is
 checking the record against the **chain**, not against the operator.
 
 ```bash
@@ -137,7 +137,7 @@ Two limits, said out loud rather than discovered:
 ## The workflow, end to end
 
 1. **Install** it (one line — installs Node too if you need it).
-2. **`merrymen start`** — opens the dashboard at `localhost:3100` and looses the
+2. **`agentcap start`** — opens the dashboard at `localhost:3100` and looses the
    24/7 worker.
 3. **Create your agent wallet** in the app's creation flow or at `/grant` for
    self-hosted setup. Follow the backup/recovery steps for your ownership model
@@ -147,18 +147,18 @@ Two limits, said out loud rather than discovered:
    address. On **testnet**, gas from the faucet and nothing else: USDG sent there
    is never shown and never traded. The worker arms itself on its next tick, no
    restart.
-5. **(optional) Link Telegram** — chat with your merryman, give it a name, let it
+5. **(optional) Link Telegram** — chat with your agentcapavatar, give it a name, let it
    trade, report, alert, and control your PC — all inside the same walls.
 
-Everything lives in **`~/.merrymen`** (settings, grant, ledger, your strategies,
-your merryman's soul). The install is disposable; upgrades never touch your data.
+Everything lives in **`~/.agentcap`** (settings, grant, ledger, your strategies,
+your agentcapavatar's soul). The install is disposable; upgrades never touch your data.
 
 **Start with paper mode.** When simulation is enabled, eligible intents can be
 recorded as paper fills using observed market prices without spending real
 funds. Paper results do not establish live fill quality. Adding a bundler key
 alone does not enable live trading: enable Live explicitly and satisfy the
 grant, funding and execution checks shown by the app. Upgrade any time with
-`merrymen update` (stops the band, installs, restarts — no Windows file-lock).
+`agentcap update` (stops the band, installs, restarts — no Windows file-lock).
 
 ---
 
@@ -167,44 +167,44 @@ grant, funding and execution checks shown by the app. Upgrade any time with
 Self-hosted, terminal-first. Install once, run from anywhere. No clone.
 
 **No Node yet? One line does everything** — installs Node if missing, then
-merrymen, and puts it on PATH:
+agentcap, and puts it on PATH:
 
 ```powershell
 # Windows (PowerShell)
-irm https://raw.githubusercontent.com/millw14/merrymen/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/millw14/agentcap/main/install.ps1 | iex
 ```
 ```bash
 # macOS / Linux
-curl -fsSL https://raw.githubusercontent.com/millw14/merrymen/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/millw14/agentcap/main/install.sh | bash
 ```
 
 **Already have Node 22.13+?**
 
 ```bash
-npm install -g merrymen            # or: npm i -g github:millw14/merrymen
-merrymen setup                     # checks node / npm / PATH, prints exact fixes
-merrymen onboard                   # optional wizard: Pimlico key, strategy, basket (all skippable)
-merrymen start                     # dashboard at localhost:3100 + the worker
+npm install -g agentcap            # or: npm i -g github:millw14/agentcap
+agentcap setup                     # checks node / npm / PATH, prints exact fixes
+agentcap onboard                   # optional wizard: Pimlico key, strategy, basket (all skippable)
+agentcap start                     # dashboard at localhost:3100 + the worker
 ```
 
-Requires Node 22.13+ on the 22.x line, or Node 23.4+. `merrymen setup` diagnoses the two things that trip people
+Requires Node 22.13+ on the 22.x line, or Node 23.4+. `agentcap setup` diagnoses the two things that trip people
 up — an old Node, and npm's global-bin folder missing from PATH.
 
-> **`merrymen: command not found`?** npm's global-bin folder isn't on PATH. Use
-> `npx merrymen start` (works everywhere), or add it once:
+> **`agentcap: command not found`?** npm's global-bin folder isn't on PATH. Use
+> `npx agentcap start` (works everywhere), or add it once:
 > - **Windows:** `[Environment]::SetEnvironmentVariable("Path", [Environment]::GetEnvironmentVariable("Path","User") + ";$env:APPDATA\npm", "User")` then reopen the terminal
 > - **macOS/Linux:** put `$(npm prefix -g)/bin` on your `PATH` (in `~/.zshrc` / `~/.bashrc`)
 
 > **Windows: `running scripts is disabled on this system` / `PSSecurityException`?**
-> PowerShell's default `Restricted` policy blocks npm's and merrymen's `.ps1`
+> PowerShell's default `Restricted` policy blocks npm's and agentcap's `.ps1`
 > shims. The installer now relaxes it for you; if you installed earlier, run once
 > (no admin, current user only): `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
-> Or just call `merrymen.cmd …` (or use cmd.exe / Git Bash) to skip the policy.
+> Or just call `agentcap.cmd …` (or use cmd.exe / Git Bash) to skip the policy.
 
 The dashboard binds to **localhost only** — it has no login and holds your
 trading controls, so it isn't reachable from your network. To open it to a
 trusted LAN (your phone on home WiFi), start with
-`MERRYMEN_HOST=0.0.0.0 merrymen start`.
+`AGENTCAP_HOST=0.0.0.0 agentcap start`.
 
 ---
 
@@ -245,7 +245,7 @@ do. A policy pointing at an empty address is not a bound, so it was removed and
 this sentence corrected rather than left to flatter the design.
 
 > **Going live is one key.** To sign real trades, paste a free [Pimlico](https://dashboard.pimlico.io)
-> API key in `/settings` — merrymen builds the bundler URL for your wallet's chain
+> API key in `/settings` — agentcap builds the bundler URL for your wallet's chain
 > automatically, so it can never point at the wrong one. No key = **practice mode**:
 > real market, full policy + simulation, no signing. Advanced users can still supply
 > a full bundler URL (Alchemy or self-hosted) instead.
@@ -255,12 +255,12 @@ this sentence corrected rather than left to flatter the design.
 ## 3 · Run it
 
 ```bash
-merrymen start      # dashboard (localhost:3100) + the 24/7 worker
-merrymen doctor     # node / keys / RPC / bundler / grant / db diagnostics
-merrymen status     # heartbeat, grant, trades, equity
-merrymen selftest   # one policy-legal no-op through the full pipeline
-merrymen kill       # stop this service by removing its active grant
-merrymen recover    # sweep the account's funds to a wallet you control
+agentcap start      # dashboard (localhost:3100) + the 24/7 worker
+agentcap doctor     # node / keys / RPC / bundler / grant / db diagnostics
+agentcap status     # heartbeat, grant, trades, equity
+agentcap selftest   # one policy-legal no-op through the full pipeline
+agentcap kill       # stop this service by removing its active grant
+agentcap recover    # sweep the account's funds to a wallet you control
 ```
 
 Stopping the service does not invalidate copied session keys. To revoke earlier
@@ -273,7 +273,7 @@ before signing the replacement.
 > account**, not a plain wallet — its owner key derives a *different* address, so
 > importing that key into MetaMask shows an empty wallet, not your funds (this
 > trips everyone up once). To move money out — including after a kill switch —
-> run **`merrymen recover`**: it rebuilds the account from your owner key (or a
+> run **`agentcap recover`**: it rebuilds the account from your owner key (or a
 > backed-up key you paste) and sweeps every balance to any address you choose in
 > one signed op. It needs a bundler key, same as live trading.
 
@@ -290,12 +290,12 @@ before signing the replacement.
 >    signs a brand-new session key on your existing account. **No funds move, no
 >    gas is spent.**
 >
-> merrymen runs **one agent per install**. To run two funded wallets at once, give
-> each its own `MERRYMEN_HOME` (e.g. `MERRYMEN_HOME=~/.merrymen-b merrymen start`).
+> agentcap runs **one agent per install**. To run two funded wallets at once, give
+> each its own `AGENTCAP_HOME` (e.g. `AGENTCAP_HOME=~/.agentcap-b agentcap start`).
 
 The worker's loop each tick: **grant sync → market safety (prices, pauses,
 sequencer) → strategy proposes → policy check → quote simulation → execute →
-record**. It re-reads `~/.merrymen/settings.json` every tick, so changes from the
+record**. It re-reads `~/.agentcap/settings.json` every tick, so changes from the
 dashboard apply within one tick — connection changes re-arm the executor,
 strategy changes rebuild in place; no restart. The dashboard shows live
 positions, the trade record (with simulation receipts), the event feed, and a
@@ -303,7 +303,7 @@ kill switch; the public scoreboard is at `/scoreboard`.
 
 Active workers schedule a decision review at least every five minutes, with
 processing time accounted for instead of added to each interval. Brain's
-`MERRYMEN_BRAIN_INTERVAL_SEC` accepts 60–300 seconds; older longer settings are
+`AGENTCAP_BRAIN_INTERVAL_SEC` accepts 60–300 seconds; older longer settings are
 capped at 300. Live Brain enrollment also enables research, while shadow-only
 enrollment still cannot execute trades. Pauses, signed limits, model budgets,
 and market-data checks remain authoritative.
@@ -317,7 +317,7 @@ or slow reads can delay a review, and no cadence forces an otherwise invalid tra
 
 ---
 
-## 4 · Chat with your merryman (Telegram)
+## 4 · Chat with your agentcapavatar (Telegram)
 
 Link a bot and run the band from your phone — natural-language chat plus slash
 commands, all inside the same permission walls. Telegram is a **control surface,
@@ -334,7 +334,7 @@ parse → validate → policy wall → signed grant discipline as the strategist
 There's an obvious **Chat on Telegram** button right on the dashboard (topbar +
 a card) so you don't have to hunt for it.
 
-**Bring it into your Telegram groups.** Your merryman can hang out in a group
+**Bring it into your Telegram groups.** Your agentcapavatar can hang out in a group
 like one more person: it answers when it's called, now and then joins in,
 remembers the chat, and when someone posts a coin it takes a look, tags them,
 and says whether it's in or passing (in trencher mode, its Brain decides and
@@ -383,7 +383,7 @@ withdrawal address, so its call policy carries no USDG transfer permission at
 all — the chain would refuse the send, and the worker refuses it first rather
 than paying gas to be told no. A prompt-injected "send everything to 0xevil"
 gets a flat no before anything is built. Money leaves through your owner key
-(`merrymen recover`), which no wall can block and no chat message can reach.
+(`agentcap recover`), which no wall can block and no chat message can reach.
 
 Wallets signed before the withdrawal allowlist landed do carry a transfer
 permission; for those, `/transfer` still applies its own guards — off by
@@ -391,9 +391,9 @@ default, and every transfer echoes the full recipient address and waits for an
 explicit `/confirm` (90s). Turn off all state-changing commands with the
 **control** toggle for read + chat only.
 
-### Remote control — your merryman runs your PC (OpenClaw-style)
+### Remote control — your agentcapavatar runs your PC (OpenClaw-style)
 
-Enable the **remote control** section in `/settings` and your merryman can act on
+Enable the **remote control** section in `/settings` and your agentcapavatar can act on
 the machine it runs on, from Telegram:
 
 | capability | what it does |
@@ -422,10 +422,10 @@ Windows is fully supported; macOS/Linux use the standard tools (`screencapture`,
 `open`, `pbcopy`, …) and say so where one isn't present. Voice needs an
 OpenAI-compatible transcription key (set it in the dashboard).
 
-### Your merryman has a soul
+### Your agentcapavatar has a soul
 
-Every merryman is an individual with a name **you** give it — and it grows with
-you. Its soul lives as plain markdown in **`~/.merrymen/soul/`** that it keeps up
+Every agentcapavatar is an individual with a name **you** give it — and it grows with
+you. Its soul lives as plain markdown in **`~/.agentcap/soul/`** that it keeps up
 to date itself (read or edit it with any editor):
 
 | file | what it holds |
@@ -444,41 +444,41 @@ recipient into a prompt.
 
 ---
 
-## 5 · Use your merryman from Claude
+## 5 · Use your agentcapavatar from Claude
 
-Hosted Merrymen has an MCP server, so Claude (and Codex, Cursor, VS Code, …)
+Hosted AgentCap has an MCP server, so Claude (and Codex, Cursor, VS Code, …)
 can work with your agent: check its status, trades and portfolio, explain why
 it has or hasn't traded, research tokens, and prepare trades or setting changes
 for you to approve.
 
-**Set it up:** tell Claude “set up merrymen mcp”, or add it in one click:
-<https://merrymen.dev/claude>. Other assistants:
-<https://app.merrymen.dev/connect/mcp>. Setup instructions written for AI
-assistants: <https://merrymen.dev/llms.txt>.
+**Set it up:** tell Claude “set up agentcap mcp”, or add it in one click:
+<https://agentcap.xyz/claude>. Other assistants:
+<https://app.agentcap.xyz/connect/mcp>. Setup instructions written for AI
+assistants: <https://agentcap.xyz/llms.txt>.
 
 In **Claude Code**, from a terminal, either add the server:
 
 ```bash
-claude mcp add --transport http --scope user merrymen https://mcp.merrymen.dev/mcp
+claude mcp add --transport http --scope user agentcap https://mcp.agentcap.xyz/mcp
 ```
 
 or install the plugin **instead** (it includes the server and adds
-`/merrymen:status`, `/merrymen:why`, `/merrymen:portfolio`, `/merrymen:week`
-and `/merrymen:token`; choose one route, not both):
+`/agentcap:status`, `/agentcap:why`, `/agentcap:portfolio`, `/agentcap:week`
+and `/agentcap:token`; choose one route, not both):
 
 ```bash
-claude plugin marketplace add https://github.com/millw14/merrymen.git
-claude plugin install merrymen@merrymen
+claude plugin marketplace add https://github.com/millw14/agentcap.git
+claude plugin install agentcap@agentcap
 ```
 
-Then, in Claude Code, type `/mcp`, choose the Merrymen entry, choose
+Then, in Claude Code, type `/mcp`, choose the AgentCap entry, choose
 Authenticate and click Allow.
 
 **What it can and cannot do:** it sees only the agent and the permissions you
 allow when you sign in, and you can disconnect it at any time at
-[Connected apps](https://app.merrymen.dev/connect/apps). It can suggest trades
+[Connected apps](https://app.agentcap.xyz/connect/apps). It can suggest trades
 or setting changes only if you allowed that, and nothing happens until you
-approve each one in Merrymen. It can never move your funds, see your keys, turn
+approve each one in AgentCap. It can never move your funds, see your keys, turn
 on live trading or loosen your limits. Paper (practice) and live money are
 always reported separately. Details: [docs/mcp](docs/mcp/README.md).
 
@@ -486,7 +486,7 @@ always reported separately. Details: [docs/mcp](docs/mcp/README.md).
 
 ## Strategies
 
-Pick one in `/settings` (or `/strategy <name>` from Telegram; `MERRYMEN_STRATEGY`
+Pick one in `/settings` (or `/strategy <name>` from Telegram; `AGENTCAP_STRATEGY`
 is the headless fallback):
 
 | name | what it does |
@@ -500,13 +500,13 @@ is the headless fallback):
 
 ### Write your own
 
-Your strategies live in **`~/.merrymen/strategies/`** — hot-reloaded on save,
+Your strategies live in **`~/.agentcap/strategies/`** — hot-reloaded on save,
 crash-isolated, and incapable of exceeding the caps you signed (every intent
 passes shape validation → the policy wall → quote simulation → the on-chain
 session key):
 
 ```bash
-merrymen strategy new my-bot       # commented template in ~/.merrymen/strategies
+agentcap strategy new my-bot       # commented template in ~/.agentcap/strategies
 # edit it, select "my-bot" in /settings — done
 ```
 
@@ -522,7 +522,7 @@ The built-in registry is the issuer-backed stock tokens — curated, Chainlink-p
 Anything else on Robinhood Chain you add yourself in `/settings`: paste the symbol,
 the contract address, and its decimals.
 
-**How they're priced.** There's no Chainlink feed for a memecoin, so merrymen reads
+**How they're priced.** There's no Chainlink feed for a memecoin, so agentcap reads
 the Uniswap v3 pool — but a spot price on a thin pool is worth nothing: anyone with
 moderate capital can push it for a block, and that number would feed your equity,
 your P&L and your drawdown breaker. So:
@@ -533,7 +533,7 @@ your P&L and your drawdown breaker. So:
   maximum spot-vs-average gap (default 5%). Live pools on this chain run from ~$3k
   to ~$1.2M, so the default admits the deep end and refuses the rest.
 - **A refusal is the feature.** When a pool is too thin or is being pushed right
-  now, the token stays *unpriced* and merrymen says why. Your agent keeps trading
+  now, the token stays *unpriced* and agentcap says why. Your agent keeps trading
   — you can always sell out — but equity, P&L and the breaker pause rather than
   running on a number nobody should trust.
 - **Most memecoins here price through WETH.** About three quarters of the chain's
@@ -564,15 +564,15 @@ needs no extra approval and no extra re-sign.
 ### Keep it running
 
 ```bash
-merrymen service install
+agentcap service install
 ```
 
-Starts your merryman when you log in, and brings it back after a reboot. On
+Starts your agentcapavatar when you log in, and brings it back after a reboot. On
 Windows it uses Task Scheduler where it can and the Startup folder where that
 would need admin — a trading agent shouldn't be asking for elevation. macOS gets
 a launchd agent, Linux a `systemd --user` unit with lingering enabled. All
-user-scoped, all removed completely by `merrymen service uninstall`, and
-`merrymen doctor` tells you whether it's installed *and* whether it's actually
+user-scoped, all removed completely by `agentcap service uninstall`, and
+`agentcap doctor` tells you whether it's installed *and* whether it's actually
 running — those are different questions.
 
 **What it does not do: run while the computer is off.** Nothing does except a
@@ -588,7 +588,7 @@ a per-token approval sealed into your signature.** So a token with a live pool b
 no approval buys fine and can never be sold — the exit reverts, with your money
 inside it.
 
-merrymen refuses the buy. If your key can't sell something, it won't buy it, and
+agentcap refuses the buy. If your key can't sell something, it won't buy it, and
 it tells you which symbols and why. A missed trade is recoverable; a position with
 no way out is not. Re-sign at `/grant` to widen the list.
 
@@ -601,14 +601,14 @@ npx tsx scripts/probe-tradability.mts
 
 ---
 
-## $MERRYMEN — energy and the Merry Circle
+## $AGENTCAP — energy and the Merry Circle
 
-**$MERRYMEN** (on Robinhood Chain — [the token page](https://merrymen.dev/token)) is an agent's
+**$AGENTCAP** (on Robinhood Chain — [the token page](https://agentcap.xyz/token)) is an agent's
 **energy**. **Utility only: no price, no returns, no buyback/burn.** Nothing here says anything
 about what the token is worth.
 
 **Energy (hosted service).** An agent runs at full strength while **your wallet and the agent's
-own account hold 100,000 $MERRYMEN between them**. Below that it still runs, on about **a tenth**
+own account hold 100,000 $AGENTCAP between them**. Below that it still runs, on about **a tenth**
 of a normal day: a tenth of a standard day's paid AI reviews (paced across the day) and of the
 new trades it opens on its own — a house figure, not a tenth of your own preset — resetting at
 **00:00 UTC**. **Stop-losses, take-profits and orders you place
@@ -617,27 +617,27 @@ agent's own AI reviews, including of its open positions, are paced with everythi
 on its own, so an exit the AI would decide waits for its next review. When
 today's allowance is used, the agent tells you once (dashboard, and Telegram if linked), with its
 account address and what it would cost to top up. The gate is an operator switch,
-`MERRYMEN_ENERGY_GATE` (`observe`, then `1`), and is **never on for a self-hosted install**.
+`AGENTCAP_ENERGY_GATE` (`observe`, then `1`), and is **never on for a self-hosted install**.
 
 Two ways to top up:
 
-1. **Send $MERRYMEN** on Robinhood Chain to the agent's account (or keep it in your own linked
+1. **Send $AGENTCAP** on Robinhood Chain to the agent's account (or keep it in your own linked
    wallet — both count).
-2. **Send USDG and ask the agent in chat to "get its $MERRYMEN".** You confirm a card stating the
+2. **Send USDG and ask the agent in chat to "get its $AGENTCAP".** You confirm a card stating the
    most it may spend; it sizes the buy to **cover the shortfall, with a small margin for price
-   movement (at least $1.00)**, over one pinned route (Uniswap v2, USDG → VIRTUAL → $MERRYMEN) —
+   movement (at least $1.00)**, over one pinned route (Uniswap v2, USDG → VIRTUAL → $AGENTCAP) —
    the pool fees and the token's own tax are paid out of the USDG — one trade at a time, inside your
    signed per-trade limit and worker-enforced daily budget.
    The permission for this is sealed into your key when you sign (renew if your key
-   predates it) and it is **buy-only**: the key can turn USDG into $MERRYMEN in its own account
-   and can never sell or send it. It moves out only with your owner key (`merrymen recover` /
-   Withdraw). Paper-mode agents do not spend real USDG on energy — send $MERRYMEN instead, or turn
+   predates it) and it is **buy-only**: the key can turn USDG into $AGENTCAP in its own account
+   and can never sell or send it. It moves out only with your owner key (`agentcap recover` /
+   Withdraw). Paper-mode agents do not spend real USDG on energy — send $AGENTCAP instead, or turn
    on Live trading first. The purchase is booked as capital set aside, not as a trading loss.
 
-One wallet powers one account: a linked holder wallet counts for the first merrymen account that
+One wallet powers one account: a linked holder wallet counts for the first agentcap account that
 proved it.
 
-**The Merry Circle.** Link a wallet that holds $MERRYMEN by signature in **Settings → Merry
+**The Merry Circle.** Link a wallet that holds $AGENTCAP by signature in **Settings → Merry
 Circle** (the wallet is only ever read — it never becomes a spend key). The same combined balance —
 your wallet plus your agent's account — sets your tier:
 
@@ -647,10 +647,10 @@ your wallet plus your agent's account — sets your tier:
 | 🏹 **Merry Man** | 100k+ | **full energy** · **25% off** · the bonus strategy pack (`even-keel`, `dip-hunter`) · 3× vote |
 | 👑 **Lord of Sherwood** | 1M+ | **50% off** — the lowest we offer · every bonus strategy · 10× vote |
 
-The fee discount is real: merrymen's performance fee is only ever taken on profit above your
+The fee discount is real: agentcap's performance fee is only ever taken on profit above your
 high-water mark, and your tier lowers it in the **actual accrual** (shown live in the panel), not
 just in the copy. Holders also steer the roadmap — which tokens join the basket, which strategies
-ship — weighted by tier ([governance](https://merrymen.dev/governance)). Thresholds live in
+ship — weighted by tier ([governance](https://agentcap.xyz/governance)). Thresholds live in
 [`packages/core/src/token.ts`](./packages/core/src/token.ts); energy's contract is
 [`packages/core/src/energy.ts`](./packages/core/src/energy.ts).
 
@@ -677,12 +677,12 @@ ship — weighted by tier ([governance](https://merrymen.dev/governance)). Thres
 - `sdk` — client SDK and build tooling.
 - `contracts` — the on-chain drawdown breaker: `BreakerRegistry` +
   `KernelBreakerPolicy` (Kernel v3 module type 5 — fails every UserOp once
-  tripped). `npm test -w @merrymen/contracts`; deployment waits on a funded key.
+  tripped). `npm test -w @agentcap/contracts`; deployment waits on a funded key.
   Until deployed, the breaker is worker-enforced.
 
 ### Develop from a clone
 ```bash
-git clone https://github.com/millw14/merrymen && cd merrymen
+git clone https://github.com/millw14/agentcap && cd agentcap
 npm install          # prepare hook builds the dashboard
 npm run onboard && npm start
 # or run halves separately: npm run dev:web · npm run dev:worker
@@ -694,8 +694,8 @@ npm run typecheck && npm test
 ```bash
 npm ci
 npm run pack:release
-# After reviewing and testing the generated release/merrymen-<version>.tgz:
-npm publish ./release/merrymen-<version>.tgz
+# After reviewing and testing the generated release/agentcap-<version>.tgz:
+npm publish ./release/agentcap-<version>.tgz
 ```
 
 The release command builds the SDK and dashboard, then stages a tarball with the
@@ -709,24 +709,24 @@ audits the packages actually installed. Development installs still use the norma
 ### Configuration
 The dashboard `/settings` is the source of truth (Anthropic/Rialto/Telegram keys,
 bundler + RPC URLs, strategy + every trading knob, the Telegram + PC-control
-toggles and allowlists). Saved to `~/.merrymen/settings.json`; secrets are masked
+toggles and allowlists). Saved to `~/.agentcap/settings.json`; secrets are masked
 to their last 4 and never echo back to the browser. Precedence:
 **settings file > env var > default.** Env vars are the headless fallback:
 
 | var | default | meaning |
 |---|---|---|
-| `MERRYMEN_HOST` | `127.0.0.1` | dashboard bind host; set `0.0.0.0` for trusted-LAN access |
-| `MERRYMEN_BUNDLER_API_KEY` | — | Pimlico API key; the bundler URL is built for your grant's chain automatically |
-| `MERRYMEN_BUNDLER_URL` | — | advanced: full 4337 bundler RPC (overrides the key); without either, execution is stubbed |
-| `MERRYMEN_SWAP_VENUE` | `uniswap` | `uniswap` = full quote→swap via SwapRouter02; `rialto` = approval-only until API onboarding |
-| `MERRYMEN_SLIPPAGE_BPS` | `100` | max slippage vs the QuoterV2 simulation |
-| `MERRYMEN_GRANT_FILE` | `~/.merrymen/grant.json` | grant handoff written by the web app |
-| `MERRYMEN_STRATEGY` | `steady-basket` | strategy name (see table above) |
-| `MERRYMEN_PERF_FEE_BPS` | `1000` | performance fee on profit above the high-water mark (accrual-only) |
-| `MERRYMEN_BREAKER_ADDRESS` | — | deployed BreakerRegistry; a tripped breaker halts all intents |
-| `MERRYMEN_RIALTO_API_KEY` | — | Rialto integrator key; enables the full quote→swap leg |
+| `AGENTCAP_HOST` | `127.0.0.1` | dashboard bind host; set `0.0.0.0` for trusted-LAN access |
+| `AGENTCAP_BUNDLER_API_KEY` | — | Pimlico API key; the bundler URL is built for your grant's chain automatically |
+| `AGENTCAP_BUNDLER_URL` | — | advanced: full 4337 bundler RPC (overrides the key); without either, execution is stubbed |
+| `AGENTCAP_SWAP_VENUE` | `uniswap` | `uniswap` = full quote→swap via SwapRouter02; `rialto` = approval-only until API onboarding |
+| `AGENTCAP_SLIPPAGE_BPS` | `100` | max slippage vs the QuoterV2 simulation |
+| `AGENTCAP_GRANT_FILE` | `~/.agentcap/grant.json` | grant handoff written by the web app |
+| `AGENTCAP_STRATEGY` | `steady-basket` | strategy name (see table above) |
+| `AGENTCAP_PERF_FEE_BPS` | `1000` | performance fee on profit above the high-water mark (accrual-only) |
+| `AGENTCAP_BREAKER_ADDRESS` | — | deployed BreakerRegistry; a tripped breaker halts all intents |
+| `AGENTCAP_RIALTO_API_KEY` | — | Rialto integrator key; enables the full quote→swap leg |
 | `ANTHROPIC_API_KEY` | — | LLM strategist driver + Telegram natural-language chat + vision |
-| `MERRYMEN_TELEGRAM_BOT_TOKEN` | — | @BotFather token; enables the Telegram bridge (all other Telegram + PC-control settings live in `/settings`) |
+| `AGENTCAP_TELEGRAM_BOT_TOKEN` | — | @BotFather token; enables the Telegram bridge (all other Telegram + PC-control settings live in `/settings`) |
 
 `npm test` covers the policy mirror, strategies, venue math (slippage, quote
 selection, calldata), the ERC-8056 invariant that a stock split is not a crash,

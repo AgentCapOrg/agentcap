@@ -1,5 +1,5 @@
 /**
- * The catalog of AI providers a merryman's brain can run on.
+ * The catalog of AI providers a agentcapavatar's brain can run on.
  *
  * Almost every modern LLM host exposes an OpenAI-compatible /chat/completions
  * endpoint, so the whole list below shares ONE transport in worker/src/llm.ts —
@@ -11,7 +11,7 @@
  * agent can DO: the model still only fills a forced tool schema; code disposes.
  */
 
-import { MERRYMEN_GATEWAY_ORIGIN } from "./token";
+import { AGENTCAP_GATEWAY_ORIGIN } from "./token";
 
 export interface LlmProviderInfo {
   /** Stable id stored in settings.llmProvider. */
@@ -32,7 +32,7 @@ export interface LlmProviderInfo {
   free?: boolean;
   /** false = no API key required (local runtimes like Ollama). */
   needsKey?: boolean;
-  /** Gated to verified $MERRYMEN holders (the Merrymen AI gateway). Surfaced as a badge. */
+  /** Gated to verified $AGENTCAP holders (the AgentCap AI gateway). Surfaced as a badge. */
   holder?: boolean;
   /** One-line pitch shown under the picker. */
   blurb: string;
@@ -44,20 +44,20 @@ export interface LlmProviderInfo {
  */
 export const LLM_PROVIDERS: LlmProviderInfo[] = [
   {
-    // The holder perk: a merryman-run gateway (gateway/) proxies to a fast model
-    // behind the scenes. Holders claim a token (prove they hold $MERRYMEN by
+    // The holder perk: a agentcapavatar-run gateway (gateway/) proxies to a fast model
+    // behind the scenes. Holders claim a token (prove they hold $AGENTCAP by
     // signing) and paste it here — no third-party API key, no signup. The client
     // never sees the upstream key; the gateway checks holdings + rate-limits.
     // baseUrl points at YOUR deployed gateway (see gateway/README.md).
-    id: "merrymen",
-    label: "Merrymen AI",
+    id: "agentcap",
+    label: "AgentCap AI",
     transport: "openai",
-    baseUrl: `${MERRYMEN_GATEWAY_ORIGIN}/v1`,
-    defaultModel: "merrymen-fast", // cosmetic — the gateway picks the real model
-    keyUrl: `${MERRYMEN_GATEWAY_ORIGIN}/claim`,
+    baseUrl: `${AGENTCAP_GATEWAY_ORIGIN}/v1`,
+    defaultModel: "agentcap-fast", // cosmetic — the gateway picks the real model
+    keyUrl: `${AGENTCAP_GATEWAY_ORIGIN}/claim`,
     vision: false,
     holder: true,
-    blurb: "For verified $MERRYMEN holders — no API key or signup. Claim a token by signing with your holder wallet, paste it, done.",
+    blurb: "For verified $AGENTCAP holders — no API key or signup. Claim a token by signing with your holder wallet, paste it, done.",
   },
   {
     id: "groq",

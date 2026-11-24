@@ -1,8 +1,8 @@
 /**
- * The Merrymen OAuth 2.1 authorization server for MCP clients.
+ * The AgentCap OAuth 2.1 authorization server for MCP clients.
  *
  * Flow: authorization code + PKCE (S256 only), with the owner's consent given
- * on a Merrymen page while signed in with their own Merrymen session. Tokens
+ * on a AgentCap page while signed in with their own AgentCap session. Tokens
  * are opaque, audience-bound to the one MCP resource URL, short-lived (access)
  * or rotated on every use (refresh, with reuse detection that revokes the whole
  * family). Revocation — by the client (RFC 7009) or by the owner on the
@@ -158,7 +158,7 @@ export async function startAuthorization(deps: OAuthDeps, p: URLSearchParams): P
   // Before the owner has seen the consent screen, an error is shown on our own
   // page, not bounced to the client: registration is open (and a metadata
   // document is whatever its author serves), so a "registered" https redirect
-  // proves nothing, and bouncing would make every Merrymen authorize link an
+  // proves nothing, and bouncing would make every AgentCap authorize link an
   // open redirector to any site that registered itself (RFC 9700 §4.11.2).
   // The one exception is a metadata-document client returning to loopback —
   // a program on the owner's own computer (Claude Code, Codex CLI) that is
@@ -670,7 +670,7 @@ export async function refreshTokens(deps: OAuthDeps, form: URLSearchParams, clie
     if (row.expires_at <= now || row.family_expires_at <= now) throw new OAuthError("invalid_grant", "the refresh token has expired; reconnect the app");
     if (!conn || conn.status !== "active") throw new OAuthError("invalid_grant", "the connection was revoked");
     // A token for an address this server no longer serves (the MCP endpoint
-    // moved: MERRYMEN_MCP_RESOURCE_URL changed) would mint access tokens /mcp
+    // moved: AGENTCAP_MCP_RESOURCE_URL changed) would mint access tokens /mcp
     // refuses, and the client would loop on 401s. invalid_grant makes it
     // start a new authorization against the current address instead. Checked
     // BEFORE the resource parameter: a client that already switched to the

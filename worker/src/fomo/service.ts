@@ -200,7 +200,7 @@ export interface FomoServiceDeps {
    */
   liveFeed?: boolean;
   /**
-   * The operator's tail switch (contract.ts fomoTailsOn, MERRYMEN_FOMO_TAILS).
+   * The operator's tail switch (contract.ts fomoTailsOn, AGENTCAP_FOMO_TAILS).
    * False: fomo_tail_trader refuses (`tails-disabled`) and stores nothing,
    * because nothing would route, be carried or be told; stopping a tail still
    * works, and research status says the stored ones are on hold. Absent: on.
@@ -1888,7 +1888,7 @@ export function createFomoService(deps: FomoServiceDeps): FomoServiceExt {
     const r = await resolveTrader(ic.cc, a, args.query as TraderRef, "prefer-fresh");
     if (!r.ok) return fromFail(ic, a, "profile", "prefer-fresh", r);
     if (r.formerHandle) a.note("That handle is one this trader used before; the account has since renamed.");
-    if (r.match === "user-id-unseen") a.note("This user id has not been seen by Merrymen before; its handle is unknown.");
+    if (r.match === "user-id-unseen") a.note("This user id has not been seen by AgentCap before; its handle is unknown.");
     return finish(ic, a, {
       cls: "profile",
       mode: "prefer-fresh",
@@ -2345,7 +2345,7 @@ export function createFomoService(deps: FomoServiceDeps): FomoServiceExt {
       a.sourceTimes.push(v.postedAt);
     }
     a.achieved = { theses: rows.length, shown: shown.length, families: tv.families, authors: tv.authors, chainFilterHonoured: honoured };
-    a.note("Theses are their authors' claims, not verified facts; stance is Merrymen's reading of the text.");
+    a.note("Theses are their authors' claims, not verified facts; stance is AgentCap's reading of the text.");
     const subject: ResolvedSubject | null = token ? { kind: "token", token, label: label ?? { symbol: null, name: null } } : trader ? { kind: "trader", trader } : null;
     // An empty page is logged by its shape only (never the coin): the provider's
     // own "available" flag and count tell a coin with no theses from a read
@@ -2597,7 +2597,7 @@ export function createFomoService(deps: FomoServiceDeps): FomoServiceExt {
         inCohort: cohort.size === null ? null : cohort.ids.has(r.trader.userId),
       }));
       a.note("P&L is the provider-reported realised P&L for the window, not a measure of skill; follower counts are not used.");
-      if (args.cohortOnly) a.note("Limited to Merrymen's watched traders who appear on this board.");
+      if (args.cohortOnly) a.note("Limited to AgentCap's watched traders who appear on this board.");
       a.achieved = { rows: traders.length, boardRows: lb.data?.rows.length ?? null };
       return finish(ic, a, {
         cls: "rankings",
@@ -2634,7 +2634,7 @@ export function createFomoService(deps: FomoServiceDeps): FomoServiceExt {
     // serves every chain; nothing is sent upstream): how many rows the board
     // had, how many matched, how many could not be placed. With no chain
     // asked, the board's Robinhood Chain rows too, so a cross-chain board can
-    // still say where the chain Merrymen trades stands on it.
+    // still say where the chain AgentCap trades stands on it.
     const counts = tb.data ? { boardRows: all.length, matched: rows.length, unplaced: tb.data.dropped } : {};
     const hood = all.filter((r) => isRobinhoodToken(r.token));
     const robinhood = tb.data && !chain ? { robinhood: { rows: hood.length, top: hood.slice(0, 3).map(view) } } : {};
@@ -2732,7 +2732,7 @@ export function createFomoService(deps: FomoServiceDeps): FomoServiceExt {
       const firstSeenInWindow: boolean | null = !early.has(c.token.key) ? false : baselineKnown ? true : null;
       // EARLY-SIGNAL EVIDENCE, NOT SIZE: market cap, volume, holders and board rank are never scored.
       const recent = c.latestBuyAt !== null && ic.now - c.latestBuyAt <= 6 * HOUR ? 1 : 0;
-      // A room's order never weighs who Merrymen watches: a watched buyer counts as any other buyer there.
+      // A room's order never weighs who AgentCap watches: a watched buyer counts as any other buyer there.
       const watched = ic.audience === "owner" ? c.cohortBuyers.size : 0;
       const score =
         3 * watched +
@@ -2758,7 +2758,7 @@ export function createFomoService(deps: FomoServiceDeps): FomoServiceExt {
         },
         score: Math.round(score * 100) / 100,
         executionAvailability: availability,
-        routeNote: isRobinhoodToken(c.token) ? "route not yet verified by Merrymen" : availability === "unsupported-chain" ? "not on a chain Merrymen trades" : "chain not resolved",
+        routeNote: isRobinhoodToken(c.token) ? "route not yet verified by AgentCap" : availability === "unsupported-chain" ? "not on a chain AgentCap trades" : "chain not resolved",
         evidence: c.refs,
       });
     }
@@ -2951,7 +2951,7 @@ export function createFomoService(deps: FomoServiceDeps): FomoServiceExt {
       cohortUserIds: cohort.ids,
       stats: statsData,
       marketContext: [],
-      routeContext: [robinhood ? "On Robinhood Chain; a trading route has not been verified by Merrymen." : "Not on a chain Merrymen trades; research only."],
+      routeContext: [robinhood ? "On Robinhood Chain; a trading route has not been verified by AgentCap." : "Not on a chain AgentCap trades; research only."],
       ownFamilies: new Set<string>(),
       selfNames,
       previous,
@@ -3088,7 +3088,7 @@ export function createFomoService(deps: FomoServiceDeps): FomoServiceExt {
     for (const l of d.coverage.limitations.slice(0, 4)) a.note(l);
     for (const m of d.coverage.missingSections) if (m === "theses" || m === "activity" || m === "token-stats") if (!a.missing.includes(m)) a.missing.push(m);
     a.sourceTimes.push(d.coverage.oldestSourceAt, d.coverage.newestSourceAt);
-    a.note("This is Merrymen's analysis of third-party claims and observed activity, not permission to trade.");
+    a.note("This is AgentCap's analysis of third-party claims and observed activity, not permission to trade.");
     a.achieved = { revision: d.revision, depth, uniqueTheses: d.coverage.uniqueTheses, uniqueAuthors: d.coverage.uniqueAuthors };
     const data: ResearchCoinData = {
       token,
@@ -3168,7 +3168,7 @@ export function createFomoService(deps: FomoServiceDeps): FomoServiceExt {
     const capabilitiesUnverified = merged.filter((c) => used.has(c.capability) && c.status === "DOCUMENTED").map((c) => c.capability).sort(streamFirst);
     const capabilitiesDown = merged.filter((c) => used.has(c.capability) && (c.status === "UNAVAILABLE" || c.status === "ENTITLEMENT_BLOCKED")).map((c) => c.capability).sort();
     if (assessment) a.ref("assessment", assessment.id);
-    if (token && !assessment && funnel.length === 0) a.note("Merrymen has not assessed this coin for you; nothing was skipped because nothing was reviewed.");
+    if (token && !assessment && funnel.length === 0) a.note("AgentCap has not assessed this coin for you; nothing was skipped because nothing was reviewed.");
     const data: ResearchStatusData = {
       token,
       assessment: assessment
@@ -3582,7 +3582,7 @@ export function createFomoService(deps: FomoServiceDeps): FomoServiceExt {
       return env;
     }
     // 1b. AN X ANSWER WITH ITS CAP AT ZERO IS OFF, not merely unpaid
-    // (MERRYMEN_FOMO_X_HOURLY_CREDITS=0, the documented off). A cap only
+    // (AGENTCAP_FOMO_X_HOURLY_CREDITS=0, the documented off). A cap only
     // refuses paid reads: a fresh copy an owner's or a room's read paid for
     // would still be served, and a held one would still stand in when the
     // charge is refused, and either would reach a public post on X. So the

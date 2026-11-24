@@ -18,7 +18,7 @@ import * as React from "react";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { JSDOM } from "jsdom";
-import { autonomyOf } from "@merrymen/core";
+import { autonomyOf } from "@agentcap/core";
 import { positionFigures, positionsOf } from "./account";
 import { idleChat } from "./test-chat";
 import type { LiveMine, LiveToken } from "./live";

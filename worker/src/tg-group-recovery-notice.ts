@@ -10,7 +10,7 @@
  * could post a duplicate apology.
  */
 import { createHash } from "node:crypto";
-import type { MerrymenSettings } from "../../packages/core/src/index";
+import type { AgentCapSettings } from "../../packages/core/src/index";
 import { illegalTags, type PgClientLike } from "./announce";
 import { mergeSettings } from "./settings";
 import { getSettingsStore } from "./settings-store";
@@ -20,8 +20,8 @@ import { botIdOf } from "./telegram/state";
 import { approvedTgRoomsForTenant } from "./tg-groups-ferry";
 
 export const SHOGUN_TENANT = "0x8e93bad5a60a266b4283855ceffa0979720aed72" as const;
-export const SHOGUN_BOT_USERNAME = "Merrymanme_bot";
-export const RECOVERY_ROOM_TITLE = "Merrymen";
+export const SHOGUN_BOT_USERNAME = "AgentCapAvatarme_bot";
+export const RECOVERY_ROOM_TITLE = "AgentCap";
 
 export const TG_GROUP_NOTICE_DDL = `CREATE TABLE IF NOT EXISTS tg_group_notices (
   campaign_id TEXT NOT NULL,
@@ -90,7 +90,7 @@ export async function runTgGroupRecoveryNotice(opts: {
   selectedChatId?: number | null;
   confirmCampaignId?: string | null;
   confirmBodySha256?: string | null;
-  settings?: { get(tenant: `0x${string}`): Promise<MerrymenSettings | null> };
+  settings?: { get(tenant: `0x${string}`): Promise<AgentCapSettings | null> };
   dek?: Buffer;
   env?: Record<string, string | undefined>;
   inspectBot?: BotCheck;
@@ -118,7 +118,7 @@ export async function runTgGroupRecoveryNotice(opts: {
   const refuse = (reason: string): TgGroupNoticeResult => ({ ...out, status: "refused", reason });
   if (campaignAndChatConfirmed && !confirmed) return refuse("body SHA-256 does not match the reviewed dry run");
   const env = opts.env ?? process.env;
-  if (env.MERRYMEN_TG_GROUPS?.trim() === "0") return refuse("operator group switch is off");
+  if (env.AGENTCAP_TG_GROUPS?.trim() === "0") return refuse("operator group switch is off");
 
   const settingsReader = opts.settings ?? getSettingsStore("spot");
   const settings = await settingsReader.get(SHOGUN_TENANT);
@@ -138,11 +138,11 @@ export async function runTgGroupRecoveryNotice(opts: {
   if (rooms === null) return refuse("Shogun has no readable durable group state");
   out.rooms = rooms.filter((room) => room.title === RECOVERY_ROOM_TITLE &&
     (room.kind === "group" || room.kind === "supergroup"));
-  if (out.rooms.length === 0) return refuse("no approved Merrymen room in Shogun's state");
+  if (out.rooms.length === 0) return refuse("no approved AgentCap room in Shogun's state");
 
   if (!confirmed) return out;
   const room = out.rooms.find((r) => r.chatId === selected);
-  if (!room) return refuse("selected chat id is not an approved Merrymen room");
+  if (!room) return refuse("selected chat id is not an approved AgentCap room");
   if (room.isForum) return refuse("forum room needs an explicit topic; this notice has none");
 
   // The dry run above is read-only, including no receipt table creation.
@@ -179,7 +179,7 @@ export async function runTgGroupRecoveryNotice(opts: {
   if (!freshSettings?.telegramBotToken || freshSettings.telegramBotToken !== token) {
     return refuse("Shogun's bot token changed before send");
   }
-  if (env.MERRYMEN_TG_GROUPS?.trim() === "0") return refuse("operator group switch changed before send");
+  if (env.AGENTCAP_TG_GROUPS?.trim() === "0") return refuse("operator group switch changed before send");
   const freshResolved = mergeSettings(freshSettings, env);
   if (!freshResolved.telegramEnabled || !freshResolved.telegramGroupsEnabled) {
     return refuse("Shogun switched Telegram groups off before send");

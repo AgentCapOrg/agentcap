@@ -530,7 +530,7 @@ export async function captureLedgerImport(o: {
   const tenant = tenantKey(o.tenant), account = address(o.smartAccount), dialect = o.dialect ?? "postgres";
   leaseOkay(o.lease, tenant); await o.assertSource();
   if (o.dek.length !== 32 || !o.source.quiescent || !o.source.singleReplicaConfirmed || !o.source.deploymentId || !o.source.gitCommit || !o.source.orchestratorStart || !Number.isSafeInteger(o.source.orchestratorPid)) throw refuse();
-  parentDirectories(o.home); const file = path.join(o.home, "merrymen.db"); plain(file, false);
+  parentDirectories(o.home); const file = path.join(o.home, "agentcap.db"); plain(file, false);
   for (const name of [LEDGER_IMPORT_PENDING_FILE, "ledger-source-blocked.json", "restore-blocked.json", "energy-unrestored.json"]) if (present(path.join(o.home, name))) throw refuse();
   const hs = lstatSync(o.home, { bigint: true }), ds = lstatSync(file, { bigint: true });
   const raw = new DatabaseSync(file, { readOnly: true }); raw.exec("BEGIN");
@@ -631,7 +631,7 @@ export async function restoreLedgerImport(o: {
   await ensureLedgerImportSchema(o.shared, dialect);
   await assertNoPendingReceiptAttestation(o.shared, tenant);
   volumeOkay(o.volume, o.home, tenant);
-  const file = path.join(o.home, "merrymen.db"), marker = path.join(o.home, LEDGER_IMPORT_PENDING_FILE);
+  const file = path.join(o.home, "agentcap.db"), marker = path.join(o.home, LEDGER_IMPORT_PENDING_FILE);
   return o.shared.tx<"none" | "present" | "restored" | "resumed"> (async db => {
     leaseOkay(o.lease, tenant);
     // Match explicit deletion's grant -> import lock order, never the inverse.
@@ -779,7 +779,7 @@ export async function registerLedgerSource(o: {
   await ensureLedgerImportSchema(o.shared, dialect);
   await assertNoPendingReceiptAttestation(o.shared, tenant);
   volumeOkay(o.volume, o.home, tenant);
-  const file = path.join(o.home, "merrymen.db"); if (present(file)) plain(file, false);
+  const file = path.join(o.home, "agentcap.db"); if (present(file)) plain(file, false);
   if (readPending(o.home) || present(path.join(o.home, "ledger-source-blocked.json"))) throw refuse();
   await o.shared.tx(async db => {
     leaseOkay(o.lease, tenant);
@@ -964,7 +964,7 @@ export async function registerAttestedGapSource(o: {
   if (o.chainRead && (!block.test(o.chainRead.fromBlock) || !block.test(o.chainRead.head) || BigInt(o.chainRead.head) < BigInt(o.chainRead.fromBlock))) throw refuse();
   leaseOkay(o.lease, tenant); volumeOkay(o.volume, o.home, tenant);
   if (readPending(o.home) || present(path.join(o.home, "ledger-source-blocked.json"))) throw refuse();
-  const file = path.join(o.home, "merrymen.db");
+  const file = path.join(o.home, "agentcap.db");
   await ensureLedgerResumeSchema(o.shared);
   await assertNoPendingReceiptAttestation(o.shared, tenant);
   const forUpdate = dialect === "postgres" ? " FOR UPDATE" : "";
@@ -1056,11 +1056,11 @@ export async function verifyLedgerImport(o: {
 }): Promise<{ tables: number; rows: number; sourceDigest: string }> {
   const a = openArtifact(o.artifact, o.dek), dialect = o.dialect ?? "postgres";
   leaseOkay(o.lease, a.tenant); await o.assertSource(); parentDirectories(o.home);
-  const file = path.join(o.home, "merrymen.db"); plain(file, false);
+  const file = path.join(o.home, "agentcap.db"); plain(file, false);
   const hs = lstatSync(o.home, { bigint: true }), ds = lstatSync(file, { bigint: true });
   if (String(hs.dev) !== a.original.homeDevice || String(hs.ino) !== a.original.homeInode || String(ds.dev) !== a.original.dbDevice || String(ds.ino) !== a.original.dbInode) throw refuse();
   const original = new DatabaseSync(file, { readOnly: true }); original.exec("BEGIN");
-  const temporary = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-verify-ledger-")));
+  const temporary = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-verify-ledger-")));
   try {
     if (hash(canonical(readBook(original, a.smartAccount))) !== a.sourceDigest || original.prepare("PRAGMA integrity_check").get()?.integrity_check !== "ok") throw refuse();
     assertSettled(original);
@@ -1089,7 +1089,7 @@ export async function verifyRestoredLedgerImport(o: {
   const a = openArtifact(o.artifact, o.dek), dialect = o.dialect ?? "postgres";
   leaseOkay(o.lease, a.tenant); await o.assertSource(); volumeOkay(o.volume, o.home, a.tenant);
   if (readPending(o.home)) throw refuse();
-  const file = path.join(o.home, "merrymen.db"); sameBook(file, a.smartAccount, a.sourceDigest);
+  const file = path.join(o.home, "agentcap.db"); sameBook(file, a.smartAccount, a.sourceDigest);
   await o.shared.tx(async db => {
     if (canonical(await bindings(db, a.tenant, a.smartAccount, dialect, true)) !== canonical(a.bindings)) throw refuse();
     const row = await db.prepare(`SELECT generation,state,target_volume_id,source_digest,sealed,source_inode,source_identity FROM tenant_ledger_import WHERE tenant = ?${dialect === "postgres" ? " FOR SHARE" : ""}`).get(a.tenant) as Record<string, unknown> | undefined;

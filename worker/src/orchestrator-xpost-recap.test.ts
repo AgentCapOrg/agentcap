@@ -50,7 +50,7 @@ async function world(t: TestContext, o: { now: number; calls: CallFact[]; tz?: s
   const poster = makeXPoster({
     app: { clientId: "client", clientSecret: "secret", redirectUri: "https://app.test/connect/x" }, dek,
     creds: { provider: "groq", transport: "openai", model: "test", apiKey: "k", baseUrl: "https://model.test/v1", vision: false },
-    knobs: { ...xpostEnv(o.standard ? {} : { MERRYMEN_XPOST_ACTIVE_TENANTS: TENANT }), repliesApproved: o.replies ?? true },
+    knobs: { ...xpostEnv(o.standard ? {} : { AGENTCAP_XPOST_ACTIVE_TENANTS: TENANT }), repliesApproved: o.replies ?? true },
     deps: { dialect: "sqlite", fetch, monotonic: () => 0, facts: async (...args) => { o.factsOpts?.push(args[4]); return new Map([[TENANT, facts]]); },
       member: async () => { if (o.zoneFails?.()) throw new Error("member read failed"); return { tz: o.tz ?? null }; },
       // The model passes on everything unless a draft is given: a recap needs none.

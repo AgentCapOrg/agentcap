@@ -2,13 +2,13 @@
  * THE TELEGRAM LINK CODE, PUBLISHED PER TENANT SO THE DASHBOARD CAN SHOW IT.
  *
  * Two beta testers were blocked at the same step: bot token saved, "test
- * connection ✓ connected as @merrymen_hosted_…_bot", "the bot is listening"
+ * connection ✓ connected as @agentcap_hosted_…_bot", "the bot is listening"
  * ticked — and no link code anywhere, so `/link` could never be sent. One
  * wrote, exactly: "I'm stuck at this point, no code from /link".
  *
  * The code was never missing. It was in the wrong container. The CHILD mints it
  * on boot and writes it to `<childHome>/telegram.json`, which lives on the
- * ORCHESTRATOR's disk; `/api/telegram` read `merrymenHome()/telegram.json` on
+ * ORCHESTRATOR's disk; `/api/telegram` read `agentcapHome()/telegram.json` on
  * the WEB container, where nothing has ever written one. So the route returned
  * `linkCode: null` to every hosted tenant, always, and rendered a placeholder.
  * The same shape as the feed's identity bug and /api/grants' "different

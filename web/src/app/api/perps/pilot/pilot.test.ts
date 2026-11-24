@@ -12,14 +12,14 @@ import { GET } from "./route";
 import { POST as redeem } from "./redeem/route";
 import { GET as adminGet, POST as adminPost } from "./admin/route";
 import { GET as offered } from "../offered/route";
-import { getSettingsStore, resetSettingsStoreForTest, type FileSettingsStore } from "@merrymen/settings-store";
+import { getSettingsStore, resetSettingsStoreForTest, type FileSettingsStore } from "@agentcap/settings-store";
 
 const ORIGIN = "https://app.example.test", APP = "pilot-test-app";
 const ADMIN: `0x${string}` = `0x${"a1".repeat(20)}`, ALICE: `0x${string}` = `0x${"b2".repeat(20)}`, BOB: `0x${string}` = `0x${"c3".repeat(20)}`;
 const DID = "did:privy:pilot-alice", BOB_DID = "did:privy:pilot-bob";
-const env = ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_PUBLIC_ORIGIN", "MERRYMEN_SESSION_SECRET", "MERRYMEN_PERPS", "MERRYMEN_PERPS_PILOT_ADMINS", "MERRYMEN_PERPS_PAPER_TENANTS", "DATABASE_URL", "NEXT_PUBLIC_PRIVY_APP_ID", "PRIVY_APP_SECRET", "PRIVY_VERIFICATION_KEY"];
+const env = ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_PUBLIC_ORIGIN", "AGENTCAP_SESSION_SECRET", "AGENTCAP_PERPS", "AGENTCAP_PERPS_PILOT_ADMINS", "AGENTCAP_PERPS_PAPER_TENANTS", "DATABASE_URL", "NEXT_PUBLIC_PRIVY_APP_ID", "PRIVY_APP_SECRET", "PRIVY_VERIFICATION_KEY"];
 const saved = Object.fromEntries(env.map(key => [key, process.env[key]]));
-const home = mkdtempSync(path.join(tmpdir(), "merrymen-pilot-api-"));
+const home = mkdtempSync(path.join(tmpdir(), "agentcap-pilot-api-"));
 const keys = generateKeyPairSync("ec", { namedCurve: "P-256" });
 let pilot: ReturnType<typeof pilotFixture>;
 const require = createRequire(import.meta.url);
@@ -40,8 +40,8 @@ const useCode = (code: string, owner = ALICE, bearer = token(), extra: Record<st
 async function invite() { return pilot.store.createInvite({ actor: ADMIN, maxUses: 1, expiresAt: Date.now() + 60_000 }); }
 
 before(async () => {
-  Object.assign(process.env, { MERRYMEN_HOME: home, MERRYMEN_HOSTED: "1", MERRYMEN_PUBLIC_ORIGIN: ORIGIN,
-    MERRYMEN_SESSION_SECRET: "pilot-session-secret-which-is-long-enough", NEXT_PUBLIC_PRIVY_APP_ID: APP,
+  Object.assign(process.env, { AGENTCAP_HOME: home, AGENTCAP_HOSTED: "1", AGENTCAP_PUBLIC_ORIGIN: ORIGIN,
+    AGENTCAP_SESSION_SECRET: "pilot-session-secret-which-is-long-enough", NEXT_PUBLIC_PRIVY_APP_ID: APP,
     PRIVY_APP_SECRET: "fixture-only-secret", PRIVY_VERIFICATION_KEY: keys.publicKey.export({ type: "spki", format: "pem" }).toString() });
   delete process.env.DATABASE_URL;
   identities.resetIdentityStoreForTest(); privy.resetPrivyClientForTest();
@@ -51,7 +51,7 @@ before(async () => {
 beforeEach(() => {
   pilot?.close(); pilot = pilotFixture();
   resetSettingsStoreForTest(); rmSync(path.join(home, "tenant-settings-perps"), { recursive: true, force: true });
-  process.env.MERRYMEN_PERPS = "paper"; process.env.MERRYMEN_PERPS_PILOT_ADMINS = ADMIN;
+  process.env.AGENTCAP_PERPS = "paper"; process.env.AGENTCAP_PERPS_PILOT_ADMINS = ADMIN;
 });
 after(() => {
   pilot?.close(); identities.resetIdentityStoreForTest(); privy.resetPrivyClientForTest(); resetSettingsStoreForTest(); mock.restoreAll();
@@ -106,7 +106,7 @@ describe("pilot enrollment uses verified login authority", () => {
     assert.equal(invalid.status, 400); assert.equal((await invalid.json()).code, "invalid-invite");
   });
   it("can register before launch while creation remains globally unavailable", async () => {
-    process.env.MERRYMEN_PERPS = "off";
+    process.env.AGENTCAP_PERPS = "off";
     const made = await invite(), response = await useCode(made.code);
     assert.equal(response.status, 200); assert.equal((await response.json()).paperAvailable, false);
     assert.equal((await offered(request("offered"))).status, 404);
@@ -153,7 +153,7 @@ describe("pilot administration is separate from membership", () => {
     await pilot.set(ALICE, "allowed");
     assert.equal((await adminGet(request("pilot/admin"))).status, 403);
     for (const raw of ["", "*", `${ADMIN},bad`, Array(21).fill(ADMIN).join(",")]) {
-      process.env.MERRYMEN_PERPS_PILOT_ADMINS = raw; assert.equal(isPerpsPilotAdmin(ADMIN), false);
+      process.env.AGENTCAP_PERPS_PILOT_ADMINS = raw; assert.equal(isPerpsPilotAdmin(ADMIN), false);
       assert.equal((await adminGet(request("pilot/admin", ADMIN))).status, 403);
     }
   });

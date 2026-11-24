@@ -58,7 +58,7 @@ export interface ResearchResult {
 }
 
 export interface BrowserConfig {
-  /** e.g. https://merrymen-browser.railway.internal:8080 — private network only. */
+  /** e.g. https://agentcap-browser.railway.internal:8080 — private network only. */
   baseUrl: string;
   token: string;
   timeoutMs?: number;

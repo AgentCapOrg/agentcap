@@ -6,8 +6,8 @@ import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { after, before, describe, it } from "node:test";
 import sharp from "sharp";
-import { getGrantStore, resetGrantStoreForTest } from "@merrymen/grant-store";
-import type { StoredGrant } from "@merrymen/core";
+import { getGrantStore, resetGrantStoreForTest } from "@agentcap/grant-store";
+import type { StoredGrant } from "@agentcap/core";
 import { mintSession } from "@/lib/auth";
 import { GET } from "./route";
 import { readTradePnl } from "@/lib/trade-pnl";
@@ -17,25 +17,25 @@ const OWNER = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as const;
 const OTHER = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as const;
 const ACCOUNT = "0x00000000000000000000000000000000000000a1";
 const OTHER_ACCOUNT = "0x00000000000000000000000000000000000000a2";
-const ENV = ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_SESSION_SECRET", "DATABASE_URL"] as const;
+const ENV = ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_SESSION_SECRET", "DATABASE_URL"] as const;
 const saved = Object.fromEntries(ENV.map((key) => [key, process.env[key]]));
 const cwd = process.cwd();
 let home: string;
 let raw: DatabaseSync;
 
 before(async () => {
-  home = mkdtempSync(path.join(tmpdir(), "merrymen-pnl-route-"));
-  process.env.MERRYMEN_HOME = home;
-  process.env.MERRYMEN_SESSION_SECRET = "pnl-test-secret-at-least-thirty-two-characters";
+  home = mkdtempSync(path.join(tmpdir(), "agentcap-pnl-route-"));
+  process.env.AGENTCAP_HOME = home;
+  process.env.AGENTCAP_SESSION_SECRET = "pnl-test-secret-at-least-thirty-two-characters";
   delete process.env.DATABASE_URL;
-  delete process.env.MERRYMEN_HOSTED;
+  delete process.env.AGENTCAP_HOSTED;
   resetGrantStoreForTest();
   for (const [tenant, smartAccount] of [[OWNER, ACCOUNT], [OTHER, OTHER_ACCOUNT]] as const) {
     await getGrantStore("spot").put(tenant, { smartAccount, chainId: 4663, serialized: "test-only", demoSessionPrivateKey: "0x" + "11".repeat(32) } as unknown as StoredGrant);
   }
-  process.env.MERRYMEN_HOSTED = "1";
+  process.env.AGENTCAP_HOSTED = "1";
   process.chdir(fileURLToPath(new URL("../../../../", import.meta.url)));
-  raw = new DatabaseSync(path.join(home, "merrymen.db"));
+  raw = new DatabaseSync(path.join(home, "agentcap.db"));
   raw.exec(`CREATE TABLE agents(smart_account TEXT, epoch INTEGER);
     INSERT INTO agents VALUES ('${ACCOUNT}', 2), ('${OTHER_ACCOUNT}', 2);
     CREATE TABLE decisions(id TEXT, agent_id TEXT, symbol TEXT, display_name TEXT);
@@ -143,12 +143,12 @@ describe("private trade P&L PNG", () => {
     }
   });
   it("self-hosted uses only the disk account and never a query-selected account", async () => {
-    delete process.env.MERRYMEN_HOSTED;
+    delete process.env.AGENTCAP_HOSTED;
     writeFileSync(path.join(home, "grant.json"), JSON.stringify({ smartAccount: ACCOUNT }));
     try {
       const own = await request("?trade=2", null);
       assert.equal(own.status, 200);
       assert.equal((await request(`?trade=18&agent=${OTHER_ACCOUNT}`, null)).status, 404);
-    } finally { process.env.MERRYMEN_HOSTED = "1"; }
+    } finally { process.env.AGENTCAP_HOSTED = "1"; }
   });
 });

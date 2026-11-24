@@ -3,7 +3,7 @@
  * PERPS WORKER CAN REACH. Opt-in, like worker/src/pg-upgrade.postgres.test.ts
  * (see its header):
  *
- *   MERRYMEN_TEST_PG_URL=postgres://merrymen@localhost:55432/merrymen_pgtest \
+ *   AGENTCAP_TEST_PG_URL=postgres://agentcap@localhost:55432/agentcap_pgtest \
  *     npx tsx --test web/src/app/api/paper-reset/hosted.postgres.test.ts
  *
  * Skipped without it. A LOCAL Postgres only, in a schema of its own, dropped
@@ -32,15 +32,15 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, before, beforeEach, describe, it } from "node:test";
 
-import type { StoredGrant } from "@merrymen/core";
-import { getGrantStore, resetGrantStoreForTest } from "@merrymen/grant-store";
-import { resetSettingsStoreForTest, useSettingsStoreForTest } from "@merrymen/settings-store";
+import type { StoredGrant } from "@agentcap/core";
+import { getGrantStore, resetGrantStoreForTest } from "@agentcap/grant-store";
+import { resetSettingsStoreForTest, useSettingsStoreForTest } from "@agentcap/settings-store";
 import { mintSession } from "@/lib/auth";
 import { makePgDb } from "../../../../../worker/src/db";
 import { recordPaperRecoveryHealth } from "../../../../../worker/src/paper-checkpoint";
 import { applyLedgerSchema } from "../../../../../worker/src/store";
 
-const url = process.env.MERRYMEN_TEST_PG_URL ?? process.env.MERRYMEN_TEST_POSTGRES_URL;
+const url = process.env.AGENTCAP_TEST_PG_URL ?? process.env.AGENTCAP_TEST_POSTGRES_URL;
 interface PgClient {
   connect(): Promise<void>;
   query(sql: string, params?: unknown[]): Promise<{ rows: Record<string, unknown>[] }>;
@@ -50,7 +50,7 @@ interface PgClient {
 // worker/src/pg-upgrade.postgres.test.ts), so CI and a plain `npm test` skip cleanly.
 const pg = (url ? createRequire(import.meta.url)("pg") : null) as { Client: new (c: { connectionString: string }) => PgClient } | null;
 
-const KEYS = ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_SETTINGS_FILE", "DATABASE_URL", "MERRYMEN_SESSION_SECRET", "MERRYMEN_PERPS", "MERRYMEN_TICK_SECONDS"] as const;
+const KEYS = ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_SETTINGS_FILE", "DATABASE_URL", "AGENTCAP_SESSION_SECRET", "AGENTCAP_PERPS", "AGENTCAP_TICK_SECONDS"] as const;
 const saved = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
 const TENANT = `0x${"aa".repeat(20)}` as const;
 const SPOT = `0x${"11".repeat(20)}`;
@@ -66,13 +66,13 @@ describe("hosted, a Perps practice reset and the book the orchestrator holds", {
 
   before(async () => {
     home = mkdtempSync(path.join(tmpdir(), "mm-reset-held-pg-"));
-    process.env.MERRYMEN_HOME = home;
-    process.env.MERRYMEN_HOSTED = "1";
-    process.env.MERRYMEN_PERPS = "paper";
-    process.env.MERRYMEN_SESSION_SECRET = "a".repeat(64);
-    process.env.MERRYMEN_SETTINGS_FILE = path.join(home, "settings.json");
+    process.env.AGENTCAP_HOME = home;
+    process.env.AGENTCAP_HOSTED = "1";
+    process.env.AGENTCAP_PERPS = "paper";
+    process.env.AGENTCAP_SESSION_SECRET = "a".repeat(64);
+    process.env.AGENTCAP_SETTINGS_FILE = path.join(home, "settings.json");
     delete process.env.DATABASE_URL;
-    delete process.env.MERRYMEN_TICK_SECONDS;
+    delete process.env.AGENTCAP_TICK_SECONDS;
     resetSettingsStoreForTest();
     resetGrantStoreForTest();
     // File-backed grants, chosen before DATABASE_URL names the ledger; one owner key for both wallets.

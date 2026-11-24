@@ -1,12 +1,12 @@
 /**
  * The orchestrator's one public perps feed (fleet-feed.ts): one socket for the
- * replica, only while MERRYMEN_PERPS=paper and nothing halts it, and a failed
+ * replica, only while AGENTCAP_PERPS=paper and nothing halts it, and a failed
  * read never blanks what it carries. Offline: `start` and `api` are seams.
  */
 import assert from "node:assert/strict";
 import path from "node:path";
 import { describe, it } from "node:test";
-import type { MerrymenSettings } from "../../../packages/core/src/index";
+import type { AgentCapSettings } from "../../../packages/core/src/index";
 import { createFleetPerpFeed } from "./fleet-feed";
 import type { LighterFeedOptions } from "./feed";
 
@@ -18,7 +18,7 @@ function setup() {
   let failSettings = false;
   let failHeld = false;
   let stops = 0;
-  let settings: MerrymenSettings[] = [{ perpsEnabled: true, perpsMarkets: ["BTC-PERP", "ETH-PERP"] }];
+  let settings: AgentCapSettings[] = [{ perpsEnabled: true, perpsMarkets: ["BTC-PERP", "ETH-PERP"] }];
   let held: number[] = [];
   const starts: LighterFeedOptions[] = [];
   const logs: string[] = [];
@@ -26,7 +26,7 @@ function setup() {
     home: HOME,
     enabled: () => enabled,
     halted: () => halted,
-    env: () => ({ MERRYMEN_PERPS: enabled ? "paper" : "off" }),
+    env: () => ({ AGENTCAP_PERPS: enabled ? "paper" : "off" }),
     readSettings: async () => {
       if (failSettings) throw new Error("settings unread");
       return settings;
@@ -45,7 +45,7 @@ function setup() {
   return {
     feed, starts, logs,
     stops: () => stops,
-    set: (s: MerrymenSettings[], h: number[] = []) => { settings = s; held = h; },
+    set: (s: AgentCapSettings[], h: number[] = []) => { settings = s; held = h; },
     enable: (x: boolean) => { enabled = x; },
     halt: (x: boolean) => { halted = x; },
     failSettings: (x: boolean) => { failSettings = x; },
@@ -71,7 +71,7 @@ describe("the orchestrator's fleet perps publisher", () => {
     assert.equal(t.stops(), 1);
   });
 
-  it("WITH MERRYMEN_PERPS NOT paper, NOTHING STARTS, whatever is held, and a running feed stops", async () => {
+  it("WITH AGENTCAP_PERPS NOT paper, NOTHING STARTS, whatever is held, and a running feed stops", async () => {
     const t = setup();
     t.enable(false);
     t.set([{ perpsEnabled: true, perpsMarkets: ["BTC-PERP"] }], [1]);
@@ -142,13 +142,13 @@ describe("the orchestrator's fleet perps publisher", () => {
   });
 
   it("a stop while a refresh awaits its targets can never start a socket, and a refresh never rejects", async () => {
-    let resolve!: (x: MerrymenSettings[]) => void;
+    let resolve!: (x: AgentCapSettings[]) => void;
     let starts = 0;
     const f = createFleetPerpFeed({
       home: HOME, enabled: () => true, halted: () => false,
       readSettings: () => new Promise((r) => { resolve = r; }),
       readHeld: async () => [],
-      env: () => ({ MERRYMEN_PERPS: "paper" }),
+      env: () => ({ AGENTCAP_PERPS: "paper" }),
       api: () => ({ budgetKey: "public" }) as unknown as LighterFeedOptions["api"],
       start: () => { starts += 1; return { stop() {} }; },
     });
@@ -162,7 +162,7 @@ describe("the orchestrator's fleet perps publisher", () => {
       home: HOME, enabled: () => true, halted: () => false,
       readSettings: async () => [{ perpsEnabled: true, perpsMarkets: ["BTC-PERP"] }],
       readHeld: async () => [],
-      env: () => ({ MERRYMEN_PERPS: "paper" }),
+      env: () => ({ AGENTCAP_PERPS: "paper" }),
       api: () => ({ budgetKey: "public" }) as unknown as LighterFeedOptions["api"],
       start: () => { throw new Error("no socket"); },
     });

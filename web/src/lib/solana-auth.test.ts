@@ -27,7 +27,7 @@ test("binding signatures prove exact owner, tenant, DID, origin, nonce and purpo
     [principal, OTHER_OWNER, origin, nonce], [principal, OWNER, "https://evil.example", nonce],
     [principal, OWNER, origin, "other-nonce"],
   ] as const) assert.equal(verifySolanaBindingSignature(identity, owner, site, challenge, signature), false);
-  const loginSignature = base58Encode(ed25519.sign(new TextEncoder().encode("Sign in to Merrymen"), seed));
+  const loginSignature = base58Encode(ed25519.sign(new TextEncoder().encode("Sign in to AgentCap"), seed));
   assert.equal(verifySolanaBindingSignature(principal, OWNER, origin, nonce, loginSignature), false);
 });
 test("invalid and noncanonical wallet proofs fail closed", () => {
@@ -49,7 +49,7 @@ async function refusal(deps: SolanaAuthDependencies, req = request()): Promise<S
   assert.fail("expected a refusal");
 }
 test("a refused sign-in says why by code, and a mismatch names the account's login without deciding anything by it", async () => {
-  // A Solana page asked to open with no Merrymen session, or a wallet token that does not verify.
+  // A Solana page asked to open with no AgentCap session, or a wallet token that does not verify.
   assert.deepEqual((await refusal(dependencies({ tenant: () => null }))).signIn, { problem: "signed-out", account: null, loginHasAccount: false });
   assert.deepEqual((await refusal(dependencies({ verifyToken: async () => ({ ok: false }) }))).signIn, { problem: "expired", account: null, loginHasAccount: false });
   // A session for one login and a wallet sign-in of another: named, and whether that other login has an account.
@@ -73,7 +73,7 @@ test("a refused sign-in says why by code, and a mismatch names the account's log
   assert.deepEqual(await authenticateSolana(request(), dependencies({ accountLogin })), principal);
   assert.deepEqual(lookups, []);
   // Every other refusal carries no code: the cross-origin and changed-identity answers stay as they were.
-  for (const headers of [{ origin: "https://evil.example" }, { "x-merrymen-privy-did": "did:privy:bob" }]) {
+  for (const headers of [{ origin: "https://evil.example" }, { "x-agentcap-privy-did": "did:privy:bob" }]) {
     const other = await refusal(dependencies({ accountLogin }), request(headers));
     assert.equal(other.status, 403);
     assert.equal(other.signIn, null);
@@ -104,12 +104,12 @@ test("browser cross-origin requests cannot mutate a bound Solana account", async
   assert.deepEqual(await authenticateSolana(request({ origin }), dependencies()), principal);
 });
 test("a delayed token from a different login cannot satisfy the browser's expected identity", async () => {
-  await assert.rejects(authenticateSolana(request({ "x-merrymen-privy-did": "did:privy:bob" }), dependencies()), (e: unknown) => e instanceof SolanaWebError && e.status === 403);
-  assert.deepEqual(await authenticateSolana(request({ "x-merrymen-privy-did": principal.did }), dependencies()), principal);
+  await assert.rejects(authenticateSolana(request({ "x-agentcap-privy-did": "did:privy:bob" }), dependencies()), (e: unknown) => e instanceof SolanaWebError && e.status === 403);
+  assert.deepEqual(await authenticateSolana(request({ "x-agentcap-privy-did": principal.did }), dependencies()), principal);
 });
 test("a page opened at 127.0.0.1 is same-origin, while other loopback ports, rebinding names and real hosts are not", async () => {
-  const configured = process.env.MERRYMEN_PUBLIC_ORIGIN;
-  delete process.env.MERRYMEN_PUBLIC_ORIGIN;
+  const configured = process.env.AGENTCAP_PUBLIC_ORIGIN;
+  delete process.env.AGENTCAP_PUBLIC_ORIGIN;
   try {
     // Next rewrites a loopback req.url to localhost, exactly as the route sees it.
     const local = (origin: string, host: string, url = "http://127.0.0.1:3000/api/solana/settings") =>
@@ -130,10 +130,10 @@ test("a page opened at 127.0.0.1 is same-origin, while other loopback ports, reb
     const real = new NextRequest("https://app.example.test/api/solana/settings", { method: "POST", headers: { authorization: "Bearer fixture", origin: "https://evil.example", host: "evil.example" } }) as unknown as Request;
     await assert.rejects(authenticateSolana(real, dependencies()), (e: unknown) => e instanceof SolanaWebError && e.status === 403);
     // A configured public origin stays exact, even for loopback.
-    process.env.MERRYMEN_PUBLIC_ORIGIN = "https://app.example.test";
+    process.env.AGENTCAP_PUBLIC_ORIGIN = "https://app.example.test";
     await assert.rejects(authenticateSolana(local("http://127.0.0.1:3000", "127.0.0.1:3000"), dependencies()), (e: unknown) => e instanceof SolanaWebError && e.status === 403);
     assert.deepEqual(await authenticateSolana(local("https://app.example.test", "127.0.0.1:3000"), dependencies()), principal);
   } finally {
-    if (configured === undefined) delete process.env.MERRYMEN_PUBLIC_ORIGIN; else process.env.MERRYMEN_PUBLIC_ORIGIN = configured;
+    if (configured === undefined) delete process.env.AGENTCAP_PUBLIC_ORIGIN; else process.env.AGENTCAP_PUBLIC_ORIGIN = configured;
   }
 });

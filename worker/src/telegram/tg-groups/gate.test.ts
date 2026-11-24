@@ -359,7 +359,7 @@ describe("meta", () => {
     ["banter", "assistant: nah"],
     ["banter", "mike: lol"],
     ["banter", "Mike: lol"],
-    ["banter", "Merryman: lol"],
+    ["banter", "AgentCapAvatar: lol"],
   ]);
   passes([
     ["banter", "hot take: tops are for buying"],
@@ -1777,7 +1777,7 @@ describe("quote kind: a stranger's thesis said back in a room, held to every thi
     ["double your sol", "lure"],
     ["envia 1 sol y recibe 2 de vuelta", "lure"],
     ["roadmap at auton dot ai, read it", "link"],
-    ["the merrymen bot picked this, so it's safe", "meta"],
+    ["the agentcap bot picked this, so it's safe", "meta"],
     ["这个币会涨到月球", "script"],
     ["лучший проект на солане", "script"],
     ["if you're not in you're ngmi", "at-the-reader"],
@@ -1819,7 +1819,7 @@ describe("quote kind: a stranger's thesis said back in a room, held to every thi
     assert.notEqual(verdict("join for the raid [link]"), "ok");
     assert.notEqual(verdict("dm [handle] for the alpha"), "ok");
   });
-  it("Merrymen named is never a stranger's to say", () => assert.notEqual(verdict("merrymen should buy this"), "ok"));
+  it("AgentCap named is never a stranger's to say", () => assert.notEqual(verdict("agentcap should buy this"), "ok"));
   for (const t of [
     "im holding, team is still building",
     "worried the top 10 wallets hold 40% of supply",
@@ -1856,15 +1856,15 @@ describe("rug permit on persona kinds: 'rugged', said of a collapsed coin, with 
   const PERMIT = { coins: ["AUTON"], brag: true };
   const v = (t: string, kind: TgLineKind, rug: TgGateCtx["rug"] | null = PERMIT): string => reason(t, { kind, names: ["Milla"], ...(rug ? { rug } : {}) });
   const ADMIT = [
-    "rugged cause it wasn't merrymen 😤",
-    "auton rugged lol, should've been a merrymen coin",
-    "chart says rugged. merrymen coins don't do that 😤",
-    "it got rugged, wasn't a merrymen coin so",
+    "rugged cause it wasn't agentcap 😤",
+    "auton rugged lol, should've been a agentcap coin",
+    "chart says rugged. agentcap coins don't do that 😤",
+    "it got rugged, wasn't a agentcap coin so",
     "auton? yeah it rugged",
-    "another one rugged. never would've happened on a merrymen coin 😤",
-    "rip auton, rugged from the top. merrymen don't do that",
-    "full rug. merrymen would never 😤",
-    "rugged. not a merryman in sight",
+    "another one rugged. never would've happened on a agentcap coin 😤",
+    "rip auton, rugged from the top. agentcap don't do that",
+    "full rug. agentcap would never 😤",
+    "rugged. not a agentcapavatar in sight",
     "rug city. should've been one of ours",
   ];
   const REFUSE: Array<[string, string]> = [
@@ -1891,35 +1891,35 @@ describe("rug permit on persona kinds: 'rugged', said of a collapsed coin, with 
     ["rugged, whales dumped on holders", "accuse"],
     ["auton rugged, kaleo dumped his bags on us", "accuse"],
     ["rugged, whales dumped their bags on holders", "accuse"],
-    ["rugged, buy merrymen instead", "advice"],
-    ["rugged lol, get a merrymen coin instead", "advice"],
-    ["rugged, ape merrymen", "advice"],
-    ["rugged, stick to merrymen coins", "advice"],
-    ["rugged. merrymen coins only from now on", "advice"],
-    ["rugged, you should've bought merrymen", "advice"],
-    ["rugged, merrymen is the play", "advice"],
-    ["rugged. merrymen coins never rug", "advice"],
-    ["rugged, merrymen coins are safe", "advice"],
+    ["rugged, buy agentcap instead", "advice"],
+    ["rugged lol, get a agentcap coin instead", "advice"],
+    ["rugged, ape agentcap", "advice"],
+    ["rugged, stick to agentcap coins", "advice"],
+    ["rugged. agentcap coins only from now on", "advice"],
+    ["rugged, you should've bought agentcap", "advice"],
+    ["rugged, agentcap is the play", "advice"],
+    ["rugged. agentcap coins never rug", "advice"],
+    ["rugged, agentcap coins are safe", "advice"],
     ["rugged, you should sell", "advice"],
-    ["rugged, swap to merrymen", "advice"],
-    ["rugged, get merrymen", "advice"],
-    ["rugged, pick merrymen", "advice"],
-    ["rugged, choose merrymen", "advice"],
-    ["rugged. y'all need merrymen", "advice"],
-    ["rugged, park it in merrymen", "advice"],
-    ["rugged, try merrymen", "advice"],
-    ["rugged, go with merrymen", "advice"],
-    ["rugged, put it in merrymen", "advice"],
-    ["rugged, swap into a merrymen coin", "advice"],
-    // Merrymen's own token, its holders, unlocking or going up (HARD EXCLUSION; review r2).
-    ["rugged cause it wasn't merrymen. merrymen tokens unlock the vip room", "advice"],
-    ["rugged, merrymen holders are fine tho 😤", "advice"],
-    ["rugged cause it wasn't merrymen. ours only go up", "advice"],
+    ["rugged, swap to agentcap", "advice"],
+    ["rugged, get agentcap", "advice"],
+    ["rugged, pick agentcap", "advice"],
+    ["rugged, choose agentcap", "advice"],
+    ["rugged. y'all need agentcap", "advice"],
+    ["rugged, park it in agentcap", "advice"],
+    ["rugged, try agentcap", "advice"],
+    ["rugged, go with agentcap", "advice"],
+    ["rugged, put it in agentcap", "advice"],
+    ["rugged, swap into a agentcap coin", "advice"],
+    // AgentCap's own token, its holders, unlocking or going up (HARD EXCLUSION; review r2).
+    ["rugged cause it wasn't agentcap. agentcap tokens unlock the vip room", "advice"],
+    ["rugged, agentcap holders are fine tho 😤", "advice"],
+    ["rugged cause it wasn't agentcap. ours only go up", "advice"],
     ["rugged. ours are safe tho", "advice"],
     ["rugged. our coin only goes up", "advice"],
-    ["rugged. unlock with merrymen tokens", "advice"],
-    ["rugged, join merrymen", "advice"],
-    ["rugged, merrymen pays its holders", "advice"],
+    ["rugged. unlock with agentcap tokens", "advice"],
+    ["rugged, join agentcap", "advice"],
+    ["rugged, agentcap pays its holders", "advice"],
   ];
   for (const kind of ["banter", "answer", "coin"] as const) {
     for (const t of ADMIT) it(`${kind} admits with the permit: ${JSON.stringify(t)}`, () => assert.equal(v(t, kind), "ok"));
@@ -1950,7 +1950,7 @@ describe("rug permit on persona kinds: 'rugged', said of a collapsed coin, with 
       // Another coin the room knows, named beside the rug word in any words.
       assert.equal(v("auton rugged, pons is cooked", kind, withOthers), "accuse", kind);
       assert.equal(v("auton rugged, pons is cooked", kind), "ok", `${kind}: without others the gate cannot know pons`);
-      for (const t of ["auton rugged lol", "rugged cause it wasn't merrymen 😤", "auton? yeah it rugged"]) assert.equal(v(t, kind, withOthers), "ok", `${kind}: ${t}`);
+      for (const t of ["auton rugged lol", "rugged cause it wasn't agentcap 😤", "auton? yeah it rugged"]) assert.equal(v(t, kind, withOthers), "ok", `${kind}: ${t}`);
     }
   });
   it("telling the room to get out under the permit is advice, and its own view stays (review r2)", () => {
@@ -1958,7 +1958,7 @@ describe("rug permit on persona kinds: 'rugged', said of a collapsed coin, with 
       for (const t of ["auton rugged, sell whatever's left", "auton rugged, exit now", "rugged lol, get out while you can", "rugged, stay away", "rugged. don't touch it", "rugged, avoid it", "it rugged. cut your losses", "auton rugged lol just sell", "rugged, steer clear"]) {
         assert.equal(v(t, kind), "advice", `${kind}: ${t}`);
       }
-      for (const t of ["rugged cause it wasn't merrymen 😤", "auton rugged lol", "auton dumped hard, rugged", "it ran then rugged lol", "rugged, holders got wrecked", "i'd stay away tbh, rugged", "rugged, then dumped"]) {
+      for (const t of ["rugged cause it wasn't agentcap 😤", "auton rugged lol", "auton dumped hard, rugged", "it ran then rugged lol", "rugged, holders got wrecked", "i'd stay away tbh, rugged", "rugged, then dumped"]) {
         assert.equal(v(t, kind), "ok", `${kind}: ${t}`);
       }
     }
@@ -1967,7 +1967,7 @@ describe("rug permit on persona kinds: 'rugged', said of a collapsed coin, with 
     for (const t of ["rugged. wasn't ours 😤", "auton? should've been ours 😤", "rugged, not one of us"]) assert.equal(v(t, "banter", { coins: ["AUTON"], brag: false }), "repeat", t);
     assert.equal(v("rugged. wasn't ours 😤", "banter", { coins: ["AUTON"], brag: true }), "ok");
   });
-  it("with the brag spent (brag false) any Merrymen mention waits, and the bare word still passes", () => {
+  it("with the brag spent (brag false) any AgentCap mention waits, and the bare word still passes", () => {
     for (const t of ADMIT.filter((x) => /merry|ours/.test(x))) assert.equal(v(t, "banter", { coins: ["AUTON"], brag: false }), "repeat", t);
     assert.equal(v("auton rugged lol", "banter", { coins: ["AUTON"], brag: false }), "ok");
   });
@@ -1975,7 +1975,7 @@ describe("rug permit on persona kinds: 'rugged', said of a collapsed coin, with 
     assert.equal(v("rugged lol", "fade", null), "accuse");
     assert.equal(v("rugby season", "banter", null), "ok");
     for (const t of ADMIT) assert.equal(v(t, "banter", null), "accuse", t);
-    assert.equal(v("merrymen would never", "banter", null), "ok");
+    assert.equal(v("agentcap would never", "banter", null), "ok");
   });
   it("the permit changes nothing for research, fixed, fade, roast, kind or buy lines", () => {
     for (const kind of ["research", "fixed", "fade", "roast", "kind", "buy"] as const) {

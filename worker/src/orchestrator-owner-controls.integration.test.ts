@@ -22,11 +22,11 @@ import { wrapSqlite } from "./db";
 import { applyLedgerSchema } from "./store";
 import { MIRROR_STATE_DDL } from "./ledger-mirror";
 
-const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-owner-controls-")));
-process.env.MERRYMEN_HOME = fleet;
-process.env.MERRYMEN_HOSTED = "1";
+const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-owner-controls-")));
+process.env.AGENTCAP_HOME = fleet;
+process.env.AGENTCAP_HOSTED = "1";
 delete process.env.DATABASE_URL;
-process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 9).toString("base64");
+process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 9).toString("base64");
 
 const { childHome, reconcile, setKillConfirmForTest, setPaperRestoreForTest, setRetirementMemoryStoreForTest, setSpawnForTest } = await import("./orchestrator");
 const { getGrantStore } = await import("./grant-store");
@@ -51,7 +51,7 @@ const forks: Array<{ home: string; paused: boolean; grant: boolean; files: strin
 const spawned: FakeProc[] = [];
 const confirmed: string[] = [];
 setSpawnForTest((_cmd, _args, options) => {
-  const home = String(options.env?.MERRYMEN_HOME);
+  const home = String(options.env?.AGENTCAP_HOME);
   forks.push({ home, paused: existsSync(path.join(home, "paused")), grant: existsSync(path.join(home, "grant.json")), files: readdirSync(home).sort() });
   const proc = new FakeProc(81_000 + spawned.length); spawned.push(proc);
   return proc as unknown as ChildProcess;

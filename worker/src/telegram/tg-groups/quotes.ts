@@ -12,7 +12,7 @@
  *
  * EVERY QUOTE IS GATED AGAIN, as the `quote` kind (gate.ts: every common
  * clause plus the third-party ones), with the coin's collapse permit for the
- * bare "rug" of a stranger's fear and no Merrymen brag. A refused quote is
+ * bare "rug" of a stranger's fear and no AgentCap brag. A refused quote is
  * DROPPED, never repaired, and counted: she hears how many were left
  * out, and that these are their words, not facts. The header and the closing
  * line are code's own, gated as `research`.

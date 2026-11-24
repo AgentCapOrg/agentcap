@@ -12,7 +12,7 @@ import { describe, it } from "node:test";
 import * as React from "react";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { autonomyOf } from "@merrymen/core";
+import { autonomyOf } from "@agentcap/core";
 import { capsOf, portfolioReadOf, profileShown, usdgOrNull } from "./account-read";
 import type { AccountState } from "./HostedControls";
 import type { LiveMine } from "./live";
@@ -194,7 +194,7 @@ describe("whether a refresh pass read what it needed", () => {
     const silentAccount = { status: "rejected", reason: new RequestError("x", 0) } as const;
     const silentMarket = { status: "rejected", reason: new LiveLoadError(false) } as const;
     assert.equal(passOutcome(silentAccount, silentMarket)!.unreachable, true);
-    assert.equal(passOutcome(silentAccount, fine)!.unreachable, false, "the market answered, so merrymen was reached");
+    assert.equal(passOutcome(silentAccount, fine)!.unreachable, false, "the market answered, so agentcap was reached");
     assert.equal(passOutcome({ status: "rejected", reason: new RequestError("x", 500) }, silentMarket)!.unreachable, false);
     assert.equal(passOutcome(silentAccount, { status: "rejected", reason: new LiveLoadError(true) })!.unreachable, false);
   });

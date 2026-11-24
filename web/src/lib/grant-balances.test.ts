@@ -10,7 +10,7 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { autonomyOf } from "@merrymen/core";
+import { autonomyOf } from "@agentcap/core";
 import { readGrantBalances } from "./grant-balances";
 import { usdgOrNull } from "../terminal/account-read";
 

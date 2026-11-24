@@ -8,7 +8,7 @@ Funding, live execution and the Brain driver remain outside the paper launch.
 
 ## Admission and capacity policy
 
-- Set `MERRYMEN_PERPS=paper` only for the reviewed release. An unset value,
+- Set `AGENTCAP_PERPS=paper` only for the reviewed release. An unset value,
   `off`, or `live` offers no paper creation or live capability.
 - Admission lives in the shared PostgreSQL pilot store, capped at **100 active
   owners**. `/perps/join` accepts an invitation, then uses the normal protected
@@ -20,7 +20,7 @@ Funding, live execution and the Brain driver remain outside the paper launch.
   enables entries; those remain explicit owner operations.
 - `/admin/perps` lets configured administrators create/revoke invitations and
   review the pending queue, approve or reject requests, and allow/revoke
-  individual login owners. `MERRYMEN_PERPS_PILOT_ADMINS` is an
+  individual login owners. `AGENTCAP_PERPS_PILOT_ADMINS` is an
   explicit comma-separated list of up to 20 nonzero owner addresses. Configure
   it consistently on the web replicas. Empty or malformed configuration grants
   nobody administrative access; membership and invitation codes never confer
@@ -42,7 +42,7 @@ Funding, live execution and the Brain driver remain outside the paper launch.
   cannot undo a newer rejection or revocation. Revoking an invitation prevents
   new submissions; review existing requests and revoke approved wallets
   separately.
-- `MERRYMEN_PERPS_PAPER_TENANTS` is now only a one-time bootstrap: the first
+- `AGENTCAP_PERPS_PAPER_TENANTS` is now only a one-time bootstrap: the first
   store initialization imports its strict owner list under a shared lock.
   Missing/empty means an empty cohort; malformed or oversized input fails
   initialization. After initialization, changes to this variable are ignored,
@@ -110,11 +110,11 @@ it is not permission to bypass an accounting hold.
 
 ## Evidence to attach before enabling internal owners
 
-Review the stack in order: [authority and security (#368)](https://github.com/millw14/merrymen/pull/368),
-[private reads and recovery (#369)](https://github.com/millw14/merrymen/pull/369),
-[paper desk (#370)](https://github.com/millw14/merrymen/pull/370),
-[pilot controls and this release record (#371)](https://github.com/millw14/merrymen/pull/371), then
-[invite signup and wallet administration (#372)](https://github.com/millw14/merrymen/pull/372).
+Review the stack in order: [authority and security (#368)](https://github.com/millw14/agentcap/pull/368),
+[private reads and recovery (#369)](https://github.com/millw14/agentcap/pull/369),
+[paper desk (#370)](https://github.com/millw14/agentcap/pull/370),
+[pilot controls and this release record (#371)](https://github.com/millw14/agentcap/pull/371), then
+[invite signup and wallet administration (#372)](https://github.com/millw14/agentcap/pull/372).
 Their current CI checks and validation notes are the code evidence; a successful
 code check does not fill the deployment and owner-drill gates below.
 
@@ -143,7 +143,7 @@ These actions advance the release gates without enabling production paper
 trading. The historical October 30 audit below is retained as a dated record.
 
 - **Exact dependency verification:** the complete [CI run for the invite and
-  approval head](https://github.com/millw14/merrymen/actions/runs/41198880031)
+  approval head](https://github.com/millw14/agentcap/actions/runs/41198880031)
   passed at `1d10b403666ec3bea3354ba91b552110235f2e7c`. An independent
   clean `npm ci` installation matched all 836 installed locked package versions;
   55 absent optional/platform packages were accounted for. Focused authority,
@@ -195,7 +195,7 @@ trading. The historical October 30 audit below is retained as a dated record.
   remain zero. An independent reviewer checked the final harness. This is a
   self-hosted local worker test, not hosted orchestrator lease proof, cohort
   load, observed-market replay or real owner signing. Run explicitly on macOS
-  with `MERRYMEN_TEST_PERPS_CHILD=1 node --import tsx --test
+  with `AGENTCAP_TEST_PERPS_CHILD=1 node --import tsx --test
   worker/src/perps-child-process.test.ts`; ordinary CI skips this OS-specific
   drill. Synthetic grant homes were removed after execution.
 - **Phone stop fixes:** iOS now offers the login-wide stop even when the Spot
@@ -318,12 +318,12 @@ existing CLI credentials supplied the scoped metadata below. Configuration
 variable values, wallet records, ledger rows and filesystem contents were not
 retrieved.
 
-- **Phone fix:** [#358](https://github.com/millw14/merrymen/pull/358) merged on
+- **Phone fix:** [#358](https://github.com/millw14/agentcap/pull/358) merged on
   October 25 at 11:50:29 UTC as
   `8844798e104243bfe06359e50ece3810d24854e6`, which is an ancestor of this
-  branch. Its [Android push run](https://github.com/millw14/merrymen/actions/runs/40190553385)
+  branch. Its [Android push run](https://github.com/millw14/agentcap/actions/runs/40190553385)
   succeeded, but has no uploaded artifacts. The repository's latest published
-  Android release remains [0.4.1](https://github.com/millw14/merrymen/releases/tag/android-v0.4.1),
+  Android release remains [0.4.1](https://github.com/millw14/agentcap/releases/tag/android-v0.4.1),
   published October 16, before that fix. No iOS release appears in the
   repository release inventory; the Native iOS workflow is
   `disabled_manually`, with its last listed runs on September 29. GitHub
@@ -334,7 +334,7 @@ retrieved.
   deployment `c6bc2a92-5999-4627-b973-8aa8e2e89cf7` as SUCCESS with one
   RUNNING instance, created October 22, at
   `b8944e4a87d37d230252e58e05476b0cffdb005f`. It serves
-  `app.merrymen.dev` and `mcp.merrymen.dev`. The orchestrator deployment
+  `app.agentcap.xyz` and `mcp.agentcap.xyz`. The orchestrator deployment
   `dc586c16-ec3b-4fb0-a337-597c6bcdd2b7` is SUCCESS with one RUNNING instance,
   created October 28, at `b74daf01747ac25019398d694560b5f6ae7fd984`.
   Both deploy in `europe-west4-drams3a`. These are older production commits,
@@ -345,8 +345,8 @@ retrieved.
   the project's promoted production target still names `fc6758fd11213a7b08f130726d855a24881b6350`.
   Neither its green builds nor its PR previews verify the Railway `web` desk.
 - **Original persistent homes:** volume `d6481580-14af-430c-af4a-f3540dfb833d`
-  (`merrymen-agent-state`) is Ready, mounted on the orchestrator at
-  `/data/merrymen`, with about 2,506 MB used of 5,120 MB. PostgreSQL's volume
+  (`agentcap-agent-state`) is Ready, mounted on the orchestrator at
+  `/data/agentcap`, with about 2,506 MB used of 5,120 MB. PostgreSQL's volume
   `78690eed-6483-49ec-a1ed-f56adb75a411` is Ready at
   `/var/lib/postgresql/data`, with about 3,865 MB used of 50,000 MB. These are
   control-plane mount identities; no filesystem continuity or restore drill

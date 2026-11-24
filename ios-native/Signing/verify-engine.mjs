@@ -47,7 +47,7 @@ const handle = async (op, args) => {
   if (op === 'signTenant') {
     assert.equal(restoring, true); assert.equal(args.address.toLowerCase(), tenant.address.toLowerCase());
     assert.ok(args.message.includes('You are linking the agent wallet below to this login. It moves no funds.'));
-    assert.ok(args.message.endsWith('URI: https://app.merrymen.dev\nNonce: fixture_nonce'));
+    assert.ok(args.message.endsWith('URI: https://app.agentcap.xyz\nNonce: fixture_nonce'));
     return tenant.signMessage({ message: args.message });
   }
   if (op === 'signMessage') {
@@ -61,8 +61,8 @@ const handle = async (op, args) => {
     assert.equal((await recoverTypedDataAddress({ ...args.typedData, signature })).toLowerCase(), owner.address.toLowerCase()); signatures++; return signature;
   }
   assert.equal(op, 'fetch');
-  const url = new URL(args.url, 'https://app.merrymen.dev');
-  if (url.host === 'app.merrymen.dev') {
+  const url = new URL(args.url, 'https://app.agentcap.xyz');
+  if (url.host === 'app.agentcap.xyz') {
     if (url.pathname === '/api/auth/challenge' && args.method === 'GET') return { status: 200, body: JSON.stringify({ origin: url.origin, nonce: 'fixture_nonce' }) };
     assert.equal(url.pathname, '/api/grants'); assert.equal(args.method, 'POST');
     posted = JSON.parse(args.body);
@@ -71,11 +71,11 @@ const handle = async (op, args) => {
     if (restoring) {
       assert.equal(posted.binding.did, undefined);
       assert.equal(posted.binding.version, 'legacy-wallet-owner-v1');
-      const message = ['https://app.merrymen.dev wants you to authorize a merrymen agent account.', '', 'You are linking the agent wallet below to this login. It moves no funds.', '', `Agent account: ${posted.smartAccount.toLowerCase()}`, `Owner key: ${owner.address.toLowerCase()}`, 'Chain ID: 4663', 'URI: https://app.merrymen.dev', 'Nonce: fixture_nonce'].join('\n');
+      const message = ['https://app.agentcap.xyz wants you to authorize a agentcap agent account.', '', 'You are linking the agent wallet below to this login. It moves no funds.', '', `Agent account: ${posted.smartAccount.toLowerCase()}`, `Owner key: ${owner.address.toLowerCase()}`, 'Chain ID: 4663', 'URI: https://app.agentcap.xyz', 'Nonce: fixture_nonce'].join('\n');
       assert.equal((await recoverMessageAddress({ message, signature: posted.binding.walletSignature })).toLowerCase(), tenant.address.toLowerCase());
       assert.equal((await recoverMessageAddress({ message, signature: posted.binding.ownerSignature })).toLowerCase(), owner.address.toLowerCase());
     } else assert.equal(posted.binding.did, 'did:privy:ios-test');
-    assert.ok(storage.has('merrymen.grant.v1'), 'Grant must be stored before handoff');
+    assert.ok(storage.has('agentcap.grant.v1'), 'Grant must be stored before handoff');
     return { status: 200, body: '{"ok":true}' }; // No real app request.
   }
   assert.equal(url.href, 'https://rpc.mainnet.chain.robinhood.com/');
@@ -106,7 +106,7 @@ context = vm.createContext({
 try {
   vm.runInContext(fs.readFileSync(path.join(root, 'ios-native/Resources/WalletRuntime.js'), 'utf8'), context);
   vm.runInContext(fs.readFileSync(path.join(root, 'ios-native/Resources/WalletEngine.js'), 'utf8'), context);
-  const message = 'Merrymen native ownership proof fixture';
+  const message = 'AgentCap native ownership proof fixture';
   const signature = await owner.signMessage({ message });
   const proof = await context.WalletEngine.recoverIdentity({ message, signature });
   assert.equal(proof.address.toLowerCase(), owner.address.toLowerCase());
@@ -145,7 +145,7 @@ try {
     // and the PUBLIC key into the wall and the grant — a phone re-sign that lost
     // them would strand a live Lighter account (or be refused 409 until it is flat).
     const perpKey = '0x' + '1a'.repeat(40);
-    const local = JSON.parse(storage.get('merrymen.grant.v1'));
+    const local = JSON.parse(storage.get('agentcap.grant.v1'));
     assert.ok(!local.grantFeatures.includes('perp-lighter-v1') && local.perp === undefined, 'this device never held perps: the projection is the only source');
     const projection = {
       smartAccount: result.smartAccount, owner: local.owner, sessionKeyAddress: local.sessionKeyAddress, caps: local.caps,

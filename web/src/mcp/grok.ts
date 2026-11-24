@@ -11,14 +11,14 @@ export function grokMcpConfig(server: string): string {
 }
 
 export function grokBotSetupPrompt({ server, app }: { server: string; app: string }): string {
-  const instructions = server === PLUGIN_SERVER_URL ? "https://merrymen.dev/llms.txt" : `${app}/llms.txt`;
+  const instructions = server === PLUGIN_SERVER_URL ? "https://agentcap.xyz/llms.txt" : `${app}/llms.txt`;
   return [
-    "Help me connect Merrymen to this Grok Bot and set up or check my hosted Merryman.",
+    "Help me connect AgentCap to this Grok Bot and set up or check my hosted AgentCapAvatar.",
     `Read the setup instructions at ${instructions}. Use only this remote MCP server: ${server}.`,
     "Check this Bot's installed MCP connections first. Reuse a working connection at that exact address; do not assume a Grok chat connector is installed in this Bot. If unavailable, guide me through adding the remote server using the supported connection settings. Do not claim it is connected until a tool call succeeds.",
-    "Use OAuth. Send sign-in and consent links to me to open in the browser on my own device. Do not sign in to Merrymen, approve proposals, create wallets or sign permissions through the Bot's shared cloud computer. Never request keys, recovery phrases, passwords or bearer tokens in chat.",
+    "Use OAuth. Send sign-in and consent links to me to open in the browser on my own device. Do not sign in to AgentCap, approve proposals, create wallets or sign permissions through the Bot's shared cloud computer. Never request keys, recovery phrases, passwords or bearer tokens in chat.",
     SETUP_WORKFLOW,
-    "Use text and links if this host cannot render MCP Apps. Merrymen's hosted worker runs the agent; this Bot and chat do not need to stay open. Do not start a second worker or set up a trading loop here.",
+    "Use text and links if this host cannot render MCP Apps. AgentCap's hosted worker runs the agent; this Bot and chat do not need to stay open. Do not start a second worker or set up a trading loop here.",
     "For later requests, use only tools this connection grants. Keep practice and live results separate. Never weaken signed limits or retry a financial action whose outcome is unknown. A proposal or submitted order is not a confirmed trade.",
     "Do not create a monitoring routine unless I ask. If I do, use read-only status, portfolio and decision tools; notify me only of meaningful changes or required action. Do not create drafts, propose or approve trades, change settings or retry orders in a routine.",
   ].join("\n\n");

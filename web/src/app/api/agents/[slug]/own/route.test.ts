@@ -25,9 +25,9 @@ const A = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as const;
 const B = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as const;
 const ACCOUNT = "0xa6e17a1b2c3d4e5f60718293a4b5c6d7e8f90123" as const;
 const saved = {
-  home: process.env.MERRYMEN_HOME,
-  hosted: process.env.MERRYMEN_HOSTED,
-  secret: process.env.MERRYMEN_SESSION_SECRET,
+  home: process.env.AGENTCAP_HOME,
+  hosted: process.env.AGENTCAP_HOSTED,
+  secret: process.env.AGENTCAP_SESSION_SECRET,
   database: process.env.DATABASE_URL,
 };
 let dir: string;
@@ -38,13 +38,13 @@ let mintSession: (a: `0x${string}`) => string;
 
 before(async () => {
   dir = await mkdtemp(path.join(tmpdir(), "mm-own-book-"));
-  process.env.MERRYMEN_HOME = dir;
-  process.env.MERRYMEN_HOSTED = "1";
-  process.env.MERRYMEN_SESSION_SECRET = randomBytes(32).toString("hex");
+  process.env.AGENTCAP_HOME = dir;
+  process.env.AGENTCAP_HOSTED = "1";
+  process.env.AGENTCAP_SESSION_SECRET = randomBytes(32).toString("hex");
   delete process.env.DATABASE_URL;
-  const identity = await import("@merrymen/identity-store");
+  const identity = await import("@agentcap/identity-store");
   identity.resetIdentityStoreForTest();
-  (await import("@merrymen/settings-store")).resetSettingsStoreForTest();
+  (await import("@agentcap/settings-store")).resetSettingsStoreForTest();
   slug = (await identity.getIdentityStore().ensure(A, ACCOUNT)).slug;
   ({ mintSession } = await import("@/lib/auth"));
   ({ GET: OWN } = await import("./route"));
@@ -54,7 +54,7 @@ before(async () => {
   // in on the chain, 1 USDG of gas, valued at 103 — a 2 USDG net P&L.
   const { wrapSqlite } = await import("../../../../../../../worker/src/db");
   const { applyLedgerSchema } = await import("../../../../../../../worker/src/store");
-  const raw = new DatabaseSync(path.join(dir, "merrymen.db"));
+  const raw = new DatabaseSync(path.join(dir, "agentcap.db"));
   try {
     const db = wrapSqlite(raw);
     await applyLedgerSchema(db);
@@ -77,14 +77,14 @@ before(async () => {
 });
 after(async () => {
   for (const [key, value] of [
-    ["MERRYMEN_HOME", saved.home], ["MERRYMEN_HOSTED", saved.hosted],
-    ["MERRYMEN_SESSION_SECRET", saved.secret], ["DATABASE_URL", saved.database],
+    ["AGENTCAP_HOME", saved.home], ["AGENTCAP_HOSTED", saved.hosted],
+    ["AGENTCAP_SESSION_SECRET", saved.secret], ["DATABASE_URL", saved.database],
   ] as const) {
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
   }
-  (await import("@merrymen/identity-store")).resetIdentityStoreForTest();
-  (await import("@merrymen/settings-store")).resetSettingsStoreForTest();
+  (await import("@agentcap/identity-store")).resetIdentityStoreForTest();
+  (await import("@agentcap/settings-store")).resetSettingsStoreForTest();
   await rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
 });
 
@@ -164,12 +164,12 @@ it("the public route is not widened: the owner's own cookie gets the private vie
 });
 
 it("self-hosted has no sessions to check, so there is no owner's view to serve", async () => {
-  delete process.env.MERRYMEN_HOSTED;
+  delete process.env.AGENTCAP_HOSTED;
   try {
     const res = await OWN(request(null), ctx());
     assert.equal(res.status, 404);
     assert.equal((await res.json() as { recentTrades?: unknown }).recentTrades, undefined);
   } finally {
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOSTED = "1";
   }
 });

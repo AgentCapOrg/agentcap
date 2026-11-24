@@ -2,7 +2,7 @@
 
 /**
  * The MCP consent screen. An AI assistant (Claude, Codex, …) sent the owner
- * here to ask for access. The owner signs in with their own Merrymen account,
+ * here to ask for access. The owner signs in with their own AgentCap account,
  * sees exactly who is asking and, in a few plain lines, what they would allow,
  * and approves or declines with one click. The full list of permissions is
  * one tap away for an owner who wants to change it. Approving sends the
@@ -16,7 +16,7 @@ import { SignOut } from "@/terminal/SignOut";
 import { BrandLockup } from "../BrandLockup";
 import { accessSummary, initialSelection, previousNote, type Selection } from "./summary";
 
-const STORAGE = "merrymen.mcp-consent";
+const STORAGE = "agentcap.mcp-consent";
 const SWITCH_STORAGE = `${STORAGE}.switching`;
 
 interface ScopeView {
@@ -56,7 +56,7 @@ async function consent<T>(body: Record<string, unknown>): Promise<T> {
       signal: AbortSignal.timeout(30_000),
     });
   } catch {
-    throw new Error("Merrymen took too long to answer. Check your connection and try again.");
+    throw new Error("AgentCap took too long to answer. Check your connection and try again.");
   }
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(typeof data.error_description === "string" ? data.error_description : `Could not load this request (${response.status}).`);
@@ -110,7 +110,7 @@ export function ConsentClient() {
     } catch { /* tab storage is optional */ }
     if (!value || value.length > 200) {
       setLoading(false);
-      setError("Start the connection from your AI assistant (for example “Add connector” in Claude, or `codex mcp login merrymen`). This page opens by itself.");
+      setError("Start the connection from your AI assistant (for example “Add connector” in Claude, or `codex mcp login agentcap`). This page opens by itself.");
       return;
     }
     if (unfinishedSwitch) {
@@ -210,7 +210,7 @@ export function ConsentClient() {
   const onlyAgent = view && view.agents.length === 1 ? view.agents[0] : null;
   const accountSwitchControl = <>
     <div className="mcp-account-actions">
-      <span>{switchingAccount ? "Switching accounts" : "Signed in to Merrymen"}</span>
+      <span>{switchingAccount ? "Switching accounts" : "Signed in to AgentCap"}</span>
       <SignOut label={switchError ? "Retry account switch" : "Use another account"} className="mcp-switch-account" disabled={busy} onStart={accountSwitchStarted} onError={setSwitchError} after={accountSignedOut} />
     </div>
     {switchError && <p className="flow-error" role="alert">{switchError}</p>}
@@ -232,7 +232,7 @@ export function ConsentClient() {
               <span className="connect-app-icon">{view.client.local ? <Laptop size={20} aria-hidden /> : <Cpu size={20} aria-hidden />}</span>
               <div>
                 <strong>{appName}</strong>
-                <span>{view.client.registration === "metadata-document" ? `Verified at ${view.client.host}` : `Registered app — not verified by Merrymen`}</span>
+                <span>{view.client.registration === "metadata-document" ? `Verified at ${view.client.host}` : `Registered app — not verified by AgentCap`}</span>
                 <span>Returns to <b className="mcp-host">{view.client.redirectHost}</b>{view.client.local ? " (a program on this computer)" : ""}</span>
               </div>
             </div>
@@ -250,21 +250,21 @@ export function ConsentClient() {
           {!loading && view && !view.signedIn && !switchingAccount && <>
             <span className="connect-step-label">01 · SIGN IN</span>
             <h2>Sign in or create your account.</h2>
-            <p>Sign in, verify account ownership, then choose what {appName} can access. You’ll return to your chat after connecting. {setupScope?"On the next step, you can allow setup suggestions to help name your Merryman and choose its strategy.":"Your assistant can use only the access you choose."}</p>
+            <p>Sign in, verify account ownership, then choose what {appName} can access. You’ll return to your chat after connecting. {setupScope?"On the next step, you can allow setup suggestions to help name your AgentCapAvatar and choose its strategy.":"Your assistant can use only the access you choose."}</p>
             <SignIn onDone={() => void load()} />
           </>}
 
           {!loading && view && view.signedIn && !done && <>
             <span className="connect-step-label">02 · ALLOW ACCESS</span>
-            <h2>Connect {appName} to Merrymen?</h2>
+            <h2>Connect {appName} to AgentCap?</h2>
             {accountSwitchControl}
-            {view.client.registration === "dynamic" && <div className="connect-boundary mcp-warn"><AlertTriangle size={18} aria-hidden /><p>Merrymen cannot confirm who made this app. Only continue if you just started this connection yourself and recognise <b>{view.client.redirectHost}</b>.</p></div>}
+            {view.client.registration === "dynamic" && <div className="connect-boundary mcp-warn"><AlertTriangle size={18} aria-hidden /><p>AgentCap cannot confirm who made this app. Only continue if you just started this connection yourself and recognise <b>{view.client.redirectHost}</b>.</p></div>}
 
             {/* One agent (every owner, today) is a card with a Share box, ticked
                 at the start like the old checkbox list; the permissions below
                 say what the app may do with it. */}
             {noAgent
-              ? <p className="mcp-note">You don’t have an agent to share yet.{setupScope ? " You can let your assistant prepare a setup below, then review and sign it in Merrymen." : " Create one in Merrymen, then reconnect to choose what to share."}</p>
+              ? <p className="mcp-note">You don’t have an agent to share yet.{setupScope ? " You can let your assistant prepare a setup below, then review and sign it in AgentCap." : " Create one in AgentCap, then reconnect to choose what to share."}</p>
               : onlyAgent
                 ? <div className="mcp-agent-card">
                   <span className="mcp-agent-card-icon"><Bot size={19} aria-hidden /></span>
@@ -291,8 +291,8 @@ export function ConsentClient() {
                 <label>
                   <input type="checkbox" checked={scopes.has(setupScope.id)} onChange={() => toggle(scopes, setupScope.id, setScopes)} />
                   <span>
-                    <strong>{needsSetup ? `Let ${appName} help set up your Merryman` : setupScope.title} <em className="mcp-level mcp-level-sensitive">Optional</em></strong>
-                    <span>Prepare a new Merryman or suggest setting changes. You review every proposal in Merrymen. Creating an agent still requires you to review its limits and sign with your own wallet.</span>
+                    <strong>{needsSetup ? `Let ${appName} help set up your AgentCapAvatar` : setupScope.title} <em className="mcp-level mcp-level-sensitive">Optional</em></strong>
+                    <span>Prepare a new AgentCapAvatar or suggest setting changes. You review every proposal in AgentCap. Creating an agent still requires you to review its limits and sign with your own wallet.</span>
                   </span>
                 </label>
               </li>
@@ -342,10 +342,10 @@ export function ConsentClient() {
         </section>
       </main>
       <footer className="connect-footer">
-        Merrymen stays the source of truth. Assistants only get the access you choose here.{" "}
-        <a href="https://merrymen.dev/privacy" target="_blank" rel="noopener noreferrer">Privacy policy</a>
+        AgentCap stays the source of truth. Assistants only get the access you choose here.{" "}
+        <a href="https://agentcap.xyz/privacy" target="_blank" rel="noopener noreferrer">Privacy policy</a>
         {" · "}
-        <a href="https://merrymen.dev/terms" target="_blank" rel="noopener noreferrer">Terms</a>
+        <a href="https://agentcap.xyz/terms" target="_blank" rel="noopener noreferrer">Terms</a>
       </footer>
     </div>
   );

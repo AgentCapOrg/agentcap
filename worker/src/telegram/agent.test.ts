@@ -70,13 +70,13 @@ test("isDestructive lets normal dev commands through", () => {
 // ── secrets guards ───────────────────────────────────────────────────────────
 
 test("sensitive paths are refused; normal ones aren't", () => {
-  for (const p of [".env", "app/.env.local", "grant.json", "C:\\Users\\me\\.merrymen\\settings.json", ".ssh/id_rsa", "wallet.dat", "keys/server.pem"]) {
+  for (const p of [".env", "app/.env.local", "grant.json", "C:\\Users\\me\\.agentcap\\settings.json", ".ssh/id_rsa", "wallet.dat", "keys/server.pem"]) {
     assert.equal(isSensitivePath(p), true, `sensitive: ${p}`);
   }
   for (const p of ["src/index.ts", "README.md", "package.json", "envelope.txt", "docs/environment.md"]) {
     assert.equal(isSensitivePath(p), false, `plain: ${p}`);
   }
-  assert.equal(shellTouchesSecrets("type C:\\Users\\me\\.merrymen\\grant.json"), true);
+  assert.equal(shellTouchesSecrets("type C:\\Users\\me\\.agentcap\\grant.json"), true);
   assert.equal(shellTouchesSecrets("cat ~/.ssh/id_rsa"), true);
   assert.equal(shellTouchesSecrets("npm run build"), false);
 });
@@ -210,7 +210,7 @@ test("redactSecrets strips known values and key-shaped blobs", () => {
 });
 
 test("a Lighter API key file never reaches the agent: refused by path, redacted by shape in every spelling", () => {
-  // docs/perps.md rule 5. MERRYMEN_HOME may be anywhere, so `.merr` is not
+  // docs/perps.md rule 5. AGENTCAP_HOME may be anywhere, so `.merr` is not
   // enough: both key-file homes are refused by name.
   assert.equal(isSensitivePath("/srv/agent/perp-keys/x.json"), true);
   assert.equal(isSensitivePath("/data/tenants/t1/perp-key.json"), true);
@@ -253,7 +253,7 @@ function solanaKeypair(seedByte: number) {
   const seed = new Uint8Array(32).fill(seedByte);
   const pub = ed25519.getPublicKey(seed);
   const secret = new Uint8Array([...seed, ...pub]);
-  const sig = ed25519.sign(new TextEncoder().encode("merrymen"), seed);
+  const sig = ed25519.sign(new TextEncoder().encode("agentcap"), seed);
   return { b58: base58Encode(secret), idJson: JSON.stringify([...secret]), pub: base58Encode(pub), sig: base58Encode(sig) };
 }
 
@@ -280,12 +280,12 @@ test("Solana public ids are not secrets: a signature, an address, a mint stay re
 });
 
 test("the Solana CLI's keypair files are sensitive paths", () => {
-  for (const p of ["~/.config/solana/id.json", "id.json", "C:\\Users\\me\\.config\\solana\\id.json", "target/deploy/merrymen_vault-keypair.json", "deployer-keypair.json"]) {
+  for (const p of ["~/.config/solana/id.json", "id.json", "C:\\Users\\me\\.config\\solana\\id.json", "target/deploy/agentcap_vault-keypair.json", "deployer-keypair.json"]) {
     assert.equal(isSensitivePath(p), true, `sensitive: ${p}`);
   }
   for (const p of ["paid.json", "src/uuid.json", "android/grid.json"]) assert.equal(isSensitivePath(p), false, `plain: ${p}`);
   assert.equal(shellTouchesSecrets("cat ~/.config/solana/id.json"), true);
-  assert.equal(shellTouchesSecrets("solana-keygen pubkey target/deploy/merrymen_vault-keypair.json"), true);
+  assert.equal(shellTouchesSecrets("solana-keygen pubkey target/deploy/agentcap_vault-keypair.json"), true);
 });
 
 test("send_file scans the WHOLE file — a secret past the old 200KB window is refused", async () => {
@@ -529,9 +529,9 @@ test("the agent's secret list holds the Solana server secrets from the environme
     const rpc = "https://mainnet.helius-rpc.com/?api-key=0f0f0f0f-1111-2222-3333-444455556666";
     const fallback = "https://example-rpc.rpcpool.com/abcdef0123456789abcdef0123456789";
     const envFile = path.join(root, ".env.solana.local");
-    writeFileSync(envFile, [`MERRYMEN_SOLANA=1`, `MERRYMEN_SOLANA_RPC_MAINNET=${rpc}`, `export MERRYMEN_SOLANA_RPC_MAINNET_FALLBACK="${fallback}"`,
-      `MERRYMEN_JUPITER_API_KEY=jup-key-0123456789`, `MERRYMEN_STORE_DEK=${dek}`, `MERRYMEN_SOLANA_FEE_PAYER_SEED=${seed}`, `MERRYMEN_SOLANA_MAX_FEE_LAMPORTS=5000000`].join("\n"));
-    const secrets = solanaSecretValues({ MERRYMEN_STORE_DEK: dek, MERRYMEN_SOLANA_FEE_PAYER_SEED: "only-in-env-0123456789" }, [envFile, path.join(root, "missing")]);
+    writeFileSync(envFile, [`AGENTCAP_SOLANA=1`, `AGENTCAP_SOLANA_RPC_MAINNET=${rpc}`, `export AGENTCAP_SOLANA_RPC_MAINNET_FALLBACK="${fallback}"`,
+      `AGENTCAP_JUPITER_API_KEY=jup-key-0123456789`, `AGENTCAP_STORE_DEK=${dek}`, `AGENTCAP_SOLANA_FEE_PAYER_SEED=${seed}`, `AGENTCAP_SOLANA_MAX_FEE_LAMPORTS=5000000`].join("\n"));
+    const secrets = solanaSecretValues({ AGENTCAP_STORE_DEK: dek, AGENTCAP_SOLANA_FEE_PAYER_SEED: "only-in-env-0123456789" }, [envFile, path.join(root, "missing")]);
     for (const value of [seed, dek, rpc, fallback, "jup-key-0123456789", "only-in-env-0123456789"]) assert.ok(secrets.includes(value), value);
     assert.ok(!secrets.includes("5000000") && !secrets.includes("1"), "settings that are not secrets are left alone");
     // A copy the agent made under another name, and a keyed URL no setting names: neither reaches the model.
@@ -546,10 +546,10 @@ test("the agent's secret list holds the Solana server secrets from the environme
     assert.ok(results && results.role === "tools");
     const output = results.results[0]!.output;
     for (const value of [seed, dek, rpc, fallback, "jup-key-0123456789", "9999aaaa-bbbb-cccc-dddd-eeeeffff0000"]) assert.ok(!output.includes(value), `${value} reached the model`);
-    assert.match(output, /MERRYMEN_SOLANA=1/, "the rest of the file is still read");
+    assert.match(output, /AGENTCAP_SOLANA=1/, "the rest of the file is still read");
     // The setting's shape alone is enough for a value the list does not hold.
-    assert.equal(redactSecrets("MERRYMEN_SOLANA_FEE_PAYER_SEED=someOtherSeedValue123", []), "[redacted]");
-    assert.equal(containsSecret("MERRYMEN_JUPITER_API_KEY=abcdefgh12345", []), true);
+    assert.equal(redactSecrets("AGENTCAP_SOLANA_FEE_PAYER_SEED=someOtherSeedValue123", []), "[redacted]");
+    assert.equal(containsSecret("AGENTCAP_JUPITER_API_KEY=abcdefgh12345", []), true);
   } finally {
     rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }

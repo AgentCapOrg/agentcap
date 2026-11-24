@@ -26,7 +26,7 @@ import { isGrantPurpose, type GrantPurpose } from "../../../packages/core/src/gr
  * and `purposeHome` take it). Hosted, both wallets' rows live in the one shared
  * Postgres, told apart by the account every query already names, so the driver
  * is the same. Self-hosted, each wallet's worker writes its own home's
- * merrymen.db (`purposeHome`: Spot's where it has always been, Perps's under
+ * agentcap.db (`purposeHome`: Spot's where it has always been, Perps's under
  * accounts/perps), so a Perps read opens that file and never the Spot one —
  * absent, it is an empty panel, not the other wallet's book.
  */
@@ -45,7 +45,7 @@ export function createReadDb(openPostgres: (url: string) => Promise<Db> = makePg
       });
       return fn(await pgDriver);
     }
-    const file = path.join(purposeHome(wallet), "merrymen.db");
+    const file = path.join(purposeHome(wallet), "agentcap.db");
     if (!existsSync(file)) return fn(null);
     let raw: DatabaseSync;
     try {

@@ -17,9 +17,9 @@ import { readFleetRecoveryView, recordFleetRecoveryHold } from "./fleet-recovery
 import { recoveryCommandRefused, RECOVERY_COMMAND_BARRIER_FILE } from "./recovery-command-barrier";
 import { commandDir, markRunning, runTickCommand, writeCommand } from "./command-files";
 
-const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-live-continuity-")));
-process.env.MERRYMEN_HOME = fleet;
-process.env.MERRYMEN_HOSTED = "1";
+const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-live-continuity-")));
+process.env.AGENTCAP_HOME = fleet;
+process.env.AGENTCAP_HOSTED = "1";
 delete process.env.DATABASE_URL;
 const {
   adoptChildForTest, childHome, hasLeaseForTest, isRetiringExpiredForTest, mirrorRunningLedgerForTest, mirrorLedgersForTest, reconcile,
@@ -56,7 +56,7 @@ async function agent(db: Db, tenant: string, account: string) {
 }
 async function book(tenant: string, account: string, id = 1) {
   const home = childHome(tenant); mkdirSync(home, { recursive: true });
-  const localRaw = new DatabaseSync(path.join(home, "merrymen.db")); handles.push(localRaw);
+  const localRaw = new DatabaseSync(path.join(home, "agentcap.db")); handles.push(localRaw);
   const local = wrapSqlite(localRaw); await applyLedgerSchema(local); await agent(local, tenant, account);
   await local.prepare(`INSERT INTO trades(id,agent_id,kind,target,amount_usdg,status,created_at)
     VALUES (?,?,'swap','fixture',1,'rejected',?)`).run(id, account, id === 100 ? 100 : 200);
@@ -93,7 +93,7 @@ async function seedDm(tenant: string, local: DatabaseSync, home: string) {
 async function restoredChats(tenant: string) {
   const destination=mkdtempSync(path.join(fleet,"dm-restore-"));
   assert.equal(await restorePersonalMemory({tenant,home:destination,shared,dek,log:()=>{}}),"restored");
-  const copy=new DatabaseSync(path.join(destination,"merrymen.db"));
+  const copy=new DatabaseSync(path.join(destination,"agentcap.db"));
   try { return copy.prepare("SELECT chat_id,content FROM chat_turns ORDER BY chat_id").all() as Array<{chat_id:number;content:string}>; }
   finally {copy.close();}
 }
@@ -156,7 +156,7 @@ it("a healthy ordinary source continues mirroring and clears only the guard it s
 it("cold startup checks the rebuilt ledger created during restore before the worker forks", async () => {
   const tenant = address(0xc41), account = address(0xc42);
   await protectedShared(tenant, account);
-  assert.equal(existsSync(path.join(childHome(tenant),"merrymen.db")), false);
+  assert.equal(existsSync(path.join(childHome(tenant),"agentcap.db")), false);
   let restored = 0;
   setRetirementMemoryStoreForTest({shared,dek,dialect:"sqlite"});
   setPaperRestoreForTest(async (t,a) => { if (t === tenant) {restored++; await book(t,a);} return {ok:true,line:null}; });
@@ -179,7 +179,7 @@ it("an unverified persistent root publishes the pause before writing a session k
   try {
     const before=spawned.length; await reconcile(); assert.equal(spawned.length,before);
     assert.equal(existsSync(path.join(childHome(tenant),"grant.json")),false);
-    assert.equal(existsSync(path.join(childHome(tenant),"merrymen.db")),false);
+    assert.equal(existsSync(path.join(childHome(tenant),"agentcap.db")),false);
     assert.equal((await readFleetRecoveryView(shared,{tenant,smartAccount:account,chainId:4663},null))?.tradingPaused,true);
   } finally {
     await getGrantStore("spot").remove(tenant);
@@ -226,7 +226,7 @@ it("an unlinked live ledger stops trading and keeps a durable source-loss marker
   const tenant=address(0xc71),account=address(0xc72),proc=new FakeProc(76_007),releases={n:0};
   await protectedShared(tenant,account); const {home}=await book(tenant,account,100);
   adoptChildForTest(tenant,account,proc,lease(tenant,releases));
-  rmSync(path.join(home,"merrymen.db"));
+  rmSync(path.join(home,"agentcap.db"));
   await assert.rejects(mirrorRunningLedgerForTest(tenant,shared),/unreadable/);
   await assertProtected(tenant,account);
   assert.equal(existsSync(path.join(home,"ledger-source-blocked.json")),true);
@@ -234,7 +234,7 @@ it("an unlinked live ledger stops trading and keeps a durable source-loss marker
   proc.exit();
   await getGrantStore("spot").put(tenant,grant(account)); setRetirementMemoryStoreForTest({shared,dek,dialect:"sqlite"});
   const before=spawned.length; await reconcile(); assert.equal(spawned.length,before);
-  assert.equal(existsSync(path.join(home,"merrymen.db")),false,"the lost source is not silently replaced");
+  assert.equal(existsSync(path.join(home,"agentcap.db")),false,"the lost source is not silently replaced");
   setRetirementMemoryStoreForTest(null);
 });
 
@@ -255,7 +255,7 @@ it("a full live pass with a missing source retains sealed DM history and still a
   const tenant=address(0xc91),account=address(0xc92),proc=new FakeProc(76_009),releases={n:0};
   await protectedShared(tenant,account); const {home,localRaw}=await book(tenant,account,100);
   await seedDm(tenant,localRaw,home); const original=(await shared.prepare("SELECT sealed FROM tenant_personal_memory WHERE tenant=?").get(tenant) as {sealed:string}).sealed;
-  rmSync(path.join(home,"merrymen.db")); adoptChildForTest(tenant,account,proc,lease(tenant,releases));
+  rmSync(path.join(home,"agentcap.db")); adoptChildForTest(tenant,account,proc,lease(tenant,releases));
   setLiveMirrorStoreForTest({shared,dek,dialect:"sqlite"}); await mirrorLedgersForTest();
   assert.equal((await shared.prepare("SELECT sealed FROM tenant_personal_memory WHERE tenant=?").get(tenant) as {sealed:string}).sealed,original);
   assert.deepEqual((await restoredChats(tenant)).map(t=>t.chat_id),[42,43]);
@@ -274,7 +274,7 @@ it("a missing retirement source retains sealed DM history and its lease while a 
   const original=(await shared.prepare("SELECT sealed FROM tenant_personal_memory WHERE tenant=?").get(tenant) as {sealed:string}).sealed;
   await getGrantStore("spot").put(tenant,grant(account)); adoptChildForTest(tenant,account,proc,lease(tenant,releases));
   setRetirementMemoryStoreForTest({shared,dek,dialect:"sqlite"}); await getGrantStore("spot").stopForReplacement(tenant,account);
-  await reconcile(); proc.exit(); rmSync(path.join(home,"merrymen.db")); await reconcile();
+  await reconcile(); proc.exit(); rmSync(path.join(home,"agentcap.db")); await reconcile();
   assert.equal((await shared.prepare("SELECT sealed FROM tenant_personal_memory WHERE tenant=?").get(tenant) as {sealed:string}).sealed,original);
   assert.deepEqual((await restoredChats(tenant)).map(t=>t.chat_id),[42,43]);
   assert.equal(isRetiringExpiredForTest(tenant),true); assert.equal(hasLeaseForTest(tenant),true); assert.equal(releases.n,0);

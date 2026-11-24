@@ -7,12 +7,12 @@
  *
  * 1. `/wallet`, `/fund`, `/grant`, `/recover`, `/restore` and `/reconnect` all
  *    land on the same reply, which says "Open http://localhost:3100/grant on
- *    the machine running merrymen". `readWallet()` has always been able to
+ *    the machine running agentcap". `readWallet()` has always been able to
  *    print the real dashboard AND the agent's own account address — but
  *    `service.ts` never set `deps.reads.wallet`, and `executor.ts` reads
  *    `deps.reads.wallet ? … : WALLET_TEXT`, so the good function was dead code
  *    and every caller got the static localhost signpost. On the hosted fleet
- *    there is no machine running merrymen, so the instruction cannot be
+ *    there is no machine running agentcap, so the instruction cannot be
  *    followed at all — and "fund your agent" is the single commonest thing a
  *    beta tester is ever told to do.
  *
@@ -43,13 +43,13 @@ describe("the wallet signpost points somewhere real", () => {
 
   it("the dashboard base is chosen, not hardcoded", () => {
     assert.match(READS, /export function dashboardBase\(\)/);
-    // Hosted children get MERRYMEN_HOSTED from the orchestrator, so they can
+    // Hosted children get AGENTCAP_HOSTED from the orchestrator, so they can
     // tell. An env override wins for anyone self-hosting behind a domain.
     const fn = READS.slice(READS.indexOf("export function dashboardBase()"));
     const body = fn.slice(0, fn.indexOf("\n}"));
-    assert.match(body, /MERRYMEN_DASHBOARD_URL/, "an explicit override must win");
+    assert.match(body, /AGENTCAP_DASHBOARD_URL/, "an explicit override must win");
     assert.match(body, /isHostedMode\(\)/, "hosted must not default to localhost");
-    assert.match(body, /app\.merrymen\.dev/);
+    assert.match(body, /app\.agentcap\.xyz/);
     assert.match(body, /localhost:3100/, "and self-hosted keeps the answer that was always right for it");
   });
 

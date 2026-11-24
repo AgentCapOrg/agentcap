@@ -2,7 +2,7 @@
  * The owner's approval of a proposal an AI assistant prepared.
  *
  * GET shows it (with a fresh quote for a trade). POST approves or declines it,
- * and only with the owner's own Merrymen session, a same-origin request (the
+ * and only with the owner's own AgentCap session, a same-origin request (the
  * /api middleware refuses cross-site; this route also checks Origin), and the
  * hash of the exact binding the page displayed. Showing it and approving it
  * both re-check that the app which prepared it is still connected with this
@@ -31,7 +31,7 @@ import {
 } from "@/lib/services/proposals";
 import { KNOWN_STRATEGIES, orderSymbol } from "@/mcp/tools/proposals";
 import { readAgentRow } from "@/lib/services/agent-status";
-import { AGENT_NAME_RE, STOCK_TOKENS, normalizeAgentName, sellableAssets } from "@merrymen/core";
+import { AGENT_NAME_RE, STOCK_TOKENS, normalizeAgentName, sellableAssets } from "@agentcap/core";
 import { specFor, validStoredSetting } from "../../../../../../../worker/src/telegram/setting-spec";
 import { PUT as settingsPut } from "../../../settings/route";
 import { POST as groupchatPost } from "../../../groupchat/route";
@@ -133,7 +133,7 @@ async function revalidateSettings(tenant: `0x${string}`, b: SettingsBinding | Dr
     try {
       const { db } = await mcpDb();
       if (await db.prepare("SELECT 1 AS present FROM grants WHERE tenant = ? LIMIT 1").get(tenant)) {
-        return { ok: false, why: "You already have a Merryman. Open your agent or Wallet & permissions to manage it; this setup cannot change it." };
+        return { ok: false, why: "You already have a AgentCapAvatar. Open your agent or Wallet & permissions to manage it; this setup cannot change it." };
       }
     } catch {
       throw new ProposalError("upstream_unavailable", "Could not check whether you already have an agent. Nothing was changed; try again.");
@@ -148,7 +148,7 @@ async function revalidateSettings(tenant: `0x${string}`, b: SettingsBinding | Dr
     }
     const spec = specFor(k);
     if (!spec || !validStoredSetting(k, v)) return { ok: false, why: `The change to ${spec?.label ?? k} is not allowed from here. Nothing was changed.` };
-    if (spec.kind === "strategy" && !(KNOWN_STRATEGIES as readonly string[]).includes(v as string)) return { ok: false, why: `${String(v)} is not a strategy Merrymen knows.` };
+    if (spec.kind === "strategy" && !(KNOWN_STRATEGIES as readonly string[]).includes(v as string)) return { ok: false, why: `${String(v)} is not a strategy AgentCap knows.` };
     if (spec.kind === "symbols") {
       const selectable = new Set([...STOCK_TOKENS.map((t) => t.symbol), ...(view?.customTokens ?? []).map((c) => c.symbol)]);
       const bad = (v as string[]).filter((s) => !selectable.has(s));
@@ -159,7 +159,7 @@ async function revalidateSettings(tenant: `0x${string}`, b: SettingsBinding | Dr
   // The creation flow shows these values and checks the account again before
   // writing settings and asking the owner to sign.
   if (b.kind === "agent_draft" && b.purpose === "create") return { ok: true, notes: [] };
-  if (!b.before || typeof b.before !== "object") return { ok: false, why: "This proposal was made before Merrymen recorded your settings with it. Ask your assistant for a fresh one." };
+  if (!b.before || typeof b.before !== "object") return { ok: false, why: "This proposal was made before AgentCap recorded your settings with it. Ask your assistant for a fresh one." };
   const changed = changedSince(b.before, await currentValues(tenant, Object.keys(b.before), view));
   if (changed.length) {
     return { ok: false, why: `Your settings changed since this was proposed (${changed.map((k) => changeRow(k, null, null).label).join(", ")}). Nothing was changed; ask your assistant for a fresh proposal.` };

@@ -19,9 +19,9 @@ import os from "node:os";
 import path from "node:path";
 import { after, before, describe, it } from "node:test";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-redact-"));
-process.env.MERRYMEN_HOME = HOME;
-process.env.MERRYMEN_HOSTED = "1";
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-redact-"));
+process.env.AGENTCAP_HOME = HOME;
+process.env.AGENTCAP_HOSTED = "1";
 
 const { closeStoreForTest, initStore, addEvent } = await import("../store");
 const { readLlmState, readRecentEvents, readReport, redactAddresses, redactHexRuns } = await import("./reads");
@@ -167,7 +167,7 @@ describe("redactAddresses", () => {
     assert.equal(redactAddresses(`sig ${sig}`), "sig [signature]");
     assert.equal(redactAddresses(`https://solscan.io/tx/${sig}`), "https://solscan.io/tx/[signature]");
     // Prose, tickers, URLs, hex digests and short hashtags are untouched.
-    const plain = "Bought $BONK at https://merrymen.xyz/t/0123456789abcdef #BuyTheDip, digest e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+    const plain = "Bought $BONK at https://agentcap.xyz/t/0123456789abcdef #BuyTheDip, digest e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
     assert.equal(redactAddresses(plain), plain);
   });
 

@@ -49,7 +49,7 @@ const edges: CaptureEdges = { now: Date.now, wait: (ms, signal) => new Promise(r
   const timer = setTimeout(finish, ms); signal?.addEventListener("abort", finish, { once: true }); if (signal?.aborted) finish();
 }) };
 export async function capturePublicFeed(options: CaptureOptions, io: CaptureEdges = edges) {
-  if (options.optIn !== "1") throw new Error("Set MERRYMEN_PERPS_CAPTURE_PUBLIC_FEED=1 to record the existing public feed.");
+  if (options.optIn !== "1") throw new Error("Set AGENTCAP_PERPS_CAPTURE_PUBLIC_FEED=1 to record the existing public feed.");
   if (path.basename(options.source) !== LIGHTER_FEED_FILE) throw new Error("Source must be the existing lighter-feed.json public feed.");
   if (!Number.isSafeInteger(options.samples) || options.samples < 1 || options.samples > CAPTURE_LIMITS.maxSamples
       || !Number.isSafeInteger(options.intervalMs) || options.intervalMs < 1_000 || options.intervalMs > 60_000

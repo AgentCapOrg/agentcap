@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { PublicAgent } from "@/lib/public-leaderboard";
 
-const HOSTED_APP = "https://app.merrymen.dev";
+const HOSTED_APP = "https://app.agentcap.xyz";
 const POLL_MS = 30_000;
 const FLASH_MS = 1_400;
 
@@ -101,7 +101,7 @@ export function LiveBandDesk({
         setUpdatedAt(Date.now());
         setSecondsSince(0);
         setDelayed(false);
-        window.dispatchEvent(new CustomEvent("merrymen:band-update", {
+        window.dispatchEvent(new CustomEvent("agentcap:band-update", {
           detail: { changed: Object.keys(nextChanged).length > 0 },
         }));
         if (flashTimer) window.clearTimeout(flashTimer);
@@ -128,7 +128,7 @@ export function LiveBandDesk({
       : `updated ${secondsSince}s ago`;
 
   return (
-    <aside className="band-desk" aria-label="Live Merrymen roster">
+    <aside className="band-desk" aria-label="Live AgentCap roster">
       <div className="band-desk-head">
         <div>
           <strong>The band, live from Sherwood.</strong>

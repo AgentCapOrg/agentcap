@@ -1,5 +1,5 @@
 /**
- * HOSTED FOMO IS OPT-IN: on only when MERRYMEN_FOMO_ENABLED is exactly "1",
+ * HOSTED FOMO IS OPT-IN: on only when AGENTCAP_FOMO_ENABLED is exactly "1",
  * the orchestrator's own switch (worker/src/orchestrator.ts fomoSetup). Off,
  * the web builds no runtime — no fomo_* DDL, no Fomo reads or writes on the
  * shared database — the chat leaves every message to its existing handlers,
@@ -13,11 +13,11 @@
 
 type Env = Record<string, string | undefined>;
 
-/** Said where a hosted deployment has not opted in to Fomo research (MERRYMEN_FOMO_ENABLED=1). */
+/** Said where a hosted deployment has not opted in to Fomo research (AGENTCAP_FOMO_ENABLED=1). */
 export const FOMO_NOT_ENABLED = "Fomo research is not enabled on this deployment.";
 
 export function hostedFomoEnabled(env: Env = process.env): boolean {
-  return env.MERRYMEN_FOMO_ENABLED === "1";
+  return env.AGENTCAP_FOMO_ENABLED === "1";
 }
 
 /**
@@ -26,5 +26,5 @@ export function hostedFomoEnabled(env: Env = process.env): boolean {
  * reads the same rule, worker/src/fomo-child.ts childFomoOff).
  */
 export function fomoEnabledFor(hosted: boolean, env: Env = process.env): boolean {
-  return hosted ? hostedFomoEnabled(env) : env.MERRYMEN_FOMO_ENABLED !== "0";
+  return hosted ? hostedFomoEnabled(env) : env.AGENTCAP_FOMO_ENABLED !== "0";
 }

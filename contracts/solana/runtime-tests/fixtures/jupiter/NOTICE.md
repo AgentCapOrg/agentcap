@@ -6,7 +6,7 @@ on-chain zero padding. `programs.json` records each read's RPC, slot and UTC tim
 the program and programdata addresses, the upgrade authority and the sha256 of
 both the file and the on-chain bytes. They are test fixtures only: the test checks
 those hashes and loads the programs into a local solana-program-test bank. Nothing
-in this repository builds, links, modifies or deploys them, and no Merrymen service
+in this repository builds, links, modifies or deploys them, and no AgentCap service
 uses them. The main `Dockerfile` copies its whole build context, so `.dockerignore`
 lists `contracts/solana/runtime-tests/fixtures` (only tests read that directory) to
 keep these copies out of the image.
@@ -41,14 +41,14 @@ repository's history: deleting one later would have left it there.
 `programs.json` stays here and pins every byte, wherever the copies live: once the
 fork test runs, a missing or different file fails it, never skips it (only `test.sh`
 decides whether it runs, below). The test reads all five ELFs from
-the directory `MERRYMEN_JUPITER_FORK_PROGRAMS` names, or from this one when it is
+the directory `AGENTCAP_JUPITER_FORK_PROGRAMS` names, or from this one when it is
 unset or empty. To supply them, either:
 
 - put `jupiter_v6.so` and `whirlpool.so` in this directory (git ignores them) and run
   `contracts/solana/test.sh` as usual; or
 - keep a directory holding all five files (the two third-party copies plus the three
   SPL files from here) outside the repository, and run
-  `MERRYMEN_JUPITER_FORK_PROGRAMS=<that directory> contracts/solana/test.sh`.
+  `AGENTCAP_JUPITER_FORK_PROGRAMS=<that directory> contracts/solana/test.sh`.
   `test.sh` resolves it to an absolute path and fails if it is not a directory.
 
 The bytes are the ones `programs.json` records (`sha256File`, and `sha256OnChain`
@@ -60,7 +60,7 @@ fixtures against the new bytes.
 
 Without the two copies, `test.sh` prints the one line
 
-    jupiter_fork: skipped, set MERRYMEN_JUPITER_FORK_PROGRAMS (release gate)
+    jupiter_fork: skipped, set AGENTCAP_JUPITER_FORK_PROGRAMS (release gate)
 
 and still runs every other target. `scripts/ci/solana-runtime-tests.mjs` accepts that
 line in place of this target alone (with a `::warning::`); custody, recovery and any
@@ -87,7 +87,7 @@ not solana-program-test's bundled copy:
     node refresh.mjs build /tmp/jupiter-raw
 
 Both derive the test vault's addresses from the vault program (default: `declare_id!`
-in `programs/merrymen-vault/src/lib.rs`) and the test's owner seed, and `route.json`
+in `programs/agentcap-vault/src/lib.rs`) and the test's owner seed, and `route.json`
 records them as `provenance.builtFor`. The test checks those against the answer and
 moves the three vault accounts to its own build's program ID, so a new `declare_id`
 needs no refresh. A refresh is needed to test against a program's newer on-chain

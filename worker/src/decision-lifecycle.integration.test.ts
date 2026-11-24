@@ -8,10 +8,10 @@ import type { BrainDecision, BrainResult } from "./brain-client";
 import type { PortfolioSnapshot } from "../../packages/core/src/index";
 import type { Db } from "./db";
 
-const scratch = mkdtempSync(path.join(os.tmpdir(), "merrymen-decision-lifecycle-"));
+const scratch = mkdtempSync(path.join(os.tmpdir(), "agentcap-decision-lifecycle-"));
 const isolatedCwd = path.join(scratch, "cwd");
 mkdirSync(isolatedCwd);
-process.env.MERRYMEN_HOME = path.join(scratch, "home");
+process.env.AGENTCAP_HOME = path.join(scratch, "home");
 delete process.env.DATABASE_URL;
 const originalCwd = process.cwd();
 const store = await import("./store");
@@ -21,7 +21,7 @@ try {
 } finally {
   process.chdir(originalCwd);
 }
-const raw = new DatabaseSync(path.join(process.env.MERRYMEN_HOME, "merrymen.db"));
+const raw = new DatabaseSync(path.join(process.env.AGENTCAP_HOME, "agentcap.db"));
 const { persistBrainDecision } = await import("./brain-shadow");
 const { withDecisionOutcome, recordDecisionRefusal } = await import("./decision-identity");
 const { readPublicDecisionLifecycle } = await import("../../web/src/lib/read-decision-lifecycle");
@@ -211,12 +211,12 @@ test("hosted readers initialize and share their read driver without running writ
 });
 
 test("a read against an empty home returns 404 without creating a database", async () => {
-  const previous = process.env.MERRYMEN_HOME;
-  process.env.MERRYMEN_HOME = path.join(scratch, "empty-home");
+  const previous = process.env.AGENTCAP_HOME;
+  process.env.AGENTCAP_HOME = path.join(scratch, "empty-home");
   try {
     assert.equal((await get("dec_missing_fixture")).status, 404);
-    assert.equal(existsSync(process.env.MERRYMEN_HOME), false);
+    assert.equal(existsSync(process.env.AGENTCAP_HOME), false);
   } finally {
-    process.env.MERRYMEN_HOME = previous;
+    process.env.AGENTCAP_HOME = previous;
   }
 });

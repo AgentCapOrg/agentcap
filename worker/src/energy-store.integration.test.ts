@@ -15,10 +15,10 @@ import { DatabaseSync } from "node:sqlite";
 import { after, describe, it } from "node:test";
 import { claimCap, energyExemptAccountsOf, energyModeForAccount, energyPlan } from "./energy";
 
-const scratch = mkdtempSync(path.join(os.tmpdir(), "merrymen-energy-store-"));
+const scratch = mkdtempSync(path.join(os.tmpdir(), "agentcap-energy-store-"));
 const isolatedCwd = path.join(scratch, "cwd");
 mkdirSync(isolatedCwd);
-process.env.MERRYMEN_HOME = path.join(scratch, "home");
+process.env.AGENTCAP_HOME = path.join(scratch, "home");
 delete process.env.DATABASE_URL;
 const originalCwd = process.cwd();
 const store = await import("./store");
@@ -28,7 +28,7 @@ try {
 } finally {
   process.chdir(originalCwd);
 }
-const raw = new DatabaseSync(path.join(process.env.MERRYMEN_HOME, "merrymen.db"));
+const raw = new DatabaseSync(path.join(process.env.AGENTCAP_HOME, "agentcap.db"));
 
 after(() => {
   raw.close();

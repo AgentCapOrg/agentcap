@@ -38,11 +38,11 @@ let logged: string | undefined;
 export async function GET(req: Request) {
   const walletRefused = walletNotSupported(req);
   if (walletRefused) return walletRefused;
-  const raw = process.env.MERRYMEN_SERVICE_NOTICE;
+  const raw = process.env.AGENTCAP_SERVICE_NOTICE;
   const read = parseServiceNotice(raw);
   if (!read.ok && logged !== raw) {
     logged = raw;
-    console.warn(`[merrymen] MERRYMEN_SERVICE_NOTICE ignored: ${read.why}`);
+    console.warn(`[agentcap] AGENTCAP_SERVICE_NOTICE ignored: ${read.why}`);
   }
   return NextResponse.json(
     { notice: read.ok ? read.notice : null },

@@ -1,7 +1,7 @@
 /**
  * Opt-in real PostgreSQL coverage for the replacement-stop SQL, scoped to a
  * disposable LOCAL database/schema. Never reads DATABASE_URL.
- * MERRYMEN_TEST_PG_URL=postgres://user@127.0.0.1:port/postgres node --import tsx --test worker/src/grant-replacement.postgres.test.ts
+ * AGENTCAP_TEST_PG_URL=postgres://user@127.0.0.1:port/postgres node --import tsx --test worker/src/grant-replacement.postgres.test.ts
  */
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
@@ -18,7 +18,7 @@ interface Client {
   end(): Promise<void>;
   on(event: "error" | "end", cb: () => void): void;
 }
-const url = process.env.MERRYMEN_TEST_PG_URL ?? process.env.MERRYMEN_TEST_POSTGRES_URL;
+const url = process.env.AGENTCAP_TEST_PG_URL ?? process.env.AGENTCAP_TEST_POSTGRES_URL;
 const pg = url ? createRequire(import.meta.url)("pg") as { Client: new (config: { connectionString: string }) => Client } : null;
 const address = (n: number) => `0x${n.toString(16).padStart(40, "0")}` as `0x${string}`;
 const OLD_KEY = `0x${"19".repeat(32)}` as `0x${string}`;
@@ -40,8 +40,8 @@ test("Postgres: durable replacement stop, fresh-key fencing and concurrent grant
   const schema = `mm_replacement_${randomBytes(8).toString("hex")}`;
   const admin = new pg!.Client({ connectionString: url! });
   await admin.connect();
-  const savedDek = process.env.MERRYMEN_STORE_DEK;
-  process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 31).toString("base64");
+  const savedDek = process.env.AGENTCAP_STORE_DEK;
+  process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 31).toString("base64");
   const connections: Client[] = [];
   let pauseStop: (() => Promise<void>) | null = null;
   await admin.query(`CREATE SCHEMA ${schema}`);
@@ -66,7 +66,7 @@ test("Postgres: durable replacement stop, fresh-key fencing and concurrent grant
     finally {
       await Promise.allSettled(connections.map(client => client.end()));
       await admin.end();
-      if (savedDek === undefined) delete process.env.MERRYMEN_STORE_DEK; else process.env.MERRYMEN_STORE_DEK = savedDek;
+      if (savedDek === undefined) delete process.env.AGENTCAP_STORE_DEK; else process.env.AGENTCAP_STORE_DEK = savedDek;
     }
   });
 

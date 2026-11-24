@@ -69,7 +69,7 @@ export interface FomoRuntimeOptions {
    * dialect: Postgres is the fleet's store, sqlite a self-hosted install's.
    */
   liveFeed?: boolean;
-  /** The operator's tail switch (contract.ts fomoTailsOn); defaults to reading MERRYMEN_FOMO_TAILS. */
+  /** The operator's tail switch (contract.ts fomoTailsOn); defaults to reading AGENTCAP_FOMO_TAILS. */
   tailsEnabled?: boolean;
 }
 

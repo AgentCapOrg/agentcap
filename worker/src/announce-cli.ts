@@ -1,14 +1,14 @@
 /**
  * The operator's hand on the announcer. Run ON a service that holds both
- * DATABASE_URL and MERRYMEN_STORE_DEK — the orchestrator or web (docs/
+ * DATABASE_URL and AGENTCAP_STORE_DEK — the orchestrator or web (docs/
  * hosted-deploy.md: "The DEK is the one secret both hold"). It will not work
  * anywhere else, and that is deliberate: the tokens it needs are sealed.
  *
  *   node --import tsx worker/src/announce-cli.ts <body.html> <announce-id>
  *
  * DRY RUN UNLESS CONFIRMED. Telegram is contacted only when
- * MERRYMEN_ANNOUNCE_CONFIRM must equal the announce id AND
- * MERRYMEN_ANNOUNCE_BODY_SHA256 must equal the dry-run body digest. A changed
+ * AGENTCAP_ANNOUNCE_CONFIRM must equal the announce id AND
+ * AGENTCAP_ANNOUNCE_BODY_SHA256 must equal the dry-run body digest. A changed
  * file cannot inherit an earlier approval.
  *
  * Prints counts and failure REASONS. Never a token, never a chat id, never the
@@ -31,8 +31,8 @@ async function main(): Promise<void> {
     );
     process.exit(2);
   }
-  if (!process.env.MERRYMEN_STORE_DEK) {
-    console.error("no MERRYMEN_STORE_DEK — the per-tenant bot tokens are sealed and cannot be read without it.");
+  if (!process.env.AGENTCAP_STORE_DEK) {
+    console.error("no AGENTCAP_STORE_DEK — the per-tenant bot tokens are sealed and cannot be read without it.");
     process.exit(2);
   }
   const body = readFileSync(bodyPath, "utf8").trim();
@@ -56,7 +56,7 @@ async function main(): Promise<void> {
     process.exit(2);
   }
   const { confirmed, bodySha256 } = announcementConfirmation(
-    announceId, body, process.env.MERRYMEN_ANNOUNCE_CONFIRM, process.env.MERRYMEN_ANNOUNCE_BODY_SHA256,
+    announceId, body, process.env.AGENTCAP_ANNOUNCE_CONFIRM, process.env.AGENTCAP_ANNOUNCE_BODY_SHA256,
   );
   console.log(`[announce] body SHA-256 ${bodySha256}`);
 
@@ -103,7 +103,7 @@ async function main(): Promise<void> {
     }
     if (out.dryRun) {
       console.log(
-        `\n  To send for real: set MERRYMEN_ANNOUNCE_CONFIRM=${announceId} and MERRYMEN_ANNOUNCE_BODY_SHA256=${bodySha256} and run the same command again.`,
+        `\n  To send for real: set AGENTCAP_ANNOUNCE_CONFIRM=${announceId} and AGENTCAP_ANNOUNCE_BODY_SHA256=${bodySha256} and run the same command again.`,
       );
     }
   } finally {

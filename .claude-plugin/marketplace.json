@@ -1,20 +1,20 @@
 {
-  "name": "merrymen",
+  "name": "agentcap",
   "owner": {
-    "name": "Merrymen",
-    "url": "https://merrymen.dev"
+    "name": "AgentCap",
+    "url": "https://agentcap.xyz"
   },
-  "description": "Merrymen for Claude Code: ask about your trading agent, its trades and your portfolio from any session, and day-trade stock tokens through it with every trade approved by you.",
+  "description": "AgentCap for Claude Code: ask about your trading agent, its trades and your portfolio from any session, and day-trade stock tokens through it with every trade approved by you.",
   "plugins": [
     {
-      "name": "merrymen",
-      "source": "./plugins/merrymen",
+      "name": "agentcap",
+      "source": "./plugins/agentcap",
       "category": "productivity",
       "tags": ["trading", "agents", "mcp", "robinhood-chain"]
     },
     {
-      "name": "merrymen-trader",
-      "source": "./plugins/merrymen-trader",
+      "name": "agentcap-trader",
+      "source": "./plugins/agentcap-trader",
       "category": "productivity",
       "tags": ["trading", "day-trading", "stock-tokens", "robinhood-chain", "paper-trading"]
     }

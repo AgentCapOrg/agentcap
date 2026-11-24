@@ -324,7 +324,7 @@ test("both signers seal the energy buy and mint its marker from ONE boolean", ()
     );
     const uses = [...src.matchAll(/GRANT_ENERGY/g)].map((m) => m.index!);
     const guarded = [...src.matchAll(/wallOpts\.energyBuy\s*\?\s*\[GRANT_ENERGY\]/g)].map((m) => m.index! + m[0].indexOf("GRANT_ENERGY"));
-    const importOnly = /import\s*\{[^}]*\bGRANT_ENERGY\b[^}]*\}\s*from\s*"@merrymen\/core"/.exec(src);
+    const importOnly = /import\s*\{[^}]*\bGRANT_ENERGY\b[^}]*\}\s*from\s*"@agentcap\/core"/.exec(src);
     assert.ok(importOnly, `${name} must import GRANT_ENERGY from core, never define its own`);
     for (const at of uses) {
       const inImport = at >= importOnly.index && at < importOnly.index + importOnly[0].length;
@@ -433,7 +433,7 @@ test("both signers seal perps, mint its marker and write grant.perp from ONE val
       `${name} must mint GRANT_PERP_LIGHTER only from wallOpts.perpLighter`,
     );
     assert.equal((src.match(/\[GRANT_PERP_LIGHTER\]/g) ?? []).length, 1, `${name} must mint GRANT_PERP_LIGHTER in exactly one place`);
-    assert.ok(/import\s*\{[^}]*\bGRANT_PERP_LIGHTER\b[^}]*\}\s*from\s*"@merrymen\/core"/.test(src), `${name} must import the marker from core`);
+    assert.ok(/import\s*\{[^}]*\bGRANT_PERP_LIGHTER\b[^}]*\}\s*from\s*"@agentcap\/core"/.test(src), `${name} must import the marker from core`);
 
     // THE BLOCK, from that same value: the public key LOWERCASED (the bytes the
     // wall pinned), the value's own index, and no private key of any kind.
@@ -562,7 +562,7 @@ test("both signers list their markers in ONE order, and perps come last", () => 
 test("the server accepts exactly the markers the dashboard can mint, perps appended", () => {
   // CANONICAL_GRANT_FEATURES is the allowlist POST /api/grants checks. A marker
   // a signer can mint and the list lacks is a fresh grant refused at handoff
-  // ("declares features the Merrymen wall does not grant"); one the list has
+  // ("declares features the AgentCap wall does not grant"); one the list has
   // and no signer mints is a route nothing could ever have sealed.
   //
   // GRANT_V4 is the one deliberate gap. The signers keep it behind the

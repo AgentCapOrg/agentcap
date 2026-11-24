@@ -67,7 +67,7 @@ const pendingRows = () => (w.raw.prepare("SELECT tenant, sealed_verifier, redire
 
 describe("who may call it", () => {
   it("is 404 on a self-hosted install", async () => {
-    process.env.MERRYMEN_HOSTED = "";
+    process.env.AGENTCAP_HOSTED = "";
     const res = await post(OWNER_A, { action: "start", client: "web", owner: OWNER_A });
     assert.equal(res.status, 404);
   });
@@ -100,12 +100,12 @@ describe("who may call it", () => {
 
   it("is 503, with a sentence written for the owner, when the X app, its callback or the DEK is missing", async () => {
     for (const change of [
-      () => delete w.env.MERRYMEN_X_CLIENT_SECRET,
-      () => delete w.env.MERRYMEN_PUBLIC_ORIGIN,
-      () => delete process.env.MERRYMEN_STORE_DEK,
+      () => delete w.env.AGENTCAP_X_CLIENT_SECRET,
+      () => delete w.env.AGENTCAP_PUBLIC_ORIGIN,
+      () => delete process.env.AGENTCAP_STORE_DEK,
     ]) {
       const env = { ...w.env };
-      const dek = process.env.MERRYMEN_STORE_DEK;
+      const dek = process.env.AGENTCAP_STORE_DEK;
       change();
       const res = await post(OWNER_A, { action: "start", client: "web", owner: OWNER_A });
       const body = await read(res);
@@ -113,7 +113,7 @@ describe("who may call it", () => {
       assert.equal(body.error, X_COPY.unavailable);
       assert.equal(body.ownerFacing, true);
       Object.assign(w.env, env);
-      process.env.MERRYMEN_STORE_DEK = dek;
+      process.env.AGENTCAP_STORE_DEK = dek;
     }
     assert.equal(pendingRows().length, 0);
   });
@@ -124,7 +124,7 @@ describe("start", () => {
     const { url, state } = await started(OWNER_A);
     assert.equal(url.searchParams.get("response_type"), "code");
     assert.equal(url.searchParams.get("client_id"), "test-client-id");
-    assert.equal(url.searchParams.get("redirect_uri"), "https://app.merrymen.test/connect/x");
+    assert.equal(url.searchParams.get("redirect_uri"), "https://app.agentcap.test/connect/x");
     assert.equal(url.searchParams.get("code_challenge_method"), "S256");
     assert.equal(url.searchParams.get("scope"), "tweet.read tweet.write users.read offline.access media.write");
     assert.match(state, /^w\.[A-Za-z0-9_-]{32}$/);
@@ -132,7 +132,7 @@ describe("start", () => {
     const rows = pendingRows();
     assert.equal(rows.length, 1);
     assert.equal(rows[0]!.tenant, OWNER_A);
-    assert.equal(rows[0]!.redirect_uri, "https://app.merrymen.test/connect/x");
+    assert.equal(rows[0]!.redirect_uri, "https://app.agentcap.test/connect/x");
     assert.equal(Number(rows[0]!.expires_at_ms), w.clock.now + 15 * 60_000);
     // Only the state's hash is stored, and the verifier is sealed.
     const stored = JSON.stringify(w.raw.prepare("SELECT * FROM xpost_pending").all());
@@ -171,7 +171,7 @@ describe("finish", () => {
     const form = new URLSearchParams(w.x.calls[0]!.body);
     assert.equal(form.get("grant_type"), "authorization_code");
     assert.equal(form.get("code"), "the-code-from-x");
-    assert.equal(form.get("redirect_uri"), "https://app.merrymen.test/connect/x");
+    assert.equal(form.get("redirect_uri"), "https://app.agentcap.test/connect/x");
     const verifier = form.get("code_verifier")!;
     assert.equal(createHash("sha256").update(verifier).digest("base64url"), challenge, "PKCE: the verifier matches the challenge");
     assert.match(w.x.calls[0]!.headers.authorization ?? "", /^Basic /);

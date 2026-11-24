@@ -45,7 +45,7 @@ function view(connection: PartnerConnection, runtime?: Runtime, token?: string |
 }
 
 function allowed(connection: PartnerConnection, scope: string) {
-  if (connection.status !== "linked" || !connection.tenant) throw new PartnerError(409, "authorization_required", "The owner must connect their Merryman first");
+  if (connection.status !== "linked" || !connection.tenant) throw new PartnerError(409, "authorization_required", "The owner must connect their AgentCapAvatar first");
   if (!connection.scopes.includes(scope)) throw new PartnerError(403, "forbidden_scope", "The owner has not approved this capability");
   return connection.tenant;
 }
@@ -74,7 +74,7 @@ export function createPartnerService(deps: {
       // The key's name is the gateway's signed metadata, not the partner's input
       // to refuse: made well-formed rather than failing every create for that key.
       const created = await store.create({ partnerId: partner.app_id, partnerName: toWellFormed(partner.name),
-        externalUserId: body.external_user_id, name: typeof body.name === "string" ? body.name.trim() : "Your Merryman", scopes });
+        externalUserId: body.external_user_id, name: typeof body.name === "string" ? body.name.trim() : "Your AgentCapAvatar", scopes });
       return { status: created.connection.status === "linked" ? 200 : 202,
         body: view(created.connection, undefined, created.token) };
     }

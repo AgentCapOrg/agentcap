@@ -11,7 +11,7 @@ import { after, it } from "node:test";
 import { PerpsBooksNotHandedOver, refuseWhilePerpsBooks } from "./perps-handover-refusal";
 import { runMemorySafeguardCli } from "./memory-safeguard-cli";
 
-const root = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-perps-refusal-")));
+const root = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-perps-refusal-")));
 after(() => rmSync(root, { recursive: true, force: true }));
 let n = 0;
 const home = () => {
@@ -30,11 +30,11 @@ it("no Perps root, an empty one, homes without a book, or a stray file: the flee
   refuseWhilePerpsBooks(h);
 });
 
-it("any home holding a merrymen.db refuses, with the count and no owner", () => {
+it("any home holding a agentcap.db refuses, with the count and no owner", () => {
   const h = home();
   for (const owner of [OWNER, `0x${"b2".repeat(20)}`]) {
     mkdirSync(path.join(h, "children-perps", owner), { recursive: true });
-    writeFileSync(path.join(h, "children-perps", owner, "merrymen.db"), "book");
+    writeFileSync(path.join(h, "children-perps", owner, "agentcap.db"), "book");
   }
   assert.throws(() => refuseWhilePerpsBooks(h), (e: unknown) => {
     assert.ok(e instanceof PerpsBooksNotHandedOver);
@@ -54,12 +54,12 @@ it("a Perps root that is not a directory is never read as no books", () => {
 it("the memory safeguard's capture, seed and checkpoint refuse too — before any database is opened — and verify still reads its artifact", async () => {
   const h = home();
   mkdirSync(path.join(h, "children-perps", OWNER), { recursive: true });
-  writeFileSync(path.join(h, "children-perps", OWNER, "merrymen.db"), "book");
-  const saved = { home: process.env.MERRYMEN_HOME, url: process.env.DATABASE_URL, dek: process.env.MERRYMEN_STORE_DEK };
-  process.env.MERRYMEN_HOME = h;
+  writeFileSync(path.join(h, "children-perps", OWNER, "agentcap.db"), "book");
+  const saved = { home: process.env.AGENTCAP_HOME, url: process.env.DATABASE_URL, dek: process.env.AGENTCAP_STORE_DEK };
+  process.env.AGENTCAP_HOME = h;
   // Never connected to: the refusal comes first.
   process.env.DATABASE_URL = "postgres://refused.invalid:1/never";
-  process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 5).toString("base64");
+  process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 5).toString("base64");
   try {
     for (const mode of ["capture", "seed", "checkpoint"]) {
       await assert.rejects(runMemorySafeguardCli([mode, "--quiescent", "--single-replica-confirmed"]), PerpsBooksNotHandedOver, mode);
@@ -67,7 +67,7 @@ it("the memory safeguard's capture, seed and checkpoint refuse too — before an
     // verify reads only its artifact, and fails here on that, not on the Perps home.
     await assert.rejects(runMemorySafeguardCli(["verify", "--artifact", path.join(h, "absent.sealed")]), (e: unknown) => !(e instanceof PerpsBooksNotHandedOver));
   } finally {
-    for (const [k, v] of [["MERRYMEN_HOME", saved.home], ["DATABASE_URL", saved.url], ["MERRYMEN_STORE_DEK", saved.dek]] as const) {
+    for (const [k, v] of [["AGENTCAP_HOME", saved.home], ["DATABASE_URL", saved.url], ["AGENTCAP_STORE_DEK", saved.dek]] as const) {
       if (v === undefined) delete process.env[k];
       else process.env[k] = v;
     }

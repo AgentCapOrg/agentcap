@@ -15,8 +15,8 @@ async function main() {
   const build = await v4DeploymentBuild(hre, V4_POOL_MANAGER);
   const gas = await client.estimateGas({ data: build.data });
   const gasPrice = await client.getGasPrice();
-  const output = process.env.MERRYMEN_V4_PREPARE_OUTPUT ||
-    path.join(tmpdir(), `merrymen-v4-${chainId}-${Date.now()}.json`);
+  const output = process.env.AGENTCAP_V4_PREPARE_OUTPUT ||
+    path.join(tmpdir(), `agentcap-v4-${chainId}-${Date.now()}.json`);
   writeFileSync(output, JSON.stringify({
     kind: "unsigned-contract-deployment",
     preparedAt: new Date().toISOString(),

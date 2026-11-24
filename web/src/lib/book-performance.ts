@@ -70,7 +70,7 @@ export interface BookPerformance {
   gasOps: GasOps | null;
   /**
    * An operator has put this account's return under review
-   * (MERRYMEN_RETURN_REVIEW, return-review.ts), or its contributions are (one
+   * (AGENTCAP_RETURN_REVIEW, return-review.ts), or its contributions are (one
    * transfer booked two ways — as our intent and again from its log, say —
    * distinct-flows.ts), so pnlBps and pnlUsdg are withheld whatever they would have been, and the
    * page says why. On the figures rather than only in the rank, because a

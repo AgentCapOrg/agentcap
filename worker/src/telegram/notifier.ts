@@ -1,5 +1,5 @@
 /**
- * Proactive notifier — the merryman speaks first.
+ * Proactive notifier — the agentcapavatar speaks first.
  *
  * An independent, self-scheduling loop (setTimeout + .finally, same discipline
  * as the poll service — NEVER inside the trading tick) that pushes to the
@@ -20,7 +20,7 @@ import { existsSync, statSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { explorerFor, type PriceQuote } from "../../../packages/core/src/index";
 import { isGasRefusal, isMarketRefusal, rejectRuleLabel, rejectRuleRemedy } from "../thesis-policy";
-import { homePaths, merrymenHome } from "../home";
+import { homePaths, agentcapHome } from "../home";
 import type { ResolvedConfig } from "../settings";
 import { appendJournal, getName, relationship } from "../soul";
 import { cpuPercent, procRunning } from "../pc/platform";
@@ -195,7 +195,7 @@ function liveBlockerRule(agentId: string): string | null {
 /** What the news desk held when this pass ran. Empty on any read failure. */
 function newsNow(): NewsLite[] {
   try {
-    return readResearch(merrymenHome()).news.items.map((n) => ({
+    return readResearch(agentcapHome()).news.items.map((n) => ({
       headline: n.headline,
       source: n.source,
       symbols: n.symbols,
@@ -748,7 +748,7 @@ export function startNotifier(deps: NotifierDeps): NotifierHandle {
              * yesterday.
              */
             let said = "";
-            // NOT FOR ENERGY. A model asked why the agent bought $MERRYMEN has
+            // NOT FOR ENERGY. A model asked why the agent bought $AGENTCAP has
             // only the token and the headlines to go on, and the one thing it
             // must never say is anything about that token's price or returns.
             if ((t.status === "landed" || t.status === "paper") && !isEnergyRow(t) && t.kind !== KEY_INSTALL_KIND) {
@@ -1069,7 +1069,7 @@ export function startNotifier(deps: NotifierDeps): NotifierHandle {
     const MILESTONES: Record<number, string> = {
       7: `🌱 a week on the road together. I'm ${esc(getName())}, and I'm starting to learn your ways — here's to the rides ahead.`,
       30: `🌳 a month riding together! Whatever the market did, we did it side by side. I know you better now — ask /soul and see.`,
-      100: `🏹 a hundred days. Most bands don't last a fortnight. You and me — we're the real merrymen now.`,
+      100: `🏹 a hundred days. Most bands don't last a fortnight. You and me — we're the real agentcap now.`,
       365: `👑 one year. Through every gap, drawdown and rally — still riding with you. Sworn brother-in-arms, always.`,
     };
     for (const [days, message] of Object.entries(MILESTONES)) {

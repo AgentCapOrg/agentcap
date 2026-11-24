@@ -20,7 +20,7 @@ export async function readPublicProjectDescription(
 ): Promise<PublicProjectDescription | null> {
   if (chainId !== MAINNET || !/^0x[0-9a-fA-F]{40}$/.test(token) || /^0x0{40}$/i.test(token)) return null;
   const address = token.toLowerCase() as `0x${string}`;
-  const client = overrides.client ?? createPublicClient({ transport: http(process.env.MERRYMEN_RPC_MAINNET ?? "https://rpc.mainnet.chain.robinhood.com", { timeout: 1200, retryCount: 0 }) });
+  const client = overrides.client ?? createPublicClient({ transport: http(process.env.AGENTCAP_RPC_MAINNET ?? "https://rpc.mainnet.chain.robinhood.com", { timeout: 1200, retryCount: 0 }) });
   const readMeta = overrides.readMeta ?? readTokenMeta;
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {

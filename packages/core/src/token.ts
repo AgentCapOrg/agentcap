@@ -1,15 +1,15 @@
 /**
- * $MERRYMEN — the token, and the "Merry Circle" holder-utility layer.
+ * $AGENTCAP — the token, and the "Merry Circle" holder-utility layer.
  *
  * STANCE (do not drift): utility only. Nothing here — or in any copy that renders
  * these tiers or ENERGY — promises price, returns, buybacks, or burns. Holding
  * earns ACCESS: a lower platform fee, the bonus strategies and, on the hosted
  * service, full ENERGY — the daily capacity an agent has for paid AI reviews and
- * the new trades it starts on its own (energy.ts). Hosted merrymen stays usable
+ * the new trades it starts on its own (energy.ts). Hosted agentcap stays usable
  * without the token, on about a tenth of that capacity, and nothing ever limits
  * stop-losses, take-profits or the owner's own orders (the agent's own AI
- * reviews, of its open positions too, are paced). merrymen stays open source and
- * self-hostable; the energy gate is an operator switch (MERRYMEN_ENERGY_GATE),
+ * reviews, of its open positions too, are paced). agentcap stays open source and
+ * self-hostable; the energy gate is an operator switch (AGENTCAP_ENERGY_GATE),
  * off unless turned on, and never on for a self-hosted install.
  *
  * This replaces an earlier line — "the token buys perks, never the product". On
@@ -35,29 +35,29 @@
  * Bitquery client, which meant moving it was four edits and a test, and missing
  * one left some paths pointing at a host that wasn't serving.
  *
- * CURRENTLY the Railway service URL. `ai.merrymen.dev` is registered and its DNS
+ * CURRENTLY the Railway service URL. `ai.agentcap.xyz` is registered and its DNS
  * is correct, but Railway hasn't issued the Let's Encrypt certificate yet, so
  * TLS on that name resets. Both hostnames route to the same service — switch
  * this line back once the cert lands and every path follows.
  */
-export const MERRYMEN_GATEWAY_ORIGIN = "https://merrymen-gateway-production.up.railway.app";
+export const AGENTCAP_GATEWAY_ORIGIN = "https://agentcap-gateway-production.up.railway.app";
 
 /** The token, on the same chain the agents trade (Robinhood Chain mainnet). */
-export const MERRYMEN_TOKEN = {
-  symbol: "MERRYMEN",
+export const AGENTCAP_TOKEN = {
+  symbol: "AGENTCAP",
   address: "0xa15cd06dd305269a0f48bebeb30aa3588fba7b32" as `0x${string}`,
   decimals: 18,
   chainId: 4663,
 } as const;
 
-export type CircleTierId = "outsider" | "villager" | "merryman" | "lord";
+export type CircleTierId = "outsider" | "villager" | "agentcapavatar" | "lord";
 
 export interface CircleTier {
   id: CircleTierId;
   /** Sherwood-flavoured tier name. */
   name: string;
   emoji: string;
-  /** Whole $MERRYMEN required to reach this tier (inclusive). */
+  /** Whole $AGENTCAP required to reach this tier (inclusive). */
   minTokens: number;
   /** Discount off the platform performance fee, in bps (2_500 = 25% off). */
   feeDiscountBps: number;
@@ -83,13 +83,13 @@ export const CIRCLE_TIERS: readonly CircleTier[] = [
     voteWeight: 0,
     bonusStrategies: false,
     // NEUTRAL, ON PURPOSE. /api/circle hands every tier's perks to the web,
-    // iOS and Android as they are, whatever MERRYMEN_ENERGY_GATE says — and the
+    // iOS and Android as they are, whatever AGENTCAP_ENERGY_GATE says — and the
     // gate is off until an operator turns it on (then 'observe' for a day). A
     // perk saying outsiders run on a tenth told every non-holder they were
     // throttled when nothing was limited, and nudged them to buy. Energy is
     // said only where the gate is known to be on (CreateAgent, Settings, the
     // worker's own report).
-    perks: ["merrymen is free and open to everyone — hold $MERRYMEN to join the Circle"],
+    perks: ["agentcap is free and open to everyone — hold $AGENTCAP to join the Circle"],
   },
   {
     id: "villager",
@@ -106,7 +106,7 @@ export const CIRCLE_TIERS: readonly CircleTier[] = [
     ],
   },
   {
-    id: "merryman",
+    id: "agentcapavatar",
     name: "Merry Man",
     emoji: "🏹",
     minTokens: 100_000,
@@ -129,7 +129,7 @@ export const CIRCLE_TIERS: readonly CircleTier[] = [
     voteWeight: 10,
     bonusStrategies: true,
     perks: [
-      "50% off the platform performance fee — the lowest merrymen offers",
+      "50% off the platform performance fee — the lowest agentcap offers",
       "Every bonus strategy, plus early access to new ones",
       "10× vote on basket & strategy proposals",
       "First look at features before they ship",
@@ -139,7 +139,7 @@ export const CIRCLE_TIERS: readonly CircleTier[] = [
 
 /** Whole tokens (floor) held at a raw 18-dp balance. */
 export function wholeTokens(rawBalance: bigint): number {
-  return Number(rawBalance / 10n ** BigInt(MERRYMEN_TOKEN.decimals));
+  return Number(rawBalance / 10n ** BigInt(AGENTCAP_TOKEN.decimals));
 }
 
 /** Highest tier a raw on-chain balance qualifies for. Never null (outsider floor). */

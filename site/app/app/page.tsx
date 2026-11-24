@@ -19,17 +19,17 @@ import { Icon } from "@/components/Icon";
  * fine with images off.
  */
 
-const GITHUB = "https://github.com/millw14/merrymen";
+const GITHUB = "https://github.com/millw14/agentcap";
 // Bump version and size TOGETHER with app/page.tsx — the URL derives from it,
 // and the two pages must never offer different builds.
 const ANDROID_VERSION = "0.1.2";
 const ANDROID_SIZE = "108 MB";
-const ANDROID_DOWNLOAD = `${GITHUB}/releases/download/mobile-v${ANDROID_VERSION}/merrymen-demo-${ANDROID_VERSION}.apk`;
+const ANDROID_DOWNLOAD = `${GITHUB}/releases/download/mobile-v${ANDROID_VERSION}/agentcap-demo-${ANDROID_VERSION}.apk`;
 
 export const metadata: Metadata = {
-  title: "The band, in your pocket — the merrymen app",
+  title: "The band, in your pocket — the agentcap app",
   description:
-    "The merrymen mobile app: your agent's owner key is born on the phone, stored in the secure enclave, and never leaves. Sign the permission wall with your thumb. Android demo out now; iOS waiting list open.",
+    "The agentcap mobile app: your agent's owner key is born on the phone, stored in the secure enclave, and never leaves. Sign the permission wall with your thumb. Android demo out now; iOS waiting list open.",
 };
 
 export default function AppPage() {
@@ -192,7 +192,7 @@ export default function AppPage() {
             because blocking the exit is never a safety feature.
           </p>
           <p className="app-honest-sub">
-            The real-data build connects to a merrymen worker — your own self-hosted one, or the
+            The real-data build connects to a agentcap worker — your own self-hosted one, or the
             hosted service. Your owner key never leaves the phone either way; the most a server ever
             holds is a capped, revocable session key.
           </p>

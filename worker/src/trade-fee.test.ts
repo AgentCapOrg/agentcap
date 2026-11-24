@@ -136,6 +136,6 @@ describe("who may set it", () => {
     // 5000 bps of PROFIT is survivable; 5000 bps of TURNOVER would empty an
     // account in a fortnight. The same number means something much larger here.
     const worker = codeOf(readFileSync(new URL("./settings.ts", import.meta.url), "utf8"));
-    assert.match(worker, /tradeFeeBps: num\(file\.tradeFeeBps, env\.MERRYMEN_TRADE_FEE_BPS, d\.tradeFeeBps \?\? 50, 0, 500\)/);
+    assert.match(worker, /tradeFeeBps: num\(file\.tradeFeeBps, env\.AGENTCAP_TRADE_FEE_BPS, d\.tradeFeeBps \?\? 50, 0, 500\)/);
   });
 });

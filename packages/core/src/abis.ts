@@ -1,5 +1,5 @@
 /**
- * Uniswap SwapRouter02 exactInputSingle — the one selector merrymen grants
+ * Uniswap SwapRouter02 exactInputSingle — the one selector agentcap grants
  * session keys permission to call. NOTE: SwapRouter02 has NO deadline field
  * (that was SwapRouter v1). Shared by web (call policy) and worker (execution).
  */
@@ -299,7 +299,7 @@ export const PONS_SELFTRADE_ABI = [
  * A packed `bytes` path has no such words. wall.test.ts proves the offsets
  * against viem's encoder.
  *
- * SupportingFeeOnTransferTokens because $MERRYMEN charges a buy tax: this
+ * SupportingFeeOnTransferTokens because $AGENTCAP charges a buy tax: this
  * variant checks amountOutMin against what actually ARRIVES at `to`, not the
  * pre-tax amount the pool sent.
  */
@@ -547,7 +547,7 @@ export const LIGHTER_EVENTS_ABI = [
 ] as const;
 
 /**
- * Virtuals agent-token tax, in bps. $MERRYMEN answered 100 (1%) on 2026-09-27;
+ * Virtuals agent-token tax, in bps. $AGENTCAP answered 100 (1%) on 2026-09-27;
  * the token's owner can change it, which is why the energy buy reads it fresh
  * and refuses above ENERGY.maxTaxBps rather than trusting a remembered figure.
  */

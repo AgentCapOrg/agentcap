@@ -296,7 +296,7 @@ export async function outcomeAfterRefusal(readRecord: () => Promise<OwnerRecord>
  * OWNER_PENDING_STUCK_MS, the page says plainly that the server cannot settle
  * it yet, and points to the recovery card's step 2 when the page shows one.
  * Without the card (key export is off by default) it names no tool: without
- * an exported owner key there is nothing to sign with outside Merrymen. A
+ * an exported owner key there is nothing to sign with outside AgentCap. A
  * stuck withdrawal or resume request never holds back the revocation; an
  * operator settles it from finalized evidence (npm run solana:resolve -- owner).
  *
@@ -341,7 +341,7 @@ export function SolanaOwnerActions({ available, owner, programId, api, sign, ref
   // Bytes cleared without a known outcome, linked so the owner can check Solana itself.
   const [cleared, setCleared] = useState<{ action: OwnerAction; signature: string } | null>(null);
   const [review, setReview] = useState<OwnerReview | null>(null), [lapsed, setLapsed] = useState<OwnerAction | null>(null);
-  // Signatures of withdrawals the owner made outside Merrymen, to record (recordOutside).
+  // Signatures of withdrawals the owner made outside AgentCap, to record (recordOutside).
   const [outside, setOutside] = useState("");
   const [, setReviewClock] = useState(0);
   // True while the owner's wallet is open on the reviewed bytes (signReview).
@@ -485,7 +485,7 @@ export function SolanaOwnerActions({ available, owner, programId, api, sign, ref
     await submit(saved);
   });
   /**
-   * WITHDRAWALS MADE OUTSIDE MERRYMEN. Any wallet or tool holding the owner key
+   * WITHDRAWALS MADE OUTSIDE AGENTCAP. Any wallet or tool holding the owner key
    * (solana-recover, for one) withdraws without this server, which leaves the vault below its
    * recorded balances: trading, exits and withdrawals of that asset are held
    * until the records match. The server records each withdrawal from its own
@@ -495,7 +495,7 @@ export function SolanaOwnerActions({ available, owner, programId, api, sign, ref
     const signatures = outside.split(/[\s,]+/).filter(Boolean);
     const { recorded } = await api<{ recorded: { booked: Array<{ signature: string; mint: string; amountRaw: string }> } }>("owner", { stage: "record", action: "external-withdrawals", signatures });
     setOutside("");
-    setNotice(`Recorded your withdrawal${recorded.booked.length === 1 ? "" : "s"} made outside Merrymen: ${recorded.booked.map((item) => item.mint === SOLANA_USDG_MINT
+    setNotice(`Recorded your withdrawal${recorded.booked.length === 1 ? "" : "s"} made outside AgentCap: ${recorded.booked.map((item) => item.mint === SOLANA_USDG_MINT
       ? `${displaySolanaAmount(item.amountRaw, 6)} USDG` : `${displaySolanaAmount(item.amountRaw, 9)} wrapped SOL`).join(", ")}.`);
     await refresh().catch(() => undefined);
   });
@@ -516,7 +516,7 @@ export function SolanaOwnerActions({ available, owner, programId, api, sign, ref
     : "the server prepares no other withdrawal, resume request or permission; revoking stays available and is prepared beside it";
   return <div className="solana-card" aria-busy={busy}><h2>Owner controls</h2>
     <p>Your wallet must sign every revocation and withdrawal. Token withdrawals return to your own token accounts; native SOL returns to your owner wallet.</p>
-    {held && revokeNeeds && withdrawNeeds && <p>Your owner wallet holds {held} SOL and pays the network fees of these transactions. To revoke it must hold at least {revokeNeeds} SOL; to withdraw, up to {withdrawNeeds} SOL, since a withdrawal may open your token account. Merrymen adds a priority fee only from SOL beyond that, and this page signs none above {sol(OWNER_MAX_PRIORITY_FEE_LAMPORTS.toString())} SOL.</p>}
+    {held && revokeNeeds && withdrawNeeds && <p>Your owner wallet holds {held} SOL and pays the network fees of these transactions. To revoke it must hold at least {revokeNeeds} SOL; to withdraw, up to {withdrawNeeds} SOL, since a withdrawal may open your token account. AgentCap adds a priority fee only from SOL beyond that, and this page signs none above {sol(OWNER_MAX_PRIORITY_FEE_LAMPORTS.toString())} SOL.</p>}
     {short && <p role="alert" className="solana-warning">That is too little to revoke. Send SOL to your owner wallet now, so you can revoke or withdraw in an emergency.</p>}
     {error && <p role="alert" className="solana-error">{error}</p>}
     {notice && <p role="status" className="solana-notice">{notice}</p>}
@@ -526,7 +526,7 @@ export function SolanaOwnerActions({ available, owner, programId, api, sign, ref
       {" "}Until it does, {holds(serverPending.kind)}, and this may not resolve by itself.{" "}
       {recovery === "send" ? "Step 2 of the owner key card below revokes every session and withdraws your vault with your offline owner key, without this server."
         : recovery === "plan" ? "Step 2 of the owner key card below shows your vault and its session without this server."
-        : "Check it again later. If it stays this way, Merrymen has to fix how the server reads Solana: nothing on this page can settle it."}
+        : "Check it again later. If it stays this way, AgentCap has to fix how the server reads Solana: nothing on this page can settle it."}
       {" "}<a target="_blank" rel="noreferrer" href={`https://solscan.io/tx/${encodeURIComponent(serverPending.signature)}`}>View it on Solana</a></p>
       : serverPending && !(pendingIsServers && pending?.signature === serverPending.signature) && <p role="status">Your {kindName(serverPending.kind)} is awaiting final confirmation on Solana. Until it is final, or its blockhash expires (usually within a few minutes), {holds(serverPending.kind)}. <a target="_blank" rel="noreferrer" href={`https://solscan.io/tx/${encodeURIComponent(serverPending.signature)}`}>View it on Solana</a></p>}
     {serverRevoke && !(pendingIsServers && pending?.signature === serverRevoke.signature) && <p role="status">Your revocation is awaiting final confirmation on Solana. Until it is final, or its blockhash expires (usually within a few minutes), the server prepares no other owner transaction, a revocation included. <a target="_blank" rel="noreferrer" href={`https://solscan.io/tx/${encodeURIComponent(serverRevoke.signature)}`}>View it on Solana</a></p>}
@@ -543,8 +543,8 @@ export function SolanaOwnerActions({ available, owner, programId, api, sign, ref
       <label>Native SOL to withdraw<input inputMode="decimal" value={solAmount} onChange={(e) => setSolAmount(e.target.value)} /></label>
       <button disabled={!!pending || anyServerPending} onClick={() => run("withdraw-sol")}>Withdraw native SOL</button>
     </fieldset>
-    <details><summary>Withdrew outside Merrymen?</summary>
-      <p>If you withdrew from your vault outside Merrymen, with your owner key in another wallet or tool, Merrymen&apos;s records still count those funds, and trading, exits and withdrawals of that asset stay held while the vault holds less. Paste those transactions&apos; signatures (up to eight) to record them. Each is read on Solana from two providers, and only an owner withdrawal from your own vault is recorded; nothing is signed or sent.</p>
+    <details><summary>Withdrew outside AgentCap?</summary>
+      <p>If you withdrew from your vault outside AgentCap, with your owner key in another wallet or tool, AgentCap&apos;s records still count those funds, and trading, exits and withdrawals of that asset stay held while the vault holds less. Paste those transactions&apos; signatures (up to eight) to record them. Each is read on Solana from two providers, and only an owner withdrawal from your own vault is recorded; nothing is signed or sent.</p>
       <label>Withdrawal transaction signatures<textarea value={outside} onChange={(e) => setOutside(e.target.value)} /></label>
       <button disabled={busy || !available || !outside.trim()} onClick={recordOutside}>Record these withdrawals</button>
     </details>

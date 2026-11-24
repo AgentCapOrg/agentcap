@@ -1,7 +1,7 @@
 /**
  * EVENT IDENTITY — the key that makes at-least-once delivery safe.
  *
- * The same trader event can reach Merrymen three ways: the live stream, the
+ * The same trader event can reach AgentCap three ways: the live stream, the
  * stream's own replay of recent events on reconnect, and REST recovery after a
  * gap. A worker restart adds a fourth. Every one of those must collapse to ONE
  * persisted event, or a reconnect becomes a duplicate research task, a

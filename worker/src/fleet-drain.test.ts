@@ -29,7 +29,7 @@ import {
   type ShutdownReceipt,
 } from "./fleet-drain";
 
-const scratch = mkdtempSync(path.join(os.tmpdir(), "merrymen-fleet-drain-"));
+const scratch = mkdtempSync(path.join(os.tmpdir(), "agentcap-fleet-drain-"));
 after(() => rmSync(scratch, { recursive: true, force: true }));
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -342,13 +342,13 @@ describe("the receipt", () => {
 describe("the budget", () => {
   it("defaults to 50s, takes a whole number of milliseconds in range, and refuses anything else without echoing it", () => {
     assert.deepEqual(drainBudgetMs({}), { ms: DRAIN_BUDGET_DEFAULT_MS, alerts: [] });
-    assert.deepEqual(drainBudgetMs({ MERRYMEN_DRAIN_BUDGET_MS: "" }), { ms: DRAIN_BUDGET_DEFAULT_MS, alerts: [] });
-    assert.deepEqual(drainBudgetMs({ MERRYMEN_DRAIN_BUDGET_MS: "40000" }), { ms: 40_000, alerts: [] });
+    assert.deepEqual(drainBudgetMs({ AGENTCAP_DRAIN_BUDGET_MS: "" }), { ms: DRAIN_BUDGET_DEFAULT_MS, alerts: [] });
+    assert.deepEqual(drainBudgetMs({ AGENTCAP_DRAIN_BUDGET_MS: "40000" }), { ms: 40_000, alerts: [] });
     for (const bad of ["abc", "0", "999", "600001", "1e4", "-5", "45.5", "0x1000", "fifty-seconds"]) {
-      const r = drainBudgetMs({ MERRYMEN_DRAIN_BUDGET_MS: bad });
+      const r = drainBudgetMs({ AGENTCAP_DRAIN_BUDGET_MS: bad });
       assert.equal(r.ms, DRAIN_BUDGET_DEFAULT_MS, bad);
       assert.equal(r.alerts.length, 1, bad);
-      assert.match(r.alerts[0]!, /^MERRYMEN_DRAIN_BUDGET_MS is not a whole number of milliseconds from 1000 to 600000 — draining within the default 50000ms$/, bad);
+      assert.match(r.alerts[0]!, /^AGENTCAP_DRAIN_BUDGET_MS is not a whole number of milliseconds from 1000 to 600000 — draining within the default 50000ms$/, bad);
     }
   });
 
@@ -361,8 +361,8 @@ describe("the budget", () => {
     assert.equal(cut.alerts.length, 1);
     assert.match(cut.alerts[0]!, /^drain budget cut to 15000ms, to end 5000ms before RAILWAY_DEPLOYMENT_DRAINING_SECONDS sends SIGKILL/);
     // An asked-for budget is cut the same way; one already inside it is not.
-    assert.equal(drainBudgetMs({ MERRYMEN_DRAIN_BUDGET_MS: "120000", RAILWAY_DEPLOYMENT_DRAINING_SECONDS: "60" }).ms, 55_000);
-    assert.deepEqual(drainBudgetMs({ MERRYMEN_DRAIN_BUDGET_MS: "30000", RAILWAY_DEPLOYMENT_DRAINING_SECONDS: "60" }), { ms: 30_000, alerts: [] });
+    assert.equal(drainBudgetMs({ AGENTCAP_DRAIN_BUDGET_MS: "120000", RAILWAY_DEPLOYMENT_DRAINING_SECONDS: "60" }).ms, 55_000);
+    assert.deepEqual(drainBudgetMs({ AGENTCAP_DRAIN_BUDGET_MS: "30000", RAILWAY_DEPLOYMENT_DRAINING_SECONDS: "60" }), { ms: 30_000, alerts: [] });
     // No draining time to speak of: the shortest budget, which gives no final
     // pass and still releases the leases.
     for (const none of ["0", "3"]) assert.equal(drainBudgetMs({ RAILWAY_DEPLOYMENT_DRAINING_SECONDS: none }).ms, 1_000, none);

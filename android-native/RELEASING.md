@@ -1,7 +1,7 @@
 # Android release
 
 Build the native hosted client in this directory. Its Play package is
-`dev.merrymen.app`; the debug package adds `.debug`. Do not substitute the Expo
+`dev.agentcap.app`; the debug package adds `.debug`. Do not substitute the Expo
 project in `mobile/`, which uses the same package name but a different client.
 
 ## Build requirements
@@ -29,8 +29,8 @@ requests and `main`; it has no upload credentials and does not publish builds.
 SDK dependency metadata is included for Play's dependency checks, and its
 generation is validated without a signing key.
 
-Debug builds use `https://app.merrymen.dev` by default. An override such as
-`-Pmerrymen.origin=http://10.0.2.2:3100` is accepted only as an origin, without
+Debug builds use `https://app.agentcap.xyz` by default. An override such as
+`-Pagentcap.origin=http://10.0.2.2:3100` is accepted only as an origin, without
 credentials, a page, a query or a fragment. Plain HTTP is limited to localhost
 and the emulator host. Release packaging requires HTTPS and refuses those
 development hosts.
@@ -47,10 +47,10 @@ protected secrets, without writing passwords into shell history:
 
 | Variable | Value |
 | --- | --- |
-| `MERRYMEN_ANDROID_KEYSTORE` | Absolute path to the upload keystore |
-| `MERRYMEN_ANDROID_STORE_PASSWORD` | Keystore password |
-| `MERRYMEN_ANDROID_KEY_ALIAS` | Upload key alias |
-| `MERRYMEN_ANDROID_KEY_PASSWORD` | Upload key password |
+| `AGENTCAP_ANDROID_KEYSTORE` | Absolute path to the upload keystore |
+| `AGENTCAP_ANDROID_STORE_PASSWORD` | Keystore password |
+| `AGENTCAP_ANDROID_KEY_ALIAS` | Upload key alias |
+| `AGENTCAP_ANDROID_KEY_PASSWORD` | Upload key password |
 
 All four may be absent for development and lint/tests. A partial configuration
 fails immediately. Release packaging fails if all are absent or the keystore
@@ -116,7 +116,7 @@ uses the current geometry within the safe area. Store artwork uses that same mar
 External X authorization stays disabled until all of these are true:
 
 1. `/auth/android`, `/api/auth/android` and `/.well-known/assetlinks.json` are
-   deployed at `https://app.merrymen.dev`.
+   deployed at `https://app.agentcap.xyz`.
 2. Digital Asset Links lists both the Google Play **app signing** certificate and
    the existing GitHub APK/upload certificate. Verify their fingerprints in Play
    Console and against the signed APK; never replace either with a debug key.
@@ -124,9 +124,9 @@ External X authorization stays disabled until all of these are true:
    2026-10-16 its redirect list was empty (all allowed-origin paths permitted),
    so no dashboard mutation was needed. Recheck before enabling; do not narrow
    redirects in a way that breaks web or iOS sign-in.
-4. Set `MERRYMEN_ANDROID_OAUTH_ENABLED=1` only after that deployment and association
+4. Set `AGENTCAP_ANDROID_OAUTH_ENABLED=1` only after that deployment and association
    check. Native code independently requires OS verification of the App Link.
-5. On a physical device, finish X approval and verify return to Merrymen, correct
+5. On a physical device, finish X approval and verify return to AgentCap, correct
    owner identity and a normal signed-in screen. Repeat with no X app installed,
    cancel/retry, rotation, process death and email fallback. Installed X app
    handling depends on X and Android; browser authorization remains supported.

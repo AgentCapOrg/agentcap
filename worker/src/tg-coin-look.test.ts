@@ -21,7 +21,7 @@ import { readFileSync } from "node:fs";
 import { describe, it, mock } from "node:test";
 import { setImmediate } from "node:timers/promises";
 import { encodeAbiParameters, type PublicClient } from "viem";
-import { CASH, MERRYMEN_TOKEN, STOCK_TOKENS, UNISWAP } from "../../packages/core/src/index";
+import { CASH, AGENTCAP_TOKEN, STOCK_TOKENS, UNISWAP } from "../../packages/core/src/index";
 import type { ShadowInputs, ShadowOutcome } from "./brain-shadow";
 import { makeTrencher, TRENCHER_FAST, type Candidate } from "./strategies/trencher";
 import { takeTick, type Snapshot } from "./strategies/types";
@@ -207,7 +207,7 @@ describe("the quick look: every kind, cheapest first", () => {
     assert.deepEqual(await look(VAULT), { kind: "own" });
     assert.deepEqual(await look(CASH.USDG), { kind: "cash", name: "USDG" });
     assert.deepEqual(await look(CASH.WETH), { kind: "cash", name: "WETH" });
-    assert.deepEqual(await look(MERRYMEN_TOKEN.address), { kind: "energy" });
+    assert.deepEqual(await look(AGENTCAP_TOKEN.address), { kind: "energy" });
     const stock = STOCK_TOKENS[0]!;
     assert.deepEqual(await look(stock.address), { kind: "stock", name: stock.symbol }, "a stock goes by its ticker");
     assert.deepEqual(calls, { pools: 0, code: 0, probe: 0, curve: 0 }, "protected addresses never perform market research");
@@ -1114,9 +1114,9 @@ describe("a nominated coin's buy", () => {
   const cand = (token: `0x${string}`, symbol: string): Candidate => ({
     symbol, token, decimals: 18, price8: 1_000_000n, priceable: true, liquidityUsd: 100_000, fdvUsd: 1_000_000, ageSec: 3600, volume24hUsd: 500_000,
   });
-  const inputFor = (symbol: string) => ({ agentId: AGENT, market: { instrumentId: `merrymen:${symbol.toLowerCase()}`, symbol, priceUsd: "0.01" } }) as ShadowInputs;
+  const inputFor = (symbol: string) => ({ agentId: AGENT, market: { instrumentId: `agentcap:${symbol.toLowerCase()}`, symbol, priceUsd: "0.01" } }) as ShadowInputs;
   const buy = (symbol: string, id: string) => ({ ran: true, result: { ok: true, decision: {
-    decision_id: id, agent_id: AGENT, instrument_id: `merrymen:${symbol.toLowerCase()}`, symbol, action: "buy", suggested_delta_usdg: 5e6, gate_verdict: "proceed",
+    decision_id: id, agent_id: AGENT, instrument_id: `agentcap:${symbol.toLowerCase()}`, symbol, action: "buy", suggested_delta_usdg: 5e6, gate_verdict: "proceed",
   } } }) as ShadowOutcome;
   const snap = { cashUsdg: 1000_000_000n, vaultUsdg: 0n, holdings: new Map(), prices: new Map(), pausedTokens: new Set(), staleFeeds: new Set(), sequencerUp: true, spendHeadroomUsdg: 100_000_000n, perTradeCapUsdg: 10_000_000n } as unknown as Snapshot;
 
@@ -1318,7 +1318,7 @@ describe("index.ts wires the seams in the order that makes them safe", () => {
   });
 
   it("the child hands the service its one store and the port", () => {
-    assert.match(CODE, /const tgGroupsStore = TgGroupsStore\.open\(merrymenHome\(\), \{ ownsForgets: !isHostedMode\(\) \}\);\n\s+const tgBook = new NominationBook\(tgGroupsStore\);/);
+    assert.match(CODE, /const tgGroupsStore = TgGroupsStore\.open\(agentcapHome\(\), \{ ownsForgets: !isHostedMode\(\) \}\);\n\s+const tgBook = new NominationBook\(tgGroupsStore\);/);
     const tg = CODE.slice(CODE.indexOf("startTelegram({"));
     assert.match(tg.slice(0, 4000), /\n\s+tgGroupsStore,\n\s+tgCoins,\n/);
   });

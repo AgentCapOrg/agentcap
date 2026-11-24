@@ -1,8 +1,8 @@
 /**
- * GENUINELY NEW TENANTS, ADMITTED WITHOUT BEING NAMED (MERRYMEN_ROLLOUT_NEW_TENANTS).
+ * GENUINELY NEW TENANTS, ADMITTED WITHOUT BEING NAMED (AGENTCAP_ROLLOUT_NEW_TENANTS).
  *
  * THE INCIDENT IT ANSWERS. On 2026-10-09 the hosted fleet ran under an
- * explicit MERRYMEN_FLEET_ROLLOUT naming 49 tenants, and every tenant it did
+ * explicit AGENTCAP_FLEET_ROLLOUT naming 49 tenants, and every tenant it did
  * not name was held (fleet-rollout.ts). A tester created a new agent that day.
  * No worker ever started for it, so nothing minted the link code its Telegram
  * row waits for ("starting up", for good), and no line anywhere said why. The
@@ -18,7 +18,7 @@
  *
  *  - Nothing for it on the volume: no home (children/<tenant>) and no archive
  *    of one (archive/<tenant>, ledger-resume.ts archiveTenantHome), under
- *    MERRYMEN_HOME and under the verified volume's root where that differs.
+ *    AGENTCAP_HOME and under the verified volume's root where that differs.
  *    Every pre-incident tenant whose home survived has one there.
  *  - No history in Postgres for the tenant or the account its grant names:
  *    the new-book branch's own predicate, the one function both ask
@@ -55,7 +55,7 @@
  * again, exactly as before it existed. Naming the tenant in the list gives it
  * the list's level instead.
  *
- * REVOKING ONE ADMISSION. Name the tenant in MERRYMEN_ACCOUNTING_HOLD_TENANTS
+ * REVOKING ONE ADMISSION. Name the tenant in AGENTCAP_ACCOUNTING_HOLD_TENANTS
  * (asked before the rollout, so it holds the tenant whatever the record says)
  * and deploy. Or delete its row here: the next pass stands its worker down,
  * and since it has a home by then it is never proved new again, so it stays
@@ -127,7 +127,7 @@ export interface NewTenantScope {
   account: string;
   owner: string;
   chainId: number;
-  /** Every path its home could have: children/<tenant> under MERRYMEN_HOME, and under the verified volume's root where that differs. At least one. */
+  /** Every path its home could have: children/<tenant> under AGENTCAP_HOME, and under the verified volume's root where that differs. At least one. */
   homes: readonly string[];
   /** Each a directory holding archive/<tenant> trees (archiveTenantHome's archiveRoot is <root>/<tenant>). At least one. */
   archiveRoots: readonly string[];

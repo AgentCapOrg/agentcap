@@ -57,7 +57,7 @@ describe("proposeSettingChange — a question, never a change", () => {
   });
 
   it("the X reply answers an owner trying to STOP posting too: off as well as on, the app as well as the dashboard", () => {
-    // The owner most likely to type "tweets off" is one whose Merryman just
+    // The owner most likely to type "tweets off" is one whose AgentCapAvatar just
     // posted something they did not like; a reply that only says how posting
     // is switched ON reads as if the command worked, or as if it was off.
     const p = proposeSettingChange("tweets", "off", ctx) as { kind: string; text: string };

@@ -9,7 +9,7 @@ import { SETTINGS_DEFAULTS } from "../../packages/core/src/index";
  *
  * /grant defaulted to testnet 46630, and preflight classifies exactly that as a
  * hard BLOCKER — not as a policy choice but as a fact: every token and router
- * address merrymen knows is a mainnet deployment, so on testnet a balance reads
+ * address agentcap knows is a mainnet deployment, so on testnet a balance reads
  * as zero and every route is refused. The most likely outcome of accepting every
  * default was an agent that could never trade, and a user asking why.
  */

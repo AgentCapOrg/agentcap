@@ -121,7 +121,7 @@ export const MUST_PRESERVE = [
  * `classMaxPositions` (0 would read as a configuration the owner chose), not
  * `scoutEnabled` (the budget is also what an exit reports against). Anything
  * broader here silently strands a live position in a book that can no longer
- * close it, which is the trap `merrymen`'s class route was built to avoid.
+ * close it, which is the trap `agentcap`'s class route was built to avoid.
  */
 export const HALT_ENTRIES = Object.freeze({ classSnipeEnabled: false });
 

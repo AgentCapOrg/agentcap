@@ -12,7 +12,7 @@
  *   a child, over IPC       decision evidence for a review. Spends from the
  *                           evidence share only (bitquery-lane.ts), and only a
  *                           child whose smart account the operator listed in
- *                           MERRYMEN_DECISION_RESEARCH_ACCOUNTS may ask at all.
+ *                           AGENTCAP_DECISION_RESEARCH_ACCOUNTS may ask at all.
  *
  * THE LAUNCHER IS RESOLVED HERE, FROM THE LAUNCHPAD'S OWN RECORD. Whether a
  * coin's launcher sold needs the launcher's address, and a caller that could
@@ -40,7 +40,7 @@ import { createPublicClient, http, type PublicClient } from "viem";
 import { decisionResearchEnabledFor } from "./decision-research";
 import { childProcessFlowPort, serveFlowRequests } from "./flow-broker";
 import type { CreatorFlow, FlowResult } from "./flow-facts";
-import { merrymenHome } from "./home";
+import { agentcapHome } from "./home";
 import { BITQUERY_LANE_DEFAULTS, BitqueryLane, LANE_POINTS, bitqueryLaneSetup, type BitqueryLaneSetup, type LanePurpose } from "./venues/bitquery-lane";
 import { readLaunchCreator, type LaunchCreator } from "./venues/pons";
 
@@ -177,7 +177,7 @@ export interface FlowRuntime {
 
 /**
  * Read the switches and build the lane, once. Off — no key, or
- * MERRYMEN_BITQUERY_LANE=0 — there is no SQLite file, no RPC client and no
+ * AGENTCAP_BITQUERY_LANE=0 — there is no SQLite file, no RPC client and no
  * request. A lane whose file cannot be opened is off too, and says why.
  */
 export function startFlowRuntime(o: { env: Record<string, string | undefined>; home: string; rpcUrl: string; log: (line: string) => void }): FlowRuntime {
@@ -217,9 +217,9 @@ export const DEFAULT_RPC_MAINNET = "https://rpc.mainnet.chain.robinhood.com";
 export function flowRuntimeNow(o: { log?: (line: string) => void } = {}): FlowRuntime {
   runtime ??= startFlowRuntime({
     env: process.env,
-    home: merrymenHome(),
+    home: agentcapHome(),
     // The same default every other read in the orchestrator uses.
-    rpcUrl: process.env.MERRYMEN_RPC_MAINNET ?? DEFAULT_RPC_MAINNET,
+    rpcUrl: process.env.AGENTCAP_RPC_MAINNET ?? DEFAULT_RPC_MAINNET,
     log: o.log ?? ((line) => console.log(`[orchestrator] ${line}`)),
   });
   return runtime;

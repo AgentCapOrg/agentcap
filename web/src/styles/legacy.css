@@ -1,5 +1,5 @@
 /* ============================================================
-   merrymen — Sherwood dark terminal design system
+   agentcap — Sherwood dark terminal design system
    Lineage: littlejohn's palette, Bloomberg density, calm confidence.
    Numbers and addresses are ALWAYS mono. Green = gain, red = loss,
    gold = the chain / live status. Nothing memes.
@@ -1120,7 +1120,7 @@ button { font: inherit; cursor: pointer; }
 
 /* ============================================================
    setup-look — the onboarding / settings screens, dressed in the
-   merrymen.dev language (Hanken Grotesk + JetBrains Mono, airy
+   agentcap.xyz language (Hanken Grotesk + JetBrains Mono, airy
    cards, tight-radius buttons, "get a key" chips). Scoped so the
    dense trading terminal keeps its own look untouched.
    ============================================================ */

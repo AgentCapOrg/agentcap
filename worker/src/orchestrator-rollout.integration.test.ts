@@ -1,7 +1,7 @@
 /**
  * THE ROLLOUT, THROUGH THE REAL reconcile() (fleet-rollout.ts).
  *
- * A tenant MERRYMEN_FLEET_ROLLOUT does not admit is held: the supervisor
+ * A tenant AGENTCAP_FLEET_ROLLOUT does not admit is held: the supervisor
  * leases nothing for it, starts nothing for it and retires none of its expired
  * keys, so its home stays as the incident left it. It stays in the roster, so
  * the removed-agent sweep still tells "not admitted" from "removed". Its
@@ -16,7 +16,7 @@
  * recorded (setLeaseAcquireForTest): the no-op lease is taken and released
  * without trace, so "never leased" could not otherwise be seen.
  *
- * MERRYMEN_HOME and the environment are per process (node --test runs each
+ * AGENTCAP_HOME and the environment are per process (node --test runs each
  * file in its own), so nothing here leaks into another file.
  */
 import assert from "node:assert/strict";
@@ -33,18 +33,18 @@ import { DEPLOY_GUARD_IMAGE, hostedOrchestratorRefusals, onRailway } from "./dep
 import { applyLedgerSchema } from "./store";
 import { MIRROR_STATE_DDL } from "./ledger-mirror";
 
-const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-rollout-")));
-process.env.MERRYMEN_HOME = fleet;
-process.env.MERRYMEN_HOSTED = "1";
+const fleet = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-rollout-")));
+process.env.AGENTCAP_HOME = fleet;
+process.env.AGENTCAP_HOSTED = "1";
 delete process.env.DATABASE_URL;
-delete process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS;
-delete process.env.MERRYMEN_FLEET_RECOVERY_REPORT_ONLY;
-delete process.env.MERRYMEN_PERSISTENT_HOME_REQUIRED;
-delete process.env.MERRYMEN_FLEET_ROLLOUT;
+delete process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS;
+delete process.env.AGENTCAP_FLEET_RECOVERY_REPORT_ONLY;
+delete process.env.AGENTCAP_PERSISTENT_HOME_REQUIRED;
+delete process.env.AGENTCAP_FLEET_ROLLOUT;
 // Not Railway: unset means `all` here, and each test names the scope it wants.
 for (const key of Object.keys(process.env)) if (key.startsWith("RAILWAY_")) delete process.env[key];
 const dek = Buffer.alloc(32, 83);
-process.env.MERRYMEN_STORE_DEK = dek.toString("base64");
+process.env.AGENTCAP_STORE_DEK = dek.toString("base64");
 
 const {
   adoptHolderForTest, childEnv, childHome, hasLeaseForTest, honourPendingKills, isHeldForTest, isRetiringExpiredForTest,
@@ -109,7 +109,7 @@ const settle = async (n = 30) => { for (let i = 0; i < n; i++) await new Promise
 const store = getGrantStore("spot");
 const used: `0x${string}`[] = [];
 const tenantAt = (n: number) => { const t = address(n); used.push(t); return t; };
-const spawnedFor = (tenant: string) => spawned.filter((p) => p.env.MERRYMEN_HOME === childHome(tenant));
+const spawnedFor = (tenant: string) => spawned.filter((p) => p.env.AGENTCAP_HOME === childHome(tenant));
 
 after(() => {
   console.log = realLog;
@@ -121,7 +121,7 @@ after(() => {
 afterEach(async () => {
   // Admit everyone again, take every grant away, and let one pass stand the
   // fleet down and sweep its homes, so each test starts from nothing.
-  delete process.env.MERRYMEN_FLEET_ROLLOUT;
+  delete process.env.AGENTCAP_FLEET_ROLLOUT;
   setRetirementMemoryStoreForTest(null);
   setPaperRestoreForTest(async () => ({ ok: true, line: null }));
   for (const tenant of used) await store.remove(tenant);
@@ -168,7 +168,7 @@ describe("a tenant the rollout does not admit", () => {
     for (const tenant of [out, expired]) {
       const home = childHome(tenant);
       mkdirSync(home, { recursive: true });
-      writeFileSync(path.join(home, "merrymen.db"), "original-book-not-opened", { mode: 0o600 });
+      writeFileSync(path.join(home, "agentcap.db"), "original-book-not-opened", { mode: 0o600 });
       writeFileSync(path.join(home, "settings.json"), JSON.stringify({ paperTradingEnabled: true }), { mode: 0o600 });
       writeFileSync(path.join(home, "telegram.json"), "{}", { mode: 0o600 });
       writeFileSync(path.join(home, "heartbeat.json"), JSON.stringify({ at: nowSec() - 86_400 }), { mode: 0o600 });
@@ -181,7 +181,7 @@ describe("a tenant the rollout does not admit", () => {
     await shared.exec(MIRROR_STATE_DDL);
     setRetirementMemoryStoreForTest({ shared, dek, dialect: "sqlite" });
     try {
-      process.env.MERRYMEN_FLEET_ROLLOUT = `${admitted}:trade`;
+      process.env.AGENTCAP_FLEET_ROLLOUT = `${admitted}:trade`;
       const before = { out: snapshot(childHome(out)), expired: snapshotWithout(childHome(expired), "grant.json") };
       for (let pass = 0; pass < 3; pass++) {
         await reconcile();
@@ -197,23 +197,23 @@ describe("a tenant the rollout does not admit", () => {
       assert.ok(leaseAsks.includes(admitted), "the admitted tenant was leased");
       assert.equal(hasLeaseForTest(out), false);
       assert.equal(hasLeaseForTest(expired), false);
-      assert.deepEqual(spawned.map((p) => p.env.MERRYMEN_HOME), [childHome(admitted)], "only the admitted tenant runs");
+      assert.deepEqual(spawned.map((p) => p.env.AGENTCAP_HOME), [childHome(admitted)], "only the admitted tenant runs");
       assert.equal(isRetiringExpiredForTest(expired), false, "its expiry is not retired");
       assert.deepEqual(rolloutCountsForTest(), { trade: 1, "exits-only": 0, observe: 0, held: 2, expired: 0, absent: 0 });
 
       // THE LEVEL, AND ONLY THE LEVEL, REACHES THE CHILD.
       const env = spawned[0]!.env;
-      assert.equal(env.MERRYMEN_ADMISSION_LEVEL, "trade");
-      assert.equal(env.MERRYMEN_FLEET_ROLLOUT, undefined, "the rollout names other tenants; a child never sees it");
+      assert.equal(env.AGENTCAP_ADMISSION_LEVEL, "trade");
+      assert.equal(env.AGENTCAP_FLEET_ROLLOUT, undefined, "the rollout names other tenants; a child never sees it");
 
       // ADMISSION DOES WHAT WAS WAITING, which also shows the homes above were
       // ones these passes would have changed had they been admitted.
-      process.env.MERRYMEN_FLEET_ROLLOUT = `${admitted}:trade,${out}:trade,${expired}:trade`;
+      process.env.AGENTCAP_FLEET_ROLLOUT = `${admitted}:trade,${out}:trade,${expired}:trade`;
       await reconcile();
       await settle();
       assert.ok(leaseAsks.includes(out), "the newly admitted tenant is leased");
       assert.equal(spawnedFor(out).length, 1, "and started");
-      assert.equal(spawnedFor(out)[0]!.env.MERRYMEN_ADMISSION_LEVEL, "trade");
+      assert.equal(spawnedFor(out)[0]!.env.AGENTCAP_ADMISSION_LEVEL, "trade");
       assert.equal(spawnedFor(expired).length, 0, "an expired key still runs nothing");
       assert.deepEqual(rolloutCountsForTest(), { trade: 2, "exits-only": 0, observe: 0, held: 0, expired: 1, absent: 0 },
         "and the heartbeat counts it as expired, not as trading");
@@ -226,7 +226,7 @@ describe("a tenant the rollout does not admit", () => {
   it("one stood down with its key expired is not retired until the pass that admits it", async () => {
     const a = tenantAt(0x1fb), account = address(0x1fc);
     await store.put(a, grant(account));
-    process.env.MERRYMEN_FLEET_ROLLOUT = `${a}:trade`;
+    process.env.AGENTCAP_FLEET_ROLLOUT = `${a}:trade`;
     await reconcile();
     assert.equal(spawnedFor(a).length, 1);
     assert.equal(hasLeaseForTest(a), true);
@@ -234,7 +234,7 @@ describe("a tenant the rollout does not admit", () => {
     // retirement that would mirror its book under the lease, then let the
     // lease go, waits.
     await store.put(a, grant(account, nowSec() - 60));
-    process.env.MERRYMEN_FLEET_ROLLOUT = "none";
+    process.env.AGENTCAP_FLEET_ROLLOUT = "none";
     leaseAsks.length = 0;
     const retiring = () => said.filter((l) => l.includes(`${a}: signed grant expired — retiring its process`));
     for (let pass = 0; pass < 2; pass++) {
@@ -247,7 +247,7 @@ describe("a tenant the rollout does not admit", () => {
     assert.equal(hasLeaseForTest(a), true, "its lease is kept, as for any held tenant still wanted");
     assert.deepEqual(leaseAsks, [], "and none asked for");
     // Admitted again, it is retired as any expired tenant is.
-    process.env.MERRYMEN_FLEET_ROLLOUT = `${a}:trade`;
+    process.env.AGENTCAP_FLEET_ROLLOUT = `${a}:trade`;
     await reconcile();
     assert.equal(retiring().length, 1, said.join("\n"));
     assert.equal(spawnedFor(a).length, 1, "and an expired key runs nothing");
@@ -257,7 +257,7 @@ describe("a tenant the rollout does not admit", () => {
     const a = tenantAt(0x111), b = tenantAt(0x121);
     await store.put(a, grant(address(0x112)));
     await store.put(b, grant(address(0x122)));
-    process.env.MERRYMEN_FLEET_ROLLOUT = "none";
+    process.env.AGENTCAP_FLEET_ROLLOUT = "none";
     await reconcile();
     await reconcile();
     assert.deepEqual(leaseAsks, []);
@@ -275,10 +275,10 @@ describe("a tenant the rollout does not admit", () => {
       await store.put(tenant, grant(account));
       const home = childHome(tenant);
       mkdirSync(home, { recursive: true });
-      writeFileSync(path.join(home, "merrymen.db"), "original-book-not-opened", { mode: 0o600 });
+      writeFileSync(path.join(home, "agentcap.db"), "original-book-not-opened", { mode: 0o600 });
       writeFileSync(path.join(home, "settings.json"), "{}", { mode: 0o600 });
     }
-    process.env.MERRYMEN_FLEET_ROLLOUT = "none";
+    process.env.AGENTCAP_FLEET_ROLLOUT = "none";
     // The order ferry's three-second clock (honourPendingKills)...
     writeKillRequest(childHome(ferried), grant(ferriedAccount), nowSec());
     await honourPendingKills();
@@ -292,12 +292,12 @@ describe("a tenant the rollout does not admit", () => {
     assert.deepEqual(confirmed, [ferried, reconciled]);
     for (const tenant of [ferried, reconciled]) {
       assert.equal(existsSync(path.join(childHome(tenant), "settings.json")), false, "a revoked tenant is removed, and its cached access cleared");
-      assert.equal(existsSync(path.join(childHome(tenant), "merrymen.db")), true, "with its original book kept");
+      assert.equal(existsSync(path.join(childHome(tenant), "agentcap.db")), true, "with its original book kept");
     }
     assert.deepEqual(leaseAsks, [], "a kill takes no lease");
     assert.deepEqual(spawned, []);
     // Admitting them later arms nothing: the grants are gone.
-    process.env.MERRYMEN_FLEET_ROLLOUT = `${ferried}:trade,${reconciled}:trade`;
+    process.env.AGENTCAP_FLEET_ROLLOUT = `${ferried}:trade,${reconciled}:trade`;
     await reconcile();
     assert.deepEqual(spawned, []);
   });
@@ -306,16 +306,16 @@ describe("a tenant the rollout does not admit", () => {
     const a = tenantAt(0x131), b = tenantAt(0x133);
     await store.put(a, grant(address(0x132)));
     await store.put(b, grant(address(0x134)));
-    process.env.MERRYMEN_FLEET_ROLLOUT = `${a}:trade,${b}:trade,${address(0x999)}:trade`;
+    process.env.AGENTCAP_FLEET_ROLLOUT = `${a}:trade,${b}:trade,${address(0x999)}:trade`;
     // And one the rollout admits but the accounting hold names: held, not trading.
-    process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS = b;
+    process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS = b;
     try {
       await reconcile();
     } finally {
-      delete process.env.MERRYMEN_ACCOUNTING_HOLD_TENANTS;
+      delete process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS;
     }
     assert.deepEqual(rolloutCountsForTest(), { trade: 1, "exits-only": 0, observe: 0, held: 1, expired: 0, absent: 1 });
-    assert.equal(spawnedFor(a)[0]?.env.MERRYMEN_ADMISSION_LEVEL, "trade");
+    assert.equal(spawnedFor(a)[0]?.env.AGENTCAP_ADMISSION_LEVEL, "trade");
     assert.equal(spawnedFor(b).length, 0);
     // And the heartbeat row publishes those counts under the scope's name, as
     // the `fleet| rollout` line says them: never a tenant.
@@ -342,12 +342,12 @@ describe("the removed-agent sweep is the fleet's, not the rollout's", () => {
       writeFileSync(path.join(childHome(tenant), "settings.json"), "{}");
       writeFileSync(path.join(childHome(tenant), "telegram.json"), "{}");
     }
-    writeFileSync(path.join(childHome(goneWithBook), "merrymen.db"), "original-book");
-    process.env.MERRYMEN_FLEET_ROLLOUT = "none";
+    writeFileSync(path.join(childHome(goneWithBook), "agentcap.db"), "original-book");
+    process.env.AGENTCAP_FLEET_ROLLOUT = "none";
     await reconcile();
     assert.equal(existsSync(childHome(gone)), false, "a removed tenant with no book is wiped");
     assert.equal(existsSync(path.join(childHome(goneWithBook), "settings.json")), false, "a removed tenant's cached access is cleared");
-    assert.equal(existsSync(path.join(childHome(goneWithBook), "merrymen.db")), true, "and its original book retained");
+    assert.equal(existsSync(path.join(childHome(goneWithBook), "agentcap.db")), true, "and its original book retained");
     assert.equal(existsSync(path.join(childHome(held), "settings.json")), true, "a held tenant is wanted, not removed");
     assert.deepEqual(leaseAsks, []);
   });
@@ -355,7 +355,7 @@ describe("the removed-agent sweep is the fleet's, not the rollout's", () => {
   it("a removed tenant still running goes to the kill switch, not the rollout's stand-down", async () => {
     const child = tenantAt(0x1fd), held = tenantAt(0x1ff), heldAccount = address(0x200);
     await store.put(child, grant(address(0x1fe)));
-    process.env.MERRYMEN_FLEET_ROLLOUT = `${child}:trade`;
+    process.env.AGENTCAP_FLEET_ROLLOUT = `${child}:trade`;
     await reconcile();
     assert.equal(spawnedFor(child).length, 1);
     await store.put(held, grant(heldAccount));
@@ -365,7 +365,7 @@ describe("the removed-agent sweep is the fleet's, not the rollout's", () => {
     // rollout would otherwise also read as held.
     await store.remove(child);
     await store.remove(held);
-    process.env.MERRYMEN_FLEET_ROLLOUT = "none";
+    process.env.AGENTCAP_FLEET_ROLLOUT = "none";
     said.length = 0;
     await reconcile();
     await settle();
@@ -381,10 +381,10 @@ describe("one hold predicate, at every path that starts a process", () => {
     const a = tenantAt(0x171), b = tenantAt(0x181);
     await store.put(a, grant(address(0x172)));
     await store.put(b, grant(address(0x182)));
-    process.env.MERRYMEN_FLEET_ROLLOUT = `${a}:trade,${b}:trade`;
+    process.env.AGENTCAP_FLEET_ROLLOUT = `${a}:trade,${b}:trade`;
     await reconcile();
     assert.equal(spawned.length, 2);
-    process.env.MERRYMEN_FLEET_ROLLOUT = `${b}:trade`;
+    process.env.AGENTCAP_FLEET_ROLLOUT = `${b}:trade`;
     leaseAsks.length = 0;
     await reconcile();
     await settle();
@@ -399,11 +399,11 @@ describe("one hold predicate, at every path that starts a process", () => {
   it("a child that exits while out of the rollout schedules no restart", async (context) => {
     const a = tenantAt(0x191);
     await store.put(a, grant(address(0x192)));
-    process.env.MERRYMEN_FLEET_ROLLOUT = `${a}:trade`;
+    process.env.AGENTCAP_FLEET_ROLLOUT = `${a}:trade`;
     await reconcile();
     assert.equal(spawned.length, 1);
     context.mock.timers.enable({ apis: ["setTimeout"] });
-    process.env.MERRYMEN_FLEET_ROLLOUT = "none";
+    process.env.AGENTCAP_FLEET_ROLLOUT = "none";
     spawned[0]!.die(1);
     context.mock.timers.tick(60_000);
     await settle();
@@ -414,14 +414,14 @@ describe("one hold predicate, at every path that starts a process", () => {
   it("a restart scheduled while admitted cannot start the tenant once the rollout no longer does", async (context) => {
     const a = tenantAt(0x1a1);
     await store.put(a, grant(address(0x1a2)));
-    process.env.MERRYMEN_FLEET_ROLLOUT = `${a}:trade`;
+    process.env.AGENTCAP_FLEET_ROLLOUT = `${a}:trade`;
     await reconcile();
     assert.equal(spawned.length, 1);
     context.mock.timers.enable({ apis: ["setTimeout"] });
     spawned[0]!.die(1);
     await settle();
     assert.ok(said.some((l) => l.includes(`${a} rallying again`)), "the restart was scheduled while admitted");
-    process.env.MERRYMEN_FLEET_ROLLOUT = "none";
+    process.env.AGENTCAP_FLEET_ROLLOUT = "none";
     // Past spawnChild's first gate, its first await is the stored grant's read,
     // reached synchronously from the timer's callback: a read here means the
     // spawn went on to prepare a key and settings it was never going to use.
@@ -446,15 +446,15 @@ describe("one hold predicate, at every path that starts a process", () => {
     const a = tenantAt(0x1b1);
     await store.put(a, grant(address(0x1b2)));
     await getSettingsStore("spot").put(a, { paperTradingEnabled: true, telegramEnabled: false } as never);
-    process.env.MERRYMEN_FLEET_ROLLOUT = `${a}:trade`;
+    process.env.AGENTCAP_FLEET_ROLLOUT = `${a}:trade`;
     setPaperRestoreForTest(async () => {
-      process.env.MERRYMEN_FLEET_ROLLOUT = "none";
+      process.env.AGENTCAP_FLEET_ROLLOUT = "none";
       return { ok: false, reason: "paper fills are newer than the recoverable valuation" };
     });
     await reconcile();
     assert.equal(spawned.length, 0, "a failed restore cannot start a holder for a tenant the rollout no longer admits");
     assert.equal(isHeldForTest(a), false, "nor record one");
-    assert.ok(!said.some((l) => l.includes(`${a}: MERRYMEN_FLEET_ROLLOUT does not admit this tenant — not holding`)),
+    assert.ok(!said.some((l) => l.includes(`${a}: AGENTCAP_FLEET_ROLLOUT does not admit this tenant — not holding`)),
       "spawnHolder's own first gate refused, before restoring the bot's link");
   });
 
@@ -464,14 +464,14 @@ describe("one hold predicate, at every path that starts a process", () => {
     await getSettingsStore("spot").put(a, { paperTradingEnabled: false, telegramEnabled: false } as never);
     const hold = new FakeProc({}, true);
     await adoptHolderForTest(a, account, hold as unknown as ChildProcess);
-    process.env.MERRYMEN_FLEET_ROLLOUT = `${a}:trade`;
+    process.env.AGENTCAP_FLEET_ROLLOUT = `${a}:trade`;
     // The scope narrows while the pass reads the held tenant's settings, after
     // its stand-down was decided and before its handover is: only holdMayLeave
     // is left to ask.
     const real = getSettingsStore("spot");
     const narrowing = Object.create(real) as typeof real;
     narrowing.get = async (t) => {
-      if (t.toLowerCase() === a) process.env.MERRYMEN_FLEET_ROLLOUT = "none";
+      if (t.toLowerCase() === a) process.env.AGENTCAP_FLEET_ROLLOUT = "none";
       return real.get(t);
     };
     useSettingsStoreForTest(narrowing, "spot");
@@ -489,14 +489,14 @@ describe("one hold predicate, at every path that starts a process", () => {
   it("a successful restore still cannot start a worker once the rollout narrowed during preparation", async () => {
     const a = tenantAt(0x1c1);
     await store.put(a, grant(address(0x1c2)));
-    process.env.MERRYMEN_FLEET_ROLLOUT = `${a}:trade`;
+    process.env.AGENTCAP_FLEET_ROLLOUT = `${a}:trade`;
     setPaperRestoreForTest(async () => {
-      process.env.MERRYMEN_FLEET_ROLLOUT = "none";
+      process.env.AGENTCAP_FLEET_ROLLOUT = "none";
       return { ok: true, line: "restored after the scope narrowed" };
     });
     await reconcile();
     assert.equal(spawned.length, 0, "the last check before the fork sees the rollout");
-    assert.ok(said.some((l) => l.includes("MERRYMEN_FLEET_ROLLOUT does not admit this tenant — not spawning")));
+    assert.ok(said.some((l) => l.includes("AGENTCAP_FLEET_ROLLOUT does not admit this tenant — not spawning")));
   });
 
   it("a held tenant's hold process is stood down and never retried or handed back; an admitted one is", async () => {
@@ -513,7 +513,7 @@ describe("one hold predicate, at every path that starts a process", () => {
     await adoptHolderForTest(b, bAccount, bHold as unknown as ChildProcess);
     let restores = 0;
     setPaperRestoreForTest(async () => { restores++; return { ok: true, line: null }; });
-    process.env.MERRYMEN_FLEET_ROLLOUT = `${b}:trade`;
+    process.env.AGENTCAP_FLEET_ROLLOUT = `${b}:trade`;
     leaseAsks.length = 0;
     await reconcile();
     await settle();
@@ -525,7 +525,7 @@ describe("one hold predicate, at every path that starts a process", () => {
     assert.ok(!leaseAsks.includes(a));
     assert.equal(bHold.gone, true, "the admitted tenant's hold process is stopped for the handover");
     assert.equal(spawnedFor(b).length, 1, "and the admitted tenant handed back to trading");
-    assert.equal(spawnedFor(b)[0]!.env.MERRYMEN_ADMISSION_LEVEL, "trade");
+    assert.equal(spawnedFor(b)[0]!.env.AGENTCAP_ADMISSION_LEVEL, "trade");
     assert.equal(restores, 1, "only the admitted tenant's book was restored, by its own spawn");
   });
 });
@@ -533,23 +533,23 @@ describe("one hold predicate, at every path that starts a process", () => {
 describe("childEnv", () => {
   it("always sets the tenant's own level, over anything the orchestrator's env carried, and strips the rollout", () => {
     const a = address(0x1f1), b = address(0x1f2);
-    process.env.MERRYMEN_FLEET_ROLLOUT = `${a}:trade`;
-    process.env.MERRYMEN_ADMISSION_LEVEL = "exits-only";
+    process.env.AGENTCAP_FLEET_ROLLOUT = `${a}:trade`;
+    process.env.AGENTCAP_ADMISSION_LEVEL = "exits-only";
     try {
-      assert.equal(childEnv(a).MERRYMEN_ADMISSION_LEVEL, "trade", "never inherited from the operator");
-      assert.equal(childEnv(a).MERRYMEN_FLEET_ROLLOUT, undefined);
-      assert.equal(childEnv(b).MERRYMEN_ADMISSION_LEVEL, "observe", "held never reaches a child; observe is the floor");
-      process.env.MERRYMEN_FLEET_ROLLOUT = "all";
-      assert.equal(childEnv(b).MERRYMEN_ADMISSION_LEVEL, "trade");
+      assert.equal(childEnv(a).AGENTCAP_ADMISSION_LEVEL, "trade", "never inherited from the operator");
+      assert.equal(childEnv(a).AGENTCAP_FLEET_ROLLOUT, undefined);
+      assert.equal(childEnv(b).AGENTCAP_ADMISSION_LEVEL, "observe", "held never reaches a child; observe is the floor");
+      process.env.AGENTCAP_FLEET_ROLLOUT = "all";
+      assert.equal(childEnv(b).AGENTCAP_ADMISSION_LEVEL, "trade");
       // A staged level reaches its child as itself, for the worker's gate to
       // obey — and still not from the operator's own, now at neither.
-      process.env.MERRYMEN_ADMISSION_LEVEL = "trade";
-      process.env.MERRYMEN_FLEET_ROLLOUT = `${a}:exits-only,${b}:observe`;
-      assert.equal(childEnv(a).MERRYMEN_ADMISSION_LEVEL, "exits-only");
-      assert.equal(childEnv(b).MERRYMEN_ADMISSION_LEVEL, "observe");
-      assert.equal(childEnv(a).MERRYMEN_FLEET_ROLLOUT, undefined);
+      process.env.AGENTCAP_ADMISSION_LEVEL = "trade";
+      process.env.AGENTCAP_FLEET_ROLLOUT = `${a}:exits-only,${b}:observe`;
+      assert.equal(childEnv(a).AGENTCAP_ADMISSION_LEVEL, "exits-only");
+      assert.equal(childEnv(b).AGENTCAP_ADMISSION_LEVEL, "observe");
+      assert.equal(childEnv(a).AGENTCAP_FLEET_ROLLOUT, undefined);
     } finally {
-      delete process.env.MERRYMEN_ADMISSION_LEVEL;
+      delete process.env.AGENTCAP_ADMISSION_LEVEL;
     }
   });
 });
@@ -573,15 +573,15 @@ describe("startup", () => {
    */
   const boot = async (rollout: string | undefined, extra: Record<string, string> = {}) => {
     const saved = { ...process.env };
-    if (rollout === undefined) delete process.env.MERRYMEN_FLEET_ROLLOUT;
-    else process.env.MERRYMEN_FLEET_ROLLOUT = rollout;
-    process.env.MERRYMEN_FLEET_RECOVERY_REPORT_ONLY = "1";
+    if (rollout === undefined) delete process.env.AGENTCAP_FLEET_ROLLOUT;
+    else process.env.AGENTCAP_FLEET_ROLLOUT = rollout;
+    process.env.AGENTCAP_FLEET_RECOVERY_REPORT_ONLY = "1";
     Object.assign(process.env, extra);
     if (onRailway(process.env)) {
       const service = process.env.RAILWAY_SERVICE_ID || "227ff49a-1111-4222-8333-444455556666";
       Object.assign(process.env, {
-        RAILWAY_SERVICE_ID: service, MERRYMEN_FLEET_SERVICE_ID: service,
-        MERRYMEN_PERSISTENT_HOME_REQUIRED: "1", MERRYMEN_IMAGE: DEPLOY_GUARD_IMAGE,
+        RAILWAY_SERVICE_ID: service, AGENTCAP_FLEET_SERVICE_ID: service,
+        AGENTCAP_PERSISTENT_HOME_REQUIRED: "1", AGENTCAP_IMAGE: DEPLOY_GUARD_IMAGE,
       });
     }
     try {
@@ -599,7 +599,7 @@ describe("startup", () => {
 
   it("refuses a malformed value before either entry path", async () => {
     for (const value of ["halt", "", "NONE", `${address(1)}:paper`, `${address(1)}:trade,`]) {
-      assert.match((await boot(value))!, /MERRYMEN_FLEET_ROLLOUT .*refusing to start rather than guess/, value);
+      assert.match((await boot(value))!, /AGENTCAP_FLEET_ROLLOUT .*refusing to start rather than guess/, value);
     }
   });
 
@@ -608,24 +608,24 @@ describe("startup", () => {
     // starts no tenant, so a value that names some is refused there — which
     // is only reached once the value itself has been read and accepted.
     for (const level of ["observe", "exits-only"]) {
-      assert.match((await boot(`${address(1)}:${level}`))!, /names tenants to start, and MERRYMEN_FLEET_RECOVERY_REPORT_ONLY=1 starts none/, level);
+      assert.match((await boot(`${address(1)}:${level}`))!, /names tenants to start, and AGENTCAP_FLEET_RECOVERY_REPORT_ONLY=1 starts none/, level);
     }
   });
 
   it("still refuses a level outside the grammar, whatever its spelling", async () => {
     for (const level of ["held", "Observe", "exits_only", "paper"]) {
-      assert.match((await boot(`${address(1)}:${level}`))!, /MERRYMEN_FLEET_ROLLOUT entry 1 is not none, all or 0x<40 hex>:observe\|exits-only\|trade/, level);
+      assert.match((await boot(`${address(1)}:${level}`))!, /AGENTCAP_FLEET_ROLLOUT entry 1 is not none, all or 0x<40 hex>:observe\|exits-only\|trade/, level);
     }
   });
 
   it("refuses an unset value on Railway, and a required persistent home counts as Railway", async () => {
     assert.match((await boot(undefined, { RAILWAY_ENVIRONMENT: "production" }))!, /must name its scope/);
     assert.match((await boot(undefined, { RAILWAY_SERVICE_ID: "svc" }))!, /must name its scope/);
-    assert.match((await boot(undefined, { MERRYMEN_PERSISTENT_HOME_REQUIRED: "1" }))!, /must name its scope/);
+    assert.match((await boot(undefined, { AGENTCAP_PERSISTENT_HOME_REQUIRED: "1" }))!, /must name its scope/);
   });
 
   it("refuses named tenants beside the failure-only reporter", async () => {
-    assert.match((await boot(`${address(1)}:trade`))!, /names tenants to start, and MERRYMEN_FLEET_RECOVERY_REPORT_ONLY=1 starts none/);
+    assert.match((await boot(`${address(1)}:trade`))!, /names tenants to start, and AGENTCAP_FLEET_RECOVERY_REPORT_ONLY=1 starts none/);
   });
 
   it("lets `none` and `all` reach the reporter, whose own prerequisites then decide", async () => {

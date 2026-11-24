@@ -16,8 +16,8 @@ import { mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-positions-keep-"));
-process.env.MERRYMEN_HOME = HOME;
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-positions-keep-"));
+process.env.AGENTCAP_HOME = HOME;
 
 const { DatabaseSync } = await import("node:sqlite");
 const { closeStoreForTest, initStore, setPositions } = await import("./store");
@@ -37,7 +37,7 @@ const row = (symbol: string, valueUsdg: number, rawBalance = 10n ** 18n) => ({
 
 type Stored = { symbol: string; raw_balance: string; value_usdg: number; updated_at: number };
 const rowsOf = (agentId: string): Stored[] => {
-  const db = new DatabaseSync(path.join(HOME, "merrymen.db"));
+  const db = new DatabaseSync(path.join(HOME, "agentcap.db"));
   try {
     return db
       .prepare("SELECT symbol, raw_balance, value_usdg, updated_at FROM positions WHERE agent_id = ? ORDER BY symbol")
@@ -48,7 +48,7 @@ const rowsOf = (agentId: string): Stored[] => {
 };
 /** Age a row, so an overwrite would show in `updated_at` and not only in the value. */
 const age = (agentId: string, symbol: string) => {
-  const db = new DatabaseSync(path.join(HOME, "merrymen.db"));
+  const db = new DatabaseSync(path.join(HOME, "agentcap.db"));
   try {
     db.prepare("UPDATE positions SET updated_at = 1000 WHERE agent_id = ? AND symbol = ?").run(agentId, symbol);
   } finally {

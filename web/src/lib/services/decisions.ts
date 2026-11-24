@@ -23,7 +23,7 @@
  * `signals_json` (the owner's whole balance sheet at decision time) is read only
  * when asked, and only its top-level scalars, capped.
  */
-import { liveBlockerText, type RefuseRule } from "@merrymen/core";
+import { liveBlockerText, type RefuseRule } from "@agentcap/core";
 import type { Db } from "../../../../worker/src/db";
 import { readDecisionLifecycle, type DecisionLifecycle } from "../../../../worker/src/decision-lifecycle";
 import { PRIVATE_REVIEW_SOURCE, RESEARCH_UNAVAILABLE_SOURCE, REVIEW_SOURCE } from "../../../../worker/src/market-review";
@@ -125,7 +125,7 @@ const QUOTE_RULES: ReadonlySet<string> = new Set([
 const REVERT_LABELS: Record<RevertClass, string> = {
   slippage: "the price moved too far between quote and fill",
   "insufficient-balance": "the account did not hold what it tried to spend",
-  allowance: "the router was not approved for the amount (a wiring fault on Merrymen's side)",
+  allowance: "the router was not approved for the amount (a wiring fault on AgentCap's side)",
   prefund: "the account could not pay the operation's gas prefund",
   "wall-refused": "the smart account's own on-chain permission refused it",
   "no-liquidity": "the route had no liquidity to fill it",
@@ -134,7 +134,7 @@ const REVERT_LABELS: Record<RevertClass, string> = {
   "curve-unsupported": "the launchpad adapter refused the trade's shape",
   "spend-cap": "the venue's spending window for this asset was used up",
   "quote-not-approved": "the vault holds no spending ceiling for the asset it was funded in",
-  unclassified: "the chain refused it for a reason Merrymen does not recognise",
+  unclassified: "the chain refused it for a reason AgentCap does not recognise",
 };
 
 /**
@@ -232,7 +232,7 @@ export function describeRule(raw: string | null | undefined, status: string | nu
   if (rule.startsWith("fence-") && SLUG_RULE_RE.test(rule)) {
     return view(rule, "execution", `a final pre-signing safety check refused it (${rule.slice(6)})`);
   }
-  if (/^sponsor-(refused|unreachable|absurd)$/.test(rule)) return view(rule, "execution", "the gas sponsor declined to pay for it — Merrymen's side to fix");
+  if (/^sponsor-(refused|unreachable|absurd)$/.test(rule)) return view(rule, "execution", "the gas sponsor declined to pay for it — AgentCap's side to fix");
   if (rule.startsWith("enable-") && SLUG_RULE_RE.test(rule)) return view(rule, "execution", "the gas pre-flight for enabling the permission refused it");
   if (rule === "not-recorded") return view(rule, "execution", labelFor(rule));
   // A suppressed intent: a class that reverted before and cannot succeed until
@@ -283,7 +283,7 @@ export function dropView(dropped: string | null): { kind: DropKind; label: strin
  */
 export function explanationOf(reason: string | null, dropped: string | null): { text: string | null; withheld: string | null } {
   if (dropped === "brain-unreachable" || dropped === "brain-malformed") {
-    return { text: null, withheld: "The stored text is a raw service error and is not relayed here; the agent's activity log in Merrymen shows it." };
+    return { text: null, withheld: "The stored text is a raw service error and is not relayed here; the agent's activity log in AgentCap shows it." };
   }
   return { text: reason, withheld: null };
 }

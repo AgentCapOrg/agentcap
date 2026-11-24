@@ -28,7 +28,7 @@
 
 import type { ChainIdentity, ChainNamespace, ExecutionAvailability, TokenIdentity } from "./types";
 
-/** Robinhood Chain mainnet: Merrymen's only executable network, and the provider's "robinhood". */
+/** Robinhood Chain mainnet: AgentCap's only executable network, and the provider's "robinhood". */
 export const ROBINHOOD_NETWORK_ID = 4663;
 /** The provider's slug for it, used for chain-scoped queries. */
 export const ROBINHOOD_SLUG = "robinhood";
@@ -197,7 +197,7 @@ export function isRobinhoodToken(t: TokenIdentity | null | undefined): t is Toke
 }
 
 /**
- * Whether Merrymen could act on this token, separately from whether it can
+ * Whether AgentCap could act on this token, separately from whether it can
  * research it (always). The caller supplies the two facts it alone knows:
  * whether a supported route was verified on chain, and whether the owner's
  * signed permission covers it. Unknown route is not a supported route.

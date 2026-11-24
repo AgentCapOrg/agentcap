@@ -61,17 +61,17 @@ function mintJson(mint: string) {
       supply: "1000000000000", freezeAuthority: null, mintAuthority: null } } } } };
 }
 
-/** A schema of its own on MERRYMEN_TEST_PG_URL, searched first and dropped after the test. */
+/** A schema of its own on AGENTCAP_TEST_PG_URL, searched first and dropped after the test. */
 async function pgSchema(t: TestContext): Promise<Db> {
-  const url = new URL(process.env.MERRYMEN_TEST_PG_URL!), schema = `solana_floor_${randomUUID().replaceAll("-", "")}`;
+  const url = new URL(process.env.AGENTCAP_TEST_PG_URL!), schema = `solana_floor_${randomUUID().replaceAll("-", "")}`;
   const admin = await makePgDb(url.toString()); await admin.exec(`CREATE SCHEMA ${schema}`);
   url.searchParams.set("options", `-c search_path=${schema}`);
   t.after(async () => { await admin.exec(`DROP SCHEMA ${schema} CASCADE`); });
   return makePgDb(url.toString());
 }
-/** Skips a PostgreSQL case unless MERRYMEN_TEST_PG_URL names an isolated test database. */
+/** Skips a PostgreSQL case unless AGENTCAP_TEST_PG_URL names an isolated test database. */
 const dialectOptions = (dialect: "sqlite" | "postgres") =>
-  dialect === "postgres" && !process.env.MERRYMEN_TEST_PG_URL ? { skip: "Set MERRYMEN_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
+  dialect === "postgres" && !process.env.AGENTCAP_TEST_PG_URL ? { skip: "Set AGENTCAP_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
 async function fixture(t: TestContext, opts: { cash: bigint; wsol: bigint; mark: "fair" | "dust" | "zero" | "down"; build: Build; strategy?: Record<string, unknown>; pythAgeMs?: number;
   env?: Record<string, string>; priorityFees?: number[]; dbFile?: string; dialect?: "sqlite" | "postgres" }) {
   const net = { lastBuild: null as null | { amount: bigint; out: bigint; min: bigint; input: string }, urls: [] as string[] };
@@ -110,7 +110,7 @@ async function fixture(t: TestContext, opts: { cash: bigint; wsol: bigint; mark:
   let raw = new DatabaseSync(opts.dbFile ?? ":memory:"), db = wrapSqlite(raw);
   const clock = { now: NOW };
   t.after(() => raw.close());
-  // `dialect: "postgres"`: the same accounts and chain on PostgreSQL (MERRYMEN_TEST_PG_URL); reopen is SQLite's only.
+  // `dialect: "postgres"`: the same accounts and chain on PostgreSQL (AGENTCAP_TEST_PG_URL); reopen is SQLite's only.
   const postgres = opts.dialect === "postgres";
   if (postgres) db = await pgSchema(t);
   const sessionSeed = Buffer.alloc(32, 22), sessionKeys = await createKeyPairFromPrivateKeyBytes(sessionSeed);
@@ -194,12 +194,12 @@ async function fixture(t: TestContext, opts: { cash: bigint; wsol: bigint; mark:
   const readMint = async (mint: string) => ({ address: mint, program: mint === SOLANA_USDG_MINT ? TOKEN_2022_PROGRAM : SOLANA_CLASSIC_TOKEN_PROGRAM,
     decimals: mint === SOLANA_USDG_MINT ? 6 : 9, slot: SLOT, observedAtMs: clock.now, buyBlockedReasons: [] });
   const market = { readMint, quote };
-  const env = { MERRYMEN_SOLANA_VAULT_PROGRAM: PROGRAM, MERRYMEN_SOLANA_VAULT_SHA256: createHash("sha256").update(binary).digest("hex"),
-    MERRYMEN_STORE_DEK: Buffer.alloc(32, 30).toString("base64"), MERRYMEN_SOLANA_FEE_PAYER_SEED: Buffer.alloc(32, 31).toString("base64"),
-    MERRYMEN_JUPITER_API_KEY: "fixture-not-a-key", MERRYMEN_SOLANA_RPC_MAINNET: RPC,
+  const env = { AGENTCAP_SOLANA_VAULT_PROGRAM: PROGRAM, AGENTCAP_SOLANA_VAULT_SHA256: createHash("sha256").update(binary).digest("hex"),
+    AGENTCAP_STORE_DEK: Buffer.alloc(32, 30).toString("base64"), AGENTCAP_SOLANA_FEE_PAYER_SEED: Buffer.alloc(32, 31).toString("base64"),
+    AGENTCAP_JUPITER_API_KEY: "fixture-not-a-key", AGENTCAP_SOLANA_RPC_MAINNET: RPC,
     // On the live list, with caps at the fixture's limits (25 and 100 USDG, 0.2 and 1 SOL).
-    MERRYMEN_SOLANA_LIVE_TENANTS: TENANT, MERRYMEN_SOLANA_LIVE_MAX_PER_TRADE_USDG: "25", MERRYMEN_SOLANA_LIVE_MAX_DAILY_USDG: "100",
-    MERRYMEN_SOLANA_LIVE_MAX_PER_TRADE_WSOL: "0.2", MERRYMEN_SOLANA_LIVE_MAX_DAILY_WSOL: "1",
+    AGENTCAP_SOLANA_LIVE_TENANTS: TENANT, AGENTCAP_SOLANA_LIVE_MAX_PER_TRADE_USDG: "25", AGENTCAP_SOLANA_LIVE_MAX_DAILY_USDG: "100",
+    AGENTCAP_SOLANA_LIVE_MAX_PER_TRADE_WSOL: "0.2", AGENTCAP_SOLANA_LIVE_MAX_DAILY_WSOL: "1",
     // The runtime builds its PostgreSQL schema as hosted does; the database itself is the one passed in.
     ...(postgres ? { DATABASE_URL: "postgres://already-connected" } : {}), ...opts.env };
   const bindings = new SqlSolanaBindingStore(async () => db, postgres ? "postgres" : "sqlite", () => clock.now);
@@ -294,13 +294,13 @@ test("C3: the expired-attempt allowance setting reaches live admission, 0 by def
   t.mock.method(Store.prototype, "recordSigned", function (this: InstanceType<typeof Store>, ...args: Parameters<typeof recordSigned>) {
     admissions.push(args[1]); return recordSigned.apply(this, args);
   });
-  for (const [env, expected] of [[{}, 0], [{ MERRYMEN_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE: "7" }, 7]] as const) {
+  for (const [env, expected] of [[{}, 0], [{ AGENTCAP_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE: "7" }, 7]] as const) {
     const f = await fixture(t, { cash: 50_000_000n, wsol: 1_000_000_000n, mark: "fair", build: { kind: "fair" }, env });
     const placed = await f.app.trade(f.scope, { mode: "live", intent: manual(SOLANA_WRAPPED_SOL_MINT, "100000000", `allowance-${expected}`) });
     assert.ok("status" in placed && placed.status === "pending");
     assert.deepEqual(admissions.splice(0), [{ expiredAttemptAllowance: expected, referenceToleranceBps: 300 }]);
   }
-  const bad = await fixture(t, { cash: 50_000_000n, wsol: 1_000_000_000n, mark: "fair", build: { kind: "fair" }, env: { MERRYMEN_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE: "97" } });
+  const bad = await fixture(t, { cash: 50_000_000n, wsol: 1_000_000_000n, mark: "fair", build: { kind: "fair" }, env: { AGENTCAP_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE: "97" } });
   await assert.rejects(bad.app.trade(bad.scope, { mode: "live", intent: manual(SOLANA_WRAPPED_SOL_MINT, "100000000", "allowance-bad") }), /expired-attempt allowance setting is misconfigured/);
   assert.deepEqual(await bad.submissions(), []); assert.equal(bad.sends.length, 0); assert.deepEqual(admissions, []);
   assert.equal(bad.net.lastBuild, null, "refused before any route was built");
@@ -396,11 +396,11 @@ test("a sell above the signed per-trade SOL limit is refused before any route is
   assert.deepEqual(await f.submissions(), []); assert.equal(f.sends.length, 0);
 });
 
-/** This process's own MERRYMEN_SOLANA_PYTH_GENERATION for one test, restored after it. */
+/** This process's own AGENTCAP_SOLANA_PYTH_GENERATION for one test, restored after it. */
 function processGeneration(t: TestContext, value: string | undefined) {
-  const had = Object.hasOwn(process.env, "MERRYMEN_SOLANA_PYTH_GENERATION"), saved = process.env.MERRYMEN_SOLANA_PYTH_GENERATION;
-  t.after(() => { if (had) process.env.MERRYMEN_SOLANA_PYTH_GENERATION = saved; else delete process.env.MERRYMEN_SOLANA_PYTH_GENERATION; });
-  if (value === undefined) delete process.env.MERRYMEN_SOLANA_PYTH_GENERATION; else process.env.MERRYMEN_SOLANA_PYTH_GENERATION = value;
+  const had = Object.hasOwn(process.env, "AGENTCAP_SOLANA_PYTH_GENERATION"), saved = process.env.AGENTCAP_SOLANA_PYTH_GENERATION;
+  t.after(() => { if (had) process.env.AGENTCAP_SOLANA_PYTH_GENERATION = saved; else delete process.env.AGENTCAP_SOLANA_PYTH_GENERATION; });
+  if (value === undefined) delete process.env.AGENTCAP_SOLANA_PYTH_GENERATION; else process.env.AGENTCAP_SOLANA_PYTH_GENERATION = value;
 }
 /** A good read clears anything an earlier test left refused in this process, so the next refusal is said at once. */
 const clearReferenceAlerts = () => readSolanaReferencePrice(async () => ({ context: { slot: SLOT }, value: pythAccount({ publishTimeMs: NOW }) }), SLOT, NOW,
@@ -408,7 +408,7 @@ const clearReferenceAlerts = () => readSolanaReferencePrice(async () => ({ conte
 const CURRENT = SOLANA_PYTH_FEEDS.current, UPGRADED = SOLANA_PYTH_FEEDS.upgraded;
 /** What a Pyth generation setting that names no generation says, first time, in full. */
 const CONFIG_ALERT = "[alert] solana-reference-price refused: reason=config generation=invalid failingForMs=0 refused=1 suppressed=0 — " +
-  "MERRYMEN_SOLANA_PYTH_GENERATION must be current or upgraded (unset is current); no live Solana trade is admitted until the setting is fixed";
+  "AGENTCAP_SOLANA_PYTH_GENERATION must be current or upgraded (unset is current); no live Solana trade is admitted until the setting is fixed";
 
 test("a Pyth generation setting that names neither generation is a configuration refusal before any quote or read, and says the [alert]", async t => {
   processGeneration(t, undefined);
@@ -416,7 +416,7 @@ test("a Pyth generation setting that names neither generation is a configuration
     const f = await fixture(t, { cash: 50_000_000n, wsol: 1_000_000_000n, mark: "fair", build: { kind: "fair" } });
     await clearReferenceAlerts();
     const said = await referenceAlerts(t, () => assert.rejects(
-      f.runtime({ MERRYMEN_SOLANA_PYTH_GENERATION: value }).trade(f.scope, { mode: "live", intent: manual(SOLANA_WRAPPED_SOL_MINT, "100000000", "misconfigured") }),
+      f.runtime({ AGENTCAP_SOLANA_PYTH_GENERATION: value }).trade(f.scope, { mode: "live", intent: manual(SOLANA_WRAPPED_SOL_MINT, "100000000", "misconfigured") }),
       (error: unknown) => error instanceof Error && error.name === "SolanaAppRuntimeError" && (error as Error & { code: string }).code === "configuration" &&
         /independent SOL price source \(Pyth generation\) is misconfigured/.test(error.message), value));
     // Said once, as the line an operator pages on, with the setting to fix rather than a Pyth outage to chase,
@@ -443,7 +443,7 @@ test("a WSOL withdrawal is valued from the runtime's generation, and a store kee
   processGeneration(t, "current");
   const f = await fixture(t, { cash: 50_000_000n, wsol: 1_000_000_000n, mark: "fair", build: { kind: "fair" } });
   f.served.set(f.scope.owner, () => rpcAccount(Buffer.alloc(0), SYSTEM, false, 1_000_000_000)); // the owner pays for its own transaction
-  await f.runtime({ MERRYMEN_SOLANA_PYTH_GENERATION: "upgraded" }).prepareOwnerAction(f.scope, { action: "withdraw", mint: SOLANA_WRAPPED_SOL_MINT, amountRaw: "100000000" });
+  await f.runtime({ AGENTCAP_SOLANA_PYTH_GENERATION: "upgraded" }).prepareOwnerAction(f.scope, { action: "withdraw", mint: SOLANA_WRAPPED_SOL_MINT, amountRaw: "100000000" });
   assert.deepEqual(f.pythReads, [UPGRADED.account, UPGRADED.account]);
   const saved = (await new SolanaTradingStore(f.db, f.scope).setup())!;
   assert.equal(saved.withdrawValuation?.reference.reference.account, UPGRADED.account);
@@ -468,7 +468,7 @@ test("a WSOL withdrawal still prepares while the Pyth generation setting names n
   await clearReferenceAlerts();
   let prepared: { transactionBase64: string } | undefined;
   const said = await referenceAlerts(t, async () => {
-    prepared = await f.runtime({ MERRYMEN_SOLANA_PYTH_GENERATION: "both" }).prepareOwnerAction(f.scope, { action: "withdraw", mint: SOLANA_WRAPPED_SOL_MINT, amountRaw: "100000000" });
+    prepared = await f.runtime({ AGENTCAP_SOLANA_PYTH_GENERATION: "both" }).prepareOwnerAction(f.scope, { action: "withdraw", mint: SOLANA_WRAPPED_SOL_MINT, amountRaw: "100000000" });
   });
   assert.ok(prepared && prepared.transactionBase64.length > 0);
   assert.deepEqual(f.pythReads, []);
@@ -489,8 +489,8 @@ test("status names a misconfigured reference setting as a blocker of every trade
   const f = await fixture(t, { cash: 50_000_000n, wsol: 1_000_000_000n, mark: "fair", build: { kind: "fair" }, strategy: { ...rebalance, targetSolBps: 2500 } });
   const good = await f.app.status(f.scope);
   assert.deepEqual([good.live.ready, good.live.blockers], [true, []]);
-  for (const [more, blocker] of [[{ MERRYMEN_SOLANA_PYTH_GENERATION: "both" }, SOURCE], [{ MERRYMEN_SOLANA_PYTH_GENERATION: "Upgraded" }, SOURCE],
-    [{ MERRYMEN_SOLANA_REFERENCE_TOLERANCE_BPS: "49" }, TOLERANCE], [{ MERRYMEN_SOLANA_REFERENCE_TOLERANCE_BPS: "3e2" }, TOLERANCE]] as const) {
+  for (const [more, blocker] of [[{ AGENTCAP_SOLANA_PYTH_GENERATION: "both" }, SOURCE], [{ AGENTCAP_SOLANA_PYTH_GENERATION: "Upgraded" }, SOURCE],
+    [{ AGENTCAP_SOLANA_REFERENCE_TOLERANCE_BPS: "49" }, TOLERANCE], [{ AGENTCAP_SOLANA_REFERENCE_TOLERANCE_BPS: "3e2" }, TOLERANCE]] as const) {
     await clearReferenceAlerts();
     let status: Awaited<ReturnType<typeof f.app.status>> | undefined;
     const said = await referenceAlerts(t, async () => { status = await f.runtime(more).status(f.scope); });
@@ -501,7 +501,7 @@ test("status names a misconfigured reference setting as a blocker of every trade
   // The agent holds instead of trying, and the operator still hears about the generation, once.
   await clearReferenceAlerts();
   let outcomes: string[] = [];
-  const said = await referenceAlerts(t, async () => { outcomes = (await f.agent(f.runtime({ MERRYMEN_SOLANA_PYTH_GENERATION: "both" })).tick()).map(r => r.outcome); });
+  const said = await referenceAlerts(t, async () => { outcomes = (await f.agent(f.runtime({ AGENTCAP_SOLANA_PYTH_GENERATION: "both" })).tick()).map(r => r.outcome); });
   assert.deepEqual(outcomes, ["held"]);
   assert.deepEqual(said, [CONFIG_ALERT]);
   assert.deepEqual(f.pythReads, []); assert.deepEqual(await f.submissions(), []); assert.equal(f.sends.length, 0);
@@ -513,7 +513,7 @@ test("status blocks trades and exits on a Jupiter key every live route refuses, 
   const good = await f.app.status(f.scope);
   assert.deepEqual([good.live.ready, good.live.canExit, good.live.blockers], [true, true, []]);
   for (const [apiKey, alerted] of [["bad key", true], ["   ", true], ["x".repeat(1025), true], ["caf\u00e9", true], ["", false]] as const) {
-    const lines: string[] = [], app = f.runtime({ MERRYMEN_JUPITER_API_KEY: apiKey }, f.rpc, line => lines.push(line));
+    const lines: string[] = [], app = f.runtime({ AGENTCAP_JUPITER_API_KEY: apiKey }, f.rpc, line => lines.push(line));
     const status = await app.status(f.scope);
     // Not ready, and no exit either: the live route builder refuses a sell's route as configuration too.
     assert.deepEqual([status.live.ready, status.live.canExit, status.live.blockers], [false, false, [JUPITER]], JSON.stringify(apiKey));
@@ -549,13 +549,13 @@ test("status blocks trades and exits once the day's operations are used, by expi
     (error: unknown) => error instanceof Error && error.message === SOLANA_EXPIRED_ATTEMPTS_EXHAUSTED);
   assert.equal(f.sends.length, 0);
   // An allowance of 1 leaves one operation.
-  assert.deepEqual(await view({ MERRYMEN_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE: "1" }), [true, true, []]);
+  assert.deepEqual(await view({ AGENTCAP_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE: "1" }), [true, true, []]);
   // An unreadable allowance is its own configuration blocker, not this one.
-  assert.deepEqual((await view({ MERRYMEN_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE: "97" }))[2], [SOLANA_EXPIRED_ATTEMPT_ALLOWANCE_MISCONFIGURED]);
+  assert.deepEqual((await view({ AGENTCAP_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE: "97" }))[2], [SOLANA_EXPIRED_ATTEMPT_ALLOWANCE_MISCONFIGURED]);
   // Trades that landed or failed use operations whatever the allowance.
   await f.db.prepare("UPDATE solana_runtime_submissions SET status='failed' WHERE request_id LIKE 'dropped-%'").run();
-  assert.deepEqual(await view({ MERRYMEN_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE: "96" }), [false, false, [SOLANA_STATUS_DAILY_OPERATIONS_USED]]);
-  await assert.rejects(f.runtime({ MERRYMEN_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE: "96" }).trade(f.scope, { mode: "live", intent: manual(SOLANA_WRAPPED_SOL_MINT, "100000000", "exit-used") }),
+  assert.deepEqual(await view({ AGENTCAP_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE: "96" }), [false, false, [SOLANA_STATUS_DAILY_OPERATIONS_USED]]);
+  await assert.rejects(f.runtime({ AGENTCAP_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE: "96" }).trade(f.scope, { mode: "live", intent: manual(SOLANA_WRAPPED_SOL_MINT, "100000000", "exit-used") }),
     /rolling daily limit/);
   assert.equal(f.sends.length, 0);
   // As they leave the window, neither blocker stays (the fixture's on-chain permission has expired by then).
@@ -565,13 +565,13 @@ test("status blocks trades and exits once the day's operations are used, by expi
   assert.ok(!later.includes(SOLANA_STATUS_DAILY_OPERATIONS_USED) && !later.includes(SOLANA_EXPIRED_ATTEMPTS_EXHAUSTED), JSON.stringify(later));
 });
 
-test("with MERRYMEN_SOLANA_PYTH_GENERATION=upgraded, live trades are read, checked by the executor and admitted by the store on the upgraded account alone", async t => {
+test("with AGENTCAP_SOLANA_PYTH_GENERATION=upgraded, live trades are read, checked by the executor and admitted by the store on the upgraded account alone", async t => {
   // The process names the other generation: a read or check that consulted it would refuse these trades.
   processGeneration(t, "current");
   for (const [inputMint, amountRaw, cash, wsol, notional] of [[SOLANA_WRAPPED_SOL_MINT, "100000000", 50_000_000n, 1_000_000_000n, "15000000"],
     [SOLANA_USDG_MINT, "25000000", 100_000_000n, 0n, "25000000"]] as const) {
     const f = await fixture(t, { cash, wsol, mark: "fair", build: { kind: "fair" } });
-    const placed = await f.runtime({ MERRYMEN_SOLANA_PYTH_GENERATION: "upgraded" }).trade(f.scope, { mode: "live", intent: manual(inputMint, amountRaw, "upgraded-trade") });
+    const placed = await f.runtime({ AGENTCAP_SOLANA_PYTH_GENERATION: "upgraded" }).trade(f.scope, { mode: "live", intent: manual(inputMint, amountRaw, "upgraded-trade") });
     assert.equal("status" in placed && placed.status, "pending", inputMint);
     // The runtime read the upgraded account and never the current one; the executor signed only
     // above that bound's floor, and the store admitted the bound as evidence from it.
@@ -590,7 +590,7 @@ test("a generation mismatch refuses: the other generation's account at the confi
   const swapped = await fixture(t, { cash: 50_000_000n, wsol: 1_000_000_000n, mark: "fair", build: { kind: "fair" } });
   swapped.served.set(UPGRADED.account, () => pythAccount({ price: 15_000_000_000n, conf: 1_500_000n, publishTimeMs: NOW, owner: CURRENT.receiverProgram }));
   await clearReferenceAlerts();
-  let said = await referenceAlerts(t, () => assert.rejects(swapped.runtime({ MERRYMEN_SOLANA_PYTH_GENERATION: "upgraded" }).trade(swapped.scope, { mode: "live", intent: sell }),
+  let said = await referenceAlerts(t, () => assert.rejects(swapped.runtime({ AGENTCAP_SOLANA_PYTH_GENERATION: "upgraded" }).trade(swapped.scope, { mode: "live", intent: sell }),
     /refused: risk/));
   assert.deepEqual(said.map(line => line.split(" — ")[0]), [`[alert] solana-reference-price refused: reason=foreign generation=upgraded account=${UPGRADED.account} ` +
     "failingForMs=0 refused=1 suppressed=0"]);
@@ -600,7 +600,7 @@ test("a generation mismatch refuses: the other generation's account at the confi
   const closed = await fixture(t, { cash: 50_000_000n, wsol: 1_000_000_000n, mark: "fair", build: { kind: "fair" } });
   closed.served.set(CURRENT.account, () => null);
   await clearReferenceAlerts();
-  said = await referenceAlerts(t, () => assert.rejects(closed.runtime({ MERRYMEN_SOLANA_PYTH_GENERATION: "current" }).trade(closed.scope, { mode: "live", intent: sell }),
+  said = await referenceAlerts(t, () => assert.rejects(closed.runtime({ AGENTCAP_SOLANA_PYTH_GENERATION: "current" }).trade(closed.scope, { mode: "live", intent: sell }),
     /refused: risk/));
   assert.deepEqual(said.map(line => line.split(" — ")[0]), [`[alert] solana-reference-price refused: reason=missing generation=current account=${CURRENT.account} ` +
     "failingForMs=0 refused=1 suppressed=0"]);
@@ -612,12 +612,12 @@ test("a signed trade whose bound came from one generation is refused at admissio
   processGeneration(t, undefined);
   // Signed and recorded by a runtime set to upgraded ...
   const signer = await fixture(t, { cash: 50_000_000n, wsol: 1_000_000_000n, mark: "fair", build: { kind: "fair" } });
-  await signer.runtime({ MERRYMEN_SOLANA_PYTH_GENERATION: "upgraded" }).trade(signer.scope, { mode: "live", intent: manual(SOLANA_WRAPPED_SOL_MINT, "100000000", "carried") });
+  await signer.runtime({ AGENTCAP_SOLANA_PYTH_GENERATION: "upgraded" }).trade(signer.scope, { mode: "live", intent: manual(SOLANA_WRAPPED_SOL_MINT, "100000000", "carried") });
   const submission = (await signer.submissions())[0]!.submission;
   assert.equal(submission.risk.reference.reference.account, UPGRADED.account);
   // ... then offered for admission to the same account's journal on a fresh database, checked as each store is set.
   const checks: Array<[string, () => SolanaPythGeneration, boolean]> = [["current", () => "current", false],
-    ["a setting that names none", () => solanaPythGeneration({ MERRYMEN_SOLANA_PYTH_GENERATION: "both" }), false], ["upgraded", () => "upgraded", true]];
+    ["a setting that names none", () => solanaPythGeneration({ AGENTCAP_SOLANA_PYTH_GENERATION: "both" }), false], ["upgraded", () => "upgraded", true]];
   for (const [name, generation, admitted] of checks) {
     const other = await fixture(t, { cash: 50_000_000n, wsol: 1_000_000_000n, mark: "fair", build: { kind: "fair" } });
     const journal = new SolanaTradingStore(other.db, other.scope, () => NOW, undefined, generation);
@@ -642,8 +642,8 @@ test("a retry of an admitted live trade returns it before any reference setting 
   assert.deepEqual(f.pythReads, [CURRENT.account, CURRENT.account]);
   const jupiter = () => f.net.urls.filter(url => url.startsWith("https://api.jup.ag/")).length, built = jupiter();
   // A setting that names no generation, the other generation, and a tolerance out of range: each would refuse a new trade.
-  for (const more of [{ MERRYMEN_SOLANA_PYTH_GENERATION: "both" }, { MERRYMEN_SOLANA_PYTH_GENERATION: "upgraded" },
-    { MERRYMEN_SOLANA_REFERENCE_TOLERANCE_BPS: "49" }] as Array<Record<string, string>>) {
+  for (const more of [{ AGENTCAP_SOLANA_PYTH_GENERATION: "both" }, { AGENTCAP_SOLANA_PYTH_GENERATION: "upgraded" },
+    { AGENTCAP_SOLANA_REFERENCE_TOLERANCE_BPS: "49" }] as Array<Record<string, string>>) {
     const label = JSON.stringify(more), sendsBefore = f.sends.length;
     await clearReferenceAlerts();
     let again: Awaited<ReturnType<typeof f.app.trade>> | undefined;
@@ -677,7 +677,7 @@ test("the executor checks a fresh bound against its own generation, not the one 
     const label = `executor ${configured ?? "default"}, bound from ${boundFrom}`;
     const f = await fixture(t, { cash: 50_000_000n, wsol: 1_000_000_000n, mark: "fair", build: { kind: "fair" } });
     const recorded: SolanaSignedSubmission[] = [], signedBefore = signs.mock.callCount();
-    const executor = createSolanaExecutor({ programId: PROGRAM, programBinarySha256: f.env.MERRYMEN_SOLANA_VAULT_SHA256, ...(configured ? { pythGeneration: configured } : {}),
+    const executor = createSolanaExecutor({ programId: PROGRAM, programBinarySha256: f.env.AGENTCAP_SOLANA_VAULT_SHA256, ...(configured ? { pythGeneration: configured } : {}),
       sessionKeyPair: f.sessionKeys, feePayerKeyPair, rpc: f.rpc, market: createSolanaLiveMarket({ env: f.env, rpc: f.rpc, now: () => f.clock.now }),
       journal: { get: async () => null, recordSigned: async submission => { recorded.push(submission); return true; }, settle: async () => assert.fail("nothing settles") },
       maxFeeLamports: "5000000", now: () => f.clock.now,
@@ -709,7 +709,7 @@ test("the configured reference tolerance reaches the executor's check and admiss
   t.mock.method(Store.prototype, "recordSigned", function (this: InstanceType<typeof Store>, ...args: Parameters<typeof recordSigned>) {
     admissions.push(args[1]); return recordSigned.apply(this, args);
   });
-  const wide = await fixture(t, { cash: 50_000_000n, wsol: 1_000_000_000n, mark: "fair", build: { kind: "fair" }, env: { MERRYMEN_SOLANA_REFERENCE_TOLERANCE_BPS: "500" } });
+  const wide = await fixture(t, { cash: 50_000_000n, wsol: 1_000_000_000n, mark: "fair", build: { kind: "fair" }, env: { AGENTCAP_SOLANA_REFERENCE_TOLERANCE_BPS: "500" } });
   const placed = await wide.app.trade(wide.scope, { mode: "live", intent: manual(SOLANA_WRAPPED_SOL_MINT, "100000000", "tolerance-500") });
   assert.ok("status" in placed && placed.status === "pending");
   assert.equal((await wide.submissions())[0]!.submission.risk.reference.toleranceBps, 500);
@@ -719,7 +719,7 @@ test("the configured reference tolerance reaches the executor's check and admiss
   for (const configured of [300, undefined]) {
     const f = await fixture(t, { cash: 50_000_000n, wsol: 1_000_000_000n, mark: "fair", build: { kind: "fair" } });
     const recorded: SolanaSignedSubmission[] = [];
-    const executor = createSolanaExecutor({ programId: PROGRAM, programBinarySha256: f.env.MERRYMEN_SOLANA_VAULT_SHA256, ...(configured ? { referenceToleranceBps: configured } : {}),
+    const executor = createSolanaExecutor({ programId: PROGRAM, programBinarySha256: f.env.AGENTCAP_SOLANA_VAULT_SHA256, ...(configured ? { referenceToleranceBps: configured } : {}),
       sessionKeyPair: f.sessionKeys, feePayerKeyPair, rpc: f.rpc, market: createSolanaLiveMarket({ env: f.env, rpc: f.rpc, now: () => f.clock.now }),
       journal: { get: async () => null, recordSigned: async submission => { recorded.push(submission); return true; }, settle: async () => assert.fail("nothing settles") },
       maxFeeLamports: "5000000", now: () => f.clock.now,
@@ -747,18 +747,18 @@ test("a stale independent price refuses even a fair live trade, and says the [al
 test("a compute-unit price minimum above the default maximum still exits; the maximum is its own setting, refused clearly when below the minimum", async t => {
   // The minimum used to be the fixed price: set alone above 1,000,000 it must not block exits.
   const alone = await fixture(t, { cash: 50_000_000n, wsol: 1_000_000_000n, mark: "fair", build: { kind: "fair" },
-    env: { MERRYMEN_SOLANA_COMPUTE_UNIT_PRICE_MICROLAMPORTS: "2000000" } });
+    env: { AGENTCAP_SOLANA_COMPUTE_UNIT_PRICE_MICROLAMPORTS: "2000000" } });
   await alone.app.trade(alone.scope, { mode: "live", intent: manual(SOLANA_WRAPPED_SOL_MINT, "100000000", "exit-at-minimum") });
   assert.equal(alone.sends.length, 1);
   assert.equal(computeBudget((await alone.submissions())[0]!.submission).price, 2_000_000n);
   // The explicit maximum bounds what recent fees would otherwise pay.
   const capped = await fixture(t, { cash: 50_000_000n, wsol: 1_000_000_000n, mark: "fair", build: { kind: "fair" }, priorityFees: [9_000_000],
-    env: { MERRYMEN_SOLANA_COMPUTE_UNIT_PRICE_MICROLAMPORTS: "1000", MERRYMEN_SOLANA_MAX_COMPUTE_UNIT_PRICE_MICROLAMPORTS: "3000" } });
+    env: { AGENTCAP_SOLANA_COMPUTE_UNIT_PRICE_MICROLAMPORTS: "1000", AGENTCAP_SOLANA_MAX_COMPUTE_UNIT_PRICE_MICROLAMPORTS: "3000" } });
   await capped.app.trade(capped.scope, { mode: "live", intent: manual(SOLANA_WRAPPED_SOL_MINT, "100000000", "exit-capped") });
   assert.equal(computeBudget((await capped.submissions())[0]!.submission).price, 3000n);
   // A maximum below the minimum is a configuration refusal, before any quote, signature or send.
-  const misconfigured: Record<string, string>[] = [{ MERRYMEN_SOLANA_COMPUTE_UNIT_PRICE_MICROLAMPORTS: "2000", MERRYMEN_SOLANA_MAX_COMPUTE_UNIT_PRICE_MICROLAMPORTS: "1000" },
-    { MERRYMEN_SOLANA_MAX_COMPUTE_UNIT_PRICE_MICROLAMPORTS: "lots" }];
+  const misconfigured: Record<string, string>[] = [{ AGENTCAP_SOLANA_COMPUTE_UNIT_PRICE_MICROLAMPORTS: "2000", AGENTCAP_SOLANA_MAX_COMPUTE_UNIT_PRICE_MICROLAMPORTS: "1000" },
+    { AGENTCAP_SOLANA_MAX_COMPUTE_UNIT_PRICE_MICROLAMPORTS: "lots" }];
   for (const env of misconfigured) {
     const bad = await fixture(t, { cash: 50_000_000n, wsol: 1_000_000_000n, mark: "fair", build: { kind: "fair" }, env });
     await assert.rejects(bad.app.trade(bad.scope, { mode: "live", intent: manual(SOLANA_WRAPPED_SOL_MINT, "100000000", "exit-misconfigured") }),
@@ -1045,7 +1045,7 @@ test("a live trade that landed is not called a vault below its book, nor paged a
   chain.landed = true;
   const status = await app.status(f.scope);
   assert.ok(status.live.blockers.includes("A live trade is awaiting final confirmation."), status.live.blockers.join(" | "));
-  assert.ok(!status.live.blockers.includes(SOLANA_STATUS_BELOW_BOOK), "its own landing is not tokens leaving outside Merrymen");
+  assert.ok(!status.live.blockers.includes(SOLANA_STATUS_BELOW_BOOK), "its own landing is not tokens leaving outside AgentCap");
   assert.equal(status.live.canExit, false, "trading and exits still wait for it");
   // The worker's next tick holds the account for its pending trade and pages no operator to reconcile the book.
   f.clock.now += 31_000;
@@ -1060,18 +1060,18 @@ const refusedAs = (message: string, code: SolanaAppRuntimeError["code"]) => (err
 };
 const SWAP_BUILD = "https://api.jup.ag/swap/v1/swap-instructions";
 
-test("live rollout: the autonomous worker places no live buy for a tenant off MERRYMEN_SOLANA_LIVE_TENANTS, nor does a manual buy, before any route is built; on the list the same tick buys", async t => {
+test("live rollout: the autonomous worker places no live buy for a tenant off AGENTCAP_SOLANA_LIVE_TENANTS, nor does a manual buy, before any route is built; on the list the same tick buys", async t => {
   // 0.1 SOL ($15) and 50 USDG; the strategy wants 90% SOL, so it buys (and the position it leaves can still be sold today).
   const f = await fixture(t, { cash: 50_000_000n, wsol: 100_000_000n, mark: "fair", build: { kind: "fair" }, strategy: { ...rebalance, targetSolBps: 9000 },
-    env: { MERRYMEN_SOLANA_LIVE_TENANTS: "" } });
+    env: { AGENTCAP_SOLANA_LIVE_TENANTS: "" } });
   assert.deepEqual((await f.agent().tick()).map(r => r.outcome), ["held"]);
   await assert.rejects(f.app.trade(f.scope, { mode: "live", intent: manual(SOLANA_USDG_MINT, "10000000", "manual-off-list-buy") }), refusedAs(SOLANA_LIVE_PAUSED, "permission"));
   assert.deepEqual(await f.submissions(), []); assert.equal(f.sends.length, 0);
   assert.ok(!f.net.urls.includes(SWAP_BUILD), "no route was built, so nothing could be signed");
   // The same account on the list, on both services (the web has served a Solana request with it): the worker's next tick buys.
   f.clock.now += 61_000;
-  await f.runtime({ MERRYMEN_SOLANA_LIVE_TENANTS: TENANT }).publishLiveRollout();
-  assert.deepEqual((await f.agent(f.runtime({ MERRYMEN_SOLANA_LIVE_TENANTS: TENANT }, undefined, undefined, "worker")).tick()).map(r => r.outcome), ["submitted"]);
+  await f.runtime({ AGENTCAP_SOLANA_LIVE_TENANTS: TENANT }).publishLiveRollout();
+  assert.deepEqual((await f.agent(f.runtime({ AGENTCAP_SOLANA_LIVE_TENANTS: TENANT }, undefined, undefined, "worker")).tick()).map(r => r.outcome), ["submitted"]);
   const [row] = await f.submissions();
   assert.equal(row!.submission.intent.inputMint, SOLANA_USDG_MINT, "a buy"); assert.equal(f.sends.length, 1);
 });
@@ -1079,7 +1079,7 @@ test("live rollout: the autonomous worker places no live buy for a tenant off ME
 test("live rollout: a tenant taken off the list mid-session is exits-only: buys stop and status says so, while its sales back to USDG, manual and autonomous, are signed, admitted and sent", async t => {
   const f = await fixture(t, { cash: 50_000_000n, wsol: 1_000_000_000n, mark: "fair", build: { kind: "fair" }, strategy: { ...rebalance, targetSolBps: 2500 } });
   assert.equal((await f.app.status(f.scope)).live.ready, true, "on the list it trades");
-  const off = f.runtime({ MERRYMEN_SOLANA_LIVE_TENANTS: `0x${"22".repeat(20)}` });
+  const off = f.runtime({ AGENTCAP_SOLANA_LIVE_TENANTS: `0x${"22".repeat(20)}` });
   const status = await off.status(f.scope);
   assert.deepEqual(status.live.blockers, [SOLANA_LIVE_PAUSED]); assert.equal(status.live.ready, false); assert.equal(status.live.canExit, true);
   assert.equal(status.liveAccess.onList, false);
@@ -1089,14 +1089,14 @@ test("live rollout: a tenant taken off the list mid-session is exits-only: buys 
   const [sale] = await f.submissions();
   assert.equal(sale!.submission.intent.inputMint, SOLANA_WRAPPED_SOL_MINT, "a sale back to USDG"); assert.equal(f.sends.length, 1);
   // A manual sale too, in a fresh account off the list.
-  const g = await fixture(t, { cash: 50_000_000n, wsol: 1_000_000_000n, mark: "fair", build: { kind: "fair" }, env: { MERRYMEN_SOLANA_LIVE_TENANTS: "" } });
+  const g = await fixture(t, { cash: 50_000_000n, wsol: 1_000_000_000n, mark: "fair", build: { kind: "fair" }, env: { AGENTCAP_SOLANA_LIVE_TENANTS: "" } });
   const sold = await g.app.trade(g.scope, { mode: "live", intent: manual(SOLANA_WRAPPED_SOL_MINT, "100000000", "exit-off-list") });
   assert.ok("status" in sold && sold.status === "pending"); assert.equal(g.sends.length, 1);
 });
 
 test("live rollout caps: under a permission registered above caps lowered since, buys are refused before anything is signed and the worker holds them; sales carry on", async t => {
   // The registered permission allows 25 and 100 USDG, 0.2 and 1 SOL; the caps are lowered to the defaults (10 and 25 USDG, 0.1 and 0.25 SOL).
-  const lowered = { MERRYMEN_SOLANA_LIVE_MAX_PER_TRADE_USDG: "", MERRYMEN_SOLANA_LIVE_MAX_DAILY_USDG: "", MERRYMEN_SOLANA_LIVE_MAX_PER_TRADE_WSOL: "", MERRYMEN_SOLANA_LIVE_MAX_DAILY_WSOL: "" };
+  const lowered = { AGENTCAP_SOLANA_LIVE_MAX_PER_TRADE_USDG: "", AGENTCAP_SOLANA_LIVE_MAX_DAILY_USDG: "", AGENTCAP_SOLANA_LIVE_MAX_PER_TRADE_WSOL: "", AGENTCAP_SOLANA_LIVE_MAX_DAILY_WSOL: "" };
   const f = await fixture(t, { cash: 50_000_000n, wsol: 1_000_000_000n, mark: "fair", build: { kind: "fair" }, strategy: { ...rebalance, targetSolBps: 9000 }, env: lowered });
   const status = await f.app.status(f.scope);
   assert.deepEqual(status.live.blockers, [solanaLiveSessionAboveCaps(SOLANA_LIVE_CAP_DEFAULTS)]); assert.equal(status.live.canExit, true);
@@ -1112,7 +1112,7 @@ test("live rollout caps: under a permission registered above caps lowered since,
 });
 
 test("live rollout caps: a permission whose registered limits are above caps lowered since refuses a live buy and its preview before any quote, from the session record; sales still quote and sell", async t => {
-  const lowered = { MERRYMEN_SOLANA_LIVE_MAX_PER_TRADE_USDG: "", MERRYMEN_SOLANA_LIVE_MAX_DAILY_USDG: "", MERRYMEN_SOLANA_LIVE_MAX_PER_TRADE_WSOL: "", MERRYMEN_SOLANA_LIVE_MAX_DAILY_WSOL: "" };
+  const lowered = { AGENTCAP_SOLANA_LIVE_MAX_PER_TRADE_USDG: "", AGENTCAP_SOLANA_LIVE_MAX_DAILY_USDG: "", AGENTCAP_SOLANA_LIVE_MAX_PER_TRADE_WSOL: "", AGENTCAP_SOLANA_LIVE_MAX_DAILY_WSOL: "" };
   const f = await fixture(t, { cash: 50_000_000n, wsol: 1_000_000_000n, mark: "fair", build: { kind: "fair" }, env: lowered });
   // The record as activateLive now leaves it: with the limits it checked against the vault (25 and 100 USDG, 0.2 and 1 SOL).
   const record = JSON.parse((await f.db.prepare("SELECT record_json FROM solana_runtime_sessions WHERE tenant=?").get(TENANT) as { record_json: string }).record_json);
@@ -1134,7 +1134,7 @@ test("live rollout caps: a permission whose registered limits are above caps low
 });
 
 test("live rollout caps: one provider showing the session's limits within lowered caps cannot let a buy under a permission above them through; every provider's limits are read before signing", async t => {
-  const lowered = { MERRYMEN_SOLANA_LIVE_MAX_PER_TRADE_USDG: "", MERRYMEN_SOLANA_LIVE_MAX_DAILY_USDG: "", MERRYMEN_SOLANA_LIVE_MAX_PER_TRADE_WSOL: "", MERRYMEN_SOLANA_LIVE_MAX_DAILY_WSOL: "" };
+  const lowered = { AGENTCAP_SOLANA_LIVE_MAX_PER_TRADE_USDG: "", AGENTCAP_SOLANA_LIVE_MAX_DAILY_USDG: "", AGENTCAP_SOLANA_LIVE_MAX_PER_TRADE_WSOL: "", AGENTCAP_SOLANA_LIVE_MAX_DAILY_WSOL: "" };
   // 0.1 SOL held, so the buy keeps room to sell its position; the session record has no limits (registered before they were kept).
   const f = await fixture(t, { cash: 50_000_000n, wsol: 100_000_000n, mark: "fair", build: { kind: "fair" }, env: lowered });
   // The primary serves the vault with limits at the default caps (10 and 25 USDG, 0.1 and 0.25 SOL); the fallback, honestly, with the signed ones.
@@ -1157,7 +1157,7 @@ test("live rollout caps: one provider showing the session's limits within lowere
 });
 
 test("live rollout: a renewal that landed after the tenant left the list is activated off it, and its sales back to USDG are then admitted and sent", async t => {
-  const f = await fixture(t, { cash: 50_000_000n, wsol: 1_000_000_000n, mark: "fair", build: { kind: "fair" }, env: { MERRYMEN_SOLANA_LIVE_TENANTS: "" } });
+  const f = await fixture(t, { cash: 50_000_000n, wsol: 1_000_000_000n, mark: "fair", build: { kind: "fair" }, env: { AGENTCAP_SOLANA_LIVE_TENANTS: "" } });
   // The app still holds the permission the renewal replaced (epoch 0). Solana holds the renewal (epoch 1): same limits, prepared,
   // submitted and finalized while the tenant was listed, and not yet activated when it was taken off.
   const session = await getAddressFromPublicKey(f.sessionKeys.publicKey), sessionSeed = Buffer.alloc(32, 22);
@@ -1350,14 +1350,14 @@ test("live rollout: the worker publishes its settings with its heartbeat; once t
   // The worker's own runtime as runSolanaAgent builds it (solanaWorkerRuntime), on this chain and clock.
   const worker = solanaWorkerRuntime({ db: f.db, rpc: f.rpc, market: f.market, env: f.env, now: () => f.clock.now, log: () => {}, localTestDeployment: true });
   // The web was redeployed without this tenant; the worker was not. The owner's page reads status from the web.
-  assert.deepEqual((await f.runtime({ MERRYMEN_SOLANA_LIVE_TENANTS: "" }, undefined, () => {}).status(f.scope)).live.blockers, [SOLANA_LIVE_PAUSED]);
+  assert.deepEqual((await f.runtime({ AGENTCAP_SOLANA_LIVE_TENANTS: "" }, undefined, () => {}).status(f.scope)).live.blockers, [SOLANA_LIVE_PAUSED]);
   assert.deepEqual((await f.agent(worker).tick()).map(r => r.outcome), ["held"], "the worker no longer buys under its old list");
   assert.deepEqual(await f.submissions(), []); assert.equal(f.sends.length, 0);
   assert.ok(!f.net.urls.includes(SWAP_BUILD), "no route was built");
   // The tick published the worker's settings with its heartbeat: a web that lists another tenant as well sees them differ.
   assert.deepEqual((await f.db.prepare("SELECT service FROM solana_runtime_live_rollout_seen ORDER BY service").all() as Array<{ service: string }>).map(r => r.service),
     ["web", "worker"], "the worker's digest under its own name, beside the web's");
-  assert.deepEqual((await f.runtime({ MERRYMEN_SOLANA_LIVE_TENANTS: `${TENANT},0x${"22".repeat(20)}` }, undefined, () => {}).status(f.scope)).live.blockers, [SOLANA_LIVE_ROLLOUT_DIFFERS]);
+  assert.deepEqual((await f.runtime({ AGENTCAP_SOLANA_LIVE_TENANTS: `${TENANT},0x${"22".repeat(20)}` }, undefined, () => {}).status(f.scope)).live.blockers, [SOLANA_LIVE_ROLLOUT_DIFFERS]);
   // Both on the same settings again: the next tick buys.
   f.clock.now += 61_000;
   assert.deepEqual((await f.runtime({}, undefined, () => {}).status(f.scope)).live.blockers, []);
@@ -1369,7 +1369,7 @@ test("live rollout: the worker publishes its settings with its heartbeat; once t
   assert.deepEqual(await idle.agent(solanaWorkerRuntime({ db: idle.db, rpc: idle.rpc, market: idle.market, env: idle.env, now: () => idle.clock.now, log: () => {},
     localTestDeployment: true })).tick(), []);
   assert.ok(await idle.db.prepare("SELECT 1 FROM solana_runtime_live_rollout_seen WHERE service='worker'").get(), "published with the heartbeat");
-  assert.deepEqual((await idle.runtime({ MERRYMEN_SOLANA_LIVE_TENANTS: `${TENANT},0x${"33".repeat(20)}` }, undefined, () => {}).status(idle.scope)).live.blockers, [SOLANA_LIVE_ROLLOUT_DIFFERS]);
+  assert.deepEqual((await idle.runtime({ AGENTCAP_SOLANA_LIVE_TENANTS: `${TENANT},0x${"33".repeat(20)}` }, undefined, () => {}).status(idle.scope)).live.blockers, [SOLANA_LIVE_ROLLOUT_DIFFERS]);
 });
 
 test("live rollout: on a fresh deployment, before the web has published any digest, the worker's tick builds no route for a buy yet still sells, and buys once the web publishes the same settings", async t => {
@@ -1417,7 +1417,7 @@ test("exits keep room within the limits the vault enforces: saved live limits ab
   // USDG: the caps raised to 200 USDG a day and the limits saved at it, under the permission registered at 100 a day (the vault's).
   // 20 USDG of buys in the window and 0.2 SOL ($30) held: a 25 USDG buy keeps room for its exit within 200 (20 + 25 + 56.65), not within 100.
   const usdg = async () => {
-    const f = await fixture(t, { cash: 50_000_000n, wsol: 200_000_000n, mark: "fair", build: { kind: "fair" }, env: { MERRYMEN_SOLANA_LIVE_MAX_DAILY_USDG: "200" } });
+    const f = await fixture(t, { cash: 50_000_000n, wsol: 200_000_000n, mark: "fair", build: { kind: "fair" }, env: { AGENTCAP_SOLANA_LIVE_MAX_DAILY_USDG: "200" } });
     await windowRow(f, "earlier-buy", "finalized", 3_600_000, SOLANA_USDG_MINT, "20000000", "20000000");
     await f.bindings.settings(TENANT, f.scope.owner, (await f.bindings.get(TENANT))!.revision, "live", { ...limits, dailyUsdg: "200000000" });
     return f;
@@ -1440,7 +1440,7 @@ test("exits keep room within the limits the vault enforces: saved live limits ab
   // SOL sold: the caps raised to 2 SOL a day and the limits saved at it, under the permission registered at 1 SOL a day (the vault's).
   // 0.9 SOL held: a 25 USDG buy brings 0.1667 SOL, which 2 SOL a day could sell and 1 SOL a day could not.
   const k = await fixture(t, { cash: 50_000_000n, wsol: 900_000_000n, mark: "fair", build: { kind: "fair" },
-    env: { MERRYMEN_SOLANA_LIVE_MAX_DAILY_USDG: "1000", MERRYMEN_SOLANA_LIVE_MAX_DAILY_WSOL: "2" } });
+    env: { AGENTCAP_SOLANA_LIVE_MAX_DAILY_USDG: "1000", AGENTCAP_SOLANA_LIVE_MAX_DAILY_WSOL: "2" } });
   await k.bindings.settings(TENANT, k.scope.owner, (await k.bindings.get(TENANT))!.revision, "live", { ...limits, dailyUsdg: "1000000000", dailyWsol: "2000000000" });
   const soldUnderOne = vaultLimits(k, { perTrade: 25_000_000n, daily: 1_000_000_000n, perTradeWsol: 200_000_000n, dailyWsol: 1_000_000_000n });
   await assert.rejects(k.runtime({}, split(k, soldUnderOne, soldUnderOne)).trade(k.scope, { mode: "live", intent: manual(SOLANA_USDG_MINT, "25000000", "buy-past-sol") }), exitReserve);
@@ -1453,7 +1453,7 @@ test("exits keep room within the limits the vault enforces: saved live limits ab
 
 test("the position above its exit room is judged within the registered permission's limits, as the vault holds them and as activateLive kept them, where they are below the saved ones", async t => {
   // The caps raised to 200 USDG a day and the limits saved at it. 20 USDG bought in the window and 0.6 SOL ($90) held: 20 + 92.70 fits 200, not 100.
-  const f = await fixture(t, { cash: 50_000_000n, wsol: 600_000_000n, mark: "fair", build: { kind: "fair" }, env: { MERRYMEN_SOLANA_LIVE_MAX_DAILY_USDG: "200" } });
+  const f = await fixture(t, { cash: 50_000_000n, wsol: 600_000_000n, mark: "fair", build: { kind: "fair" }, env: { AGENTCAP_SOLANA_LIVE_MAX_DAILY_USDG: "200" } });
   await windowRow(f, "earlier-buy", "finalized", 3_600_000, SOLANA_USDG_MINT, "20000000", "20000000");
   await f.bindings.settings(TENANT, f.scope.owner, (await f.bindings.get(TENANT))!.revision, "live", { ...limits, dailyUsdg: "200000000" });
   // The vault holds the permission registered at 100 a day (the fixture's): buying waits.
@@ -1485,7 +1485,7 @@ test("the position above its exit room is priced as the exit reserve prices it: 
   await windowRow(g, "earlier-buy", "finalized", 3_600_000, SOLANA_USDG_MINT, "25000000", "25000000");
   assert.deepEqual((await g.app.status(g.scope)).live.blockers, [SOLANA_STATUS_POSITION_ABOVE_EXIT_ROOM]);
   // The configured tolerance, not a fixed one: at 200 bps it fits (25 + 74.97).
-  assert.deepEqual((await g.runtime({ MERRYMEN_SOLANA_REFERENCE_TOLERANCE_BPS: "200" }).status(g.scope)).live.blockers, []);
+  assert.deepEqual((await g.runtime({ AGENTCAP_SOLANA_REFERENCE_TOLERANCE_BPS: "200" }).status(g.scope)).live.blockers, []);
 });
 
 test("daily limits lowered below the position hold buys with a warning that names lowered limits among the causes and says selling it all takes more than one window; a sale within them goes through", async t => {
@@ -1518,7 +1518,7 @@ test("the position above its exit room is priced only while a buy that still cou
 
 test("live rollout caps: on the list, an account whose permission is registered above caps lowered since may save its live limits up to what it signed, so a re-save never narrows its exits; buys stay refused", async t => {
   // The registered permission allows 25 and 100 USDG, 0.2 and 1 SOL (kept as activateLive keeps it); the caps are lowered to the defaults.
-  const lowered = { MERRYMEN_SOLANA_LIVE_MAX_PER_TRADE_USDG: "", MERRYMEN_SOLANA_LIVE_MAX_DAILY_USDG: "", MERRYMEN_SOLANA_LIVE_MAX_PER_TRADE_WSOL: "", MERRYMEN_SOLANA_LIVE_MAX_DAILY_WSOL: "" };
+  const lowered = { AGENTCAP_SOLANA_LIVE_MAX_PER_TRADE_USDG: "", AGENTCAP_SOLANA_LIVE_MAX_DAILY_USDG: "", AGENTCAP_SOLANA_LIVE_MAX_PER_TRADE_WSOL: "", AGENTCAP_SOLANA_LIVE_MAX_DAILY_WSOL: "" };
   // 0.4 SOL ($60) held: one day of the signed limits can sell it beside the 30 USDG used below.
   const f = await fixture(t, { cash: 50_000_000n, wsol: 400_000_000n, mark: "fair", build: { kind: "fair" }, env: lowered });
   const signed = { perTradeUsdg: limits.perTradeUsdg, dailyUsdg: limits.dailyUsdg, perTradeWsol: limits.perTradeWsol, dailyWsol: limits.dailyWsol };

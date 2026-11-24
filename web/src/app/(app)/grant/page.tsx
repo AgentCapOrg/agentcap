@@ -1,2 +1,2 @@
-export const metadata = {title:"Wallet & permissions — merrymen"};
+export const metadata = {title:"Wallet & permissions — agentcap"};
 export default function WalletRoute() { return null; }

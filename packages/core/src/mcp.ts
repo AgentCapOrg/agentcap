@@ -8,7 +8,7 @@
  * loopback redirect catcher that the desktop worker needs is deliberately NOT
  * here for exactly that reason — it is node-only and lives in the worker.
  *
- * Why hand-rolled rather than @modelcontextprotocol/sdk: merrymen ships as an
+ * Why hand-rolled rather than @modelcontextprotocol/sdk: agentcap ships as an
  * npm package and is bundled into a phone app, so every dependency is a
  * decision, and the wire format here is about sixty lines. The framing has one
  * genuine trap (below) that a wrapper would hide rather than remove.
@@ -116,7 +116,7 @@ export class McpClient {
     return msg.result;
   }
 
-  async initialize(clientName = "merrymen", clientVersion = "0.0.0"): Promise<unknown> {
+  async initialize(clientName = "agentcap", clientVersion = "0.0.0"): Promise<unknown> {
     const result = await this.send("initialize", {
       protocolVersion: this.opts.protocolVersion ?? "2025-06-18",
       capabilities: {},

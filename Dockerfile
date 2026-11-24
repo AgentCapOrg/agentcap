@@ -1,9 +1,9 @@
-# Hosted merrymen — ONE image, FOUR explicit roles.
+# Hosted agentcap — ONE image, FOUR explicit roles.
 #
 # The same image runs the Next.js dashboard (the web service), or — on the
 # orchestrator service — the process-per-tenant supervisor or the recovery reply
 # listener. A separate Solana service can run the explicitly enabled Solana
-# strategies. The role is picked by MERRYMEN_START per service, and it
+# strategies. The role is picked by AGENTCAP_START per service, and it
 # is scripts/container-start.sh that reads it, holds it to an allowlist and execs
 # the role, under tini (the ENTRYPOINT/CMD at the bottom; docs/hosted-deploy.md).
 # railway.json deliberately sets NO startCommand and NO healthcheck, so this one
@@ -81,22 +81,22 @@ RUN /bin/sh -n /app/scripts/container-start.sh
 # to this list: an ARG is baked into the image layer and readable by anyone who
 # can pull it. Every secret stays a runtime variable (see the CMD below).
 #
-# NEXT_PUBLIC_MERRYMEN_SOLANA_OWNER_KEY_EXPORT is a boolean, and off by
+# NEXT_PUBLIC_AGENTCAP_SOLANA_OWNER_KEY_EXPORT is a boolean, and off by
 # default: the Solana owner-key backup card (web/src/terminal/SolanaRecovery.tsx)
 # shows only when it is exactly "1". Turn it on only after wallet export is
 # enabled for the Privy app in its dashboard.
 ARG NEXT_PUBLIC_PRIVY_APP_ID=""
 ARG NEXT_PUBLIC_TRENCHER_FACTORY=""
 ARG NEXT_PUBLIC_TRENCHER_FACTORY_CODE_HASH=""
-ARG NEXT_PUBLIC_MERRYMEN_PRIVY_BETA=""
-ARG NEXT_PUBLIC_MERRYMEN_SOLANA_OWNER_KEY_EXPORT=""
+ARG NEXT_PUBLIC_AGENTCAP_PRIVY_BETA=""
+ARG NEXT_PUBLIC_AGENTCAP_SOLANA_OWNER_KEY_EXPORT=""
 ARG NEXT_PUBLIC_GLOAM_FUNDING_ENABLED=""
 ARG NEXT_PUBLIC_GLOAM_WITHDRAWALS_ENABLED=""
 ENV NEXT_PUBLIC_PRIVY_APP_ID=$NEXT_PUBLIC_PRIVY_APP_ID
 ENV NEXT_PUBLIC_TRENCHER_FACTORY=$NEXT_PUBLIC_TRENCHER_FACTORY
 ENV NEXT_PUBLIC_TRENCHER_FACTORY_CODE_HASH=$NEXT_PUBLIC_TRENCHER_FACTORY_CODE_HASH
-ENV NEXT_PUBLIC_MERRYMEN_PRIVY_BETA=$NEXT_PUBLIC_MERRYMEN_PRIVY_BETA
-ENV NEXT_PUBLIC_MERRYMEN_SOLANA_OWNER_KEY_EXPORT=$NEXT_PUBLIC_MERRYMEN_SOLANA_OWNER_KEY_EXPORT
+ENV NEXT_PUBLIC_AGENTCAP_PRIVY_BETA=$NEXT_PUBLIC_AGENTCAP_PRIVY_BETA
+ENV NEXT_PUBLIC_AGENTCAP_SOLANA_OWNER_KEY_EXPORT=$NEXT_PUBLIC_AGENTCAP_SOLANA_OWNER_KEY_EXPORT
 ENV NEXT_PUBLIC_GLOAM_FUNDING_ENABLED=$NEXT_PUBLIC_GLOAM_FUNDING_ENABLED
 ENV NEXT_PUBLIC_GLOAM_WITHDRAWALS_ENABLED=$NEXT_PUBLIC_GLOAM_WITHDRAWALS_ENABLED
 
@@ -107,13 +107,13 @@ ENV NODE_ENV=production
 # Which start path this image has. An image built before the roles ran this way
 # does not carry it, so a start-phase check can tell an old image from this one
 # by asking, rather than by guessing from the process tree.
-ENV MERRYMEN_IMAGE=dockerfile-v1
+ENV AGENTCAP_IMAGE=dockerfile-v1
 
-# ONE image, FOUR roles, selected by MERRYMEN_START (a Railway per-service var):
-#   web service          → MERRYMEN_START unset → start:web (the Next dashboard)
-#   orchestrator service → MERRYMEN_START=start:orchestrator (the per-tenant supervisor)
+# ONE image, FOUR roles, selected by AGENTCAP_START (a Railway per-service var):
+#   web service          → AGENTCAP_START unset → start:web (the Next dashboard)
+#   orchestrator service → AGENTCAP_START=start:orchestrator (the per-tenant supervisor)
 #                          or start:recovery-replies (the recovery reply listener)
-#   Solana service       → MERRYMEN_START=start:solana (bounded Solana strategies)
+#   Solana service       → AGENTCAP_START=start:solana (bounded Solana strategies)
 # Still an npm script NAME, never a command: scripts/container-start.sh runs only
 # an allowlist of them, and refuses an empty or unknown value with exit 64 —
 # never an arbitrary shell command, and never the wrong role running green.
@@ -131,7 +131,7 @@ ENV MERRYMEN_IMAGE=dockerfile-v1
 # nor node would.
 # worker/src/container-start.test.ts holds the shape of both lines.
 #
-# Every secret (MERRYMEN_SESSION_SECRET, MERRYMEN_STORE_DEK, DATABASE_URL, the
+# Every secret (AGENTCAP_SESSION_SECRET, AGENTCAP_STORE_DEK, DATABASE_URL, the
 # house keys) is injected at RUNTIME by Railway, never baked into the image.
 ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["/bin/sh", "/app/scripts/container-start.sh"]

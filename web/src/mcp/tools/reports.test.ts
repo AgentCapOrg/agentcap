@@ -9,7 +9,7 @@ import { randomBytes } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, test } from "node:test";
 import { createMcpHandler } from "@modelcontextprotocol/server";
-import { CASH } from "@merrymen/core";
+import { CASH } from "@agentcap/core";
 import { mintSession } from "@/lib/auth";
 import { EXPORT_LIVE_MAX_BYTES, EXPORT_LIVE_MAX_COUNT, EXPORT_MAX_BYTES, EXPORT_MAX_ROWS, csvCell, normalizeRefusal } from "@/lib/services/reports";
 import { GET as downloadExport } from "../../app/api/mcp/exports/[id]/route";
@@ -26,8 +26,8 @@ import { errorOf,
 import { INLINE_CONTENT_MAX, REPORTS_RESOURCES, REPORTS_TOOLS } from "./reports";
 import { encodeCursor } from "./shared";
 
-delete process.env.MERRYMEN_OAUTH_ISSUER;
-process.env.MERRYMEN_PUBLIC_ORIGIN = "https://app.test";
+delete process.env.AGENTCAP_OAUTH_ISSUER;
+process.env.AGENTCAP_PUBLIC_ORIGIN = "https://app.test";
 
 const NOW = 1_800_000_000;
 const DAY = 86_400;
@@ -433,11 +433,11 @@ test("create_export trades (CSV): one row per operation, labelled books, evidenc
   const { d, a } = await setup();
   const r = data(await run("create_export", { kind: "trades", format: "csv", since: new Date((NOW - DAY) * 1000).toISOString() }, a));
   assert.match(r.export_id, /^exp_[0-9a-f]{32}$/);
-  assert.equal(r.resource_uri, `merrymen://exports/${r.export_id}`);
+  assert.equal(r.resource_uri, `agentcap://exports/${r.export_id}`);
   assert.equal(r.download_url, `https://app.test/connect/export/${r.export_id}`, "a page link: the file route refuses the cross-site click");
   assert.equal(r.expires_at, new Date((NOW + DAY) * 1000).toISOString());
   assert.equal(r.agent, SLUG_A);
-  assert.match(r.filename, new RegExp(`^merrymen-${SLUG_A}-trades-\\d{8}T\\d{6}Z\\.csv$`));
+  assert.match(r.filename, new RegExp(`^agentcap-${SLUG_A}-trades-\\d{8}T\\d{6}Z\\.csv$`));
   assert.deepEqual(r.untrusted_columns, ["symbol", "name"]);
 
   const stored = d.raw.prepare("SELECT tenant, connection_id, kind, format, bytes, created_at, expires_at, content FROM mcp_exports WHERE id = ?").get(r.export_id) as Record<string, any>;
@@ -494,7 +494,7 @@ test("create_export decisions (JSON): no signals, reasons labelled untrusted", a
   assert.ok(!content.includes("SECRET_BALANCE_SHEET"), "signals_json is never exported");
   assert.ok(!content.includes("SECRET_B_REASON"), "another owner's decisions are not exported");
   const doc = JSON.parse(content);
-  assert.equal(doc.format, "merrymen-export");
+  assert.equal(doc.format, "agentcap-export");
   assert.equal(doc.kind, "decisions");
   assert.equal(doc.agent, SLUG_A);
   assert.equal(doc.row_count, doc.rows.length);
@@ -543,7 +543,7 @@ test("create_export: another owner's agent id is not found and nothing is stored
 test("create_export: an owner holds a bounded number of unexpired exports at once", async () => {
   const { d, a, b } = await setup({ seed: false });
   const put = d.raw.prepare(`INSERT INTO mcp_exports (id, tenant, connection_id, kind, format, filename, content, bytes, created_at, expires_at) VALUES (?, ?, 'c', 'trades', 'csv', ?, 'x', ?, ?, ?)`);
-  for (let i = 0; i < EXPORT_LIVE_MAX_COUNT; i++) put.run(`exp_${i.toString(16).padStart(32, "0")}`, OWNER_A, `merrymen-${SLUG_A}-trades-x.csv`, 1, NOW - 100, NOW + 3600 + i);
+  for (let i = 0; i < EXPORT_LIVE_MAX_COUNT; i++) put.run(`exp_${i.toString(16).padStart(32, "0")}`, OWNER_A, `agentcap-${SLUG_A}-trades-x.csv`, 1, NOW - 100, NOW + 3600 + i);
   const full = await run("create_export", { kind: "portfolio" }, a);
   assert.equal(errorCode(full), "quota_exceeded");
   assert.equal(errorOf(full).retry_after_s, 3600);
@@ -554,7 +554,7 @@ test("create_export: an owner holds a bounded number of unexpired exports at onc
 
   // The byte cap holds too: one huge live export leaves no room for another 2 MB file.
   d.raw.exec("DELETE FROM mcp_exports");
-  put.run(`exp_${"f".repeat(32)}`, OWNER_A, `merrymen-${SLUG_A}-trades-y.csv`, EXPORT_LIVE_MAX_BYTES - EXPORT_MAX_BYTES + 1, NOW - 100, NOW + 3600);
+  put.run(`exp_${"f".repeat(32)}`, OWNER_A, `agentcap-${SLUG_A}-trades-y.csv`, EXPORT_LIVE_MAX_BYTES - EXPORT_MAX_BYTES + 1, NOW - 100, NOW + 3600);
   assert.equal(errorCode(await run("create_export", { kind: "portfolio" }, a)), "quota_exceeded");
 });
 
@@ -639,7 +639,7 @@ test("get_export inlines at most 32 KB; anything larger is left to its resource 
   const g = data(await run("get_export", { export_id: big.export_id, include_content: true }, a));
   assert.equal(g.content, null);
   assert.equal(g.content_note, `The export is ${big.bytes} bytes, over the 32 KB inline limit; read ${big.resource_uri} or use the download link.`);
-  assert.equal(g.resource_uri, `merrymen://exports/${big.export_id}`);
+  assert.equal(g.resource_uri, `agentcap://exports/${big.export_id}`);
   assert.ok(g.download_url, "the download link is still there");
   assert.match(REPORTS_TOOLS.find((t) => t.name === "get_export")!.description, /at most 32 KB/);
 
@@ -742,17 +742,17 @@ test("SDK: reports tools are listed with honest annotations, and the export reso
   const id = (created.result?.structuredContent as { export_id: string }).export_id;
   assert.match(id, /^exp_/);
 
-  const read = await rpcResult(await call(mcpRequest(tokenA, "resources/read", { uri: `merrymen://exports/${id}` })));
+  const read = await rpcResult(await call(mcpRequest(tokenA, "resources/read", { uri: `agentcap://exports/${id}` })));
   const contents = read.result?.contents as Array<{ mimeType: string; text: string }>;
   assert.match(contents[0]!.mimeType, /^text\/csv/);
   assert.match(contents[0]!.text, /^at,account,book,status,confirmed/);
 
   const listed = await rpcResult(await call(mcpRequest(tokenA, "resources/list")));
-  assert.ok((listed.result?.resources as Array<{ uri: string }>).some((r) => r.uri === `merrymen://exports/${id}`));
+  assert.ok((listed.result?.resources as Array<{ uri: string }>).some((r) => r.uri === `agentcap://exports/${id}`));
   const listedB = await rpcResult(await call(mcpRequest(tokenB, "resources/list")));
-  assert.ok(!(listedB.result?.resources as Array<{ uri: string }>).some((r) => r.uri.startsWith("merrymen://exports/")));
+  assert.ok(!(listedB.result?.resources as Array<{ uri: string }>).some((r) => r.uri.startsWith("agentcap://exports/")));
 
-  const stolen = await rpcResult(await call(mcpRequest(tokenB, "resources/read", { uri: `merrymen://exports/${id}` })));
+  const stolen = await rpcResult(await call(mcpRequest(tokenB, "resources/read", { uri: `agentcap://exports/${id}` })));
   assert.ok(stolen.error, "another owner's export is not readable");
   assert.match(stolen.error!.message, /not_found/);
   assert.ok(!JSON.stringify(stolen).includes("0xtx1"));
@@ -762,12 +762,12 @@ test("SDK: reports tools are listed with honest annotations, and the export reso
 // ── the browser download route ──────────────────────────────────────────────
 
 async function withHostedEnv<T>(fn: () => Promise<T>, over: Record<string, string | undefined> = {}): Promise<T> {
-  const keys = ["MERRYMEN_HOSTED", "DATABASE_URL", "MERRYMEN_SESSION_SECRET", "MERRYMEN_MCP_ENABLED", "MERRYMEN_PUBLIC_ORIGIN"] as const;
+  const keys = ["AGENTCAP_HOSTED", "DATABASE_URL", "AGENTCAP_SESSION_SECRET", "AGENTCAP_MCP_ENABLED", "AGENTCAP_PUBLIC_ORIGIN"] as const;
   const saved = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
   Object.assign(process.env, {
-    MERRYMEN_HOSTED: "1", DATABASE_URL: "postgres://unused.invalid/db", MERRYMEN_SESSION_SECRET: randomBytes(32).toString("hex"), MERRYMEN_PUBLIC_ORIGIN: "https://app.test",
+    AGENTCAP_HOSTED: "1", DATABASE_URL: "postgres://unused.invalid/db", AGENTCAP_SESSION_SECRET: randomBytes(32).toString("hex"), AGENTCAP_PUBLIC_ORIGIN: "https://app.test",
   });
-  delete process.env.MERRYMEN_MCP_ENABLED;
+  delete process.env.AGENTCAP_MCP_ENABLED;
   for (const [k, v] of Object.entries(over)) if (v === undefined) delete process.env[k]; else process.env[k] = v;
   try {
     return await fn();
@@ -778,7 +778,7 @@ async function withHostedEnv<T>(fn: () => Promise<T>, over: Record<string, strin
 
 function seedExport(raw: DatabaseSync, id: string, tenant: string, expiresAt: number): void {
   raw.prepare(`INSERT INTO mcp_exports (id, tenant, connection_id, kind, format, filename, content, bytes, created_at, expires_at) VALUES (?, ?, 'mcpcon_x', 'trades', 'csv', ?, ?, ?, ?, ?)`)
-    .run(id, tenant, `merrymen-${SLUG_A}-trades-20270101T000000Z.csv`, "at,book\r\n2027-01-01T00:00:00.000Z,live\r\n", 42, Math.floor(Date.now() / 1000) - 10, expiresAt);
+    .run(id, tenant, `agentcap-${SLUG_A}-trades-20270101T000000Z.csv`, "at,book\r\n2027-01-01T00:00:00.000Z,live\r\n", 42, Math.floor(Date.now() / 1000) - 10, expiresAt);
 }
 
 const get = (id: string, cookie?: string) => downloadExport(
@@ -799,7 +799,7 @@ test("download route: only the owner's session gets the file, as a no-store atta
     const ok = await get(live, cookieA);
     assert.equal(ok.status, 200);
     assert.match(ok.headers.get("content-type") ?? "", /^text\/csv/);
-    assert.equal(ok.headers.get("content-disposition"), `attachment; filename="merrymen-${SLUG_A}-trades-20270101T000000Z.csv"`);
+    assert.equal(ok.headers.get("content-disposition"), `attachment; filename="agentcap-${SLUG_A}-trades-20270101T000000Z.csv"`);
     assert.equal(ok.headers.get("cache-control"), "no-store");
     assert.equal(ok.headers.get("x-content-type-options"), "nosniff");
     assert.match(await ok.text(), /^at,book/);
@@ -850,5 +850,5 @@ test("download route: absent when MCP is off", async () => {
   await withHostedEnv(async () => {
     const res = await get(id, `mm_session=${encodeURIComponent(mintSession(OWNER_A))}`);
     assert.equal(res.status, 404);
-  }, { MERRYMEN_MCP_ENABLED: "0" });
+  }, { AGENTCAP_MCP_ENABLED: "0" });
 });

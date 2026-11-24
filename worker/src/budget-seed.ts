@@ -129,7 +129,7 @@ export const BUDGET_SEED_SCHEMA = `CREATE TABLE IF NOT EXISTS budget_seed (
   PRIMARY KEY (agent_id, op_hash)
 )`;
 
-/** In the child's home, beside merrymen.db. Present = the trailing day was not put back. */
+/** In the child's home, beside agentcap.db. Present = the trailing day was not put back. */
 export const BUDGET_UNRESTORED_FILE = "budget-unrestored.json";
 
 const markerIn = (home: string) => path.join(home, BUDGET_UNRESTORED_FILE);

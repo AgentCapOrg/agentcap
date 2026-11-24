@@ -17,7 +17,7 @@
  * restore seam for the real restore over a sqlite ledger, and gives the
  * practice reset the same ledger (setHeldResetDbForTest).
  *
- * MERRYMEN_HOME is per process (node --test forks per file), so this never
+ * AGENTCAP_HOME is per process (node --test forks per file), so this never
  * leaks into another test file.
  */
 import assert from "node:assert/strict";
@@ -32,12 +32,12 @@ import type { StoredGrant } from "../../packages/core/src/index";
 import { wrapSqlite, type Db } from "./db";
 
 // The real cache-erasure guard requires plain ancestors; macOS /var is a symlink.
-const FLEET = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-restore-hold-")));
-process.env.MERRYMEN_HOME = FLEET;
-process.env.MERRYMEN_HOSTED = "1";
+const FLEET = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-restore-hold-")));
+process.env.AGENTCAP_HOME = FLEET;
+process.env.AGENTCAP_HOSTED = "1";
 delete process.env.DATABASE_URL;
-process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 9).toString("base64");
-process.env.MERRYMEN_TICK_SECONDS = "60";
+process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 9).toString("base64");
+process.env.AGENTCAP_TICK_SECONDS = "60";
 
 const {
   reconcile,
@@ -132,7 +132,7 @@ const holds = () => spawned.filter((p) => p.kind === "hold");
 setSpawnForTest((_cmd, args, opts) => {
   const kind = args.some((a) => a.endsWith("telegram-hold.ts")) ? "hold" : "worker";
   // Both run with the child's env: a tenant's own home, no shared database.
-  assert.ok([childHome(TENANT), childHome(OTHER)].includes(String(opts.env?.MERRYMEN_HOME)));
+  assert.ok([childHome(TENANT), childHome(OTHER)].includes(String(opts.env?.AGENTCAP_HOME)));
   assert.equal(opts.env?.DATABASE_URL, undefined);
   const p = new FakeProc(kind);
   spawned.push(p);
@@ -223,7 +223,7 @@ const readSettings = (t: string) =>
 
 /** Real local accounting and personal data, kept apart at the writer-exit boundary. */
 async function seedRetainedHome() {
-  const home = childHome(TENANT), file = path.join(home, "merrymen.db"), raw = new DatabaseSync(file);
+  const home = childHome(TENANT), file = path.join(home, "agentcap.db"), raw = new DatabaseSync(file);
   try {
     await applyLedgerSchema(wrapSqlite(raw));
     raw.prepare("INSERT OR IGNORE INTO agents(smart_account,owner_address,session_key_address,chain_id,caps,granted_at,expires_at,hwm_usdg) VALUES(?,?,?,4663,'{}',1,9999999999,120)")

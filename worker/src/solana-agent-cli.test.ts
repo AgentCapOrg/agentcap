@@ -277,9 +277,9 @@ async function book(db: Db) {
     wsol: paper.positions.map((position) => position.amountRaw) };
 }
 
-const childPoint = process.env.MERRYMEN_SOLANA_CRASH_CHILD as Point | undefined;
+const childPoint = process.env.AGENTCAP_SOLANA_CRASH_CHILD as Point | undefined;
 if (childPoint) {
-  await crashChild(childPoint, process.env.MERRYMEN_SOLANA_CRASH_DB!);
+  await crashChild(childPoint, process.env.AGENTCAP_SOLANA_CRASH_DB!);
 } else {
   for (const point of ["in-commit", "after-commit"] as const) {
     test(`a forced stop ${point === "in-commit" ? "inside a paper fill's transaction" : "right after a paper fill committed"} is recovered by a restart without a second fill`,
@@ -290,7 +290,7 @@ if (childPoint) {
         await seed(file);
 
         const child = spawn(process.execPath, ["--import", "tsx", THIS_FILE], { cwd: ROOT, stdio: ["ignore", "pipe", "pipe"],
-          env: { ...process.env, MERRYMEN_SOLANA_CRASH_CHILD: point, MERRYMEN_SOLANA_CRASH_DB: file } });
+          env: { ...process.env, AGENTCAP_SOLANA_CRASH_CHILD: point, AGENTCAP_SOLANA_CRASH_DB: file } });
         t.after(() => { if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL"); });
         let output = "";
         child.stdout.on("data", (chunk) => { output += chunk; });
@@ -351,7 +351,7 @@ if (childPoint) {
       await seedLive(file);
 
       const child = spawn(process.execPath, ["--import", "tsx", THIS_FILE], { cwd: ROOT, stdio: ["ignore", "pipe", "pipe"],
-        env: { ...process.env, MERRYMEN_SOLANA_CRASH_CHILD: "live-send", MERRYMEN_SOLANA_CRASH_DB: file } });
+        env: { ...process.env, AGENTCAP_SOLANA_CRASH_CHILD: "live-send", AGENTCAP_SOLANA_CRASH_DB: file } });
       t.after(() => { if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL"); });
       let output = "";
       child.stdout.on("data", (chunk) => { output += chunk; });
@@ -393,21 +393,21 @@ if (childPoint) {
     });
 }
 
-test("the Solana worker starts only with MERRYMEN_SOLANA=1: unset, it refuses before it opens any storage (review finalise)", async (t) => {
+test("the Solana worker starts only with AGENTCAP_SOLANA=1: unset, it refuses before it opens any storage (review finalise)", async (t) => {
   const { solanaWorkerSwitchRefusal } = await import("./solana-agent-cli");
-  assert.equal(solanaWorkerSwitchRefusal({ MERRYMEN_SOLANA: "1" }), null);
-  assert.equal(solanaWorkerSwitchRefusal({ MERRYMEN_SOLANA: " 1\n" }), null);
-  for (const value of [undefined, "", "0", "true", "yes"]) assert.match(solanaWorkerSwitchRefusal({ MERRYMEN_SOLANA: value })!, /MERRYMEN_SOLANA is not 1/, String(value));
+  assert.equal(solanaWorkerSwitchRefusal({ AGENTCAP_SOLANA: "1" }), null);
+  assert.equal(solanaWorkerSwitchRefusal({ AGENTCAP_SOLANA: " 1\n" }), null);
+  for (const value of [undefined, "", "0", "true", "yes"]) assert.match(solanaWorkerSwitchRefusal({ AGENTCAP_SOLANA: value })!, /AGENTCAP_SOLANA is not 1/, String(value));
   const home = mkdtempSync(path.join(tmpdir(), "solana-worker-off-"));
   t.after(() => rmSync(home, { recursive: true, force: true }));
-  const env: NodeJS.ProcessEnv = { PATH: process.env.PATH, MERRYMEN_HOME: home };
+  const env: NodeJS.ProcessEnv = { PATH: process.env.PATH, AGENTCAP_HOME: home };
   const child = spawn(process.execPath, ["--import", "tsx", fileURLToPath(new URL("./solana-agent-cli.ts", import.meta.url))],
     { cwd: fileURLToPath(new URL("../../", import.meta.url)), env, stdio: ["ignore", "pipe", "pipe"] });
   let stderr = "";
   child.stderr.on("data", (chunk) => { stderr += chunk; });
   const [code] = await once(child, "exit") as [number | null];
   assert.equal(code, 78, stderr);
-  assert.match(stderr, /\[solana-worker\] refused: MERRYMEN_SOLANA is not 1/);
+  assert.match(stderr, /\[solana-worker\] refused: AGENTCAP_SOLANA is not 1/);
   const { existsSync } = await import("node:fs");
   assert.equal(existsSync(path.join(home, "solana-accounts.sqlite")), false, "no Solana storage was opened");
 });

@@ -3,7 +3,7 @@
  *
  * `PonsClassVault.sweep` existing at contract level was never the question. The
  * question was whether an ordinary owner has a supported way to CALL it, and
- * until now they did not: `merrymen recover` swept ERC-20 balances of the smart
+ * until now they did not: `agentcap recover` swept ERC-20 balances of the smart
  * account and had no notion of the vault at all. `class-recovery.ts` held
  * well-built primitives — `findClassVault`, `readClassHoldings`,
  * `planClassSweep` — with no production caller anywhere in the repo.
@@ -72,7 +72,7 @@ describe("it depends on the owner key and an RPC, and nothing else", () => {
   });
 
   it("derives the vault with NO grant, because recovery may have none", () => {
-    // `merrymen recover` accepts a pasted owner key with nothing else, and can
+    // `agentcap recover` accepts a pasted owner key with nothing else, and can
     // run against an archived grant. The factory constants are what make the
     // vault derivable from the owner key alone — which is exactly why they are a
     // deploy fact rather than a setting anyone can edit.
@@ -131,7 +131,7 @@ describe("it depends on the owner key and an RPC, and nothing else", () => {
 
   it("needs no operator or deployer key", () => {
     // The only secrets in this path are the owner's own key and a bundler URL.
-    assert.ok(!/MERRYMEN_DEPLOYER_PRIVATE_KEY|operatorKey/.test(RECOVER));
+    assert.ok(!/AGENTCAP_DEPLOYER_PRIVATE_KEY|operatorKey/.test(RECOVER));
   });
 });
 

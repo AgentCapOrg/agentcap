@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const base = "https://merrymen.dev";
+const base = "https://agentcap.xyz";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return ["", "/docs", "/claude", "/grok", "/api","/token", "/governance", "/terms", "/privacy"].map((path) => ({

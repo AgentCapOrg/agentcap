@@ -13,8 +13,8 @@ import { mkdtempSync, rmSync, readFileSync, statSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-istore-"));
-process.env.MERRYMEN_HOME = HOME;
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-istore-"));
+process.env.AGENTCAP_HOME = HOME;
 
 const { FileIdentityStore, mintSlug, SLUG_RE, SLUG_LENGTH } = await import("./identity-store");
 

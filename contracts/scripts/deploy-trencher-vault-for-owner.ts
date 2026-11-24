@@ -76,7 +76,7 @@ async function main() {
   }
 
   const [wallet] = await hre.viem.getWalletClients();
-  if (!wallet) throw new Error("Set MERRYMEN_DEPLOYER_PRIVATE_KEY in the operator environment; never use a tenant session key");
+  if (!wallet) throw new Error("Set AGENTCAP_DEPLOYER_PRIVATE_KEY in the operator environment; never use a tenant session key");
 
   // Simulate first: a CREATE2 that reverts costs the same gas as one that works.
   const { request, result } = await client.simulateContract({

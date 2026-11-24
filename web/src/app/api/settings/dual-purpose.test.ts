@@ -13,7 +13,7 @@
  *     Telegram bot claim (lib/telegram-claims.ts);
  *   - hosted, a Perps save takes its turn under the login's save lock, the
  *     one Spot's saves take, and writes nothing while another save holds it;
- *   - WHERE PERPS ARE NOT OFFERED (MERRYMEN_PERPS unset), a Perps save may
+ *   - WHERE PERPS ARE NOT OFFERED (AGENTCAP_PERPS unset), a Perps save may
  *     only turn things off, hosted and self-hosted (D1, D19): everything else
  *     is refused 403 with nothing written, and the GET still answers.
  */
@@ -30,13 +30,13 @@ import { after, afterEach, before, beforeEach, describe, it } from "node:test";
 
 import { mintSession } from "@/lib/auth";
 import { SETTINGS_SAVE_LOCK, settingsSaveLockKey, useBotClaimsDbForTest, withSettingsSaveLock } from "@/lib/telegram-claims";
-import { getSettingsStore, resetSettingsStoreForTest } from "@merrymen/settings-store";
+import { getSettingsStore, resetSettingsStoreForTest } from "@agentcap/settings-store";
 import { advisoryLockWaitersForTest, wrapSqlite, type Db } from "../../../../../worker/src/db";
 import { readBotClaims } from "../../../../../worker/src/telegram-claims";
 
 const OWNER = `0x${"aa".repeat(20)}` as const;
 const OTHER = `0x${"bb".repeat(20)}` as const;
-const KEYS = ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_SESSION_SECRET", "DATABASE_URL", "MERRYMEN_PERPS", "MERRYMEN_PERPS_PAPER_TENANTS"] as const;
+const KEYS = ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_SESSION_SECRET", "DATABASE_URL", "AGENTCAP_PERPS", "AGENTCAP_PERPS_PAPER_TENANTS"] as const;
 const saved = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
 const realFetch = globalThis.fetch;
 const getMeAsked: string[] = [];
@@ -62,8 +62,8 @@ async function currentVersion(tenant: `0x${string}` | null = OWNER): Promise<str
 
 before(async () => {
   home = mkdtempSync(path.join(tmpdir(), "mm-dual-settings-"));
-  process.env.MERRYMEN_HOME = home;
-  process.env.MERRYMEN_SESSION_SECRET = randomBytes(32).toString("hex");
+  process.env.AGENTCAP_HOME = home;
+  process.env.AGENTCAP_SESSION_SECRET = randomBytes(32).toString("hex");
   delete process.env.DATABASE_URL;
   // getMe, for the Spot wallet's bot claim: any `<id>:<secret>` answers for bot <id>.
   globalThis.fetch = (async (input: string | URL | Request) => {
@@ -79,9 +79,9 @@ before(async () => {
 beforeEach(() => {
   pilot?.close();
   pilot = pilotFixture([OWNER, OTHER]);
-  process.env.MERRYMEN_HOSTED = "1";
-  process.env.MERRYMEN_PERPS = "paper";
-  process.env.MERRYMEN_PERPS_PAPER_TENANTS = `${OWNER},${OTHER}`;
+  process.env.AGENTCAP_HOSTED = "1";
+  process.env.AGENTCAP_PERPS = "paper";
+  process.env.AGENTCAP_PERPS_PAPER_TENANTS = `${OWNER},${OTHER}`;
   resetSettingsStoreForTest();
   for (const d of ["tenant-settings", "tenant-settings-perps", "accounts"]) rmSync(path.join(home, d), { recursive: true, force: true });
   rmSync(path.join(home, "settings.json"), { force: true });
@@ -152,7 +152,7 @@ describe("each wallet keeps its own settings", () => {
   });
 
   it("self-hosted, the Perps wallet writes its own home and never touches Spot's settings.json", async () => {
-    delete process.env.MERRYMEN_HOSTED;
+    delete process.env.AGENTCAP_HOSTED;
     assert.equal((await PUT(request("", { strategy: "steady-basket", slippageBps: 120 }, null))).status, 200);
     const spotFile = path.join(home, "settings.json");
     const before = readFileSync(spotFile, "utf8");
@@ -277,7 +277,7 @@ describe("a hosted Perps save takes the login's save lock", () => {
 
 describe("where Perps are not offered, a Perps save may only turn things off (D1)", () => {
   beforeEach(() => {
-    delete process.env.MERRYMEN_PERPS;
+    delete process.env.AGENTCAP_PERPS;
   });
 
   it("HOSTED: anything but an off is refused 403 with nothing written; an off is written; the GET still answers", async () => {
@@ -309,7 +309,7 @@ describe("where Perps are not offered, a Perps save may only turn things off (D1
     assert.deepEqual(mixedOut.saved, ["perpsEnabled"]);
     assert.match(mixedOut.errors?.join(" ") ?? "", /Switched off \(perpsEnabled\) — that was saved\. Nothing else was\./);
     assert.deepEqual(await getSettingsStore("perps").get(OWNER), { strategy: "perps-only", perpsEnabled: false, perpsMaxLeverage: 2 });
-    // The GET answers whatever MERRYMEN_PERPS says: an owner can see the wallet to switch it off.
+    // The GET answers whatever AGENTCAP_PERPS says: an owner can see the wallet to switch it off.
     const view = await GET(request("?wallet=perps"));
     assert.equal(view.status, 200);
     assert.equal(((await json(view)).values as Record<string, unknown>).perpsEnabled, false);
@@ -318,7 +318,7 @@ describe("where Perps are not offered, a Perps save may only turn things off (D1
   });
 
   it("SELF-HOSTED MATCHES HOSTED (D19): nothing but an off is written into the Perps home", async () => {
-    delete process.env.MERRYMEN_HOSTED;
+    delete process.env.AGENTCAP_HOSTED;
     const perpsFile = path.join(home, "accounts", "perps", "settings.json");
     const res = await PUT(request("?wallet=perps", { perpsEnabled: true, perpsMaxLeverage: 3 }, null));
     assert.equal(res.status, 403);

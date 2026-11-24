@@ -33,7 +33,7 @@ const BUNDLER = '0x00000000000000000000000000000000000000e1';
 const PEPE = '0x0000000000000000000000000000000000000ee0';
 const USDG = core.CASH.USDG.toLowerCase();
 const TSLA = core.STOCK_TOKENS.find(t => t.symbol === 'TSLA');
-const MERRYMEN = core.energyReserveTokens(4663)[0];
+const AGENTCAP = core.energyReserveTokens(4663)[0];
 const ECDSA_VALIDATOR = '0x845adb2c711129d4f3966735ed98a9f09fc4ce57';
 const GRANT_PONS_CLASS = core.GRANT_PONS_CLASS;
 
@@ -75,7 +75,7 @@ const CURVE_BUY = { hash: '0x' + '53'.repeat(32), block: 300,
   logs: [before(), transfer(PEPE, CURVE, ME, 400n * 10n ** 18n), opEvent(ME, sessionNonce(10n))] };
 const ENERGY = { hash: '0x' + '54'.repeat(32), block: 400,
   input: handleOps([{ sender: ME, nonce: sessionNonce(11n), callData: single(POOL, 0n) }]),
-  logs: [before(), transfer(USDG, ME, POOL, 42_000_000n), transfer(MERRYMEN, POOL, ME, 98_000n * 10n ** 18n), opEvent(ME, sessionNonce(11n))] };
+  logs: [before(), transfer(USDG, ME, POOL, 42_000_000n), transfer(AGENTCAP, POOL, ME, 98_000n * 10n ** 18n), opEvent(ME, sessionNonce(11n))] };
 const VAULT_SWEEP = { hash: '0x' + '55'.repeat(32), block: 401,
   input: handleOps([{ sender: ME, nonce: rootNonce(5n), callData: single(VAULT, 0n, '0x01') }]),
   logs: [before(), transfer(PEPE, VAULT, ME, 400n * 10n ** 18n), opEvent(ME, rootNonce(5n))] };
@@ -273,7 +273,7 @@ describe('the preview', () => {
       [SHOGUN.hash, PEPE, 'trade-leg'], // a session-key swap with no trades row
       [CURVE_BUY.hash, PEPE, 'trade-leg'], // a native-ETH curve buy…
       [CURVE_BUY.hash, 'native', 'fuel'], // …and the ETH that paid for it, which sits outside the book
-      [ENERGY.hash, MERRYMEN, 'reserve'], // excluded
+      [ENERGY.hash, AGENTCAP, 'reserve'], // excluded
       [VAULT_SWEEP.hash, PEPE, 'custody'], // excluded
     ]);
     const shogun = p.accounts[0].movements.find(m => m.txHash === SHOGUN.hash);

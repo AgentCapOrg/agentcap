@@ -58,7 +58,7 @@ function commitArgs(overrides: Partial<SolanaPaperCommit> = {}): SolanaPaperComm
   };
 }
 function fixture(t: TestContext) {
-  const directory = mkdtempSync(join(tmpdir(), "merrymen-solana-paper-"));
+  const directory = mkdtempSync(join(tmpdir(), "agentcap-solana-paper-"));
   const file = join(directory, "solana-paper.sqlite");
   const stores: SolanaPaperStore[] = [];
   let nowMs = NOW;

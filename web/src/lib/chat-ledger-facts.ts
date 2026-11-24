@@ -1,5 +1,5 @@
 /** Owner chat facts are read on the server, never inferred from the browser's partial tape. */
-import { calculateChatMath, chatPeriodStart, parseChatMath, type GrantPurpose } from "@merrymen/core";
+import { calculateChatMath, chatPeriodStart, parseChatMath, type GrantPurpose } from "@agentcap/core";
 import { readTradeFacts, type ChatTradeFact } from "../../../worker/src/chat-trades";
 import type { Db } from "../../../worker/src/db";
 import type { AgentChatBody } from "./agent-chat";

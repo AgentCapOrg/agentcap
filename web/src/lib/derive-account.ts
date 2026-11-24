@@ -4,7 +4,7 @@ import { toAccount } from "viem/accounts";
 import { createKernelAccount } from "@zerodev/sdk";
 import { KERNEL_V3_3, getEntryPoint } from "@zerodev/sdk/constants";
 import { signerToEcdsaValidator } from "@zerodev/ecdsa-validator";
-import { accountIndexForPurpose, chainForId, derivationOf, type Derivation, type GrantPurpose } from "@merrymen/core";
+import { accountIndexForPurpose, chainForId, derivationOf, type Derivation, type GrantPurpose } from "@agentcap/core";
 
 /**
  * Recompute the ERC-4337 smart-account address a given OWNER controls, from the

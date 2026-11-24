@@ -47,7 +47,7 @@ const expiry = (s: SolanaSignedSubmission, blockHeight = "1201"): SolanaLiveSett
 async function fixture(t: TestContext, dialect: "sqlite" | "postgres" = "sqlite") {
   const clock = { value: NOW }; let db: Db;
   if (dialect === "postgres") {
-    const url = new URL(process.env.MERRYMEN_TEST_PG_URL!), schema = `solana_test_${randomUUID().replaceAll("-", "")}`;
+    const url = new URL(process.env.AGENTCAP_TEST_PG_URL!), schema = `solana_test_${randomUUID().replaceAll("-", "")}`;
     const admin = await makePgDb(url.toString()); await admin.exec(`CREATE SCHEMA ${schema}`);
     url.searchParams.set("options", `-c search_path=${schema}`); db = await makePgDb(url.toString());
     t.after(async () => { await admin.exec(`DROP SCHEMA ${schema} CASCADE`); });
@@ -79,7 +79,7 @@ const seen: SolanaObservation = { settlement: null, seen: true };
 const resolutions = (db: Db) => db.prepare("SELECT * FROM solana_operator_resolutions ORDER BY approved_at_ms").all() as Promise<Array<Record<string, unknown>>>;
 
 for (const dialect of ["sqlite", "postgres"] as const) {
-  const options = dialect === "postgres" && !process.env.MERRYMEN_TEST_PG_URL ? { skip: "Set MERRYMEN_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
+  const options = dialect === "postgres" && !process.env.AGENTCAP_TEST_PG_URL ? { skip: "Set AGENTCAP_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
   test(`${dialect}: a fill two independent providers agree on is recorded with the operator and every view, then booked once through the store`, options, async t => {
     const f = await fixture(t, dialect), agreed = fill(f.pending);
     // The configured pair disagrees: the fallback lags (seen, not finalized). Automatic settlement keeps it pending.
@@ -194,7 +194,7 @@ test("a trade whose vault sequence moved for another reason is booked expired by
   // The stuck trade's signed bytes carry a deadline of unix 1030: it could have run only at a cluster time from 1000 to 1029.
   const signed = { ...f.pending, signedTransactionBase64: bytesWithDeadline(1030n) };
   await f.db.prepare("UPDATE solana_runtime_submissions SET submission_json=? WHERE request_id='stuck-1'").run(JSON.stringify(signed));
-  // An owner withdrawal outside Merrymen moved the sequence to 1; the debit log holds only a swap from long before.
+  // An owner withdrawal outside AgentCap moved the sequence to 1; the debit log holds only a swap from long before.
   const moved = vaultAt(1n, [500n]);
   // One provider's log holds a debit inside the window: it may have run. Nothing is booked.
   const disputed = await resolveSolanaPendingTrade({ db: f.db, tenant: TENANT, requestId: "stuck-1", now: () => f.clock.value,
@@ -316,7 +316,7 @@ test("a booking whose reply is lost is still marked booked: the store marks the 
 });
 
 for (const dialect of ["sqlite", "postgres"] as const) {
-  const options = dialect === "postgres" && !process.env.MERRYMEN_TEST_PG_URL ? { skip: "Set MERRYMEN_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
+  const options = dialect === "postgres" && !process.env.AGENTCAP_TEST_PG_URL ? { skip: "Set AGENTCAP_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
   test(`${dialect}: a decision the automatic settlement beat is recorded as superseded, never as the one that booked`, options, async t => {
     // A run recorded its decision, then stopped before settling (crash, kill).
     const f = await fixture(t, dialect), agreed = fill(f.pending);
@@ -416,14 +416,14 @@ function network(answers: Record<string, { status: unknown; receipt: unknown }>)
   }) as typeof globalThis.fetch;
   return { fetch, asked };
 }
-const env = { MERRYMEN_SOLANA_RPC_MAINNET: "https://primary.example/?api-key=one", MERRYMEN_SOLANA_RPC_MAINNET_FALLBACK: "https://fallback.example/key-two" };
+const env = { AGENTCAP_SOLANA_RPC_MAINNET: "https://primary.example/?api-key=one", AGENTCAP_SOLANA_RPC_MAINNET_FALLBACK: "https://fallback.example/key-two" };
 
 test("the command shows each provider's own view through the executor's observation, never an endpoint, and a book without agreement fails", async t => {
   const f = await fixture(t);
   const confirmed = { status: { confirmationStatus: "confirmed", slot: 1001, err: null }, receipt: null };
   // The primary says finalized but its receipt cannot be read; the others have only seen it.
   const net = network({ "primary.example": { status: { confirmationStatus: "finalized", slot: 1001, err: null }, receipt: {} }, "fallback.example": confirmed, "third.example": confirmed });
-  const deps = { db: f.db, env: { ...env, MERRYMEN_SOLANA_RESOLVE_THIRD_RPC: "https://third.example/secret-path" }, fetch: net.fetch, now: () => f.clock.value };
+  const deps = { db: f.db, env: { ...env, AGENTCAP_SOLANA_RESOLVE_THIRD_RPC: "https://third.example/secret-path" }, fetch: net.fetch, now: () => f.clock.value };
   const shown = await runSolanaResolveCommand(["show", TENANT, "stuck-1", "--third-rpc"], deps);
   assert.match(shown, /primary: could not be used: Finalized Solana evidence disagrees with the recorded submission\./);
   assert.match(shown, /fallback: pending: seen, not finalized\n {2}operator's provider: pending: seen, not finalized\nNo provider reports a final outcome yet/);
@@ -434,7 +434,7 @@ test("the command shows each provider's own view through the executor's observat
     (error: unknown) => error instanceof SolanaResolveError && /No provider reports a final outcome yet/.test(error.message));
   assert.deepEqual(await resolutions(f.db), []);
   // The operator's provider must be its own host, and an HTTPS URL.
-  const third = (url: string) => ({ ...deps, env: { ...env, MERRYMEN_SOLANA_RESOLVE_THIRD_RPC: url } });
+  const third = (url: string) => ({ ...deps, env: { ...env, AGENTCAP_SOLANA_RESOLVE_THIRD_RPC: url } });
   await assert.rejects(runSolanaResolveCommand(["show", TENANT, "stuck-1", "--third-rpc"], third("https://PRIMARY.example./other")), /different hostname/);
   await assert.rejects(runSolanaResolveCommand(["show", TENANT, "stuck-1", "--third-rpc"], third("http://third.example/")), (error: unknown) => error instanceof SolanaRpcError && error.code === "invalid-config");
   for (const argv of [[], ["show", TENANT], ["book", TENANT, "stuck-1", "--operator", "milla"], ["show", TENANT, "stuck-1", "--operator", "milla"],
@@ -452,14 +452,14 @@ test("the third provider's URL comes from the environment, never the command lin
   const deps = { db: f.db, env, fetch: net.fetch, now: () => f.clock.value };
   for (const argv of [["show", TENANT, "stuck-1", "--third-rpc", "https://third.example/?api-key=secret"], ["show", TENANT, "stuck-1", "https://third.example/secret"]]) {
     await assert.rejects(runSolanaResolveCommand(argv, deps), (error: unknown) => error instanceof SolanaResolveError
-      && /^Do not pass provider URLs on the command line\. Put the third provider's HTTPS URL in MERRYMEN_SOLANA_RESOLVE_THIRD_RPC/.test(error.message) && !/secret|third\.example/.test(error.message), argv.join(" "));
+      && /^Do not pass provider URLs on the command line\. Put the third provider's HTTPS URL in AGENTCAP_SOLANA_RESOLVE_THIRD_RPC/.test(error.message) && !/secret|third\.example/.test(error.message), argv.join(" "));
   }
   // The switch without the variable names the variable to set.
-  await assert.rejects(runSolanaResolveCommand(["show", TENANT, "stuck-1", "--third-rpc"], deps), /reads the third provider's HTTPS URL from MERRYMEN_SOLANA_RESOLVE_THIRD_RPC/);
+  await assert.rejects(runSolanaResolveCommand(["show", TENANT, "stuck-1", "--third-rpc"], deps), /reads the third provider's HTTPS URL from AGENTCAP_SOLANA_RESOLVE_THIRD_RPC/);
   assert.deepEqual(net.asked, [], "refused before any provider is asked");
   // The usage names the variable and the --exclude names.
   await assert.rejects(runSolanaResolveCommand([], deps), (error: unknown) => error instanceof Error
-    && /\[--third-rpc\] \[--exclude primary\|fallback\|third\]/.test(error.message) && /MERRYMEN_SOLANA_RESOLVE_THIRD_RPC/.test(error.message));
+    && /\[--third-rpc\] \[--exclude primary\|fallback\|third\]/.test(error.message) && /AGENTCAP_SOLANA_RESOLVE_THIRD_RPC/.test(error.message));
 });
 
 test("an excluded provider's conflicting outcome is shown and recorded, never counted; two others must still agree", async t => {
@@ -502,7 +502,7 @@ test("the command maps --exclude names to providers, the third one included", as
   const f = await fixture(t);
   const confirmed = { status: { confirmationStatus: "confirmed", slot: 1001, err: null }, receipt: null };
   const net = network({ "primary.example": confirmed, "fallback.example": confirmed, "third.example": confirmed });
-  const deps = { db: f.db, env: { ...env, MERRYMEN_SOLANA_RESOLVE_THIRD_RPC: "https://third.example/" }, fetch: net.fetch, now: () => f.clock.value };
+  const deps = { db: f.db, env: { ...env, AGENTCAP_SOLANA_RESOLVE_THIRD_RPC: "https://third.example/" }, fetch: net.fetch, now: () => f.clock.value };
   for (const [name, label] of [["primary", "primary"], ["fallback", "fallback"], ["third", "operator's provider"]]) {
     const shown = await runSolanaResolveCommand(["show", TENANT, "stuck-1", "--third-rpc", "--exclude", name!], deps);
     const marked = shown.split("\n").filter(line => line.includes("(excluded by the operator"));
@@ -589,7 +589,7 @@ test("a moved-sequence view that cannot prove its expiry yet says why, and refus
 });
 
 for (const dialect of ["sqlite", "postgres"] as const) {
-  const options = dialect === "postgres" && !process.env.MERRYMEN_TEST_PG_URL ? { skip: "Set MERRYMEN_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
+  const options = dialect === "postgres" && !process.env.AGENTCAP_TEST_PG_URL ? { skip: "Set AGENTCAP_TEST_PG_URL to an isolated PostgreSQL test database." } : {};
   test(`${dialect}: pending names every trade and signed owner transaction the pending-stuck alert counts, oldest first, from the database alone`, options, async t => {
     const f = await fixture(t, dialect);
     const OTHER = `0x${"22".repeat(20)}`, THIRD = `0x${"33".repeat(20)}`;

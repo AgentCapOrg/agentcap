@@ -12,7 +12,7 @@ import { isCircleStrategyId } from "../strategy";
 import type { TierView } from "@/app/api/tier/route";
 import { loadTier } from "../tier";
 import { FormPage as AppShell, FormHeading as PageHeader } from "../FormPage";
-import { ENERGY, MERRYMEN_GATEWAY_ORIGIN, SLIPPAGE_BPS_MAX, TELEGRAM_GROUPS_CHATTINESS, isEnergyReserveToken, isValidCustomToken, uncoveredBasketSymbols, type CustomToken, type StoredGrant, type TelegramGroupsChattiness } from "@merrymen/core";
+import { ENERGY, AGENTCAP_GATEWAY_ORIGIN, SLIPPAGE_BPS_MAX, TELEGRAM_GROUPS_CHATTINESS, isEnergyReserveToken, isValidCustomToken, uncoveredBasketSymbols, type CustomToken, type StoredGrant, type TelegramGroupsChattiness } from "@agentcap/core";
 import type { SettingsView } from "@/app/api/settings/route";
 import type { TelegramStatus } from "@/app/api/telegram/route";
 import { telegramLabel, telegramRow, type AgentDown, type TelegramRow } from "../agent-status";
@@ -331,7 +331,7 @@ export default function SettingsPage({onFund, slug, onSaved, agentDown = null}:{
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem("merrymen.grant.v1");
+      const raw = localStorage.getItem("agentcap.grant.v1");
       if (raw) setStoredGrant(JSON.parse(raw) as StoredGrant);
     } catch {
       /* no grant, or unreadable — the basket just won't annotate */
@@ -501,13 +501,13 @@ export default function SettingsPage({onFund, slug, onSaved, agentDown = null}:{
       setTokenError("needs a short symbol, a full 0x… address (42 chars) and whole-number decimals");
       return;
     }
-    // $MERRYMEN IS ENERGY, NOT A COIN TO TRADE. Every signer drops it from the
+    // $AGENTCAP IS ENERGY, NOT A COIN TO TRADE. Every signer drops it from the
     // sealed tokens and the worker never watches it, so adding it here would
     // only produce a token that can never be covered, whatever gets re-signed.
     if (isEnergyReserveToken(candidate.address)) {
       setTokenError(
-        "that's $MERRYMEN — your agent's energy, not a coin it trades, so it isn't added here. " +
-          "Ask your agent in chat to get its $MERRYMEN, or send it to the agent's account on Robinhood Chain.",
+        "that's $AGENTCAP — your agent's energy, not a coin it trades, so it isn't added here. " +
+          "Ask your agent in chat to get its $AGENTCAP, or send it to the agent's account on Robinhood Chain.",
       );
       return;
     }
@@ -620,7 +620,7 @@ export default function SettingsPage({onFund, slug, onSaved, agentDown = null}:{
       // ANOTHER AGENT HOLDS THIS BOT. Not an error in the form: a question for
       // the owner, asked beside the button they pressed. Nothing was saved.
       if (res.status === 409 && json.error === "bot_claimed") {
-        setBotClaimed(json.errors?.[0] ?? "This bot is already connected to another Merrymen agent.");
+        setBotClaimed(json.errors?.[0] ?? "This bot is already connected to another AgentCap agent.");
         setStatus(null);
         return;
       }
@@ -982,7 +982,7 @@ export default function SettingsPage({onFund, slug, onSaved, agentDown = null}:{
             {botClaimed && <p className="mm-danger" role="alert">{botClaimed} Nothing has been saved. Resolve the bot choice at the bottom of this page, then save again.</p>}
             {telegramCreating ? <p className="mm-hint" role="status">Finish or cancel Telegram setup before saving other settings.</p> : null}
             <details><summary>Customise Trencher settings</summary>
-            <p>Your Merryman tracks active memecoin pools with at least $100,000 in daily volume, 20 distinct buyers, recent activity and both buys and sells.
+            <p>Your AgentCapAvatar tracks active memecoin pools with at least $100,000 in daily volume, 20 distinct buyers, recent activity and both buys and sells.
               Brain reviews eligible coins in the background about once a minute; execution and exit checks run every 15 seconds.
               New buys need a fresh Brain approval. Brain can also sell early. The fast profile attempts exits at −10%, +20%, or after 30 minutes, even while Brain is unavailable. Liquidity loss can trigger an earlier exit.</p>
             <p>Entries are $2.50, subject to your budget and signed limits. Only discovered, priced pools that pass the liquidity, age and valuation checks qualify.
@@ -1276,7 +1276,7 @@ export default function SettingsPage({onFund, slug, onSaved, agentDown = null}:{
                   <strong>That one won&apos;t run yet.</strong>
                   {tier.why === "unreadable" ? (
                     <p>
-                      We couldn&apos;t read your $MERRYMEN balance just now, so we can&apos;t tell
+                      We couldn&apos;t read your $AGENTCAP balance just now, so we can&apos;t tell
                       whether it will run. That&apos;s our read failing, not your wallet.
                     </p>
                   ) : (
@@ -1284,7 +1284,7 @@ export default function SettingsPage({onFund, slug, onSaved, agentDown = null}:{
                        owner's wallet and this agent's account together — and
                        a dash for a count nobody read, never `?? 0`. */
                     <p>
-                      Your wallet and your agent&apos;s account hold {count(tier.tokens)} $MERRYMEN and it
+                      Your wallet and your agent&apos;s account hold {count(tier.tokens)} $AGENTCAP and it
                       needs {count(tier.needTokens)}. Until you hold enough it opens nothing new and leaves
                       its basket as it is; positions in a class vault are still closed by their own exit
                       rules. Saving this won&apos;t change that.
@@ -1540,7 +1540,7 @@ export default function SettingsPage({onFund, slug, onSaved, agentDown = null}:{
           </div>
 
           {/* ── SCOUT MODE ─────────────────────────────────────────────────
-              The one place merrymen will knowingly hold something it cannot
+              The one place agentcap will knowingly hold something it cannot
               value. The copy has to be blunt about what that costs, because
               the usual safety net genuinely does not apply here. */}
           <div className="mm-subtle mono">scout mode · buying what can&apos;t be priced yet</div>
@@ -2283,7 +2283,7 @@ export default function SettingsPage({onFund, slug, onSaved, agentDown = null}:{
           </div>
 
           <div className="mm-section">{t("settings.section.merryCircle")}</div>
-          {/* The tier reads a $MERRYMEN balance. By default that is the wallet you
+          {/* The tier reads a $AGENTCAP balance. By default that is the wallet you
               sign in with, which is the only address the server can verify without
               being told. Holding the token elsewhere is a real case and needs a
               proof, not a text box — see /api/holder. */}
@@ -2297,9 +2297,9 @@ export default function SettingsPage({onFund, slug, onSaved, agentDown = null}:{
           {tier?.energyGate && (
             <p className="mm-hint">
               On the hosted service your agent runs at full energy while your wallet and its account hold{" "}
-              {count(ENERGY.fullTokens)} $MERRYMEN between them; below that it gets about a tenth of a standard day&apos;s AI reviews and
+              {count(ENERGY.fullTokens)} $AGENTCAP between them; below that it gets about a tenth of a standard day&apos;s AI reviews and
               new trades. Stop-losses, take-profits and your own orders are never limited; its own AI
-              reviews — including of its open positions — are paced along with the rest. $MERRYMEN buys
+              reviews — including of its open positions — are paced along with the rest. $AGENTCAP buys
               capacity, nothing else — we make no promise about its price.
             </p>
           )}
@@ -2376,7 +2376,7 @@ export default function SettingsPage({onFund, slug, onSaved, agentDown = null}:{
               <span className="mm-label">{t("settings.label.streamToVirtuals")}</span>
               <span className="mm-input">
                 <input type="checkbox" checked={virtualsEnabledVal} onChange={(e) => setVirtualsEnabled(e.target.checked)} style={{ width: "auto" }} />
-                <span className="mm-unit">{virtualsEnabledVal ? "live activity → your $MERRYMEN agent page" : "off"}</span>
+                <span className="mm-unit">{virtualsEnabledVal ? "live activity → your $AGENTCAP agent page" : "off"}</span>
               </span>
               <span className="mm-hint">{t("settings.hint.publishesLandedTradesAnd")}<b>Outbound &amp; public</b> — off by default; nothing streams until
                 you turn this on and add a key.
@@ -2417,17 +2417,17 @@ export default function SettingsPage({onFund, slug, onSaved, agentDown = null}:{
             </Field>
             <Field
               label={t("settings.label.merryCircleToken")}
-              action={{ href: `${MERRYMEN_GATEWAY_ORIGIN}/claim`, label: "claim one" }}
-              hint={t("settings.hint.claimWithYourMerrymen")}
+              action={{ href: `${AGENTCAP_GATEWAY_ORIGIN}/claim`, label: "claim one" }}
+              hint={t("settings.hint.claimWithYourAgentCap")}
             >
               <input
                 type="password"
-                placeholder={secretPlaceholder(view.merrymenToken)}
-                value={draft.merrymenToken ?? ""}
-                onChange={set("merrymenToken")}
+                placeholder={secretPlaceholder(view.agentcapToken)}
+                value={draft.agentcapToken ?? ""}
+                onChange={set("agentcapToken")}
               />
-              {view.merrymenToken.set && (
-                <button type="button" className="mm-btn danger sm" onClick={() => setDraft((x) => ({ ...x, merrymenToken: "" }))}>
+              {view.agentcapToken.set && (
+                <button type="button" className="mm-btn danger sm" onClick={() => setDraft((x) => ({ ...x, agentcapToken: "" }))}>
                   clear
                 </button>
               )}

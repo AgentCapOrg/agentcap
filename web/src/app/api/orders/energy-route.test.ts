@@ -1,7 +1,7 @@
 /**
  * FROM THE CARD TO THE ROUTE THE WORKER TAKES — run end to end, self-hosted.
  *
- * The worker used to send every order whose symbol read MERRYMEN to its energy
+ * The worker used to send every order whose symbol read AGENTCAP to its energy
  * buy, so a plain `buy` card the model wrote for it, or a snipe that resolved
  * to a coin with that name, bought the reserve without ever showing the energy
  * card's disclosure. It routes on get-energy's fixed `purpose: "energy"` now,
@@ -16,7 +16,7 @@
  * that insert) and the orchestrator's ferry passes every scalar arg through
  * unexamined (orchestrator.ts parseArgs), so the marker arrives the same way.
  *
- * MERRYMEN_HOME is pointed at a fresh directory per case, before the route
+ * AGENTCAP_HOME is pointed at a fresh directory per case, before the route
  * resolves it; node's --test runs each file in its own process.
  */
 import assert from "node:assert/strict";
@@ -26,23 +26,23 @@ import path from "node:path";
 import { after, beforeEach, describe, it } from "node:test";
 
 import { commandFor, commandPayload } from "@/lib/chat-commands";
-import { resetSettingsStoreForTest } from "@merrymen/settings-store";
+import { resetSettingsStoreForTest } from "@agentcap/settings-store";
 import { claimCommandFile } from "../../../../../worker/src/command-files";
 import { orderRoute } from "../../../../../worker/src/order-gate";
 import { POST } from "./route";
 
-const KEYS = ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_SETTINGS_FILE", "MERRYMEN_TELEGRAM_MAX_ACTION_USDG", "DATABASE_URL"] as const;
+const KEYS = ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_SETTINGS_FILE", "AGENTCAP_TELEGRAM_MAX_ACTION_USDG", "DATABASE_URL"] as const;
 const original = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
 const dirs: string[] = [];
 let home = "";
 
 beforeEach(() => {
-  home = mkdtempSync(path.join(tmpdir(), "merrymen-energy-route-"));
+  home = mkdtempSync(path.join(tmpdir(), "agentcap-energy-route-"));
   dirs.push(home);
-  process.env.MERRYMEN_HOME = home;
-  process.env.MERRYMEN_SETTINGS_FILE = path.join(home, "no-such-settings.json");
-  process.env.MERRYMEN_TELEGRAM_MAX_ACTION_USDG = "100";
-  delete process.env.MERRYMEN_HOSTED;
+  process.env.AGENTCAP_HOME = home;
+  process.env.AGENTCAP_SETTINGS_FILE = path.join(home, "no-such-settings.json");
+  process.env.AGENTCAP_TELEGRAM_MAX_ACTION_USDG = "100";
+  delete process.env.AGENTCAP_HOSTED;
   delete process.env.DATABASE_URL;
   resetSettingsStoreForTest();
   // The one grant on this machine, where the self-hosted route finds its account.
@@ -80,8 +80,8 @@ describe("the energy route, from the card to the worker's gate", () => {
     assert.equal(orderRoute(claimed.args), "energy");
   });
 
-  it("A BUY CARD FOR MERRYMEN IS AN ORDINARY ORDER — even when the model tried to add the marker", async () => {
-    const payload = commandPayload(commandFor("buy")!, { symbol: "MERRYMEN", usdgAmount: 20, purpose: "energy" });
+  it("A BUY CARD FOR AGENTCAP IS AN ORDINARY ORDER — even when the model tried to add the marker", async () => {
+    const payload = commandPayload(commandFor("buy")!, { symbol: "AGENTCAP", usdgAmount: 20, purpose: "energy" });
     const { status, error, claimed } = await placeAndClaim(payload);
     assert.equal(status, 200, error);
     assert.ok(claimed);
@@ -89,16 +89,16 @@ describe("the energy route, from the card to the worker's gate", () => {
     assert.equal(orderRoute(claimed.args), "trade");
   });
 
-  it("A SNIPE THAT RESOLVED TO A COIN NAMED MERRYMEN IS AN ORDINARY ORDER — the shape Agent.tsx places", async () => {
-    const { status, error, claimed } = await placeAndClaim({ side: "buy", symbol: "MERRYMEN", usdgAmount: 20 });
+  it("A SNIPE THAT RESOLVED TO A COIN NAMED AGENTCAP IS AN ORDINARY ORDER — the shape Agent.tsx places", async () => {
+    const { status, error, claimed } = await placeAndClaim({ side: "buy", symbol: "AGENTCAP", usdgAmount: 20 });
     assert.equal(status, 200, error);
     assert.equal(orderRoute(claimed!.args), "trade");
   });
 
-  it("a marked order that is not a buy of $MERRYMEN is refused and writes nothing", async () => {
+  it("a marked order that is not a buy of $AGENTCAP is refused and writes nothing", async () => {
     const { status, error } = await placeAndClaim({ side: "buy", symbol: "TSLA", usdgAmount: 5, purpose: "energy" });
     assert.equal(status, 400);
-    assert.match(error, /an energy order is a buy of \$MERRYMEN and nothing else/);
+    assert.match(error, /an energy order is a buy of \$AGENTCAP and nothing else/);
     assert.equal(claimCommandFile(home), null, "nothing reached the queue");
   });
 });

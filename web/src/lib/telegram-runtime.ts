@@ -78,7 +78,7 @@ export function runtimeFromRow(row: TelegramRuntimeRow, full: boolean): Telegram
  * (lib/telegram-claims.ts). A saved token is stored as typed when getMe does
  * not confirm it, and a bot id is public, so asking the claims about the
  * saved token's id told any signed-in account, for any bot it named with
- * `<id>:anything`, whether a Merrymen agent held it: silently, while that
+ * `<id>:anything`, whether a AgentCap agent held it: silently, while that
  * agent was offline, and without the bot or its owner ever seeing the
  * question. The route passes the id getMe answered with for the token, or
  * null; an owner whose bot was moved to another agent still holds a live

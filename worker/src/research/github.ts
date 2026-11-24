@@ -20,7 +20,7 @@
  *     newest of their own (not forked, not archived) repos is the one read.
  *
  * Unauthenticated, GitHub allows sixty calls an hour from one address, which
- * the whole fleet shares behind Railway's egress. MERRYMEN_GITHUB_TOKEN (any
+ * the whole fleet shares behind Railway's egress. AGENTCAP_GITHUB_TOKEN (any
  * fine-grained token with no permissions: public data only) lifts that to
  * five thousand. Without it the reader still works, and a 403 that is
  * GitHub's rate limit is reported as `rate-limited`, never as "not found":
@@ -129,7 +129,7 @@ async function get(path: string, o: { token: string; deadline: number; now: () =
         accept: "application/vnd.github+json",
         "x-github-api-version": "2022-11-28",
         // GitHub refuses a request with no user agent.
-        "user-agent": "merrymen-research",
+        "user-agent": "agentcap-research",
         ...(o.token ? { authorization: `Bearer ${o.token}` } : {}),
       },
       signal: ctl.signal,
@@ -170,7 +170,7 @@ function repoOf(body: unknown): Omit<GithubRepoRecord, "commits30d" | "commitsPa
 export async function readGithub(args: {
   owner: string;
   repo: string | null;
-  /** MERRYMEN_GITHUB_TOKEN, or empty: sixty calls an hour instead of five thousand. */
+  /** AGENTCAP_GITHUB_TOKEN, or empty: sixty calls an hour instead of five thousand. */
   token?: string;
   timeoutMs: number;
   now?: () => number;

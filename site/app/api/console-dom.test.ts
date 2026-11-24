@@ -53,7 +53,7 @@ const FETCH_CAP = 600;
 
 const plansJson = (over: Record<string, unknown> = {}) => ({
   billing: { mode: 'enforce', enforced: true }, period_days: 30, treasury: TREASURY,
-  currency: { symbol: 'MERRYMEN', address: TOKEN.address, chain_id: 4663, decimals: 18, explorer_url: '' }, confirmations: { blocks: 64, min_age_sec: 120 },
+  currency: { symbol: 'AGENTCAP', address: TOKEN.address, chain_id: 4663, decimals: 18, explorer_url: '' }, confirmations: { blocks: 64, min_age_sec: 120 },
   plans: FALLBACK_PLANS.plans.map(p => ({ ...p, price_tokens: String(BigInt(p.price_raw) / UNIT) })), ...over,
 });
 const accountJson = (over: Record<string, unknown> = {}) => ({
@@ -91,7 +91,7 @@ const mounted = new Set<Root>();
 before(async () => {
   const jsdom = 'jsdom';
   const { JSDOM } = await import(jsdom);
-  dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https://merrymen.dev/api', pretendToBeVisual: true });
+  dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https://agentcap.xyz/api', pretendToBeVisual: true });
   for (const k of ['window', 'document', 'navigator', 'HTMLElement', 'HTMLInputElement', 'Element', 'Node', 'Event', 'MouseEvent', 'localStorage', 'getComputedStyle']) {
     Object.defineProperty(globalThis, k, { value: (dom.window as unknown as Record<string, unknown>)[k], configurable: true, writable: true });
   }
@@ -131,7 +131,7 @@ before(async () => {
 });
 after(() => { globalThis.setTimeout = realSetTimeout; globalThis.clearTimeout = realClearTimeout; dom?.window?.close(); });
 
-/** A signed-in wallet with 100,000 MERRYMEN due and payments open; each test changes what it needs. */
+/** A signed-in wallet with 100,000 AGENTCAP due and payments open; each test changes what it needs. */
 beforeEach(() => {
   calls = []; sent = []; fetches = 0; runaway = ''; held = []; fired = 0;
   localStorage.clear();
@@ -242,7 +242,7 @@ test('while a payment is being checked no second one is offered, and a pasted ha
   // The gateway records nothing for a 202: the page is the only thing holding HASH_A now.
   assert.equal(canPay(page.container), false, 'no second wallet payment while the first is unanswered');
   assert.match(text(page.container), /Your payment is being checked/); assert.match(text(page.container), /Paying again sends a second payment/);
-  assert.doesNotMatch(text(page.container), /Pay 100,000 MERRYMEN/);
+  assert.doesNotMatch(text(page.container), /Pay 100,000 AGENTCAP/);
   // A hash from elsewhere (a sped-up transaction, a manual send) is added, never swapped in.
   await type(inputFor(page.container, /Paste the transaction hash/), HASH_B);
   await click(buttonFor(page.container, /^Check payment$/));
@@ -267,7 +267,7 @@ test('while a payment is being checked no second one is offered, and a pasted ha
 test('a hash is forgotten only on a final answer; a stall, a refused check, a sign-out or a day passing keeps it', async () => {
   const answers: Record<string, Answer> = {
     [HASH_A]: { status: 200, body: { already: false, ...accountJson({ due_raw: null, due_tokens: null }) } },
-    [HASH_B]: { status: 422, body: { error: { code: 'payment_not_found', reason: 'wrong_recipient', message: 'This transfer did not go to the Merrymen payments wallet.' } } },
+    [HASH_B]: { status: 422, body: { error: { code: 'payment_not_found', reason: 'wrong_recipient', message: 'This transfer did not go to the AgentCap payments wallet.' } } },
     [HASH_C]: { status: 404, body: { error: { code: 'not_found', message: 'Not found' } } },
     [HASH_D]: pending,
   };
@@ -280,7 +280,7 @@ test('a hash is forgotten only on a final answer; a stall, a refused check, a si
   assert.match(statusOf(page.container, HASH_A), /^Credited/);
   // The account view that came with the credit is what the page now shows.
   assert.match(text(page.container), /Nothing due/); assert.doesNotMatch(text(page.container), /Due: 100,000/);
-  assert.match(statusOf(page.container, HASH_B), /^Not credited This transfer did not go to the Merrymen payments wallet\./);
+  assert.match(statusOf(page.container, HASH_B), /^Not credited This transfer did not go to the AgentCap payments wallet\./);
   assert.match(statusOf(page.container, HASH_C), /could not be checked just now \(Not found\)\. It is saved here/, 'a refused check is not a refused payment');
   assert.match(statusOf(page.container, HASH_D), /^Checking payment/);
   await drain(page.container, [HASH_D]);
@@ -461,15 +461,15 @@ test('Pay reads the account again: a payment, a plan change or a sign-in made el
     // The page loaded with Crumbs selected and 100,000 due to start it; by the click the account has moved on.
     routes['GET account'] = (_, call) => call === 1 ? { status: 200, body: accountJson() } : later;
     const page = await mount();
-    assert.equal(canPay(page.container), true, why); assert.match(text(page.container), /Due: 100,000 MERRYMEN/, why);
+    assert.equal(canPay(page.container), true, why); assert.match(text(page.container), /Due: 100,000 AGENTCAP/, why);
     await click(payButton(page.container));
     assert.equal(sent.length, 0, why); assert.match(text(page.container), words, why);
     assert.equal(accountReads(), 2, `${why}: read again at the click`);
     // What is due now is what the page shows now; an account this tab is not signed in as is not shown.
-    if (why === 'credited elsewhere') { assert.match(text(page.container), /To renew on 7 Nov 2026: 100,000 MERRYMEN/); assert.doesNotMatch(text(page.container), /Due: 100,000/); }
+    if (why === 'credited elsewhere') { assert.match(text(page.container), /To renew on 7 Nov 2026: 100,000 AGENTCAP/); assert.doesNotMatch(text(page.container), /Due: 100,000/); }
     if (why === 'paid in full elsewhere') { assert.equal(canPay(page.container), false); assert.match(text(page.container), /Nothing due/); }
-    if (why === 'moved to Feast elsewhere') assert.match(text(page.container), /Pay 1,000,000 MERRYMEN with wallet/);
-    if (why === 'another wallet signed in' || why === 'unreadable') assert.match(text(page.container), /Due: 100,000 MERRYMEN/);
+    if (why === 'moved to Feast elsewhere') assert.match(text(page.container), /Pay 1,000,000 AGENTCAP with wallet/);
+    if (why === 'another wallet signed in' || why === 'unreadable') assert.match(text(page.container), /Due: 100,000 AGENTCAP/);
     await page.unmount();
   }
   // An upgrade's price falls with the time left in the period: a click a few seconds later still pays what the button said.
@@ -494,12 +494,12 @@ test('just after a payment starts a plan, the next period is not offered as a pa
   await click(payButton(page.container));
   assert.equal(sent.length, 1); assert.match(statusOf(page.container, HASH_A), /^Credited Payment credited\./);
   assert.equal(canPay(page.container), false, 'no second payment of the same size is offered under the first one\'s receipt');
-  assert.match(text(page.container), /To renew on 7 Nov 2026: 100,000 MERRYMEN/);
+  assert.match(text(page.container), /To renew on 7 Nov 2026: 100,000 AGENTCAP/);
   assert.match(text(page.container), /runs until 7 Nov 2026 either way, and nothing is owed before then/);
-  assert.doesNotMatch(text(page.container), /Pay 100,000 MERRYMEN/);
+  assert.doesNotMatch(text(page.container), /Pay 100,000 AGENTCAP/);
   // Paying ahead stays possible, on purpose.
   await click(buttonFor(page.container, /^Pay ahead for the next period$/));
-  assert.equal(canPay(page.container), true); assert.match(text(page.container), /Renew for the next period: 100,000 MERRYMEN/);
+  assert.equal(canPay(page.container), true); assert.match(text(page.container), /Renew for the next period: 100,000 AGENTCAP/);
   await click(buttonFor(page.container, /^Not now$/));
   assert.equal(canPay(page.container), false);
   // The page stayed open past the period's end: Crumbs renewed from credit, and the next renewal has a new date.
@@ -508,7 +508,7 @@ test('just after a payment starts a plan, the next period is not offered as a pa
   await click(buttonFor(page.container, /^Pay ahead for the next period$/));
   await click(payButton(page.container));
   assert.equal(sent.length, 1, 'nothing is sent ahead for a period that has passed'); assert.match(text(page.container), /What is due changed since this page loaded/);
-  assert.equal(canPay(page.container), false, 'a new period\'s renewal starts folded again'); assert.match(text(page.container), /To renew on 7 Dec 2026: 100,000 MERRYMEN/);
+  assert.equal(canPay(page.container), false, 'a new period\'s renewal starts folded again'); assert.match(text(page.container), /To renew on 7 Dec 2026: 100,000 AGENTCAP/);
   await click(buttonFor(page.container, /^Pay ahead for the next period$/));
   await click(payButton(page.container));
   assert.equal(sent.length, 2, 'the second payment was asked for'); assert.match(statusOf(page.container, HASH_B), /^Credited/);
@@ -562,7 +562,7 @@ test('a reversed payment is offered to be checked again before any new payment i
   routes['GET account'] = () => ({ status: 200, body: reversed });
   const page = await mount();
   assert.match(text(page.container), /If that transfer still shows in your wallet's activity, check it again/);
-  assert.match(text(page.container), /200,000 MERRYMEN includes a reversed payment\. Check that transaction again first/);
+  assert.match(text(page.container), /200,000 AGENTCAP includes a reversed payment\. Check that transaction again first/);
   assert.equal(page.container.querySelectorAll('.dev-history button').length, 1, 'the reversal in History has the action too');
   await click(buttonFor(page.container, /^Check this transaction again$/));
   assert.deepEqual(submitted(), [HASH_C]); assert.deepEqual(saved(), [HASH_C]);
@@ -590,7 +590,7 @@ test('Review change only previews; only Confirm sends confirm:true', async () =>
   await click(buttonFor(page.container, /^Review change$/));
   const plan = () => calls.filter(c => c.action === 'plan').map(c => c.body);
   assert.deepEqual(plan(), [{ tier: 'crumbs' }], 'the preview carries no confirm');
-  assert.match(text(page.container), /Crumbs starts as soon as 100,000 MERRYMEN arrives/);
+  assert.match(text(page.container), /Crumbs starts as soon as 100,000 AGENTCAP arrives/);
   await click(buttonFor(page.container, /^Confirm Crumbs$/));
   assert.deepEqual(plan(), [{ tier: 'crumbs' }, { tier: 'crumbs', confirm: true }]);
   assert.equal(canPay(page.container), true, 'what is due now can be paid');
@@ -610,7 +610,7 @@ test('keyboard focus follows the plan preview and the pay-ahead swap, and a copy
   assert.match(focused(), /^div\.dev-plan-preview:/, 'the preview takes focus, so the sentence agreed to is read');
   const region = page.container.querySelector('.dev-plan-preview');
   const described = region?.getAttribute('aria-describedby');
-  assert.equal(!!described && /Crumbs starts as soon as 100,000 MERRYMEN arrives/.test(text(document.getElementById(described)!)), true);
+  assert.equal(!!described && /Crumbs starts as soon as 100,000 AGENTCAP arrives/.test(text(document.getElementById(described)!)), true);
   await press(buttonFor(page.container, /^Cancel$/));
   assert.match(focused(), /^button\.dev-secondary:Review change/, 'Cancel gives focus back to Review change');
   await press(buttonFor(page.container, /^Review change$/));

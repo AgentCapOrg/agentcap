@@ -19,9 +19,9 @@ const TOKEN = "0x0000000000000000000000000000000000000011" as const;
 const USDG = "0x0000000000000000000000000000000000000022" as const;
 const ROUTER = "0x0000000000000000000000000000000000000033" as const;
 const AGENT = "0x0000000000000000000000000000000000000044";
-const input = { agentId: AGENT, market: { instrumentId: "merrymen:meme", symbol: "MEME", priceUsd: "0.01" } } as ShadowInputs;
+const input = { agentId: AGENT, market: { instrumentId: "agentcap:meme", symbol: "MEME", priceUsd: "0.01" } } as ShadowInputs;
 const answer = (over = {}) => ({ ran: true, result: { ok: true, decision: {
-  decision_id: "decision-1", agent_id: AGENT, instrument_id: "merrymen:meme", symbol: "MEME", action: "buy", suggested_delta_usdg: 5e6, gate_verdict: "proceed", ...over,
+  decision_id: "decision-1", agent_id: AGENT, instrument_id: "agentcap:meme", symbol: "MEME", action: "buy", suggested_delta_usdg: 5e6, gate_verdict: "proceed", ...over,
 } } }) as ShadowOutcome;
 const pool = (over: Partial<GeckoPool> = {}): GeckoPool => ({
   tokenAddress: TOKEN, volume24hUsd: 200_000, buyers24h: 50, buys24h: 100, sells24h: 80,

@@ -5,7 +5,7 @@
  * events (via Bitquery, the only source that decodes hooked v4 pools). That
  * finds nothing here: a Pons token launches onto its OWN bonding-curve contract
  * and has no pool at all until it graduates at 4.2 ETH raised. So the launchpad
- * where essentially every new token on this chain appears was, to merrymen,
+ * where essentially every new token on this chain appears was, to agentcap,
  * completely invisible — not "hard to price", not "filtered out", simply never
  * seen. This reads the launchpad directly instead.
  *

@@ -11,7 +11,7 @@
  * MONEY IS BIGINT RAW UNITS, never Number: 1,000,000 tokens is 1e24 raw, far
  * past what a double holds exactly. Time is integer milliseconds.
  *
- * Copy rule, as everywhere $MERRYMEN appears: a plan is paid for API usage.
+ * Copy rule, as everywhere $AGENTCAP appears: a plan is paid for API usage.
  * Nothing here or in what renders it says where the tokens go or what they are
  * worth.
  */
@@ -21,12 +21,12 @@ export const PERIOD_MS = 2_592_000_000;
 export const PERIOD_DAYS = 30;
 
 /**
- * $MERRYMEN on Robinhood Chain. Mirrors packages/core/src/token.ts and the
+ * $AGENTCAP on Robinhood Chain. Mirrors packages/core/src/token.ts and the
  * explorer in packages/core/src/chain.ts, inline because the gateway is plain
  * ESM with no build step and must not import the TypeScript packages.
  */
 export const TOKEN = Object.freeze({
-  symbol: "MERRYMEN",
+  symbol: "AGENTCAP",
   address: "0xa15cd06dd305269a0f48bebeb30aa3588fba7b32",
   decimals: 18,
   chainId: 4663,

@@ -99,7 +99,7 @@ export const PROTECT_THRESHOLDS = Object.freeze({
   closeSlipFloorBps: 150,
   /** …and never past 4.5%, inside the venue's 5% price band. */
   closeSlipCapBps: 450,
-  /** P7: the first unread alert, and the one that names `merrymen recover`. */
+  /** P7: the first unread alert, and the one that names `agentcap recover`. */
   unreadAlertSec: 120,
   unreadRecoverAlertSec: 600,
   /** A view older than this is unread, whatever it says. */
@@ -564,7 +564,7 @@ function unreadAlerts(
       code: "perp-venue-unread-recover",
       text:
         `${cannot} for 10 minutes. Resting venue stops still protect open positions, but nothing else can act on them ` +
-        "until it reads. To see and unwind them with your owner key, run `merrymen recover`.",
+        "until it reads. To see and unwind them with your owner key, run `agentcap recover`.",
     });
   }
   return { unreadSince: since, unreadAlerted: alerted, unreadRecoverAlerted: recover };

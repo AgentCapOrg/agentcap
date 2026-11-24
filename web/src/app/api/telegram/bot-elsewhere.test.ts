@@ -2,11 +2,11 @@
  * "CONNECTED TO ANOTHER AGENT" IS SAID ONLY ABOUT A BOT TELEGRAM VOUCHES FOR.
  *
  * `botElsewhere` tells an owner that the bot of their saved token is held by
- * another Merrymen agent. It was asked of the claims by the saved token's bot
+ * another AgentCap agent. It was asked of the claims by the saved token's bot
  * id alone, and a token Telegram does not confirm is saved as typed (the
  * settings PUT's rule, lib/telegram-claims.ts decideBotClaim). A bot id is
  * public. So any signed-in account could save `<id>:garbage` for a bot it
- * named, read this route, and learn whether a Merrymen agent held that bot:
+ * named, read this route, and learn whether a AgentCap agent held that bot:
  * silently, while that agent was offline, with neither the bot nor its owner
  * seeing the question. The very disclosure decideBotClaim runs getMe first to
  * deny.
@@ -27,7 +27,7 @@ import { DatabaseSync } from "node:sqlite";
 import { after, before, beforeEach, describe, it } from "node:test";
 
 import { mintSession } from "@/lib/auth";
-import { getSettingsStore, resetSettingsStoreForTest } from "@merrymen/settings-store";
+import { getSettingsStore, resetSettingsStoreForTest } from "@agentcap/settings-store";
 import { wrapSqlite, type Db } from "../../../../../worker/src/db";
 import { TELEGRAM_BOT_CLAIMS_DDL } from "../../../../../worker/src/telegram-claims";
 import {
@@ -42,7 +42,7 @@ import type { TelegramStatus } from "./route";
 const OWNER = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as const;
 const HOLDER = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as const;
 const STRANGER = "0x5555555555555555555555555555555555555555" as const;
-const KEYS = ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_SESSION_SECRET", "DATABASE_URL", "MERRYMEN_TELEGRAM_BOT_TOKEN"] as const;
+const KEYS = ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_SESSION_SECRET", "DATABASE_URL", "AGENTCAP_TELEGRAM_BOT_TOKEN"] as const;
 const original = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
 const realFetch = globalThis.fetch;
 const NOW = Math.floor(Date.now() / 1000);
@@ -58,13 +58,13 @@ const confirmAll = (token: string) => {
 };
 
 before(async () => {
-  home = mkdtempSync(path.join(tmpdir(), "merrymen-telegram-elsewhere-"));
-  process.env.MERRYMEN_HOME = home;
-  process.env.MERRYMEN_HOSTED = "1";
-  process.env.MERRYMEN_SESSION_SECRET = randomBytes(32).toString("hex");
+  home = mkdtempSync(path.join(tmpdir(), "agentcap-telegram-elsewhere-"));
+  process.env.AGENTCAP_HOME = home;
+  process.env.AGENTCAP_HOSTED = "1";
+  process.env.AGENTCAP_SESSION_SECRET = randomBytes(32).toString("hex");
   delete process.env.DATABASE_URL;
   // Set, to show a hosted read never stands the web's environment in for a tenant's token.
-  process.env.MERRYMEN_TELEGRAM_BOT_TOKEN = "999:ENV-token-of-the-web-container";
+  process.env.AGENTCAP_TELEGRAM_BOT_TOKEN = "999:ENV-token-of-the-web-container";
   globalThis.fetch = (async (input: string | URL | Request) => {
     const url = String(input instanceof Request ? input.url : input);
     const m = /^https:\/\/api\.telegram\.org\/bot(.+)\/getMe$/.exec(url);
@@ -78,10 +78,10 @@ beforeEach(async () => {
   resetSettingsStoreForTest();
   rmSync(path.join(home, "tenant-settings"), { recursive: true, force: true });
   raw?.close();
-  rmSync(path.join(home, "merrymen.db"), { force: true });
+  rmSync(path.join(home, "agentcap.db"), { force: true });
   // The shared database as the orchestrator leaves it: the route opens this
   // file read-only for each request (lib/ledger.ts withReadDb).
-  raw = new DatabaseSync(path.join(home, "merrymen.db"));
+  raw = new DatabaseSync(path.join(home, "agentcap.db"));
   db = wrapSqlite(raw);
   await db.exec(TELEGRAM_STATE_DDL);
   for (const ddl of TELEGRAM_LIVENESS_DDL) await db.exec(ddl);
@@ -167,7 +167,7 @@ describe("GET /api/telegram — botElsewhere", () => {
     assert.equal(blind.linkPending, false);
   });
 
-  it("hosted, the web container's MERRYMEN_TELEGRAM_BOT_TOKEN is nobody's token", async () => {
+  it("hosted, the web container's AGENTCAP_TELEGRAM_BOT_TOKEN is nobody's token", async () => {
     // No token saved: no token, whatever the environment holds.
     await getSettingsStore("spot").put(OWNER, { telegramEnabled: true });
     const s = await status(OWNER);

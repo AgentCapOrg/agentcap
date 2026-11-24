@@ -18,12 +18,12 @@ import {
   ensurePersonalMemorySchema, publishPersonalMemory, recordPersonalMemoryForget, restorePersonalMemory,
 } from "./personal-memory-ferry";
 
-const fleet = mkdtempSync(path.join(os.tmpdir(), "merrymen-memory-retire-"));
-process.env.MERRYMEN_HOME = fleet;
-process.env.MERRYMEN_HOSTED = "1";
+const fleet = mkdtempSync(path.join(os.tmpdir(), "agentcap-memory-retire-"));
+process.env.AGENTCAP_HOME = fleet;
+process.env.AGENTCAP_HOSTED = "1";
 delete process.env.DATABASE_URL;
 const dek = Buffer.alloc(32, 71);
-process.env.MERRYMEN_STORE_DEK = dek.toString("base64");
+process.env.AGENTCAP_STORE_DEK = dek.toString("base64");
 const {
   adoptChildForTest, adoptHolderForTest, childHome, hasLeaseForTest,
   finalMirrorBeforeAnchor, isRetiringExpiredForTest, reconcile, setRetirementMemoryStoreForTest, setSpawnForTest,
@@ -79,7 +79,7 @@ async function restoredText(tenant: string): Promise<string> {
   return readFileSync(path.join(home, "tg-groups.json"), "utf8");
 }
 async function emptyLedger(home: string): Promise<void> {
-  const local = new DatabaseSync(path.join(home, "merrymen.db"));
+  const local = new DatabaseSync(path.join(home, "agentcap.db"));
   try { await applyLedgerSchema(wrapSqlite(local)); } finally { local.close(); }
 }
 
@@ -228,7 +228,7 @@ it("an unreadable held group row retains both its ciphertext and retirement barr
 async function rebuiltBook(tenant: `0x${string}`, account: `0x${string}`, sourceId = 1) {
   const home = childHome(tenant);
   mkdirSync(home, { recursive: true });
-  const sourceRaw = new DatabaseSync(path.join(home, "merrymen.db")), source = wrapSqlite(sourceRaw);
+  const sourceRaw = new DatabaseSync(path.join(home, "agentcap.db")), source = wrapSqlite(sourceRaw);
   await applyLedgerSchema(source);
   await applyLedgerSchema(db);
   await db.exec(MIRROR_STATE_DDL);

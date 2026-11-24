@@ -74,7 +74,7 @@ async function world(t: TestContext, o: { env?: Record<string, string>; answer?:
     scan: async (url) => { asked.scans++; return o.scan ?? { ok: true, url, page: PAGE }; },
     github: async () => REPO,
   } });
-  const env = { MERRYMEN_XPOST_ACTIVE_TENANTS: TENANT, MERRYMEN_XPOST_RESEARCH: "1", MERRYMEN_XPOST_CHECKS: "1", ...o.env };
+  const env = { AGENTCAP_XPOST_ACTIVE_TENANTS: TENANT, AGENTCAP_XPOST_RESEARCH: "1", AGENTCAP_XPOST_CHECKS: "1", ...o.env };
   const poster = makeXPoster({
     app: { clientId: "client", clientSecret: "secret", redirectUri: "https://app.test/connect/x" }, dek,
     creds: { provider: "groq", transport: "openai", model: "test", apiKey: "private-model", baseUrl: "https://model.test/v1", vision: false },
@@ -127,13 +127,13 @@ test("a draft that PASSes, or calls it a scam, gives way to code's own casual li
 });
 
 test("never with checks off: the tag under someone else's post is still answered by nothing", async (t) => {
-  const w = await world(t, { env: { MERRYMEN_XPOST_CHECKS: "0" } });
+  const w = await world(t, { env: { AGENTCAP_XPOST_CHECKS: "0" } });
   await w.step();
   assert.deepEqual([w.sends.length, w.asked.scans, (await w.answers()).length], [0, 0, 0]);
 });
 
 test("never under sherwood or the house, and nothing is read for it", async (t) => {
-  for (const context of [`SHERWOOD-1 presale live. CA ${CA} https://t.co/s`, `merrymen agents are live. CA ${CA} https://t.co/s`]) {
+  for (const context of [`SHERWOOD-1 presale live. CA ${CA} https://t.co/s`, `agentcap agents are live. CA ${CA} https://t.co/s`]) {
     const w = await world(t, { context });
     await w.step();
     assert.deepEqual([w.sends.length, w.asked.scans], [0, 0], context);
@@ -141,7 +141,7 @@ test("never under sherwood or the house, and nothing is read for it", async (t) 
 });
 
 test("never past the day's count of checks", async (t) => {
-  const w = await world(t, { env: { MERRYMEN_XPOST_CHECKS_PER_DAY: "0" } });
+  const w = await world(t, { env: { AGENTCAP_XPOST_CHECKS_PER_DAY: "0" } });
   await w.step();
   assert.deepEqual([w.sends.length, w.asked.scans, (await w.answers()).length], [0, 0, 0]);
 });

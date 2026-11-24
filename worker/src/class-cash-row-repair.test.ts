@@ -196,7 +196,7 @@ describe("the pass reads the tables that exist", () => {
   });
 
   it("refuses to apply across the fleet", () => {
-    assert.match(PASS, /REFUSING to apply without MERRYMEN_REPAIR_CLASS_CASH_ROW_ONLY/);
+    assert.match(PASS, /REFUSING to apply without AGENTCAP_REPAIR_CLASS_CASH_ROW_ONLY/);
   });
 
   it("and VERIFIES the row is gone rather than assuming the delete worked", () => {

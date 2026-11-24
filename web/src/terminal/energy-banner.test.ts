@@ -2,7 +2,7 @@
  * THE ENERGY PANEL ON THE DESK: WHERE IT SITS, WHAT IT SAYS, WHAT IT MAY DO.
  *
  * Energy is how much an agent may start on its own each day. Without 100,000
- * $MERRYMEN between the owner's wallet and the agent's account it runs on about
+ * $AGENTCAP between the owner's wallet and the agent's account it runs on about
  * a tenth of a normal day, and when that is used up it waits for 00:00 UTC.
  * The desk says so from the worker's own report — and every way that sentence
  * could go wrong costs somebody money or trust:
@@ -25,7 +25,7 @@ import { describe, it } from "node:test";
 import * as React from "react";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { ENERGY_NOTICE_PREFIX, REAL_LABEL, SIMULATED_LABEL, autonomyOf, type EnergyStatus } from "@merrymen/core";
+import { ENERGY_NOTICE_PREFIX, REAL_LABEL, SIMULATED_LABEL, autonomyOf, type EnergyStatus } from "@agentcap/core";
 import { JSDOM } from "jsdom";
 import type { FleetRecoveryView } from "../../../worker/src/fleet-recovery";
 import type { ChatController } from "./chat-controller";
@@ -223,7 +223,7 @@ describe("what the panel may do", () => {
     const at = AGENT_CODE.indexOf("onAsk={");
     assert.ok(at > 0, "the panel is given an ask handler");
     const handler = AGENT_CODE.slice(at, AGENT_CODE.indexOf("\n", at));
-    assert.match(handler, /onAsk=\{\(\) => setAsk\("Get your \$MERRYMEN"\)\}/);
+    assert.match(handler, /onAsk=\{\(\) => setAsk\("Get your \$AGENTCAP"\)\}/);
     assert.ok(!/setPending|setProposal|send\(|placeOrder|confirm/.test(handler), handler);
     // And setAsk is the draft setter, nothing else.
     assert.match(AGENT_CODE, /const setAsk = chat\.setDraft;/);
@@ -264,7 +264,7 @@ describe("what the panel says", () => {
 
   it("LOW, NOT SPENT: one quiet line with the worker's counts", async () => {
     const t = text(await note(report()));
-    assert.match(t, /^Low energy: without 100,000 \$MERRYMEN between your wallet and my account/);
+    assert.match(t, /^Low energy: without 100,000 \$AGENTCAP between your wallet and my account/);
     assert.match(t, /2 of 3 AI reviews and 1 of 2 new trades used today/);
     assert.match(t, /00:00 UTC/);
     assert.match(await note(report()), /<progress/, "a bar against an allowance the worker reported");
@@ -282,7 +282,7 @@ describe("what the panel says", () => {
     const page = desk(zero);
     assert.match(page.querySelector(".desk-energy")!.textContent!, /0 of 3 AI reviews and 0 of 2 new trades used today/);
     assert.deepEqual([...page.querySelectorAll<HTMLProgressElement>(".desk-energy progress")].map(bar => [bar.value, bar.max]), [[0, 3], [0, 2]]);
-    assert.match(desk({ ...zero, spent: true }).querySelector(".desk-energy")!.textContent!, /You and I hold 0 \$MERRYMEN — 100,000 short/);
+    assert.match(desk({ ...zero, spent: true }).querySelector(".desk-energy")!.textContent!, /You and I hold 0 \$AGENTCAP — 100,000 short/);
     const unread = desk(freshReport({ reviews: null, entries: { used: 1, allowed: null } }));
     assert.equal(unread.querySelector(".desk-energy progress"), null);
     assert.doesNotMatch(unread.querySelector(".desk-energy")!.textContent!, /AI reviews/);
@@ -303,13 +303,13 @@ describe("what the panel says", () => {
     assert.doesNotMatch(t, /my usual/);
     assert.match(t, /Stop-losses, take-profits and your own orders still run; my own AI reviews — including of my open positions — are paced along with the rest\./);
     assert.doesNotMatch(t, /\bSelling\b/, "an exit the AI decides is paced; 'selling still runs' was false");
-    assert.match(t, /You and I hold 12,345 \$MERRYMEN — 87,655 short\./);
+    assert.match(t, /You and I hold 12,345 \$AGENTCAP — 87,655 short\./);
     const noWallet = text(await note(report({ spent: true, holderCounted: false, holderTokens: null, agentTokens: 5_000 })));
-    assert.match(noWallet, /My account holds 5,000 \$MERRYMEN — 95,000 short\./, "the figure is not dropped when no wallet counts");
-    assert.match(t, /Send \$MERRYMEN on Robinhood Chain to my account:/);
+    assert.match(noWallet, /My account holds 5,000 \$AGENTCAP — 95,000 short\./, "the figure is not dropped when no wallet counts");
+    assert.match(t, /Send \$AGENTCAP on Robinhood Chain to my account:/);
     assert.ok(t.includes(ACCOUNT), "the address, whole");
     assert.match(t, /Copy address/);
-    assert.match(t, /Or send USDG to that address and ask me to get my \$MERRYMEN — you'll confirm the amount first/);
+    assert.match(t, /Or send USDG to that address and ask me to get my \$AGENTCAP — you'll confirm the amount first/);
     assert.match(t, /Ask me to get it/);
     assert.match(t, /Or change nothing — I carry on at this pace\./);
   });
@@ -317,12 +317,12 @@ describe("what the panel says", () => {
   it("SPENT BUT A COUNT UNREAD: no holdings line, never 'hold 0' or 'hold —'", async () => {
     const t = text(await note(report({ spent: true, holderTokens: null })));
     assert.ok(!/You and I hold/.test(t));
-    assert.ok(!/\b0 \$MERRYMEN|hold 0/.test(t));
+    assert.ok(!/\b0 \$AGENTCAP|hold 0/.test(t));
   });
 
   it("SPENT AND UNREAD: says so, with no count at all", async () => {
     const t = text(await note(report({ spent: true, level: "unread", agentTokens: null, holderTokens: null })));
-    assert.match(t, /I couldn't read the \$MERRYMEN balances — that's our read failing, not your wallet\./);
+    assert.match(t, /I couldn't read the \$AGENTCAP balances — that's our read failing, not your wallet\./);
     assert.ok(!/You and I hold/.test(t));
   });
 
@@ -343,7 +343,7 @@ describe("what the panel says", () => {
     const e = report({ spent: true, buy: "not-mainnet", agentTokens: null, holderTokens: 5 });
     const t = text(await note(e, { chainId: 46630 }));
     assert.ok(!t.includes(ACCOUNT), "no address to send to");
-    assert.match(t, /My account is on another network, so \$MERRYMEN sent to it would not count/);
+    assert.match(t, /My account is on another network, so \$AGENTCAP sent to it would not count/);
     assert.match(t, /in your own wallet/);
   });
 
@@ -352,7 +352,7 @@ describe("what the panel says", () => {
     assert.ok(!/about \$/.test(text(await note(report({ spent: true, estimateUsdg: null })))));
   });
 
-  it("$MERRYMEN IS ENERGY, NOTHING MORE — no price, returns or profit, and no percentages", async () => {
+  it("$AGENTCAP IS ENERGY, NOTHING MORE — no price, returns or profit, and no percentages", async () => {
     // Every variant the panel can render, read as a person reads it.
     const variants: EnergyStatus[] = [
       report(),
@@ -417,22 +417,22 @@ describe("the funding screen", () => {
 
   it("LOW: the combined standing, what full needs, and both routes", async () => {
     const t = await funding(report());
-    assert.match(t, /your wallet and this account hold 12,345 \$MERRYMEN between them, 87,655 short/);
-    assert.match(t, /Full strength needs 100,000 \$MERRYMEN between your wallet and this account/);
+    assert.match(t, /your wallet and this account hold 12,345 \$AGENTCAP between them, 87,655 short/);
+    assert.match(t, /Full strength needs 100,000 \$AGENTCAP between your wallet and this account/);
     assert.match(t, /below that your agent gets about a tenth of a standard day's AI reviews and new trades/);
     assert.match(t, /Stop-losses, take-profits and your own orders are never limited; its own AI reviews — including of its open positions — are paced along with the rest\./);
     assert.doesNotMatch(t, /\bSelling\b/);
-    assert.match(t, /Send \$MERRYMEN on Robinhood Chain to this same address, or send USDG here and ask your agent in chat to get its \$MERRYMEN — you confirm the amount first\./);
+    assert.match(t, /Send \$AGENTCAP on Robinhood Chain to this same address, or send USDG here and ask your agent in chat to get its \$AGENTCAP — you confirm the amount first\./);
     assert.match(t, /Or change nothing/);
     assert.match(t, /Copy deposit address/, "the existing copy button stays");
   });
 
   it("NO WALLET THAT COUNTS: the account's own figure — never 'couldn't read'", async () => {
     const t = await funding(report({ holderCounted: false, holderTokens: null, agentTokens: 5_000 }));
-    assert.match(t, /this account holds 5,000 \$MERRYMEN, 95,000 short — no wallet of yours counts toward it/);
+    assert.match(t, /this account holds 5,000 \$AGENTCAP, 95,000 short — no wallet of yours counts toward it/);
     assert.doesNotMatch(t, /couldn't read/);
     const failed = await funding(report({ holderCounted: true, holderTokens: null }));
-    assert.match(failed, /we couldn't read every \$MERRYMEN balance just now/, "a real failed read still says so");
+    assert.match(failed, /we couldn't read every \$AGENTCAP balance just now/, "a real failed read still says so");
     const offChain = await funding(report({ buy: "not-mainnet", holderCounted: false, holderTokens: null, agentTokens: null }), 46630);
     assert.match(offChain, /no wallet of yours counts toward it yet/);
     assert.doesNotMatch(offChain, /couldn't read/);
@@ -445,7 +445,7 @@ describe("the funding screen", () => {
   it("a recovery hold suppresses energy purchase and renewal remedies while keeping the deposit address", async () => {
     for (const buy of ["ready", "paper", "resign"] as const) {
       const t = await funding(report({ spent: true, buy }), 4663, held);
-      assert.doesNotMatch(t, /Energy|spent for today|turn on Live trading first|renew your agent's permission|ask your agent in chat to get its \$MERRYMEN/);
+      assert.doesNotMatch(t, /Energy|spent for today|turn on Live trading first|renew your agent's permission|ask your agent in chat to get its \$AGENTCAP/);
       assert.match(t, /Copy deposit address/);
     }
   });
@@ -468,7 +468,7 @@ describe("the funding screen", () => {
 
   it("ANOTHER NETWORK: never 'send it here'", async () => {
     const t = await funding(report({ buy: "not-mainnet", agentTokens: null, holderTokens: 50 }), 46630);
-    assert.match(t, /This account is on another network, so \$MERRYMEN sent to it would not count/);
+    assert.match(t, /This account is on another network, so \$AGENTCAP sent to it would not count/);
     assert.ok(!/to this same address/.test(t));
   });
 

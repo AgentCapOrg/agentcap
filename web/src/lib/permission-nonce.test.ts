@@ -59,7 +59,7 @@ describe("permission signing after nonce revocation", () => {
 
   it("does not replace a different wallet saved while owner approval is pending", async () => {
     const previousStorage = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
-    const values = new Map<string, string>([["merrymen.grant.v1", "older wallet"]]);
+    const values = new Map<string, string>([["agentcap.grant.v1", "older wallet"]]);
     Object.defineProperty(globalThis, "localStorage", { configurable: true, value: {
       getItem: (key: string) => values.get(key) ?? null,
       setItem: (key: string, value: string) => values.set(key, value),
@@ -87,10 +87,10 @@ describe("permission signing after nonce revocation", () => {
         const pending = createPrivyOwnedWallet(owner, "did:privy:test-owner", { chainId: 4663, caps: TEST_CAPS, onStatus: () => {} });
         await signingStarted;
         const newer = JSON.stringify({ smartAccount: "newer account", opaque: "a different tab's exact grant" });
-        values.set("merrymen.grant.v1", newer);
+        values.set("agentcap.grant.v1", newer);
         approve();
         await assert.rejects(pending, /saved wallet changed while signing/);
-        assert.equal(values.get("merrymen.grant.v1"), newer);
+        assert.equal(values.get("agentcap.grant.v1"), newer);
         assert.equal(posts, 0, "a stale signing attempt must not reach server handoff");
         assert.equal(values.size, 1, "the newer wallet must not be archived or rewritten either");
       });

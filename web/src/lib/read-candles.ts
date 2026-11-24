@@ -301,14 +301,14 @@ function candleReadOf(r: CandleFetch): CandleRead {
  *
  * Everything above about arrangement buying nothing is true of the free
  * public bucket, and that path is unchanged: no key, no queue. But with
- * MERRYMEN_COINGECKO_PRO_API_KEY set, every chart read spends a monthly
+ * AGENTCAP_COINGECKO_PRO_API_KEY set, every chart read spends a monthly
  * credit, and this was the one Pro caller in the web process outside the
  * process-local lane every other web read already shares (the discovery
  * feeds, pool evidence). So a burst of chart views was unpaced, and a 429
  * here held back only this one pool's key while every other pool kept asking.
  *
  * On Pro the read now goes through that lane (venues/geckoterminal.ts):
- * the same MERRYMEN_COINGECKO_PRO_SPACING_MS knob and monthly-credit ceiling
+ * the same AGENTCAP_COINGECKO_PRO_SPACING_MS knob and monthly-credit ceiling
  * (20% share for a process-local lane), one 429 cooldown for the whole
  * process, the one-hour plan-refusal latch, and the public fallback the other
  * reads use on a Pro outage.

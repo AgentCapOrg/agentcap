@@ -16,12 +16,12 @@
  *     news, and a desk left open overnight must not show it as today's.
  *
  * UNREAD IS NEVER ZERO. `level: "unread"` means the worker could not read the
- * $MERRYMEN balances, so this view carries no number at all for it — and every
+ * $AGENTCAP balances, so this view carries no number at all for it — and every
  * count below is number | null, rendered through count(), where null is a dash.
  * A zero here is the number that sends somebody to buy tokens they may already
  * hold.
  */
-import { MERRYMEN_TOKEN, type EnergyBuy, type EnergyMeter, type EnergyStatus } from "@merrymen/core";
+import { AGENTCAP_TOKEN, type EnergyBuy, type EnergyMeter, type EnergyStatus } from "@agentcap/core";
 
 export type EnergyView =
   | { kind: "none" }
@@ -29,7 +29,7 @@ export type EnergyView =
   | {
       kind: "low";
       spent: boolean;
-      /** Whole $MERRYMEN between the owner's wallet and the agent's account; null unless every counted part was read. */
+      /** Whole $AGENTCAP between the owner's wallet and the agent's account; null unless every counted part was read. */
       total: number | null;
       /** How far short of full energy; null whenever `total` is. */
       short: number | null;
@@ -89,7 +89,7 @@ export function workerSaysFull(e: EnergyStatus | null | undefined): boolean {
 
 export interface EnergyRemedies {
   /**
-   * Can the owner send $MERRYMEN straight to the agent's account and have it
+   * Can the owner send $AGENTCAP straight to the agent's account and have it
    * count? Only when the account is on Robinhood Chain: on any other network
    * its mainnet address is one this app cannot recover from, and tokens sent
    * there would sit uncounted — so the address is not offered at all.
@@ -104,7 +104,7 @@ export function energyRemedies(
   chainId: number | null | undefined,
 ): EnergyRemedies {
   return {
-    sendToAgent: chainId === MERRYMEN_TOKEN.chainId && e?.buy !== "not-mainnet",
+    sendToAgent: chainId === AGENTCAP_TOKEN.chainId && e?.buy !== "not-mainnet",
     usdg: e?.buy ?? null,
   };
 }

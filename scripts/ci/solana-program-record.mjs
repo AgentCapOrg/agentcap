@@ -12,7 +12,7 @@
 //
 // Refuses (exit 1) unless:
 // - lib.rs declares exactly one program ID, a 32-byte base58 key;
-// - Anchor.toml names that same ID for merrymen_vault in every [programs.*];
+// - Anchor.toml names that same ID for agentcap_vault in every [programs.*];
 // - the .so is an ELF file that contains the ID's 32 bytes. A binary built for
 //   another ID passes a hash check but fails every instruction with
 //   DeclaredProgramIdMismatch (0x1004) once deployed, and an immutable deploy
@@ -26,7 +26,7 @@
 // a build is never a release, whatever its manifest says.
 //
 // A release artifact comes only from a CI run on refs/heads/main of
-// millw14/merrymen (a push to main or a manual run on main) whose pinned
+// millw14/agentcap (a push to main or a manual run on main) whose pinned
 // Linux build matched the committed build manifest and whose app check passed
 // (RELEASE_RULE). CI never runs on a tag push, and a manual run on a tag or
 // another branch is not a candidate. This script cannot know the manifest
@@ -134,7 +134,7 @@ export function readToolchain(envText) {
 }
 
 /** The repository whose main branch releases the vault. */
-export const RELEASE_REPOSITORY = "millw14/merrymen";
+export const RELEASE_REPOSITORY = "millw14/agentcap";
 /**
  * Only refs/heads/main. ci.yml runs on a push to main, on pull requests and on
  * a manual dispatch; it never runs on a tag push. A manual run can be
@@ -152,13 +152,13 @@ export const CANDIDATE_LABEL = "candidate-unconfirmed";
 export const NOT_A_RELEASE_LABEL = "not-a-release";
 /** What solana · test names its upload, from the label and the run. */
 export function candidateArtifactName(label, { commit, runId, runAttempt }) {
-  return `merrymen-vault-sbf-${label}-${commit}-run${runId}.${runAttempt}`;
+  return `agentcap-vault-sbf-${label}-${commit}-run${runId}.${runAttempt}`;
 }
 export const RELEASE_RULE = `A release artifact comes only from a CI run on ${RELEASE_REF} of ${RELEASE_REPOSITORY}: `
   + "a push to main, or a manual (workflow_dispatch) run on main, whose pinned Linux build matched the committed "
   + "contracts/solana/build-manifests/Linux-x86_64.json and whose app check passed, so solana · rebuild reproduced its hash. "
-  + `solana · test uploads such a run's bytes as merrymen-vault-sbf-${CANDIDATE_LABEL}-<commit>-run<id>.<attempt>, before app has decided; `
-  + "solana · release, which runs only after app passed, confirms them with merrymen-vault-release-<commit>-run<id>.<attempt>, "
+  + `solana · test uploads such a run's bytes as agentcap-vault-sbf-${CANDIDATE_LABEL}-<commit>-run<id>.<attempt>, before app has decided; `
+  + "solana · release, which runs only after app passed, confirms them with agentcap-vault-release-<commit>-run<id>.<attempt>, "
   + "a record naming that artifact and its SHA-256. Without that record the run is not a release. "
   + "A build whose lib.rs declares the local test program id (SOLANA_VAULT_LOCAL_TEST_PROGRAM in packages/core/src/solana-live.ts) is never a release: "
   + "the live runtime refuses that id, so its Linux manifest is a reproducibility baseline only. "
@@ -287,8 +287,8 @@ export function programRecord({ libRs, anchorToml, so, localTestId = null, toolc
   const key = base58Decode(programId);
   if (key.length !== 32) throw new Error(`declared program ID ${programId} is ${key.length} bytes, not 32`);
 
-  const named = anchorProgramIds(anchorToml, "merrymen_vault");
-  if (named.length === 0) throw new Error("Anchor.toml names no merrymen_vault program ID");
+  const named = anchorProgramIds(anchorToml, "agentcap_vault");
+  if (named.length === 0) throw new Error("Anchor.toml names no agentcap_vault program ID");
   for (const { cluster, id } of named) {
     if (id !== programId) throw new Error(`Anchor.toml [programs.${cluster}] names ${id}, but lib.rs declares ${programId}`);
   }
@@ -301,7 +301,7 @@ export function programRecord({ libRs, anchorToml, so, localTestId = null, toolc
     throw new Error(`the local test program ID ${JSON.stringify(localTestId)} is not a 32-byte key`);
   }
   return {
-    program: "merrymen_vault",
+    program: "agentcap_vault",
     programId,
     programIdOccurrences,
     // SOLANA_VAULT_LOCAL_TEST_PROGRAM: a build that declares it is never a release.
@@ -339,7 +339,7 @@ function main(argv) {
   const here = dirname(fileURLToPath(import.meta.url));
   const run = provenance(process.env);
   const record = programRecord({
-    libRs: readFileSync(join(programRoot, "programs/merrymen-vault/src/lib.rs"), "utf8"),
+    libRs: readFileSync(join(programRoot, "programs/agentcap-vault/src/lib.rs"), "utf8"),
     anchorToml: readFileSync(join(programRoot, "Anchor.toml"), "utf8"),
     so: readFileSync(soPath),
     localTestId: readLocalTestProgramId(join(here, "..", "..")),
@@ -352,7 +352,7 @@ function main(argv) {
   if (process.env.GITHUB_STEP_SUMMARY) {
     const t = record.toolchain;
     appendFileSync(process.env.GITHUB_STEP_SUMMARY, [
-      "### merrymen_vault SBF artifact",
+      "### agentcap_vault SBF artifact",
       "",
       `- program ID: \`${record.programId}\` (its 32 bytes appear ${record.programIdOccurrences} time(s) in the binary)`,
       record.declaresLocalTestId

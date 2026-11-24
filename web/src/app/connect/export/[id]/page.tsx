@@ -6,7 +6,7 @@ import "../../connect.css";
 import "../../mcp-connect.css";
 
 export const metadata: Metadata = {
-  title: "Download an export · merrymen",
+  title: "Download an export · agentcap",
   description: "Download a report your AI assistant prepared.",
   robots: { index: false, follow: false },
   referrer: "no-referrer",

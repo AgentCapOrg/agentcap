@@ -7,10 +7,10 @@ import type { MessageKey } from "./en";
  * That is what makes a partial file safe to have here.
  */
 export const ko: Partial<Record<MessageKey, string>> = {
-  "tour.stop01.title": "merrymen에 오신 것을 환영합니다.",
+  "tour.stop01.title": "agentcap에 오신 것을 환영합니다.",
   "tour.stop01.copy": "에이전트에 전략을 정해 주고, 한도를 설정하고, 에이전트가 내리는 판단을 지켜보세요. 안내를 처음부터 따라가도 되고, 목차에서 원하는 기능으로 바로 넘어가도 됩니다. 언제든 중간에 나가거나 다시 볼 수 있습니다.",
   "tour.stop02.title": "아는 시장부터 시작하세요.",
-  "tour.stop02.copy": "홈에는 당신의 merryman과 자금이 있습니다. 탐색(Explore)에는 리더보드와 시장이 있습니다. 토큰을 열면 그 토큰의 가격 추이와, 에이전트들이 그 토큰에 대해 남긴 매매 기록을 볼 수 있습니다.",
+  "tour.stop02.copy": "홈에는 당신의 agentcapavatar과 자금이 있습니다. 탐색(Explore)에는 리더보드와 시장이 있습니다. 토큰을 열면 그 토큰의 가격 추이와, 에이전트들이 그 토큰에 대해 남긴 매매 기록을 볼 수 있습니다.",
   "tour.stop03.title": "내 에이전트, 내가 정한 한도.",
   "tour.stop03.copy": "전략 하나와 한도 두 가지(거래당, 하루당)가 에이전트가 할 수 있는 일을 정합니다. 모의 모드에서는 실제 돈이 아닌 가상 자금으로 연습하며, 직접 바꾸기 전까지 그대로 유지됩니다.",
   "tour.stop04.title": "이유를 물어보세요.",
@@ -56,7 +56,7 @@ export const ko: Partial<Record<MessageKey, string>> = {
   "tour.stop24.title": "설정과 공개 범위.",
   "tour.stop24.copy": "설정에서는 에이전트 구성과 공개할 내용을 관리합니다. 보유 장부를 공개하면 포지션과 거래 규모까지 드러날 수 있습니다. 비공개로 두어도 활동 내역과 집계 조건을 충족한 퍼센트 수익률은 여전히 공개됩니다.",
   "tour.stop25.title": "API로 직접 만들기.",
-  "tour.stop25.copy": "개발자는 merrymen.dev/api에서 API 키 설정, SDK, 연동 안내를 볼 수 있습니다. 비밀 API 키는 반드시 본인 서버에만 두세요. 다른 앱을 연결할 때는 문서에 적힌 설정과 대화 흐름을 그대로 따르세요.",
+  "tour.stop25.copy": "개발자는 agentcap.xyz/api에서 API 키 설정, SDK, 연동 안내를 볼 수 있습니다. 비밀 API 키는 반드시 본인 서버에만 두세요. 다른 앱을 연결할 때는 문서에 적힌 설정과 대화 흐름을 그대로 따르세요.",
   "tour.stop26.title": "준비되면 시작하세요.",
   "tour.stop26.copy": "전략이나 한도, 가장 최근 판단이 궁금하면 대화창으로 돌아가 물어보세요. 에이전트가 아무것도 하지 않고 있다면 설명, 모드, 입금 상태, 권한을 확인해 보세요. 이 안내는 '둘러보기'를 눌러 언제든 다시 볼 수 있습니다.",
   "tour.skip": "건너뛰기",
@@ -65,7 +65,7 @@ export const ko: Partial<Record<MessageKey, string>> = {
   "tour.next": "다음",
   "tour.finish": "완료",
   "tour.relaunch": "둘러보기",
-  "tour.dialogLabel": "merrymen 둘러보기",
+  "tour.dialogLabel": "agentcap 둘러보기",
   "tour.stepOf": "{current} / {total}",
   "tour.savedLocally": "이 브라우저에 저장되었습니다.",
   "tour.retrySync": "계정 동기화 다시 시도",

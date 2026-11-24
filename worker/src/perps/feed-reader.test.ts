@@ -28,7 +28,7 @@ const DETAILS = parseOrderBookDetails(JSON.parse(readFileSync(path.join(import.m
 const BTC = DETAILS.markets.get(1)!;
 const ETH = DETAILS.markets.get(0)!;
 
-const ROOT = mkdtempSync(path.join(os.tmpdir(), "merrymen-lighter-feed-reader-"));
+const ROOT = mkdtempSync(path.join(os.tmpdir(), "agentcap-lighter-feed-reader-"));
 after(() => rmSync(ROOT, { recursive: true, force: true }));
 
 const NOW = 1_790_707_956_000;
@@ -254,17 +254,17 @@ test("the reader makes no network call: with fetch and WebSocket booby-trapped i
 });
 
 test("lighterFeedPath: the fleet home when the orchestrator set one, else the process's own", () => {
-  const prior = process.env.MERRYMEN_FLEET_HOME;
+  const prior = process.env.AGENTCAP_FLEET_HOME;
   try {
-    process.env.MERRYMEN_FLEET_HOME = "/srv/fleet";
+    process.env.AGENTCAP_FLEET_HOME = "/srv/fleet";
     assert.equal(lighterFeedPath("/srv/fleet/children/t1"), path.join("/srv/fleet", "lighter-feed.json"));
-    process.env.MERRYMEN_FLEET_HOME = "  ";
-    assert.equal(lighterFeedPath("/home/me/.merrymen"), path.join("/home/me/.merrymen", "lighter-feed.json"));
-    delete process.env.MERRYMEN_FLEET_HOME;
-    assert.equal(lighterFeedPath("/home/me/.merrymen"), path.join("/home/me/.merrymen", "lighter-feed.json"));
+    process.env.AGENTCAP_FLEET_HOME = "  ";
+    assert.equal(lighterFeedPath("/home/me/.agentcap"), path.join("/home/me/.agentcap", "lighter-feed.json"));
+    delete process.env.AGENTCAP_FLEET_HOME;
+    assert.equal(lighterFeedPath("/home/me/.agentcap"), path.join("/home/me/.agentcap", "lighter-feed.json"));
   } finally {
-    if (prior === undefined) delete process.env.MERRYMEN_FLEET_HOME;
-    else process.env.MERRYMEN_FLEET_HOME = prior;
+    if (prior === undefined) delete process.env.AGENTCAP_FLEET_HOME;
+    else process.env.AGENTCAP_FLEET_HOME = prior;
   }
 });
 

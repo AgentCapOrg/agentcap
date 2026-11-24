@@ -40,7 +40,7 @@ const missing = (e: unknown) => (e as NodeJS.ErrnoException).code === "ENOENT";
 
 /**
  * Throws PerpsBooksNotHandedOver while `<home>/children-perps` holds a
- * `merrymen.db` in any of its homes. No Perps root at all is the fleet as it
+ * `agentcap.db` in any of its homes. No Perps root at all is the fleet as it
  * has always been, and passes. Anything that cannot be read — the root, an
  * entry, a book's lstat — is counted as a book or refuses outright, never
  * read as absence.
@@ -59,7 +59,7 @@ export function refuseWhilePerpsBooks(home: string): void {
   let books = 0;
   for (const name of names) {
     try {
-      lstatSync(path.join(root, name, "merrymen.db"));
+      lstatSync(path.join(root, name, "agentcap.db"));
       books++;
     } catch (e) {
       // Not there, or an entry that is not a directory and so holds nothing.

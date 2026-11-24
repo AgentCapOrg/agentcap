@@ -25,8 +25,8 @@ import { createPublicClient } from "viem";
 import { afterEach, beforeEach, describe, it } from "node:test";
 
 // The breaker's shared cooldown is a file in the home. Keep it out of the real one.
-process.env.MERRYMEN_HOME = mkdtempSync(path.join(tmpdir(), "merrymen-rpc-quota-"));
-delete process.env.MERRYMEN_FLEET_HOME;
+process.env.AGENTCAP_HOME = mkdtempSync(path.join(tmpdir(), "agentcap-rpc-quota-"));
+delete process.env.AGENTCAP_FLEET_HOME;
 
 const { chainRead, resetGovernorForTest, resetRpcMetersForTest, rpcSummaryLines } = await import("./rpc-meter");
 const { classifyRpcError } = await import("./rpc-error");

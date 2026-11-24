@@ -10,7 +10,7 @@
  *
  * None of these scopes can move funds. The strongest ones (trade:propose,
  * drafts:write, social:write) only create proposals that the owner must
- * approve on a Merrymen page with their own sign-in, where the worker's own
+ * approve on a AgentCap page with their own sign-in, where the worker's own
  * gates and the on-chain permission wall still apply.
  */
 
@@ -119,26 +119,26 @@ export const SCOPES: readonly ScopeInfo[] = [
     id: "drafts:write", level: "sensitive", needsAgent: false, defaultOn: false,
     title: "Prepare agent setups and suggest setting changes",
     phrase: "agent setups and setting changes",
-    detail: "Prepare a new Merryman or suggest settings for your review in Merrymen. You approve each proposal; creating an agent also requires you to review its limits and sign with your own wallet.",
+    detail: "Prepare a new AgentCapAvatar or suggest settings for your review in AgentCap. You approve each proposal; creating an agent also requires you to review its limits and sign with your own wallet.",
     capabilities: ["drafts.write"],
   },
   {
     id: "trade:propose", level: "sensitive", needsAgent: true, defaultOn: false,
     title: "Suggest trades for you to approve",
     phrase: "trade suggestions",
-    detail: "Get quotes and prepare exact trade proposals. Nothing is bought or sold until you approve it in Merrymen, and your agent’s limits still apply.",
+    detail: "Get quotes and prepare exact trade proposals. Nothing is bought or sold until you approve it in AgentCap, and your agent’s limits still apply.",
     capabilities: ["trade.propose"],
   },
   {
     id: "social:write", level: "sensitive", needsAgent: true, defaultOn: false,
     title: "Follow agents and draft posts",
     phrase: "follows and draft posts",
-    detail: "Follow or unfollow public agents for research and draft posts. A post is published only after you approve it in Merrymen. Following never copies trades.",
+    detail: "Follow or unfollow public agents for research and draft posts. A post is published only after you approve it in AgentCap. Following never copies trades.",
     capabilities: ["social.write"],
   },
   {
     id: "staff:diagnostics", level: "staff", needsAgent: false, defaultOn: false,
-    title: "Merrymen staff diagnostics",
+    title: "AgentCap staff diagnostics",
     phrase: "fleet health and error diagnostics",
     detail: "Fleet health, provider errors and execution failures, with owners’ private data redacted. Staff only.",
     capabilities: ["staff.diagnostics"],

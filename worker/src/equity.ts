@@ -97,7 +97,7 @@ export function perpAccountUsdg(perp: PerpBookPart | undefined): bigint {
  * against P&L at the price on the day it was burned (trades.gas_usdg, priced
  * from the WETH pool TWAP), rather than its BALANCE being marked. See pnlUsdg.
  *
- * ALSO ABSENT: THE ENERGY RESERVE ($MERRYMEN in the account). It sits outside
+ * ALSO ABSENT: THE ENERGY RESERVE ($AGENTCAP in the account). It sits outside
  * the book exactly as ETH does — never watched, never a position, never valued
  * here, never sold by a strategy — and for the same reasons: marked, an owner's
  * in-kind top-up would ratchet the peak as profit, and a refused price read
@@ -111,7 +111,7 @@ export function perpAccountUsdg(perp: PerpBookPart | undefined): bigint {
  *
  * KNOWN LIMITS, both of which the operator tools cover: a purchase made with
  * the OWNER's key out of the account's USDG is not booked by the worker (owners
- * are told to send $MERRYMEN directly instead), and a redeploy during the
+ * are told to send $AGENTCAP directly instead), and a redeploy during the
  * purchase's receipt wait leaves it unbooked until hwm-repair / reconstruction
  * restore it — the audit's envelope floor is the detector.
  *

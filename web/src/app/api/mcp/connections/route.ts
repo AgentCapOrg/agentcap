@@ -1,6 +1,6 @@
 /**
  * Connected apps, for the owner: list the MCP connections that can reach
- * their Merrymen, see what each may do and what it did recently, revoke any of
+ * their AgentCap, see what each may do and what it did recently, revoke any of
  * them (which also cancels what it left waiting for approval), and create or
  * revoke personal access tokens. Session-only; every
  * statement is scoped to the signed-in tenant.

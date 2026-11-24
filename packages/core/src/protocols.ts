@@ -88,7 +88,7 @@ export const MORPHO = {
  * contracts/deployments.json; testnet remains undeployed.
  *
  * WHY A CONSTANT AT ALL, when the grant already seals the factory it was signed
- * against. Because RECOVERY may have no grant. `merrymen recover` accepts a
+ * against. Because RECOVERY may have no grant. `agentcap recover` accepts a
  * pasted owner key with nothing else, and it can also run against an ARCHIVED
  * grant — so the vault has to be derivable from the owner key alone, and the
  * only missing input is the factory. Without this, an owner who lost their
@@ -147,7 +147,7 @@ export const PONS_CLASS_VAULT_FACTORY: Readonly<Record<number, string | null>> =
  * A SECOND CONSTANT, NOT A REPLACEMENT, and the v1 table above must never be
  * emptied. A v1 vault is a deployed contract at a CREATE2 address derived from
  * the v1 factory, and it may be holding a position right now. Recovery is the
- * reason the constant exists at all — `merrymen recover` can run from a pasted
+ * reason the constant exists at all — `agentcap recover` can run from a pasted
  * owner key with no grant, deriving the vault from the factory — so deleting v1
  * here would not tidy anything up. It would make a real balance unreachable by
  * the one path built to reach it without a grant. Both must be probed.
@@ -235,7 +235,7 @@ export const PONS_CLASS_VAULT_FACTORY_V2: Readonly<Record<number, string | null>
  * never the authority", and the delivery path proves the point: the web
  * `GET /api/settings` returns the stored blob with no default merged in, the
  * phone signer has no settings fetch wired at all, and the worker's
- * `MERRYMEN_PONS_ADAPTER_ADDRESS` sits on the far side of the boundary where it
+ * `AGENTCAP_PONS_ADAPTER_ADDRESS` sits on the far side of the boundary where it
  * can only raise a drift warning. So every owner who never pasted an address
  * signed a grant with no Pons route, and the weekend curve fallback — shipped,
  * tested, and the documented remedy for all 24 equity feeds going stale — could

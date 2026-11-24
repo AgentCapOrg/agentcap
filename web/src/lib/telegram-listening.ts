@@ -31,7 +31,7 @@
  *   is wrong. Only the owner can fix it.
  * - `conflict`: the last poll failed with 409, and the bot has not been heard
  *   for longer than LIVE_WITHIN_SEC: another program is reading this bot's
- *   messages (a copy of Merrymen on the owner's computer, say, or a
+ *   messages (a copy of AgentCap on the owner's computer, say, or a
  *   webhook). Not before: a redeploy's handover, while the old worker's long
  *   poll is still open, gives a 409 or two and then polls that work, and a
  *   linked owner's panel must not flip to "another program has the bot" for

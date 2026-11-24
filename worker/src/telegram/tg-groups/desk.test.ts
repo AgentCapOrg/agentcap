@@ -411,10 +411,10 @@ async function said(m: TgMessage): Promise<void> {
 
 /** Answer every group model call with `reply()`. */
 function fakeModel(reply: (prompt: string) => string): string[] {
-  envVars.MERRYMEN_TG_GROUPS_LLM_KEY = "k-test";
-  envVars.MERRYMEN_TG_GROUPS_LLM_PROVIDER = "openai";
-  envVars.MERRYMEN_TG_GROUPS_LLM_BASE_URL = "https://llm.test/v1";
-  envVars.MERRYMEN_TG_GROUPS_MODEL = "fake";
+  envVars.AGENTCAP_TG_GROUPS_LLM_KEY = "k-test";
+  envVars.AGENTCAP_TG_GROUPS_LLM_PROVIDER = "openai";
+  envVars.AGENTCAP_TG_GROUPS_LLM_BASE_URL = "https://llm.test/v1";
+  envVars.AGENTCAP_TG_GROUPS_MODEL = "fake";
   const prompts: string[] = [];
   globalThis.fetch = (async (url: string, init: { body: string }) => {
     assert.ok(String(url).startsWith("https://llm.test/"));
@@ -645,13 +645,13 @@ describe("the desk lane", () => {
   });
 
   it("stays out when the operator switched the desk off, or the coins switch is off for a coin", async () => {
-    envVars.MERRYMEN_TG_GROUPS_DESK = "0";
+    envVars.AGENTCAP_TG_GROUPS_DESK = "0";
     make();
     await said(msg("pine how is the market?"));
     assert.equal(desk!.asks.length, 0);
     groups.stop();
     await groups.drain();
-    envVars.MERRYMEN_TG_GROUPS_DESK = undefined;
+    envVars.AGENTCAP_TG_GROUPS_DESK = undefined;
     cfg.telegramGroupCoinsEnabled = false;
     make();
     await said(msg("pine thoughts on cashcat?"));

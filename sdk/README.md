@@ -1,6 +1,6 @@
-# Merrymen browser SDK
+# AgentCap browser SDK
 
-Create and authorize a hosted Merryman from inside another application. The SDK
+Create and authorize a hosted AgentCapAvatar from inside another application. The SDK
 prepares a capped session grant and verifies/signs an enrollment challenge using
 the owner's wallet. Your backend calls the partner API with its private key.
 
@@ -10,10 +10,10 @@ After the SDK revision is deployed to hosted web:
 
 ```js
 import {
-  prepareMerryman,
+  prepareAgentCapAvatar,
   partnerGrantDigest,
-  signMerrymanAuthorization,
-} from "https://app.merrymen.dev/sdk/merrymen-browser.js";
+  signAgentCapAvatarAuthorization,
+} from "https://app.agentcap.xyz/sdk/agentcap-browser.js";
 ```
 
 This is an ESM browser bundle. The static module supports cross-origin loading;
@@ -24,11 +24,11 @@ image builds the SDK after `npm ci --omit=dev`) and run:
 
 ```bash
 npm run build:sdk    # sdk/dist/browser.js, plus the copy hosted web serves
-node sdk/build.mjs --outfile ../my-app/public/merrymen-browser.js    # that file only
+node sdk/build.mjs --outfile ../my-app/public/agentcap-browser.js    # that file only
 ```
 
 Serve the result from your application's own assets. Without `--outfile` the
-build also copies it to `web/public/sdk/merrymen-browser.js`; the normal web
+build also copies it to `web/public/sdk/agentcap-browser.js`; the normal web
 build includes this step. The SDK has not been published as an npm package.
 
 The bundle needs no Node globals. A copy built from a revision between
@@ -41,12 +41,12 @@ API contract it speaks (`2026-10-08`), the `api_version` that
 `2026-10-08+<12 hex characters>`, a fingerprint of the bundle's own bytes, so
 the same sources always give the same version and any bundled change gives a
 new one (`+source` when running unbundled). The build prints it and writes it on
-the bundle's first line, `/* merrymen-browser <SDK_VERSION> */`. Log it, and
+the bundle's first line, `/* agentcap-browser <SDK_VERSION> */`. Log it, and
 quote it in support requests.
 
 ## Browser and backend responsibilities
 
-Your backend first requests `POST https://ai.merrymen.dev/partner/v1/agents` with
+Your backend first requests `POST https://ai.agentcap.xyz/partner/v1/agents` with
 `{external_user_id, name}`, authenticating with a server-only `mmp_` partner key.
 It must derive the external user ID from its authenticated session and enforce
 connection ownership on every subsequent operation.
@@ -66,7 +66,7 @@ const settings = {
   live_trading_enabled: false,
 };
 const expectedScopes = ["read:agents", "chat:agents"];
-const grant = await prepareMerryman({
+const grant = await prepareAgentCapAvatar({
   owner,
   chainId: 4663,
   caps: {
@@ -85,7 +85,7 @@ const challenge = await backend.challenge(connection.id, {
   grant_hash: partnerGrantDigest(grant),
   settings,
 });
-const payload = await signMerrymanAuthorization({
+const payload = await signAgentCapAvatarAuthorization({
   owner, grant, challenge, settings,
   expectedAppId: YOUR_CONFIGURED_APP_ID,
   expectedAgentId: connection.id,
@@ -95,19 +95,19 @@ const payload = await signMerrymanAuthorization({
 const result = await backend.activate(connection.id, payload);
 ```
 
-`prepareMerryman` performs wallet/chain setup and returns a signed `StoredGrant`.
+`prepareAgentCapAvatar` performs wallet/chain setup and returns a signed `StoredGrant`.
 It does not call the partner API, start a worker, fund an account, persist the
 grant or perform wallet backups. It takes exactly these options:
 
 - `owner`: the signer, with `signTypedData` and `signMessage`. Here it is asked
   for exactly one EIP-712 typed-data signature, the permission itself;
-  `signMerrymanAuthorization` later asks for one message signature. Nothing
+  `signAgentCapAvatarAuthorization` later asks for one message signature. Nothing
   else is ever requested.
 - `caps`: exactly `perTradeUsdg`, `dailyUsdg`, `expiryDays`, `maxDrawdownPct`
   and `maxOpsPerDay`, each a finite number of at least 1. `perTradeUsdg` must
   not exceed `dailyUsdg`, `maxDrawdownPct` must not exceed 100, `expiryDays` is
   a whole number up to 365 and `maxOpsPerDay` a whole number. Fractional USDG
-  amounts and drawdowns are fine. Merrymen's own apps sign `expiryDays: 30` by
+  amounts and drawdowns are fine. AgentCap's own apps sign `expiryDays: 30` by
   default, so owners renew once a month; the example above does the same.
 - `chainId`: `4663` (Robinhood Chain, real funds) or `46630` (its testnet).
   Omitted or `undefined` means `4663`. Anything else, `null` and the string
@@ -132,7 +132,7 @@ rebuild it whenever hosted web deploys and compare `SDK_VERSION` with the
 hosted module's. Activation can still refuse it for other reasons, such as a wallet
 already linked to another of your users or an expired challenge.
 
-`partnerGrantDigest` hashes the canonical grant. `signMerrymanAuthorization`
+`partnerGrantDigest` hashes the canonical grant. `signAgentCapAvatarAuthorization`
 checks the exact app, connection, user, access scopes, owner, smart account,
 chain, grant, settings, expiry and message before signing. The expected values
 must come from the user's choices and your established application state, not

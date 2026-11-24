@@ -1,9 +1,9 @@
 /**
  * A ROBINHOOD KILL ON A POSTGRES THAT NEVER RAN SOLANA (opt-in, disposable LOCAL
- * PostgreSQL only, MERRYMEN_TEST_PG_URL; never reads a configured DATABASE_URL).
+ * PostgreSQL only, AGENTCAP_TEST_PG_URL; never reads a configured DATABASE_URL).
  *
  * Hosted "kill all agents" and Telegram /kill stop the tenant's Solana strategy
- * too, MERRYMEN_SOLANA on or off. With no Solana table the kill must create
+ * too, AGENTCAP_SOLANA on or off. With no Solana table the kill must create
  * none, take no Solana lock and answer the Robinhood kill as done; once the
  * table exists, it stops the strategy as before.
  */
@@ -21,7 +21,7 @@ import { makePgDb } from "../../../worker/src/db";
 import { stopSolanaForKill } from "../../../worker/src/solana-kill";
 import { SqlSolanaBindingStore } from "./solana-binding-store";
 
-const url = process.env.MERRYMEN_TEST_PG_URL ?? process.env.MERRYMEN_TEST_POSTGRES_URL;
+const url = process.env.AGENTCAP_TEST_PG_URL ?? process.env.AGENTCAP_TEST_POSTGRES_URL;
 const TENANT = `0x${"11".repeat(20)}` as const;
 const OWNER = base58Encode(new Uint8Array(32).fill(20));
 const NOW = 1_000_000;
@@ -51,15 +51,15 @@ test("Postgres: a kill without the Solana table creates nothing, waits on no Sol
   await admin.query(`CREATE SCHEMA ${schema}`);
   const holder = new pg.Client({ connectionString: scoped("holder") });
   await holder.connect();
-  const saved = Object.fromEntries(["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_SESSION_SECRET", "DATABASE_URL", "MERRYMEN_STORE_DEK"].map((k) => [k, process.env[k]]));
+  const saved = Object.fromEntries(["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_SESSION_SECRET", "DATABASE_URL", "AGENTCAP_STORE_DEK"].map((k) => [k, process.env[k]]));
   const home = mkdtempSync(path.join(tmpdir(), "solana-kill-pg-"));
   const table = async () => (await admin.query("SELECT to_regclass($1) IS NOT NULL AS found", [`${schema}.solana_wallet_bindings`])).rows[0]!.found;
   try {
-    process.env.MERRYMEN_HOME = home;
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOME = home;
+    process.env.AGENTCAP_HOSTED = "1";
     process.env.DATABASE_URL = scoped("web");
-    process.env.MERRYMEN_SESSION_SECRET = "test-secret-at-least-thirty-two-characters-long";
-    process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
+    process.env.AGENTCAP_SESSION_SECRET = "test-secret-at-least-thirty-two-characters-long";
+    process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
 
     await t.test("the store's kill paths, while another process holds the Solana schema lock", async () => {
       await holder.query("BEGIN");
@@ -91,9 +91,9 @@ test("Postgres: a kill without the Solana table creates nothing, waits on no Sol
       } as unknown as Parameters<InstanceType<typeof PgGrantStore>["put"]>[1]);
       const grantRows = async () => Number((await admin.query(`SELECT count(*)::int AS n FROM ${schema}.grants WHERE tenant = $1`, [TENANT])).rows[0]!.n);
       assert.equal(await grantRows(), 1, "the RH grant was stored");
-      (await import("@merrymen/grant-store")).resetGrantStoreForTest();
+      (await import("@agentcap/grant-store")).resetGrantStoreForTest();
       const { DELETE } = await import("../app/api/grants/route");
-      const response = await DELETE(new Request("https://app.merrymen.dev/api/grants", {
+      const response = await DELETE(new Request("https://app.agentcap.xyz/api/grants", {
         method: "DELETE", headers: { cookie: `${auth.SESSION_COOKIE}=${auth.mintSession(TENANT)}`, "content-type": "application/json" },
         body: JSON.stringify({ expectedTenant: TENANT, purpose: "delete-agent" }),
       }));

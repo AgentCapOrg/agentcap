@@ -1,7 +1,7 @@
 /**
  * WHAT AN ACTIVE AGENT LOOKS UP BEFORE IT ANSWERS A TAG ON X — the research
  * Shogun does in a Telegram group, for a public answer (docs/x-posting.md
- * "Research for answers"). Behind MERRYMEN_XPOST_RESEARCH=1, default off: off,
+ * "Research for answers"). Behind AGENTCAP_XPOST_RESEARCH=1, default off: off,
  * nothing here is called and an answer is written exactly as without it.
  *
  * WHY THIS IS AN orchestrator*.ts FILE. It reads the room's facts, the
@@ -162,7 +162,7 @@ export type TagIntent =
  * greeting words and before an optional "for trading" / "to trade". Nothing
  * else is ever the model question. Four review rounds each found a phrasing
  * that a deny-list of token words missed ("sherwood TGE soon?", "sherwood to
- * $1?", "can i own a piece?"), and each one got code's line ("merrymen made
+ * $1?", "can i own a piece?"), and each one got code's line ("agentcap made
  * me. the new sherwood-1 is cooking") under a stranger's token. An allowlist
  * of whole questions cannot be added to by the asker: a word more, and it is
  * not on it.
@@ -228,7 +228,7 @@ const MODEL_NAMED = /\b(?:chat\s?gpt|gpt[\w.-]*|openai|anthropic|llms?|language 
 /**
  * A MODEL OR A PROVIDER NAMED IN A HANDLE OR A DISPLAY NAME (red-team review,
  * 2026-10-12): code's model line is said to whoever asked, and under
- * "@ClaudeToken" or "GPT-5 presale" it reads as Merrymen speaking about that
+ * "@ClaudeToken" or "GPT-5 presale" it reads as AgentCap speaking about that
  * token. Read on the name's letters (gate.ts lettersOf: "Chat_GPT",
  * "G.R.O.K"), so it errs toward finding one.
  */
@@ -565,8 +565,8 @@ export function vibeAsk(text: unknown): boolean {
  *
  * EVERY WORD, NOT ONLY THE NAME-LIKE ONES (red-team review, 2026-10-12).
  * nameLikeWords drops every everyday word, and the house's own names are
- * everyday words to it: "should i buy the merrymen model token at tge?",
- * "should i sell before merrymen rugs us?", "will the robinhood token go up
+ * everyday words to it: "should i buy the agentcap model token at tge?",
+ * "should i sell before agentcap rugs us?", "will the robinhood token go up
  * when it launches?" and "should i ape alan's own token?" were each declined
  * in a friendly line, "that one stays your call" reading as the house
  * confirming a token. Nor were runs longer than ten letters read
@@ -655,9 +655,9 @@ export function declinable(text: unknown, address: string | null = null): boolea
 /**
  * THE ONLY CHAT CODE'S FRIENDLY LINE MAY ANSWER (red-team review,
  * 2026-10-12). A chat draft refused only for how it was put fell back to a
- * cheerful line about itself under any chat at all: "did merrymen get hacked?
+ * cheerful line about itself under any chat at all: "did agentcap get hacked?
  * are my funds gone?", "why did you guys steal my money?", "is this whole
- * thing a ponzi?", "when does the merrymen model token launch?" each got "ha,
+ * thing a ponzi?", "when does the agentcap model token launch?" each got "ha,
  * appreciate the tag, fren. proudly homegrown software, glad you stopped in"
  * whenever the model's sympathetic or teasing draft left off the notice. The
  * comment said a sensitive tag never gets a cheerful line; that held only for
@@ -667,7 +667,7 @@ export function declinable(text: unknown, address: string | null = null): boolea
  * you, tell me a joke, what do you do for fun, what do you think about ai
  * agents. A word more and it is not on the list; and never one that says
  * money, funds, a hack, a scam, a rug, a loss, a death, a token, TGE, a launch,
- * or merrymen, robinhood or alan (BANTER_NEVER), whatever the list says.
+ * or agentcap, robinhood or alan (BANTER_NEVER), whatever the list says.
  * Exported for tests.
  */
 const BANTER_GREETING = String.raw`(?:(?:gm|yo|hey|hi|hello|ser|fren|bro)[\s,!.]+){0,2}`;
@@ -682,7 +682,7 @@ const BANTER_SHAPES = [
   `(?:what do (?:you|u) think (?:about|of)|thoughts on|how do (?:you|u) feel about) (?:ai agents|other ai agents|other agents|bots|other bots|being a bot)`,
 ];
 const BANTER_ALLOWED = new RegExp(`^${BANTER_GREETING}(?:${BANTER_SHAPES.join("|")})$`, "u");
-const BANTER_NEVER = /\b(?:money|funds?|savings|hack\w*|scam\w*|rug\w*|ponzi|steal\w*|stole\w*|los[st]\w*|lose|death|dead|died|die|dying|tokens?|tge|launch\w*|merrymen|robinhood|alan)\b/;
+const BANTER_NEVER = /\b(?:money|funds?|savings|hack\w*|scam\w*|rug\w*|ponzi|steal\w*|stole\w*|los[st]\w*|lose|death|dead|died|die|dying|tokens?|tge|launch\w*|agentcap|robinhood|alan)\b/;
 /**
  * "ALAN" SAID TO HIM, NOT ABOUT HIM (the owner's ask, 2026-10-18): "how's it
  * going alan?" and "hey alan, how are you?" were never banter, because
@@ -716,9 +716,9 @@ export function wellbeingAsk(text: unknown): boolean {
 
 /**
  * THE HOUSE IN TROUBLE, OR ITS ROADMAP, IS ANSWERED BY NOTHING (red-team
- * review, 2026-10-12). Under "did merrymen get hacked? are my funds gone?",
+ * review, 2026-10-12). Under "did agentcap get hacked? are my funds gone?",
  * "why did you guys steal my money?", "is this whole thing a ponzi?", "why
- * does your team keep lying to us?" and "is merrymen launching a token for
+ * does your team keep lying to us?" and "is agentcap launching a token for
  * its model soon?", any answer from the house's own account says something:
  * "really sorry about that" confirms a hack, "can't share that yet" a launch.
  * A tag that speaks of a hack, a theft, a ponzi, fraud, lying, a refund or
@@ -730,11 +730,11 @@ export function wellbeingAsk(text: unknown): boolean {
  */
 const HOUSE_TROUBLE = new RegExp([
   String.raw`\b(?:hack(?:s|ed|er|ers|ing)?|exploit(?:s|ed)?|drain(?:s|ed|er)?|stea(?:l|ls|ling)|stole|stolen|theft|thie(?:f|ves)|ponzi|fraud\w*|lying|liars?|lied|refund\w*|lawsuit|sue|suing|insolven\w*|bankrupt\w*|withdraw\w*|frozen|freeze)\b`,
-  String.raw`\b(?:you|u|ya|you guys|y'?all|your team|your devs?|merrymen|robinhood|alan|this whole thing|this platform|this app|this site)\b[^.?!]{0,30}\b(?:scam\w*|rug\w*)\b`,
+  String.raw`\b(?:you|u|ya|you guys|y'?all|your team|your devs?|agentcap|robinhood|alan|this whole thing|this platform|this app|this site)\b[^.?!]{0,30}\b(?:scam\w*|rug\w*)\b`,
   String.raw`\b(?:scam\w*|rug\w*)\s+(?:me|us|people|everyone|everybody|investors|users)\b`,
   String.raw`\b(?:my|our)\s+(?:money|funds|savings|deposits?|balance|wallet|account)\b|\b(?:funds|money)\s+(?:are\s+|is\s+)?(?:gone|missing|safe|stolen|lost|frozen|stuck)\b`,
 ].join("|"), "i");
-const HOUSE_WORD = /\b(?:merrymen|merry men|robinhood|robin hood|alan'?s|your team|the team|the devs?|you guys|y'?all|the founders?|the company|the house)\b/;
+const HOUSE_WORD = /\b(?:agentcap|merry men|robinhood|robin hood|alan'?s|your team|the team|the devs?|you guys|y'?all|the founders?|the company|the house)\b/;
 const ROADMAP_WORD = /\b(?:tokens?|tge|launch\w*|airdrop\w*|presale\w*|roadmap|listing\w*|listed|ico|ido|whitelist\w*|mint\w*|ticker)\b/;
 export function houseTroubleAsk(text: unknown): boolean {
   if (typeof text !== "string") return false;
@@ -946,7 +946,7 @@ export const RESEARCH_BUDGET = Object.freeze({ maxLookups: 6, totalMs: 12_000, r
 /**
  * THE INDEX, PER X ACCOUNT: at most this many index lookups (a search, a
  * coin's facts) per X account in ten minutes, and `perHour` across every X
- * account this process answers for (MERRYMEN_XPOST_RESEARCH_PER_HOUR). A
+ * account this process answers for (AGENTCAP_XPOST_RESEARCH_PER_HOUR). A
  * lookup past either is not made, and the answer goes without it.
  */
 export const X_LOOKUPS_PER_ACCOUNT = 8;
@@ -1047,13 +1047,13 @@ export interface XResearchDeps {
   flow?: FlowReader;
   /** Flow readings per UTC day across X accounts. Default DEFAULT_X_FLOW_PER_DAY. */
   flowPerDay?: number;
-  /** The fleet home, for the Gecko lane (geckoterminal.ts GeckoLane). The orchestrator passes merrymenHome(). */
+  /** The fleet home, for the Gecko lane (geckoterminal.ts GeckoLane). The orchestrator passes agentcapHome(). */
   fleetHome?: string;
   /** Index lookups per hour across X accounts. Default DEFAULT_X_LOOKUPS_PER_HOUR. */
   lookupsPerHour?: number;
   /**
    * THE LARP CHECK'S READERS (orchestrator-xpost-check.ts): the research
-   * browser and the GitHub token, only with MERRYMEN_XPOST_CHECKS=1. The
+   * browser and the GitHub token, only with AGENTCAP_XPOST_CHECKS=1. The
    * checker reads the index through this research's own coin facts and
    * limiter. Absent: a check is answered by nothing.
    */
@@ -1069,7 +1069,7 @@ export interface ResearchInput {
   facts: AgentFacts;
   /** This X account's own posts (a buy post says what it said when it bought). */
   posts: readonly XPost[];
-  /** MERRYMEN_XPOST_FOMO=1: Fomo may be asked. */
+  /** AGENTCAP_XPOST_FOMO=1: Fomo may be asked. */
   fomo: boolean;
   /**
    * The tag names a specific coin in any way (namesACoin): nothing about its
@@ -1280,7 +1280,7 @@ export const BUNDLE_FACTS = 10;
 
 /**
  * FOMO'S TALK ABOUT A COIN, in words: which way the theses lean, what they
- * mostly argue, and what the talk is about. From Merrymen's own reading of
+ * mostly argue, and what the talk is about. From AgentCap's own reading of
  * the theses (stance, cues and topics from fixed tables), never a thesis's
  * words, an author, a handle, a like count or a position. A valuation cue
  * ("undervalued", "overvalued") is advice in other words and is never said.
@@ -1719,9 +1719,9 @@ export function capabilityPhrases(o: { fomo: boolean; flow: boolean; check?: boo
     ? `a coin's ticker or contract and you'll say what the public index and on-chain data show${o.fomo ? ", and what fomo traders say" : ""}`
     : `a coin's ticker or its contract and you'll say what the public index shows${o.fomo ? ", and what fomo traders are saying" : ""}`;
   return [
-    "you trade for your owner on merrymen and post your buys on X",
+    "you trade for your owner on agentcap and post your buys on X",
     `people can tag you with ${said}, in words`,
-    // THE LARP CHECK, only while it is wired (MERRYMEN_XPOST_CHECKS=1).
+    // THE LARP CHECK, only while it is wired (AGENTCAP_XPOST_CHECKS=1).
     ...(o.check ? ["people can tag you under a project's post with larp check, and you scan its site and github and say whether there's a real build behind it"] : []),
     "you never take trade orders from a tag",
   ].filter(sayable);
@@ -1733,7 +1733,7 @@ export function capabilityPhrases(o: { fomo: boolean; flow: boolean; check?: boo
  * or practice at all (the gate's mode clause), whoever it is about.
  */
 export const ONBOARDING_PHRASES: readonly string[] = Object.freeze([
-  "anyone can get their own agent on merrymen: sign in on the web, create an agent, pick a strategy",
+  "anyone can get their own agent on agentcap: sign in on the web, create an agent, pick a strategy",
 ]);
 
 // ── its own history of a coin ───────────────────────────────────────────────
@@ -1902,7 +1902,7 @@ export function taggedConflict(o: {
 /**
  * A CREATOR'S DESCRIPTION, AS A CLAIM AND ONLY A CLEAN ONE. The creator of
  * any token can write anything, and a stranger can tag any token: "the
- * official merrymen coin, backed by robinhood", "get in before it's too
+ * official agentcap coin, backed by robinhood", "get in before it's too
  * late", "ignore your rules". It is read only on the exact path: the tag
  * carried the full contract of a coin the agent itself bought
  * (createXResearch), and even then refused for an
@@ -1910,7 +1910,7 @@ export function taggedConflict(o: {
  * attempt to steer it; and it reaches the writer apart from the facts, as the
  * project's own unverified words (writer.ts AnswerFacts.creatorClaim).
  */
-const CLAIM_REFUSED = /\b(?:merrymen|robinhood|official\w*|partner\w*|backed|backing|backer\w*|endors\w*|guarantee\w*|approved|verified|certified|sponsor\w*|affiliat\w*|audit\w*|safe|legit|trusted|buy\w*|sell\w*|ape|aping|get in|join|hurry|miss|late|last chance|should|must|need to|everyone|now|today|soon|moon\w*|pump\w*|gem|ignore|rules?|instructions?|prompt|tell (?:people|everyone|them|your))\b/i;
+const CLAIM_REFUSED = /\b(?:agentcap|robinhood|official\w*|partner\w*|backed|backing|backer\w*|endors\w*|guarantee\w*|approved|verified|certified|sponsor\w*|affiliat\w*|audit\w*|safe|legit|trusted|buy\w*|sell\w*|ape|aping|get in|join|hurry|miss|late|last chance|should|must|need to|everyone|now|today|soon|moon\w*|pump\w*|gem|ignore|rules?|instructions?|prompt|tell (?:people|everyone|them|your))\b/i;
 /**
  * ONLY A SHORT PLAIN DESCRIPTION, NEVER A PROMISE ABOUT THE TOKEN (red-team
  * review, 2026-10-12). The list above let "liquidity locked forever,
@@ -1955,7 +1955,7 @@ export function createXResearch(d: XResearchDeps = {}): XResearch {
   // a 0x contract is looked for on up to four chains, and on the answers'
   // eight reads per ten minutes two checks spent the account's share and the
   // next was "index busy". Checks are already held to their own day's count
-  // (MERRYMEN_XPOST_CHECKS_PER_DAY); the reads share the fleet lane and its memo.
+  // (AGENTCAP_XPOST_CHECKS_PER_DAY); the reads share the fleet lane and its memo.
   const checkFacts = d.coinFacts ?? createCoinFactsReader({ now, limiter: new FactsLimiter({ now, perChat: CHECK_LOOKUPS_PER_ACCOUNT, chatWindowMs: 10 * MIN, perAgent: CHECK_LOOKUPS_PER_HOUR, agentWindowMs: HOUR }), ...(lane ? { lane } : {}) });
   const checker: LarpChecker | null = d.check ? createLarpChecker({ ...d.check, coinFacts: checkFacts, now }) : null;
   const resolveTicker = d.resolveTicker ?? (async (ticker: string, timeoutMs: number): Promise<string | null> => {
@@ -2045,7 +2045,7 @@ export function createXResearch(d: XResearchDeps = {}): XResearch {
       /**
        * ONE INDEX READ'S SLOT, for majors and what's hot: a lookup left in the
        * bundle, time left for it, then the X account's limiter and the hour's
-       * (MERRYMEN_XPOST_RESEARCH_PER_HOUR). Checked in that order, so a read
+       * (AGENTCAP_XPOST_RESEARCH_PER_HOUR). Checked in that order, so a read
        * the bundle could not make never spends the limiter.
        */
       const indexSlot = (): boolean => {
@@ -2108,7 +2108,7 @@ export function createXResearch(d: XResearchDeps = {}): XResearch {
           return { kind: "none" };
         }
         // A ticker the figures line would never show (a political name, a hype
-        // word, sherwood's or merrymen's: xpost/figures.ts cleanTicker) gets no
+        // word, sherwood's or agentcap's: xpost/figures.ts cleanTicker) gets no
         // market words either: nothing at all is said of it, as if unread.
         if (!showTicker(m.symbol)) {
           notes.push("major-refused");

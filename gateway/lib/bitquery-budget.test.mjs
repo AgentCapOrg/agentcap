@@ -41,7 +41,7 @@ function gateway(over = {}) {
     upstreamUrl: "https://example.invalid",
     upstreamKey: "x",
     model: "test-model",
-    domain: "merrymen.dev",
+    domain: "agentcap.xyz",
     minTokens: 10_000n,
     tokenAddress: "0x0000000000000000000000000000000000000000",
     bitqueryKey: "k",
@@ -54,7 +54,7 @@ function gateway(over = {}) {
   });
 }
 
-describe("MERRYMEN_GATEWAY_BITQUERY_POINTS_PER_DAY", () => {
+describe("AGENTCAP_GATEWAY_BITQUERY_POINTS_PER_DAY", () => {
   it("defaults to 12,500 a day: the memescope's 10,000 plus the holders' 2,500, under the ceiling", () => {
     assert.equal(DEFAULTS.BITQUERY_POINTS_PER_DAY, 12_500);
     assert.deepEqual(bitqueryPointsPerDayFrom(undefined), { points: 12_500, note: null });

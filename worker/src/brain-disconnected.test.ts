@@ -120,15 +120,15 @@ describe("direct Brain execution remains gated separately from Trencher strategy
   });
 
   it("AND IT IS A DIFFERENT LIST FROM THE ONE THAT ONLY WATCHES", () => {
-    // Reusing MERRYMEN_BRAIN_SHADOW would have turned every agent enrolled to
+    // Reusing AGENTCAP_BRAIN_SHADOW would have turned every agent enrolled to
     // be observed into one that spends, retroactively, for owners who agreed to
     // the first thing and were never asked about the second.
     // CODE, NOT PROSE — this file's own header records the version of itself
     // that failed on its documentation. brain-live.ts names the shadow variable
     // in a comment, explaining why it is deliberately not the one it reads.
     const live = codeOnly("brain-live");
-    assert.match(live, /env\.MERRYMEN_BRAIN_LIVE/);
-    assert.ok(!/MERRYMEN_BRAIN_SHADOW/.test(live), "the two lists must not be the same list");
+    assert.match(live, /env\.AGENTCAP_BRAIN_LIVE/);
+    assert.ok(!/AGENTCAP_BRAIN_SHADOW/.test(live), "the two lists must not be the same list");
     // Defaults to nobody.
     assert.match(live, /if \(!raw\) return false;/);
   });

@@ -7,7 +7,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { ONE_TOKEN, PERIOD_DAYS, PERIOD_MS, PLANS, TOKEN, ceilTokens, formatTokens, parseTokens, validatePlans } from "./billing-plans.mjs";
 
-test("the table is the one the owner set: Free, then 100k to 1M MERRYMEN per 30 days", () => {
+test("the table is the one the owner set: Free, then 100k to 1M AGENTCAP per 30 days", () => {
   assert.equal(PERIOD_MS, 2_592_000_000);
   assert.equal(PERIOD_MS, PERIOD_DAYS * 86_400_000);
   const rows = Object.values(PLANS).map((p) => [p.id, p.price_raw / ONE_TOKEN, p.requests, p.rpm]);
@@ -26,7 +26,7 @@ test("the token and explorer mirror packages/core, so a payment is checked again
   // Read, not imported: the gateway is plain ESM and ships without packages/.
   const core = (rel) => readFileSync(fileURLToPath(new URL(`../../packages/core/src/${rel}`, import.meta.url)), "utf8");
   const token = core("token.ts");
-  const block = /export const MERRYMEN_TOKEN = \{([\s\S]*?)\} as const;/.exec(token)?.[1] ?? "";
+  const block = /export const AGENTCAP_TOKEN = \{([\s\S]*?)\} as const;/.exec(token)?.[1] ?? "";
   assert.match(block, new RegExp(`address: "${TOKEN.address}"`));
   assert.match(block, new RegExp(`decimals: ${TOKEN.decimals},`));
   assert.match(block, new RegExp(`chainId: ${TOKEN.chainId},`));

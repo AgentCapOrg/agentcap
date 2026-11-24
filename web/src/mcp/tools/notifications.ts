@@ -6,7 +6,7 @@
  * that proved the /link code. A subscription is a wish, never an override: the
  * background pass (worker/src/mcp/notify.ts, run by the orchestrator) records a
  * message as skipped when the owner is unlinked or has Telegram or its alerts
- * switched off, and only the owner can change those switches, in Merrymen.
+ * switched off, and only the owner can change those switches, in AgentCap.
  *
  * Nothing here reads or returns a bot token, a chat id or the link code. The
  * link is reported as yes/no and the switches as booleans.
@@ -75,12 +75,12 @@ function telegramView(s: ChannelState) {
   let fix: string | null = null;
   if (!linked) {
     fix = s.link
-      ? "Telegram was linked once and then unlinked. Open Merrymen Settings → Telegram and send the /link code shown there to your bot."
-      : "No Telegram chat is linked. In Merrymen Settings → Telegram, add your bot and send it the /link code shown there.";
+      ? "Telegram was linked once and then unlinked. Open AgentCap Settings → Telegram and send the /link code shown there to your bot."
+      : "No Telegram chat is linked. In AgentCap Settings → Telegram, add your bot and send it the /link code shown there.";
   } else if (enabled === false) {
-    fix = "Telegram is switched off in Merrymen Settings. Only you can switch it on there; alerts are recorded as skipped until then.";
+    fix = "Telegram is switched off in AgentCap Settings. Only you can switch it on there; alerts are recorded as skipped until then.";
   } else if (alerts === false) {
-    fix = "Telegram alerts (notifications) are switched off in Merrymen Settings. Only you can switch them on there; alerts are recorded as skipped until then.";
+    fix = "Telegram alerts (notifications) are switched off in AgentCap Settings. Only you can switch them on there; alerts are recorded as skipped until then.";
   }
   return {
     channel: "telegram" as const,
@@ -188,7 +188,7 @@ async function reachableSlugs(ctx: ToolContext): Promise<Set<string>> {
 const listChannels = defineTool({
   name: "list_notification_channels",
   title: "My alert channels",
-  description: "Where your agent can send you alerts: whether your Telegram is linked and whether Telegram and its alerts are switched on in Merrymen Settings (never the chat id, bot token or link code). Telegram through your own bot is the only channel; email, webhooks and push are not available.",
+  description: "Where your agent can send you alerts: whether your Telegram is linked and whether Telegram and its alerts are switched on in AgentCap Settings (never the chat id, bot token or link code). Telegram through your own bot is the only channel; email, webhooks and push are not available.",
   capability: "notifications.manage",
   input: z.object({}).strict(),
   output: z.object({
@@ -206,9 +206,9 @@ const listChannels = defineTool({
       data: {
         channels: [tg],
         unavailable_channels: [
-          { channel: "email", supported: false as const, why: "Merrymen does not send email." },
-          { channel: "webhook", supported: false as const, why: "Merrymen does not call webhooks." },
-          { channel: "push", supported: false as const, why: "Merrymen has no mobile push notifications." },
+          { channel: "email", supported: false as const, why: "AgentCap does not send email." },
+          { channel: "webhook", supported: false as const, why: "AgentCap does not call webhooks." },
+          { channel: "push", supported: false as const, why: "AgentCap has no mobile push notifications." },
         ],
         note: "Alerts go through the bot token you saved in Settings to the chat that sent /link. If the bot token is removed, deliveries are recorded as skipped (no_linked_telegram).",
         warnings: settingsWarnings(state),
@@ -243,7 +243,7 @@ const subscribe = defineTool({
     "watchlist_price (params.token plus above and/or below, USD; only stock tokens with a Chainlink feed),",
     "summary (params.period day|week and params.hour_utc; live and paper reported separately).",
     "Needs a linked Telegram. Subscribing the same thing twice returns the existing subscription. At most 20 active.",
-    "Your Telegram switches in Merrymen Settings still decide whether anything is sent.",
+    "Your Telegram switches in AgentCap Settings still decide whether anything is sent.",
     "Alerts pause while you have no connected app allowed to manage them, and resume when you connect one.",
   ].join(" "),
   capability: "notifications.manage",
@@ -283,7 +283,7 @@ const subscribe = defineTool({
 
     const state = await channelState(ctx);
     if (!isLinked(state)) {
-      throw new McpError("conflict", "Link Telegram first: in Merrymen Settings → Telegram, add your bot and send it the /link code shown there. Alerts can only go to a linked chat.", {
+      throw new McpError("conflict", "Link Telegram first: in AgentCap Settings → Telegram, add your bot and send it the /link code shown there. Alerts can only go to a linked chat.", {
         details: { required: "linked_telegram" },
       });
     }

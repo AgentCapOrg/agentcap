@@ -17,7 +17,7 @@ final class TourProgress: ObservableObject {
     private var revision = 0
     private var record = Record()
     private var posting = false
-    private var key: String { "merrymen.native.tour.v\(Self.version)" + (tenant.map { "." + $0 } ?? "") }
+    private var key: String { "agentcap.native.tour.v\(Self.version)" + (tenant.map { "." + $0 } ?? "") }
     private func read(_ key: String) -> Record {
         guard let data = UserDefaults.standard.data(forKey: key), let value = try? JSONDecoder().decode(Record.self, from: data) else { return Record() }
         return value
@@ -28,7 +28,7 @@ final class TourProgress: ObservableObject {
         tenant = store.owner?.lowercased(); revision += 1; let current = revision
         record = read(key); syncFailed = false
         if let tenant {
-            let anonymousKey = "merrymen.native.tour.v\(Self.version)"
+            let anonymousKey = "agentcap.native.tour.v\(Self.version)"
             var anonymous = read(anonymousKey)
             if anonymous.done, anonymous.claimed == nil {
                 record.done = true; record.pending = true; anonymous.claimed = tenant; write(anonymous, key: anonymousKey)

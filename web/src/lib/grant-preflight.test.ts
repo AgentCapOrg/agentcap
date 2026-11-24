@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import { privateKeyToAccount } from "viem/accounts";
 import { decodeFunctionData, type Hex, type LocalAccount } from "viem";
 import { KernelV3_3AccountAbi } from "@zerodev/sdk";
-import { buildCallPermissions, firstEnableEnvelope, wallShape } from "@merrymen/core";
+import { buildCallPermissions, firstEnableEnvelope, wallShape } from "@agentcap/core";
 import {
   CLASS_FACTORY, CLASS_VAULT, TRENCHER_FACTORY, TRENCHER_VAULT,
   TEST_CAPS, withStubChain, type KernelState,

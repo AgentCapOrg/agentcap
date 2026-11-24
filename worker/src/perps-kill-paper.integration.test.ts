@@ -6,7 +6,7 @@
  * position here is opened by the REAL perp lane (perps/lane.ts) on the REAL
  * ledger in that home, reading a synthetic fleet feed file, with the lane's
  * settings resolved from the home's own settings.json exactly as the worker
- * resolves them (MERRYMEN_PERPS=paper, a Perps wallet's worker). Only
+ * resolves them (AGENTCAP_PERPS=paper, a Perps wallet's worker). Only
  * index.ts's plumbing is modelled, as paper-e2e.integration.test.ts models it,
  * plus syncGrant's one rule that matters here: no grant, nothing armed.
  *
@@ -16,7 +16,7 @@
  * again; then, signed again with perps off, nothing new opens and what is held
  * closes on its own stop. Every self-hosted kill path is driven: Telegram's
  * /kill (selfHostedPerpsKill), the dashboard's (the web DELETE answers through
- * perpsHalf), and `merrymen kill`, spawned for real. A half that fails is
+ * perpsHalf), and `agentcap kill`, spawned for real. A half that fails is
  * reported incomplete, never done. The hosted rows are in
  * perps-kill-hosted.integration.test.ts and perps-kill-settings.postgres.test.ts.
  */
@@ -37,15 +37,15 @@ import { createPerpLane, type PerpLane } from "./perps/lane";
 import { parseOrderBookDetails } from "./perps/markets";
 import { H4, T_LAST, breakout } from "./perps/testkit-perps";
 
-const ROOT = mkdtempSync(path.join(realpathSync(os.tmpdir()), "merrymen-perps-kill-paper-"));
+const ROOT = mkdtempSync(path.join(realpathSync(os.tmpdir()), "agentcap-perps-kill-paper-"));
 const SPOT_HOME = path.join(ROOT, "home");
 const PERPS_HOME = path.join(SPOT_HOME, "accounts", "perps");
 mkdirSync(PERPS_HOME, { recursive: true });
 // The store opens the PERPS home's ledger, as that wallet's worker does.
-process.env.MERRYMEN_HOME = PERPS_HOME;
+process.env.AGENTCAP_HOME = PERPS_HOME;
 delete process.env.DATABASE_URL;
-delete process.env.MERRYMEN_HOSTED;
-delete process.env.MERRYMEN_FLEET_HOME;
+delete process.env.AGENTCAP_HOSTED;
+delete process.env.AGENTCAP_FLEET_HOME;
 const isolatedCwd = path.join(ROOT, "cwd");
 mkdirSync(isolatedCwd);
 const originalCwd = process.cwd();
@@ -65,11 +65,11 @@ after(() => {
 
 /** A kill runs from the install's own home (Spot's), where purposeHome("perps") is accounts/perps. */
 async function fromSpotHome<T>(fn: () => Promise<T>): Promise<T> {
-  process.env.MERRYMEN_HOME = SPOT_HOME;
+  process.env.AGENTCAP_HOME = SPOT_HOME;
   try {
     return await fn();
   } finally {
-    process.env.MERRYMEN_HOME = PERPS_HOME;
+    process.env.AGENTCAP_HOME = PERPS_HOME;
   }
 }
 
@@ -122,7 +122,7 @@ const PAPER: ExecMode = { mode: "paper", rule: "live-not-enabled" };
 function settingsNow() {
   const read = readSettingsFileAt(SETTINGS);
   if (read.kind === "unusable") throw new Error(read.why);
-  return mergeSettings(read.kind === "parsed" ? read.settings : {}, { MERRYMEN_PERPS: "paper", MERRYMEN_WALLET_PURPOSE: "perps" });
+  return mergeSettings(read.kind === "parsed" ? read.settings : {}, { AGENTCAP_PERPS: "paper", AGENTCAP_WALLET_PURPOSE: "perps" });
 }
 
 let agentId = "";
@@ -157,7 +157,7 @@ const hooks = (equityUsdg: bigint) => ({
 const pass = () => lane.protectPass({ lock: lane.lock, signal: new AbortController().signal, pass: 1 });
 const held = async () => (await store.getPerpPositions(agentId, "paper")).find((p) => p.marketId === 1) ?? null;
 /** A second, raw connection to the Perps home's ledger, to look at what the store wrote. */
-const raw = new DatabaseSync(path.join(PERPS_HOME, "merrymen.db"));
+const raw = new DatabaseSync(path.join(PERPS_HOME, "agentcap.db"));
 const rows = async (sql: string) => raw.prepare(sql).all(agentId.toLowerCase()) as Record<string, unknown>[];
 
 before(async () => {
@@ -321,9 +321,9 @@ describe("the other self-hosted kill paths, and a half that fails", () => {
 
 const bin = fileURLToPath(new URL("../../cli/bin.mjs", import.meta.url));
 const cli = (input: string) =>
-  spawnSync(process.execPath, [bin, "kill"], { input, encoding: "utf8", timeout: 100_000, env: { ...process.env, MERRYMEN_HOME: SPOT_HOME, MERRYMEN_HOSTED: "", DATABASE_URL: "" } });
+  spawnSync(process.execPath, [bin, "kill"], { input, encoding: "utf8", timeout: 100_000, env: { ...process.env, AGENTCAP_HOME: SPOT_HOME, AGENTCAP_HOSTED: "", DATABASE_URL: "" } });
 
-describe("`merrymen kill`, spawned for real", () => {
+describe("`agentcap kill`, spawned for real", () => {
   it("revokes the Perps grant and switches its practice perpetuals off, and says both", { timeout: 120_000 }, () => {
     writeFileSync(GRANT, grantJson(5_000_000));
     writeFileSync(SETTINGS, JSON.stringify(OWNER_SETTINGS));

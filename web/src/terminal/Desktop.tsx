@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { Coin, Face, LogoMark, TabIcon, NameBlock, MovingFigure } from "./ui";
 import { TABS } from "./nav";
-import { wordOf } from "@/merryman/mood";
+import { wordOf } from "@/agentcapavatar/mood";
 import {
   money,
   coinPrice,
@@ -100,7 +100,7 @@ export function DesktopHeader({
       <button
         className="desktop-brand"
         onClick={() => onTab("feed")}
-        aria-label="Merrymen feed"
+        aria-label="AgentCap feed"
       >
         {/*
           THE BRAND IS NOT A TAB. It borrowed the tab bar's icon for `agent`,
@@ -109,7 +109,7 @@ export function DesktopHeader({
           nothing failing to compile and no test noticing.
         */}
         <LogoMark size={15} />
-        <span>merrymen</span>
+        <span>agentcap</span>
       </button>
       {/* THE SAME FOUR PLACES AS THE PHONE'S BAR, so the desktop is not a second
           product to learn. Explore holds the feed, the board, the markets and
@@ -139,13 +139,13 @@ export function DesktopHeader({
           className="desktop-fund"
           onClick={() => onScreen({ kind: "deposit" })}
         >
-          {hasAgent ? "Add money" : "Create your merryman"}
+          {hasAgent ? "Add money" : "Create your agentcapavatar"}
         </button>)}
         <details className="desktop-account-menu" ref={accountMenu} onBlur={event=>{if(!event.currentTarget.contains(event.relatedTarget as Node|null))closeAccountMenu();}} onKeyDown={event=>{if(event.key==="Escape"){closeAccountMenu();accountMenu.current?.querySelector("summary")?.focus();}}}>
           <summary><Face name={stopped && !hasAgent ? stopped.name : mine.name} slug={stopped && !hasAgent ? stopped.slug : mine.slug}/><span>{hasAgent && mine.name ? mine.name : stopped ? stopped.name : "Account"}</span><ChevronDown size={14}/></summary>
           <nav aria-label="Account navigation" onClick={closeAccountMenu}>
             <Link href={wallet === "perps" ? "/perps" : "/you"}>{wallet === "perps" ? "Perps portfolio" : "Portfolio"}</Link>
-            {wallet === "spot" && <Link href="/wardrobe">Dress your merryman</Link>}
+            {wallet === "spot" && <Link href="/wardrobe">Dress your agentcapavatar</Link>}
             <Link href={wallet === "perps" ? "/settings?wallet=perps" : "/settings"}>Settings</Link>
             <Link href={wallet === "perps" ? "/grant?wallet=perps" : "/grant"}>Wallet & permissions</Link>
             <Link href="/withdraw?wallet=perps">Perps withdrawal & recovery</Link>

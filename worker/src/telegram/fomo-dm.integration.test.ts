@@ -32,8 +32,8 @@ import type { FomoToolName } from "../fomo/types";
 import type { FollowReadiness } from "../fomo-child";
 import type { TelegramState } from "./state";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-fomo-dm-"));
-process.env.MERRYMEN_HOME = HOME;
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-fomo-dm-"));
+process.env.AGENTCAP_HOME = HOME;
 after(() => rmSync(HOME, { recursive: true, force: true }));
 
 const { startTelegram } = await import("./service");
@@ -272,7 +272,7 @@ async function withDm(
     return ok(true);
   }) as typeof fetch;
   const fx = await fomoFixture({ ...(opts.liveFeed ? { liveFeed: true } : {}), ...(opts.search ? { search: opts.search } : {}) });
-  const groupHome = opts.groupPick ? mkdtempSync(path.join(os.tmpdir(), "merrymen-fomo-group-")) : null;
+  const groupHome = opts.groupPick ? mkdtempSync(path.join(os.tmpdir(), "agentcap-fomo-group-")) : null;
   const groupStore = groupHome ? new TgGroupsStore(path.join(groupHome, "tg-groups.json"), emptyTgGroupsState(), { debounceMs: 60_000 }) : null;
   if (groupStore) {
     cfg.telegramGroupsEnabled = true;
@@ -374,10 +374,10 @@ async function withDm(
             sleep: async () => {},
             log: () => {},
             env: {
-              MERRYMEN_TG_GROUPS_LLM_KEY: "k-test",
-              MERRYMEN_TG_GROUPS_LLM_PROVIDER: "openai",
-              MERRYMEN_TG_GROUPS_LLM_BASE_URL: "https://llm.test/v1",
-              MERRYMEN_TG_GROUPS_MODEL: "fake",
+              AGENTCAP_TG_GROUPS_LLM_KEY: "k-test",
+              AGENTCAP_TG_GROUPS_LLM_PROVIDER: "openai",
+              AGENTCAP_TG_GROUPS_LLM_BASE_URL: "https://llm.test/v1",
+              AGENTCAP_TG_GROUPS_MODEL: "fake",
             },
           },
         }
@@ -466,7 +466,7 @@ describe("social-trading research in a DM", () => {
       await ask(h, "what are the theses on $PONS");
       const reply = await ask(h, "should we follow this?");
       assert.equal(h.composed.length, 1);
-      assert.match(reply, /Merrymen's research/);
+      assert.match(reply, /AgentCap's research/);
       assert.ok(reply.includes(NOT_PERMISSION_LINE));
     });
   });
@@ -919,7 +919,7 @@ describe("a Fomo tail in the owner's DM: the card, and nothing until she presses
     });
   });
 
-  it("MERRYMEN_FOMO_TAILS=0: /tail is refused up front with no search; a start in words goes on as before; a stored tail can still be stopped (review 2026-10-07)", async () => {
+  it("AGENTCAP_FOMO_TAILS=0: /tail is refused up front with no search; a start in words goes on as before; a stored tail can still be stopped (review 2026-10-07)", async () => {
     let state: "on" | "switched-off" = "on";
     await withDm({ liveFeed: true, readiness: () => READY, tailsState: () => state }, async (h) => {
       await tailAndPress(h, "/tail CryptoKaleo 2h", "tell");

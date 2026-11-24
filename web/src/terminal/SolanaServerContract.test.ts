@@ -123,18 +123,18 @@ async function fixture() {
       decimals: mint === SOLANA_USDG_MINT ? 6 : 9, slot: 1000, observedAtMs: clock.now, buyBlockedReasons: [] }),
     quote: async () => { throw new Error("no quotes in these tests"); },
   };
-  const env = { MERRYMEN_SOLANA_VAULT_PROGRAM: PROGRAM, MERRYMEN_SOLANA_VAULT_SHA256: createHash("sha256").update(binary).digest("hex"),
-    MERRYMEN_STORE_DEK: Buffer.alloc(32, 30).toString("base64"), MERRYMEN_SOLANA_FEE_PAYER_SEED: Buffer.alloc(32, 31).toString("base64"), MERRYMEN_JUPITER_API_KEY: "fixture",
+  const env = { AGENTCAP_SOLANA_VAULT_PROGRAM: PROGRAM, AGENTCAP_SOLANA_VAULT_SHA256: createHash("sha256").update(binary).digest("hex"),
+    AGENTCAP_STORE_DEK: Buffer.alloc(32, 30).toString("base64"), AGENTCAP_SOLANA_FEE_PAYER_SEED: Buffer.alloc(32, 31).toString("base64"), AGENTCAP_JUPITER_API_KEY: "fixture",
     // On the live list, with daily caps at the fixture's limits (50 USDG and 0.5 SOL; per trade the defaults).
-    MERRYMEN_SOLANA_LIVE_TENANTS: TENANT, MERRYMEN_SOLANA_LIVE_MAX_DAILY_USDG: "50", MERRYMEN_SOLANA_LIVE_MAX_DAILY_WSOL: "0.5" };
+    AGENTCAP_SOLANA_LIVE_TENANTS: TENANT, AGENTCAP_SOLANA_LIVE_MAX_DAILY_USDG: "50", AGENTCAP_SOLANA_LIVE_MAX_DAILY_WSOL: "0.5" };
   const app = createSolanaAppRuntime({ db, rpc, market, env, now: () => clock.now });
   const sign = async (wire: string) => getBase64EncodedWireTransaction(await signTransaction([ownerKeys], getTransactionDecoder().decode(Buffer.from(wire, "base64"))));
   return { raw, db, clock, scope, owner, session, vault, controls, app, sign };
 }
 
-const flag = process.env.MERRYMEN_SOLANA;
-test.before(() => { process.env.MERRYMEN_SOLANA = "1"; });
-test.after(() => { if (flag === undefined) delete process.env.MERRYMEN_SOLANA; else process.env.MERRYMEN_SOLANA = flag; });
+const flag = process.env.AGENTCAP_SOLANA;
+test.before(() => { process.env.AGENTCAP_SOLANA = "1"; });
+test.after(() => { if (flag === undefined) delete process.env.AGENTCAP_SOLANA; else process.env.AGENTCAP_SOLANA = flag; });
 /** What the page receives from a route, and whether it would treat it as a refusal (SolanaOwnerActions.refusedByServer). */
 async function asPage(run: () => Promise<unknown>) {
   const response = await solanaResponse(run);

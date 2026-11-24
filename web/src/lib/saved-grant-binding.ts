@@ -1,9 +1,9 @@
 import { recoverMessageAddress } from "viem";
-import { bindingMessage, grantPurpose, isGrantPurpose, type GrantPurpose } from "@merrymen/core";
+import { bindingMessage, grantPurpose, isGrantPurpose, type GrantPurpose } from "@agentcap/core";
 import type { Grant } from "./session";
 
 type Session = { hosted: boolean; address: string | null };
-const RECOVERY_PREFIX = "merrymen.permission-recovery.v1.";
+const RECOVERY_PREFIX = "agentcap.permission-recovery.v1.";
 
 /**
  * Historical signature evidence for recovery display, never fresh grant authorization.
@@ -52,7 +52,7 @@ export async function trustedSavedGrant(grant: Grant | null, session: Session, o
  */
 export function saveRecoveryGrant(grant: Grant): void {
   // Whitelist public renewal inputs; never duplicate a root/session secret or
-  // overwrite the full local grant held under merrymen.grant.v1.
+  // overwrite the full local grant held under agentcap.grant.v1.
   const { purpose, smartAccount, owner, sessionKeyAddress, caps, grantedAt, expiresAt, chainId, grantFeatures, grantTokens, binding, v4AdapterAddress, ponsAdapterAddress, ponsClassVaultAddress, ponsClassVaultFactoryAddress, trencherVaultAddress, trencherFactoryAddress } = grant;
   localStorage.setItem(`${RECOVERY_PREFIX}${chainId}.${smartAccount.toLowerCase()}`, JSON.stringify({
     ...(purpose === undefined ? {} : { purpose }),

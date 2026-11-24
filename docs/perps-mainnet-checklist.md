@@ -6,7 +6,7 @@ registration, order and withdrawal happen on mainnet 4663 with real money
 a small amount, **before live perps are switched on for anyone** — the
 operator's own self-hosted install included. It is the Phase 0 gate of
 docs/perps.md's Rollout; Phase 2 (signers offer the opt-in, live for the
-tenants in `MERRYMEN_PERPS_LIVE_TENANTS`) does not start while any item below is
+tenants in `AGENTCAP_PERPS_LIVE_TENANTS`) does not start while any item below is
 open.
 
 Every item says why it is here, the exact probe, what to record, what result
@@ -35,7 +35,7 @@ run by CI.
   for gas, by the owner's own transfer from Spot. Nothing in this list needs
   more.
 - **Worker.** Self-hosted, from the commit under test, with
-  `MERRYMEN_PERPS=live` set explicitly (unset means off), live trading on, the
+  `AGENTCAP_PERPS=live` set explicitly (unset means off), live trading on, the
   real-money consent given, and the Perps wallet's grant signed with the
   perpetuals opt-in (`perp-lighter-v1`); the Spot wallet's grant carries none.
   The Perps wallet's settings: `perpsMarkets ["BTC-PERP"]`,
@@ -43,7 +43,7 @@ run by CI.
   `perpsMaxCollateralUsdg 30`, `perpsStopLossPct 5`, `perpsStopSlipBps 200`,
   `perpsDriver manual` (owner orders only — no strategy opens anything during
   the probes).
-- **Before anything.** `merrymen doctor` must print that both signer files
+- **Before anything.** `agentcap doctor` must print that both signer files
   match their pinned hashes and the known-answer test passes. If it does not,
   stop: nothing below can be signed.
 - **Reads.** Public: `https://api.rh.lighter.xyz/api/v1/…` (`orderBookDetails`,
@@ -433,7 +433,7 @@ written).
 ### H1 · Kill drill
 
 **Probe.** With an open BTC position on the Perps wallet, its resting stop,
-free collateral, and the Spot wallet's agent running beside it: `merrymen kill`
+free collateral, and the Spot wallet's agent running beside it: `agentcap kill`
 (self-hosted). Repeat on an allowlisted hosted tenant from every kill path:
 the dashboard's "Kill all agents", Telegram /kill, "discard & start over"
 (which owners are told is the kill switch), and the Stop of both phone apps.
@@ -520,7 +520,7 @@ that open positions keep their stops until closed from the web or the CLI.
 | when every item above passes | what may switch on |
 |---|---|
 | A1–H3 all passed, results recorded here | live perps on the operator's own self-hosted install |
-| and the fleet feed, the canonical-wall allowlist and paper perps have run hosted (Phase 1) and both mobile apps show the perps banner | Phase 2: signers offer the opt-in; hosted live only for `MERRYMEN_PERPS_LIVE_TENANTS` |
+| and the fleet feed, the canonical-wall allowlist and paper perps have run hosted (Phase 1) and both mobile apps show the perps banner | Phase 2: signers offer the opt-in; hosted live only for `AGENTCAP_PERPS_LIVE_TENANTS` |
 | and the written decisions in docs/perps.md "Decisions that need Milla" exist, and hosted children no longer share an OS user | Phase 3: general availability |
 
 A later venue upgrade, a new signer release or a changed market table re-opens

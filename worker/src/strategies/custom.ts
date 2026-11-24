@@ -1,7 +1,7 @@
 /**
  * User-written strategies — the plugin surface. Drop a file in strategies/
  * (repo root) exporting the Strategy contract and select it by filename in
- * /settings or `merrymen onboard`. Like every built-in, a custom strategy
+ * /settings or `agentcap onboard`. Like every built-in, a custom strategy
  * only PROPOSES: each returned intent is shape-validated here, then faces
  * checkPolicy → quote simulation → the on-chain session-key wall. A buggy or
  * hostile strategy file can waste its own tick; it cannot exceed the caps.
@@ -23,12 +23,12 @@ import type { Snapshot, Strategy } from "./types";
 const EXTENSIONS = [".ts", ".mts", ".mjs", ".js"];
 
 export function customStrategiesDir(): string {
-  return process.env.MERRYMEN_STRATEGIES_DIR ?? homePaths.strategies();
+  return process.env.AGENTCAP_STRATEGIES_DIR ?? homePaths.strategies();
 }
 
 /**
  * Everything a user strategy needs, injected as tick's second argument so
- * strategy files stay dependency-free (they live in ~/.merrymen/strategies,
+ * strategy files stay dependency-free (they live in ~/.agentcap/strategies,
  * outside any node_modules). Addresses come from the verified registry.
  */
 export interface StrategyCtx {

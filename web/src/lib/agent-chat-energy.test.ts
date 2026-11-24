@@ -14,7 +14,7 @@
  *     says never type one, and the data gives it none to type;
  *   - an unread count stays null in the block, never 0;
  *   - the prompt no longer says money cannot fix the Circle lock, and it says
- *     $MERRYMEN is energy and nothing more;
+ *     $AGENTCAP is energy and nothing more;
  *   - /api/chat reads the report itself, for the caller's own agent.
  *
  * Driven through the real reply builder with a completion stub that captures
@@ -23,7 +23,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import type { EnergyStatus } from "@merrymen/core";
+import type { EnergyStatus } from "@agentcap/core";
 import type { LlmCreds } from "../../../worker/src/llm";
 import { currentEnergy, energyForPrompt, generateAgentReply, type AgentChatOptions } from "./agent-chat";
 
@@ -142,9 +142,9 @@ describe("what the model is told", () => {
     assert.match(system, /Propose show-address or open-deposit/);
   });
 
-  it("$MERRYMEN IS ENERGY, NOTHING MORE — no price talk, and changing nothing is a fine answer", async () => {
+  it("$AGENTCAP IS ENERGY, NOTHING MORE — no price talk, and changing nothing is a fine answer", async () => {
     const { system } = await ask("hello");
-    assert.match(system, /\$MERRYMEN IS ENERGY, NOTHING MORE/);
+    assert.match(system, /\$AGENTCAP IS ENERGY, NOTHING MORE/);
     assert.match(system, /changing nothing is a fine answer/);
   });
 
@@ -160,7 +160,7 @@ describe("what the model is told", () => {
     const { system } = await ask("hello");
     assert.doesNotMatch(system, /no amount of money fixes it/);
     assert.doesNotMatch(system, /no matter how well funded/);
-    assert.match(system, /between them, and below that the strategy stays idle however much USDG you hold — USDG only changes it once it has been turned into \$MERRYMEN \(get-energy\)/);
+    assert.match(system, /between them, and below that the strategy stays idle however much USDG you hold — USDG only changes it once it has been turned into \$AGENTCAP \(get-energy\)/);
   });
 
   it("AND SAYS WHAT A SHORT CIRCLE AGENT STILL DOES — the sentence every surface uses (worker circle-gate.ts)", async () => {
@@ -177,14 +177,14 @@ describe("what the model is told", () => {
     assert.match(system, /money will NOT change it/);
   });
 
-  it("\"GET YOUR MERRYMEN\" MAPS TO get-energy, and the spec names its one argument", async () => {
+  it("\"GET YOUR AGENTCAP\" MAPS TO get-energy, and the spec names its one argument", async () => {
     const { system } = await ask("hello");
-    assert.match(system, /"get your merrymen" \/ "top up your energy" \/ "buy the tokens you need" → get-energy/);
+    assert.match(system, /"get your agentcap" \/ "top up your energy" \/ "buy the tokens you need" → get-energy/);
     assert.match(system, /get-energy \{usdgAmount\}/);
     assert.match(system, /today's energy is spent \(the ENERGY block says so\)/);
     // One card for it, the one that explains it: never a bare buy or snipe of
     // the token, and never a sell, which the key cannot do.
-    assert.match(system, /\$MERRYMEN is only ever bought with get-energy — never buy or snipe it — and never sold/);
+    assert.match(system, /\$AGENTCAP is only ever bought with get-energy — never buy or snipe it — and never sold/);
   });
 });
 

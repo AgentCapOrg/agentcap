@@ -6,7 +6,7 @@ import { androidAuthReturnHref, isAndroidAuthWebView } from "@/lib/android-auth"
 import { AndroidSignIn } from "./AndroidSignIn";
 import { privyEnabled } from "@/lib/privy-client";
 
-export const metadata: Metadata = { title: "Sign in to Merrymen", referrer: "no-referrer", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "Sign in to AgentCap", referrer: "no-referrer", robots: { index: false, follow: false } };
 
 export default async function AndroidAuthPage({ searchParams }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -22,11 +22,11 @@ export default async function AndroidAuthPage({ searchParams }: {
     }
     const href = androidAuthReturnHref(params);
     return <main style={{ maxWidth: 480, margin: "0 auto", padding: "48px 24px" }}>
-      <h1>Return to Merrymen</h1>
-      <p>Finish this sign-in in the Merrymen app where you started.</p>
+      <h1>Return to AgentCap</h1>
+      <p>Finish this sign-in in the AgentCap app where you started.</p>
       {href && <a className="flow-primary" href={href} referrerPolicy="no-referrer">Return to the app</a>}
-      <p>If the app does not open, return to it and choose “Continue in Merrymen”.</p>
-      <a href="/home">Open Merrymen on the web</a>
+      <p>If the app does not open, return to it and choose “Continue in AgentCap”.</p>
+      <a href="/home">Open AgentCap on the web</a>
     </main>;
   }
   const jar = await cookies();

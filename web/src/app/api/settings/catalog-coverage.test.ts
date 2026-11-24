@@ -18,22 +18,22 @@ import path from "node:path";
 import { after, before, describe, it } from "node:test";
 
 import { mintSession } from "@/lib/auth";
-import { getSettingsStore, resetSettingsStoreForTest } from "@merrymen/settings-store";
-import { SETTINGS_CATALOG, validCatalogValue, type CatalogEntry } from "@merrymen/core";
+import { getSettingsStore, resetSettingsStoreForTest } from "@agentcap/settings-store";
+import { SETTINGS_CATALOG, validCatalogValue, type CatalogEntry } from "@agentcap/core";
 
 const TENANT = "0xdddddddddddddddddddddddddddddddddddddddd";
-const KEYS = ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_SESSION_SECRET", "DATABASE_URL", "MERRYMEN_FOMO_ENABLED"] as const;
+const KEYS = ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_SESSION_SECRET", "DATABASE_URL", "AGENTCAP_FOMO_ENABLED"] as const;
 const original = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
 let dir: string;
 let PUT: (req: Request) => Promise<Response>;
 
 before(async () => {
-  dir = mkdtempSync(path.join(tmpdir(), "merrymen-settings-catalog-"));
-  process.env.MERRYMEN_HOME = dir;
-  process.env.MERRYMEN_HOSTED = "1";
+  dir = mkdtempSync(path.join(tmpdir(), "agentcap-settings-catalog-"));
+  process.env.AGENTCAP_HOME = dir;
+  process.env.AGENTCAP_HOSTED = "1";
   // A deployment that runs Fomo, so its three switches are among what PUT takes (see the last case for one that does not).
-  process.env.MERRYMEN_FOMO_ENABLED = "1";
-  process.env.MERRYMEN_SESSION_SECRET = randomBytes(32).toString("hex");
+  process.env.AGENTCAP_FOMO_ENABLED = "1";
+  process.env.AGENTCAP_SESSION_SECRET = randomBytes(32).toString("hex");
   delete process.env.DATABASE_URL;
   resetSettingsStoreForTest();
   ({ PUT } = await import("./route"));
@@ -99,7 +99,7 @@ describe("SETTINGS_CATALOG against PUT /api/settings", () => {
   }
 
   it("a hosted deployment that has not opted in to Fomo saves none of its switches, and says so", async () => {
-    delete process.env.MERRYMEN_FOMO_ENABLED;
+    delete process.env.AGENTCAP_FOMO_ENABLED;
     try {
       const before = { ...((await getSettingsStore("spot").get(TENANT)) as Record<string, unknown> | null) };
       const res = await put({ fomoDataAccess: false, fomoMonitoringEnabled: true, fomoFollowEnabled: true, scoutEnabled: true });
@@ -109,7 +109,7 @@ describe("SETTINGS_CATALOG against PUT /api/settings", () => {
       for (const k of ["fomoDataAccess", "fomoMonitoringEnabled", "fomoFollowEnabled"]) assert.deepEqual(stored?.[k], before[k], `${k} left as it was`);
       assert.equal(stored?.scoutEnabled, true, "everything else saves as before");
     } finally {
-      process.env.MERRYMEN_FOMO_ENABLED = "1";
+      process.env.AGENTCAP_FOMO_ENABLED = "1";
     }
   });
 });

@@ -372,14 +372,14 @@ describe("an energy purchase is not capital to the scanner", () => {
   const PAIR_A = "0x00000000000000000000000000000000000000b1";
   const PAIR_B = "0x00000000000000000000000000000000000000b2";
   const VIRTUAL = "0xc6911796042b15d7fa4f6cde69e245ddcd3d9c31";
-  const MERRYMEN = "0xa15cd06dd305269a0f48bebeb30aa3588fba7b32";
+  const AGENTCAP = "0xa15cd06dd305269a0f48bebeb30aa3588fba7b32";
   const TX = "0xe0e0";
 
   const USDG_OUT = transferLog({ from: ACCT, to: PAIR_A, value: 42_000_000n, txHash: TX, blockNumber: 700, logIndex: 5 });
   const OTHER_LEGS = [
     transferLog({ from: PAIR_A, to: PAIR_B, value: 9n * 10n ** 19n, txHash: TX, blockNumber: 700, logIndex: 6, token: VIRTUAL }),
-    transferLog({ from: PAIR_B, to: MERRYMEN, value: 2n * 10n ** 21n, txHash: TX, blockNumber: 700, logIndex: 7, token: MERRYMEN }),
-    transferLog({ from: PAIR_B, to: ACCT, value: 98n * 10n ** 21n, txHash: TX, blockNumber: 700, logIndex: 8, token: MERRYMEN }),
+    transferLog({ from: PAIR_B, to: AGENTCAP, value: 2n * 10n ** 21n, txHash: TX, blockNumber: 700, logIndex: 7, token: AGENTCAP }),
+    transferLog({ from: PAIR_B, to: ACCT, value: 98n * 10n ** 21n, txHash: TX, blockNumber: 700, logIndex: 8, token: AGENTCAP }),
   ];
   const DEPOSIT = transferLog({ from: OTHER, to: ACCT, value: 100_000_000n, txHash: "0xfund2", blockNumber: 699, logIndex: 0 });
 

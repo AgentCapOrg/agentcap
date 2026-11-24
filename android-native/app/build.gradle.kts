@@ -9,16 +9,16 @@ plugins {
 
 // This string is compiled into the app. Accept only an origin, never a URL
 // containing credentials, a page, or Java string escapes.
-val configuredOrigin = providers.gradleProperty("merrymen.origin")
-  .orElse("https://app.merrymen.dev").get().trim()
+val configuredOrigin = providers.gradleProperty("agentcap.origin")
+  .orElse("https://app.agentcap.xyz").get().trim()
 val originUri = runCatching { URI(configuredOrigin) }.getOrNull()
-  ?: throw GradleException("merrymen.origin must be a valid HTTP(S) origin.")
+  ?: throw GradleException("agentcap.origin must be a valid HTTP(S) origin.")
 require(
   originUri.scheme?.lowercase() in setOf("http", "https") &&
     originUri.host != null && originUri.rawUserInfo == null &&
     originUri.rawPath in setOf("", "/") && originUri.rawQuery == null &&
     originUri.rawFragment == null && (originUri.port == -1 || originUri.port in 1..65535),
-) { "merrymen.origin must be an HTTP(S) origin without credentials, a path, query, or fragment." }
+) { "agentcap.origin must be an HTTP(S) origin without credentials, a path, query, or fragment." }
 val apiOrigin = "${originUri.scheme.lowercase()}://${originUri.rawAuthority}"
 val developmentHost = originUri.host.lowercase() in setOf("localhost", "10.0.2.2")
 require(originUri.scheme.equals("https", ignoreCase = true) || developmentHost) {
@@ -28,24 +28,24 @@ require(originUri.scheme.equals("https", ignoreCase = true) || developmentHost) 
 // Do not put signing credentials in gradle.properties, command-line arguments,
 // or source control. A developer can compile and test without the upload key.
 val signingEnvNames = listOf(
-  "MERRYMEN_ANDROID_KEYSTORE",
-  "MERRYMEN_ANDROID_STORE_PASSWORD",
-  "MERRYMEN_ANDROID_KEY_ALIAS",
-  "MERRYMEN_ANDROID_KEY_PASSWORD",
+  "AGENTCAP_ANDROID_KEYSTORE",
+  "AGENTCAP_ANDROID_STORE_PASSWORD",
+  "AGENTCAP_ANDROID_KEY_ALIAS",
+  "AGENTCAP_ANDROID_KEY_PASSWORD",
 )
 val signingInputs = signingEnvNames.associateWith { providers.environmentVariable(it).orNull }
 val hasSigning = signingInputs.values.any { it != null }
 require(!hasSigning || signingInputs.values.all { !it.isNullOrBlank() }) {
-  "Android signing is incomplete. Supply all four MERRYMEN_ANDROID signing environment variables, or unset all four."
+  "Android signing is incomplete. Supply all four AGENTCAP_ANDROID signing environment variables, or unset all four."
 }
-val uploadKeystore = signingInputs["MERRYMEN_ANDROID_KEYSTORE"]?.let { file(it) }
+val uploadKeystore = signingInputs["AGENTCAP_ANDROID_KEYSTORE"]?.let { file(it) }
 
 android {
-  namespace = "dev.merrymen.app"
+  namespace = "dev.agentcap.app"
   compileSdk = 36
 
   defaultConfig {
-    applicationId = "dev.merrymen.app"
+    applicationId = "dev.agentcap.app"
     minSdk = 26
     targetSdk = 36
     // Http.kt derives the user-agent version from BuildConfig.VERSION_NAME.
@@ -55,7 +55,7 @@ android {
 
     // THE ORIGIN IS A BUILD INPUT, not a literal in the code. The gateway host
     // moved once already and three hand-copies had to move with it; this app
-    // will not become a fourth. Override with -Pmerrymen.origin=https://…
+    // will not become a fourth. Override with -Pagentcap.origin=https://…
     buildConfigField(
       "String",
       "DEFAULT_ORIGIN",
@@ -66,9 +66,9 @@ android {
   signingConfigs {
     if (hasSigning) create("upload") {
       storeFile = uploadKeystore
-      storePassword = signingInputs["MERRYMEN_ANDROID_STORE_PASSWORD"]
-      keyAlias = signingInputs["MERRYMEN_ANDROID_KEY_ALIAS"]
-      keyPassword = signingInputs["MERRYMEN_ANDROID_KEY_PASSWORD"]
+      storePassword = signingInputs["AGENTCAP_ANDROID_STORE_PASSWORD"]
+      keyAlias = signingInputs["AGENTCAP_ANDROID_KEY_ALIAS"]
+      keyPassword = signingInputs["AGENTCAP_ANDROID_KEY_PASSWORD"]
     }
   }
 
@@ -103,7 +103,7 @@ android {
   }
   packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
 
-  // JVM UNIT TESTS RUN THE REAL CLIENT, not a mock of it: MerrymenApi against a
+  // JVM UNIT TESTS RUN THE REAL CLIENT, not a mock of it: AgentCapApi against a
   // MockWebServer, the models against captured production answers. Anything
   // they touch from android.jar (a Log line, a TextUtils call) returns its
   // default instead of throwing "not mocked", so a test fails on behaviour
@@ -122,10 +122,10 @@ val validatePlayRelease by tasks.registering {
       "A release requires an HTTPS server origin reachable by users, not a local development origin."
     }
     check(hasSigning) {
-      "Release packaging requires all four MERRYMEN_ANDROID signing environment variables. See RELEASING.md."
+      "Release packaging requires all four AGENTCAP_ANDROID signing environment variables. See RELEASING.md."
     }
     check(uploadKeystore?.isFile == true && uploadKeystore.canRead()) {
-      "MERRYMEN_ANDROID_KEYSTORE must point to a readable upload keystore file."
+      "AGENTCAP_ANDROID_KEYSTORE must point to a readable upload keystore file."
     }
   }
 }
@@ -172,7 +172,7 @@ dependencies {
 
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.kotlinx.serialization.json)
-  // No Retrofit: MerrymenApi is hand-rolled over OkHttp because the origin is a
+  // No Retrofit: AgentCapApi is hand-rolled over OkHttp because the origin is a
   // RUNTIME value (hosted / staging / a laptop) and Retrofit fixes its base URL
   // when the instance is built.
   implementation(libs.okhttp)

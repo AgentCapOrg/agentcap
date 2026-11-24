@@ -16,7 +16,7 @@
  *   - two concurrent settles book one flow and move the peak once;
  *   - no contribution record: refused with the owner told, nothing moved.
  *
- * MERRYMEN_HOME is set before any store import; node's --test runs each file in
+ * AGENTCAP_HOME is set before any store import; node's --test runs each file in
  * its own process, so the override never leaks.
  */
 import assert from "node:assert/strict";
@@ -25,13 +25,13 @@ import { mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-const HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-energy-settle-"));
-process.env.MERRYMEN_HOME = HOME;
+const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-energy-settle-"));
+process.env.AGENTCAP_HOME = HOME;
 
 const store = await import("./store");
 const { homePaths } = await import("./home");
 const { DatabaseSync } = await import("node:sqlite");
-const { CASH, ENERGY_ROUTE_V1, MERRYMEN_TOKEN, VIRTUAL_TOKEN } = await import("../../packages/core/src/index");
+const { CASH, ENERGY_ROUTE_V1, AGENTCAP_TOKEN, VIRTUAL_TOKEN } = await import("../../packages/core/src/index");
 const { TRANSFER_TOPIC } = await import("./deposit-log");
 const { bookEnergyPurchase, energyLandedBlockAtArm, isEnergyRow, settleEnergyLanding, settleTransferLanding } = await import("./energy-settle");
 type Deps = import("./energy-settle").EnergySettleDeps;
@@ -39,7 +39,7 @@ type ReceiptLog = import("./fills").ReceiptLog;
 
 const ACCOUNT = "0x00000000000000000000000000000000000e0e03";
 const USDG = (CASH.USDG as string).toLowerCase();
-const MERRY = MERRYMEN_TOKEN.address.toLowerCase();
+const MERRY = AGENTCAP_TOKEN.address.toLowerCase();
 const PAIR_A = "0x00000000000000000000000000000000000000b1";
 const PAIR_B = "0x00000000000000000000000000000000000000b2";
 const RISK_ID = "energy-settle-risk";
@@ -363,7 +363,7 @@ describe("the stranded-op resolver: settleEnergyLanding before the row is settle
 /**
  * THE BALANCE-READ PIN SURVIVES A RESTART.
  *
- * The next ask reads both $MERRYMEN halves and the cash no earlier than the
+ * The next ask reads both $AGENTCAP halves and the cash no earlier than the
  * last purchase's landing block, so a node still behind it cannot hand the
  * planner a pre-purchase balance to size a second chunk on. The pin lived in
  * memory only; the in-flight guard it was said to stand in for matches only

@@ -26,7 +26,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { readFileSync } from "node:fs";
 import React from "react";
-import { autonomyOf } from "@merrymen/core";
+import { autonomyOf } from "@agentcap/core";
 import type { TierView } from "@/app/api/tier/route";
 import type { FleetRecoveryView } from "../../../worker/src/fleet-recovery";
 import type { ChatController } from "./chat-controller";
@@ -63,7 +63,7 @@ async function withAgent(options: { strategy?: StrategyId; tier?: TierView; live
     if (url === "/api/proposals") return json({ proposals: [], covered: [], why: null });
     return json({ error: "not scripted" }, 404);
   }) as typeof fetch;
-  ui.dom.window.localStorage.setItem("merrymen:trencher-fast:v2:dismissed", "yes");
+  ui.dom.window.localStorage.setItem("agentcap:trencher-fast:v2:dismissed", "yes");
   const chat = { draft: "", setDraft: noop, proposal: null, setProposal: noop, confirming: false,
     messages: [], sending: false, streaming: "", ceiling: 10 } as unknown as ChatController;
   try {
@@ -123,7 +123,7 @@ describe("the picker marks what the worker gates", () => {
     // A badge alone is a label. The sentence is what stops somebody funding an
     // agent that will not trade.
     const src = read("./screens/CreateAgent.tsx");
-    assert.match(src, /Runs only while you hold \$MERRYMEN/);
+    assert.match(src, /Runs only while you hold \$AGENTCAP/);
     assert.match(src, /opens nothing new until you do/);
   });
 
@@ -165,14 +165,14 @@ describe("the Circle gate is satisfiable, and the warning is visible", () => {
     // `cfg.holderAddress` is what the child reads to resolve its tier, and
     // hosted NO SCREEN EVER WROTE IT — so circle.ts returned OUTSIDER for every
     // tenant and half the picker was inert for the whole beta, however much
-    // $MERRYMEN anybody held. Marking the strategies as holders-only (above)
+    // $AGENTCAP anybody held. Marking the strategies as holders-only (above)
     // would have been a lie without this.
     // The tenant is the FALLBACK now: a wallet proven by its own signature
-    // (/api/holder) outranks it, which is how somebody holding $MERRYMEN
+    // (/api/holder) outranks it, which is how somebody holding $AGENTCAP
     // outside their login wallet earns the tier. What matters here is
     // unchanged — the child is written an address the server established, not
     // one the tenant typed.
-    // And one $MERRYMEN wallet powers one agent: which of the two counts is
+    // And one $AGENTCAP wallet powers one agent: which of the two counts is
     // effectiveHolder's call, over the holder claims (B2).
     const orch = readFileSync(new URL("../../../worker/src/orchestrator.ts", import.meta.url), "utf8");
     assert.match(orch, /effectiveHolder\(tenant, settings\?\.holderProof \?\? null, \(w\) => claims\.get\(w\)\)\?\.address \?\? null/);
@@ -190,7 +190,7 @@ describe("the Circle gate is satisfiable, and the warning is visible", () => {
     // start of the block rather than from the top of the file — otherwise the
     // slice runs backwards and comes out empty, which passes nothing and
     // proves nothing.
-    const from = orch.indexOf("const forChild: MerrymenSettings = childSettingsFor(settings, holder);");
+    const from = orch.indexOf("const forChild: AgentCapSettings = childSettingsFor(settings, holder);");
     assert.ok(from > 0, "the child settings copy must still be built here");
     const block = orch.slice(from, orch.indexOf("const home = childHome(tenant);", from));
     assert.ok(!/settings\.holderAddress/.test(block), "the self-declared field must not be read here");
@@ -243,7 +243,7 @@ describe("the Circle gate is satisfiable, and the warning is visible", () => {
       await withAgent({ strategy }, page => {
         const circle = page.querySelector(".desk-circle-locked");
         assert.ok(circle, `${strategy}: the holder-only strategy has a persistent banner`);
-        assert.match(circle.textContent!, /wallet and my account hold 100,000 \$MERRYMEN between them — right now 99,999/);
+        assert.match(circle.textContent!, /wallet and my account hold 100,000 \$AGENTCAP between them — right now 99,999/);
         assert.equal(page.querySelector(".desk-blocked, .desk-notice"), null);
       });
     }
@@ -258,7 +258,7 @@ describe("the Circle gate is satisfiable, and the warning is visible", () => {
     await withAgent({ strategy: "even-keel", tier: UNREADABLE_TIER }, page => {
       const circle = page.querySelector(".desk-circle-locked");
       assert.ok(circle);
-      assert.match(circle.textContent!, /We couldn't read your \$MERRYMEN balance/);
+      assert.match(circle.textContent!, /We couldn't read your \$AGENTCAP balance/);
       assert.doesNotMatch(circle.textContent!, /right now 0|you hold 0/);
       assert.equal(page.querySelector(".desk-notice"), null);
     });
@@ -302,7 +302,7 @@ describe("the Circle gate is satisfiable, and the warning is visible", () => {
     // THIS ASSERTION USED TO RUN THE OTHER WAY. It pinned "Adding funds won't
     // change it", which was true while only the owner's own wallet counted and
     // stopped being true the day an agent could turn USDG into its own
-    // $MERRYMEN (the get-energy command). A funded owner told money is not the
+    // $AGENTCAP (the get-energy command). A funded owner told money is not the
     // fix is exactly the owner who needs to hear that, converted, it is.
     //
     // What is pinned now: the count is the COMBINED one — the owner's wallet
@@ -313,7 +313,7 @@ describe("the Circle gate is satisfiable, and the warning is visible", () => {
     assert.match(agent, /between them/);
     // Inside a template literal, so it is a plain apostrophe rather than the
     // JSX entity the surrounding markup uses.
-    assert.match(agent, /ask me to get my \$MERRYMEN/);
+    assert.match(agent, /ask me to get my \$AGENTCAP/);
     assert.doesNotMatch(agent, /tokens \?\? 0/, "an unread balance rendered as 'you hold 0'");
   });
 
@@ -334,13 +334,13 @@ describe("the Circle gate is satisfiable, and the warning is visible", () => {
  * /api/tier's `tokens` and `bonusStrategies` are the combined figure the worker
  * counts. That is the right answer on the desk and in Settings, about the agent
  * that exists. It is the wrong answer in the create flow: a new agent is a new,
- * empty account, and the old one's $MERRYMEN stays with the old one.
+ * empty account, and the old one's $AGENTCAP stays with the old one.
  */
 describe("whose tokens each screen counts", () => {
   it("CREATE JUDGES THE WALLET ALONE, and says what a new agent does not inherit", async () => {
     const create = readFileSync(new URL("./screens/CreateAgent.tsx", import.meta.url), "utf8");
     assert.match(create, /!newAgentQualifies\(tier\)/);
-    assert.match(create, /Your wallet holds \{count\(tier\.holderTokens\)\} \$MERRYMEN/);
+    assert.match(create, /Your wallet holds \{count\(tier\.holderTokens\)\} \$AGENTCAP/);
     assert.match(create, /stays with\s+that agent — a new agent starts without it/);
     assert.doesNotMatch(create, /tokens \?\? 0/, "an unread count is a dash, not a zero");
     const { newAgentQualifies, UNREADABLE_TIER } = await import("./tier");
@@ -356,7 +356,7 @@ describe("whose tokens each screen counts", () => {
 
   it("SETTINGS STATES THE COMBINED FIGURE about the agent that exists", () => {
     const settings = readFileSync(new URL("./screens/Settings.tsx", import.meta.url), "utf8");
-    assert.match(settings, /Your wallet and your agent&apos;s account hold \{count\(tier\.tokens\)\} \$MERRYMEN/);
+    assert.match(settings, /Your wallet and your agent&apos;s account hold \{count\(tier\.tokens\)\} \$AGENTCAP/);
     assert.doesNotMatch(settings, /tier\.tokens \?\? 0/);
   });
 
@@ -374,7 +374,7 @@ describe("whose tokens each screen counts", () => {
 
   it("AND SAYS WHAT THE TOKEN IS FOR, and only that", () => {
     const settings = readFileSync(new URL("./screens/Settings.tsx", import.meta.url), "utf8");
-    assert.match(settings, /\$MERRYMEN buys\s+capacity, nothing else — we make no promise about its price\./);
+    assert.match(settings, /\$AGENTCAP buys\s+capacity, nothing else — we make no promise about its price\./);
     assert.match(settings, /Stop-losses, take-profits and your own orders are never limited; its own AI\s+reviews — including of its open positions — are paced along with the rest\./);
     assert.doesNotMatch(settings, /Selling, stop-losses/, "an exit the AI decides is paced; 'selling is never limited' was false");
   });
@@ -418,7 +418,7 @@ describe("every surface says what a short Circle agent still does", () => {
     assert.match(ios, /this strategy opens nothing new and leaves its basket as it is/);
     assert.match(ios, SENTENCE);
     assert.doesNotMatch(ios, /stays idle until your wallet/);
-    const android = flat(read("../../../android-native/app/src/main/java/dev/merrymen/app/ui/screens/SettingsEditor.kt"));
+    const android = flat(read("../../../android-native/app/src/main/java/dev/agentcap/app/ui/screens/SettingsEditor.kt"));
     assert.match(android, /Until you do it opens nothing new and leaves its basket as it is/);
     assert.match(android, SENTENCE);
     assert.doesNotMatch(android, /agent stays idle until you do/);

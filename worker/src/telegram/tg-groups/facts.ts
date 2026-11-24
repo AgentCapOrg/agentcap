@@ -37,7 +37,7 @@ const CAPABILITIES =
  * ("should i get one of these coins?").
  */
 const OWN_AGENT =
-  /\b(?:get|make|build|set\s*up|have|run)\s+(?:my\s+own\s+(?:agent|bot|merryman|one)|one\s+of\s+(?:you|u)\b|an?\s+(?:agent|bot|merryman)\s+like\s+(?:you|u|this|yours|this\s+one)|(?:an?\s+)?(?:agent|bot)\s+of\s+my\s+own)\b/iu;
+  /\b(?:get|make|build|set\s*up|have|run)\s+(?:my\s+own\s+(?:agent|bot|agentcapavatar|one)|one\s+of\s+(?:you|u)\b|an?\s+(?:agent|bot|agentcapavatar)\s+like\s+(?:you|u|this|yours|this\s+one)|(?:an?\s+)?(?:agent|bot)\s+of\s+my\s+own)\b/iu;
 
 /**
  * "WHY CAN'T YOU ANSWER THAT HERE?", "why not in the group?", "why only in
@@ -83,18 +83,18 @@ export function publicFactRequest(text: string, names: readonly string[] = []): 
     return { kind: "trades", why: true, ...(named ? { symbol: named } : {}), ...(side ? { side } : {}) };
   }
   // Site questions describe features, never the owner's settings or grant.
-  const site = /\b(?:site|website|web|merrymen|app|dashboard)\b/iu.test(s);
+  const site = /\b(?:site|website|web|agentcap|app|dashboard)\b/iu.test(s);
   // Public help can explain the route without reading a person's account.
   // Specific remedies precede generic site/history questions and market asks;
   // they never assert that a reported blocker is present or has been fixed.
   if (/\b(?:v4\s*(?:adapter|permission)|v4selfswap)\b/iu.test(s)
     || /\buniswap\s*v4\b/iu.test(s) && /\b(?:grant\w*|permission|adapter|wallet|settings?|renew\w*|re[ -]?sign|trad\w*|use|enable|connect\w*)\b/iu.test(s)) return { kind: "site", topic: "v4" };
   if (/\b(?:drawdown\s*(?:breaker|limit)|breaker\s*(?:tripped|trips|triggered|limit)|high[ -]water\s*mark)\b/iu.test(s)) return { kind: "site", topic: "drawdown" };
-  if (/\b(?:sign[ -]?up|register|create\s+(?:(?:my|an?|the|new)\s+)?(?:agent|merryman)|get\s+started|start\s+using\s+merrymen|join\s+merrymen)\b/iu.test(s)
+  if (/\b(?:sign[ -]?up|register|create\s+(?:(?:my|an?|the|new)\s+)?(?:agent|agentcapavatar)|get\s+started|start\s+using\s+agentcap|join\s+agentcap)\b/iu.test(s)
     || OWN_AGENT.test(s)) return { kind: "site", topic: "onboarding" };
   if (/\b(?:paper|practice|simulated)\b/iu.test(s) && /\b(?:withdraw\w*|cash\s*out)\b/iu.test(s)) return { kind: "site", topic: "modes" };
   if (/\b(?:withdraw\w*|cash\s*out|recover(?:y)?\s+(?:key|wallet|funds)|(?:lost|restore)\s+(?:(?:my|the)\s+)?(?:wallet|recovery\s*key))\b/iu.test(s)) return { kind: "site", topic: "withdrawals" };
-  if (/\b(?:add\s+(?:funds|money|usdg)|deposit(?:ed)?\s*(?:funds|money|usdg|address)?|top[ -]?up|fund\s+(?:(?:my|the|an?|your)\s+)?(?:agent|merryman|account|wallet))\b/iu.test(s)) return { kind: "site", topic: "funding" };
+  if (/\b(?:add\s+(?:funds|money|usdg)|deposit(?:ed)?\s*(?:funds|money|usdg|address)?|top[ -]?up|fund\s+(?:(?:my|the|an?|your)\s+)?(?:agent|agentcapavatar|account|wallet))\b/iu.test(s)) return { kind: "site", topic: "funding" };
   if (/\b(?:paper\s*(?:trading|trades?|mode|money)|practice\s*(?:trading|mode|money)|simulated\s*(?:money|funds|trades?)|real\s*(?:money|funds)|paper\s*(?:and|or|vs\.?|versus)\s*live|live\s*(?:and|or|vs\.?|versus)\s*paper|(?:switch|turn|enable)\b.{0,25}\blive\s*trading)\b/iu.test(s)) return { kind: "site", topic: "modes" };
   if (DM_WHY.test(s) && DM_POLICY.some((re) => re.test(s.trim())) && !DM_POLICY_NOT.test(s)) return { kind: "site", topic: "dm-policy" };
   if (/\b(?:public\s*(?:group|chat)|in\s+(?:the\s+)?group|private\s*(?:chat|details|portfolio|account|wallet)|dm|direct\s*message)\b/iu.test(s)
@@ -104,7 +104,7 @@ export function publicFactRequest(text: string, names: readonly string[] = []): 
     || /\b(?:group|bot)\b/iu.test(s) && /\b(?:silent|not\s*(?:replying|responding|working)|doesn'?t\s*(?:reply|respond|work)|approve|approved|approval|link|reply|replies|respond|mentions?|tags?|read|hear|listen)\b/iu.test(s)) return { kind: "site", topic: "groups" };
   if (/\b(?:re[ -]?sign|resign|renew\w*|expir\w*|signing\s*(?:failed|stuck|error)|permission\s*(?:renewal|not\s*granted|missing)|trading\s*permission|wallet\s*(?:inactive|isn'?t\s*active))\b/iu.test(s)
     && (site || /\b(?:wallet|grant|key|permission|sign|signing|trading)\b/iu.test(s))) return { kind: "site", topic: "wallet" };
-  if (/\b(?:agent|merryman|you|your|u|ur)\b/iu.test(s)
+  if (/\b(?:agent|agentcapavatar|you|your|u|ur)\b/iu.test(s)
     && /\b(?:idle|blocked|not\s*(?:buying|trading|active)|(?:can'?t|cannot|won'?t|doesn'?t)\s*trade|stopped\s*buying|live\s*(?:off|disabled)|no\s*(?:cash|gas))\b/iu.test(s)) return { kind: "site", topic: "readiness" };
   if ((site || /\b(?:print|download|pnl image|p&l image|pnl card|p&l card)\b/iu.test(s)) && /\b(?:pnl|p&l|profit|loss|trade image)\b/iu.test(s)) return { kind: "site", topic: "pnl" };
   if (site && /\b(?:history|trades?|reason|why)\b/iu.test(s)) return { kind: "site", topic: "trades" };
@@ -304,8 +304,8 @@ export function publicFactLine(fact: TgPublicFact): string | null {
         break;
       }
       const answers = {
-        overview: "Merrymen runs your trading agent. the web shows its trades, decisions and controls; Telegram is another view of the same agent.",
-        onboarding: "open Merrymen on the web, sign in, then choose Create agent. pick a strategy and trading mode, review the limits and sign the permission. finish the wallet's backup or login steps, then check your agent's status. you can start with paper trading.",
+        overview: "AgentCap runs your trading agent. the web shows its trades, decisions and controls; Telegram is another view of the same agent.",
+        onboarding: "open AgentCap on the web, sign in, then choose Create agent. pick a strategy and trading mode, review the limits and sign the permission. finish the wallet's backup or login steps, then check your agent's status. you can start with paper trading.",
         funding: "open Add funds on the web and copy the agent account shown there. send only the supported funds on that account's displayed network. check the recorded balance and agent status afterward; a deposit alone doesn't enable live trading or renew permission.",
         withdrawals: "open Withdraw from Profile on the web and use the owner recovery/signing flow shown for your wallet. stopping an agent doesn't withdraw funds or confirm revocation. never paste a recovery key into chat; account recovery requires your owner access.",
         modes: "paper trading uses simulated money that can't be withdrawn. Settings → Trading mode controls real orders; funding alone isn't proof of live execution. live trading needs signed permission and readiness checks. switching to paper doesn't sell real positions.",

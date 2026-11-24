@@ -1,13 +1,13 @@
 /** Dashboard narration. The partner adapter supplies its own authoritative state. */
 import { NextResponse } from "next/server";
-import { isHostedMode, type StoredGrant } from "@merrymen/core";
+import { isHostedMode, type StoredGrant } from "@agentcap/core";
 import { tenantOf } from "@/lib/auth";
 import { agentReplyResponse, currentEnergy, type AgentChatBody } from "@/lib/agent-chat";
 import { diskAgent } from "@/lib/agent-for";
-import { getGrantStore } from "@merrymen/grant-store";
+import { getGrantStore } from "@agentcap/grant-store";
 import { readAgentEnergy } from "@/lib/agent-energy";
 import { ceilingFor } from "@/lib/order-ceiling";
-import { getSettingsStore } from "@merrymen/settings-store";
+import { getSettingsStore } from "@agentcap/settings-store";
 import { resolveConfig } from "../../../../../worker/src/settings";
 import { normalizeAgentBrief } from "../../../../../worker/src/agent-brief";
 import { ledgerChatReply } from "@/lib/chat-ledger-facts";

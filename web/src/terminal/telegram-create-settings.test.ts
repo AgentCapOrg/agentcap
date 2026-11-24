@@ -4,7 +4,7 @@ import { afterEach, before, beforeEach, describe, it, mock } from "node:test";
 import { fileURLToPath } from "node:url";
 import { JSDOM } from "jsdom";
 import React, { act } from "react";
-import { LLM_PROVIDERS, SETTINGS_DEFAULTS } from "@merrymen/core";
+import { LLM_PROVIDERS, SETTINGS_DEFAULTS } from "@agentcap/core";
 import type { SettingsView } from "@/app/api/settings/route";
 
 const OWNER = `0x${"a".repeat(40)}`;
@@ -29,7 +29,7 @@ let missingIntent: boolean;
 /** What the create endpoint's readiness probe says. */
 let createAvailable: boolean;
 let fomo: boolean;
-const setup = () => ({ id: ID, status: phase, expiresAt: Date.now() + 60_000, botUsername: phase === "confirm" || phase === "connected" ? "merrymen_testbot" : null, botId: phase === "confirm" || phase === "connected" ? "1234567" : null });
+const setup = () => ({ id: ID, status: phase, expiresAt: Date.now() + 60_000, botUsername: phase === "confirm" || phase === "connected" ? "agentcap_testbot" : null, botId: phase === "confirm" || phase === "connected" ? "1234567" : null });
 
 before(async () => {
   const boot = new JSDOM("<!doctype html><p></p>", { pretendToBeVisual: true });
@@ -59,7 +59,7 @@ function fixture(): SettingsView {
   return {
     bundlerApiKey: secret, groqApiKey: secret, anthropicApiKey: secret, llmApiKey: secret,
     rialtoApiKey: secret, telegramBotToken: secret, telegramTranscribeKey: secret,
-    virtualsApiKey: secret, bitqueryApiKey: secret, merrymenToken: secret,
+    virtualsApiKey: secret, bitqueryApiKey: secret, agentcapToken: secret,
     values: { agentName: "Captain", strategy: "steady-basket", basketSymbols: ["AAPL"], telegramEnabled: false, telegramGroupsEnabled: true, telegramAllowlist: [] },
     defaults: structuredClone(SETTINGS_DEFAULTS), knownSymbols: ["AAPL"], officialCoins: [],
     strategies: { builtin: ["steady-basket"], custom: [] }, llmProviders: LLM_PROVIDERS, owner: OWNER,
@@ -74,7 +74,7 @@ beforeEach(() => {
   missingIntent = false;
   createAvailable = true;
   fomo = false;
-  telegramReply = () => json({ botUsername: "merrymen_testbot", linkCode: "link-proof" });
+  telegramReply = () => json({ botUsername: "agentcap_testbot", linkCode: "link-proof" });
   telegramPlain = () => json({});
   globalThis.fetch = async (input, init) => {
     const url = String(input), method = init?.method ?? "GET";
@@ -93,7 +93,7 @@ beforeEach(() => {
     if (url === "/api/telegram/create" && method === "POST") {
       const body = JSON.parse(String(init?.body));
       assert.equal(body.owner, OWNER);
-      if (body.action === "begin") { phase = "confirm"; return json({ intent: { ...setup(), status: "waiting_telegram", botUsername: null, botId: null }, telegramUrl: "https://t.me/MerrymenManagerBot?start=nonce" }); }
+      if (body.action === "begin") { phase = "confirm"; return json({ intent: { ...setup(), status: "waiting_telegram", botUsername: null, botId: null }, telegramUrl: "https://t.me/AgentCapManagerBot?start=nonce" }); }
       if (body.action === "confirm") {
         if (missingIntent) return json({ error: "setup_not_found" }, 404);
         phase = "connected";
@@ -162,7 +162,7 @@ describe("managed Telegram creation through Settings", () => {
     assert.equal(token().disabled, false);
     assert.equal(agentName().value, "Robin Hood");
     assert.deepEqual(telegramReads, [`/api/telegram?owner=${OWNER}`]);
-    const link = ui.container.querySelector<HTMLAnchorElement>(`a[href="https://t.me/merrymen_testbot?start=link-proof"]`);
+    const link = ui.container.querySelector<HTMLAnchorElement>(`a[href="https://t.me/agentcap_testbot?start=link-proof"]`);
     assert.equal(link?.textContent, "Open my bot →");
     await ui.click("Save settings");
     assert.deepEqual(writes[0], { owner: OWNER, agentName: "Robin Hood", telegramGroupsEnabled: false, telegramAllowlist: [999] });
@@ -203,14 +203,14 @@ describe("managed Telegram creation through Settings", () => {
     await ui.click("Try again"); await drain();
     await ui.click("Save settings"); assert.equal(writes.length, 0);
     assert.equal(token().value, "123456:obsolete-manual-token");
-    assert.equal(localStorage.getItem(`merrymen.telegram.create.v1:${OWNER}`), ID);
+    assert.equal(localStorage.getItem(`agentcap.telegram.create.v1:${OWNER}`), ID);
     refreshedOwner = OWNER;
     await ui.click("Try again"); await drain();
-    assert.equal(localStorage.getItem(`merrymen.telegram.create.v1:${OWNER}`), null);
+    assert.equal(localStorage.getItem(`agentcap.telegram.create.v1:${OWNER}`), null);
     assert.equal(token().value, "");
     assert.equal(token().disabled, false);
     assert.equal(agentName().value, "Robin Hood");
-    assert.ok(ui.container.querySelector('a[href="https://t.me/merrymen_testbot?start=link-proof"]'));
+    assert.ok(ui.container.querySelector('a[href="https://t.me/agentcap_testbot?start=link-proof"]'));
     await ui.click("Save settings");
     assert.deepEqual(writes[0], { owner: OWNER, agentName: "Robin Hood", telegramGroupsEnabled: false, telegramAllowlist: [999] });
     assert.equal("telegramBotToken" in writes[0], false);
@@ -218,12 +218,12 @@ describe("managed Telegram creation through Settings", () => {
   });
 
   it("keeps the verified existing bot's launch link after a persisted missing intent is reconciled", async () => {
-    localStorage.setItem(`merrymen.telegram.create.v1:${OWNER}`, ID);
+    localStorage.setItem(`agentcap.telegram.create.v1:${OWNER}`, ID);
     missingIntent = true;
     server = { ...server, telegramBotToken: { set: true, hint: "masked" }, values: { ...server.values, telegramEnabled: true } };
     await mount(); await drain();
-    assert.equal(localStorage.getItem(`merrymen.telegram.create.v1:${OWNER}`), null);
-    assert.ok(ui.container.querySelector('a[href="https://t.me/merrymen_testbot?start=link-proof"]'));
+    assert.equal(localStorage.getItem(`agentcap.telegram.create.v1:${OWNER}`), null);
+    assert.ok(ui.container.querySelector('a[href="https://t.me/agentcap_testbot?start=link-proof"]'));
     assert.equal([...ui.container.querySelectorAll("button")].find(button => button.textContent === "Save settings")?.disabled, false);
     assert.equal([...ui.container.querySelectorAll("button")].some(button => button.textContent === "Create Telegram bot"), false);
   });
@@ -239,11 +239,11 @@ describe("managed Telegram creation through Settings", () => {
     for (const [change, settings] of Object.entries(later)) {
       // Connected from the manager chat while this browser was away (its
       // poll never saw it), then changed from another device.
-      localStorage.setItem(`merrymen.telegram.create.v1:${OWNER}`, ID);
+      localStorage.setItem(`agentcap.telegram.create.v1:${OWNER}`, ID);
       phase = "connected";
       server = settings();
       await ui.remount(React.createElement(Settings, { onFund: () => {}, slug: null })); await drain();
-      assert.equal(localStorage.getItem(`merrymen.telegram.create.v1:${OWNER}`), null, `${change}: the setup is forgotten`);
+      assert.equal(localStorage.getItem(`agentcap.telegram.create.v1:${OWNER}`), null, `${change}: the setup is forgotten`);
       assert.equal(save().disabled, false, `${change}: Save is released`);
       assert.equal(token().disabled, false, `${change}: so is the manual token field`);
       assert.doesNotMatch(ui.container.textContent ?? "", /Refresh Settings before saving|Finish or cancel Telegram setup/, change);
@@ -259,7 +259,7 @@ describe("managed Telegram creation through Settings", () => {
     missingIntent = true;
     await ui.click("Connect this bot"); await drain();
     await ui.click("Try again"); await drain();
-    assert.equal(localStorage.getItem(`merrymen.telegram.create.v1:${OWNER}`), null);
+    assert.equal(localStorage.getItem(`agentcap.telegram.create.v1:${OWNER}`), null);
     assert.equal(token().value, "123456:obsolete-manual-token");
     assert.equal(agentName().value, "Robin Hood");
     assert.equal([...ui.container.querySelectorAll("button")].find(button => button.textContent === "Save settings")?.disabled, false);
@@ -280,14 +280,14 @@ describe("managed Telegram creation through Settings", () => {
 
   it("releases Save after readback while waiting briefly for the matching bot's launch link", async () => {
     await prepare();
-    telegramReply = () => json({ botUsername: "merrymen_testbot", linkCode: null, linkPending: true });
+    telegramReply = () => json({ botUsername: "agentcap_testbot", linkCode: null, linkPending: true });
     await ui.click("Connect this bot"); await drain();
     assert.equal([...ui.container.querySelectorAll("button")].find(button => button.textContent === "Save settings")?.disabled, false);
     assert.match(ui.container.textContent ?? "", /Your bot is saved\. Waiting for your agent to pick it up and make its link/);
     assert.equal(ui.container.querySelector('a[href*="?start="]'), null);
-    telegramReply = () => json({ botUsername: "merrymen_testbot", linkCode: "new-link-proof" });
+    telegramReply = () => json({ botUsername: "agentcap_testbot", linkCode: "new-link-proof" });
     await act(async () => mock.timers.tick(3000)); await drain();
-    const link = ui.container.querySelector<HTMLAnchorElement>('a[href="https://t.me/merrymen_testbot?start=new-link-proof"]');
+    const link = ui.container.querySelector<HTMLAnchorElement>('a[href="https://t.me/agentcap_testbot?start=new-link-proof"]');
     assert.equal(link?.textContent, "Open my bot →");
     assert.equal(link?.className, "mm-btn primary");
     const reads = telegramReads.length;
@@ -297,7 +297,7 @@ describe("managed Telegram creation through Settings", () => {
 
   it("stops the launch-link wait after sixty seconds without claiming the bot is listening", async () => {
     await prepare();
-    telegramReply = () => json({ botUsername: "merrymen_testbot", linkCode: null, linkPending: true });
+    telegramReply = () => json({ botUsername: "agentcap_testbot", linkCode: null, linkPending: true });
     await ui.click("Connect this bot"); await drain();
     await act(async () => mock.timers.tick(60_000)); await drain();
     assert.match(ui.container.textContent ?? "", /Its link appears here once your agent is running and has picked it up\. Refresh Settings to check again\./);
@@ -310,7 +310,7 @@ describe("managed Telegram creation through Settings", () => {
 
   it("does not publish a launch link for a different bot returned during the wait", async () => {
     await prepare();
-    telegramReply = () => json({ botUsername: "merrymen_testbot", linkCode: null });
+    telegramReply = () => json({ botUsername: "agentcap_testbot", linkCode: null });
     await ui.click("Connect this bot"); await drain();
     telegramReply = () => json({ botUsername: "someone_else_bot", linkCode: "wrong-bot-code" });
     await act(async () => mock.timers.tick(3000)); await drain();
@@ -324,9 +324,9 @@ describe("managed Telegram creation through Settings", () => {
 
   it("stops for a bot claimed elsewhere without exposing its code", async () => {
     await prepare();
-    telegramReply = () => json({ botUsername: "merrymen_testbot", linkCode: null });
+    telegramReply = () => json({ botUsername: "agentcap_testbot", linkCode: null });
     await ui.click("Connect this bot"); await drain();
-    telegramReply = () => json({ botUsername: "merrymen_testbot", linkCode: "elsewhere-code", botElsewhere: true });
+    telegramReply = () => json({ botUsername: "agentcap_testbot", linkCode: "elsewhere-code", botElsewhere: true });
     await act(async () => mock.timers.tick(3000)); await drain();
     assert.equal(ui.container.querySelector('a[href*="?start="]'), null);
     assert.doesNotMatch(ui.container.textContent ?? "", /elsewhere-code/);
@@ -337,7 +337,7 @@ describe("managed Telegram creation through Settings", () => {
 
   it("cleans up the launch-link timer when Settings is closed", async () => {
     await prepare();
-    telegramReply = () => json({ botUsername: "merrymen_testbot", linkCode: null });
+    telegramReply = () => json({ botUsername: "agentcap_testbot", linkCode: null });
     await ui.click("Connect this bot"); await drain();
     await ui.render(null);
     const reads = telegramReads.length;
@@ -362,7 +362,7 @@ describe("Settings: a saved bot whose agent isn't running", () => {
   for (const linkPending of [false, true]) {
     it(`stopped worker, no code (${linkPending ? "a stale row" : "no row"}): says it isn't running, never "check back shortly"`, async () => {
       saved();
-      telegramPlain = () => json({ enabled: true, hasToken: true, connected: true, botUsername: "merrymen_testbot", ownerId: null, allowlist: [], linkCode: null, linkPending, botElsewhere: false, listening: null, tradingHeld: null });
+      telegramPlain = () => json({ enabled: true, hasToken: true, connected: true, botUsername: "agentcap_testbot", ownerId: null, allowlist: [], linkCode: null, linkPending, botElsewhere: false, listening: null, tradingHeld: null });
       await mount({ agentDown: "stopped" });
       await drain();
       assert.match(section(), /Your bot is saved\. Its link code appears here once your agent is running, and it isn't running right now\./);
@@ -372,7 +372,7 @@ describe("Settings: a saved bot whose agent isn't running", () => {
 
   it("expired session key: points to renewal", async () => {
     saved();
-    telegramPlain = () => json({ enabled: true, hasToken: true, connected: true, botUsername: "merrymen_testbot", ownerId: null, allowlist: [], linkCode: null, linkPending: false, botElsewhere: false, listening: null, tradingHeld: null });
+    telegramPlain = () => json({ enabled: true, hasToken: true, connected: true, botUsername: "agentcap_testbot", ownerId: null, allowlist: [], linkCode: null, linkPending: false, botElsewhere: false, listening: null, tradingHeld: null });
     await mount({ agentDown: "expired" });
     await drain();
     assert.match(section(), /it can't run until you renew its trading permission/);
@@ -383,7 +383,7 @@ describe("Settings: a saved bot whose agent isn't running", () => {
 
   it("an agent not known to be down keeps the existing wording", async () => {
     saved();
-    telegramPlain = () => json({ enabled: true, hasToken: true, connected: true, botUsername: "merrymen_testbot", ownerId: null, allowlist: [], linkCode: null, linkPending: true, botElsewhere: false, listening: null, tradingHeld: null });
+    telegramPlain = () => json({ enabled: true, hasToken: true, connected: true, botUsername: "agentcap_testbot", ownerId: null, allowlist: [], linkCode: null, linkPending: true, botElsewhere: false, listening: null, tradingHeld: null });
     await mount();
     await drain();
     assert.match(section(), /Your agent hasn't picked up this bot yet/);
@@ -399,10 +399,10 @@ describe("Settings: a saved bot whose agent isn't running", () => {
   for (const linkPending of [false, true]) {
     it(`recovery hold, a saved bot with no code (${linkPending ? "not picked up" : "no row"}): says it waits for the agent to resume, never "check back shortly"`, async () => {
       saved();
-      telegramPlain = () => json({ enabled: true, hasToken: true, connected: true, botUsername: "merrymen_testbot", ownerId: null, allowlist: [], linkCode: null, linkPending, botElsewhere: false, listening: null, tradingHeld: null });
+      telegramPlain = () => json({ enabled: true, hasToken: true, connected: true, botUsername: "agentcap_testbot", ownerId: null, allowlist: [], linkCode: null, linkPending, botElsewhere: false, listening: null, tradingHeld: null });
       await mount({ agentDown: "recovery" });
       await drain();
-      assert.match(section(), /Your bot is saved\. Trading is paused for recovery, so @merrymen_testbot won't answer yet and has no link code; both come once your agent resumes\./);
+      assert.match(section(), /Your bot is saved\. Trading is paused for recovery, so @agentcap_testbot won't answer yet and has no link code; both come once your agent resumes\./);
       const page = ui.container.textContent ?? "";
       assert.match(page, /no link code until your agent resumes/, "the short Advanced line too");
       assert.doesNotMatch(page, /check back|shortly|next pass|hasn't started|isn't running|until your agent is running/i);
@@ -411,7 +411,7 @@ describe("Settings: a saved bot whose agent isn't running", () => {
 
   it("connecting a bot under a recovery hold: no minute of waiting for a link nothing will make, and no polling", async () => {
     await prepare({ agentDown: "recovery" });
-    telegramReply = () => json({ botUsername: "merrymen_testbot", linkCode: null, linkPending: true });
+    telegramReply = () => json({ botUsername: "agentcap_testbot", linkCode: null, linkPending: true });
     await ui.click("Connect this bot"); await drain();
     assert.doesNotMatch(ui.container.textContent ?? "", /Waiting for your agent to pick it up/);
     assert.match(section(), /Trading is paused for recovery/);
@@ -422,7 +422,7 @@ describe("Settings: a saved bot whose agent isn't running", () => {
 
   it("connecting a bot for an agent that isn't running: no minute of waiting for a link nothing will make", async () => {
     await prepare({ agentDown: "stopped" });
-    telegramReply = () => json({ botUsername: "merrymen_testbot", linkCode: null, linkPending: true });
+    telegramReply = () => json({ botUsername: "agentcap_testbot", linkCode: null, linkPending: true });
     await ui.click("Connect this bot"); await drain();
     assert.doesNotMatch(ui.container.textContent ?? "", /Waiting for your agent to pick it up/);
     assert.match(section(), /it isn't running right now/);

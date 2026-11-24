@@ -19,8 +19,8 @@
  * Solana strategy, which it never did.
  */
 import { NextResponse } from "next/server";
-import { isHostedMode } from "@merrymen/core";
-import { getGrantStore } from "@merrymen/grant-store";
+import { isHostedMode } from "@agentcap/core";
+import { getGrantStore } from "@agentcap/grant-store";
 import { tenantOf } from "@/lib/auth";
 import { expectedTenantMatches } from "@/lib/expected-tenant";
 import { diskAgent, hostedAgentFor } from "@/lib/agent-for";

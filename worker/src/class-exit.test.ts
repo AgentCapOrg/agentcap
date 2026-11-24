@@ -139,9 +139,9 @@ describe("every refusal fails in the safe direction", () => {
 
   it("tells the owner when only their own key can help", () => {
     // The two cases the agent genuinely cannot fix — no curve on record, and a
-    // dead curve — must name `merrymen recover`, because an owner cannot guess
+    // dead curve — must name `agentcap recover`, because an owner cannot guess
     // that the way out is their own key.
-    assert.match(EXIT, /merrymen recover/, "an unexitable position must name the owner's remedy");
+    assert.match(EXIT, /agentcap recover/, "an unexitable position must name the owner's remedy");
   });
 
   it("has NO impact ceiling, unlike the entry", () => {

@@ -13,7 +13,7 @@ import os from "node:os";
 import path from "node:path";
 import { describe, it } from "node:test";
 
-process.env.MERRYMEN_HOME = mkdtempSync(path.join(os.tmpdir(), "merrymen-network-"));
+process.env.AGENTCAP_HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-network-"));
 
 const { toolByName } = await import("./chat-tools");
 

@@ -8,22 +8,22 @@ import { assertPatched, evaluateAudit, physicalLock } from "./verify-installed.m
 const patched = Object.fromEntries(Object.entries({ postcss: "8.5.28", ws: "8.22.0", "bn.js": "4.12.5", uuid: "11.1.1", "@walletconnect/utils": "2.21.9", zod: "4.6.7" }).map(([name, version]) => [`node_modules/${name}`, { name, version }]));
 
 test("physical scan includes hidden vulnerable duplicates and ignores a misleading shrinkwrap", (t) => {
-  const directory = mkdtempSync(path.join(tmpdir(), "merrymen-verify-test-"));
+  const directory = mkdtempSync(path.join(tmpdir(), "agentcap-verify-test-"));
   t.after(() => rmSync(directory, { recursive: true, force: true }));
   function pkg(location, value) {
     const target = path.join(directory, location);
     mkdirSync(target, { recursive: true });
     writeFileSync(path.join(target, "package.json"), JSON.stringify(value));
   }
-  pkg("", { name: "merrymen", version: "1.0.0", dependencies: { next: "15.5.27" }, overrides: { postcss: "8.5.28" } });
+  pkg("", { name: "agentcap", version: "1.0.0", dependencies: { next: "15.5.27" }, overrides: { postcss: "8.5.28" } });
   pkg("node_modules/next", { name: "next", version: "15.5.27", dependencies: { postcss: "8.4.31" }, bundleDependencies: ["postcss"] });
   pkg("node_modules/next/node_modules/postcss", { name: "postcss", version: "8.4.31" });
   writeFileSync(path.join(directory, "npm-shrinkwrap.json"), JSON.stringify({ packages: { "node_modules/postcss": { version: "8.5.28" } } }));
   const snapshot = physicalLock(directory);
-  const nested = "node_modules/merrymen/node_modules/next/node_modules/postcss";
+  const nested = "node_modules/agentcap/node_modules/next/node_modules/postcss";
   assert.equal(snapshot.lock.packages[nested].version, "8.4.31");
-  assert.equal(snapshot.lock.packages["node_modules/merrymen"].overrides, undefined);
-  assert.equal(snapshot.lock.packages["node_modules/merrymen/node_modules/next"].bundleDependencies, undefined);
+  assert.equal(snapshot.lock.packages["node_modules/agentcap"].overrides, undefined);
+  assert.equal(snapshot.lock.packages["node_modules/agentcap/node_modules/next"].bundleDependencies, undefined);
   assert.throws(() => assertPatched({ ...patched, [nested]: snapshot.lock.packages[nested] }), /Unpatched.*8\.4\.31/);
 });
 
@@ -35,21 +35,21 @@ test("patched families include valid older ws major and reject missing closure",
 });
 
 test("a missing required runtime fails even without npm's empty placeholder directory", (t) => {
-  const directory = mkdtempSync(path.join(tmpdir(), "merrymen-verify-missing-"));
+  const directory = mkdtempSync(path.join(tmpdir(), "agentcap-verify-missing-"));
   t.after(() => rmSync(directory, { recursive: true, force: true }));
-  writeFileSync(path.join(directory, "package.json"), JSON.stringify({ name: "merrymen", version: "1.0.0", dependencies: { react: "19.2.4" } }));
+  writeFileSync(path.join(directory, "package.json"), JSON.stringify({ name: "agentcap", version: "1.0.0", dependencies: { react: "19.2.4" } }));
   assert.throws(() => physicalLock(directory), /Required runtime dependency missing.*react/);
 });
 
 test("empty hoisted placeholders are accepted only when required dependencies and peers resolve", (t) => {
-  const directory = mkdtempSync(path.join(tmpdir(), "merrymen-verify-hoisted-"));
+  const directory = mkdtempSync(path.join(tmpdir(), "agentcap-verify-hoisted-"));
   t.after(() => rmSync(directory, { recursive: true, force: true }));
   function pkg(location, value) {
     const target = path.join(directory, location);
     mkdirSync(target, { recursive: true });
     writeFileSync(path.join(target, "package.json"), JSON.stringify(value));
   }
-  pkg("", { name: "merrymen", version: "1.0.0", dependencies: { wrapper: "1.0.0" } });
+  pkg("", { name: "agentcap", version: "1.0.0", dependencies: { wrapper: "1.0.0" } });
   pkg("node_modules/wrapper", { name: "wrapper", version: "1.0.0", dependencies: { "@noble/curves": "1.9.7" }, peerDependencies: { react: "19.2.4", absentOptional: "*" }, peerDependenciesMeta: { absentOptional: { optional: true } } });
   mkdirSync(path.join(directory, "node_modules/wrapper/node_modules/@noble/curves"), { recursive: true });
   assert.throws(() => physicalLock(directory), /missing.*@noble\/curves/);
@@ -57,8 +57,8 @@ test("empty hoisted placeholders are accepted only when required dependencies an
   assert.throws(() => physicalLock(directory), /missing.*react/);
   pkg("node_modules/react", { name: "react", version: "19.2.4" });
   const snapshot = physicalLock(directory);
-  assert.equal(snapshot.lock.packages["node_modules/merrymen/node_modules/wrapper/node_modules/@noble/curves"], undefined);
-  assert.equal(snapshot.lock.packages["node_modules/merrymen/node_modules/@noble/curves"].version, "1.9.7");
+  assert.equal(snapshot.lock.packages["node_modules/agentcap/node_modules/wrapper/node_modules/@noble/curves"], undefined);
+  assert.equal(snapshot.lock.packages["node_modules/agentcap/node_modules/@noble/curves"].version, "1.9.7");
   writeFileSync(path.join(directory, "node_modules/wrapper/node_modules/@noble/curves/partial.js"), "// incomplete extraction");
   assert.throws(() => physicalLock(directory), /package\.json/);
 });
@@ -67,12 +67,12 @@ test("empty hoisted placeholders are accepted only when required dependencies an
 const advisory = (id, severity, title) => ({ source: 1, name: id, title, url: `https://github.com/advisories/${id}`, severity, range: "*" });
 const ZOD = advisory("GHSA-mrhx-c7xc-m3w5", "high", "Zod can exhaust memory while validating oversized constrained collections");
 const NEXT = advisory("GHSA-2464-fhr4-w9xw", "critical", "Next.js: Unauthenticated Remote Code Execution in Image Optimization API");
-const zodUnder = (parent) => `node_modules/merrymen/node_modules/${parent}/node_modules/zod`;
+const zodUnder = (parent) => `node_modules/agentcap/node_modules/${parent}/node_modules/zod`;
 // The four copies the 2026-11-22 exception used to excuse.
 const sdkCopies = ["@coinbase/cdp-sdk", "@reown/appkit-wallet", "@wagmi/connectors", "x402"].map(zodUnder);
 const report = (vulnerabilities) => ({ vulnerabilities, metadata: { vulnerabilities: { total: Object.keys(vulnerabilities).length } } });
 const zodFinding = (nodes, via = [ZOD]) => ({ name: "zod", severity: "high", via, nodes });
-const dependent = (name, ...via) => ({ name, severity: "high", via, nodes: [`node_modules/merrymen/node_modules/${name}`] });
+const dependent = (name, ...via) => ({ name, severity: "high", via, nodes: [`node_modules/agentcap/node_modules/${name}`] });
 
 test("a clean report passes, and npm's own failure is never a pass", () => {
   assert.doesNotThrow(() => evaluateAudit(report({})));
@@ -86,7 +86,7 @@ test("the zod 3 exception is gone: the SDK copies it excused fail the audit and 
     "@privy-io/react-auth": dependent("@privy-io/react-auth", "x402", "@reown/appkit-wallet"),
   });
   assert.throws(() => evaluateAudit(audit), /3 vulnerable packages: zod \(high: https:\/\/github\.com\/advisories\/GHSA-mrhx-c7xc-m3w5\); x402 \(high: via zod, via wagmi\)/);
-  for (const [node, version] of [[sdkCopies[0], "3.25.76"], [sdkCopies[1], "3.22.4"], ["node_modules/merrymen/node_modules/zod", "4.6.5"]]) {
+  for (const [node, version] of [[sdkCopies[0], "3.25.76"], [sdkCopies[1], "3.22.4"], ["node_modules/agentcap/node_modules/zod", "4.6.5"]]) {
     assert.throws(() => assertPatched({ ...patched, [node]: { name: "zod", version } }), new RegExp(`Unpatched installed dependency: ${node}@${version.replaceAll(".", "\\.")}`));
   }
   assert.doesNotThrow(() => assertPatched({ ...patched, [sdkCopies[3]]: { name: "zod", version: "4.6.6" } }));
@@ -94,9 +94,9 @@ test("the zod 3 exception is gone: the SDK copies it excused fail the audit and 
 
 test("every other advisory fails, alone or beside another", () => {
   const audit = report({
-    next: { name: "next", severity: "critical", via: [NEXT], nodes: ["node_modules/merrymen/node_modules/next"] },
-    merrymen: dependent("merrymen", "next"),
+    next: { name: "next", severity: "critical", via: [NEXT], nodes: ["node_modules/agentcap/node_modules/next"] },
+    agentcap: dependent("agentcap", "next"),
   });
-  assert.throws(() => evaluateAudit(audit), /2 vulnerable packages: next \(critical: https:\/\/github\.com\/advisories\/GHSA-2464-fhr4-w9xw\); merrymen \(high: via next\)/);
+  assert.throws(() => evaluateAudit(audit), /2 vulnerable packages: next \(critical: https:\/\/github\.com\/advisories\/GHSA-2464-fhr4-w9xw\); agentcap \(high: via next\)/);
   assert.throws(() => evaluateAudit(report({ zod: zodFinding([zodUnder("@some/other-sdk")], [ZOD, NEXT]) })), /1 vulnerable packages: zod \(high/);
 });

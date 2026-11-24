@@ -17,7 +17,7 @@ import * as React from "react";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { IN_FLIGHT_TEXT } from "@merrymen/thesis";
+import { IN_FLIGHT_TEXT } from "@agentcap/thesis";
 import { beatsOf, emptyFor, lanesOf, pillBeats, pillOf, verbOf, type Beat, type FeedRow, type TradeBeat } from "./beat";
 import type { LiveAgent } from "./live";
 

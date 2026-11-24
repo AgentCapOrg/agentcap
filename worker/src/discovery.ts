@@ -1,7 +1,7 @@
 /**
  * Discovery — telling the owner a pair exists, and nothing more than that.
  *
- * merrymen reads Uniswap v3 pools directly and can compute a v4 PoolKey when the
+ * agentcap reads Uniswap v3 pools directly and can compute a v4 PoolKey when the
  * pool is vanilla. Neither of those finds a HOOKED pool: Pons/Doppler launches
  * attach a hook whose address can't be guessed, so the pool is unreachable by
  * any amount of scanning. Bitquery decodes this chain's Initialize events from
@@ -129,7 +129,7 @@ export interface DiscoveryDeps {
 
 /**
  * What discovery must never surface as a coin to go and trade: what the agent
- * already watches, and the ENERGY RESERVE on every chain. $MERRYMEN has a real
+ * already watches, and the ENERGY RESERVE on every chain. $AGENTCAP has a real
  * pool and can trend like anything else, but it is the agent's energy, bought
  * only by its get-energy route: surfaced here it would reach the owner as "add
  * it in /settings and re-sign at /grant" — a re-sign that can never cover it

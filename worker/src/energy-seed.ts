@@ -43,7 +43,7 @@ import type { Db } from "./db";
 import { ensureEnergyDays, mergeEnergyDayRow, readEnergyDaysSince } from "./energy-days";
 import { planEnergySeed, utcDay } from "./energy";
 
-/** In the child's home, beside merrymen.db. Present = some day's energy history was not put back. */
+/** In the child's home, beside agentcap.db. Present = some day's energy history was not put back. */
 export const ENERGY_UNRESTORED_FILE = "energy-unrestored.json";
 
 const markerIn = (home: string) => path.join(home, ENERGY_UNRESTORED_FILE);

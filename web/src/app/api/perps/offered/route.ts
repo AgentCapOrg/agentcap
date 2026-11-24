@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isHostedMode } from "@merrymen/core";
+import { isHostedMode } from "@agentcap/core";
 import { perpsCreationAllowed } from "@/lib/perps-enabled";
 import { NO_STORE_HEADERS, walletUnknown } from "@/lib/route-guard";
 import { readWalletParam } from "@/lib/wallet-param";

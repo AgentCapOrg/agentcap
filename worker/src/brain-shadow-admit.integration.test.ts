@@ -29,10 +29,10 @@ import type { BrainDecision } from "./brain-client";
 import type { ShadowInputs } from "./brain-shadow";
 import { nextTickDelayMs } from "./decision-cadence";
 
-const scratch = mkdtempSync(path.join(os.tmpdir(), "merrymen-shadow-admit-"));
+const scratch = mkdtempSync(path.join(os.tmpdir(), "agentcap-shadow-admit-"));
 const isolatedCwd = path.join(scratch, "cwd");
 mkdirSync(isolatedCwd);
-process.env.MERRYMEN_HOME = path.join(scratch, "home");
+process.env.AGENTCAP_HOME = path.join(scratch, "home");
 delete process.env.DATABASE_URL;
 const originalCwd = process.cwd();
 const store = await import("./store");
@@ -191,7 +191,7 @@ describe("THE GATE IS PERSISTED, not only logged", () => {
     candidate_action: null, models: [], cost: { model_calls: 1, tokens_in: 1, tokens_out: 1, usd: 0 }, ...over,
   });
   const signalsOf = (id: string) => {
-    const raw = new DatabaseSync(path.join(process.env.MERRYMEN_HOME!, "merrymen.db"));
+    const raw = new DatabaseSync(path.join(process.env.AGENTCAP_HOME!, "agentcap.db"));
     try {
       const row = raw.prepare("SELECT signals_json FROM decisions WHERE id = ?").get(id) as { signals_json: string } | undefined;
       return JSON.parse(row!.signals_json) as Record<string, unknown>;

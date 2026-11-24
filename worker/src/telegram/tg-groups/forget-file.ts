@@ -1,5 +1,5 @@
 /**
- * Telegram groups — the forget requests, `<MERRYMEN_HOME>/tg-groups-forget.json`.
+ * Telegram groups — the forget requests, `<AGENTCAP_HOME>/tg-groups-forget.json`.
  * Contract: docs/tg-groups.md, "Memory" and "Storage and the ferry".
  *
  * APART FROM THE STORE, so a process that must not hold group memory can

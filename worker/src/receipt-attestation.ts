@@ -101,7 +101,7 @@ export function fileIdentity(o: ReceiptAttestationOptions): { file: string; inod
   }
   const mount = lstatSync(volume.mountPath, { bigint: true });
   if (String(mount.dev) !== volume.device || String(mount.ino) !== volume.inode) refuse("volume identity changed");
-  const file = path.join(o.home, "merrymen.db"), st = lstatSync(file, { bigint: true });
+  const file = path.join(o.home, "agentcap.db"), st = lstatSync(file, { bigint: true });
   if (!st.isFile() || String(st.dev) !== volume.device || (st.mode & 0o077n) !== 0n
       || (process.getuid && st.uid !== BigInt(process.getuid()))) refuse("source is not the original private file");
   for (const marker of OTHER_MARKERS) if (present(path.join(o.home, marker))) refuse("another recovery barrier exists");

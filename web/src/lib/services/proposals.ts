@@ -1,5 +1,5 @@
 /**
- * Proposals: actions an assistant PREPARES and the owner APPROVES in Merrymen.
+ * Proposals: actions an assistant PREPARES and the owner APPROVES in AgentCap.
  *
  * The state machine (one row per proposal, in mcp_proposals):
  *
@@ -146,7 +146,7 @@ export function creationSetupResult(proposalId: string): Record<string, unknown>
   return {
     setup_only: true,
     setup_url: `/connect/setup/${encodeURIComponent(proposalId)}`,
-    note: "Setup approved. No agent, trading permission, settings or trades were created. Continue in Merrymen to review limits and sign with your own wallet.",
+    note: "Setup approved. No agent, trading permission, settings or trades were created. Continue in AgentCap to review limits and sign with your own wallet.",
   };
 }
 
@@ -297,7 +297,7 @@ export function changedSince(before: Record<string, unknown>, current: Record<st
  * "no ceiling" when the owner never stored one, so a proposal the worker then
  * refused at its default (25 USDG) was accepted and shown with no ceiling.
  *
- * `hosted: true` because MCP exists only on hosted Merrymen (mcp/config.ts
+ * `hosted: true` because MCP exists only on hosted AgentCap (mcp/config.ts
  * refuses to enable it otherwise), which is the branch the route takes there.
  * Zero is an owner's explicit "no chat ceiling".
  */
@@ -426,7 +426,7 @@ const num = (v: unknown): number | null => {
 };
 
 /**
- * A reject rule in Merrymen's own vocabulary (services/decisions.ts): the slug,
+ * A reject rule in AgentCap's own vocabulary (services/decisions.ts): the slug,
  * its family, our sentence and the owner's remedy. The raw text a rule can
  * carry (a provider error after "couldn't submit", a revert string) is never
  * relayed — describeRule withholds it and so does this.
@@ -444,7 +444,7 @@ function ruleFields(raw: string | null | undefined, tradeStatus: string): Record
  * from a pre-submission failure on is provider text — the bundler's or the
  * RPC's error, which can carry the endpoint and its key — and is cut; a
  * parenthesised tail survives only as a bare rule slug; no link survives at
- * all. What is left is still the agent's text, not Merrymen's, so it is
+ * all. What is left is still the agent's text, not AgentCap's, so it is
  * marked untrusted and bounded.
  */
 export function workerSentence(line: string | null | undefined): string | null {
@@ -656,7 +656,7 @@ export function resultView(json: string | null): Record<string, unknown> | null 
 export const DISCONNECTED_WHY = "the app that prepared it was disconnected";
 
 /** Why a proposal is refused when its app is connected through the directory listing, which can never ask for approvals (stored as result.why). */
-export const DIRECTORY_WHY = "the app that prepared it is connected through Merrymen's connector-directory listing, which can never ask for approvals";
+export const DIRECTORY_WHY = "the app that prepared it is connected through AgentCap's connector-directory listing, which can never ask for approvals";
 
 /**
  * Whether the connection that prepared a proposal still stands behind it: it
@@ -676,7 +676,7 @@ export const DIRECTORY_WHY = "the app that prepared it is connected through Merr
  * nothing.
  */
 export async function connectionStanding(mcp: Db, row: Pick<ProposalRow, "tenant" | "connection_id" | "kind" | "agent_slug">): Promise<{ ok: true } | { ok: false; why: string }> {
-  if (!row.connection_id) return { ok: false, why: "Merrymen cannot tell which app prepared it" };
+  if (!row.connection_id) return { ok: false, why: "AgentCap cannot tell which app prepared it" };
   const c = await mcp.prepare("SELECT status, scopes, agent_slugs, resource FROM mcp_connections WHERE id = ? AND tenant = ?")
     .get(row.connection_id, row.tenant.toLowerCase()) as { status: string; scopes: string; agent_slugs: string; resource: string | null } | undefined;
   if (!c || c.status !== "active") return { ok: false, why: DISCONNECTED_WHY };
@@ -736,16 +736,16 @@ export function settingsOutcome(changes: Record<string, unknown>, res: { ok: boo
   const keys = Object.keys(changes);
   const strings = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
   if (!res.ok) {
-    return { status: "failed", result: { why: "Merrymen's settings check refused it; nothing was changed.", errors: strings(res.body.errors).slice(0, 5) } };
+    return { status: "failed", result: { why: "AgentCap's settings check refused it; nothing was changed.", errors: strings(res.body.errors).slice(0, 5) } };
   }
   const ignored = strings(res.body.ignored).filter((k) => keys.includes(k));
   const applied = keys.filter((k) => !ignored.includes(k));
   if (!applied.length) {
-    return { status: "failed", result: { why: "Merrymen's settings route did not accept any of these changes; nothing was changed.", not_applied: ignored } };
+    return { status: "failed", result: { why: "AgentCap's settings route did not accept any of these changes; nothing was changed.", not_applied: ignored } };
   }
   return {
     status: "applied",
-    result: { applied, ...(ignored.length ? { partial: true, not_applied: ignored, note: "Merrymen's settings route did not accept these keys; they were not changed." } : {}) },
+    result: { applied, ...(ignored.length ? { partial: true, not_applied: ignored, note: "AgentCap's settings route did not accept these keys; they were not changed." } : {}) },
   };
 }
 
@@ -882,7 +882,7 @@ export async function resumeStranded(mcp: Db, row: ProposalRow, now: number, pro
         const same = keys.filter((k) => canonical(current[k] ?? null) === canonical(changes[k] ?? null));
         done = same.length === keys.length ? { status: "applied", result: { recovered: true, applied: keys, note } }
           : same.length === 0 ? "not_done"
-            : { status: "failed", result: { recovered: true, outcome_unknown: true, matching: same, why: "the approval was interrupted: some of these settings now hold their proposed values and some do not. Check your settings in Merrymen." } };
+            : { status: "failed", result: { recovered: true, outcome_unknown: true, matching: same, why: "the approval was interrupted: some of these settings now hold their proposed values and some do not. Check your settings in AgentCap." } };
       }
     } else if (binding.kind === "post") {
       const stored = await probe.postStored(binding.tenant, row.id.slice(4, 36));

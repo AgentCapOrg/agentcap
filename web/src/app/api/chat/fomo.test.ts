@@ -31,11 +31,11 @@ const A = `0x${"a".repeat(40)}` as `0x${string}`;
 const B = `0x${"b".repeat(40)}` as `0x${string}`;
 const ALERTS_NEWEST = 1788378000000;
 const ENV_KEYS = [
-  "MERRYMEN_HOSTED", "MERRYMEN_SESSION_SECRET", "MERRYMEN_HOME", "DATABASE_URL", "GROQ_API_KEY", "ANTHROPIC_API_KEY",
-  "MERRYMEN_LLM_PROVIDER", "MERRYMEN_SETTINGS_FILE", "MERRYMEN_FOMO_API_KEY", "FOMO_API_KEY", "MERRYMEN_FOMO_ENABLED",
+  "AGENTCAP_HOSTED", "AGENTCAP_SESSION_SECRET", "AGENTCAP_HOME", "DATABASE_URL", "GROQ_API_KEY", "ANTHROPIC_API_KEY",
+  "AGENTCAP_LLM_PROVIDER", "AGENTCAP_SETTINGS_FILE", "AGENTCAP_FOMO_API_KEY", "FOMO_API_KEY", "AGENTCAP_FOMO_ENABLED",
 ] as const;
 const saved = new Map(ENV_KEYS.map((k) => [k, process.env[k]]));
-const home = mkdtempSync(path.join(os.tmpdir(), "merrymen-chat-fomo-"));
+const home = mkdtempSync(path.join(os.tmpdir(), "agentcap-chat-fomo-"));
 
 function fixture(name: string): Rec {
   return JSON.parse(readFileSync(new URL(`../../../../../worker/src/fomo/testdata/${name}.json`, import.meta.url), "utf8")) as Rec;
@@ -75,11 +75,11 @@ let raw: DatabaseSync;
 
 before(() => {
   for (const k of ENV_KEYS) delete process.env[k];
-  process.env.MERRYMEN_HOSTED = "1";
+  process.env.AGENTCAP_HOSTED = "1";
   // Hosted Fomo is opt-in (fomo-runtime.ts hostedFomoEnabled); these tests run an opted-in deployment.
-  process.env.MERRYMEN_FOMO_ENABLED = "1";
-  process.env.MERRYMEN_SESSION_SECRET = "test-chat-fomo-secret-at-least-32-characters";
-  process.env.MERRYMEN_HOME = home;
+  process.env.AGENTCAP_FOMO_ENABLED = "1";
+  process.env.AGENTCAP_SESSION_SECRET = "test-chat-fomo-secret-at-least-32-characters";
+  process.env.AGENTCAP_HOME = home;
   // The house brain: an OpenAI-compatible endpoint, reached only through the stub below.
   process.env.GROQ_API_KEY = "test-llm-key-not-a-credential";
   mock.method(globalThis, "fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -111,7 +111,7 @@ beforeEach(async () => {
 
 afterEach(() => {
   setFomoRuntimeForTest(null);
-  process.env.MERRYMEN_FOMO_ENABLED = "1";
+  process.env.AGENTCAP_FOMO_ENABLED = "1";
 });
 
 after(() => {
@@ -127,7 +127,7 @@ after(() => {
 });
 
 async function chat(tenant: `0x${string}`, message: string, o: { stream?: boolean; state?: unknown } = {}) {
-  const res = await POST(new Request("https://app.merrymen.dev/api/chat", {
+  const res = await POST(new Request("https://app.agentcap.xyz/api/chat", {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -143,11 +143,11 @@ async function chat(tenant: `0x${string}`, message: string, o: { stream?: boolea
 
 const requests = () => raw.prepare("SELECT tenant, surface, tool FROM fomo_requests ORDER BY created_at_ms, rowid").all() as Rec[];
 
-describe("a hosted deployment that has not opted in (MERRYMEN_FOMO_ENABLED unset)", () => {
+describe("a hosted deployment that has not opted in (AGENTCAP_FOMO_ENABLED unset)", () => {
   it("answers a Fomo question exactly as before Fomo existed: no lookup, no research store touched, no research turn for the model", async () => {
     for (const value of [undefined, "0", "true"]) {
-      if (value === undefined) delete process.env.MERRYMEN_FOMO_ENABLED;
-      else process.env.MERRYMEN_FOMO_ENABLED = value;
+      if (value === undefined) delete process.env.AGENTCAP_FOMO_ENABLED;
+      else process.env.AGENTCAP_FOMO_ENABLED = value;
       llm = [];
       setFomoRuntimeForTest(untouchable());
       const r = await chat(A, "who are the top traders on fomo this week?");
@@ -155,7 +155,7 @@ describe("a hosted deployment that has not opted in (MERRYMEN_FOMO_ENABLED unset
       assert.equal(provider.length, 0, "no provider call");
       assert.equal(requests().length, 0, "nothing logged in the research store");
       assert.equal(llm.length, 1);
-      assert.ok(!/FOMO RESEARCH|FOMO EVIDENCE/.test(llm[0]!.system + llm[0]!.prompt), `MERRYMEN_FOMO_ENABLED=${String(value)}: no research turn`);
+      assert.ok(!/FOMO RESEARCH|FOMO EVIDENCE/.test(llm[0]!.system + llm[0]!.prompt), `AGENTCAP_FOMO_ENABLED=${String(value)}: no research turn`);
     }
   });
 });
@@ -198,13 +198,13 @@ describe("POST /api/chat with a Fomo question", () => {
     delete process.env.GROQ_API_KEY;
     const none = await chat(A, "should we follow this?");
     assert.equal(llm.length, 0);
-    assert.match(none.reply!, /Merrymen's research/);
+    assert.match(none.reply!, /AgentCap's research/);
     assert.ok(none.reply!.includes(NOT_PERMISSION_LINE) && none.reply!.endsWith(FOMO_ATTRIBUTION));
     process.env.GROQ_API_KEY = "test-llm-key-not-a-credential";
     llmReply = () => json({ error: { message: "invalid api key", type: "invalid_request_error" } }, 401);
     const failed = await chat(A, "should we follow this?", { stream: false });
     assert.equal(llm.length, 1);
-    assert.match(failed.reply!, /Merrymen's research/);
+    assert.match(failed.reply!, /AgentCap's research/);
     assert.equal(failed.why, undefined, "not a generic failure");
   });
 

@@ -323,7 +323,7 @@ contract PonsClassVault {
      * @notice Send a token's whole balance back to the owner.
      * @dev THE UNCONDITIONAL EXIT. It takes no recipient and no amount: there is
      * exactly one destination and it is fixed at construction. This is what
-     * `merrymen recover` uses to pull class positions out of the vault, and what
+     * `agentcap recover` uses to pull class positions out of the vault, and what
      * makes "the tokens are in a contract" recoverable rather than a one-way
      * door. It is deliberately callable even for a graduated or dead curve,
      * because a position you cannot sell is still a position you can move.

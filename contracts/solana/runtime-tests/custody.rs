@@ -20,7 +20,7 @@ use anchor_spl::{
     },
 };
 use base64::Engine;
-use merrymen_vault::{self as vault, Vault, JUPITER, SHARED_ROUTE, USDG, WSOL};
+use agentcap_vault::{self as vault, Vault, JUPITER, SHARED_ROUTE, USDG, WSOL};
 use solana_program_test::{processor, ProgramTest, ProgramTestContext};
 use solana_sdk::program::invoke_signed;
 use solana_sdk::{
@@ -101,7 +101,7 @@ fn hook_validation() -> Pubkey {
     Pubkey::find_program_address(&[b"extra-account-metas", USDG.as_ref()], &HOOK).0
 }
 fn hook_pda(destination: &Pubkey) -> Pubkey {
-    Pubkey::find_program_address(&[b"merrymen", destination.as_ref()], &HOOK).0
+    Pubkey::find_program_address(&[b"agentcap", destination.as_ref()], &HOOK).0
 }
 fn mock_hook(_program: &Pubkey, a: &[AccountInfo], _data: &[u8]) -> ProgramResult {
     use anchor_lang::solana_program::program_error::ProgramError;
@@ -118,14 +118,14 @@ fn mock_hook(_program: &Pubkey, a: &[AccountInfo], _data: &[u8]) -> ProgramResul
     Ok(())
 }
 /// The hook's ExtraAccountMetaList for Execute: HOOK_FIXED, then the PDA of
-/// [literal "merrymen", account key 2 (the destination)] under the hook program.
+/// [literal "agentcap", account key 2 (the destination)] under the hook program.
 fn hook_meta_list() -> Vec<u8> {
     let mut fixed = vec![0u8];
     fixed.extend_from_slice(HOOK_FIXED.as_ref());
     fixed.extend_from_slice(&[0, 0]);
     let mut pda = vec![1u8];
     let mut config = vec![1u8, 8];
-    config.extend_from_slice(b"merrymen");
+    config.extend_from_slice(b"agentcap");
     config.extend_from_slice(&[3, 2]);
     config.resize(32, 0);
     pda.extend_from_slice(&config);
@@ -279,7 +279,7 @@ impl Fixture {
         let output = ata(&vault, &WSOL, &anchor_spl::token::ID);
         let pool_input = Pubkey::new_unique();
         let pool_output = Pubkey::new_unique();
-        let mut pt = ProgramTest::new("merrymen_vault", vault::ID, None);
+        let mut pt = ProgramTest::new("agentcap_vault", vault::ID, None);
         // BPF_OUT_DIR makes this same suite exercise the compiled SBF custody program.
         pt.prefer_bpf(false); // Mock Jupiter stays native; custody and bundled token programs use SBF.
                               // Use ProgramTest’s bundled real SBF Token, Token-2022 and ATA programs.
@@ -2352,7 +2352,7 @@ async fn typescript_built_instructions_run_against_the_compiled_program() {
     let (vault_usdg, vault_wsol, owner_usdg) =
         (key("vaultUsdg"), key("vaultWsol"), key("ownerUsdg"));
 
-    let mut pt = ProgramTest::new("merrymen_vault", vault::ID, None);
+    let mut pt = ProgramTest::new("agentcap_vault", vault::ID, None);
     pt.prefer_bpf(false);
     pt.add_program("mock_jupiter", JUPITER, processor!(mock_jupiter));
     let system = anchor_lang::system_program::ID;

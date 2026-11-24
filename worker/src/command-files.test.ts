@@ -39,7 +39,7 @@ import {
  */
 
 function tmpHome(): string {
-  return mkdtempSync(path.join(os.tmpdir(), "merrymen-cmdfile-"));
+  return mkdtempSync(path.join(os.tmpdir(), "agentcap-cmdfile-"));
 }
 
 /** What the one-at-a-time rule sees in a home, as `id:state`. */

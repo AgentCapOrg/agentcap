@@ -23,8 +23,8 @@ import path from "node:path";
 import { createPublicClient, defineChain } from "viem";
 import { afterEach, beforeEach, describe, it } from "node:test";
 
-process.env.MERRYMEN_HOME = mkdtempSync(path.join(tmpdir(), "merrymen-rpc-failover-"));
-delete process.env.MERRYMEN_FLEET_HOME;
+process.env.AGENTCAP_HOME = mkdtempSync(path.join(tmpdir(), "agentcap-rpc-failover-"));
+delete process.env.AGENTCAP_FLEET_HOME;
 
 const { chainRead, chainReadRpc, resetGovernorForTest, resetRpcMeters, resetRpcMetersForTest, rpcSummaryLines } = await import("./rpc-meter");
 const { classifyRpcError: sweepRefusal } = await import("./chain-capital");
@@ -354,10 +354,10 @@ describe("what failover must never do", () => {
     assert.ok(!sent.includes(OTHER_PUBLIC) && !sent.includes(PUBLIC), `ambiguous: ${sent.join(", ")}`);
   });
 
-  it("MERRYMEN_RPC_FAILOVER=off keeps every read on the configured endpoint", async (t) => {
-    const prior = process.env.MERRYMEN_RPC_FAILOVER;
-    process.env.MERRYMEN_RPC_FAILOVER = "off";
-    t.after(() => { if (prior === undefined) delete process.env.MERRYMEN_RPC_FAILOVER; else process.env.MERRYMEN_RPC_FAILOVER = prior; });
+  it("AGENTCAP_RPC_FAILOVER=off keeps every read on the configured endpoint", async (t) => {
+    const prior = process.env.AGENTCAP_RPC_FAILOVER;
+    process.env.AGENTCAP_RPC_FAILOVER = "off";
+    t.after(() => { if (prior === undefined) delete process.env.AGENTCAP_RPC_FAILOVER; else process.env.AGENTCAP_RPC_FAILOVER = prior; });
     behaviour.set(HOUSE, "quota");
     const c = house();
     const e = await readBlock(c).then(() => null, (err: unknown) => err);
@@ -372,7 +372,7 @@ describe("what failover must never do", () => {
     behaviour.set(PUBLIC, "429");
     const c = house();
     for (let i = 0; i < 4; i++) await readBlock(c).catch(() => null);
-    const files = readdirSync(process.env.MERRYMEN_HOME!);
+    const files = readdirSync(process.env.AGENTCAP_HOME!);
     assert.ok(files.some((f) => f.startsWith("rpc-cooldown-")), `the fallback's breaker was published: ${files.join(", ")}`);
     for (const f of files) assert.ok(!f.includes("SECRET"), f);
     for (const w of [...warnings, ...rpcSummaryLines()]) assert.ok(!w.includes("SECRET"), w);

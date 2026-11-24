@@ -3,7 +3,7 @@
  * runs them. Opt-in and disposable: a LOCAL database only, each run in a
  * schema of its own, never DATABASE_URL.
  *
- * MERRYMEN_TEST_PG_URL=postgres://postgres@127.0.0.1:5432/postgres \
+ * AGENTCAP_TEST_PG_URL=postgres://postgres@127.0.0.1:5432/postgres \
  *   node --import tsx --test --test-force-exit worker/src/dual-wallet.postgres.test.ts
  *
  * What it holds the stores to:
@@ -35,7 +35,7 @@ interface Client {
   end(): Promise<void>;
   on(event: "error" | "end", cb: () => void): void;
 }
-const url = process.env.MERRYMEN_TEST_PG_URL ?? process.env.MERRYMEN_TEST_POSTGRES_URL;
+const url = process.env.AGENTCAP_TEST_PG_URL ?? process.env.AGENTCAP_TEST_POSTGRES_URL;
 const pg = url ? (createRequire(import.meta.url)("pg") as { Client: new (config: { connectionString: string }) => Client }) : null;
 const addr = (n: number) => `0x${n.toString(16).padStart(40, "0")}` as `0x${string}`;
 const key = (byte: string) => `0x${byte.repeat(32)}` as `0x${string}`;
@@ -64,15 +64,15 @@ test("Postgres: two wallets per login, beside an untouched Spot fleet", { skip: 
     clients.push(c);
     return c;
   };
-  const savedDek = process.env.MERRYMEN_STORE_DEK;
-  process.env.MERRYMEN_STORE_DEK = DEK.toString("base64");
+  const savedDek = process.env.AGENTCAP_STORE_DEK;
+  process.env.AGENTCAP_STORE_DEK = DEK.toString("base64");
   const admin = await connect(target.toString());
   await admin.query(`CREATE SCHEMA ${schema}`);
   t.after(async () => {
     try { await admin.query(`DROP SCHEMA ${schema} CASCADE`); }
     finally {
       await Promise.allSettled(clients.map((c) => c.end()));
-      if (savedDek === undefined) delete process.env.MERRYMEN_STORE_DEK; else process.env.MERRYMEN_STORE_DEK = savedDek;
+      if (savedDek === undefined) delete process.env.AGENTCAP_STORE_DEK; else process.env.AGENTCAP_STORE_DEK = savedDek;
     }
   });
   const perpsTable = async () => (await admin.query(`SELECT to_regclass($1) IS NOT NULL AS found`, [`${schema}.perps_grants`])).rows[0]!.found === true;

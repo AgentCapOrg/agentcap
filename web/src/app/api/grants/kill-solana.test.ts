@@ -19,7 +19,7 @@ const T = `0x${"22".repeat(20)}` as `0x${string}`;
 const OWNER = base58Encode(new Uint8Array(32).fill(20));
 const limits = { perTradeUsdg: "10000000", dailyUsdg: "50000000", maxOpsPerDay: 20, maxDrawdownBps: 2000, expiresAtMs: Date.now() + 3_600_000 };
 const strategy = { enabled: true, targetSolBps: 5000, rebalanceBps: 500, tradeUsdgRaw: "1000000", intervalSeconds: 300 };
-const saved = Object.fromEntries(["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_GRANT_FILE", "DATABASE_URL"].map((key) => [key, process.env[key]]));
+const saved = Object.fromEntries(["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_GRANT_FILE", "DATABASE_URL"].map((key) => [key, process.env[key]]));
 
 let home = "";
 let DELETE: (req: Request) => Promise<Response>;
@@ -27,8 +27,8 @@ let store: import("@/lib/solana-binding-store").SolanaBindingStore;
 
 before(async () => {
   home = mkdtempSync(path.join(tmpdir(), "mm-grants-kill-solana-"));
-  process.env.MERRYMEN_HOME = home;
-  for (const key of ["MERRYMEN_HOSTED", "MERRYMEN_GRANT_FILE", "DATABASE_URL"]) delete process.env[key];
+  process.env.AGENTCAP_HOME = home;
+  for (const key of ["AGENTCAP_HOSTED", "AGENTCAP_GRANT_FILE", "DATABASE_URL"]) delete process.env[key];
   ({ DELETE } = await import("./route"));
   store = (await import("@/lib/solana-binding-store")).getSolanaBindingStore();
 });

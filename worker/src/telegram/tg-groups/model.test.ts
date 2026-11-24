@@ -52,7 +52,7 @@ const DEDICATED = "gsk_dedicated_tg_groups_22222222222";
 
 describe("resolveTgGroupsModel: the dedicated key", () => {
   it("is used first, groq by default, with the X writer's default model and base", () => {
-    const m = resolveTgGroupsModel(cfg({ groqApiKey: OWN_GROQ }), { MERRYMEN_TG_GROUPS_LLM_KEY: DEDICATED }, true);
+    const m = resolveTgGroupsModel(cfg({ groqApiKey: OWN_GROQ }), { AGENTCAP_TG_GROUPS_LLM_KEY: DEDICATED }, true);
     assert.equal(m?.source, "dedicated");
     assert.equal(m?.creds.provider, "groq");
     assert.equal(m?.creds.transport, "openai");
@@ -63,14 +63,14 @@ describe("resolveTgGroupsModel: the dedicated key", () => {
     assert.equal(TG_GROUPS_GROQ_DEFAULT_MODEL, "qwen/qwen3.8-27b");
   });
 
-  it("is trimmed, and MERRYMEN_TG_GROUPS_MODEL overrides the default model", () => {
-    const m = resolveTgGroupsModel(cfg({}), { MERRYMEN_TG_GROUPS_LLM_KEY: `  ${DEDICATED}\n`, MERRYMEN_TG_GROUPS_MODEL: " llama-small " }, false);
+  it("is trimmed, and AGENTCAP_TG_GROUPS_MODEL overrides the default model", () => {
+    const m = resolveTgGroupsModel(cfg({}), { AGENTCAP_TG_GROUPS_LLM_KEY: `  ${DEDICATED}\n`, AGENTCAP_TG_GROUPS_MODEL: " llama-small " }, false);
     assert.equal(m?.creds.apiKey, DEDICATED);
     assert.equal(m?.creds.model, "llama-small");
   });
 
   it("speaks anthropic with Opus 5 by default", () => {
-    const m = resolveTgGroupsModel(cfg({}), { MERRYMEN_TG_GROUPS_LLM_KEY: "sk-ant-dedicated", MERRYMEN_TG_GROUPS_LLM_PROVIDER: "Anthropic" }, true);
+    const m = resolveTgGroupsModel(cfg({}), { AGENTCAP_TG_GROUPS_LLM_KEY: "sk-ant-dedicated", AGENTCAP_TG_GROUPS_LLM_PROVIDER: "Anthropic" }, true);
     assert.equal(m?.creds.provider, "anthropic");
     assert.equal(m?.creds.transport, "anthropic");
     assert.equal(m?.creds.baseUrl, "");
@@ -82,10 +82,10 @@ describe("resolveTgGroupsModel: the dedicated key", () => {
     const m = resolveTgGroupsModel(
       cfg({}),
       {
-        MERRYMEN_TG_GROUPS_LLM_KEY: "sk-openai-dedicated",
-        MERRYMEN_TG_GROUPS_LLM_PROVIDER: "openai",
-        MERRYMEN_TG_GROUPS_LLM_BASE_URL: "https://llm.example/v1///",
-        MERRYMEN_TG_GROUPS_MODEL: "small-chat",
+        AGENTCAP_TG_GROUPS_LLM_KEY: "sk-openai-dedicated",
+        AGENTCAP_TG_GROUPS_LLM_PROVIDER: "openai",
+        AGENTCAP_TG_GROUPS_LLM_BASE_URL: "https://llm.example/v1///",
+        AGENTCAP_TG_GROUPS_MODEL: "small-chat",
       },
       true,
     );
@@ -96,10 +96,10 @@ describe("resolveTgGroupsModel: the dedicated key", () => {
 
   it("accepts http only on loopback, and never a base carrying credentials", () => {
     const env = (base: string) => ({
-      MERRYMEN_TG_GROUPS_LLM_KEY: "sk-openai-dedicated",
-      MERRYMEN_TG_GROUPS_LLM_PROVIDER: "openai",
-      MERRYMEN_TG_GROUPS_LLM_BASE_URL: base,
-      MERRYMEN_TG_GROUPS_MODEL: "m",
+      AGENTCAP_TG_GROUPS_LLM_KEY: "sk-openai-dedicated",
+      AGENTCAP_TG_GROUPS_LLM_PROVIDER: "openai",
+      AGENTCAP_TG_GROUPS_LLM_BASE_URL: base,
+      AGENTCAP_TG_GROUPS_MODEL: "m",
     });
     assert.equal(resolveTgGroupsModel(cfg({}), env("http://127.0.0.1:1234/v1"), true)?.source, "dedicated");
     assert.equal(resolveTgGroupsModel(cfg({}), env("http://llm.example/v1"), true), null);
@@ -108,22 +108,22 @@ describe("resolveTgGroupsModel: the dedicated key", () => {
 
   it("openai without a base or a model, or an unknown provider, falls through to the owner's key", () => {
     const own = cfg({ groqApiKey: OWN_GROQ });
-    const noModel = { MERRYMEN_TG_GROUPS_LLM_KEY: "k-1", MERRYMEN_TG_GROUPS_LLM_PROVIDER: "openai", MERRYMEN_TG_GROUPS_LLM_BASE_URL: "https://x.example/v1" };
+    const noModel = { AGENTCAP_TG_GROUPS_LLM_KEY: "k-1", AGENTCAP_TG_GROUPS_LLM_PROVIDER: "openai", AGENTCAP_TG_GROUPS_LLM_BASE_URL: "https://x.example/v1" };
     assert.equal(resolveTgGroupsModel(own, noModel, false)?.source, "owner");
-    assert.match(tgGroupsDedicatedKeyProblem(noModel) ?? "", /MERRYMEN_TG_GROUPS_MODEL/);
-    const odd = { MERRYMEN_TG_GROUPS_LLM_KEY: "k-1", MERRYMEN_TG_GROUPS_LLM_PROVIDER: "gemini" };
+    assert.match(tgGroupsDedicatedKeyProblem(noModel) ?? "", /AGENTCAP_TG_GROUPS_MODEL/);
+    const odd = { AGENTCAP_TG_GROUPS_LLM_KEY: "k-1", AGENTCAP_TG_GROUPS_LLM_PROVIDER: "gemini" };
     assert.equal(resolveTgGroupsModel(own, odd, false)?.source, "owner");
     assert.equal(resolveTgGroupsModel(cfg({}), odd, true), null);
   });
 
-  for (const fleet of ["GROQ_API_KEY", "MERRYMEN_LLM_API_KEY", "ANTHROPIC_API_KEY"]) {
-    it(`is refused when it equals ${fleet}, unless MERRYMEN_TG_GROUPS_SHARE_HOUSE_KEY=1`, () => {
-      const env: Record<string, string> = { [fleet]: HOUSE_GROQ, MERRYMEN_TG_GROUPS_LLM_KEY: ` ${HOUSE_GROQ} ` };
+  for (const fleet of ["GROQ_API_KEY", "AGENTCAP_LLM_API_KEY", "ANTHROPIC_API_KEY"]) {
+    it(`is refused when it equals ${fleet}, unless AGENTCAP_TG_GROUPS_SHARE_HOUSE_KEY=1`, () => {
+      const env: Record<string, string> = { [fleet]: HOUSE_GROQ, AGENTCAP_TG_GROUPS_LLM_KEY: ` ${HOUSE_GROQ} ` };
       assert.equal(resolveTgGroupsModel(cfg({}), env, true), null);
       const problem = tgGroupsDedicatedKeyProblem(env) ?? "";
       assert.match(problem, new RegExp(fleet));
       assert.ok(!problem.includes(HOUSE_GROQ), "the problem line names the variable, never the value");
-      const shared = resolveTgGroupsModel(cfg({}), { ...env, MERRYMEN_TG_GROUPS_SHARE_HOUSE_KEY: " 1 " }, true);
+      const shared = resolveTgGroupsModel(cfg({}), { ...env, AGENTCAP_TG_GROUPS_SHARE_HOUSE_KEY: " 1 " }, true);
       assert.equal(shared?.source, "dedicated");
       assert.equal(shared?.creds.apiKey, HOUSE_GROQ);
     });
@@ -131,13 +131,13 @@ describe("resolveTgGroupsModel: the dedicated key", () => {
 
   it("the share flag is exactly 1", () => {
     for (const flag of ["true", "yes", "01", "", "on"]) {
-      const env = { GROQ_API_KEY: HOUSE_GROQ, MERRYMEN_TG_GROUPS_LLM_KEY: HOUSE_GROQ, MERRYMEN_TG_GROUPS_SHARE_HOUSE_KEY: flag };
+      const env = { GROQ_API_KEY: HOUSE_GROQ, AGENTCAP_TG_GROUPS_LLM_KEY: HOUSE_GROQ, AGENTCAP_TG_GROUPS_SHARE_HOUSE_KEY: flag };
       assert.equal(resolveTgGroupsModel(cfg({}), env, true), null, `flag ${JSON.stringify(flag)}`);
     }
   });
 
   it("a refused dedicated key falls through to the owner's own key, never the house's", () => {
-    const env = { GROQ_API_KEY: HOUSE_GROQ, MERRYMEN_TG_GROUPS_LLM_KEY: HOUSE_GROQ };
+    const env = { GROQ_API_KEY: HOUSE_GROQ, AGENTCAP_TG_GROUPS_LLM_KEY: HOUSE_GROQ };
     const m = resolveTgGroupsModel(cfg({ groqApiKey: OWN_GROQ }, env), env, true);
     assert.equal(m?.source, "owner");
     assert.equal(m?.creds.apiKey, OWN_GROQ);
@@ -169,7 +169,7 @@ describe("resolveTgGroupsModel: the owner's key and the house's", () => {
   });
 
   it("hosted: the house key only with the share flag, and then it says so", () => {
-    const env = { GROQ_API_KEY: HOUSE_GROQ, MERRYMEN_TG_GROUPS_SHARE_HOUSE_KEY: "1" };
+    const env = { GROQ_API_KEY: HOUSE_GROQ, AGENTCAP_TG_GROUPS_SHARE_HOUSE_KEY: "1" };
     const m = resolveTgGroupsModel(cfg({}, env), env, true);
     assert.equal(m?.source, "house");
     assert.equal(m?.creds.apiKey, HOUSE_GROQ);
@@ -187,21 +187,21 @@ describe("resolveTgGroupsModel: the owner's key and the house's", () => {
   });
 
   it("hosted: an owner key that happens to equal a fleet key is the house's", () => {
-    const env = { MERRYMEN_LLM_API_KEY: OWN_GROQ };
+    const env = { AGENTCAP_LLM_API_KEY: OWN_GROQ };
     assert.equal(resolveTgGroupsModel(cfg({ groqApiKey: OWN_GROQ }), env, true), null);
   });
 });
 
 describe("labels and the boot line never carry a key", () => {
   it("label is provider/model", () => {
-    const m = resolveTgGroupsModel(cfg({}), { MERRYMEN_TG_GROUPS_LLM_KEY: DEDICATED }, true)!;
+    const m = resolveTgGroupsModel(cfg({}), { AGENTCAP_TG_GROUPS_LLM_KEY: DEDICATED }, true)!;
     assert.equal(m.label, `groq/${TG_GROUPS_GROQ_DEFAULT_MODEL}`);
     assert.ok(!describeTgGroupsModel(m).includes(DEDICATED));
     assert.match(describeTgGroupsModel(m), /its own key/);
   });
 
   it("a model name that carries the key has it taken out", () => {
-    const m = resolveTgGroupsModel(cfg({}), { MERRYMEN_TG_GROUPS_LLM_KEY: DEDICATED, MERRYMEN_TG_GROUPS_MODEL: `x-${DEDICATED}` }, true)!;
+    const m = resolveTgGroupsModel(cfg({}), { AGENTCAP_TG_GROUPS_LLM_KEY: DEDICATED, AGENTCAP_TG_GROUPS_MODEL: `x-${DEDICATED}` }, true)!;
     assert.ok(!m.label.includes(DEDICATED));
     assert.ok(!describeTgGroupsModel(m).includes(DEDICATED));
   });
@@ -222,21 +222,21 @@ describe("tgGroupsPerDay", () => {
   it("defaults: 300 hosted, 1000 self-hosted", () => {
     assert.equal(tgGroupsPerDay({}, true), 300);
     assert.equal(tgGroupsPerDay({}, false), 1000);
-    assert.equal(tgGroupsPerDay({ MERRYMEN_TG_GROUPS_LLM_PER_DAY: "  " }, true), 300);
+    assert.equal(tgGroupsPerDay({ AGENTCAP_TG_GROUPS_LLM_PER_DAY: "  " }, true), 300);
   });
 
   it("reads the variable, floored and clamped to [0, 20000]", () => {
-    assert.equal(tgGroupsPerDay({ MERRYMEN_TG_GROUPS_LLM_PER_DAY: " 42 " }, true), 42);
-    assert.equal(tgGroupsPerDay({ MERRYMEN_TG_GROUPS_LLM_PER_DAY: "12.9" }, true), 12);
-    assert.equal(tgGroupsPerDay({ MERRYMEN_TG_GROUPS_LLM_PER_DAY: "0" }, true), 0);
-    assert.equal(tgGroupsPerDay({ MERRYMEN_TG_GROUPS_LLM_PER_DAY: "-5" }, false), 0);
-    assert.equal(tgGroupsPerDay({ MERRYMEN_TG_GROUPS_LLM_PER_DAY: "99999999" }, false), 20_000);
-    assert.equal(tgGroupsPerDay({ MERRYMEN_TG_GROUPS_LLM_PER_DAY: "1e3" }, false), 1000);
+    assert.equal(tgGroupsPerDay({ AGENTCAP_TG_GROUPS_LLM_PER_DAY: " 42 " }, true), 42);
+    assert.equal(tgGroupsPerDay({ AGENTCAP_TG_GROUPS_LLM_PER_DAY: "12.9" }, true), 12);
+    assert.equal(tgGroupsPerDay({ AGENTCAP_TG_GROUPS_LLM_PER_DAY: "0" }, true), 0);
+    assert.equal(tgGroupsPerDay({ AGENTCAP_TG_GROUPS_LLM_PER_DAY: "-5" }, false), 0);
+    assert.equal(tgGroupsPerDay({ AGENTCAP_TG_GROUPS_LLM_PER_DAY: "99999999" }, false), 20_000);
+    assert.equal(tgGroupsPerDay({ AGENTCAP_TG_GROUPS_LLM_PER_DAY: "1e3" }, false), 1000);
   });
 
   it("junk reads as the default", () => {
-    assert.equal(tgGroupsPerDay({ MERRYMEN_TG_GROUPS_LLM_PER_DAY: "lots" }, true), 300);
-    assert.equal(tgGroupsPerDay({ MERRYMEN_TG_GROUPS_LLM_PER_DAY: "Infinity" }, false), 1000);
+    assert.equal(tgGroupsPerDay({ AGENTCAP_TG_GROUPS_LLM_PER_DAY: "lots" }, true), 300);
+    assert.equal(tgGroupsPerDay({ AGENTCAP_TG_GROUPS_LLM_PER_DAY: "Infinity" }, false), 1000);
   });
 });
 

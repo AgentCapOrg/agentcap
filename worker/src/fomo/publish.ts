@@ -34,7 +34,7 @@
  * in an active agent's ANSWERS to people who tagged it on X — "fomo traders
  * mostly argue it's still early" — and nothing more: no handles, quotes, P&L
  * or wallet lists, built by code and gated like every other X answer, behind
- * MERRYMEN_XPOST_FOMO=1 (default off). Republishing provider-derived data
+ * AGENTCAP_XPOST_FOMO=1 (default off). Republishing provider-derived data
  * needs the provider's Enterprise redistribution rights: confirmed by the
  * owner on 2026-10-12 (docs/fomo.md "Publication"), and the Enterprise plan
  * covers these paraphrased, attributed facts in X answers. Every kind in this
@@ -253,7 +253,7 @@ export interface ContentBasis {
 export interface PublicationFacts {
   /** Coin display name (a label, never identity). */
   coinName: string;
-  /** Dossier claim summaries, Merrymen's paraphrases, in plain words with no figures. */
+  /** Dossier claim summaries, AgentCap's paraphrases, in plain words with no figures. */
   claims: readonly string[];
   /** What remains unknown, as short phrases ("whether the volume is organic"). */
   uncertainty: readonly string[];

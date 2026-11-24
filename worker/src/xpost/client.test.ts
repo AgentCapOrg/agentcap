@@ -54,16 +54,16 @@ const throwing: FetchLike = async () => {
 
 test("the app is configured only with both halves, and its callback is built from the public origin", () => {
   assert.equal(xAppFromEnv({}), null);
-  assert.equal(xAppFromEnv({ MERRYMEN_X_CLIENT_ID: "id" }), null);
-  assert.deepEqual(xAppFromEnv({ MERRYMEN_X_CLIENT_ID: " id ", MERRYMEN_X_CLIENT_SECRET: "s", MERRYMEN_PUBLIC_ORIGIN: "https://app.merrymen.dev/" }), {
+  assert.equal(xAppFromEnv({ AGENTCAP_X_CLIENT_ID: "id" }), null);
+  assert.deepEqual(xAppFromEnv({ AGENTCAP_X_CLIENT_ID: " id ", AGENTCAP_X_CLIENT_SECRET: "s", AGENTCAP_PUBLIC_ORIGIN: "https://app.agentcap.xyz/" }), {
     clientId: "id",
     clientSecret: "s",
-    redirectUri: "https://app.merrymen.dev/connect/x",
+    redirectUri: "https://app.agentcap.xyz/connect/x",
   });
-  const explicit = xAppFromEnv({ MERRYMEN_X_CLIENT_ID: "id", MERRYMEN_X_CLIENT_SECRET: "s", MERRYMEN_X_REDIRECT_URI: "http://127.0.0.1:3100/connect/x" });
+  const explicit = xAppFromEnv({ AGENTCAP_X_CLIENT_ID: "id", AGENTCAP_X_CLIENT_SECRET: "s", AGENTCAP_X_REDIRECT_URI: "http://127.0.0.1:3100/connect/x" });
   assert.equal(explicit?.redirectUri, "http://127.0.0.1:3100/connect/x");
   // Plain http off loopback is not a callback X would honour, nor one we should.
-  assert.equal(xAppFromEnv({ MERRYMEN_X_CLIENT_ID: "id", MERRYMEN_X_CLIENT_SECRET: "s", MERRYMEN_PUBLIC_ORIGIN: "http://evil.test" })?.redirectUri, null);
+  assert.equal(xAppFromEnv({ AGENTCAP_X_CLIENT_ID: "id", AGENTCAP_X_CLIENT_SECRET: "s", AGENTCAP_PUBLIC_ORIGIN: "http://evil.test" })?.redirectUri, null);
 });
 
 test("PKCE is S256 and the authorize URL asks for exactly what posting needs", () => {

@@ -40,17 +40,17 @@ export interface RecoveryReplyRootProof {
     assert(): void;
 }
 export function proveRecoveryReplyRoot(env: NodeJS.ProcessEnv = process.env, readMountInfo = () => readFileSync("/proc/self/mountinfo", "utf8")): RecoveryReplyRootProof {
-    const home = env.MERRYMEN_HOME, volume = env.MERRYMEN_HOME_VOLUME_ID;
+    const home = env.AGENTCAP_HOME, volume = env.AGENTCAP_HOME_VOLUME_ID;
     const mode = () => {
-        if (env.MERRYMEN_FLEET_RECOVERY_REPORT_ONLY !== "1" || env.MERRYMEN_FLEET_RECOVERY_REPLIES !== "1"
-            || !["1", "true", "yes"].includes((env.MERRYMEN_HOSTED ?? "").trim().toLowerCase()) || !env.DATABASE_URL
-            || env.MERRYMEN_PERSISTENT_HOME_REQUIRED !== "1" || !home || !path.isAbsolute(home) || path.resolve(home) !== home
+        if (env.AGENTCAP_FLEET_RECOVERY_REPORT_ONLY !== "1" || env.AGENTCAP_FLEET_RECOVERY_REPLIES !== "1"
+            || !["1", "true", "yes"].includes((env.AGENTCAP_HOSTED ?? "").trim().toLowerCase()) || !env.DATABASE_URL
+            || env.AGENTCAP_PERSISTENT_HOME_REQUIRED !== "1" || !home || !path.isAbsolute(home) || path.resolve(home) !== home
             || home === path.parse(home).root || home.includes("\0") || home !== env.RAILWAY_VOLUME_MOUNT_PATH
             || !volume || !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(volume) || !process.geteuid
             || !constants.O_NOFOLLOW || !constants.O_DIRECTORY || !constants.O_NONBLOCK
-            || (env.MERRYMEN_INITIAL_HANDOVER !== undefined && !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(env.MERRYMEN_INITIAL_HANDOVER)))
+            || (env.AGENTCAP_INITIAL_HANDOVER !== undefined && !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(env.AGENTCAP_INITIAL_HANDOVER)))
             throw recoveryReplyRefused();
-        const holds = env.MERRYMEN_ACCOUNTING_HOLD_TENANTS;
+        const holds = env.AGENTCAP_ACCOUNTING_HOLD_TENANTS;
         if (holds !== undefined && holds !== "" && holds.split(",").some(t => !/^0x[0-9a-f]{40}$/i.test(t.trim())))
             throw recoveryReplyRefused();
     };
@@ -102,8 +102,8 @@ export function proveRecoveryReplyRoot(env: NodeJS.ProcessEnv = process.env, rea
     const manifest = fileProof(path.join(home!, PERSISTENT_HOME_MANIFEST), rootStat.dev);
     if (manifest !== null && !verifyPersistentHome(env, { readMountInfo }))
         throw recoveryReplyRefused();
-    const keys = ["MERRYMEN_HOME", "MERRYMEN_HOME_VOLUME_ID", "RAILWAY_VOLUME_MOUNT_PATH", "MERRYMEN_HOSTED", "DATABASE_URL",
-        "MERRYMEN_PERSISTENT_HOME_REQUIRED", "MERRYMEN_INITIAL_HANDOVER", "MERRYMEN_FLEET_RECOVERY_REPORT_ONLY", "MERRYMEN_FLEET_RECOVERY_REPLIES", "MERRYMEN_ACCOUNTING_HOLD_TENANTS", "MERRYMEN_TG_GROUPS"];
+    const keys = ["AGENTCAP_HOME", "AGENTCAP_HOME_VOLUME_ID", "RAILWAY_VOLUME_MOUNT_PATH", "AGENTCAP_HOSTED", "DATABASE_URL",
+        "AGENTCAP_PERSISTENT_HOME_REQUIRED", "AGENTCAP_INITIAL_HANDOVER", "AGENTCAP_FLEET_RECOVERY_REPORT_ONLY", "AGENTCAP_FLEET_RECOVERY_REPLIES", "AGENTCAP_ACCOUNTING_HOLD_TENANTS", "AGENTCAP_TG_GROUPS"];
     const frozen = JSON.stringify(keys.map(k => env[k]));
     return { assert() {
             if (JSON.stringify(keys.map(k => env[k])) !== frozen)

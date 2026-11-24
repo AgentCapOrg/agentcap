@@ -1,4 +1,4 @@
-import type { GrantPurpose } from "@merrymen/core";
+import type { GrantPurpose } from "@agentcap/core";
 import { walletUrl } from "./wallet-param";
 
 /**

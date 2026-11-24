@@ -8,13 +8,13 @@ import { pathToFileURL } from "node:url";
 
 const require = createRequire(import.meta.url);
 const electron = require("electron");
-const root = path.dirname(require.resolve("merrymen/package.json"));
+const root = path.dirname(require.resolve("agentcap/package.json"));
 const tsx = [path.join(root, "node_modules"), path.dirname(root)]
   .map((dir) => path.join(dir, "tsx", "dist", "cli.mjs"))
   .find((file) => existsSync(file));
 if (!tsx) throw new Error("The desktop package is missing the worker's tsx runtime");
 
-const scratch = mkdtempSync(path.join(tmpdir(), "merrymen-desktop-runtime-"));
+const scratch = mkdtempSync(path.join(tmpdir(), "agentcap-desktop-runtime-"));
 try {
   const probe = path.join(scratch, "probe.mts");
   // Import the exact shipped driver, without starting the worker or opening

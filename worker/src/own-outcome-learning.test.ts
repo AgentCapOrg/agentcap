@@ -233,13 +233,13 @@ describe("scoped own-learning transport", () => {
   it("materializes only explicit current-grant opt-ins and rechecks the grant after the database read", async () => {
     const f = fixture(), home = mkdtempSync(path.join(tmpdir(), "mm-own-learning-"));
     const grant = { smartAccount: ACCOUNT, chainId: CHAIN, expiresAt: NOW + 1_000 };
-    const env = { MERRYMEN_DECISION_RESEARCH_ACCOUNTS: ACCOUNT };
+    const env = { AGENTCAP_DECISION_RESEARCH_ACCOUNTS: ACCOUNT };
     const options = { db: f.db, home, readGrant: async () => grant, nowSec: NOW, env };
     try {
       let reads = 0;
       await materializeOwnOutcomeLearning({ ...options, env: {}, readGrant: async () => { reads++; return grant; } });
       assert.equal(reads, 0);
-      await materializeOwnOutcomeLearning({ ...options, env: { MERRYMEN_DECISION_RESEARCH_ACCOUNTS: OTHER } });
+      await materializeOwnOutcomeLearning({ ...options, env: { AGENTCAP_DECISION_RESEARCH_ACCOUNTS: OTHER } });
       assert.equal(readOwnOutcomeLearningFile(home, { account: ACCOUNT, ...grant, epoch: 1 }, NOW), null);
       await materializeOwnOutcomeLearning({ ...options, readGrant: async () => ++reads === 1 ? grant : { ...grant, smartAccount: OTHER } });
       assert.equal(readOwnOutcomeLearningFile(home, { account: ACCOUNT, ...grant, epoch: 1 }, NOW), null);

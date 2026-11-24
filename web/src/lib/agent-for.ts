@@ -44,9 +44,9 @@
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { grantPurpose, isGrantPurpose, type GrantPurpose } from "@merrymen/core";
-import { purposeHome } from "@merrymen/home";
-import { getGrantStore } from "@merrymen/grant-store";
+import { grantPurpose, isGrantPurpose, type GrantPurpose } from "@agentcap/core";
+import { purposeHome } from "@agentcap/home";
+import { getGrantStore } from "@agentcap/grant-store";
 import { tenantOf } from "@/lib/auth";
 
 /**

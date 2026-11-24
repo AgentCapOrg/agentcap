@@ -1,7 +1,7 @@
 import { stoppedFigure, type OwnBookRead, type StoppedOwner } from "./owner-state";
 
 /**
- * A STOPPED AGENT, SAID AS ONE — never the newcomer's "Create your merryman"
+ * A STOPPED AGENT, SAID AS ONE — never the newcomer's "Create your agentcapavatar"
  * to an owner whose agent, name, profile and book all still exist
  * (owner-state.ts). Two sentences, the owner's own figure when it was read,
  * and the one way back.

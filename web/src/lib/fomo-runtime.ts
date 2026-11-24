@@ -7,10 +7,10 @@
  *   database   hosted: the shared Postgres the web already holds (mcp/db.ts),
  *              the same store the orchestrator writes, so caches, subject
  *              memory, watches and the credit counters are one set for the
- *              fleet. Self-hosted: fomo.sqlite in MERRYMEN_HOME, which the
+ *              fleet. Self-hosted: fomo.sqlite in AGENTCAP_HOME, which the
  *              local worker opens too (worker/src/fomo/local-db.ts). The
  *              ledger stays single-writer; Fomo never touches it.
- *   key        hosted: MERRYMEN_FOMO_API_KEY, else FOMO_API_KEY, read HERE and
+ *   key        hosted: AGENTCAP_FOMO_API_KEY, else FOMO_API_KEY, read HERE and
  *              in no other web file (worker/src/fomo/boundary.test.ts). A
  *              blank value is no key. Self-hosted: the install's own
  *              resolveConfig().fomoApiKey (settings file, then the same env
@@ -26,11 +26,11 @@
  *   model      a per-tenant ModelBudget (analysis-model calls and tokens per
  *              UTC day) on the same fomo_meta allowance counters, checked by
  *              the app chat before Fomo evidence is handed to a model.
- *   plan       MERRYMEN_FOMO_PLAN_CREDITS, a positive number, read the way the
+ *   plan       AGENTCAP_FOMO_PLAN_CREDITS, a positive number, read the way the
  *              orchestrator reads it: the two processes share the fomo_meta
  *              allowance counters, so they must agree on the pool.
- *   caps       MERRYMEN_FOMO_GROUP_HOURLY_CREDITS, MERRYMEN_FOMO_TENANT_HOURLY_CREDITS
- *              and MERRYMEN_FOMO_TENANT_DAILY_CREDITS, whole numbers, read by
+ *   caps       AGENTCAP_FOMO_GROUP_HOURLY_CREDITS, AGENTCAP_FOMO_TENANT_HOURLY_CREDITS
+ *              and AGENTCAP_FOMO_TENANT_DAILY_CREDITS, whole numbers, read by
  *              the same function the orchestrator uses (fomo/budget.ts
  *              fomoBudgetFrom), for the same reason: set them on both, then
  *              redeploy both. Unset, the defaults apply.
@@ -41,14 +41,14 @@
  *
  * HOSTED OR NOT IS THE CALLER'S TO SAY, as order-ceiling.ts and x-connect.ts
  * take it: a route handler passes its own isHostedMode(), and the MCP tools
- * pass true because MCP runs on hosted Merrymen only (mcp/config.ts). A
+ * pass true because MCP runs on hosted AgentCap only (mcp/config.ts). A
  * module under lib/ never reads the mode itself (lib/client-env.test.ts).
  *
  * MEMOISED AS A PROMISE, one per mode, and dropped on failure, so a database
  * that was down at the first question is retried at the next one instead of
  * forever.
  */
-import { getGrantStore } from "@merrymen/grant-store";
+import { getGrantStore } from "@agentcap/grant-store";
 import type { Db } from "../../../worker/src/db";
 import { fomoBudgetFrom, fomoPlanFrom, ModelBudget, type FomoBudgetConfig, type ModelBudgetConfig } from "../../../worker/src/fomo/budget";
 import { SELF_HOSTED_TENANT, type FomoAccess } from "../../../worker/src/fomo/contract";
@@ -77,7 +77,7 @@ const NO_ACCESS: FomoAccess = Object.freeze({ dataAccess: false, monitoring: fal
 export const FOMO_MODEL_BUDGET: Readonly<ModelBudgetConfig> = Object.freeze({ callsPerDay: 40, tokensPerDay: 160_000 });
 
 /** Said to a hosted wallet with no agent: Fomo research is for owners, and the fleet's credits are theirs. */
-export const FOMO_NEEDS_AGENT = "Fomo research is for Merrymen owners. Create your agent first, then ask me again.";
+export const FOMO_NEEDS_AGENT = "Fomo research is for AgentCap owners. Create your agent first, then ask me again.";
 
 /**
  * Whether a hosted tenant owns an agent. THROWS when the grant store cannot
@@ -137,7 +137,7 @@ export class FomoNotEnabledError extends Error {
  */
 export function hostedFomoApiKey(env: Env = process.env): string | null {
   if (!hostedFomoEnabled(env)) return null;
-  return env.MERRYMEN_FOMO_API_KEY?.trim() || env.FOMO_API_KEY?.trim() || null;
+  return env.AGENTCAP_FOMO_API_KEY?.trim() || env.FOMO_API_KEY?.trim() || null;
 }
 
 /**
@@ -152,7 +152,7 @@ export function selfHostedFomoReady(env: Env = process.env): boolean {
 
 /** The self-hosted key: the install's own settings (file first, then env), as the local worker reads it. */
 function selfHostedFomoApiKey(env: Env = process.env): string | null {
-  if (env.MERRYMEN_FOMO_ENABLED === "0") return null;
+  if (env.AGENTCAP_FOMO_ENABLED === "0") return null;
   const key = resolveConfig().fomoApiKey;
   return typeof key === "string" && key.trim() ? key.trim() : null;
 }

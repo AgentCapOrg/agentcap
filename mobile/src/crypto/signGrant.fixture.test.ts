@@ -14,7 +14,7 @@ vi.mock("./grantStore", () => ({
   },
 }));
 
-import { GRANT_PERP_LIGHTER, GRANT_PONS_CLASS, GRANT_TRENCHER, LIGHTER_ROUTE_V1, TRADEABLE_V2 } from "@merrymen/core";
+import { GRANT_PERP_LIGHTER, GRANT_PONS_CLASS, GRANT_TRENCHER, LIGHTER_ROUTE_V1, TRADEABLE_V2 } from "@agentcap/core";
 import { signGrant } from "./signGrant";
 import { accountFromMnemonic } from "./mnemonic";
 import {

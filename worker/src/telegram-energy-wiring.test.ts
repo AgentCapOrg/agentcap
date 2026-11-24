@@ -64,9 +64,9 @@ describe("index.ts hands the Telegram surfaces the tick's energy report", () => 
 
   it("nothing in the Telegram poll path reaches the energy buy", () => {
     // Read-only in v1: /status and the alert tell; the buy is the app chat's.
-    // Telegram's trades go through submitChatTrade, which refuses $MERRYMEN
+    // Telegram's trades go through submitChatTrade, which refuses $AGENTCAP
     // (the buy path's slice); nothing here may route around it.
     const telegram = literal("startTelegram({", "\n  });");
-    assert.doesNotMatch(telegram, /submitEnergyBuy|energy-buy|MERRYMEN/);
+    assert.doesNotMatch(telegram, /submitEnergyBuy|energy-buy|AGENTCAP/);
   });
 });

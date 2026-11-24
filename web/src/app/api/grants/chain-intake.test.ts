@@ -14,25 +14,25 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, before, beforeEach, describe, it } from "node:test";
-import { CHAINS } from "@merrymen/core";
+import { CHAINS } from "@agentcap/core";
 
 const A = "0xbC78E8b5d209Bf1D4706faEd06e155B5774275D7";
 const B = "0x1111111111111111111111111111111111111111";
 
 let home = "";
 let POST: (req: Request) => Promise<Response>;
-const saved = { home: process.env.MERRYMEN_HOME, hosted: process.env.MERRYMEN_HOSTED, grant: process.env.MERRYMEN_GRANT_FILE };
+const saved = { home: process.env.AGENTCAP_HOME, hosted: process.env.AGENTCAP_HOSTED, grant: process.env.AGENTCAP_GRANT_FILE };
 
 before(async () => {
   home = mkdtempSync(path.join(tmpdir(), "mm-grants-chain-"));
-  process.env.MERRYMEN_HOME = home;
-  delete process.env.MERRYMEN_HOSTED;
-  delete process.env.MERRYMEN_GRANT_FILE;
+  process.env.AGENTCAP_HOME = home;
+  delete process.env.AGENTCAP_HOSTED;
+  delete process.env.AGENTCAP_GRANT_FILE;
   // After the env: the route resolves its paths when it loads.
   ({ POST } = await import("./route"));
 });
 after(() => {
-  for (const [key, value] of [["MERRYMEN_HOME", saved.home], ["MERRYMEN_HOSTED", saved.hosted], ["MERRYMEN_GRANT_FILE", saved.grant]] as const) {
+  for (const [key, value] of [["AGENTCAP_HOME", saved.home], ["AGENTCAP_HOSTED", saved.hosted], ["AGENTCAP_GRANT_FILE", saved.grant]] as const) {
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
   }
@@ -64,7 +64,7 @@ describe("POST /api/grants, self-hosted — the chain id", () => {
       assert.equal(res.body.code, "unsupported_chain");
       assert.equal(
         res.body.error,
-        `this grant is for chain ${JSON.stringify(chainId)}, and Merrymen only runs on Robinhood Chain (4663) and its testnet (46630). Nothing was saved.`,
+        `this grant is for chain ${JSON.stringify(chainId)}, and AgentCap only runs on Robinhood Chain (4663) and its testnet (46630). Nothing was saved.`,
       );
       assert.equal(readFileSync(grantFile(), "utf8"), LIVE, "the grant in place is untouched");
       assert.equal(existsSync(archiveDir()), false, "nothing was archived for a grant that was never taken");
@@ -75,14 +75,14 @@ describe("POST /api/grants, self-hosted — the chain id", () => {
     const res = await post({ smartAccount: B, serialized: "0xserialized" });
     assert.equal(res.status, 400);
     assert.equal(res.body.code, "unsupported_chain");
-    assert.match(res.body.error ?? "", /^this grant names no chain, and Merrymen only runs on Robinhood Chain \(4663\)/);
+    assert.match(res.body.error ?? "", /^this grant names no chain, and AgentCap only runs on Robinhood Chain \(4663\)/);
     assert.equal(readFileSync(grantFile(), "utf8"), LIVE);
   });
 
   it("keeps a long id out of the message past 64 characters", async () => {
     const res = await post({ smartAccount: B, serialized: "0xserialized", chainId: "9".repeat(500) });
     assert.equal(res.status, 400);
-    assert.equal(res.body.error, `this grant is for chain "${"9".repeat(63)}, and Merrymen only runs on Robinhood Chain (4663) and its testnet (46630). Nothing was saved.`);
+    assert.equal(res.body.error, `this grant is for chain "${"9".repeat(63)}, and AgentCap only runs on Robinhood Chain (4663) and its testnet (46630). Nothing was saved.`);
   });
 
   it("takes 4663 and 46630 exactly as before", async () => {

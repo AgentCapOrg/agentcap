@@ -85,7 +85,7 @@ export interface CommandDeps {
   walletPurpose?: "spot" | "perps";
   controlEnabled: boolean;
   /**
-   * Hosted fleet (MERRYMEN_HOSTED)? The kill prompt has to say what a kill
+   * Hosted fleet (AGENTCAP_HOSTED)? The kill prompt has to say what a kill
    * does HERE. Self-hosted it archives an owner key on the owner's machine.
    * Hosted there is no owner key on the server to archive. Optional: absent
    * means self-hosted, which is what every fixture predating it describes.
@@ -231,7 +231,7 @@ export async function executeCommand(cmd: Command, deps: CommandDeps): Promise<s
     case "link": {
       const r = deps.link(cmd.code); // call once — link mutates state
       return r.ok
-        ? "🏹 you're linked — you now command this merryman. Try /status."
+        ? "🏹 you're linked — you now command this agentcapavatar. Try /status."
         : `couldn't link: ${r.reason ?? "bad or expired code"}`;
     }
     case "help":
@@ -324,7 +324,7 @@ export async function executeCommand(cmd: Command, deps: CommandDeps): Promise<s
         // advice that costs a session key and delivers nothing. Worded to
         // match what checkPolicy says for the same refusal, so the two read
         // alike wherever the owner meets them.
-        return "🧱 this wall carries no transfer permission — no withdrawal address was registered when it was signed, so the chain would refuse the send. Move funds with your owner key: `merrymen recover`.";
+        return "🧱 this wall carries no transfer permission — no withdrawal address was registered when it was signed, so the chain would refuse the send. Move funds with your owner key: `agentcap recover`.";
       }
       let usdg = cmd.usdg;
       let note = "";

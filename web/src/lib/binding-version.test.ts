@@ -1,7 +1,7 @@
 /**
  * WHICH SECURITY MODEL A CLAIM WAS MADE UNDER, AND WHY IT IS NEVER GUESSED.
  *
- * Merrymen is about to have two ways of proving the same two facts:
+ * AgentCap is about to have two ways of proving the same two facts:
  *
  *   legacy-wallet-owner-v1  the login wallet signs, and a SEPARATE browser-held
  *                           owner key co-signs. Authentication and owner
@@ -27,18 +27,18 @@ import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { DEFAULT_BINDING_VERSION, bindingMessage, isBindingVersion } from "@merrymen/core";
+import { DEFAULT_BINDING_VERSION, bindingMessage, isBindingVersion } from "@agentcap/core";
 
-process.env.MERRYMEN_SESSION_SECRET = "test-secret-at-least-thirty-two-characters-long";
-const testHome = mkdtempSync(join(tmpdir(), "merrymen-binding-version-"));
-process.env.MERRYMEN_HOME = testHome;
+process.env.AGENTCAP_SESSION_SECRET = "test-secret-at-least-thirty-two-characters-long";
+const testHome = mkdtempSync(join(tmpdir(), "agentcap-binding-version-"));
+process.env.AGENTCAP_HOME = testHome;
 delete process.env.DATABASE_URL;
-delete process.env.MERRYMEN_HOSTED;
+delete process.env.AGENTCAP_HOSTED;
 after(() => rmSync(testHome, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 }));
 
 import { ENFORCE_LEGACY_TWO_PROOF, issueChallengeNonce, verifyGrantBinding } from "./auth";
 
-const ORIGIN = "https://app.merrymen.dev";
+const ORIGIN = "https://app.agentcap.xyz";
 const SMART = "0x00000000000000000000000000000000000000a1" as `0x${string}`;
 const CHAIN = 4663;
 
@@ -295,14 +295,14 @@ test("the legacy message text is frozen, byte for byte", () => {
   assert.equal(
     text,
     [
-      "https://app.merrymen.dev wants you to authorize a merrymen agent account.",
+      "https://app.agentcap.xyz wants you to authorize a agentcap agent account.",
       "",
       "You are linking the agent wallet below to this login. It moves no funds.",
       "",
       "Agent account: 0x00000000000000000000000000000000000000a1",
       "Owner key: 0x00000000000000000000000000000000000000b2",
       "Chain ID: 4663",
-      "URI: https://app.merrymen.dev",
+      "URI: https://app.agentcap.xyz",
       "Nonce: NONCE",
     ].join("\n"),
   );

@@ -3,11 +3,11 @@
  *
  * The selector names which of a login's two wallets a request is about;
  * absent is Spot, so every existing client keeps its account. Here:
- *  - while MERRYMEN_PERPS is not paper, POST makes and renews no Perps wallet
+ *  - while AGENTCAP_PERPS is not paper, POST makes and renews no Perps wallet
  *    (?wallet=perps with a Perps grant is refused 403 before anything is read
  *    or stored), and a grant naming the other wallet than the request is
  *    refused whatever it says (dual-purpose*.test.ts make one at paper);
- *  - GET ?wallet=perps answers for the Perps wallet, whatever MERRYMEN_PERPS
+ *  - GET ?wallet=perps answers for the Perps wallet, whatever AGENTCAP_PERPS
  *    says, and never with the Spot wallet's status;
  *  - a permission replacement stops exactly the wallet it names, so a Perps
  *    renewal's first step never touches the Spot grant, and the other way round
@@ -28,26 +28,26 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, before, beforeEach, describe, it } from "node:test";
 import { privateKeyToAccount } from "viem/accounts";
-import type { StoredGrant } from "@merrymen/core";
+import type { StoredGrant } from "@agentcap/core";
 
-const ORIGIN = "https://app.merrymen.dev";
-const ENV = ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_GRANT_FILE", "MERRYMEN_SESSION_SECRET", "MERRYMEN_STORE_DEK", "DATABASE_URL", "MERRYMEN_PERPS", "MERRYMEN_PERPS_PAPER_TENANTS"] as const;
+const ORIGIN = "https://app.agentcap.xyz";
+const ENV = ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_GRANT_FILE", "AGENTCAP_SESSION_SECRET", "AGENTCAP_STORE_DEK", "DATABASE_URL", "AGENTCAP_PERPS", "AGENTCAP_PERPS_PAPER_TENANTS"] as const;
 const saved = Object.fromEntries(ENV.map((k) => [k, process.env[k]]));
 let home = "";
 let route: typeof import("./route");
 let auth: typeof import("@/lib/auth");
-let stores: typeof import("@merrymen/grant-store");
+let stores: typeof import("@agentcap/grant-store");
 
 before(async () => {
   home = mkdtempSync(path.join(tmpdir(), "mm-grants-wallet-"));
-  process.env.MERRYMEN_HOME = home;
-  // MERRYMEN_PERPS unset is off (perps-ceiling.ts): no Perps wallet is made here.
-  for (const k of ["MERRYMEN_HOSTED", "MERRYMEN_GRANT_FILE", "DATABASE_URL", "MERRYMEN_PERPS"] as const) delete process.env[k];
-  process.env.MERRYMEN_SESSION_SECRET = "test-secret-at-least-thirty-two-characters-long";
-  process.env.MERRYMEN_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
+  process.env.AGENTCAP_HOME = home;
+  // AGENTCAP_PERPS unset is off (perps-ceiling.ts): no Perps wallet is made here.
+  for (const k of ["AGENTCAP_HOSTED", "AGENTCAP_GRANT_FILE", "DATABASE_URL", "AGENTCAP_PERPS"] as const) delete process.env[k];
+  process.env.AGENTCAP_SESSION_SECRET = "test-secret-at-least-thirty-two-characters-long";
+  process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 7).toString("base64");
   route = await import("./route");
   auth = await import("@/lib/auth");
-  stores = await import("@merrymen/grant-store");
+  stores = await import("@agentcap/grant-store");
 });
 after(() => {
   pilot?.close();
@@ -72,18 +72,18 @@ const post = (query: string, body: unknown) =>
 const json = async (res: Response) => ({ status: res.status, body: (await res.json()) as Record<string, unknown> });
 /**
  * A Perps renewal's stop runs only where a Perps wallet can be renewed:
- * MERRYMEN_PERPS=paper, for this test alone (the file runs with it unset).
+ * AGENTCAP_PERPS=paper, for this test alone (the file runs with it unset).
  */
 const atPaper = (t: { after: (fn: () => void) => void }) => {
-  process.env.MERRYMEN_PERPS = "paper";
-  t.after(() => { delete process.env.MERRYMEN_PERPS; });
+  process.env.AGENTCAP_PERPS = "paper";
+  t.after(() => { delete process.env.AGENTCAP_PERPS; });
 };
 
 describe("self-hosted: no Perps wallet is made while perps is off, and the kill names none", () => {
   const grantFile = () => path.join(home, "grant.json");
   const kept = "{\"smartAccount\":\"0x00000000000000000000000000000000000000b2\"}\n";
   beforeEach(() => {
-    delete process.env.MERRYMEN_HOSTED;
+    delete process.env.AGENTCAP_HOSTED;
     writeFileSync(grantFile(), kept);
   });
   const spotGrant = { smartAccount: addr(0xa1), serialized: "0xserialized", chainId: 4663, grantFeatures: ["tradeable-v2"] };
@@ -166,8 +166,8 @@ describe("hosted: a permission replacement stops the wallet it names, and only t
     route.DELETE(new Request(`${ORIGIN}/api/grants${query}`, { method: "DELETE", headers: { "Content-Type": "application/json", ...signedIn() }, body: JSON.stringify(body) }));
 
   beforeEach(async () => {
-    process.env.MERRYMEN_HOSTED = "1";
-    process.env.MERRYMEN_PERPS_PAPER_TENANTS = T;
+    process.env.AGENTCAP_HOSTED = "1";
+    process.env.AGENTCAP_PERPS_PAPER_TENANTS = T;
     pilot?.close(); pilot = pilotFixture([T]);
     await stores.getGrantStore("spot").remove(T);
     await stores.getGrantStore("perps").remove(T);

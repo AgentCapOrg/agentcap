@@ -34,8 +34,8 @@ is read again.
 
 | Variable | Meaning |
 | --- | --- |
-| `MERRYMEN_COINGECKO_PRO_SPACING_MS` | Milliseconds between Pro requests on one lane. Default `3000` (20/min). Never below `60` (the plan's 1,000/min). |
-| `MERRYMEN_COINGECKO_MONTHLY_CREDITS` | The plan's monthly credits. When set, the spacing is raised to a floor at which the lane, running flat out for a 30-day month, spends at most its share. |
+| `AGENTCAP_COINGECKO_PRO_SPACING_MS` | Milliseconds between Pro requests on one lane. Default `3000` (20/min). Never below `60` (the plan's 1,000/min). |
+| `AGENTCAP_COINGECKO_MONTHLY_CREDITS` | The plan's monthly credits. When set, the spacing is raised to a floor at which the lane, running flat out for a 30-day month, spends at most its share. |
 
 The shares are 70% for the fleet worker lane (every tenant child, coordinated
 through one SQLite file) and 20% for a process-local lane (the web service, or
@@ -82,7 +82,7 @@ and asked again. A revoked
 or mistyped key latches each family it touches in the same way, so the log
 names every refused endpoint within a few minutes. Latches belong to the key
 that was refused (stored as a short sha256 fingerprint, never the key), so
-fixing or rotating `MERRYMEN_COINGECKO_PRO_API_KEY` and restarting asks
+fixing or rotating `AGENTCAP_COINGECKO_PRO_API_KEY` and restarting asks
 every endpoint again at once. A plan upgrade under the same key takes effect
 when the hour runs out.
 
@@ -94,7 +94,7 @@ unpaced public behaviour.
 
 ## Opt-in decision evidence
 
-`MERRYMEN_DECISION_RESEARCH_ACCOUNTS` on the orchestrator accepts comma- or
+`AGENTCAP_DECISION_RESEARCH_ACCOUNTS` on the orchestrator accepts comma- or
 space-separated complete smart-account addresses. It defaults to nobody and
 accepts neither prefixes nor `all`. The child compares its active signed grant's
 account, and applies this evidence only to the live fast-Trencher review.

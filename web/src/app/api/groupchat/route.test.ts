@@ -17,7 +17,7 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { after, afterEach, before, beforeEach, describe, it, mock } from "node:test";
 
-import { agentNameForSlug, type StoredGrant } from "@merrymen/core";
+import { agentNameForSlug, type StoredGrant } from "@agentcap/core";
 import { mintSession, SESSION_COOKIE } from "@/lib/auth";
 import { wrapSqlite, type Db } from "../../../../../worker/src/db";
 import { getGrantStore, resetGrantStoreForTest } from "../../../../../worker/src/grant-store";
@@ -28,7 +28,7 @@ import { GET as getMe } from "./me/route";
 import { DELETE, GET, POST } from "./route";
 import { setRoomForTest } from "./room";
 
-const ORIGIN = "https://app.merrymen.dev";
+const ORIGIN = "https://app.agentcap.xyz";
 const A = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as const;
 const B = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as const;
 /** Signed in, no grant: not an owner. */
@@ -40,7 +40,7 @@ const SA_B = "0x00000000000000000000000000000000000000b2" as const;
 const NOON = Date.UTC(2026, 8, 23, 12, 0, 0);
 
 const saved = Object.fromEntries(
-  ["MERRYMEN_HOME", "MERRYMEN_HOSTED", "MERRYMEN_SESSION_SECRET", "DATABASE_URL", "MERRYMEN_STORE_DEK", "MERRYMEN_GROUPCHAT"].map((k) => [
+  ["AGENTCAP_HOME", "AGENTCAP_HOSTED", "AGENTCAP_SESSION_SECRET", "DATABASE_URL", "AGENTCAP_STORE_DEK", "AGENTCAP_GROUPCHAT"].map((k) => [
     k,
     process.env[k],
   ]),
@@ -66,11 +66,11 @@ function grantFor(smartAccount: `0x${string}`): StoredGrant {
 
 before(async () => {
   home = mkdtempSync(path.join(tmpdir(), "mm-groupchat-route-"));
-  process.env.MERRYMEN_HOME = home;
-  process.env.MERRYMEN_HOSTED = "1";
-  process.env.MERRYMEN_SESSION_SECRET = "groupchat-route-test-secret-at-least-32-chars";
+  process.env.AGENTCAP_HOME = home;
+  process.env.AGENTCAP_HOSTED = "1";
+  process.env.AGENTCAP_SESSION_SECRET = "groupchat-route-test-secret-at-least-32-chars";
   delete process.env.DATABASE_URL;
-  delete process.env.MERRYMEN_STORE_DEK;
+  delete process.env.AGENTCAP_STORE_DEK;
   resetGrantStoreForTest();
   resetIdentityStoreForTest();
   await getGrantStore("spot").put(A, grantFor(SA_A));
@@ -97,8 +97,8 @@ let clock = NOON;
 
 /** A fresh room per test, with the ledger's `agents` rows the name is read from. */
 beforeEach(async () => {
-  process.env.MERRYMEN_HOSTED = "1";
-  delete process.env.MERRYMEN_GROUPCHAT;
+  process.env.AGENTCAP_HOSTED = "1";
+  delete process.env.AGENTCAP_GROUPCHAT;
   clock = NOON;
   raw = new DatabaseSync(":memory:");
   raw.exec("CREATE TABLE agents (smart_account TEXT PRIMARY KEY, name TEXT)");
@@ -231,23 +231,23 @@ const CODE = readFileSync(new URL("./route.ts", import.meta.url), "utf8")
 
 describe("hosted only", () => {
   it("answers 404 to every verb on a self-hosted install", async () => {
-    delete process.env.MERRYMEN_HOSTED;
+    delete process.env.AGENTCAP_HOSTED;
     assert.equal((await get()).status, 404);
     assert.equal((await post(A, { body: "hello" })).status, 404);
     assert.equal((await del(A, 1)).status, 404);
   });
 
-  it("MERRYMEN_GROUPCHAT=0 on the web answers every verb exactly like self-hosted, and writes nothing", async () => {
+  it("AGENTCAP_GROUPCHAT=0 on the web answers every verb exactly like self-hosted, and writes nothing", async () => {
     const line = await posted(await post(A, { body: "said before the switch" }));
     const verbs = [() => get(), () => get("?since=0", A), () => post(A, { body: "anyone here?" }), () => del(A, line.id)];
     const answer = async (res: Response) => [res.status, res.headers.get("cache-control"), await res.text()];
-    delete process.env.MERRYMEN_HOSTED;
+    delete process.env.AGENTCAP_HOSTED;
     const selfHosted: unknown[][] = [];
     for (const verb of verbs) selfHosted.push(await answer(await verb()));
     assert.deepEqual(selfHosted.map((a) => a[0]), [404, 404, 404, 404]);
-    process.env.MERRYMEN_HOSTED = "1";
+    process.env.AGENTCAP_HOSTED = "1";
     for (const off of ["0", " 0 ", "0\n"]) {
-      process.env.MERRYMEN_GROUPCHAT = off;
+      process.env.AGENTCAP_GROUPCHAT = off;
       for (const [i, verb] of verbs.entries()) {
         assert.deepEqual(await answer(await verb()), selfHosted[i], `${JSON.stringify(off)}, verb #${i}`);
       }
@@ -256,7 +256,7 @@ describe("hosted only", () => {
     assert.equal((raw.prepare("SELECT hidden FROM groupchat_messages").get() as { hidden: number }).hidden, 0, "none was taken back");
     // Anything but a 0 leaves the room open: the orchestrator reads it the same way.
     for (const on of ["", "1", "off", "false"]) {
-      process.env.MERRYMEN_GROUPCHAT = on;
+      process.env.AGENTCAP_GROUPCHAT = on;
       assert.equal((await get()).status, 200, JSON.stringify(on));
     }
   });
@@ -413,12 +413,12 @@ describe("GET says when it could not read", () => {
 });
 
 describe("POST: who may post", () => {
-  it("401 signed out, 403 signed in without a Merryman", async () => {
+  it("401 signed out, 403 signed in without a AgentCapAvatar", async () => {
     const out = await post(null, { body: "hi" });
     assert.equal(out.status, 401);
     const stranger = await post(C, { body: "hi" });
     assert.equal(stranger.status, 403);
-    assert.equal(((await stranger.json()) as { error: string }).error, "Only owners with a Merryman can post.");
+    assert.equal(((await stranger.json()) as { error: string }).error, "Only owners with a AgentCapAvatar can post.");
   });
 
   it("503, not 403, when the grant store cannot be read", async () => {

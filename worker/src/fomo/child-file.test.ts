@@ -114,7 +114,7 @@ function dossier(token: TokenIdentity, over: Partial<CoinDossier> = {}): CoinDos
   };
 }
 
-const LENS = "Source: trader activity grouped by Merrymen. Two buyers in the hour. [ref:dabc123r3c1] One objection on supply. [ref:dabc123r3c2]";
+const LENS = "Source: trader activity grouped by AgentCap. Two buyers in the hour. [ref:dabc123r3c1] One objection on supply. [ref:dabc123r3c2]";
 
 function signal(token: TokenIdentity, priority: RetrievalPriority = "discovery", over: Partial<ChildSignal> = {}): ChildSignal {
   return {

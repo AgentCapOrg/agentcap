@@ -10,8 +10,8 @@ import "../mcp-connect.css";
  * next.config.mjs sends it no-referrer and refuses framing.
  */
 export const metadata: Metadata = {
-  title: "Connect X · merrymen",
-  description: "Finish connecting the X account your Merryman posts from.",
+  title: "Connect X · agentcap",
+  description: "Finish connecting the X account your AgentCapAvatar posts from.",
   robots: { index: false, follow: false },
   referrer: "no-referrer",
 };

@@ -12,7 +12,7 @@ import { documentPolicy } from "@/lib/browser-security";
  *
  *   1. Host allowlist — reject any Host that isn't loopback or a private-LAN IP
  *      literal. DNS rebinding needs a PUBLIC domain name in the Host header, so
- *      this kills it, while still allowing the explicit MERRYMEN_HOST=0.0.0.0 LAN
+ *      this kills it, while still allowing the explicit AGENTCAP_HOST=0.0.0.0 LAN
  *      opt-in (reached via a private IP like 192.168.x.x).
  *   2. Cross-site block — check Origin independently of Fetch Metadata. Browsers
  *      omit Sec-Fetch-Site for ordinary private-LAN HTTP URLs, so its absence
@@ -64,13 +64,13 @@ function hostAllowed(hostHeader: string | null): boolean {
  * anything" — enforced by tenantOf()/requireTenant in each route handler, which
  * run in the node runtime with the signing secret. Middleware keeps the one
  * defence that still applies on a public origin: the cross-site block, which no
- * attacker page can forge past. Read `MERRYMEN_HOSTED` directly (edge runtime
+ * attacker page can forge past. Read `AGENTCAP_HOSTED` directly (edge runtime
  * can't import node modules) rather than through isHostedMode().
  */
-const HOSTED = ["1", "true", "yes"].includes((process.env.MERRYMEN_HOSTED ?? "").trim().toLowerCase());
+const HOSTED = ["1", "true", "yes"].includes((process.env.AGENTCAP_HOSTED ?? "").trim().toLowerCase());
 
 /**
- * The dedicated MCP domain (mcp.merrymen.dev), when there is one. It is the
+ * The dedicated MCP domain (mcp.agentcap.xyz), when there is one. It is the
  * same web service as the app, so without a word from here a browser that
  * opens it gets the whole terminal, signed out, and a client given the bare
  * domain gets HTML (mcp/landing.ts has the full story). Derived from
@@ -79,15 +79,15 @@ const HOSTED = ["1", "true", "yes"].includes((process.env.MERRYMEN_HOSTED ?? "")
  * every self-hosted install: then nothing below touches a page.
  */
 const MCP_HOST = dedicatedMcpHost({
-  MERRYMEN_OAUTH_ISSUER: process.env.MERRYMEN_OAUTH_ISSUER,
-  MERRYMEN_PUBLIC_ORIGIN: process.env.MERRYMEN_PUBLIC_ORIGIN,
-  MERRYMEN_MCP_RESOURCE_URL: process.env.MERRYMEN_MCP_RESOURCE_URL,
+  AGENTCAP_OAUTH_ISSUER: process.env.AGENTCAP_OAUTH_ISSUER,
+  AGENTCAP_PUBLIC_ORIGIN: process.env.AGENTCAP_PUBLIC_ORIGIN,
+  AGENTCAP_MCP_RESOURCE_URL: process.env.AGENTCAP_MCP_RESOURCE_URL,
 }, HOSTED);
 
 /** The browser's actual origin, preserving 127.0.0.1 (Next normalizes its URL). */
 function apiOrigin(req: NextRequest): string | null {
   try {
-    if (HOSTED && process.env.MERRYMEN_PUBLIC_ORIGIN) return new URL(process.env.MERRYMEN_PUBLIC_ORIGIN.trim()).origin;
+    if (HOSTED && process.env.AGENTCAP_PUBLIC_ORIGIN) return new URL(process.env.AGENTCAP_PUBLIC_ORIGIN.trim()).origin;
     const url = new URL(req.url);
     const host = req.headers.get("host");
     if (host) url.host = host;
@@ -127,10 +127,10 @@ function signedServerApi(pathname: string): boolean {
 // Exact public files/text endpoints only. A dotted agent name or approval identifier still
 // renders a document, so a generic file-extension exclusion is unsafe here.
 const STATIC_ASSETS = new Set([
-  "/sw.js", "/sdk/merrymen-browser.js", "/offline.html", "/manifest.webmanifest", "/llms.txt",
+  "/sw.js", "/sdk/agentcap-browser.js", "/offline.html", "/manifest.webmanifest", "/llms.txt",
   "/favicon.ico", "/favicon.svg", "/logo.svg", "/og.png", "/mcp-icon.svg", "/mcp-icon-512.png",
   "/icon-192.png", "/icon-512.png", "/icon-maskable-192.png", "/icon-maskable-512.png",
-  "/apple-touch-icon.png", "/merrymenlogo.png", "/atmos/sherwood-night.webp",
+  "/apple-touch-icon.png", "/agentcaplogo.png", "/atmos/sherwood-night.webp",
   ...["DMSans-latin.woff2", "DMSans-latin-ext.woff2", "DMSans-OFL.txt",
     "GeistPixel-latin.woff2", "GeistPixel-latin-ext.woff2", "Geist-numerals.woff2", "Geist-OFL.txt",
     "Inter-latin.woff2", "Inter-latin-ext.woff2", "Inter-vietnamese.woff2", "Inter-cyrillic.woff2", "Inter-OFL.txt",

@@ -3,7 +3,7 @@
  * plain text (mcp/assistant-setup.ts has the why and the wording).
  *
  * Served on every host this app answers on. On the dedicated MCP host
- * (mcp.merrymen.dev) a path with a file extension is never redirected
+ * (mcp.agentcap.xyz) a path with a file extension is never redirected
  * (mcp/landing.ts), so an assistant that fetched the server address and
  * landed on a help page can try /llms.txt on the same domain and get this.
  *
@@ -22,7 +22,7 @@ export function GET(): Response {
   const body = cfg.enabled
     ? llmsTxt({ server: cfg.resource, app: cfg.issuer, directory: cfg.directoryResource })
     : [
-      "# Merrymen",
+      "# AgentCap",
       "",
       "Assistant connections are switched off on this server, so there is no MCP server here to set up.",
       ...(cfg.disabledWhy ? ["", `Reason: ${cfg.disabledWhy}.`] : []),

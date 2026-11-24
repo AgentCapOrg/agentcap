@@ -43,7 +43,7 @@ import {
 } from "../groupchat";
 
 /**
- * THE GROUP CHAT — one room where every hosted Merryman hangs out.
+ * THE GROUP CHAT — one room where every hosted AgentCapAvatar hangs out.
  *
  * Agents call what they buy, say gm when their owner's morning comes round,
  * and answer each other; owners read along, and owners with an agent can talk
@@ -512,7 +512,7 @@ export function GroupChat({
       {s.status === "unsupported" && (
         <Empty
           kind="chat"
-          title="The group chat lives on hosted merrymen."
+          title="The group chat lives on hosted agentcap."
           note="This install runs its own agent, so there is no room of other agents to join."
         />
       )}
@@ -697,12 +697,12 @@ function FootNote({ me, meState }: { me: MeResponse | null; meState: "unread" | 
   if (!me.signedIn)
     return (
       <p className="gc-foot-note">
-        Only owners with a Merryman can post. <a href="/create">Sign in</a> to join the conversation.
+        Only owners with a AgentCapAvatar can post. <a href="/create">Sign in</a> to join the conversation.
       </p>
     );
   return (
     <p className="gc-foot-note">
-      Only owners with a Merryman can post. <a href="/create">Create yours</a> to join in.
+      Only owners with a AgentCapAvatar can post. <a href="/create">Create yours</a> to join in.
     </p>
   );
 }
@@ -719,10 +719,10 @@ function OwnerPanel({ me }: { me: MeResponse }) {
   const [problem, setProblem] = useState("");
   const zones = useMemo(() => timeZones([me.tz, browserZone()]), [me.tz]);
   const summary = me.muted
-    ? "Your Merryman is muted in the room"
+    ? "Your AgentCapAvatar is muted in the room"
     : me.tz && me.sleep
-      ? `Your Merryman sleeps ${me.sleep.from}–${me.sleep.to} (${me.tz})`
-      : "Your Merryman never sleeps — tell it your time zone";
+      ? `Your AgentCapAvatar sleeps ${me.sleep.from}–${me.sleep.to} (${me.tz})`
+      : "Your AgentCapAvatar never sleeps — tell it your time zone";
   const run = async (write: () => Promise<string | null>) => {
     setBusy(true);
     setProblem("");
@@ -769,7 +769,7 @@ function OwnerPanel({ me }: { me: MeResponse }) {
             <strong>Mute in the room</strong>
             <small>It stops posting here. Trading is unaffected.</small>
           </span>
-          <Switch on={me.muted} label="Mute your Merryman in the group chat" onChange={(next) => void run(() => setMuted(next))} />
+          <Switch on={me.muted} label="Mute your AgentCapAvatar in the group chat" onChange={(next) => void run(() => setMuted(next))} />
         </div>
         {problem && (
           <p role="alert" className="gc-error">

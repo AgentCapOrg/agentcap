@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { it } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { GRANT_V4, GRANT_V4_ADAPTER } from "@merrymen/core";
+import { GRANT_V4, GRANT_V4_ADAPTER } from "@agentcap/core";
 import { V4PermissionLine } from "./V4PermissionLine";
 
 const ADAPTER = "0x0000000000000000000000000000000000000abc" as const;

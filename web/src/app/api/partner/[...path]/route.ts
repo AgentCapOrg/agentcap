@@ -1,4 +1,4 @@
-import { isHostedMode } from "@merrymen/core";
+import { isHostedMode } from "@agentcap/core";
 import { getPartnerStore } from "@/lib/partner-store";
 import { createPartnerService, partnerFailure } from "@/lib/partner-service";
 import { readPartnerRuntime, replyToPartner } from "@/lib/partner-runtime";

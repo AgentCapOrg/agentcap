@@ -30,7 +30,7 @@ import {
   answeredGrantChanges, chainHoldOf, chainReadFloor, readChainHold, type DecisionRow, type GapChain, type PreviewEntry,
 } from "./ledger-resume";
 
-const root = realpathSync(mkdtempSync(path.join(os.tmpdir(), "merrymen-ledger-resume-")));
+const root = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-ledger-resume-")));
 const handles: DatabaseSync[] = [];
 after(() => { for (const h of handles) h.close(); rmSync(root, { recursive: true, force: true }); });
 const addr = (n: number) => `0x${n.toString(16).padStart(40, "0")}`;
@@ -291,12 +291,12 @@ describe("the evidence", () => {
   it("binds the books, the cursors and the home, and not the grant's incarnation, WAL, shm or mtimes", async () => {
     const f = await fixture();
     const home = path.join(root, `home-${f.id}`); mkdirSync(home, { recursive: true });
-    const book = new DatabaseSync(path.join(home, "merrymen.db")); book.exec("CREATE TABLE t (x)"); book.close();
+    const book = new DatabaseSync(path.join(home, "agentcap.db")); book.exec("CREATE TABLE t (x)"); book.close();
     writeFileSync(path.join(home, "ledger-source-blocked.json"), "{}");
     const read = () => readResumeEvidence(f.shared, { tenant: f.tenant, grant: { smartAccount: f.account, chainId: 4663, owner: f.owner }, home, nowSec: NOW, controls: CONTROLS });
     const first = await read();
-    writeFileSync(path.join(home, "merrymen.db-wal"), "wal"); writeFileSync(path.join(home, "merrymen.db-shm"), "shm");
-    utimesSync(path.join(home, "merrymen.db"), new Date(), new Date(Date.now() - 86_400_000));
+    writeFileSync(path.join(home, "agentcap.db-wal"), "wal"); writeFileSync(path.join(home, "agentcap.db-shm"), "shm");
+    utimesSync(path.join(home, "agentcap.db"), new Date(), new Date(Date.now() - 86_400_000));
     f.raw.prepare("UPDATE grants SET updated_at = 2000, row_version = 99 WHERE tenant = ?").run(f.tenant);
     assert.equal((await read()).digest, first.digest);
     writeFileSync(path.join(home, "paused"), "paused");
@@ -308,7 +308,7 @@ describe("the evidence", () => {
   });
   it("never binds a device number, which a volume reattached on another host changes", () => {
     const home = path.join(root, "dev-free"); mkdirSync(home, { recursive: true });
-    const book = new DatabaseSync(path.join(home, "merrymen.db")); book.exec("CREATE TABLE t (x)"); book.close();
+    const book = new DatabaseSync(path.join(home, "agentcap.db")); book.exec("CREATE TABLE t (x)"); book.close();
     const id = homeIdentity(home);
     assert.equal("dev" in id, false);
     assert.equal("dev" in (id.db ?? {}), false);
@@ -687,7 +687,7 @@ describe("a tenant held on a chain refusal: its window and its digest", () => {
         insert("2", "applied", 2_000, null);
         insert("3", "refused", 3_000, "the evidence changed since the preview");
       }
-      const r = await readResumeEvidence(shared, { tenant, grant: { smartAccount: account, chainId: 4663, owner }, home: "/nonexistent/merrymen-golden-home", nowSec: NOW,
+      const r = await readResumeEvidence(shared, { tenant, grant: { smartAccount: account, chainId: 4663, owner }, home: "/nonexistent/agentcap-golden-home", nowSec: NOW,
         controls: CONTROLS, ...(o.liveIntent === undefined ? {} : { liveIntent: o.liveIntent }) });
       assert.equal(r.digest, digest, JSON.stringify(o));
       assert.equal(Object.hasOwn(r.evidence.checks, "chainHeldSince"), false);
@@ -818,7 +818,7 @@ describe("approvals", () => {
   });
 });
 
-describe("automatic admission of re-signed paper tenants (MERRYMEN_RESUME_AUTO_PAPER)", () => {
+describe("automatic admission of re-signed paper tenants (AGENTCAP_RESUME_AUTO_PAPER)", () => {
   /** A pre-incident paper tenant that holds nothing: the fixture less its position, live basis and floor. */
   async function paperHoldingNothing() {
     const f = await fixture();
@@ -841,10 +841,10 @@ describe("automatic admission of re-signed paper tenants (MERRYMEN_RESUME_AUTO_P
   it("the variable is 1 or unset; anything else refuses boot, and at runtime approves nobody", () => {
     assert.equal(parseResumeAutoPaper(undefined), false);
     assert.equal(parseResumeAutoPaper("1"), true);
-    for (const bad of ["0", "", "true", " 1", "1 ", "yes"]) assert.throws(() => parseResumeAutoPaper(bad), /MERRYMEN_RESUME_AUTO_PAPER is not 1/);
-    assert.equal(resumeAutoPaperOn({ MERRYMEN_RESUME_AUTO_PAPER: "1" }), true);
+    for (const bad of ["0", "", "true", " 1", "1 ", "yes"]) assert.throws(() => parseResumeAutoPaper(bad), /AGENTCAP_RESUME_AUTO_PAPER is not 1/);
+    assert.equal(resumeAutoPaperOn({ AGENTCAP_RESUME_AUTO_PAPER: "1" }), true);
     assert.equal(resumeAutoPaperOn({}), false);
-    assert.equal(resumeAutoPaperOn({ MERRYMEN_RESUME_AUTO_PAPER: "true" }), false, "fails closed");
+    assert.equal(resumeAutoPaperOn({ AGENTCAP_RESUME_AUTO_PAPER: "true" }), false, "fails closed");
   });
 
   it("room under the process cap: the runbook's 40 of 48, counting open approvals as taken", () => {
@@ -1016,7 +1016,7 @@ describe("automatic admission of re-signed paper tenants (MERRYMEN_RESUME_AUTO_P
     const run = await recordPreviewRun(f.shared, [entry], 1);
     const insert = /INSERT INTO ledger_resume_approvals/;
     // What the error says can carry a connection string: never in a line or a reason.
-    const coded = (code: string) => () => Object.assign(new Error("postgres://merrymen:hunter2@db.internal/x: canceling statement"), { code });
+    const coded = (code: string) => () => Object.assign(new Error("postgres://agentcap:hunter2@db.internal/x: canceling statement"), { code });
     const auto = (db: Db, lines: string[]) => recordResumeApproval(db, { entry, run, at: 1, nowMs: 2, source: "auto-paper" }, (l) => lines.push(l));
     for (const code of ["57014", "40001", "40P01", "08006", "08001", "57P01", "53300", "55P03", "ECONNRESET", "ETIMEDOUT"]) {
       const lines: string[] = [];
@@ -1067,7 +1067,7 @@ describe("automatic admission of re-signed paper tenants (MERRYMEN_RESUME_AUTO_P
     assert.deepEqual(await autoPaperVerdict(f.shared, entry, ENFORCED), { kind: "auto" }, "the safe case, with consent in force");
     const v = await autoPaperVerdict(f.shared, entry, { consentEnforced: false });
     assert.equal(v.kind, "manual");
-    assert.match((v as { why: string[] }).why.join(" | "), /live-trading consent is stood down on this deployment \(MERRYMEN_LIVE_INTENT_STAND_DOWN=1\)/);
+    assert.match((v as { why: string[] }).why.join(" | "), /live-trading consent is stood down on this deployment \(AGENTCAP_LIVE_INTENT_STAND_DOWN=1\)/);
   });
 
   it("a missing column is schema drift, not an absent table: the verdict throws rather than read it as nothing open", async () => {
@@ -1243,7 +1243,7 @@ describe("the home archive", () => {
   function home(id: string) {
     const h = path.join(root, "vol", "children", id); mkdirSync(h, { recursive: true });
     for (const [name, body] of [["grant.json", "SESSION KEY"], ["settings.json", '{"telegramBotToken":"secret"}'], ["telegram.json", '{"offset":77}'],
-      ["telegram-promoted.json", "{}"], ["paused", "paused"], ["kill-request-a.superseded.json", '{"grant":"x"}'], ["merrymen.db", "book"],
+      ["telegram-promoted.json", "{}"], ["paused", "paused"], ["kill-request-a.superseded.json", '{"grant":"x"}'], ["agentcap.db", "book"],
       ["ledger-source-blocked.json", "{}"]] as const) writeFileSync(path.join(h, name), body);
     mkdirSync(path.join(h, "grants")); writeFileSync(path.join(h, "grants", "old.json"), "OLD KEY");
     return h;
@@ -1257,11 +1257,11 @@ describe("the home archive", () => {
     assert.deepEqual(readdirSync(h).sort(), ["kill-request-a.superseded.json", "paused", "telegram-promoted.json", "telegram.json"]);
     assert.equal(readFileSync(path.join(h, "telegram.json"), "utf8"), '{"offset":77}');
     const archived = readdirSync(dest).sort();
-    assert.deepEqual(archived, [".archive-manifest.json", "kill-request-a.superseded.json", "ledger-source-blocked.json", "merrymen.db", "paused"]);
+    assert.deepEqual(archived, [".archive-manifest.json", "kill-request-a.superseded.json", "ledger-source-blocked.json", "agentcap.db", "paused"]);
     assert.equal(lstatSync(dest).mode & 0o777, 0o700);
     assert.equal(lstatSync(path.join(dest, ".archive-manifest.json")).mode & 0o777, 0o600);
     const manifest = JSON.parse(readFileSync(path.join(dest, ".archive-manifest.json"), "utf8")) as { files: Array<{ path: string }> };
-    assert.deepEqual(manifest.files.map((f) => f.path).sort(), ["kill-request-a.superseded.json", "ledger-source-blocked.json", "merrymen.db", "paused"]);
+    assert.deepEqual(manifest.files.map((f) => f.path).sort(), ["kill-request-a.superseded.json", "ledger-source-blocked.json", "agentcap.db", "paused"]);
     for (const secret of ["SESSION KEY", "OLD KEY", "secret"]) {
       for (const name of archived) if (lstatSync(path.join(dest, name)).isFile()) assert.ok(!readFileSync(path.join(dest, name), "utf8").includes(secret), `${secret} in ${name}`);
     }
@@ -1271,7 +1271,7 @@ describe("the home archive", () => {
     let calls = 0;
     // Lose the lease right after the rename: the carry is left staged.
     assert.throws(() => archiveTenantHome({ home: h, archiveRoot, generation: gen, mayWrite: () => ++calls < 4 }), /Lost the tenant lease/);
-    assert.equal(existsSync(path.join(archiveRoot, gen, "merrymen.db")), true);
+    assert.equal(existsSync(path.join(archiveRoot, gen, "agentcap.db")), true);
     assert.equal(existsSync(h), false);
     const r = archiveTenantHome({ home: h, archiveRoot, generation: gen, mayWrite: () => true });
     assert.equal(r.archivePath, path.join(archiveRoot, gen));
@@ -1309,7 +1309,7 @@ describe("the home archive", () => {
   it("a lost lease before the rename moves nothing", () => {
     const h = home("t3"), archiveRoot = path.join(root, "vol", "archive", "t3"), gen = "00000000-0000-4000-8000-000000000013";
     assert.throws(() => archiveTenantHome({ home: h, archiveRoot, generation: gen, mayWrite: () => false }), /Lost the tenant lease/);
-    assert.ok(existsSync(path.join(h, "grant.json")) && existsSync(path.join(h, "merrymen.db")));
+    assert.ok(existsSync(path.join(h, "grant.json")) && existsSync(path.join(h, "agentcap.db")));
     assert.equal(existsSync(path.join(archiveRoot, gen)), false);
   });
   it("with no home there is nothing to archive", () => {
@@ -1332,7 +1332,7 @@ describe("the home archive", () => {
   /** A home whose telegram.json is `body` at `mode`, archived and carried. */
   function carry(id: string, body: string, mode: number, extra: Record<string, [string, number]> = {}) {
     const h = path.join(root, "vol", "children", id); mkdirSync(h, { recursive: true });
-    for (const [name, [b, m]] of Object.entries({ "telegram.json": [body, mode] as [string, number], "merrymen.db": ["book", 0o600] as [string, number], ...extra })) {
+    for (const [name, [b, m]] of Object.entries({ "telegram.json": [body, mode] as [string, number], "agentcap.db": ["book", 0o600] as [string, number], ...extra })) {
       writeFileSync(path.join(h, name), b); chmodSync(path.join(h, name), m);
     }
     const r = archiveTenantHome({ home: h, archiveRoot: path.join(root, "vol", "archive", id), generation: `00000000-0000-4000-8000-0000000001${id.slice(-2)}`, mayWrite: () => true });
@@ -1451,7 +1451,7 @@ describe("the home archive", () => {
     const h = path.join(root, "vol", "children", id), archiveRoot = path.join(root, "vol", "archive", id), gen = `00000000-0000-4000-8000-0000000002${id.slice(-2)}`;
     mkdirSync(h, { recursive: true });
     writeFileSync(path.join(h, "telegram.json"), LINKED, { mode: 0o600 });
-    writeFileSync(path.join(h, "merrymen.db"), "book", { mode: 0o600 });
+    writeFileSync(path.join(h, "agentcap.db"), "book", { mode: 0o600 });
     record?.(path.join(h, "telegram-promoted.json"));
     return { h, archiveRoot, gen, dest: path.join(archiveRoot, gen) };
   }
@@ -1799,14 +1799,14 @@ describe("registerAttestedGapSource", () => {
     const receipt = f.raw.prepare("SELECT state, generation, source_identity, source_inode FROM tenant_ledger_import WHERE tenant = ?").get(f.tenant) as Record<string, unknown>;
     assert.deepEqual({ state: receipt.state, generation: receipt.generation, identity: receipt.source_identity },
       { state: "consumed", generation: r.generation, identity: r.generation });
-    assert.equal(receipt.source_inode, String(lstatSync(path.join(p.home, "merrymen.db"), { bigint: true }).ino));
+    assert.equal(receipt.source_inode, String(lstatSync(path.join(p.home, "agentcap.db"), { bigint: true }).ino));
     assert.equal((f.raw.prepare("SELECT state FROM ledger_resume_approvals").get() as { state: string }).state, "registered");
     assert.equal((f.raw.prepare("SELECT count(*) AS n FROM ledger_resume_attestations").get() as { n: number }).n, 1);
     assert.deepEqual({ ...(f.raw.prepare("SELECT chain_from_block, chain_head FROM ledger_resume_attestations").get() as object) },
       { chain_from_block: "1700000", chain_head: "2000250" }, "the attestation records the chain window read for it, to the head read last");
-    const book = new DatabaseSync(path.join(p.home, "merrymen.db"), { readOnly: true });
+    const book = new DatabaseSync(path.join(p.home, "agentcap.db"), { readOnly: true });
     try { assert.equal((book.prepare("SELECT count(*) AS n FROM trades").get() as { n: number }).n, 0); } finally { book.close(); }
-    assert.equal(lstatSync(path.join(p.home, "merrymen.db")).mode & 0o777, 0o600);
+    assert.equal(lstatSync(path.join(p.home, "agentcap.db")).mode & 0o777, 0o600);
   });
   it("the approval and the receipt change together: a refusal inside rolls every row back", async () => {
     const p = await prepared();
@@ -1831,7 +1831,7 @@ describe("registerAttestedGapSource", () => {
       return fn(wrapped);
     }) };
     await assert.rejects(registerAttestedGapSource({ ...p.args, shared: flaky }), /connection lost/);
-    assert.equal(existsSync(path.join(p.home, "merrymen.db")), true, "the book outlived the rolled-back transaction");
+    assert.equal(existsSync(path.join(p.home, "agentcap.db")), true, "the book outlived the rolled-back transaction");
     const r = await registerAttestedGapSource(p.args);
     assert.equal((p.f.raw.prepare("SELECT source_identity FROM tenant_ledger_import WHERE tenant = ?").get(p.f.tenant) as { source_identity: string }).source_identity, r.generation);
     assert.equal((p.f.raw.prepare("SELECT state FROM ledger_resume_approvals").get() as { state: string }).state, "registered");
@@ -1840,7 +1840,7 @@ describe("registerAttestedGapSource", () => {
     for (const leftover of ["empty", "schema-only"] as const) {
       const p = await prepared();
       mkdirSync(p.home, { recursive: true, mode: 0o700 });
-      const file = path.join(p.home, "merrymen.db");
+      const file = path.join(p.home, "agentcap.db");
       writeFileSync(file, "", { mode: 0o600 });
       if (leftover === "schema-only") {
         const half = new DatabaseSync(file);
@@ -1862,7 +1862,7 @@ describe("registerAttestedGapSource", () => {
     for (const foreign of ["a-row", "other-identity"] as const) {
       const p = await prepared();
       mkdirSync(p.home, { recursive: true, mode: 0o700 });
-      const file = path.join(p.home, "merrymen.db");
+      const file = path.join(p.home, "agentcap.db");
       const other = new DatabaseSync(file);
       try {
         await applyLedgerSchema(wrapSqlite(other));
@@ -1890,7 +1890,7 @@ describe("registerAttestedGapSource", () => {
       const p = await make();
       await assert.rejects(registerAttestedGapSource(p.args), /refused/);
       assert.deepEqual(p.f.raw.prepare("SELECT table_name, last_id, last_stamp, updated_at FROM mirror_state WHERE tenant = ? ORDER BY table_name").all(p.f.tenant).map((x) => ({ ...x })), p.before.marks);
-      assert.equal(existsSync(path.join(p.home, "merrymen.db")), false);
+      assert.equal(existsSync(path.join(p.home, "agentcap.db")), false);
     }
   });
   it("refuses a chain window that is not one, moving nothing; a tenant that needed no chain read attests none", async () => {
@@ -1908,7 +1908,7 @@ describe("registerAttestedGapSource", () => {
     const dek = Buffer.alloc(32, 9);
     /** What the spawn path writes before its later gates: the restored practice book, its paper basis, the live seed, a floor, the day's energy. */
     function seed(home: string, account: string, extra?: (raw: DatabaseSync) => void) {
-      const book = new DatabaseSync(path.join(home, "merrymen.db"));
+      const book = new DatabaseSync(path.join(home, "agentcap.db"));
       try {
         book.prepare("INSERT INTO paper_book (agent_id, cash_usdg, vault_usdg, hwm_usdg, shares, updated_at) VALUES (?, 90, 0, 100, '{}', 1)").run(account);
         book.prepare("INSERT INTO cost_basis VALUES (?, 'paper', 'COIN', '10', '20', 1)").run(account);
@@ -1947,12 +1947,12 @@ describe("registerAttestedGapSource", () => {
         await assert.rejects(registerLedgerSource(o), /refused/, `${label}: registerLedgerSource`);
       };
       await refusedWith("a trade with no agent", (p) => {
-        const book = new DatabaseSync(path.join(p.home, "merrymen.db"));
+        const book = new DatabaseSync(path.join(p.home, "agentcap.db"));
         try { book.prepare("INSERT INTO trades (agent_id, kind, target, amount_usdg, status, created_at) VALUES (?, 'swap', 'x', 1, 'paper', 1)").run(p.f.account); }
         finally { book.close(); }
       });
       await refusedWith("an event with no agent", (p) => {
-        const book = new DatabaseSync(path.join(p.home, "merrymen.db"));
+        const book = new DatabaseSync(path.join(p.home, "agentcap.db"));
         try { book.prepare("INSERT INTO events (agent_id, level, message, created_at) VALUES (?, 'info', 'x', 1)").run(p.f.account); }
         finally { book.close(); }
       });

@@ -20,17 +20,17 @@ const args = {
 test("research opt-in binds exact account addresses and accepts no wildcard or prefix", () => {
   assert.equal(decisionResearchEnabledFor(TOKEN, {}), false);
   for (const value of ["all", "*", TOKEN.slice(0, 10), `${TOKEN}junk`, "0x" + "0".repeat(40)]) {
-    assert.equal(decisionResearchEnabledFor(TOKEN, { MERRYMEN_DECISION_RESEARCH_ACCOUNTS: value }), false);
+    assert.equal(decisionResearchEnabledFor(TOKEN, { AGENTCAP_DECISION_RESEARCH_ACCOUNTS: value }), false);
   }
-  const env = { MERRYMEN_DECISION_RESEARCH_ACCOUNTS: `${OTHER},\n${TOKEN.toUpperCase().replace("0X", "0x")}` };
+  const env = { AGENTCAP_DECISION_RESEARCH_ACCOUNTS: `${OTHER},\n${TOKEN.toUpperCase().replace("0X", "0x")}` };
   assert.equal(decisionResearchEnabledFor(TOKEN, env), true);
   assert.equal(decisionResearchEnabledFor(`0x${"c".repeat(40)}`, env), false);
 });
 
 test("the boot line names the allowlisted accounts and only counts what is not an address", () => {
   assert.equal(decisionResearchBootLine({}), "decision research: nobody");
-  assert.equal(decisionResearchBootLine({ MERRYMEN_DECISION_RESEARCH_ACCOUNTS: "secret-ish, *" }), "decision research: nobody (2 entries are not an address)");
-  const line = decisionResearchBootLine({ MERRYMEN_DECISION_RESEARCH_ACCOUNTS: `${TOKEN}, alan ,0x${"0".repeat(40)}` });
+  assert.equal(decisionResearchBootLine({ AGENTCAP_DECISION_RESEARCH_ACCOUNTS: "secret-ish, *" }), "decision research: nobody (2 entries are not an address)");
+  const line = decisionResearchBootLine({ AGENTCAP_DECISION_RESEARCH_ACCOUNTS: `${TOKEN}, alan ,0x${"0".repeat(40)}` });
   assert.equal(line, `decision research: 1 account(s) — ${TOKEN}; 2 entries are not an address`);
   assert.doesNotMatch(line, /alan/);
 });

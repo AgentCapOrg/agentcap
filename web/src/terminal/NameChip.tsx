@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { agentNameForSlug, DEFAULT_AGENT_NAME } from "@merrymen/core";
+import { agentNameForSlug, DEFAULT_AGENT_NAME } from "@agentcap/core";
 
 /**
  * "NAME YOUR AGENT", ONE TAP, ON THE AGENT'S OWN HEADER.
@@ -20,7 +20,7 @@ import { agentNameForSlug, DEFAULT_AGENT_NAME } from "@merrymen/core";
  * the same name rule as the soul, and whatever it says back is shown here.
  */
 
-const KEEP_KEY = (slug: string | null) => `merrymen.keep-name.${slug ?? "unlinked"}`;
+const KEEP_KEY = (slug: string | null) => `agentcap.keep-name.${slug ?? "unlinked"}`;
 
 function kept(slug: string | null): boolean {
   try {

@@ -122,13 +122,13 @@ export const KEY_INSTALL_LABEL = "your trading key's permissions";
 /**
  * What an energy purchase is called wherever a trade is shown.
  *
- * NOT the token's own ticker and never "a coin I can't name": $MERRYMEN bought
+ * NOT the token's own ticker and never "a coin I can't name": $AGENTCAP bought
  * for energy is capacity, not a position — it is not valued, not sold by a
  * strategy, and pickAcquiredLeg refuses it, so a row recovered after a restart
  * has no other name to fall back on. Saying "energy" is also what stops an
  * owner reading it as a trade they should expect a profit or a loss from.
  */
-export const ENERGY_LABEL = "energy ($MERRYMEN)";
+export const ENERGY_LABEL = "energy ($AGENTCAP)";
 
 /**
  * Is this row an energy purchase? The worker's own kind, or — for an older
@@ -138,8 +138,8 @@ export function isEnergyRow(r: { kind: string; sell_token?: string | null; buy_t
   return r.kind === ENERGY_BUY_KIND || isEnergyReserveToken(nonCashLeg(r));
 }
 
-/** Asked for "merrymen", "$MERRYMEN" or "energy", the energy rows answer. */
-const ENERGY_WORDS = new Set(["merrymen", "$merrymen", "energy"]);
+/** Asked for "agentcap", "$AGENTCAP" or "energy", the energy rows answer. */
+const ENERGY_WORDS = new Set(["agentcap", "$agentcap", "energy"]);
 
 const FILLED = new Set(["landed", "paper"]);
 // 'dropped' is here as what the owner asks "refused" for: a trade that did not

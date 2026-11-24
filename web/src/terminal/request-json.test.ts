@@ -75,14 +75,14 @@ describe("requestJson", () => {
     const e = await failure();
     assert.equal(e.status, 0, "no answer at all is status 0");
     assert.doesNotMatch(e.message, RAW);
-    assert.match(e.message, /reach merrymen/);
+    assert.match(e.message, /reach agentcap/);
   });
 
   it("says a dropped connection in plain words", async () => {
     refuse(new TypeError("fetch failed"));
     const e = await failure();
     assert.equal(e.status, 0);
-    assert.match(e.message, /reach merrymen/);
+    assert.match(e.message, /reach agentcap/);
   });
 
   it("lets a caller abort an in-flight request", async () => {
@@ -205,7 +205,7 @@ describe("what a server error may say to the owner", () => {
       const e = await failure();
       assert.equal(e.status, 500);
       assert.doesNotMatch(e.message, /ECONNREFUSED|127\.0\.0\.1|5432/);
-      assert.match(e.message, /merrymen answered with an error \(500\)/);
+      assert.match(e.message, /agentcap answered with an error \(500\)/);
       assert.ok(warned.some((args) => JSON.stringify(args).includes("ECONNREFUSED")), "the cause is kept where a developer looks");
     } finally {
       console.warn = warn;

@@ -1,13 +1,13 @@
 # kotlinx.serialization keeps its generated serializers on the companion.
 -keepattributes *Annotation*, InnerClasses
 -dontnote kotlinx.serialization.**
--keepclassmembers class dev.merrymen.app.** {
+-keepclassmembers class dev.agentcap.app.** {
     *** Companion;
 }
--keepclasseswithmembers class dev.merrymen.app.** {
+-keepclasseswithmembers class dev.agentcap.app.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
--keep,includedescriptorclasses class dev.merrymen.app.net.**$$serializer { *; }
+-keep,includedescriptorclasses class dev.agentcap.app.net.**$$serializer { *; }
 
 # Retrofit / OkHttp
 -dontwarn okhttp3.**

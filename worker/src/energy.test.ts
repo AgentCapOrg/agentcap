@@ -57,7 +57,7 @@ describe("the day is a UTC calendar day", () => {
   });
 });
 
-describe("MERRYMEN_ENERGY_GATE defaults to doing nothing", () => {
+describe("AGENTCAP_ENERGY_GATE defaults to doing nothing", () => {
   it("unset, '0' and garbage are off", () => {
     assert.equal(energyModeOf(undefined), "off");
     assert.equal(energyModeOf(""), "off");

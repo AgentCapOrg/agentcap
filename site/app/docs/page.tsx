@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Docs",
-  description: "Install merrymen, create and fund a wallet, run it, set up Telegram, enable PC control, and understand the safety model.",
+  description: "Install agentcap, create and fund a wallet, run it, set up Telegram, enable PC control, and understand the safety model.",
 };
 
 const TOC = [
@@ -13,7 +13,7 @@ const TOC = [
   ["Reference", [["safety", "Safety model"], ["config", "Configuration"], ["troubleshooting", "Troubleshooting"], ["faq", "FAQ"]]],
 ] as const;
 
-const GITHUB = "https://github.com/millw14/merrymen";
+const GITHUB = "https://github.com/millw14/agentcap";
 /** Beta testers' room. Kept in sync with TELEGRAM_BETA in app/page.tsx and components/Footer.tsx. */
 const TELEGRAM_BETA = "https://t.me/+oL-7xzghFwA4OTc8";
 
@@ -38,7 +38,7 @@ export default function Docs() {
       <article className="doc-body">
         <h1>Documentation</h1>
         <p className="doc-lead">
-          merrymen is a self-hosted band of autonomous trading agents for Robinhood Chain. Everything
+          agentcap is a self-hosted band of autonomous trading agents for Robinhood Chain. Everything
           runs on your machine; your keys never leave it. This guide takes you from install to a
           named agent you chat with on Telegram.
         </p>
@@ -48,45 +48,45 @@ export default function Docs() {
         <p>
           Runs on <strong>Linux, macOS, and Windows</strong> — one Node package, no Docker, no clone.
           Requires <strong>Node 22.12+</strong> (for the built-in SQLite); no Node yet? The one-line
-          installer sets it up and puts merrymen on your PATH.
+          installer sets it up and puts agentcap on your PATH.
         </p>
         <pre className="code">
 {`# Linux / macOS
-curl -fsSL https://raw.githubusercontent.com/millw14/merrymen/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/millw14/agentcap/main/install.sh | bash
 
 # Windows (PowerShell)
-irm https://raw.githubusercontent.com/millw14/merrymen/main/install.ps1 | iex`}
+irm https://raw.githubusercontent.com/millw14/agentcap/main/install.ps1 | iex`}
         </pre>
         <p>Already have Node 22.12+? This works on any OS:</p>
         <pre className="code">
-{`npm install -g merrymen
-merrymen setup      # checks node / npm / PATH, prints exact fixes
-merrymen start      # dashboard at localhost:3100 + the worker
-merrymen update     # upgrade later (stops the band, installs, restarts)`}
+{`npm install -g agentcap
+agentcap setup      # checks node / npm / PATH, prints exact fixes
+agentcap start      # dashboard at localhost:3100 + the worker
+agentcap update     # upgrade later (stops the band, installs, restarts)`}
         </pre>
         <p>
           On a headless Linux box the dashboard won&apos;t auto-open — it prints{" "}
           <code className="inline">localhost:3100</code>; set{" "}
-          <code className="inline">MERRYMEN_HOST=0.0.0.0</code> to reach it across a trusted LAN.
-          Verify a fresh box with <code className="inline">merrymen doctor</code> — it checks Node,
+          <code className="inline">AGENTCAP_HOST=0.0.0.0</code> to reach it across a trusted LAN.
+          Verify a fresh box with <code className="inline">agentcap doctor</code> — it checks Node,
           SQLite, RPC reach, keys, and paper/live mode, no wallet needed.
         </p>
         <div className="callout">
-          <strong>“merrymen: command not found”?</strong> npm&apos;s global-bin folder isn&apos;t on your PATH.
-          Use <code className="inline">npx merrymen start</code>, or run <code className="inline">merrymen setup</code> for the
+          <strong>“agentcap: command not found”?</strong> npm&apos;s global-bin folder isn&apos;t on your PATH.
+          Use <code className="inline">npx agentcap start</code>, or run <code className="inline">agentcap setup</code> for the
           exact one-time fix for your OS.
         </div>
         <p>
-          All your data lives in <code className="inline">~/.merrymen</code> (settings, grant, ledger, your
+          All your data lives in <code className="inline">~/.agentcap</code> (settings, grant, ledger, your
           strategies, your agent&apos;s soul). The install is disposable — upgrades never touch your data.
           The dashboard binds to <strong>localhost only</strong>; to reach it from your phone on a
-          trusted network, start with <code className="inline">MERRYMEN_HOST=0.0.0.0 merrymen start</code>.
+          trusted network, start with <code className="inline">AGENTCAP_HOST=0.0.0.0 agentcap start</code>.
         </p>
 
         {/* ── wallet ── */}
         <h2 id="wallet">Create &amp; fund a wallet</h2>
         <p>
-          Open <code className="inline">localhost:3100/grant</code>. There is nothing to connect — merrymen
+          Open <code className="inline">localhost:3100/grant</code>. There is nothing to connect — agentcap
           generates a fresh account, shows you the owner key to <strong>back up</strong>, and lets you
           fund it. Pick your ground:
         </p>
@@ -97,7 +97,7 @@ merrymen update     # upgrade later (stops the band, installs, restarts)`}
           <tbody>
             <tr>
               <td><strong>testnet · 46630</strong></td>
-              <td>The sandbox (default). Free <strong>gas</strong> from the faucet, and the grant, caps, policy checks, live prices and journal all run for real. The trading venues aren&apos;t deployed there, so swaps simulate and no-route by design. <strong>Send gas, not capital:</strong> merrymen only knows the mainnet token addresses, so USDG sent to testnet reads 0 and is never traded — the band trades a simulated 1,000 USDG paper book at live prices instead.</td>
+              <td>The sandbox (default). Free <strong>gas</strong> from the faucet, and the grant, caps, policy checks, live prices and journal all run for real. The trading venues aren&apos;t deployed there, so swaps simulate and no-route by design. <strong>Send gas, not capital:</strong> agentcap only knows the mainnet token addresses, so USDG sent to testnet reads 0 and is never traded — the band trades a simulated 1,000 USDG paper book at live prices instead.</td>
             </tr>
             <tr>
               <td><strong>mainnet · 4663</strong></td>
@@ -117,7 +117,7 @@ merrymen update     # upgrade later (stops the band, installs, restarts)`}
         <div className="callout">
           <strong>Going live is one key.</strong> To sign real trades, paste a free{" "}
           <a href="https://dashboard.pimlico.io" target="_blank" rel="noreferrer">Pimlico</a> API key in
-          settings — merrymen builds the bundler URL for your wallet&apos;s chain automatically, so it can
+          settings — agentcap builds the bundler URL for your wallet&apos;s chain automatically, so it can
           never point at the wrong one. No key? The band runs in <strong>practice mode</strong>: real
           market, full policy + simulation, no signing. Advanced users can still paste a full bundler
           URL (Alchemy or self-hosted) instead.
@@ -126,11 +126,11 @@ merrymen update     # upgrade later (stops the band, installs, restarts)`}
         {/* ── run ── */}
         <h2 id="run">Run it</h2>
         <pre className="code">
-{`merrymen start      # dashboard (localhost:3100) + the 24/7 worker
-merrymen doctor     # node / keys / RPC / bundler / grant / db checks
-merrymen status     # heartbeat, grant, trades, equity
-merrymen selftest   # one policy-legal no-op through the full pipeline
-merrymen kill       # kill switch — destroys the grant`}
+{`agentcap start      # dashboard (localhost:3100) + the 24/7 worker
+agentcap doctor     # node / keys / RPC / bundler / grant / db checks
+agentcap status     # heartbeat, grant, trades, equity
+agentcap selftest   # one policy-legal no-op through the full pipeline
+agentcap kill       # kill switch — destroys the grant`}
         </pre>
         <p>
           Each tick the worker runs: <strong>grant sync → market safety → strategy proposes → policy
@@ -143,11 +143,11 @@ merrymen kill       # kill switch — destroys the grant`}
         <p>
           Connect Claude to your agent and it can check on it, explain why it has or hasn&apos;t
           traded, and, if you allow it, suggest trades or setting changes that only happen once you
-          approve them in Merrymen. The quickest way: tell Claude “set up merrymen mcp”, or add it
-          in one click from <Link className="link" href="/claude">Set up Merrymen in Claude</Link>.
+          approve them in AgentCap. The quickest way: tell Claude “set up agentcap mcp”, or add it
+          in one click from <Link className="link" href="/claude">Set up AgentCap in Claude</Link>.
         </p>
         <div className="callout">
-          The MCP server is for hosted Merrymen (app.merrymen.dev); the rest of this guide covers the
+          The MCP server is for hosted AgentCap (app.agentcap.xyz); the rest of this guide covers the
           self-hosted install.
         </div>
 
@@ -167,7 +167,7 @@ merrymen kill       # kill switch — destroys the grant`}
         {/* ── telegram groups ── */}
         <h2 id="tg-groups">Telegram groups</h2>
         <p>
-          Your merryman can hang out in a Telegram group like one more person: it answers when
+          Your agentcapavatar can hang out in a Telegram group like one more person: it answers when
           it&apos;s called, now and then joins in, remembers the chat, and when someone posts a
           Robinhood Chain coin it takes a look, tags them, and says whether it&apos;s in or passing.
           Coins from other chains (Ethereum, Solana, BNB and the rest) it leaves alone. In trencher
@@ -225,8 +225,8 @@ merrymen kill       # kill switch — destroys the grant`}
         </p>
         <p>Money leaves through the <strong>owner key</strong>, which no wall can block:</p>
         <ul>
-          <li><strong>Hosted</strong> — <strong>Withdraw</strong> in your profile on app.merrymen.dev.</li>
-          <li><strong>Self-hosted</strong> — <code className="inline">merrymen recover</code> sweeps the smart account to a wallet you control.</li>
+          <li><strong>Hosted</strong> — <strong>Withdraw</strong> in your profile on app.agentcap.xyz.</li>
+          <li><strong>Self-hosted</strong> — <code className="inline">agentcap recover</code> sweeps the smart account to a wallet you control.</li>
         </ul>
         <div className="callout">
           <strong>Wallets signed before 00:35:24 UTC on 2 August 2026</strong>, if their key hasn&apos;t expired,
@@ -242,7 +242,7 @@ merrymen kill       # kill switch — destroys the grant`}
         {/* ── pc control ── */}
         <h2 id="pc-control">PC remote control</h2>
         <p>
-          Enable the <strong>remote control</strong> section in settings and your merryman can act on
+          Enable the <strong>remote control</strong> section in settings and your agentcapavatar can act on
           the machine it runs on, from Telegram. It is a hot wallet for your desktop, so the whole
           design is safety-first:
         </p>
@@ -275,8 +275,8 @@ merrymen kill       # kill switch — destroys the grant`}
         {/* ── soul ── */}
         <h2 id="soul">The soul</h2>
         <p>
-          Every merryman is an individual. Its soul lives as plain markdown in{" "}
-          <code className="inline">~/.merrymen/soul/</code>:
+          Every agentcapavatar is an individual. Its soul lives as plain markdown in{" "}
+          <code className="inline">~/.agentcap/soul/</code>:
         </p>
         <table>
           <tbody>
@@ -305,9 +305,9 @@ merrymen kill       # kill switch — destroys the grant`}
 
         {/* ── custom ── */}
         <h2 id="custom">Write your own bot</h2>
-        <p>Your strategies live in <code className="inline">~/.merrymen/strategies/</code> — hot-reloaded, crash-isolated, and unable to exceed the caps you signed.</p>
+        <p>Your strategies live in <code className="inline">~/.agentcap/strategies/</code> — hot-reloaded, crash-isolated, and unable to exceed the caps you signed.</p>
         <pre className="code">
-{`merrymen strategy new my-bot   # commented template
+{`agentcap strategy new my-bot   # commented template
 # edit it, select "my-bot" in settings — done`}
         </pre>
         <p>
@@ -320,7 +320,7 @@ merrymen kill       # kill switch — destroys the grant`}
         {/* ── virtuals ── */}
         <h2 id="virtuals">Stream to Virtuals</h2>
         <p>
-          Put your merryman&apos;s activity live on its page at <strong>app.virtuals.io</strong>. When
+          Put your agentcapavatar&apos;s activity live on its page at <strong>app.virtuals.io</strong>. When
           you turn it on, every <strong>landed trade</strong> and the <strong>daily campfire
           report</strong> are posted to your agent&apos;s public Virtuals Terminal — a running
           activity log (rejections aren&apos;t posted one-by-one; the daily report
@@ -328,14 +328,14 @@ merrymen kill       # kill switch — destroys the grant`}
         </p>
         <p>
           It is a <em>log</em>, not a proof: anyone reading it is taking your word for the numbers.
-          What they can check independently is the audit export — <code>merrymen export</code>
-          writes the hash-chained journal, and <code>merrymen verify</code> checks it against
+          What they can check independently is the audit export — <code>agentcap export</code>
+          writes the hash-chained journal, and <code>agentcap verify</code> checks it against
           nothing but itself and the chain. Share that if you want to be believed rather than
           trusted.
         </p>
         <ol>
           <li>Grab your <strong>Virtuals API key</strong> from your agent&apos;s page on app.virtuals.io.</li>
-          <li>In merrymen <strong>settings → virtuals terminal</strong>, paste the key and flip <strong>stream to Virtuals</strong> on.</li>
+          <li>In agentcap <strong>settings → virtuals terminal</strong>, paste the key and flip <strong>stream to Virtuals</strong> on.</li>
         </ol>
         <div className="callout">
           <strong>Outbound &amp; public, and off by default.</strong> Nothing is streamed until you
@@ -355,7 +355,7 @@ merrymen kill       # kill switch — destroys the grant`}
           <li><strong>Trades</strong> pass caps enforced by the account contract; every swap is simulated first.</li>
           <li><strong>Transfers</strong> out through chat are refused: no wallet signed at or after 00:35:24 UTC on 2 August 2026 carries a transfer permission. Money leaves with your owner key.</li>
           <li><strong>PC actions</strong> are off by default, per-capability, allowlisted, and the sharp ones are confirmed.</li>
-          <li><strong>Secrets</strong> live only in <code className="inline">~/.merrymen</code> and are masked before they ever reach the browser.</li>
+          <li><strong>Secrets</strong> live only in <code className="inline">~/.agentcap</code> and are masked before they ever reach the browser.</li>
           <li><strong>The kill switch</strong> destroys the grant; hard on-chain key expiry is the backstop.</li>
         </ul>
         <div className="callout warn">
@@ -365,7 +365,7 @@ merrymen kill       # kill switch — destroys the grant`}
         <h3>Why not a platform&apos;s own agent?</h3>
         <p>
           A first-party agent is custodial by construction — their servers, their keys, their
-          discretion; the safety story is a terms-of-service. merrymen inverts the trust: the agent
+          discretion; the safety story is a terms-of-service. agentcap inverts the trust: the agent
           runs on <em>your</em> machine, the keys never leave it, and the caps live in your account
           contract on-chain — so a compromised agent can trade inside the wall, but cannot sign on
           your behalf, cannot send funds to an address you never registered, and cannot touch your
@@ -380,10 +380,10 @@ merrymen kill       # kill switch — destroys the grant`}
         <h2 id="config">Configuration</h2>
         <p>
           The dashboard <strong>Settings</strong> is the source of truth — Essentials up front, everything
-          else under Advanced. Saved to <code className="inline">~/.merrymen/settings.json</code>; secrets are masked
+          else under Advanced. Saved to <code className="inline">~/.agentcap/settings.json</code>; secrets are masked
           and never echo back. Precedence: <strong>settings file → env var → default</strong>. Env vars
-          are the headless fallback (<code className="inline">MERRYMEN_BUNDLER_URL</code>, <code className="inline">ANTHROPIC_API_KEY</code>,{" "}
-          <code className="inline">MERRYMEN_TELEGRAM_BOT_TOKEN</code>, <code className="inline">MERRYMEN_HOST</code>, …). See the{" "}
+          are the headless fallback (<code className="inline">AGENTCAP_BUNDLER_URL</code>, <code className="inline">ANTHROPIC_API_KEY</code>,{" "}
+          <code className="inline">AGENTCAP_TELEGRAM_BOT_TOKEN</code>, <code className="inline">AGENTCAP_HOST</code>, …). See the{" "}
           <a className="link" href={`${GITHUB}#readme`} target="_blank" rel="noreferrer">README</a> for the full table.
         </p>
 
@@ -392,27 +392,27 @@ merrymen kill       # kill switch — destroys the grant`}
         <h3>Windows: “running scripts is disabled on this system”</h3>
         <p>
           Windows PowerShell ships locked to <code className="inline">Restricted</code>, which blocks npm&apos;s
-          and merrymen&apos;s <code className="inline">.ps1</code> command shims (you&apos;ll see{" "}
+          and agentcap&apos;s <code className="inline">.ps1</code> command shims (you&apos;ll see{" "}
           <code className="inline">PSSecurityException</code>). The installer fixes this for you now; if you
           installed earlier, run this once — no admin needed, current user only:
         </p>
         <pre className="code">{`Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`}</pre>
         <p>
-          Then <code className="inline">merrymen setup</code> works. Or skip the policy entirely and call it
-          as <code className="inline">merrymen.cmd setup</code> (or run from cmd.exe / Git Bash).
+          Then <code className="inline">agentcap setup</code> works. Or skip the policy entirely and call it
+          as <code className="inline">agentcap.cmd setup</code> (or run from cmd.exe / Git Bash).
         </p>
         <h3>The dashboard won&apos;t open</h3>
-        <p>Run <code className="inline">merrymen doctor</code>. The prebuilt dashboard ships with the package, so a missing build usually means an interrupted install — reinstall with <code className="inline">npm i -g merrymen@latest</code>.</p>
+        <p>Run <code className="inline">agentcap doctor</code>. The prebuilt dashboard ships with the package, so a missing build usually means an interrupted install — reinstall with <code className="inline">npm i -g agentcap@latest</code>.</p>
         <h3>Trades never land</h3>
-        <p>Live trading needs three things together: the wallet on <strong>mainnet · 4663</strong>, a <strong>Pimlico API key</strong> in settings (or a full bundler URL), and the smart account funded with <strong>ETH for gas and USDG for capital</strong>. Without a bundler key the agent stays in practice mode — it simulates but never signs. On testnet no trade can land by design: the stock-token venues aren&apos;t deployed, so swaps no-route, and any USDG you sent there reads 0 because merrymen only knows the mainnet token addresses. Switch to mainnet for real fills.</p>
+        <p>Live trading needs three things together: the wallet on <strong>mainnet · 4663</strong>, a <strong>Pimlico API key</strong> in settings (or a full bundler URL), and the smart account funded with <strong>ETH for gas and USDG for capital</strong>. Without a bundler key the agent stays in practice mode — it simulates but never signs. On testnet no trade can land by design: the stock-token venues aren&apos;t deployed, so swaps no-route, and any USDG you sent there reads 0 because agentcap only knows the mainnet token addresses. Switch to mainnet for real fills.</p>
         <h3>Telegram says “not authorized”</h3>
         <p>Only allowlisted chats are obeyed. Send <code className="inline">/link &lt;code&gt;</code> with the code from settings to claim ownership.</p>
         <h3>A PC command is refused</h3>
         <p>Enable <strong>remote control</strong> and the specific capability in settings. Shell/apps also need the exact command/app on their allowlist; <code className="inline">/pc</code> shows what&apos;s on.</p>
         <h3>Still stuck?</h3>
-        <p>Ask in the <a className="link" href={TELEGRAM_BETA} target="_blank" rel="noreferrer">beta group on Telegram</a>, email <a className="link" href="mailto:support@merrymen.dev">support@merrymen.dev</a>, or open an issue on <a className="link" href="https://github.com/millw14/merrymen" target="_blank" rel="noreferrer">GitHub</a> — include your OS and what <code className="inline">merrymen doctor</code> prints.</p>
+        <p>Ask in the <a className="link" href={TELEGRAM_BETA} target="_blank" rel="noreferrer">beta group on Telegram</a>, email <a className="link" href="mailto:support@agentcap.xyz">support@agentcap.xyz</a>, or open an issue on <a className="link" href="https://github.com/millw14/agentcap" target="_blank" rel="noreferrer">GitHub</a> — include your OS and what <code className="inline">agentcap doctor</code> prints.</p>
         <p>
-          <code className="inline">merrymen doctor</code> is safe to share: it reports <em>whether</em> a key is
+          <code className="inline">agentcap doctor</code> is safe to share: it reports <em>whether</em> a key is
           set, never the key itself (it does print install paths, which include your username). Your{" "}
           <strong>bot token, private key and grant link</strong> are a different matter — nobody helping you
           needs them, and the beta group is a room with strangers in it. If you screenshot the settings page,
@@ -437,7 +437,7 @@ merrymen kill       # kill switch — destroys the grant`}
           to revoke the old permission on-chain before the new one is signed. Your wallet, funds, and
           history stay exactly where they are; nothing is redeployed, and your money never moves when a
           permission ends. From three days before it ends, the <code className="inline">/grant</code>{" "}
-          page and your merryman on Telegram remind you. On the web wallet, the Perps desk and the iPhone
+          page and your agentcapavatar on Telegram remind you. On the web wallet, the Perps desk and the iPhone
           app, an agent still on a shorter permission can switch to monthly in one tap when you renew it.
         </p>
         <h3>Does the expiry apply in paper mode too?</h3>
@@ -450,7 +450,7 @@ merrymen kill       # kill switch — destroys the grant`}
         <h3>This feels built for devs — is easier onboarding coming? A desktop app?</h3>
         <p>
           Heard, and yes. Today the easiest path is the <a className="link" href="#install">one-line
-          installer</a> — it checks Node, installs merrymen, and <code className="inline">merrymen
+          installer</a> — it checks Node, installs agentcap, and <code className="inline">agentcap
           start</code> opens the dashboard in your browser; you never need to write code (strategies
           are optional, presets cover the rest). The <strong>1-click desktop app</strong> (.exe/.dmg
           — no terminal at all) also ships now, on the{" "}
@@ -460,7 +460,7 @@ merrymen kill       # kill switch — destroys the grant`}
           revocable session key.
           <br />
           <br />
-          To keep it running across logouts and reboots, <code className="inline">merrymen service
+          To keep it running across logouts and reboots, <code className="inline">agentcap service
           install</code> (or the tray toggle in the desktop app). Said plainly:{" "}
           <strong>that survives logout, sleep and reboot — it can&apos;t run while the computer is
           off.</strong> Nothing does except a machine that stays on, and the honest version of that

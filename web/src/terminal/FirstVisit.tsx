@@ -110,7 +110,7 @@ export const STOPS: Stop[] = [
 export const ESSENTIAL_STOP_INDICES: number[] = [0, 1, 8, 2, 9, 5, 4, 25];
 const FULL_STOP_INDICES = STOPS.map((_, index) => index);
 
-const KEY = `merrymen.tour.v${TOUR_VERSION}`;
+const KEY = `agentcap.tour.v${TOUR_VERSION}`;
 type TourTrack = "essentials" | "all";
 type Saved = { done: boolean; step: number; track?: TourTrack; pending?: boolean; replay?: boolean; claimed?: string };
 
@@ -150,7 +150,7 @@ export function FirstVisit({
   layoutKey?: string;
   /**
    * Does the tour open by itself for somebody who has never seen it? The app
-   * passes false: a newcomer now lands on their merryman, whose bubble and two
+   * passes false: a newcomer now lands on their agentcapavatar, whose bubble and two
    * buttons are the welcome, with the replay link one tap away above him. An
    * eight-card modal over that, before anything else could be read, was the
    * first piece of "work" every visitor was handed. Default true, so the tour

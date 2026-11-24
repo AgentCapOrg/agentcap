@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Screen } from "./live";
 
 type Detail = Extract<Screen, { kind: "token" | "profile" }>;
-const KEY = "merrymen.desktop-detail.v1";
+const KEY = "agentcap.desktop-detail.v1";
 
 function isDetail(value: unknown): value is Detail {
   if (!value || typeof value !== "object") return false;

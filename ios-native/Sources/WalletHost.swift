@@ -1,7 +1,7 @@
 import Foundation
 import Combine
 import PrivySDK
-import MerrymenPolicy
+import AgentCapPolicy
 
 /// A native, explicitly invoked host for the shipped permission library. No
 /// remote script evaluation, external credential forwarding or raw-tx signing.
@@ -28,7 +28,7 @@ final class WalletHost: NSObject, ObservableObject, URLSessionTaskDelegate {
         config.timeoutIntervalForRequest = 45
         return URLSession(configuration: config, delegate: self, delegateQueue: nil)
     }()
-    private var service: String { "dev.merrymen.wallet.\(identity.lowercased())" }
+    private var service: String { "dev.agentcap.wallet.\(identity.lowercased())" }
 
     func call(_ name: String, input: J, store: AppStore, legacyKey: String? = nil) async throws -> J {
         guard !busy else { throw fail("A wallet operation is already running.") }
@@ -77,19 +77,19 @@ final class WalletHost: NSObject, ObservableObject, URLSessionTaskDelegate {
     }
 
     static func savedGrant(owner: String) throws -> J? {
-        guard let data = try SecureStore.read("dev.merrymen.wallet.\(owner.lowercased())", "grants") else { return nil }
+        guard let data = try SecureStore.read("dev.agentcap.wallet.\(owner.lowercased())", "grants") else { return nil }
         let values = try JSONDecoder().decode([String: String].self, from: data)
-        guard let text = values["merrymen.grant.v1"] else { return nil }
+        guard let text = values["agentcap.grant.v1"] else { return nil }
         let grant = try JSONDecoder().decode(J.self, from: Data(text.utf8))
         guard (grant["owner"].text.lowercased() == owner.lowercased() || grant["binding"]["version"].text == "legacy-wallet-owner-v1"), grant["demoOwnerPrivateKey"] == .null else { throw APIError(status: 0, message: "This saved grant belongs to a different owner.") }
         return grant
     }
     static func withdrawals(owner: String) throws -> [J] {
-        guard let data = try SecureStore.read("dev.merrymen.wallet.\(owner.lowercased())", "withdrawals") else { return [] }
+        guard let data = try SecureStore.read("dev.agentcap.wallet.\(owner.lowercased())", "withdrawals") else { return [] }
         return try JSONDecoder().decode([J].self, from: data)
     }
     private func journal() throws -> [J] { try Self.withdrawals(owner: signingOwner) }
-    private func saveJournal(_ items: [J]) throws { try SecureStore.write("dev.merrymen.wallet.\(signingOwner.lowercased())", "withdrawals", JSONEncoder().encode(items)) }
+    private func saveJournal(_ items: [J]) throws { try SecureStore.write("dev.agentcap.wallet.\(signingOwner.lowercased())", "withdrawals", JSONEncoder().encode(items)) }
 
     private func storage(_ op: String, _ args: J) throws -> J {
         guard store?.generation == generation, store?.owner == identity else { throw fail("Your account changed. Open your wallet again.") }
@@ -97,7 +97,7 @@ final class WalletHost: NSObject, ObservableObject, URLSessionTaskDelegate {
         if let data = try SecureStore.read(service, "grants") { values = try JSONDecoder().decode([String: String].self, from: data) }
         if op == "storageKeys" { return .array(values.keys.sorted().map(J.string)) }
         let key = args["key"].text
-        guard key == "merrymen.grant.v1" || key.range(of: "^merrymen\\.grant\\.archive\\.0x[0-9a-fA-F]{40}$", options: .regularExpression) != nil else { throw fail("Unsupported wallet storage key.") }
+        guard key == "agentcap.grant.v1" || key.range(of: "^agentcap\\.grant\\.archive\\.0x[0-9a-fA-F]{40}$", options: .regularExpression) != nil else { throw fail("Unsupported wallet storage key.") }
         switch op {
         case "storageGet": return values[key].map(J.string) ?? .null
         case "storageSet":
@@ -106,11 +106,11 @@ final class WalletHost: NSObject, ObservableObject, URLSessionTaskDelegate {
             let embedded = legacyKey == nil && grant["binding"]["version"].text == "privy-did-owner-v1" && grant["binding"]["did"].text == did
             let restored = legacyKey != nil && operation == "restore" && grant["binding"]["version"].text == "legacy-wallet-owner-v1" && grant["binding"]["walletSignature"].string != nil && grant["smartAccount"].text.lowercased() == account.lowercased()
             guard grant["owner"].text.lowercased() == signingOwner.lowercased(), grant["demoOwnerPrivateKey"] == .null, embedded || restored else { throw fail("Refusing to store a grant for a different wallet.") }
-            if key == "merrymen.grant.v1", let old = values[key] {
+            if key == "agentcap.grant.v1", let old = values[key] {
                 let previous = try JSONDecoder().decode(J.self, from: Data(old.utf8))
                 // One atomic write preserves the preceding account even if the
                 // shared library's best-effort archive could not run.
-                values["merrymen.grant.archive.\(previous["smartAccount"].text.lowercased())"] = old
+                values["agentcap.grant.archive.\(previous["smartAccount"].text.lowercased())"] = old
             }
             values[key] = text
         case "storageRemove": throw fail("Grant deletion is not part of this operation.")

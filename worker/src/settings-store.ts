@@ -32,9 +32,9 @@ import { randomBytes, randomUUID } from "node:crypto";
 import path from "node:path";
 import { writeFileAtomicSync } from "./atomic-write";
 import { withSettingsFileLock } from "./settings-file-lock";
-import { merrymenHome } from "./home";
+import { agentcapHome } from "./home";
 import { openSecret, requireDek, sealSecret, storeDek } from "./store-crypto";
-import { isGrantPurpose, type GrantPurpose, type MerrymenSettings } from "../../packages/core/src/index";
+import { isGrantPurpose, type GrantPurpose, type AgentCapSettings } from "../../packages/core/src/index";
 
 /** Where each wallet's settings live. Spot's are where they always were. */
 const WALLET_SETTINGS_TABLE = { spot: "tenant_settings", perps: "perps_tenant_settings" } as const satisfies Record<GrantPurpose, string>;
@@ -193,15 +193,15 @@ export interface HolderBackfillState {
 
 export interface SettingsStore {
   /** Persist (replace) a tenant's settings. */
-  put(tenant: `0x${string}`, settings: MerrymenSettings): Promise<void>;
+  put(tenant: `0x${string}`, settings: AgentCapSettings): Promise<void>;
   /** A tenant's settings, or null if none stored. */
-  get(tenant: `0x${string}`): Promise<MerrymenSettings | null>;
+  get(tenant: `0x${string}`): Promise<AgentCapSettings | null>;
   /** Every tenant that has stored settings. */
   listTenants(): Promise<`0x${string}`[]>;
   /** Forget a tenant's settings (on kill). */
   remove(tenant: `0x${string}`): Promise<void>;
   /**
-   * ONE $MERRYMEN WALLET POWERS ONE AGENT — the cross-account record.
+   * ONE $AGENTCAP WALLET POWERS ONE AGENT — the cross-account record.
    *
    * Settings are sealed per tenant, so they cannot answer "who else linked this
    * wallet?"; this can. First claim wins, atomically: two accounts claiming the
@@ -310,20 +310,20 @@ function claimKey(what: "wallet" | "tenant", v: string): `0x${string}` {
 }
 
 /** Seal the settings JSON when a DEK is present, else store it plaintext. */
-function seal(settings: MerrymenSettings): string {
+function seal(settings: AgentCapSettings): string {
   const json = JSON.stringify(settings);
   const dek = storeDek();
   return dek ? sealSecret(json, dek) : json;
 }
 
 /** Reverse of seal — unseal if it looks sealed (iv.tag.ct), else parse plaintext. */
-function unseal(blob: string): MerrymenSettings {
+function unseal(blob: string): AgentCapSettings {
   const dek = storeDek();
   // A sealed blob is exactly three base64url parts; anything else is plaintext
   // JSON (self-hosted / no DEK), which starts with '{'.
   const looksSealed = dek && /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(blob);
   const json = looksSealed ? openSecret(blob, dek) : blob;
-  return JSON.parse(json) as MerrymenSettings;
+  return JSON.parse(json) as AgentCapSettings;
 }
 
 interface StoredSettingsRecord {
@@ -339,12 +339,12 @@ interface StoredSettingsRecord {
  * stored). Opaque to the caller, which only hands it back.
  */
 export interface VersionedSettings {
-  settings: MerrymenSettings | null;
+  settings: AgentCapSettings | null;
   version: string | null;
 }
 
 /** The file one record is written as. */
-const recordText = (tenant: `0x${string}`, settings: MerrymenSettings): string =>
+const recordText = (tenant: `0x${string}`, settings: AgentCapSettings): string =>
   JSON.stringify({ tenant, sealed: seal(settings), updatedAt: Math.floor(Date.now() / 1000) } satisfies StoredSettingsRecord, null, 2);
 
 /** A file's text, or null when there is none. Anything but ENOENT throws: an unreadable file is not an absent one. */
@@ -363,12 +363,12 @@ export class FileSettingsStore implements SettingsStore {
   private readonly dir: string;
   constructor(readonly wallet: GrantPurpose) {
     if (!isGrantPurpose(wallet)) throw new Error("Unrecognised wallet purpose");
-    this.dir = path.join(merrymenHome(), WALLET_SETTINGS_DIR[wallet]);
+    this.dir = path.join(agentcapHome(), WALLET_SETTINGS_DIR[wallet]);
   }
   private file(tenant: string) {
     return path.join(this.dir, `${tenant.toLowerCase()}.json`);
   }
-  async put(tenant: `0x${string}`, settings: MerrymenSettings): Promise<void> {
+  async put(tenant: `0x${string}`, settings: AgentCapSettings): Promise<void> {
     const rec: StoredSettingsRecord = { tenant, sealed: seal(settings), updatedAt: Math.floor(Date.now() / 1000) };
     await mkdir(this.dir, { recursive: true });
     await writeFile(this.file(tenant), JSON.stringify(rec, null, 2), { encoding: "utf8", mode: 0o600 });
@@ -381,7 +381,7 @@ export class FileSettingsStore implements SettingsStore {
    * (so that holder's claim was skipped for good), and every read-modify-write
    * (`?? {}` then put) replaced the tenant's whole settings with its one field.
    */
-  async get(tenant: `0x${string}`): Promise<MerrymenSettings | null> {
+  async get(tenant: `0x${string}`): Promise<AgentCapSettings | null> {
     let raw: string;
     try {
       raw = await readFile(this.file(tenant), "utf8");
@@ -419,7 +419,7 @@ export class FileSettingsStore implements SettingsStore {
    * hold the kill's cross-process file lock, so another process cannot switch
    * perps off between the comparison and the stale save's rename.
    */
-  async putIfUnchanged(tenant: `0x${string}`, settings: MerrymenSettings, version: string | null): Promise<boolean> {
+  async putIfUnchanged(tenant: `0x${string}`, settings: AgentCapSettings, version: string | null): Promise<boolean> {
     const file = this.file(tenant);
     return withSettingsFileLock(file, () => {
       if (readTextOrNull(file) !== version) return false;
@@ -472,7 +472,7 @@ export class FileSettingsStore implements SettingsStore {
    * claim could read the record, a claim-and-release land in between, and the
    * claim then be made against a record that no longer says who let it go.
    */
-  private claimsDir = path.join(merrymenHome(), "holder-claims");
+  private claimsDir = path.join(agentcapHome(), "holder-claims");
   private claimFile(wallet: string) {
     return path.join(this.claimsDir, `${wallet}.json`);
   }
@@ -521,7 +521,7 @@ export class FileSettingsStore implements SettingsStore {
    * claims rather than among them — a file in holder-claims is a claim.
    * Replaced whole by rename(2), under the wallet's lock.
    */
-  private releasesDir = path.join(merrymenHome(), "holder-wallet-moves");
+  private releasesDir = path.join(agentcapHome(), "holder-wallet-moves");
   private releaseFile(wallet: string) {
     return path.join(this.releasesDir, `${wallet}.json`);
   }
@@ -722,7 +722,7 @@ export class FileSettingsStore implements SettingsStore {
    * claim. Replaced by rename(2), so a crash leaves the old record or the
    * new one, never half of either.
    */
-  private backfillFile = path.join(merrymenHome(), "holder-claims-backfill.json");
+  private backfillFile = path.join(agentcapHome(), "holder-claims-backfill.json");
   async holderBackfill(): Promise<HolderBackfillState | null> {
     let raw: string;
     try {
@@ -999,7 +999,7 @@ async function connectPg(url: string): Promise<PgClientLike> {
  * catalog look (to_regclass) on a connection that has run no DDL, exactly as
  * PgGrantStore keeps `perps_grants` (its existing()). It used not to: every
  * read went through client(), which makes every table it names, so a signed-in
- * login's GET /api/settings?wallet=perps — answered whatever MERRYMEN_PERPS
+ * login's GET /api/settings?wallet=perps — answered whatever AGENTCAP_PERPS
  * says (D1) — or an off-only PUT with nothing to turn off made the Perps table
  * on a fleet that had never had a Perps wallet. Tables are never dropped, so
  * that could not be taken back, and every kill after it went past its no-table
@@ -1144,7 +1144,7 @@ export class PgSettingsStore implements SettingsStore {
        )`,
     );
   }
-  async put(tenant: `0x${string}`, settings: MerrymenSettings): Promise<void> {
+  async put(tenant: `0x${string}`, settings: AgentCapSettings): Promise<void> {
     const c = await this.client();
     await c.query(
       `INSERT INTO ${this.table} (tenant, sealed, updated_at) VALUES ($1, $2, $3)
@@ -1152,7 +1152,7 @@ export class PgSettingsStore implements SettingsStore {
       [tenant.toLowerCase(), seal(settings), Math.floor(Date.now() / 1000)],
     );
   }
-  async get(tenant: `0x${string}`): Promise<MerrymenSettings | null> {
+  async get(tenant: `0x${string}`): Promise<AgentCapSettings | null> {
     const c = await this.reading();
     if (!c) return null;
     const { rows } = await c.query(`SELECT sealed FROM ${this.table} WHERE tenant = $1`, [tenant.toLowerCase()]);
@@ -1190,7 +1190,7 @@ export class PgSettingsStore implements SettingsStore {
    * kill's, from another connection or another service, which takes no save
    * lock — makes this miss, and nothing is written.
    */
-  async putIfUnchanged(tenant: `0x${string}`, settings: MerrymenSettings, version: string | null): Promise<boolean> {
+  async putIfUnchanged(tenant: `0x${string}`, settings: AgentCapSettings, version: string | null): Promise<boolean> {
     const c = await this.client();
     const t = tenant.toLowerCase();
     const at = Math.floor(Date.now() / 1000);
@@ -1503,7 +1503,7 @@ export async function readSettingsVersioned(store: SettingsStore, tenant: `0x${s
 export async function putSettingsIfUnchanged(
   store: SettingsStore,
   tenant: `0x${string}`,
-  settings: MerrymenSettings,
+  settings: AgentCapSettings,
   version: string | null,
 ): Promise<boolean> {
   if (store instanceof PgSettingsStore || store instanceof FileSettingsStore) return store.putIfUnchanged(tenant, settings, version);

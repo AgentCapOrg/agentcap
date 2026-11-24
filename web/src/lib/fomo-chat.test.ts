@@ -110,14 +110,14 @@ const factual = (t: FomoChatTurn): string => {
   return t.factualReply;
 };
 
-const savedEnabled = process.env.MERRYMEN_FOMO_ENABLED;
+const savedEnabled = process.env.AGENTCAP_FOMO_ENABLED;
 before(() => {
   // Hosted Fomo is opt-in (fomo-runtime.ts hostedFomoEnabled); these tests run an opted-in deployment.
-  process.env.MERRYMEN_FOMO_ENABLED = "1";
+  process.env.AGENTCAP_FOMO_ENABLED = "1";
 });
 after(() => {
-  if (savedEnabled === undefined) delete process.env.MERRYMEN_FOMO_ENABLED;
-  else process.env.MERRYMEN_FOMO_ENABLED = savedEnabled;
+  if (savedEnabled === undefined) delete process.env.AGENTCAP_FOMO_ENABLED;
+  else process.env.AGENTCAP_FOMO_ENABLED = savedEnabled;
 });
 
 beforeEach(() => {
@@ -134,17 +134,17 @@ afterEach(() => {
 
 describe("a self-hosted install with no Fomo key of its own", () => {
   it("is not a Fomo turn: no runtime, no fomo.sqlite, the model answers as before", async () => {
-    const saved = { enabled: process.env.MERRYMEN_FOMO_ENABLED, key: process.env.MERRYMEN_FOMO_API_KEY, file: process.env.MERRYMEN_SETTINGS_FILE };
-    delete process.env.MERRYMEN_FOMO_ENABLED;
-    delete process.env.MERRYMEN_FOMO_API_KEY;
-    process.env.MERRYMEN_SETTINGS_FILE = "/nonexistent/merrymen-settings-for-this-test.json";
+    const saved = { enabled: process.env.AGENTCAP_FOMO_ENABLED, key: process.env.AGENTCAP_FOMO_API_KEY, file: process.env.AGENTCAP_SETTINGS_FILE };
+    delete process.env.AGENTCAP_FOMO_ENABLED;
+    delete process.env.AGENTCAP_FOMO_API_KEY;
+    process.env.AGENTCAP_SETTINGS_FILE = "/nonexistent/agentcap-settings-for-this-test.json";
     try {
       const runtime = async () => { throw new Error("the runtime must not be asked for"); };
       for (const message of ["who are the top traders on fomo this week?", "how are you today?"]) {
         assert.equal(await fomoChatTurn({ message }, { tenant: null, now: Date.now(), hosted: false }, { runtime }), null, message);
       }
     } finally {
-      for (const [k, v] of [["MERRYMEN_FOMO_ENABLED", saved.enabled], ["MERRYMEN_FOMO_API_KEY", saved.key], ["MERRYMEN_SETTINGS_FILE", saved.file]] as const) {
+      for (const [k, v] of [["AGENTCAP_FOMO_ENABLED", saved.enabled], ["AGENTCAP_FOMO_API_KEY", saved.key], ["AGENTCAP_SETTINGS_FILE", saved.file]] as const) {
         if (v === undefined) delete process.env[k];
         else process.env[k] = v;
       }
@@ -152,15 +152,15 @@ describe("a self-hosted install with no Fomo key of its own", () => {
   });
 });
 
-describe("a self-hosted install that switched Fomo off (MERRYMEN_FOMO_ENABLED=0)", () => {
+describe("a self-hosted install that switched Fomo off (AGENTCAP_FOMO_ENABLED=0)", () => {
   it("is not a Fomo turn at all, and nothing is built", async () => {
-    const saved = process.env.MERRYMEN_FOMO_ENABLED;
-    process.env.MERRYMEN_FOMO_ENABLED = "0";
+    const saved = process.env.AGENTCAP_FOMO_ENABLED;
+    process.env.AGENTCAP_FOMO_ENABLED = "0";
     try {
       const runtime = async () => { throw new Error("the runtime must not be asked for"); };
       assert.equal(await fomoChatTurn({ message: "who are the top traders on fomo this week?" }, { tenant: null, now: Date.now(), hosted: false }, { runtime }), null);
     } finally {
-      process.env.MERRYMEN_FOMO_ENABLED = saved;
+      process.env.AGENTCAP_FOMO_ENABLED = saved;
     }
   });
 });
@@ -173,15 +173,15 @@ describe("a hosted deployment that has not opted in", () => {
       assert.equal(await fomoChatTurn({ message }, { tenant: A, now: Date.now(), hosted: true }, { runtime, enabled: () => false }), null, message);
     }
     // The switch itself: only "1" is on.
-    const saved = process.env.MERRYMEN_FOMO_ENABLED;
+    const saved = process.env.AGENTCAP_FOMO_ENABLED;
     try {
       for (const value of [undefined, "", "0", "true", "yes"]) {
-        if (value === undefined) delete process.env.MERRYMEN_FOMO_ENABLED;
-        else process.env.MERRYMEN_FOMO_ENABLED = value;
-        assert.equal(await fomoChatTurn({ message: "who are the top traders on fomo this week?" }, { tenant: A, now: Date.now(), hosted: true }, { runtime }), null, `MERRYMEN_FOMO_ENABLED=${String(value)}`);
+        if (value === undefined) delete process.env.AGENTCAP_FOMO_ENABLED;
+        else process.env.AGENTCAP_FOMO_ENABLED = value;
+        assert.equal(await fomoChatTurn({ message: "who are the top traders on fomo this week?" }, { tenant: A, now: Date.now(), hosted: true }, { runtime }), null, `AGENTCAP_FOMO_ENABLED=${String(value)}`);
       }
     } finally {
-      process.env.MERRYMEN_FOMO_ENABLED = saved;
+      process.env.AGENTCAP_FOMO_ENABLED = saved;
     }
   });
 });

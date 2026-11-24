@@ -1,7 +1,7 @@
 /**
  * WHICH TENANTS THIS ORCHESTRATOR MAY START, AND AT WHAT LEVEL.
  *
- * `MERRYMEN_FLEET_ROLLOUT` is the one operator switch for bringing a halted
+ * `AGENTCAP_FLEET_ROLLOUT` is the one operator switch for bringing a halted
  * fleet back a few tenants at a time. It replaces two earlier designs (a list
  * of tenants to resume, and a separate rollout level) with ONE variable, so
  * there is no combination of two switches for anybody to reason about:
@@ -13,10 +13,10 @@
  * where <level> is `observe`, `exits-only` or `trade`, and is accepted only
  * once a worker in this tree obeys it (WORKER_ENFORCED_LEVELS: all three, now
  * that worker-admission.ts does). The level reaches the child as
- * MERRYMEN_ADMISSION_LEVEL (childEnv)
+ * AGENTCAP_ADMISSION_LEVEL (childEnv)
  * and nothing else of the value does: the list names other tenants, and a
  * child has no business knowing who else is running, the same reason
- * MERRYMEN_HOLDER_ADDRESS is stripped.
+ * AGENTCAP_HOLDER_ADDRESS is stripped.
  *
  * A TENANT THE VALUE DOES NOT ADMIT IS `held`. The supervisor starts nothing
  * for it and leases nothing, so its home on the volume stays exactly as the
@@ -38,7 +38,7 @@
  * pending kill, the source fences) still stops it; the list adds one more
  * reason to stop and removes none.
  *
- * The one route: MERRYMEN_ROLLOUT_NEW_TENANTS (observe | exits-only | trade).
+ * The one route: AGENTCAP_ROLLOUT_NEW_TENANTS (observe | exits-only | trade).
  * On 2026-10-09, with the list naming 49 tenants and production live, a tester
  * created a new agent and nothing ever started for it: no worker, no link code
  * for its bot ("starting up" for good), no line saying why. The list exists so
@@ -66,7 +66,7 @@
  * thing to clear, and the one somebody forgets.
  *
  * MALFORMED REFUSES, IT NEVER GUESSES. The same rule as
- * MERRYMEN_ACCOUNTING_HOLD_TENANTS: a typo that silently dropped one entry
+ * AGENTCAP_ACCOUNTING_HOLD_TENANTS: a typo that silently dropped one entry
  * would admit nobody it was meant to, or worse, be read as some other scope.
  * The orchestrator validates it at boot and refuses to start; every runtime
  * reader below fails closed to `held` on the same refusal, so a value that
@@ -88,7 +88,7 @@ import { parseFleetId } from "./fleet-id";
 import { ADMISSION_LEVEL_ENV, ADMISSION_LEVELS, type AdmissionLevel } from "./worker-admission";
 export { ADMISSION_LEVEL_ENV, ADMISSION_LEVELS, type AdmissionLevel };
 
-export const FLEET_ROLLOUT_ENV = "MERRYMEN_FLEET_ROLLOUT";
+export const FLEET_ROLLOUT_ENV = "AGENTCAP_FLEET_ROLLOUT";
 /** Far beyond any cohort the rollout plan uses, and small enough that the value stays a reviewable diff. */
 export const MAX_ROLLOUT_TENANTS = 512;
 
@@ -101,7 +101,7 @@ export type RolloutLevel = AdmissionLevel | "held";
  * (worker-admission.ts ADMISSION_LEVELS).
  *
  * Until that gate was in this tree this was `trade` alone. Nothing in the
- * worker read MERRYMEN_ADMISSION_LEVEL then, so a tenant named at `observe`
+ * worker read AGENTCAP_ADMISSION_LEVEL then, so a tenant named at `observe`
  * would have been spawned with the word in its environment and traded with
  * full authority, while the startup line and the heartbeat reported it as
  * only being watched. A risk control that depends on the order two changes
@@ -152,7 +152,7 @@ const RAILWAY_MARKERS = [...RAILWAY_ONLY_IDENTITY, "RAILWAY_VOLUME_MOUNT_PATH"] 
  * process that has opted into the production volume is the production fleet.
  */
 export function railwayHosted(env: Env): boolean {
-  return env.MERRYMEN_PERSISTENT_HOME_REQUIRED === "1" || RAILWAY_MARKERS.some((key) => env[key] !== undefined);
+  return env.AGENTCAP_PERSISTENT_HOME_REQUIRED === "1" || RAILWAY_MARKERS.some((key) => env[key] !== undefined);
 }
 
 /** `<tenant>:<level>`. The tenant is fleet-id.ts's to read: only a 0x one is admitted. */
@@ -215,13 +215,13 @@ export function fleetRollout(env: Env = process.env): FleetRollout {
   return rollout;
 }
 
-export const ROLLOUT_NEW_TENANTS_ENV = "MERRYMEN_ROLLOUT_NEW_TENANTS";
+export const ROLLOUT_NEW_TENANTS_ENV = "AGENTCAP_ROLLOUT_NEW_TENANTS";
 
 const refuseNew = (why: string) =>
   new Error(`${ROLLOUT_NEW_TENANTS_ENV} ${why}; refusing to start rather than guess which tenants it admits`);
 
 /**
- * THE LEVEL MERRYMEN_ROLLOUT_NEW_TENANTS ASKS FOR, OR NULL WHEN UNSET. Throws
+ * THE LEVEL AGENTCAP_ROLLOUT_NEW_TENANTS ASKS FOR, OR NULL WHEN UNSET. Throws
  * on anything else, by the rollout's own rule: runOrchestrator asks this at
  * boot beside fleetRollout, so a typo is a failed boot, never a guess. One of
  * the grammar's three words, exactly (whitespace around it ignored, as around
@@ -359,7 +359,7 @@ export interface RolloutCounts {
    * Of the admitted, those the new-tenant route admits (the list does not name
    * them; new-tenant-admission.ts recorded them). Already counted at their
    * level: this says how many of those figures came in that way. Present only
-   * while the route is open, so with MERRYMEN_ROLLOUT_NEW_TENANTS unset the
+   * while the route is open, so with AGENTCAP_ROLLOUT_NEW_TENANTS unset the
    * counts are exactly what they were before it existed.
    */
   new?: number;
@@ -465,7 +465,7 @@ export function rolloutStartupLine(rollout: FleetRollout): string {
 }
 
 /**
- * Said once at boot beside the rollout's line: MERRYMEN_ROLLOUT_NEW_TENANTS's
+ * Said once at boot beside the rollout's line: AGENTCAP_ROLLOUT_NEW_TENANTS's
  * value, and what it does under the scope that took. Throws on a malformed
  * value, as rolloutNewTenants does; runOrchestrator has asked that already.
  */

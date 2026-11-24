@@ -12,7 +12,7 @@ import {
 
 const SECRET = "fixture-secret-do-not-log";
 const ENDPOINT = `https://rpc.example.test/?api-key=${SECRET}`;
-const CONFIG = readSolanaMainnetRpcConfig({ MERRYMEN_SOLANA_RPC_MAINNET: ENDPOINT });
+const CONFIG = readSolanaMainnetRpcConfig({ AGENTCAP_SOLANA_RPC_MAINNET: ENDPOINT });
 type RequestBody = { id: number; method: string; params: unknown[] };
 const bodyOf = (init?: RequestInit): RequestBody => JSON.parse(String(init?.body));
 const resultResponse = (id: number, result: unknown) =>
@@ -32,7 +32,7 @@ const assertSafeError = (code: SolanaRpcError["code"]) => (error: unknown): bool
 describe("server-side Solana mainnet RPC configuration", () => {
   it("requires an explicit private setting, with no public endpoint fallback", () => {
     for (const value of [undefined, "", "  "]) {
-      assert.throws(() => readSolanaMainnetRpcConfig({ MERRYMEN_SOLANA_RPC_MAINNET: value }),
+      assert.throws(() => readSolanaMainnetRpcConfig({ AGENTCAP_SOLANA_RPC_MAINNET: value }),
         assertSafeError("missing-config"));
     }
     assert.deepEqual(CONFIG, { url: ENDPOINT });
@@ -46,7 +46,7 @@ describe("server-side Solana mainnet RPC configuration", () => {
       `https://${SECRET}@rpc.example.test/`,
       `https://rpc.example.test/#${SECRET}`,
     ]) {
-      assert.throws(() => readSolanaMainnetRpcConfig({ MERRYMEN_SOLANA_RPC_MAINNET: value }),
+      assert.throws(() => readSolanaMainnetRpcConfig({ AGENTCAP_SOLANA_RPC_MAINNET: value }),
         assertSafeError("invalid-config"));
     }
   });
@@ -189,32 +189,32 @@ describe("read-only Solana mainnet RPC probe", () => {
 
 describe("bounded read-only RPC fallback", () => {
   const FALLBACK = "https://independent.example.test/?api-key=fixture-fallback";
-  const config = readSolanaMainnetRpcConfig({ MERRYMEN_SOLANA_RPC_MAINNET: ENDPOINT,
-    MERRYMEN_SOLANA_RPC_MAINNET_FALLBACK: FALLBACK });
+  const config = readSolanaMainnetRpcConfig({ AGENTCAP_SOLANA_RPC_MAINNET: ENDPOINT,
+    AGENTCAP_SOLANA_RPC_MAINNET_FALLBACK: FALLBACK });
   it("requires an explicit HTTPS fallback on a different hostname", () => {
     assert.deepEqual(config, { url: ENDPOINT, fallbackUrl: FALLBACK });
     for (const url of [ENDPOINT, "https://rpc.example.test/another-path?key=another-key"]) {
-      assert.throws(() => readSolanaMainnetRpcConfig({ MERRYMEN_SOLANA_RPC_MAINNET: ENDPOINT,
-        MERRYMEN_SOLANA_RPC_MAINNET_FALLBACK: url }), assertSafeError("invalid-fallback"));
+      assert.throws(() => readSolanaMainnetRpcConfig({ AGENTCAP_SOLANA_RPC_MAINNET: ENDPOINT,
+        AGENTCAP_SOLANA_RPC_MAINNET_FALLBACK: url }), assertSafeError("invalid-fallback"));
     }
-    assert.throws(() => readSolanaMainnetRpcConfig({ MERRYMEN_SOLANA_RPC_MAINNET: ENDPOINT,
-      MERRYMEN_SOLANA_RPC_MAINNET_FALLBACK: "http://backup.example.test" }), assertSafeError("invalid-config"));
+    assert.throws(() => readSolanaMainnetRpcConfig({ AGENTCAP_SOLANA_RPC_MAINNET: ENDPOINT,
+      AGENTCAP_SOLANA_RPC_MAINNET_FALLBACK: "http://backup.example.test" }), assertSafeError("invalid-config"));
     // A trailing dot or capital letters still name the primary's host.
     for (const url of ["https://rpc.example.test./", "https://RPC.example.test/"]) {
-      assert.throws(() => readSolanaMainnetRpcConfig({ MERRYMEN_SOLANA_RPC_MAINNET: ENDPOINT,
-        MERRYMEN_SOLANA_RPC_MAINNET_FALLBACK: url }), assertSafeError("invalid-fallback"));
+      assert.throws(() => readSolanaMainnetRpcConfig({ AGENTCAP_SOLANA_RPC_MAINNET: ENDPOINT,
+        AGENTCAP_SOLANA_RPC_MAINNET_FALLBACK: url }), assertSafeError("invalid-fallback"));
     }
   });
   it("makes the independent fallback mandatory for live trading (audit G3-6)", () => {
-    assert.deepEqual(readSolanaLiveRpcConfig({ MERRYMEN_SOLANA_RPC_MAINNET: ENDPOINT, MERRYMEN_SOLANA_RPC_MAINNET_FALLBACK: FALLBACK }),
+    assert.deepEqual(readSolanaLiveRpcConfig({ AGENTCAP_SOLANA_RPC_MAINNET: ENDPOINT, AGENTCAP_SOLANA_RPC_MAINNET_FALLBACK: FALLBACK }),
       { url: ENDPOINT, fallbackUrl: FALLBACK });
     for (const fallback of [undefined, "", "  ", ENDPOINT]) {
-      assert.throws(() => readSolanaLiveRpcConfig({ MERRYMEN_SOLANA_RPC_MAINNET: ENDPOINT, MERRYMEN_SOLANA_RPC_MAINNET_FALLBACK: fallback }),
+      assert.throws(() => readSolanaLiveRpcConfig({ AGENTCAP_SOLANA_RPC_MAINNET: ENDPOINT, AGENTCAP_SOLANA_RPC_MAINNET_FALLBACK: fallback }),
         assertSafeError("invalid-fallback"));
     }
-    assert.throws(() => readSolanaLiveRpcConfig({ MERRYMEN_SOLANA_RPC_MAINNET_FALLBACK: FALLBACK }), assertSafeError("missing-config"));
+    assert.throws(() => readSolanaLiveRpcConfig({ AGENTCAP_SOLANA_RPC_MAINNET_FALLBACK: FALLBACK }), assertSafeError("missing-config"));
     // Paper reads keep the fallback optional.
-    assert.deepEqual(readSolanaMainnetRpcConfig({ MERRYMEN_SOLANA_RPC_MAINNET: ENDPOINT }), { url: ENDPOINT });
+    assert.deepEqual(readSolanaMainnetRpcConfig({ AGENTCAP_SOLANA_RPC_MAINNET: ENDPOINT }), { url: ENDPOINT });
   });
   it("verifies the fallback's genesis before any account read", async () => {
     const calls: Array<[string, string]> = [];

@@ -144,7 +144,7 @@ export interface ConfirmScope {
  * anything else that names no wallet.
  */
 export function ownerOfChatKey(key: string | null): string | null {
-  const m = key === null ? null : /^merrymen\.chat\.(0x[0-9a-f]{40})$/i.exec(key);
+  const m = key === null ? null : /^agentcap\.chat\.(0x[0-9a-f]{40})$/i.exec(key);
   return m ? m[1]!.toLowerCase() : null;
 }
 

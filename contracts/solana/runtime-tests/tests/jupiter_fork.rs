@@ -17,7 +17,7 @@
 //!   test pads each back and checks the sha256 of the on-chain bytes before loading it.
 //!   NOTICE.md names each program's source and licence status. Only the SPL copies are
 //!   committed: jupiter_v6.so and whirlpool.so are supplied out of band (in the directory
-//!   MERRYMEN_JUPITER_FORK_PROGRAMS names, or placed here), and test.sh skips this target
+//!   AGENTCAP_JUPITER_FORK_PROGRAMS names, or placed here), and test.sh skips this target
 //!   without them;
 //! - refresh.mjs: the read-only fetch and the offline build that write these files.
 //!
@@ -70,7 +70,7 @@ use anchor_spl::token_2022::spl_token_2022::{
     self, extension::StateWithExtensions, state::Account as TokenAccount,
 };
 use base64::Engine;
-use merrymen_vault::{self as vault, Vault, JUPITER, SHARED_ROUTE, USDG, WSOL};
+use agentcap_vault::{self as vault, Vault, JUPITER, SHARED_ROUTE, USDG, WSOL};
 use solana_program_test::{ProgramTest, ProgramTestContext};
 use solana_sdk::{
     account::Account,
@@ -87,7 +87,7 @@ const DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/jupiter");
 /// The test owner. route.json was asked for this owner's vault (seq 0 swap authority, its
 /// temporary USDG ATA and the vault's WSOL ATA) under the vault program its provenance
 /// names; Answer::read checks that it still is.
-const OWNER_SEED: [u8; 32] = *b"merrymen jupiter fork test owner";
+const OWNER_SEED: [u8; 32] = *b"agentcap jupiter fork test owner";
 /// The route accounts that hold the vault's own addresses for a buy: the swap authority
 /// (the route's only signer), its temporary USDG ATA and the vault's WSOL ATA, which
 /// check_route_accounts pins to execute_swap's own accounts.
@@ -197,7 +197,7 @@ fn recorded_account(pubkey: &Pubkey) -> Vec<u8> {
 /// The directory the program ELFs are read from: PROGRAMS_ENV's, when set, or this one.
 /// programs.json (always this directory's) pins their bytes either way, so the setting
 /// changes where the copies live, never what runs (NOTICE.md).
-const PROGRAMS_ENV: &str = "MERRYMEN_JUPITER_FORK_PROGRAMS";
+const PROGRAMS_ENV: &str = "AGENTCAP_JUPITER_FORK_PROGRAMS";
 fn elf_dir() -> String {
     std::env::var(PROGRAMS_ENV)
         .ok()
@@ -639,7 +639,7 @@ impl Fork {
 
         let mut pt = ProgramTest::default();
         // BPF_OUT_DIR (test.sh) supplies the compiled custody program.
-        pt.add_program("merrymen_vault", vault::ID, None);
+        pt.add_program("agentcap_vault", vault::ID, None);
         pt.set_transaction_account_lock_limit(LOCK_LIMIT);
         let accounts = json("accounts.json");
         let fork_slot = number(&accounts["provenance"]["slot"]);

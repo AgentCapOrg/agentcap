@@ -9,9 +9,9 @@ import { appendFile, mkdtemp, readdir, readFile, rm, utimes, writeFile } from "n
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-const dir = await mkdtemp(path.join(tmpdir(), "merrymen-partners-"));
-process.env.MERRYMEN_DATA_DIR = dir;
-delete process.env.MERRYMEN_PARTNER_KEYS;
+const dir = await mkdtemp(path.join(tmpdir(), "agentcap-partners-"));
+process.env.AGENTCAP_DATA_DIR = dir;
+delete process.env.AGENTCAP_PARTNER_KEYS;
 
 const { createPartners, FileBusy, hashSecret, loadRegistry, makeKey, parseKey, repairTail, withAppendLock, writeRecord, SCOPES, DEFAULT_SCOPES } =
   await import("./partners.mjs");
@@ -138,7 +138,7 @@ test("a key's name is signed as well-formed text, never half an emoji or a contr
 
 test("the file overrides the env, so a revocation on the volume always wins", async () => {
   const { key, keyId, secret } = makeKey();
-  process.env.MERRYMEN_PARTNER_KEYS = JSON.stringify([
+  process.env.AGENTCAP_PARTNER_KEYS = JSON.stringify([
     { keyId, name: "from-env", hash: hashSecret(SECRET, secret), scopes: ["read:agents"], status: "active" },
   ]);
   const live = createPartners({ secret: SECRET });
@@ -149,14 +149,14 @@ test("the file overrides the env, so a revocation on the volume always wins", as
   const v = await after.verify(key);
   assert.equal(v.ok, false, "a stale env var must not keep a revoked key alive");
   assert.equal(v.code, "key_revoked");
-  delete process.env.MERRYMEN_PARTNER_KEYS;
+  delete process.env.AGENTCAP_PARTNER_KEYS;
 });
 
-test("a malformed MERRYMEN_PARTNER_KEYS does not throw the gateway over", async () => {
-  process.env.MERRYMEN_PARTNER_KEYS = "{not json";
+test("a malformed AGENTCAP_PARTNER_KEYS does not throw the gateway over", async () => {
+  process.env.AGENTCAP_PARTNER_KEYS = "{not json";
   const reg = await loadRegistry();
   assert.ok(reg instanceof Map);
-  delete process.env.MERRYMEN_PARTNER_KEYS;
+  delete process.env.AGENTCAP_PARTNER_KEYS;
 });
 
 test("parseKey splits only well-formed keys", () => {

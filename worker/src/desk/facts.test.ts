@@ -153,7 +153,7 @@ describe("AUTON, measured (live probe 2026-10-09 01:15 UTC)", () => {
 
   it("a reader handed the fleet home spends the fleet's shared lane, and never touches the environment", async () => {
     const home = mkdtempSync(path.join(tmpdir(), "facts-lane-"));
-    const before = process.env.MERRYMEN_FLEET_HOME;
+    const before = process.env.AGENTCAP_FLEET_HOME;
     try {
       const idx = fakeIndex();
       const read = createCoinFactsReader({ fetchJson: idx.fetch, now: () => NOW, lane: { fleetHome: home } });
@@ -161,7 +161,7 @@ describe("AUTON, measured (live probe 2026-10-09 01:15 UTC)", () => {
       const lanes = readdirSync(home);
       assert.equal(lanes.length, 1, "one provider lane under the fleet home");
       assert.ok(existsSync(path.join(home, lanes[0]!, "gecko-feed-cache.sqlite")), "the children's shared pacing file");
-      assert.equal(process.env.MERRYMEN_FLEET_HOME, before);
+      assert.equal(process.env.AGENTCAP_FLEET_HOME, before);
     } finally {
       resetDeskReadsForTest();
       rmSync(home, { recursive: true, force: true });

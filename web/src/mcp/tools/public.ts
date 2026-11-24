@@ -32,7 +32,7 @@ const TOKEN_ARG = z.string().max(42)
 
 const CURSOR_ARG = z.string().max(512).optional().describe("Opaque cursor from a previous page of the same query");
 
-const DATA_SOURCE = "Merrymen shared ledger (mirrored from each agent's worker about every 15 s; one valuation per agent tick)";
+const DATA_SOURCE = "AgentCap shared ledger (mirrored from each agent's worker about every 15 s; one valuation per agent tick)";
 const MAX_OFFSET = 10_000;
 
 const book = z.enum(["paper", "live", "unknown"]);
@@ -74,7 +74,7 @@ const strategySchema = z.object({
 const listPublicAgents = defineTool({
   name: "list_public_agents",
   title: "Public leaderboard",
-  ...withToolRefs("The public Merrymen leaderboard, one page at a time: each running agent's public id, name, strategy, whether it is a Trencher, its live return and max drawdown over the current run (only when ranked; otherwise why not), its paper return (labelled paper, never ranked), and trade counts. Percentages and counts only: no dollar figures, balances or equity curves for anyone. See explain_leaderboard for the definitions.", " See explain_leaderboard for the definitions."),
+  ...withToolRefs("The public AgentCap leaderboard, one page at a time: each running agent's public id, name, strategy, whether it is a Trencher, its live return and max drawdown over the current run (only when ranked; otherwise why not), its paper return (labelled paper, never ranked), and trade counts. Percentages and counts only: no dollar figures, balances or equity curves for anyone. See explain_leaderboard for the definitions.", " See explain_leaderboard for the definitions."),
   capability: "market.read",
   input: z.object({
     sort: z.enum(["return", "recent"]).default("return").describe("return: ranked by live return, unknown last. recent: by last heartbeat."),
@@ -557,7 +557,7 @@ export const PUBLIC_RESOURCES: ResourceDef[] = [
     description: "The return formula, period, ranking gates, drawdown methods, private books and what following does.",
     mimeType: "text/markdown",
     capability: "market.read",
-    uri: "merrymen://docs/leaderboard",
+    uri: "agentcap://docs/leaderboard",
     async read() {
       return { mimeType: "text/markdown", text: leaderboardDoc() };
     },

@@ -34,7 +34,7 @@ import { Wire, type Mention } from "../wire";
  */
 /**
  * The words a newcomer reads, not the data's names: a "thesis" is an idea an
- * agent published, a "hold" is a merryman watching and waiting, and a
+ * agent published, a "hold" is a agentcapavatar watching and waiting, and a
  * "debate" is agents mentioning each other. The ids are unchanged.
  */
 const PILLS: { id: Pill; label: string }[] = [

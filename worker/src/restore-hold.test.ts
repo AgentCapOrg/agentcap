@@ -131,7 +131,7 @@ describe("the restore gate holds instead of returning", () => {
     assert.ok(ts.isConditionalExpression(choice));
     assert.equal(choice.condition.getText(), "held.perpsSeat");
     assert.ok(ts.isObjectLiteralExpression(choice.whenTrue) && ts.isObjectLiteralExpression(choice.whenFalse));
-    assert.deepEqual(choice.whenTrue.properties.map(p => p.getText()), ['MERRYMEN_PERPS_BOT_SEAT: "1"', 'MERRYMEN_TG_GROUPS: "0"'],
+    assert.deepEqual(choice.whenTrue.properties.map(p => p.getText()), ['AGENTCAP_PERPS_BOT_SEAT: "1"', 'AGENTCAP_TG_GROUPS: "0"'],
       "the only additions select the control-only entry and turn groups off");
     assert.equal(choice.whenFalse.properties.length, 0, "ordinary restore holders retain the stripped env unchanged");
     assert.equal(prop("stdio")?.getText(), '["ignore", "pipe", "pipe"]', "neither holder kind receives an IPC broker channel");
@@ -179,7 +179,7 @@ describe("held tenants reach only the loops they belong in", () => {
       .sort();
     assert.deepEqual(readers, [
       "adoptHolderForTest",
-      // MERRYMEN_RESUME_AUTO_PAPER asks `holders.has` of a re-signed tenant
+      // AGENTCAP_RESUME_AUTO_PAPER asks `holders.has` of a re-signed tenant
       // and nothing else: one with a hold process is past the continuity
       // gate (held by the paper-restore gate instead, which retryHold and
       // handHoldBack answer), so its re-sign is settled with nothing
@@ -316,7 +316,7 @@ describe("held tenants reach only the loops they belong in", () => {
     for (const writer of ["children", "spawning", "exitingChildren", "holders"]) {
       assert.match(writerGuard.expression.getText(), new RegExp(`\\b${writer}\\.has\\(tenant\\)`), `${writer} prevents cleanup`);
     }
-    const retainedBook = all(cleanup.statement, (n) => ts.isIfStatement(n) && n.expression.getText() === 'existsSync(path.join(home, "merrymen.db"))')[0] as ts.IfStatement | undefined;
+    const retainedBook = all(cleanup.statement, (n) => ts.isIfStatement(n) && n.expression.getText() === 'existsSync(path.join(home, "agentcap.db"))')[0] as ts.IfStatement | undefined;
     assert.ok(retainedBook, "the original financial book gets a retained-home branch");
     for (const name of ["scrubHostedGrantCache", "forgetTgGroupsHome", "forgetPersonalMemoryHome"]) {
       const clear = calls(cleanup.statement, name)[0];

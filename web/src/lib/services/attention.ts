@@ -64,7 +64,7 @@ export const SEVERITIES: readonly Severity[] = ["act_now", "today", "fyi"];
 
 export const SEVERITY_MEANING: Readonly<Record<Severity, string>> = Object.freeze({
   act_now: "Trading has stopped or stops within a day and the owner can fix it, or the drawdown breaker has tripped.",
-  today: "Needs the owner within the day, or a fault they should know about that Merrymen has to fix.",
+  today: "Needs the owner within the day, or a fault they should know about that AgentCap has to fix.",
   fyi: "Explains a quiet agent. Nothing has to be done; it can wait for a daily brief.",
 });
 
@@ -118,10 +118,10 @@ const EXPIRY_TIERS: ReadonlyArray<{ within: number; severity: Severity; tag: str
   { within: 7 * DAY, severity: "fyi", tag: "7d" },
 ];
 
-/** Delivery failures the owner can clear (their chat, their bot, their switches); the rest are Telegram's or Merrymen's. */
+/** Delivery failures the owner can clear (their chat, their bot, their switches); the rest are Telegram's or AgentCap's. */
 const OWNER_DELIVERY_CODES: ReadonlySet<string> = new Set(["no_linked_telegram", "owner_disabled", "bot_blocked", "chat_not_found", "bot_token_rejected"]);
 
-const RENEW = "Re-sign the trading permission in Merrymen (Wallet & permissions). Renewal revokes the old permission on chain and costs network fees.";
+const RENEW = "Re-sign the trading permission in AgentCap (Wallet & permissions). Renewal revokes the old permission on chain and costs network fees.";
 
 const iso = (sec: number): string => new Date(sec * 1000).toISOString();
 
@@ -189,7 +189,7 @@ export function permissionItems(slug: string, account: string | null, expiresAt:
       key: `no-permission:${slug}:none`, severity: "today", kind: "no-permission", agent: slug,
       title: "No trading permission signed yet",
       detail: "The agent cannot run until the owner signs a trading permission with their own wallet.",
-      owner_can_fix: true, what_to_do: "Sign a trading permission in Merrymen to start the agent.", link: links.grant,
+      owner_can_fix: true, what_to_do: "Sign a trading permission in AgentCap to start the agent.", link: links.grant,
       started_at: null, ends_at: null,
     }];
   }
@@ -258,7 +258,7 @@ function killedItem(slug: string, links: AttentionLinks, at: number | null): Att
     key: `killed:${slug}:on`, severity: "fyi", kind: "killed", agent: slug,
     title: "Kill switch is on",
     detail: "The trading key was removed, so the agent can sign nothing. Funds stay in the owner's smart account.",
-    owner_can_fix: true, what_to_do: "Sign a new trading permission in Merrymen when the agent should trade again.", link: links.grant,
+    owner_can_fix: true, what_to_do: "Sign a new trading permission in AgentCap when the agent should trade again.", link: links.grant,
     started_at: at, ends_at: null,
   };
 }
@@ -297,7 +297,7 @@ export async function readAgentAttention(db: Db, input: AgentAttentionInput): Pr
         key: `no-permission:${slug}:removed`, severity: "fyi", kind: "no-permission", agent: slug,
         title: "No trading permission is active",
         detail: "The agent's trading permission was discarded, so it cannot trade until a new one is signed. Funds stay in the owner's smart account.",
-        owner_can_fix: true, what_to_do: "Sign a new trading permission in Merrymen when the agent should trade again.", link: links.grant,
+        owner_can_fix: true, what_to_do: "Sign a new trading permission in AgentCap when the agent should trade again.", link: links.grant,
         started_at: null, ends_at: null,
       }],
     };
@@ -310,7 +310,7 @@ export async function readAgentAttention(db: Db, input: AgentAttentionInput): Pr
   // route key it (this owner, the current account, the grant's chain). A held
   // agent's supervisor runs no trading worker for it until its saved records
   // are verified, so its heartbeat, blockers and limits are the hold, and no
-  // step is asked of the owner: lifting it is on Merrymen's side. An expired
+  // step is asked of the owner: lifting it is on AgentCap's side. An expired
   // permission is named in it and offered once the hold lifts. A report that
   // cannot be read counts as no hold, never as one, and is said.
   let hold: { checkedAt: number } | null = null;
@@ -335,7 +335,7 @@ export async function readAgentAttention(db: Db, input: AgentAttentionInput): Pr
       items: [{
         key: `recovery-hold:${slug}:on`, severity: "today", kind: "recovery-hold", agent: slug,
         title: "Trading is paused for recovery",
-        detail: `Merrymen is holding this agent until its saved trading records are verified (last confirmed at ${iso(hold.checkedAt)}). A held agent does not trade, and nothing is asked of the owner: lifting the hold is on Merrymen's side.${also}`,
+        detail: `AgentCap is holding this agent until its saved trading records are verified (last confirmed at ${iso(hold.checkedAt)}). A held agent does not trade, and nothing is asked of the owner: lifting the hold is on AgentCap's side.${also}`,
         owner_can_fix: false, what_to_do: null, link: null, started_at: null, ends_at: null,
       }],
     };
@@ -349,7 +349,7 @@ export async function readAgentAttention(db: Db, input: AgentAttentionInput): Pr
   // blocker and heartbeat belong to an earlier one (a first grant not yet
   // armed, or a renewal on the same account while the old worker may still be
   // beating), so none of them is the agent's state now. Adoption is read from
-  // the worker's own row, as get_merryman_setup reads it (currentGrantSeen):
+  // the worker's own row, as get_agentcapavatar_setup reads it (currentGrantSeen):
   // a heartbeat at or after signing, in a row that carries this permission.
   // The identity the worker writes for it is expires_at (ensureAgent updates
   // it, with the caps and session key, on every grant; granted_at is written
@@ -400,7 +400,7 @@ export async function readAgentAttention(db: Db, input: AgentAttentionInput): Pr
     items.push({
       key: `arm-error:${slug}:on`, severity: "today", kind: "arm-error", agent: slug,
       title: "The agent could not arm its trading key",
-      detail: "The worker reports that it could not arm the trading key, so nothing is signed. This is Merrymen's to fix, not the owner's.",
+      detail: "The worker reports that it could not arm the trading key, so nothing is signed. This is AgentCap's to fix, not the owner's.",
       owner_can_fix: false, what_to_do: null, link: null,
       started_at: armFailedAt, ends_at: null,
     });
@@ -414,7 +414,7 @@ export async function readAgentAttention(db: Db, input: AgentAttentionInput): Pr
     items.push({
       key: `worker-stale:${slug}:since-${signedAt}`, severity: "today", kind: "worker-stale", agent: slug,
       title: beat === null ? "The agent's worker has never reported" : "The agent's worker has not picked up the new permission",
-      detail: `The trading permission was signed at ${iso(signedAt!)}, but ${beat === null ? "the agent's worker has not reported once since" : "the agent's worker has not taken it up (its reports are for the previous permission)"}, so it is not trading under it or running exits. Merrymen starts workers; the owner cannot fix this from here.`,
+      detail: `The trading permission was signed at ${iso(signedAt!)}, but ${beat === null ? "the agent's worker has not reported once since" : "the agent's worker has not taken it up (its reports are for the previous permission)"}, so it is not trading under it or running exits. AgentCap starts workers; the owner cannot fix this from here.`,
       owner_can_fix: false, what_to_do: null, link: null,
       started_at: signedAt! + grace, ends_at: null,
     });
@@ -425,7 +425,7 @@ export async function readAgentAttention(db: Db, input: AgentAttentionInput): Pr
     items.push({
       key: `worker-stale:${slug}:${beat}`, severity: "today", kind: "worker-stale", agent: slug,
       title: "The agent's worker stopped reporting",
-      detail: `The worker has not reported since ${iso(beat)}, so the agent may not be trading or running its exits. Merrymen restarts workers; the owner cannot fix this from here.`,
+      detail: `The worker has not reported since ${iso(beat)}, so the agent may not be trading or running its exits. AgentCap restarts workers; the owner cannot fix this from here.`,
       owner_can_fix: false, what_to_do: null, link: null,
       started_at: beat + freshWithinSec, ends_at: null,
     });
@@ -475,7 +475,7 @@ export async function readAgentAttention(db: Db, input: AgentAttentionInput): Pr
     items.push({
       key: `provider-failure:${slug}:${provider}`, severity: "fyi", kind: "provider-failure", agent: slug,
       title: PROVIDER_TITLE[provider],
-      detail: `${PROVIDER_TEXT[provider]} This is Merrymen's to fix; the owner has nothing to do.`,
+      detail: `${PROVIDER_TEXT[provider]} This is AgentCap's to fix; the owner has nothing to do.`,
       owner_can_fix: false, what_to_do: null, link: null, started_at: start, ends_at: null,
     });
   }
@@ -515,7 +515,7 @@ export function proposalItems(rows: ReadonlyArray<{ id: string; kind: string; ag
   return rows.map((r) => ({
     key: `proposal-waiting:${r.agent_slug ?? "-"}:${r.kind}.${r.id.toLowerCase()}`, severity: "today" as const, kind: "proposal-waiting" as const, agent: r.agent_slug,
     title: PROPOSAL_TITLE[r.kind] ?? "A proposal is waiting for approval",
-    detail: `Nothing happens unless the owner approves it in Merrymen. It expires at ${iso(r.expires_at)}.`,
+    detail: `Nothing happens unless the owner approves it in AgentCap. It expires at ${iso(r.expires_at)}.`,
     owner_can_fix: true, what_to_do: "Open the approval page to review it, then approve or decline.", link: r.approval_url,
     started_at: r.created_at, ends_at: r.expires_at,
   }));
@@ -525,7 +525,7 @@ export function proposalItems(rows: ReadonlyArray<{ id: string; kind: string; ag
  * One item when alert messages to the owner's Telegram died in the lookback,
  * keyed by the agent a read was limited to, or `-` for a read of them all.
  * The newest failure's code says whose it is: the owner's chat, bot or
- * switches, or a Telegram or Merrymen failure no setting can clear.
+ * switches, or a Telegram or AgentCap failure no setting can clear.
  */
 export function deliveryItems(dead: { count: number; first: number; lastErrorCode: string | null } | null, links: AttentionLinks, agent: string | null = null): AttentionItem[] {
   if (!dead || dead.count <= 0) return [];
@@ -535,7 +535,7 @@ export function deliveryItems(dead: { count: number; first: number; lastErrorCod
     key: `alerts-failing:${agent ?? "-"}:on`, severity: "fyi", kind: "alerts-failing", agent,
     title: "Telegram alerts are not being delivered",
     detail: `${dead.count} alert message(s) in the last 24 hours could not be delivered${why ? `: ${why}` : "."}${owners ? "" : " This is not something a setting can fix."}`,
-    owner_can_fix: owners, what_to_do: owners ? "Check the Telegram link and bot in Merrymen Settings." : null, link: owners ? links.settings : null,
+    owner_can_fix: owners, what_to_do: owners ? "Check the Telegram link and bot in AgentCap Settings." : null, link: owners ? links.settings : null,
     started_at: dead.first, ends_at: null,
   }];
 }

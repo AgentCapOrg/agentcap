@@ -10,7 +10,7 @@
  * Every word below was argued for once already. Do not change one of them
  * without a reason better than "shorter".
  */
-import { IN_FLIGHT_TEXT } from "@merrymen/thesis";
+import { IN_FLIGHT_TEXT } from "@agentcap/thesis";
 import type { PublicThesis } from "@/lib/thesis";
 
 export type BadgeKind = "bought" | "sold" | "thesis" | "turned" | "quiet";

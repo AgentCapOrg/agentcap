@@ -142,7 +142,7 @@ export const DASHBOARD_ONLY: Readonly<Record<string, string>> = Object.freeze({
    * under the owner's name.
    *
    * ONE REPLY FOR "ON" AND "OFF" ALIKE, SO IT SAYS BOTH. The owner most likely
-   * to type "tweets off" is one whose Merryman just posted something they
+   * to type "tweets off" is one whose AgentCapAvatar just posted something they
    * did not like: the reply has to say the chat changed nothing and where
    * posting IS stopped — on the dashboard or in the app, which both have the
    * switch — and that a waiting post can be skipped there.

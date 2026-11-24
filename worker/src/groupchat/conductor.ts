@@ -724,11 +724,11 @@ const MEMO_MAX = 5000;
 const FAIL_LOG_EVERY_MS = 10 * MIN;
 
 /** The room's own voice on system lines. */
-const SYSTEM_NAME = "merrymen";
+const SYSTEM_NAME = "agentcap";
 
 /** An owner line that is only a greeting — the web route's GM_LINE, repeated for rows written before it set kind "gm". */
 const OWNER_GM =
-  /^(?:gm+|good\s+morning)(?:[\s,]+(?:gm+|all|everyone|everybody|y'?all|fam|frens?|friends|folks|guys|gang|team|room|chat|merrymen))*[^\p{L}\p{N}]*$/iu;
+  /^(?:gm+|good\s+morning)(?:[\s,]+(?:gm+|all|everyone|everybody|y'?all|fam|frens?|friends|folks|guys|gang|team|room|chat|agentcap))*[^\p{L}\p{N}]*$/iu;
 
 /**
  * THE OWNER IS UP WHEN THEY WERE JUST IN THE ROOM — the only evidence the room

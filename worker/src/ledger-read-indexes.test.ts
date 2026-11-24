@@ -103,7 +103,7 @@ test("an existing pre-epoch ledger installs indexes after column upgrades and re
 });
 
 test("self-hosted SQLite initialization installs the same indexes in a disposable home", () => {
-  const home = mkdtempSync(path.join(os.tmpdir(), "merrymen-read-indexes-"));
+  const home = mkdtempSync(path.join(os.tmpdir(), "agentcap-read-indexes-"));
   try {
     const storeUrl = new URL("./store.ts", import.meta.url).href;
     const script = `
@@ -112,14 +112,14 @@ test("self-hosted SQLite initialization installs the same indexes in a disposabl
       const { initStore, closeStoreForTest } = await import(${JSON.stringify(storeUrl)});
       await initStore();
       closeStoreForTest();
-      const raw = new DatabaseSync(path.join(process.env.MERRYMEN_HOME, 'merrymen.db'));
+      const raw = new DatabaseSync(path.join(process.env.AGENTCAP_HOME, 'agentcap.db'));
       process.stdout.write(JSON.stringify(raw.prepare("SELECT name FROM sqlite_schema WHERE type = 'index' AND name LIKE '%_agent_run_normalized' ORDER BY name").all()));
       raw.close();
     `;
     // An empty cwd avoids legacy .data migration; DATABASE_URL is disabled so
     // this test never consults a configured external database.
     const child = spawnSync(process.execPath, ["--import", import.meta.resolve("tsx"), "--input-type=module", "-e", script], {
-      cwd: home, env: { ...process.env, DATABASE_URL: "", MERRYMEN_HOME: home }, encoding: "utf8",
+      cwd: home, env: { ...process.env, DATABASE_URL: "", AGENTCAP_HOME: home }, encoding: "utf8",
     });
     assert.equal(child.status, 0, child.stderr);
     assert.deepEqual(JSON.parse(child.stdout), indexes.map(index => ({ name: index.name })).sort((a, b) => a.name.localeCompare(b.name)));

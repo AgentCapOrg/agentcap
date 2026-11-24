@@ -1,23 +1,23 @@
 #!/usr/bin/env node
 /**
- * merrymen CLI — the terminal front door.
+ * agentcap CLI — the terminal front door.
  *
- * Install (no clone):   npm install -g merrymen        (or github:millw14/merrymen)
- * Then:                 merrymen onboard && merrymen start
+ * Install (no clone):   npm install -g agentcap        (or github:millw14/agentcap)
+ * Then:                 agentcap onboard && agentcap start
  *
- *   merrymen onboard        interactive setup wizard (keys, strategy, basket)
- *   merrymen start          run web + worker together
- *   merrymen doctor         diagnose the whole stack
- *   merrymen status         what the band is doing right now
- *   merrymen strategy new   scaffold a custom strategy in ~/.merrymen/strategies
- *   merrymen strategy list  builtins + your strategies
- *   merrymen selftest       one policy-legal no-op through the full pipeline
- *   merrymen kill           terminal kill switch (deletes the grant)
- *   merrymen wallets        every wallet on this machine (live + archived) + balances
- *   merrymen recover        sweep the smart account's funds to a wallet you control
+ *   agentcap onboard        interactive setup wizard (keys, strategy, basket)
+ *   agentcap start          run web + worker together
+ *   agentcap doctor         diagnose the whole stack
+ *   agentcap status         what the band is doing right now
+ *   agentcap strategy new   scaffold a custom strategy in ~/.agentcap/strategies
+ *   agentcap strategy list  builtins + your strategies
+ *   agentcap selftest       one policy-legal no-op through the full pipeline
+ *   agentcap kill           terminal kill switch (deletes the grant)
+ *   agentcap wallets        every wallet on this machine (live + archived) + balances
+ *   agentcap recover        sweep the smart account's funds to a wallet you control
  *
- * Zero dependencies. All user data lives in ~/.merrymen (override with
- * MERRYMEN_HOME) — the install location stays disposable.
+ * Zero dependencies. All user data lives in ~/.agentcap (override with
+ * AGENTCAP_HOME) — the install location stays disposable.
  */
 
 import { spawn, spawnSync } from "node:child_process";
@@ -36,7 +36,7 @@ import { installService, serviceLogTail, serviceStatus, uninstallService } from 
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 // Where the USER's data lives — settings, grant, ledger, strategies.
-const HOME = process.env.MERRYMEN_HOME ?? path.join(os.homedir(), ".merrymen");
+const HOME = process.env.AGENTCAP_HOME ?? path.join(os.homedir(), ".agentcap");
 const SETTINGS = path.join(HOME, "settings.json");
 const GRANT = path.join(HOME, "grant.json");
 /** The local Perps wallet's grant, in its own home (worker/src/home.ts purposeHome). */
@@ -44,7 +44,7 @@ const PERPS_GRANT = path.join(HOME, "accounts", "perps", "grant.json");
 // The Perps home's settings: a kill turns its paper strategy off (worker/src/perps-kill.ts).
 const PERPS_SETTINGS = path.join(HOME, "accounts", "perps", "settings.json");
 const HEARTBEAT = path.join(HOME, "heartbeat.json");
-const DB = path.join(HOME, "merrymen.db");
+const DB = path.join(HOME, "agentcap.db");
 const STRATEGIES = path.join(HOME, "strategies");
 // Every wallet this machine has armed — one file per smart account. grant.json is
 // a single slot, so replacing or killing a wallet archives the old one here first
@@ -61,10 +61,10 @@ const WELCOMED = path.join(HOME, ".welcomed");
 const RPC_MAINNET = "https://rpc.mainnet.chain.robinhood.com";
 const RPC_TESTNET = "https://rpc.testnet.chain.robinhood.com";
 const BUILTINS = ["steady-basket", "weekend-gap", "llm-strategist"];
-// Merry Circle strategies — selectable, but only RUN for $MERRYMEN holders (the
+// Merry Circle strategies — selectable, but only RUN for $AGENTCAP holders (the
 // worker gates them by tier). Listed apart so the lock is obvious.
 const CIRCLE_STRATEGIES = ["even-keel", "dip-hunter"];
-// tsx worker entry that rebuilds the Kernel account and sweeps it (merrymen recover).
+// tsx worker entry that rebuilds the Kernel account and sweeps it (agentcap recover).
 const RECOVER_CLI = path.join(ROOT, "worker", "src", "recover-cli.ts");
 const EXPLORER = {
   4663: "https://robinhoodchain.blockscout.com",
@@ -88,12 +88,12 @@ function readJson(file) {
   }
 }
 
-/** Create ~/.merrymen, migrate any legacy <checkout>/.data, seed the example. */
+/** Create ~/.agentcap, migrate any legacy <checkout>/.data, seed the example. */
 function ensureHome() {
   mkdirSync(STRATEGIES, { recursive: true });
   const legacy = path.join(ROOT, ".data");
   if (existsSync(legacy)) {
-    for (const name of ["settings.json", "grant.json", "merrymen.db", "heartbeat.json"]) {
+    for (const name of ["settings.json", "grant.json", "agentcap.db", "heartbeat.json"]) {
       const from = path.join(legacy, name);
       const to = path.join(HOME, name);
       if (existsSync(from) && !existsSync(to)) {
@@ -296,7 +296,7 @@ async function ethBalance(rpc, addr) {
 }
 
 /**
- * `merrymen wallets` — every wallet this machine knows about, live + archived,
+ * `agentcap wallets` — every wallet this machine knows about, live + archived,
  * with what each one actually holds. The answer to "where did my other wallet go?"
  */
 async function wallets() {
@@ -324,7 +324,7 @@ async function wallets() {
     );
   }
   console.log(
-    `\n  ${c.gold(c.arrow)} ${dim("sweep funds out:")} ${bold("merrymen recover")}\n` +
+    `\n  ${c.gold(c.arrow)} ${dim("sweep funds out:")} ${bold("agentcap recover")}\n` +
       `  ${c.gold(c.arrow)} ${dim("put one back to work:")} ${bold("http://localhost:3100/grant")} ${dim("→ restore a funded wallet")}\n`,
   );
 }
@@ -336,16 +336,16 @@ async function welcome() {
   await banner("stand and deliver — you just joined the band");
   console.log(
     `  ${bold("the band is mustered.")} raise your first agent:\n\n` +
-      `     ${bold(c.lime("merrymen onboard"))}   ${dim("gather the band — bundler, keys, strategy, basket")}\n` +
-      `     ${bold(c.lime("merrymen start"))}     ${dim("open the tavern (localhost:3100) + loose the worker")}\n\n` +
+      `     ${bold(c.lime("agentcap onboard"))}   ${dim("gather the band — bundler, keys, strategy, basket")}\n` +
+      `     ${bold(c.lime("agentcap start"))}     ${dim("open the tavern (localhost:3100) + loose the worker")}\n\n` +
       `  ${c.gold(c.arrow)} ${dim("your keys, your caps · bounded worst case · every trade simulated first")}\n` +
-      `  ${c.gold(c.arrow)} ${dim("learn more:")} ${bold("https://merrymen.dev")}\n`,
+      `  ${c.gold(c.arrow)} ${dim("learn more:")} ${bold("https://agentcap.xyz")}\n`,
   );
 }
 
 /**
  * Show the welcome once, the first time any command runs after install.
- * Marker lives in ~/.merrymen so a reinstall (fresh home) re-greets.
+ * Marker lives in ~/.agentcap so a reinstall (fresh home) re-greets.
  */
 async function maybeFirstRun(cmd) {
   // The paper command has machine-readable output and must not initialize
@@ -380,11 +380,11 @@ async function onboard() {
   );
 
   if (!nodeVersionOk()) {
-    bad(`Node ${process.versions.node} — merrymen needs ${NODE_REQUIREMENT} (node:sqlite). Install from nodejs.org and rerun.`);
+    bad(`Node ${process.versions.node} — agentcap needs ${NODE_REQUIREMENT} (node:sqlite). Install from nodejs.org and rerun.`);
     process.exit(1);
   }
   if (!existsSync(path.join(ROOT, "node_modules"))) {
-    bad("install incomplete — node_modules missing next to the package. Reinstall: npm install -g merrymen");
+    bad("install incomplete — node_modules missing next to the package. Reinstall: npm install -g agentcap");
     process.exit(1);
   }
 
@@ -394,7 +394,7 @@ async function onboard() {
   const keep = (has) => dim(has ? ` [saved — blank keeps it]` : ` [blank skips]`);
 
   console.log(bold(`\n  ${c.arrow} 1/4 · go live`) + dim("  (optional — skip to stay in practice mode)"));
-  console.log(dim("  To place real trades, merrymen needs one key: a free ") + "Pimlico" + dim(" key that relays"));
+  console.log(dim("  To place real trades, agentcap needs one key: a free ") + "Pimlico" + dim(" key that relays"));
   console.log(dim("  your agent's transactions on-chain. Grab it at ") + bold("dashboard.pimlico.io") + dim(" → API Keys."));
   console.log(dim("  Paste just the key — we build the right URL for your chain automatically."));
   const bundlerKey = (await p.askSecret(`  Pimlico API key${keep(current.bundlerApiKey || current.bundlerUrl)}: `)).trim();
@@ -402,7 +402,7 @@ async function onboard() {
 
   async function fetchModels(provId, apiKey, customUrl) {
     const MODELS_BASE = {
-      merrymen: "", groq: "https://api.groq.com/openai/v1", openai: "https://api.openai.com/v1",
+      agentcap: "", groq: "https://api.groq.com/openai/v1", openai: "https://api.openai.com/v1",
       anthropic: "https://api.anthropic.com", google: "https://generativelanguage.googleapis.com/v1beta/openai",
       xai: "https://api.x.ai/v1", deepseek: "https://api.deepseek.com", mistral: "https://api.mistral.ai/v1",
       openrouter: "https://openrouter.ai/api/v1", together: "https://api.together.xyz/v1",
@@ -446,7 +446,7 @@ async function onboard() {
   // plain ESM and can't import the TS core. keyField routes the key to the field
   // the worker reads: groq/anthropic keep their classic fields, the rest use llmApiKey.
   const LLM_PROVIDERS = [
-    { id: "merrymen", label: "Merrymen AI", keyField: "llmApiKey", modelField: "llmProviderModel", def: "merrymen-fast", key: "merrymen-gateway-production.up.railway.app/claim", holder: true, needsKey: true },
+    { id: "agentcap", label: "AgentCap AI", keyField: "llmApiKey", modelField: "llmProviderModel", def: "agentcap-fast", key: "agentcap-gateway-production.up.railway.app/claim", holder: true, needsKey: true },
     { id: "groq", label: "Groq", keyField: "groqApiKey", modelField: "groqModel", def: "llama-3.3-70b-versatile", key: "console.groq.com/keys", free: true, needsKey: true },
     { id: "openai", label: "OpenAI", keyField: "llmApiKey", modelField: "llmProviderModel", def: "gpt-4o-mini", key: "platform.openai.com/api-keys", needsKey: true },
     { id: "anthropic", label: "Anthropic (Claude)", keyField: "anthropicApiKey", modelField: "llmModel", def: "claude-opus-4-8", key: "console.anthropic.com/settings/keys", needsKey: true },
@@ -488,7 +488,7 @@ async function onboard() {
   }
   // ── auto-detect available models ──────────────────────────────
   let brainModels = [];
-  if (chosen.id !== "merrymen") {
+  if (chosen.id !== "agentcap") {
     const ak = current[chosen.keyField]?.trim();
     const cu = chosen.custom ? current.llmBaseUrl?.trim() : undefined;
     process.stdout.write(dim("  fetching available models…"));
@@ -517,10 +517,10 @@ async function onboard() {
   const all = [...BUILTINS, ...CIRCLE_STRATEGIES, ...custom];
   all.forEach((s, i) =>
     console.log(
-      `  ${i + 1}. ${s}${custom.includes(s) ? dim(" (yours)") : ""}${CIRCLE_STRATEGIES.includes(s) ? dim(" 🏹 merry circle — hold $MERRYMEN") : ""}${s === (current.strategy ?? "steady-basket") ? green(" ← current") : ""}`,
+      `  ${i + 1}. ${s}${custom.includes(s) ? dim(" (yours)") : ""}${CIRCLE_STRATEGIES.includes(s) ? dim(" 🏹 merry circle — hold $AGENTCAP") : ""}${s === (current.strategy ?? "steady-basket") ? green(" ← current") : ""}`,
     ),
   );
-  console.log(dim(`  forge your own outlaw: merrymen strategy new <name>  (template lands in ${STRATEGIES})`));
+  console.log(dim(`  forge your own outlaw: agentcap strategy new <name>  (template lands in ${STRATEGIES})`));
   const pick = (await p.ask(`  pick 1-${all.length} [blank keeps current]: `)).trim();
   const idx = Number(pick) - 1;
   if (pick && Number.isInteger(idx) && all[idx]) current.strategy = all[idx];
@@ -538,7 +538,7 @@ async function onboard() {
     if (valid.length) current.basketSymbols = valid;
   }
 
-  console.log(bold(`\n  ${c.arrow} a raven to Telegram`) + dim("  (chat with your merryman — optional)"));
+  console.log(bold(`\n  ${c.arrow} a raven to Telegram`) + dim("  (chat with your agentcapavatar — optional)"));
   console.log(dim("  Create a bot: message @BotFather in Telegram, send /newbot, copy the token."));
   console.log(dim("  Then finish linking from the dashboard settings, or leave blank to skip."));
   const tgToken = (await p.askSecret(`  Telegram bot token${keep(current.telegramBotToken)}: `)).trim();
@@ -556,15 +556,15 @@ async function onboard() {
 
   console.log(`
 ${bold(`  ${c.arrow} ride out`)}
-  1. ${bold("merrymen start")} — opens the tavern (dashboard) at http://localhost:3100 + looses the worker
+  1. ${bold("agentcap start")} — opens the tavern (dashboard) at http://localhost:3100 + looses the worker
   2. at ${bold("/grant")}, create your agent wallet — pick testnet 46630 (practice) or mainnet 4663 (real funds)
   3. testnet ${bold("gas")} from the sheriff's vault: ${dim("https://faucet.testnet.chain.robinhood.com")}
      ${dim("gas only — USDG sent to a testnet account is never shown and never traded.")}
      ${dim("mainnet: send ETH (gas) + USDG (capital) from your own wallet.")}
-  4. prove the shot lands: ${bold("merrymen selftest")}
-  5. muster check anytime: ${bold("merrymen doctor")} · tune the band: ${dim("http://localhost:3100/settings")}
+  4. prove the shot lands: ${bold("agentcap selftest")}
+  5. muster check anytime: ${bold("agentcap doctor")} · tune the band: ${dim("http://localhost:3100/settings")}
 
-  ${dim("guide & docs:")} ${bold("https://merrymen.dev")} ${dim("·")} ${dim("https://merrymen.dev/docs")}
+  ${dim("guide & docs:")} ${bold("https://agentcap.xyz")} ${dim("·")} ${dim("https://agentcap.xyz/docs")}
 
   ${c.gold("nock, draw, loose. 🏹")}
 `);
@@ -599,9 +599,9 @@ async function start() {
   const noOpen = process.argv.includes("--no-open");
   // Bind localhost-only by default: the dashboard has no login and holds your
   // trading controls, so it must not be reachable from the LAN. Opt into
-  // network access explicitly with MERRYMEN_HOST=0.0.0.0 (e.g. phone on your
+  // network access explicitly with AGENTCAP_HOST=0.0.0.0 (e.g. phone on your
   // home WiFi) — only on a network you trust.
-  const host = process.env.MERRYMEN_HOST || "127.0.0.1";
+  const host = process.env.AGENTCAP_HOST || "127.0.0.1";
   const url = "http://localhost:3100";
   await banner("the band rides out");
   const web = path.join(ROOT, "web");
@@ -615,7 +615,7 @@ async function start() {
         if (b.status !== 0) throw new Error("build failed");
       });
     } catch {
-      bad("the tavern won't stand (dashboard build failed) — the worker still runs via `merrymen selftest`.");
+      bad("the tavern won't stand (dashboard build failed) — the worker still runs via `agentcap selftest`.");
       process.exit(1);
     }
   }
@@ -666,7 +666,7 @@ async function start() {
       if (Date.now() - startedAt > 60_000) bandRestarts = 0;
       bandRestarts += 1;
       if (bandRestarts > 8) {
-        bad("the band keeps falling right after starting — fix the error above, then `merrymen start`.");
+        bad("the band keeps falling right after starting — fix the error above, then `agentcap start`.");
         return;
       }
       const delay = Math.min(30_000, 1_000 * 2 ** Math.min(bandRestarts, 5));
@@ -696,9 +696,9 @@ async function start() {
 function version() {
   try {
     const pkg = readJson(path.join(ROOT, "package.json"));
-    console.log(`merrymen v${pkg?.version ?? "unknown"}`);
+    console.log(`agentcap v${pkg?.version ?? "unknown"}`);
   } catch {
-    console.log("merrymen (version unknown)");
+    console.log("agentcap (version unknown)");
   }
 }
 
@@ -711,18 +711,18 @@ async function doctor() {
 
   nodeVersionOk()
     ? ok(`node ${process.versions.node}`)
-    : bad(`node ${process.versions.node} — need ${NODE_REQUIREMENT} for node:sqlite (run: merrymen setup)`);
+    : bad(`node ${process.versions.node} — need ${NODE_REQUIREMENT} for node:sqlite (run: agentcap setup)`);
   const npmV = sh("npm", ["--version"]);
-  npmV ? ok(`npm ${npmV}`) : warn("npm not found on PATH — reinstall Node (run: merrymen setup)");
+  npmV ? ok(`npm ${npmV}`) : warn("npm not found on PATH — reinstall Node (run: agentcap setup)");
   const binDir = npmGlobalBinDir();
-  if (binDir && !onPath(binDir)) warn(`npm global bin not on PATH — "command not found" trap (run: merrymen setup)`);
+  if (binDir && !onPath(binDir)) warn(`npm global bin not on PATH — "command not found" trap (run: agentcap setup)`);
   existsSync(path.join(ROOT, "node_modules")) ? ok("package install complete") : bad("node_modules missing — reinstall");
   console.log(`  ${dim(`package: ${ROOT}`)}`);
   console.log(`  ${dim(`home:    ${HOME}`)}`);
 
-  existsSync(SETTINGS) ? ok("settings present") : warn("no settings yet — run: merrymen onboard");
+  existsSync(SETTINGS) ? ok("settings present") : warn("no settings yet — run: agentcap onboard");
   const paperOn = s.paperTradingEnabled !== false;
-  const hasSigner = !!(s.bundlerApiKey || s.bundlerUrl || process.env.MERRYMEN_BUNDLER_API_KEY || process.env.MERRYMEN_BUNDLER_URL);
+  const hasSigner = !!(s.bundlerApiKey || s.bundlerUrl || process.env.AGENTCAP_BUNDLER_API_KEY || process.env.AGENTCAP_BUNDLER_URL);
   hasSigner
     ? ok("bundler key configured — can sign live trades")
     : paperOn
@@ -740,7 +740,7 @@ async function doctor() {
     s.llmProvider === "ollama" ||
     process.env.GROQ_API_KEY ||
     process.env.ANTHROPIC_API_KEY ||
-    process.env.MERRYMEN_LLM_API_KEY
+    process.env.AGENTCAP_LLM_API_KEY
   );
   const brainName = s.llmProvider
     ? s.llmProvider
@@ -750,7 +750,7 @@ async function doctor() {
   hasLlm
     ? ok(`AI brain set (${brainName})`)
     : warn("no AI provider key — plain-English chat + llm-strategist idle. Pick one in /settings (free: Groq, Google, Cerebras; local: Ollama).");
-  if (s.telegramBotToken || process.env.MERRYMEN_TELEGRAM_BOT_TOKEN) {
+  if (s.telegramBotToken || process.env.AGENTCAP_TELEGRAM_BOT_TOKEN) {
     s.telegramEnabled === false
       ? warn("Telegram token set but DISABLED — enable it in /settings so the bot answers")
       : Array.isArray(s.telegramAllowlist) && s.telegramAllowlist.length
@@ -762,7 +762,7 @@ async function doctor() {
   if (process.platform === "win32") {
     const pol = sh("powershell", ["-NoProfile", "-Command", "Get-ExecutionPolicy"]);
     pol && /Restricted|AllSigned/i.test(pol)
-      ? bad(`PowerShell policy is ${pol.trim()} — 'merrymen' scripts are blocked. Fix: Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`)
+      ? bad(`PowerShell policy is ${pol.trim()} — 'agentcap' scripts are blocked. Fix: Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`)
       : ok(`PowerShell script policy ok (${(pol || "unknown").trim()})`);
   }
 
@@ -798,16 +798,16 @@ async function doctor() {
   const hb = readJson(HEARTBEAT);
   if (hb && Math.floor(Date.now() / 1000) - hb.at < 90)
     ok(`worker alive (heartbeat ${Math.floor(Date.now() / 1000) - hb.at}s ago, block ${hb.block}${hb.mode ? `, mode ${hb.mode}` : ""})`);
-  else warn("worker not running (no heartbeat in 90s) — merrymen start");
+  else warn("worker not running (no heartbeat in 90s) — agentcap start");
 
-  existsSync(DB) ? ok("ledger present (~/.merrymen/merrymen.db)") : warn("no ledger yet — appears after the worker's first tick");
+  existsSync(DB) ? ok("ledger present (~/.agentcap/agentcap.db)") : warn("no ledger yet — appears after the worker's first tick");
 
   const custom = await listCustom();
   const strategy = s.strategy ?? "steady-basket";
   if (BUILTINS.includes(strategy)) ok(`strategy: ${strategy} (builtin)`);
   else if (CIRCLE_STRATEGIES.includes(strategy))
-    ok(`strategy: ${strategy} (🏹 merry circle — runs when you hold $MERRYMEN at your holder wallet)`);
-  else if (custom.includes(strategy)) ok(`strategy: ${strategy} (yours, ~/.merrymen/strategies/${strategy}.*)`);
+    ok(`strategy: ${strategy} (🏹 merry circle — runs when you hold $AGENTCAP at your holder wallet)`);
+  else if (custom.includes(strategy)) ok(`strategy: ${strategy} (yours, ~/.agentcap/strategies/${strategy}.*)`);
   else bad(`strategy "${strategy}" is neither builtin nor in ${STRATEGIES} — the worker will idle with a warning`);
   if (custom.length) console.log(`  ${dim(`your strategies: ${custom.join(", ")}`)}`);
 
@@ -826,7 +826,7 @@ async function doctor() {
   // didn't. Purely informational — doctor never changes anything.
   const svc = serviceStatus();
   if (!svc.installed) {
-    console.log(`  ${dim("auto-start: not installed — `merrymen service install` to start on login")}`);
+    console.log(`  ${dim("auto-start: not installed — `agentcap service install` to start on login")}`);
   } else if (svc.running) {
     ok(`auto-start: installed and running (${svc.where})`);
   } else {
@@ -954,12 +954,12 @@ async function status() {
     let db;
     try {
       const { DatabaseSync } = await import("node:sqlite");
-      db = new DatabaseSync(path.join(perps.home, "merrymen.db"), { readOnly: true });
+      db = new DatabaseSync(path.join(perps.home, "agentcap.db"), { readOnly: true });
       const row = db.prepare("SELECT COUNT(*) AS n FROM perp_fills WHERE agent_id = ? AND mode = ?").get(perps.g.smartAccount.toLowerCase(), "paper");
       console.log(`  Perps recorded paper fills (all epochs): ${row.n}`);
     } catch { console.log(dim("  Perps book could not be read; balances and positions are unknown")); }
     finally { db?.close(); }
-    console.log(dim("  Recovery remains available: merrymen recover"));
+    console.log(dim("  Recovery remains available: agentcap recover"));
   }
   console.log();
 }
@@ -1004,16 +1004,16 @@ async function strategyCmd(sub, name) {
   if (sub === "list") {
     console.log(bold("builtin"));
     BUILTINS.forEach((s) => console.log(`  ${s}`));
-    console.log(bold("merry circle") + dim(" (hold $MERRYMEN — Merry Man tier — to run)"));
+    console.log(bold("merry circle") + dim(" (hold $AGENTCAP — Merry Man tier — to run)"));
     CIRCLE_STRATEGIES.forEach((s) => console.log(`  ${s} ${dim("🏹")}`));
     const custom = await listCustom();
     console.log(bold("yours") + dim(` (${STRATEGIES})`));
-    custom.length ? custom.forEach((s) => console.log(`  ${s}`)) : console.log(dim("  none yet — merrymen strategy new <name>"));
+    custom.length ? custom.forEach((s) => console.log(`  ${s}`)) : console.log(dim("  none yet — agentcap strategy new <name>"));
     return;
   }
   if (sub === "new") {
     if (!name || !/^[A-Za-z0-9_-]{1,64}$/.test(name)) {
-      bad("usage: merrymen strategy new <name>   (letters, digits, - and _ only)");
+      bad("usage: agentcap strategy new <name>   (letters, digits, - and _ only)");
       process.exit(1);
     }
     if (BUILTINS.includes(name)) {
@@ -1027,7 +1027,7 @@ async function strategyCmd(sub, name) {
     }
     writeFileSync(file, TEMPLATE(name), "utf8");
     ok(`created ${file}`);
-    console.log(`  edit it, then select "${name}" in /settings or: merrymen onboard`);
+    console.log(`  edit it, then select "${name}" in /settings or: agentcap onboard`);
     return;
   }
   if (sub === "backtest") {
@@ -1038,7 +1038,7 @@ async function strategyCmd(sub, name) {
     // The child is spawned with cwd: ROOT (it must be, to find tsx and the
     // worker sources), so a relative path handed straight through would be
     // opened relative to the installed package instead of the user's folder —
-    // `--file bars.json` looked for it inside node_modules/merrymen.
+    // `--file bars.json` looked for it inside node_modules/agentcap.
     const fi = extraArgs.indexOf("--file");
     if (fi >= 0 && extraArgs[fi + 1] && !extraArgs[fi + 1].startsWith("--")) {
       extraArgs[fi + 1] = path.resolve(process.cwd(), extraArgs[fi + 1]);
@@ -1052,12 +1052,12 @@ async function strategyCmd(sub, name) {
     child.on("exit", (code) => process.exit(code ?? 1));
     return;
   }
-  bad("usage: merrymen strategy <list|new|backtest> [name]");
+  bad("usage: agentcap strategy <list|new|backtest> [name]");
   process.exit(1);
 }
 
 /**
- * `merrymen preflight` — can this install actually make a REAL trade?
+ * `agentcap preflight` — can this install actually make a REAL trade?
  *
  * Distinct from `doctor`, which asks whether the software is installed and
  * configured. This asks whether the account can trade: balances, the grant's
@@ -1076,9 +1076,9 @@ function preflightCmd() {
 // ──────────────────────────────────────────────────────────────── audit ──
 
 /**
- * `merrymen export` writes the hash-chained journal to stdout; `merrymen verify`
+ * `agentcap export` writes the hash-chained journal to stdout; `agentcap verify`
  * checks a file someone handed you. Verify reads ONLY that file — not
- * ~/.merrymen, not settings — because a verifier that consults the operator's
+ * ~/.agentcap, not settings — because a verifier that consults the operator's
  * own machine is only checking the ledger against itself.
  */
 function auditCmd(which, extraArgs) {
@@ -1136,7 +1136,7 @@ function stopLocalSolana() {
     if (child.stdout.trim() === "stopped") ok("Solana strategy stopped");
     return true;
   }
-  bad("Kill incomplete: your Solana strategy could not be stopped and may still trade. Rerun: merrymen kill");
+  bad("Kill incomplete: your Solana strategy could not be stopped and may still trade. Rerun: agentcap kill");
   process.exitCode = 1;
   return false;
 }
@@ -1179,10 +1179,10 @@ function stopLocalPerps() {
   // An exit code alone does not prove that the grant was dealt with: the
   // runtime can fail before the helper has produced an answer at all.
   if (failureStatus === 2) {
-    bad(`Kill incomplete: your Perps wallet's practice perpetuals could not be switched off.${why ? ` ${why}` : ""} Rerun: merrymen kill`);
+    bad(`Kill incomplete: your Perps wallet's practice perpetuals could not be switched off.${why ? ` ${why}` : ""} Rerun: agentcap kill`);
     return "the Perps wallet's practice perpetuals were not switched off";
   }
-  bad(`Kill incomplete: your Perps wallet's grant could not be revoked and it may still sign.${why ? ` ${why}` : ""} Rerun: merrymen kill`);
+  bad(`Kill incomplete: your Perps wallet's grant could not be revoked and it may still sign.${why ? ` ${why}` : ""} Rerun: agentcap kill`);
   return "the Perps wallet's grant was not revoked";
 }
 
@@ -1242,8 +1242,8 @@ async function kill() {
       bad(`grant NOT destroyed — ${archive.why}, and deleting it without a copy would lose your owner key for good.`);
       console.log(
         paused
-          ? dim("  Trading is paused instead. Fix ~/.merrymen/grants/ (disk space, permissions), then rerun: merrymen kill")
-          : dim("  Trading could not be paused either — stop the worker. Fix ~/.merrymen/grants/, then rerun: merrymen kill"),
+          ? dim("  Trading is paused instead. Fix ~/.agentcap/grants/ (disk space, permissions), then rerun: agentcap kill")
+          : dim("  Trading could not be paused either — stop the worker. Fix ~/.agentcap/grants/, then rerun: agentcap kill"),
       );
       process.exitCode = 1;
       return;
@@ -1258,10 +1258,10 @@ async function kill() {
     }
     const archived = archive.kind === "archived" ? archive.account : null;
     if (solanaStopped && perpsLeft === null) ok("grant destroyed — the band stands down on the next tick (on-chain expiry is the backstop)");
-    else bad(`grant destroyed and the Robinhood band stands down, but the kill is incomplete: ${[solanaStopped ? null : "the Solana strategy was not stopped", perpsLeft].filter(Boolean).join(" and ")}. Rerun: merrymen kill`);
+    else bad(`grant destroyed and the Robinhood band stands down, but the kill is incomplete: ${[solanaStopped ? null : "the Solana strategy was not stopped", perpsLeft].filter(Boolean).join(" and ")}. Rerun: agentcap kill`);
     if (archived) {
       console.log(
-        `  ${dim("wallet archived — funds stay reachable:")} ${bold("merrymen wallets")} ${dim("·")} ${bold("merrymen recover")}`,
+        `  ${dim("wallet archived — funds stay reachable:")} ${bold("agentcap wallets")} ${dim("·")} ${bold("agentcap recover")}`,
       );
     }
   } else {
@@ -1281,9 +1281,9 @@ function runRecoverChild(mode, { ownerKey, to, chainId, expect, purpose }) {
   return new Promise((resolve) => {
     const env = {
       ...process.env,
-      MERRYMEN_RECOVER_OWNER_KEY: ownerKey,
-      MERRYMEN_RECOVER_EXPECT: expect || "",
-      MERRYMEN_RECOVER_PURPOSE: purpose ?? "spot",
+      AGENTCAP_RECOVER_OWNER_KEY: ownerKey,
+      AGENTCAP_RECOVER_EXPECT: expect || "",
+      AGENTCAP_RECOVER_PURPOSE: purpose ?? "spot",
     };
     const child = toolSpawn(localBin("tsx"), [RECOVER_CLI, mode, to, String(chainId)], { cwd: ROOT, env });
     let out = "";
@@ -1305,7 +1305,7 @@ function runRecoverChild(mode, { ownerKey, to, chainId, expect, purpose }) {
 }
 
 /**
- * `merrymen recover` — sweep a smart account back to a wallet you control.
+ * `agentcap recover` — sweep a smart account back to a wallet you control.
  *
  * The funded address is an ERC-4337 smart account, not a plain wallet: its owner
  * key derives a DIFFERENT address (what MetaMask shows — empty), so funds can't
@@ -1373,15 +1373,15 @@ async function recover() {
   const hasBundler = !!(
     s.bundlerApiKey ||
     s.bundlerUrl ||
-    process.env.MERRYMEN_BUNDLER_API_KEY ||
-    process.env.MERRYMEN_BUNDLER_URL
+    process.env.AGENTCAP_BUNDLER_API_KEY ||
+    process.env.AGENTCAP_BUNDLER_URL
   );
   if (!hasBundler) {
     p.close();
     bad("recovery needs a bundler key — a smart account can only move funds by sending a UserOp.");
     console.log(
-      `  Add a free Pimlico key at ${bold("dashboard.pimlico.io")}, paste it into ${bold("merrymen onboard")}\n` +
-        `  (or the dashboard ${dim("/settings")}), then rerun ${bold("merrymen recover")}.`,
+      `  Add a free Pimlico key at ${bold("dashboard.pimlico.io")}, paste it into ${bold("agentcap onboard")}\n` +
+        `  (or the dashboard ${dim("/settings")}), then rerun ${bold("agentcap recover")}.`,
     );
     return;
   }
@@ -1526,7 +1526,7 @@ async function recover() {
   } else {
     bad(
       `recovery didn't complete${done.result?.error ? ` — ${done.result.error}` : ""}. ` +
-        "Your funds are still safe in the account; fix the cause above and rerun merrymen recover.",
+        "Your funds are still safe in the account; fix the cause above and rerun agentcap recover.",
     );
   }
 }
@@ -1552,7 +1552,7 @@ function sh(cmd, args) {
   return null;
 }
 
-/** The dir npm drops global CLIs into — what must be on PATH for `merrymen`. */
+/** The dir npm drops global CLIs into — what must be on PATH for `agentcap`. */
 function npmGlobalBinDir() {
   const prefix = sh("npm", ["prefix", "-g"]);
   if (!prefix) return null;
@@ -1587,9 +1587,9 @@ function nodeInstallHint() {
 }
 
 /**
- * `merrymen setup` — a rig check that runs even when things are broken:
+ * `agentcap setup` — a rig check that runs even when things are broken:
  * Node version, npm, and the global-bin PATH trap that yields
- * "merrymen: command not found". Prints exact, copy-paste fixes.
+ * "agentcap: command not found". Prints exact, copy-paste fixes.
  */
 async function setup() {
   await banner("kit up — check your rig");
@@ -1599,7 +1599,7 @@ async function setup() {
   if (nodeVersionOk(v)) {
     ok(`node ${v} ${dim(`(need ${NODE_REQUIREMENT})`)}`);
   } else {
-    bad(`node ${v} is unsupported — merrymen needs ${NODE_REQUIREMENT} (node:sqlite)`);
+    bad(`node ${v} is unsupported — agentcap needs ${NODE_REQUIREMENT} (node:sqlite)`);
     console.log(`      ${bold("install a newer Node:")} ${dim(nodeInstallHint())}`);
   }
 
@@ -1614,34 +1614,34 @@ async function setup() {
   } else if (onPath(binDir)) {
     ok(`global CLIs on PATH ${dim(binDir)}`);
   } else {
-    bad('npm\'s global bin isn\'t on PATH — the "merrymen: command not found" trap');
+    bad('npm\'s global bin isn\'t on PATH — the "agentcap: command not found" trap');
     console.log(`      ${dim(binDir)}`);
     console.log(`      ${bold("fix once")} ${dim("(then open a NEW terminal):")}`);
     console.log(`      ${dim(pathFix(binDir))}`);
-    console.log(`      ${dim("…or just prefix commands: ")}${bold("npx merrymen start")}`);
+    console.log(`      ${dim("…or just prefix commands: ")}${bold("npx agentcap start")}`);
   }
 
   const resolved =
-    process.platform === "win32" ? sh("where", ["merrymen"]) : sh("which", ["merrymen"]);
+    process.platform === "win32" ? sh("where", ["agentcap"]) : sh("which", ["agentcap"]);
   resolved
-    ? ok(`merrymen resolves ${dim(resolved.split(/\r?\n/)[0])}`)
-    : warn("merrymen not yet resolvable by name — use the PATH fix above, or `npx merrymen`");
+    ? ok(`agentcap resolves ${dim(resolved.split(/\r?\n/)[0])}`)
+    : warn("agentcap not yet resolvable by name — use the PATH fix above, or `npx agentcap`");
 
-  console.log(`\n  ${c.gold(c.arrow)} ${dim("rig ready? → ")}${bold("merrymen onboard")}\n`);
+  console.log(`\n  ${c.gold(c.arrow)} ${dim("rig ready? → ")}${bold("agentcap onboard")}\n`);
 }
 
 /** Soft guard for commands that need a modern Node; warns, points to setup. */
 function warnIfOldNode() {
   if (!nodeVersionOk()) {
     warn(
-      `node ${process.versions.node} is unsupported — the worker needs ${NODE_REQUIREMENT}. Run ${bold("merrymen setup")} for the fix.`,
+      `node ${process.versions.node} is unsupported — the worker needs ${NODE_REQUIREMENT}. Run ${bold("agentcap setup")} for the fix.`,
     );
   }
 }
 
 /**
  * Self-update. A running dashboard/worker holds file locks inside the global
- * install, so a bare `npm i -g merrymen@latest` dies with EBUSY on Windows.
+ * install, so a bare `npm i -g agentcap@latest` dies with EBUSY on Windows.
  * This stops the band's child processes (NOT this CLI — the pattern matches
  * the nested node_modules the children run from), then upgrades from a cwd
  * OUTSIDE the install folder so nothing we hold can block npm's rename.
@@ -1652,29 +1652,29 @@ async function update() {
     // -Command text is unaffected by the .ps1 execution policy.
     const ps =
       "Get-CimInstance Win32_Process -Filter \"Name='node.exe'\" | " +
-      "Where-Object { $_.CommandLine -like '*merrymen\\node_modules\\*' -and $_.ProcessId -ne " + process.pid + " } | " +
+      "Where-Object { $_.CommandLine -like '*agentcap\\node_modules\\*' -and $_.ProcessId -ne " + process.pid + " } | " +
       "ForEach-Object { Stop-Process -Id $_.ProcessId -Force }";
     spawnSync("powershell", ["-NoProfile", "-Command", ps], { stdio: "ignore" });
   } else {
-    spawnSync("sh", ["-c", "pkill -f 'merrymen/node_modules' 2>/dev/null || true"], { stdio: "ignore" });
+    spawnSync("sh", ["-c", "pkill -f 'agentcap/node_modules' 2>/dev/null || true"], { stdio: "ignore" });
   }
   ok("band called home — any running dashboard/worker stopped");
 
   console.log(dim("  fetching the latest from the fletcher…\n"));
   const r =
     process.platform === "win32"
-      ? spawnSync("cmd.exe", ["/c", "npm install -g merrymen@latest"], { stdio: "inherit", cwd: os.tmpdir() })
-      : spawnSync("sh", ["-c", "npm install -g merrymen@latest"], { stdio: "inherit", cwd: os.tmpdir() });
+      ? spawnSync("cmd.exe", ["/c", "npm install -g agentcap@latest"], { stdio: "inherit", cwd: os.tmpdir() })
+      : spawnSync("sh", ["-c", "npm install -g agentcap@latest"], { stdio: "inherit", cwd: os.tmpdir() });
 
   if (r.status === 0) {
-    console.log(`\n  ${green("✓")} ${bold("upgraded.")} ride out again: ${bold(c.lime("merrymen start"))}\n`);
+    console.log(`\n  ${green("✓")} ${bold("upgraded.")} ride out again: ${bold(c.lime("agentcap start"))}\n`);
   } else {
-    bad("upgrade failed — if it said EBUSY, close any terminal cd'd into the install folder and rerun merrymen update");
+    bad("upgrade failed — if it said EBUSY, close any terminal cd'd into the install folder and rerun agentcap update");
   }
 }
 
 /**
- * merrymen service install|uninstall|status — survive a logout and a reboot.
+ * agentcap service install|uninstall|status — survive a logout and a reboot.
  *
  * The honest framing is repeated in the output rather than buried in docs: this
  * keeps the agent alive across logout, sleep and reboot. It cannot make it run
@@ -1692,13 +1692,13 @@ async function serviceCmd(sub) {
     }
     console.log(`  ${c.green("+")} installed — ${r.detail}`);
     console.log(`
-  Your merryman now starts when you log in, and comes back after a reboot.
+  Your agentcapavatar now starts when you log in, and comes back after a reboot.
 
   ${bold("What this does NOT do:")} it can't run while the computer is off.
   Nothing survives that except a machine that stays on — your own always-on
   box if you want one. We're not going to hold your keys to do it for you.
 
-  ${dim("undo any time:")} merrymen service uninstall`);
+  ${dim("undo any time:")} agentcap service uninstall`);
     return;
   }
   if (sub === "uninstall") {
@@ -1710,7 +1710,7 @@ async function serviceCmd(sub) {
   const st = serviceStatus();
   if (!st.installed) {
     console.log(`  ${c.gold("-")} auto-start is not installed`);
-    console.log(dim("    merrymen service install   — start on login, survive reboots"));
+    console.log(dim("    agentcap service install   — start on login, survive reboots"));
     return;
   }
   console.log(`  ${c.green("+")} installed — ${st.where}`);
@@ -1774,7 +1774,7 @@ switch (cmd) {
       // starts with another parent (re-parented) or a closed channel knows this
       // command is gone and never opens storage (SOLANA_WORKER_IPC_ENV).
       stdio: agent ? ["inherit", "inherit", "inherit", "ipc"] : "inherit",
-      ...(agent ? { env: { ...process.env, MERRYMEN_SOLANA_WORKER_IPC: String(process.pid) } } : {}),
+      ...(agent ? { env: { ...process.env, AGENTCAP_SOLANA_WORKER_IPC: String(process.pid) } } : {}),
       shell: false,
     });
     const running = () => child.exitCode === null && child.signalCode === null;
@@ -1804,7 +1804,7 @@ switch (cmd) {
           // forces the stop; a worker too wedged to act on it is killed.
           const force = presses >= 2, connected = child.connected;
           if (connected) {
-            try { child.send({ type: "merrymen-solana-worker-stop", force, signal }, () => {}); } catch { /* exiting */ }
+            try { child.send({ type: "agentcap-solana-worker-stop", force, signal }, () => {}); } catch { /* exiting */ }
           } else {
             // The worker closes the channel only once its run has finished, so
             // nothing is in flight: it exits at once with its own exit code.
@@ -1852,29 +1852,29 @@ switch (cmd) {
     break;
   default:
     await banner("stand and deliver — autonomous agents for Robinhood Chain");
-    console.log(`${dim("  install: npm install -g merrymen · your loot: ~/.merrymen")}
+    console.log(`${dim("  install: npm install -g agentcap · your loot: ~/.agentcap")}
 
-  ${bold("merrymen setup")}          check your rig — node, npm, PATH (with fixes)
-  ${bold("merrymen onboard")}        gather the band (keys, strategy, basket)
-  ${bold("merrymen start")}          open the tavern (localhost:3100) + loose the worker
-  ${bold("merrymen doctor")}         muster check — node/keys/RPC/bundler/grant/db
-  ${bold("merrymen status")}         what the band's up to — heartbeat, grant, trades, equity
-  ${bold("merrymen strategy new")}   forge your own outlaw in ~/.merrymen/strategies
-  ${bold("merrymen strategy list")}  the roster — builtins + your strategies
-  ${bold("merrymen selftest")}       fire one arrow through the whole pipeline
-  ${bold("merrymen preflight")}      can it actually trade? balances, chain, caps, sizing
-  ${bold("merrymen solana-paper")}   local Solana paper book and quotes (--help)
-  ${bold("merrymen solana-agent")}   run explicitly enabled Solana strategies; Ctrl+C twice forces a stop (--help)
-  ${bold("merrymen solana-recover")} withdraw your Solana vault with your own key (--help)
-  ${bold("merrymen export")}         write the hash-chained audit journal (stdout)
-  ${bold("merrymen verify")}         check an export — reads only the file you hand it
-  ${bold("merrymen service")}        start on login, survive reboots (install/uninstall/status)
-  ${bold("merrymen kill")}           call the band home (kill switch)
-  ${bold("merrymen wallets")}        every wallet on this machine + what it holds
-  ${bold("merrymen recover")}        sweep your account's funds to a wallet you control
-  ${bold("merrymen update")}         stop the band, upgrade to latest, no EBUSY
-  ${bold("merrymen version")}        which build is this (-v)
-  ${bold("merrymen welcome")}        replay the intro 🏹
+  ${bold("agentcap setup")}          check your rig — node, npm, PATH (with fixes)
+  ${bold("agentcap onboard")}        gather the band (keys, strategy, basket)
+  ${bold("agentcap start")}          open the tavern (localhost:3100) + loose the worker
+  ${bold("agentcap doctor")}         muster check — node/keys/RPC/bundler/grant/db
+  ${bold("agentcap status")}         what the band's up to — heartbeat, grant, trades, equity
+  ${bold("agentcap strategy new")}   forge your own outlaw in ~/.agentcap/strategies
+  ${bold("agentcap strategy list")}  the roster — builtins + your strategies
+  ${bold("agentcap selftest")}       fire one arrow through the whole pipeline
+  ${bold("agentcap preflight")}      can it actually trade? balances, chain, caps, sizing
+  ${bold("agentcap solana-paper")}   local Solana paper book and quotes (--help)
+  ${bold("agentcap solana-agent")}   run explicitly enabled Solana strategies; Ctrl+C twice forces a stop (--help)
+  ${bold("agentcap solana-recover")} withdraw your Solana vault with your own key (--help)
+  ${bold("agentcap export")}         write the hash-chained audit journal (stdout)
+  ${bold("agentcap verify")}         check an export — reads only the file you hand it
+  ${bold("agentcap service")}        start on login, survive reboots (install/uninstall/status)
+  ${bold("agentcap kill")}           call the band home (kill switch)
+  ${bold("agentcap wallets")}        every wallet on this machine + what it holds
+  ${bold("agentcap recover")}        sweep your account's funds to a wallet you control
+  ${bold("agentcap update")}         stop the band, upgrade to latest, no EBUSY
+  ${bold("agentcap version")}        which build is this (-v)
+  ${bold("agentcap welcome")}        replay the intro 🏹
 
   ${c.gold(c.arrow)} ${dim("your keys, your caps · bounded worst case · every trade simulated first")}
 `);

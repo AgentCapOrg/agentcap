@@ -14,9 +14,9 @@ import { SolanaPaperStoreError } from "../../../worker/src/solana-paper-store";
 import { OWNER_OUTCOME_UNKNOWN, solanaRequestBody, solanaResponse } from "./solana-api";
 import { SolanaWebError } from "./solana-auth";
 
-const flag = process.env.MERRYMEN_SOLANA;
-before(() => { process.env.MERRYMEN_SOLANA = "1"; });
-after(() => { if (flag === undefined) delete process.env.MERRYMEN_SOLANA; else process.env.MERRYMEN_SOLANA = flag; });
+const flag = process.env.AGENTCAP_SOLANA;
+before(() => { process.env.AGENTCAP_SOLANA = "1"; });
+after(() => { if (flag === undefined) delete process.env.AGENTCAP_SOLANA; else process.env.AGENTCAP_SOLANA = flag; });
 
 test("Solana routes reject authority fields and oversized bodies", async () => {
   for (const value of [null, [], { owner: "untrusted", amount: "1" }, { tenant: "other" }]) {
@@ -27,9 +27,9 @@ test("Solana routes reject authority fields and oversized bodies", async () => {
 });
 test("a refused sign-in carries its code to the page, and no other refusal does", async () => {
   const signIn = { problem: "mismatch", account: { provider: "twitter", handle: "jamesc" }, loginHasAccount: true } as const;
-  const refused = await solanaResponse(async () => { throw new SolanaWebError(403, "Your Merrymen sign-in and your wallet sign-in are different logins.", signIn); });
+  const refused = await solanaResponse(async () => { throw new SolanaWebError(403, "Your AgentCap sign-in and your wallet sign-in are different logins.", signIn); });
   assert.equal(refused.status, 403);
-  assert.deepEqual(await refused.json(), { error: "Your Merrymen sign-in and your wallet sign-in are different logins.", ownerFacing: true, signIn });
+  assert.deepEqual(await refused.json(), { error: "Your AgentCap sign-in and your wallet sign-in are different logins.", ownerFacing: true, signIn });
   const plain = await solanaResponse(async () => { throw new SolanaWebError(403, "Cross-origin Solana requests are not allowed."); });
   assert.deepEqual(await plain.json(), { error: "Cross-origin Solana requests are not allowed.", ownerFacing: true });
 });
@@ -54,7 +54,7 @@ test("setup errors answer as unavailable, never naming a setting", async () => {
 });
 test("with Solana off the response refuses before the action runs", async () => {
   for (const value of [undefined, "", "0", "true", "yes"]) {
-    if (value === undefined) delete process.env.MERRYMEN_SOLANA; else process.env.MERRYMEN_SOLANA = value;
+    if (value === undefined) delete process.env.AGENTCAP_SOLANA; else process.env.AGENTCAP_SOLANA = value;
     let ran = false;
     const response = await solanaResponse(async () => { ran = true; return { ok: true }; });
     assert.equal(response.status, 404, String(value));
@@ -62,14 +62,14 @@ test("with Solana off the response refuses before the action runs", async () => 
     assert.deepEqual(await response.json(), { error: "Solana trading is not available.", ownerFacing: true });
     assert.equal(ran, false);
   }
-  process.env.MERRYMEN_SOLANA = "1";
+  process.env.AGENTCAP_SOLANA = "1";
   assert.equal((await solanaResponse(async () => ({ ok: true }))).status, 200);
 });
 
 const OUTAGE = "Solana is temporarily unavailable. Nothing was confirmed; refresh to check existing requests before retrying.";
 /** Owner text must never name a provider, a setting, an endpoint or the worker's internal code. */
 function ownerSafe(text: string) {
-  assert.doesNotMatch(text, /MERRYMEN_|jupiter|pyth|api[ _-]?key|https?:|rpc|refused: |execution/i, text);
+  assert.doesNotMatch(text, /AGENTCAP_|jupiter|pyth|api[ _-]?key|https?:|rpc|refused: |execution/i, text);
 }
 test("live refusals the owner can act on are clear 4xx answers, not an outage", async () => {
   const cases: Array<[SolanaExecutionError["code"], number, RegExp]> = [
@@ -163,11 +163,11 @@ test("failures to use Solana's answer about a saved owner transaction are an unk
 });
 
 test("a live route that cannot be built is answered by the builder's code: setup is unavailable, a provider fault is a neutral retry, and only a route shape is 'no supported route'", async () => {
-  const key = process.env.MERRYMEN_JUPITER_API_KEY;
+  const key = process.env.AGENTCAP_JUPITER_API_KEY;
   try {
     // The code decides, not this process's settings: each answer is the same whatever the key here says.
     for (const value of [undefined, "", "bad key", "configured-key"]) {
-      if (value === undefined) delete process.env.MERRYMEN_JUPITER_API_KEY; else process.env.MERRYMEN_JUPITER_API_KEY = value;
+      if (value === undefined) delete process.env.AGENTCAP_JUPITER_API_KEY; else process.env.AGENTCAP_JUPITER_API_KEY = value;
       const setup = await solanaResponse(async () => { throw new SolanaLiveMarketError("configuration"); });
       assert.equal(setup.status, 503, JSON.stringify(value));
       assert.deepEqual(await setup.json(), { error: "Solana trading is not available.", ownerFacing: true }, JSON.stringify(value));
@@ -184,7 +184,7 @@ test("a live route that cannot be built is answered by the builder's code: setup
     const unknown = await solanaResponse(async () => { throw new SolanaLiveMarketError("something-new" as SolanaLiveMarketError["code"]); });
     assert.equal(unknown.status, 503);
     assert.doesNotMatch((await unknown.json()).error, /no supported route|not available/i);
-  } finally { if (key === undefined) delete process.env.MERRYMEN_JUPITER_API_KEY; else process.env.MERRYMEN_JUPITER_API_KEY = key; }
+  } finally { if (key === undefined) delete process.env.AGENTCAP_JUPITER_API_KEY; else process.env.AGENTCAP_JUPITER_API_KEY = key; }
 });
 
 test("an amount that quotes to nothing is a 400 the owner can fix, in fixed words", async () => {

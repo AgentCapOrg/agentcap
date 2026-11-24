@@ -94,7 +94,7 @@ function stateOut(wired: string[], agents: OwnedAgent[]) {
 const followTool = defineTool({
   name: "follow_agent",
   title: "Follow a public agent (for research)",
-  description: `Follow a public Merrymen agent so its public theses become part of your agent's research. Your agent reads them as evidence and still decides for itself: following NEVER copies the target's trades and never buys or sells anything. You can follow up to ${MAX_FOLLOWS} agents, not your own. Following one you already follow changes nothing.`,
+  description: `Follow a public AgentCap agent so its public theses become part of your agent's research. Your agent reads them as evidence and still decides for itself: following NEVER copies the target's trades and never buys or sells anything. You can follow up to ${MAX_FOLLOWS} agents, not your own. Following one you already follow changes nothing.`,
   capability: "social.write",
   input: z.object({ target: TARGET_ARG }).strict(),
   output: z.object({
@@ -295,19 +295,19 @@ function tradeOut(t: ShareTrade, realMoney: boolean): z.infer<typeof SHARE_TRADE
 
 function privacyNote(s: ShareSummary): string {
   if (!s.settingRead) return "Your public-book setting could not be read, so the book is treated as private: no sizes, dollar results or prices, only percentages and counts.";
-  if (s.publicBook) return "Your book is public (Merrymen Settings), so dollar sizes and realized dollars are included.";
-  return "Your book is private, so dollar figures are left out: no sizes, dollar results or prices, only percentages and counts. To include them, make your book public in Merrymen Settings.";
+  if (s.publicBook) return "Your book is public (AgentCap Settings), so dollar sizes and realized dollars are included.";
+  return "Your book is private, so dollar figures are left out: no sizes, dollar results or prices, only percentages and counts. To include them, make your book public in AgentCap Settings.";
 }
 
 /** For a connection holding social.write: draft_post is registered on it. */
-const POSTING = "This tool posts nothing. To post in the Merrymen group chat, pass post_line (or a line of the owner's own) to draft_post: it is posted only after the owner approves it in Merrymen, and the group chat refuses links and addresses, so `text` with links will not pass there. Anywhere else, the owner pastes `text` themselves.";
+const POSTING = "This tool posts nothing. To post in the AgentCap group chat, pass post_line (or a line of the owner's own) to draft_post: it is posted only after the owner approves it in AgentCap, and the group chat refuses links and addresses, so `text` with links will not pass there. Anywhere else, the owner pastes `text` themselves.";
 /** For any other connection (always the directory profile): no posting tool exists, so none is named. */
-const POSTING_OWNER_ONLY = "This tool posts nothing, and this connection cannot post. post_line is a one-line version with no links or addresses, as the Merrymen group chat requires (`text` with links will not pass there). The owner shares `text` or post_line wherever they choose themselves.";
+const POSTING_OWNER_ONLY = "This tool posts nothing, and this connection cannot post. post_line is a one-line version with no links or addresses, as the AgentCap group chat requires (`text` with links will not pass there). The owner shares `text` or post_line wherever they choose themselves.";
 
 const shareSummary = defineTool({
   name: "share_trade_summary",
   title: "Verified trade summary to share",
-  description: `A share-ready summary of your agent's own CONFIRMED trades — one trade (trade_id) or a period (day or week) — with block-explorer links and a plain-text version to paste. Only trades that landed on chain with a transaction hash count; submitted and reverted ones are counted as left out; realized results appear only when both the proceeds and the cost are measured; paper fills are shown as practice and never in a real figure. If your book is private, dollar figures are left out (percentages and counts only). It posts nothing: post_line is a one-line version with no links or addresses, which the Merrymen group chat accepts.`,
+  description: `A share-ready summary of your agent's own CONFIRMED trades — one trade (trade_id) or a period (day or week) — with block-explorer links and a plain-text version to paste. Only trades that landed on chain with a transaction hash count; submitted and reverted ones are counted as left out; realized results appear only when both the proceeds and the cost are measured; paper fills are shown as practice and never in a real figure. If your book is private, dollar figures are left out (percentages and counts only). It posts nothing: post_line is a one-line version with no links or addresses, which the AgentCap group chat accepts.`,
   capability: "portfolio.read",
   input: z.object({
     agent: AGENT_ARG,
@@ -452,7 +452,7 @@ const shareSummary = defineTool({
         warnings,
         untrusted_fields: ["name", "trades[].symbol", "trades[].display_name", "text", "post_line"],
         untrusted_note: UNTRUSTED_NOTE,
-        source: "Merrymen shared ledger (mirrored from your agent's worker); links go to the chain's block explorer",
+        source: "AgentCap shared ledger (mirrored from your agent's worker); links go to the chain's block explorer",
         observed_at: iso(now),
       },
       summary: s.kind === "trade"

@@ -167,7 +167,7 @@ export function tokensForSymbols(symbols: readonly string[]): StockToken[] {
  * chain" and "did the owner opt out" are decided once, by code that knows the
  * answer, instead of being guessed here.
  *
- * THE ENERGY RESERVE IS NEVER WATCHED, whoever lists it. $MERRYMEN held by the
+ * THE ENERGY RESERVE IS NEVER WATCHED, whoever lists it. $AGENTCAP held by the
  * account is energy, not a position: watched, it would be valued into equity
  * (an owner sending it in would read as profit, ratchet the peak and accrue a
  * fee), or — unpriceable — pause equity, fees and the breaker every tick; and
@@ -299,7 +299,7 @@ export function buildStrategy(name: string, opts: StrategyBuildOpts): Strategy {
       // code — never throw, which would crash the child at boot. The settings
       // route rejects the name at write time too; this is the loader half of the
       // gate, the boundary that actually executes.
-      opts.onNote?.("warn", `custom strategy "${name}" is disabled on hosted merrymen — running steady-basket instead`);
+      opts.onNote?.("warn", `custom strategy "${name}" is disabled on hosted agentcap — running steady-basket instead`);
     } else {
       return makeCustomStrategy(name, { onNote: opts.onNote });
     }

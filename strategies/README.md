@@ -1,14 +1,14 @@
 # write your own bot
 
-Your strategies live in **`~/.merrymen/strategies/`** — outside the install,
+Your strategies live in **`~/.agentcap/strategies/`** — outside the install,
 so upgrades and reinstalls never touch them. Scaffold one:
 
 ```bash
-merrymen strategy new my-bot
-# edit ~/.merrymen/strategies/my-bot.mjs, select "my-bot" in /settings — done
+agentcap strategy new my-bot
+# edit ~/.agentcap/strategies/my-bot.mjs, select "my-bot" in /settings — done
 ```
 
-(This folder in the package only ships the example + this doc; `merrymen
+(This folder in the package only ships the example + this doc; `agentcap
 onboard` copies them into your home folder.)
 
 ## The contract

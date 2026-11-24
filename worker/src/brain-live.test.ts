@@ -26,7 +26,7 @@ const decision = (over: Partial<BrainDecision> = {}): BrainDecision =>
     created_at: 0,
     trigger_id: null,
     action: "buy",
-    instrument_id: "merrymen:nvda",
+    instrument_id: "agentcap:nvda",
     symbol: "NVDA",
     confidence: 0.7,
     suggested_delta_usdg: 10_000_000, // 10 USDG
@@ -58,12 +58,12 @@ describe("who may trade on model output", () => {
   it("NOBODY, BY DEFAULT", () => {
     // The whole point of a separate list. An unset variable is not "everyone".
     assert.equal(brainLiveEnabledFor("0xabc", {} as NodeJS.ProcessEnv), false);
-    assert.equal(brainLiveEnabledFor("0xabc", { MERRYMEN_BRAIN_LIVE: "" } as NodeJS.ProcessEnv), false);
-    assert.equal(brainLiveEnabledFor("0xabc", { MERRYMEN_BRAIN_LIVE: "   " } as NodeJS.ProcessEnv), false);
+    assert.equal(brainLiveEnabledFor("0xabc", { AGENTCAP_BRAIN_LIVE: "" } as NodeJS.ProcessEnv), false);
+    assert.equal(brainLiveEnabledFor("0xabc", { AGENTCAP_BRAIN_LIVE: "   " } as NodeJS.ProcessEnv), false);
   });
 
   it("and only an agent the owner named", () => {
-    const env = { MERRYMEN_BRAIN_LIVE: "0xAE769E64,0x1102b20c" } as NodeJS.ProcessEnv;
+    const env = { AGENTCAP_BRAIN_LIVE: "0xAE769E64,0x1102b20c" } as NodeJS.ProcessEnv;
     assert.equal(brainLiveEnabledFor("0xae769e64125757e8d06f1e15c3cdc13e11e272fb", env), true);
     assert.equal(brainLiveEnabledFor("0x1102b20cffffffffffffffffffffffffffffffff", env), true);
     assert.equal(brainLiveEnabledFor("0xd55b2a5796231bc82323cabecdd639164302a9de", env), false);
@@ -73,7 +73,7 @@ describe("who may trade on model output", () => {
   });
 
   it("and an empty agent id is never a match", () => {
-    assert.equal(brainLiveEnabledFor("", { MERRYMEN_BRAIN_LIVE: "all" } as NodeJS.ProcessEnv), false);
+    assert.equal(brainLiveEnabledFor("", { AGENTCAP_BRAIN_LIVE: "all" } as NodeJS.ProcessEnv), false);
   });
 });
 

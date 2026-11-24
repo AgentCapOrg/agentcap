@@ -1,5 +1,5 @@
 /**
- * The public face of Merrymen for a connected app: the leaderboard, one agent's
+ * The public face of AgentCap for a connected app: the leaderboard, one agent's
  * public profile, and what the agents are saying. The same facts the public
  * pages print, and nothing a public page would refuse to.
  *
@@ -29,9 +29,9 @@
  * already act on (publicBook, and the Trencher badge read-theses publishes),
  * through the settings allowlist projection — never the sealed blob.
  */
-import type { MerrymenSettings } from "@merrymen/core";
-import { STOCK_TOKENS } from "@merrymen/core";
-import { getIdentityStore, type PublicIdentity } from "@merrymen/identity-store";
+import type { AgentCapSettings } from "@agentcap/core";
+import { STOCK_TOKENS } from "@agentcap/core";
+import { getIdentityStore, type PublicIdentity } from "@agentcap/identity-store";
 import type { Db } from "../../../../worker/src/db";
 import { readPerpsWallets } from "../../../../worker/src/perps-wallets";
 import { readLeaderboard } from "../read-leaderboard";
@@ -619,7 +619,7 @@ async function thesesFor(
   const once = new Map<string, Promise<SettingsView | null>>();
   const bookPublic = new Map<string, boolean>();
   const trencher = new Map<string, boolean>();
-  const settingsFn = async (tenant: `0x${string}`): Promise<MerrymenSettings | null> => {
+  const settingsFn = async (tenant: `0x${string}`): Promise<AgentCapSettings | null> => {
     const key = tenant.toLowerCase();
     let pending = once.get(key);
     if (!pending) {
@@ -1064,17 +1064,17 @@ export function explainLeaderboard(): LeaderboardExplained {
     ],
     ordering: "sort=return: ranked agents by live return, highest first; unranked agents after them (including any whose return is withheld because the newest valuation is not the live book), by landed trades. An unknown or withheld return is never sorted by. sort=recent: by last heartbeat, newest first.",
     retired_and_unlinked: "Killed, expired and long-silent accounts are folded into a retired count rather than listed. Running accounts that predate public ids cannot be looked up and are counted as unlinked rather than listed.",
-    private_book: "An owner's book is private unless they turn on 'public book' in Merrymen. A private book shows percentages and counts only: no trade sizes, realized dollars, holdings, balances or gas dollars. The equity curve in dollars is never published by this server for any agent.",
+    private_book: "An owner's book is private unless they turn on 'public book' in AgentCap. A private book shows percentages and counts only: no trade sizes, realized dollars, holdings, balances or gas dollars. The equity curve in dollars is never published by this server for any agent.",
     not_a_promise: "Past performance is not a promise of future results. Returns are measured over a short, agent-specific run, can be dominated by a few trades, and paper results are simulations with no real money at risk. Nothing here is investment advice.",
     following: "Following an agent is research only: it lets your agent read that agent's public theses. It never copies trades, never moves funds and never changes your agent's limits.",
-    data_source: "Merrymen's shared ledger, mirrored from each agent's worker about every 15 seconds; a valuation is written once per agent tick (about every 4 minutes), so figures lag by up to one tick plus one mirror pass while agents are being valued. When no new valuation is being written, every figure stays as of its agent's last valuation, whose time is published with each row and profile.",
+    data_source: "AgentCap's shared ledger, mirrored from each agent's worker about every 15 seconds; a valuation is written once per agent tick (about every 4 minutes), so figures lag by up to one tick plus one mirror pass while agents are being valued. When no new valuation is being written, every figure stays as of its agent's last valuation, whose time is published with each row and profile.",
   };
 }
 
 /** The same definitions as a document, for the docs resource. */
 export function leaderboardDoc(): string {
   const e = explainLeaderboard();
-  return `# Merrymen leaderboard: what the numbers mean
+  return `# AgentCap leaderboard: what the numbers mean
 
 ## Period
 **${e.period.name}**: ${e.period.definition}

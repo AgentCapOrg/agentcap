@@ -537,7 +537,7 @@ test("CIMD: a client_id on one of our own hosts, or with a query, fragment or do
   assert.equal(fetches, 0, "our own host is never fetched");
   // A copy cached under the old, looser rule is not served either.
   d.raw.prepare(`INSERT INTO mcp_clients (client_id, kind, client_name, redirect_uris, auth_method, secret_hash, metadata_json, created_at, fetched_at, expires_at)
-    VALUES (?, 'cimd', 'Merrymen Assistant', '["https://attacker.example/cb"]', 'none', NULL, '{}', 1, ?, ?)`).run(selfId, deps.now(), deps.now() + 3600);
+    VALUES (?, 'cimd', 'AgentCap Assistant', '["https://attacker.example/cb"]', 'none', NULL, '{}', 1, ?, ?)`).run(selfId, deps.now(), deps.now() + 3600);
   await assert.rejects(resolveClient(d, selfId, deps.now(), { ownHosts: own }), /client_id must be/);
 });
 
@@ -764,10 +764,10 @@ test("offline_access is described to assistants as what it is: accepted for comp
 });
 
 test("Connected apps: the owner's POST body is read with a bound, never buffered whole", async () => {
-  const keys = ["MERRYMEN_HOSTED", "DATABASE_URL", "MERRYMEN_PUBLIC_ORIGIN", "MERRYMEN_SESSION_SECRET", "MERRYMEN_OAUTH_ISSUER", "MERRYMEN_MCP_RESOURCE_URL", "MERRYMEN_MCP_ENABLED"] as const;
+  const keys = ["AGENTCAP_HOSTED", "DATABASE_URL", "AGENTCAP_PUBLIC_ORIGIN", "AGENTCAP_SESSION_SECRET", "AGENTCAP_OAUTH_ISSUER", "AGENTCAP_MCP_RESOURCE_URL", "AGENTCAP_MCP_ENABLED"] as const;
   const saved = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
-  Object.assign(process.env, { MERRYMEN_HOSTED: "1", DATABASE_URL: "postgres://unused-in-tests", MERRYMEN_PUBLIC_ORIGIN: "https://app.test", MERRYMEN_SESSION_SECRET: "s".repeat(48) });
-  for (const k of ["MERRYMEN_OAUTH_ISSUER", "MERRYMEN_MCP_RESOURCE_URL", "MERRYMEN_MCP_ENABLED"]) delete process.env[k];
+  Object.assign(process.env, { AGENTCAP_HOSTED: "1", DATABASE_URL: "postgres://unused-in-tests", AGENTCAP_PUBLIC_ORIGIN: "https://app.test", AGENTCAP_SESSION_SECRET: "s".repeat(48) });
+  for (const k of ["AGENTCAP_OAUTH_ISSUER", "AGENTCAP_MCP_RESOURCE_URL", "AGENTCAP_MCP_ENABLED"]) delete process.env[k];
   const d = await makeTestDb();
   const restore = installFixtures(d);
   try {
@@ -1232,8 +1232,8 @@ async function exchange(deps: ReturnType<typeof makeDeps>, clientId: string, loc
   return exchangeCode(deps, form, await clientOf(deps, clientId));
 }
 
-test("directory profile: /mcp/directory on the endpoint's origin by default, only the origin overridable, off with MERRYMEN_MCP_DIRECTORY=0, never the canonical path", () => {
-  const base = { MERRYMEN_PUBLIC_ORIGIN: "https://app.test", MERRYMEN_MCP_RESOURCE_URL: "https://mcp.test/mcp" } as unknown as NodeJS.ProcessEnv;
+test("directory profile: /mcp/directory on the endpoint's origin by default, only the origin overridable, off with AGENTCAP_MCP_DIRECTORY=0, never the canonical path", () => {
+  const base = { AGENTCAP_PUBLIC_ORIGIN: "https://app.test", AGENTCAP_MCP_RESOURCE_URL: "https://mcp.test/mcp" } as unknown as NodeJS.ProcessEnv;
   const cfg = mcpConfig(base);
   assert.equal(cfg.resource, "https://mcp.test/mcp");
   assert.equal(cfg.directoryResource, "https://mcp.test/mcp/directory");
@@ -1241,21 +1241,21 @@ test("directory profile: /mcp/directory on the endpoint's origin by default, onl
   assert.equal(resourcePath(cfg, "directory"), "/mcp/directory");
   assert.equal(protectedResourceMetadataUrl(cfg), "https://mcp.test/.well-known/oauth-protected-resource/mcp");
   assert.equal(protectedResourceMetadataUrl(cfg, "directory"), "https://mcp.test/.well-known/oauth-protected-resource/mcp/directory");
-  assert.equal(mcpConfig({ ...base, MERRYMEN_MCP_DIRECTORY: "0" }).directoryResource, "", "the kill switch");
-  assert.equal(mcpConfig({ ...base, MERRYMEN_MCP_DIRECTORY: "1" }).directoryResource, "https://mcp.test/mcp/directory");
-  assert.equal(mcpConfig({ ...base, MERRYMEN_MCP_DIRECTORY: "0" }).resource, "https://mcp.test/mcp", "switching the directory off leaves the canonical endpoint alone");
-  const over = mcpConfig({ ...base, MERRYMEN_MCP_DIRECTORY_RESOURCE_URL: "https://dir.test/mcp/directory/" });
+  assert.equal(mcpConfig({ ...base, AGENTCAP_MCP_DIRECTORY: "0" }).directoryResource, "", "the kill switch");
+  assert.equal(mcpConfig({ ...base, AGENTCAP_MCP_DIRECTORY: "1" }).directoryResource, "https://mcp.test/mcp/directory");
+  assert.equal(mcpConfig({ ...base, AGENTCAP_MCP_DIRECTORY: "0" }).resource, "https://mcp.test/mcp", "switching the directory off leaves the canonical endpoint alone");
+  const over = mcpConfig({ ...base, AGENTCAP_MCP_DIRECTORY_RESOURCE_URL: "https://dir.test/mcp/directory/" });
   assert.equal(over.directoryResource, "https://dir.test/mcp/directory");
   assert.ok(over.allowedHosts.has("dir.test"), "the directory answers on its own host");
   // Only the origin may change: the route is app/mcp/directory, so any other
   // path would be advertised to clients and answer 404.
   for (const bad of ["https://dir.test/listing", "https://mcp.test/listing", "https://mcp.test/mcp/directory/x", "https://mcp.test/directory", "https://dir.test/MCP/directory", "http://dir.test/mcp/directory", "https://mcp.test/mcp", "https://other.test/mcp", "https://mcp.test/", "not a url", "https://dir.test/mcp/directory?y=1", "https://u:p@dir.test/mcp/directory"]) {
-    assert.equal(mcpConfig({ ...base, MERRYMEN_MCP_DIRECTORY_RESOURCE_URL: bad }).directoryResource, "", bad);
+    assert.equal(mcpConfig({ ...base, AGENTCAP_MCP_DIRECTORY_RESOURCE_URL: bad }).directoryResource, "", bad);
   }
   // With no usable canonical endpoint (any path but /mcp is one) there is
   // no directory profile either.
   for (const canonical of ["https://mcp.test/v2/mcp", "https://mcp.test/mcp/directory", "https://mcp.test/"]) {
-    const off = mcpConfig({ ...base, MERRYMEN_MCP_RESOURCE_URL: canonical });
+    const off = mcpConfig({ ...base, AGENTCAP_MCP_RESOURCE_URL: canonical });
     assert.equal(off.resource, "", canonical);
     assert.equal(off.directoryResource, "", canonical);
   }
@@ -1562,36 +1562,36 @@ test("after the migration, a connection and tokens written before the resource c
 
 /** mcpConfig reads hosted mode from process.env (isHostedMode), everything else from the env it is given. */
 function hostedConfig(env: Record<string, string>): ReturnType<typeof mcpConfig> {
-  const saved = process.env.MERRYMEN_HOSTED;
-  process.env.MERRYMEN_HOSTED = "1";
+  const saved = process.env.AGENTCAP_HOSTED;
+  process.env.AGENTCAP_HOSTED = "1";
   try {
-    return mcpConfig({ DATABASE_URL: "postgres://unused-in-tests", MERRYMEN_SESSION_SECRET: "s".repeat(48), ...env } as unknown as NodeJS.ProcessEnv);
+    return mcpConfig({ DATABASE_URL: "postgres://unused-in-tests", AGENTCAP_SESSION_SECRET: "s".repeat(48), ...env } as unknown as NodeJS.ProcessEnv);
   } finally {
-    if (saved === undefined) delete process.env.MERRYMEN_HOSTED;
-    else process.env.MERRYMEN_HOSTED = saved;
+    if (saved === undefined) delete process.env.AGENTCAP_HOSTED;
+    else process.env.AGENTCAP_HOSTED = saved;
   }
 }
 
-const PRODUCTION_RESOURCE = "https://mcp.merrymen.dev/mcp";
-const PRODUCTION_ENV = { MERRYMEN_PUBLIC_ORIGIN: "https://app.merrymen.dev", MERRYMEN_MCP_RESOURCE_URL: PRODUCTION_RESOURCE };
+const PRODUCTION_RESOURCE = "https://mcp.agentcap.xyz/mcp";
+const PRODUCTION_ENV = { AGENTCAP_PUBLIC_ORIGIN: "https://app.agentcap.xyz", AGENTCAP_MCP_RESOURCE_URL: PRODUCTION_RESOURCE };
 
-test("canonical resource: production's MERRYMEN_MCP_RESOURCE_URL gives the same resource string, metadata and challenge as before", () => {
+test("canonical resource: production's AGENTCAP_MCP_RESOURCE_URL gives the same resource string, metadata and challenge as before", () => {
   const cfg = hostedConfig(PRODUCTION_ENV);
   assert.equal(cfg.enabled, true, String(cfg.disabledWhy));
   assert.equal(cfg.resource, PRODUCTION_RESOURCE, "byte-identical: every existing token is bound to exactly this");
-  assert.equal(cfg.issuer, "https://app.merrymen.dev");
+  assert.equal(cfg.issuer, "https://app.agentcap.xyz");
   assert.equal(resourcePath(cfg), CANONICAL_ROUTE_PATH);
-  assert.equal(protectedResourceMetadataUrl(cfg), "https://mcp.merrymen.dev/.well-known/oauth-protected-resource/mcp");
+  assert.equal(protectedResourceMetadataUrl(cfg), "https://mcp.agentcap.xyz/.well-known/oauth-protected-resource/mcp");
   assert.equal(protectedResourceMetadata(cfg).resource, PRODUCTION_RESOURCE);
-  assert.match(bearerChallenge(cfg), /resource_metadata="https:\/\/mcp\.merrymen\.dev\/\.well-known\/oauth-protected-resource\/mcp"/);
-  assert.ok(cfg.allowedHosts.has("mcp.merrymen.dev") && cfg.allowedHosts.has("app.merrymen.dev"));
+  assert.match(bearerChallenge(cfg), /resource_metadata="https:\/\/mcp\.agentcap\.xyz\/\.well-known\/oauth-protected-resource\/mcp"/);
+  assert.ok(cfg.allowedHosts.has("mcp.agentcap.xyz") && cfg.allowedHosts.has("app.agentcap.xyz"));
   // Spellings of the same URL normalise to the same string, as they always did.
-  for (const same of ["https://mcp.merrymen.dev/mcp/", "https://mcp.merrymen.dev/mcp//", " https://MCP.merrymen.dev/mcp ", "https://mcp.merrymen.dev:443/mcp"]) {
-    assert.equal(hostedConfig({ ...PRODUCTION_ENV, MERRYMEN_MCP_RESOURCE_URL: same }).resource, PRODUCTION_RESOURCE, same);
+  for (const same of ["https://mcp.agentcap.xyz/mcp/", "https://mcp.agentcap.xyz/mcp//", " https://MCP.agentcap.xyz/mcp ", "https://mcp.agentcap.xyz:443/mcp"]) {
+    assert.equal(hostedConfig({ ...PRODUCTION_ENV, AGENTCAP_MCP_RESOURCE_URL: same }).resource, PRODUCTION_RESOURCE, same);
   }
   // Unset, it is the issuer's own /mcp; and the origin alone may be moved.
-  assert.equal(hostedConfig({ MERRYMEN_PUBLIC_ORIGIN: "https://app.merrymen.dev" }).resource, "https://app.merrymen.dev/mcp");
-  const moved = hostedConfig({ ...PRODUCTION_ENV, MERRYMEN_MCP_RESOURCE_URL: "https://mcp.test:8443/mcp" });
+  assert.equal(hostedConfig({ AGENTCAP_PUBLIC_ORIGIN: "https://app.agentcap.xyz" }).resource, "https://app.agentcap.xyz/mcp");
+  const moved = hostedConfig({ ...PRODUCTION_ENV, AGENTCAP_MCP_RESOURCE_URL: "https://mcp.test:8443/mcp" });
   assert.equal(moved.enabled, true);
   assert.equal(moved.resource, "https://mcp.test:8443/mcp");
   assert.ok(moved.allowedHosts.has("mcp.test:8443"));
@@ -1600,7 +1600,7 @@ test("canonical resource: production's MERRYMEN_MCP_RESOURCE_URL gives the same 
 test("canonical resource: a token and refresh token minted under production's configuration still work under it", async () => {
   const d = await makeTestDb();
   // As production's config read before the path rule: the same issuer and resource strings.
-  const before = makeDeps(d, { cfg: testConfig({ issuer: "https://app.merrymen.dev", resource: PRODUCTION_RESOURCE, allowedHosts: new Set(["app.merrymen.dev", "mcp.merrymen.dev"]) }) });
+  const before = makeDeps(d, { cfg: testConfig({ issuer: "https://app.agentcap.xyz", resource: PRODUCTION_RESOURCE, allowedHosts: new Set(["app.agentcap.xyz", "mcp.agentcap.xyz"]) }) });
   const { tokens, clientId } = await connectAs(before, OWNER_A);
   const after = makeDeps(d, { cfg: hostedConfig(PRODUCTION_ENV) });
   assert.ok(await verifyAccessToken(d, after.cfg, tokens.access_token, after.now()), "the access token still verifies");
@@ -1609,25 +1609,25 @@ test("canonical resource: a token and refresh token minted under production's co
   assert.ok(await verifyAccessToken(d, after.cfg, refreshed.access_token, after.now()), "and refreshing does not ask the owner to reconnect");
 });
 
-test("canonical resource: only the origin may change; any other path (the root included) switches MCP off and names MERRYMEN_MCP_RESOURCE_URL", () => {
+test("canonical resource: only the origin may change; any other path (the root included) switches MCP off and names AGENTCAP_MCP_RESOURCE_URL", () => {
   // app/mcp/route.ts is the only route that serves the endpoint and
   // next.config.mjs has no rewrites, so every one of these was advertised (in
   // llms.txt, health, the protected-resource metadata, the 401 challenge and
   // the install links) and answered every client POST with 404.
   for (const bad of [
     "https://mcp.test/v2/mcp", "https://mcp.test/", "https://mcp.test", "https://mcp.test/MCP", "https://mcp.test/mcpx",
-    "https://mcp.test/mcp/directory", "https://mcp.test/mcp/x", "https://mcp.test/api/mcp", "https://mcp.test/%6Dcp", "https://app.merrymen.dev/v1/mcp",
+    "https://mcp.test/mcp/directory", "https://mcp.test/mcp/x", "https://mcp.test/api/mcp", "https://mcp.test/%6Dcp", "https://app.agentcap.xyz/v1/mcp",
   ]) {
-    const cfg = hostedConfig({ ...PRODUCTION_ENV, MERRYMEN_MCP_RESOURCE_URL: bad });
+    const cfg = hostedConfig({ ...PRODUCTION_ENV, AGENTCAP_MCP_RESOURCE_URL: bad });
     assert.equal(cfg.enabled, false, bad);
     assert.equal(cfg.resource, "", `${bad}: nothing to advertise`);
-    assert.equal(cfg.disabledWhy, "MERRYMEN_MCP_RESOURCE_URL must have the path /mcp, the only path the MCP endpoint is served at (only the origin may change)", bad);
-    assert.deepEqual([...cfg.allowedHosts], ["app.merrymen.dev"], `${bad}: treated like an unusable URL, so its host is not allowed either`);
+    assert.equal(cfg.disabledWhy, "AGENTCAP_MCP_RESOURCE_URL must have the path /mcp, the only path the MCP endpoint is served at (only the origin may change)", bad);
+    assert.deepEqual([...cfg.allowedHosts], ["app.agentcap.xyz"], `${bad}: treated like an unusable URL, so its host is not allowed either`);
   }
   // An unusable URL keeps its own reason.
   for (const bad of ["http://mcp.test/mcp", "not a url", "https://mcp.test/mcp?x=1", "https://mcp.test/mcp#f", "https://u:p@mcp.test/mcp"]) {
-    const cfg = hostedConfig({ ...PRODUCTION_ENV, MERRYMEN_MCP_RESOURCE_URL: bad });
+    const cfg = hostedConfig({ ...PRODUCTION_ENV, AGENTCAP_MCP_RESOURCE_URL: bad });
     assert.equal(cfg.enabled, false, bad);
-    assert.equal(cfg.disabledWhy, "MERRYMEN_MCP_RESOURCE_URL must be an https URL", bad);
+    assert.equal(cfg.disabledWhy, "AGENTCAP_MCP_RESOURCE_URL must be an https URL", bad);
   }
 });

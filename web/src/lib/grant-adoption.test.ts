@@ -1,7 +1,7 @@
 /**
  * A SECOND BROWSER IS NOT A LOST WALLET.
  *
- * Reported from the beta: create an agent and grant on app.merrymen.dev, then
+ * Reported from the beta: create an agent and grant on app.agentcap.xyz, then
  * sign in from incognito or another machine with the same X account, and you
  * cannot re-sign or change your trading limits. The screen fell to its RESTORE
  * panel, which asks for the owner private key — and a Privy-owned agent has no
@@ -11,7 +11,7 @@
  * The tester got out by hand-writing the server's grant into localStorage. It
  * works, and it is a trap, which is why these tests exist at all:
  *
- *   localStorage["merrymen.grant.v1"] is the browser's FULL-FAT copy — the
+ *   localStorage["agentcap.grant.v1"] is the browser's FULL-FAT copy — the
  *   session key, a second copy of it inside `serialized`, and on a legacy agent
  *   the OWNER key, which is the smart account's sudo validator and is not bound
  *   by the wall at all. GET /api/grants strips all three. Writing what comes
@@ -34,13 +34,13 @@ describe("the server's grant may be adopted, never stored", () => {
   // wallet-renewal.test.ts mounts Wallet to exercise adoption across binding
   // cohorts and verifies that the full local recovery record is untouched.
 
-  it("AND NEVER WRITTEN TO merrymen.grant.v1", () => {
+  it("AND NEVER WRITTEN TO agentcap.grant.v1", () => {
     // The whole hazard in one assertion. `setGrant` is React state; the storage
     // slot is written in exactly one place in the app — session.ts, at mint —
     // and this screen must not become a second writer.
     const src = wallet();
     assert.ok(
-      !/localStorage\.setItem\(\s*(STORAGE_KEY|["']merrymen\.grant\.v1["'])/.test(src),
+      !/localStorage\.setItem\(\s*(STORAGE_KEY|["']agentcap\.grant\.v1["'])/.test(src),
       "Wallet.tsx must never write the grant storage slot",
     );
   });

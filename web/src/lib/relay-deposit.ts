@@ -10,7 +10,7 @@
  * deposit-path plan.
  *
  * THIS MODULE MOVES NO MONEY. The first slice is quotes plus deep links:
- * - Merrymen asks Relay's `/price` what a conversion would deliver and shows
+ * - AgentCap asks Relay's `/price` what a conversion would deliver and shows
  *   that answer.
  * - "Continue on Relay" opens relay.link, prefilled with the agent account as
  *   the recipient.
@@ -38,7 +38,7 @@
  * cannot carry a slippage cap, so the panel also names ours for the owner to
  * check there.
  */
-import { CASH, USDG_DECIMALS } from "@merrymen/core";
+import { CASH, USDG_DECIMALS } from "@agentcap/core";
 import { EVM_NATIVE, SOL_NATIVE, formatAmount, formatFixed, type DepositSource } from "./deposit-math";
 
 export const RELAY_API = "https://api.relay.link";
@@ -201,7 +201,7 @@ export function parseRelayPrice(body: unknown, request: { source: DepositSource;
   const relayer = feeLine("relayer", "Relay fee");
   if (relayer && relayer.amount > 0n) fees.push(strip(relayer));
   const app = feeLine("app", "App fee");
-  // Merrymen takes no fee. Should an answer ever carry one, it is shown, not hidden.
+  // AgentCap takes no fee. Should an answer ever carry one, it is shown, not hidden.
   if (app && app.amount > 0n) fees.push(strip(app));
   const gas = feeLine("gas", `Network fee on ${source.network}`);
   if (gas && gas.amount > 0n) {

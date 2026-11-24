@@ -1,5 +1,5 @@
 /**
- * The Perps half of `merrymen kill` (cli/bin.mjs), which cannot import the
+ * The Perps half of `agentcap kill` (cli/bin.mjs), which cannot import the
  * worker: the local Perps wallet's grant is archived and revoked and its paper
  * strategy turned off, as the dashboard's and Telegram's self-hosted kills do
  * (stopLocalPerpsWallet). Prints "stopped" followed by what was done ("grant",
@@ -20,7 +20,7 @@ try {
 } catch (e) {
   const code = (e as NodeJS.ErrnoException | null)?.code;
   const why = e instanceof PerpsKillIncomplete ? e.message
-    : `The local Perps wallet's grant could not be read or revoked${typeof code === "string" ? ` (${code})` : ""}. Check ~/.merrymen/accounts/perps/, and run the kill as the user that owns it.`;
+    : `The local Perps wallet's grant could not be read or revoked${typeof code === "string" ? ` (${code})` : ""}. Check ~/.agentcap/accounts/perps/, and run the kill as the user that owns it.`;
   const status = e instanceof PerpsPaperNotStopped ? 2 : 1;
   console.log(JSON.stringify({ v: 1, kind: "perps-kill-error", status, why: redactUrls(why) }));
   process.exitCode = status;

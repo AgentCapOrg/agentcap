@@ -24,7 +24,7 @@ interface Client {
   query(sql: string, params?: unknown[]): Promise<{ rows: Record<string, unknown>[]; rowCount: number | null }>;
   on(event: "error" | "end", fn: () => void): void;
 }
-const url = process.env.MERRYMEN_TEST_PG_URL ?? process.env.MERRYMEN_TEST_POSTGRES_URL;
+const url = process.env.AGENTCAP_TEST_PG_URL ?? process.env.AGENTCAP_TEST_POSTGRES_URL;
 const pg = url ? createRequire(import.meta.url)("pg") as {
   Client: new (config: { connectionString: string }) => Client;
   types: { setTypeParser(id: number, fn: (s: string) => unknown): void };
@@ -39,7 +39,7 @@ test("Postgres: original source import, actual grant deletion locks and durable 
   const admin = new pg!.Client({ connectionString: target.toString() }); await admin.connect(); await admin.query(`CREATE SCHEMA ${schema}`);
   const scoped = new URL(target); scoped.searchParams.set("options", `-c search_path=${schema} -c statement_timeout=10000 -c lock_timeout=8000`);
   const clients: Client[] = [], raws: DatabaseSync[] = [], tmp = realpathSync(mkdtempSync(path.join(os.tmpdir(), "mm-ledger-pg-")));
-  const savedDek = process.env.MERRYMEN_STORE_DEK; process.env.MERRYMEN_STORE_DEK = dek.toString("base64");
+  const savedDek = process.env.AGENTCAP_STORE_DEK; process.env.AGENTCAP_STORE_DEK = dek.toString("base64");
   const connect = async () => { const c = new pg!.Client({ connectionString: scoped.toString() }); await c.connect(); clients.push(c); return c; };
   const main = await connect();
   const wrap = (client: Client, scopedTransaction = false): Db => ({
@@ -62,14 +62,14 @@ test("Postgres: original source import, actual grant deletion locks and durable 
     for (const raw of raws) raw.close();
     await Promise.allSettled(clients.map(c => c.end()));
     try { await admin.query(`DROP SCHEMA ${schema} CASCADE`); } finally { await admin.end(); rmSync(tmp, { recursive: true, force: true }); }
-    if (savedDek === undefined) delete process.env.MERRYMEN_STORE_DEK; else process.env.MERRYMEN_STORE_DEK = savedDek;
+    if (savedDek === undefined) delete process.env.AGENTCAP_STORE_DEK; else process.env.AGENTCAP_STORE_DEK = savedDek;
   });
   let number = 0;
   async function fixture(empty = false) {
     const id = ++number, tenant = address(0xabc00 + id), account = address(0xdef00 + id), owner = address(0xfed00 + id);
     const homeBase = path.join(tmp, String(id)), original = path.join(homeBase, "original"), mountPath = path.join(homeBase, "volume"), homeRoot = path.join(mountPath, "fleet");
     mkdirSync(original, { recursive: true }); mkdirSync(homeRoot, { recursive: true });
-    const raw = new DatabaseSync(path.join(original, "merrymen.db")); raws.push(raw); const local = wrapSqlite(raw); await applyLedgerSchema(local);
+    const raw = new DatabaseSync(path.join(original, "agentcap.db")); raws.push(raw); const local = wrapSqlite(raw); await applyLedgerSchema(local);
     await grants.put(tenant, { smartAccount: account, owner, chainId: 4663, sessionKeyAddress: privateKeyToAccount(key).address, serialized: Buffer.from(JSON.stringify({ privateKey: key })).toString("base64"), demoSessionPrivateKey: key,
       grantedAt: 1, expiresAt: Math.floor(Date.now() / 1000) + 86400, caps: { perTradeUsdg: 10, dailyUsdg: 50, maxDrawdownPct: 20, expiryDays: 1 }, grantFeatures: ["tradeable-v2"], grantTokens: [] } as unknown as StoredGrant);
     if (!empty) {
@@ -94,10 +94,10 @@ test("Postgres: original source import, actual grant deletion locks and durable 
     const verified = await verifyLedgerImport({ artifact, home: f.original, shared, dek, lease: f.lease, assertSource() {} });
     assert.equal(await restoreLedgerImport(f.options), "restored");
     assert.deepEqual(await verifyRestoredLedgerImport({ ...f.options, artifact, assertSource() {} }), verified);
-    const raw = new DatabaseSync(path.join(f.home, "merrymen.db")); raws.push(raw);
+    const raw = new DatabaseSync(path.join(f.home, "agentcap.db")); raws.push(raw);
     const report = await mirrorTenant({ tenant: f.tenant, child: wrapSqlite(raw), shared }); assert.equal(report.restarted, undefined); assert.equal(report.failed, undefined);
     const row = await shared.prepare("SELECT state,sealed,source_inode FROM tenant_ledger_import WHERE tenant=?").get(f.tenant) as Record<string, unknown>;
-    assert.equal(row.state, "consumed"); assert.equal(row.sealed, null); assert.equal(row.source_inode, String(lstatSync(path.join(f.home, "merrymen.db"), { bigint: true }).ino));
+    assert.equal(row.state, "consumed"); assert.equal(row.sealed, null); assert.equal(row.source_inode, String(lstatSync(path.join(f.home, "agentcap.db"), { bigint: true }).ino));
   });
   await t.test("real grant DELETE waits for import grant-first lock, then invalidates both consumed payload and generation atomically", async () => {
     const f = await fixture(); let entered!: () => void, unblock!: () => void; let first = true;
@@ -115,12 +115,12 @@ test("Postgres: original source import, actual grant deletion locks and durable 
     assert.equal((await main.query("SELECT tenant FROM grants WHERE tenant=$1", [f.tenant])).rows.length, 0);
     const row = (await main.query("SELECT state,sealed FROM tenant_ledger_import WHERE tenant=$1", [f.tenant])).rows[0]!; assert.equal(row.state, "deleted"); assert.equal(row.sealed, null);
     assert.equal((await main.query("SELECT state FROM tenant_ledger_import_generations WHERE generation=$1", [f.artifact!.generation])).rows[0]!.state, "deleted");
-    assert.ok(existsSync(path.join(f.home, "merrymen.db")), "explicit removal retains original accounting evidence");
+    assert.ok(existsSync(path.join(f.home, "agentcap.db")), "explicit removal retains original accounting evidence");
     assert.equal(existsSync(path.join(f.home, LEDGER_IMPORT_PENDING_FILE)), "error" in outcome);
     await assert.rejects(restoreLedgerImport(f.options), /Original ledger import refused/);
   });
   await t.test("new zero-cursor original receives consumed receipt and a missing book is never recreated", async () => {
     const f = await fixture(true); await registerLedgerSource(f.options); assert.equal(await restoreLedgerImport(f.options), "present");
-    rmSync(path.join(f.home, "merrymen.db")); await assert.rejects(restoreLedgerImport(f.options)); await assert.rejects(registerLedgerSource(f.options));
+    rmSync(path.join(f.home, "agentcap.db")); await assert.rejects(restoreLedgerImport(f.options)); await assert.rejects(registerLedgerSource(f.options));
   });
 });

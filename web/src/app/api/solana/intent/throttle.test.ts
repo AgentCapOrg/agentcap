@@ -30,9 +30,9 @@ test("one tenant looping previews or trades is paced per action; other tenants a
 const tenant = `0x${"d4".repeat(20)}` as const, owner = "So11111111111111111111111111111111111111112";
 const ran: string[] = [];
 let POST: (req: Request) => Promise<Response>;
-const flag = process.env.MERRYMEN_SOLANA;
+const flag = process.env.AGENTCAP_SOLANA;
 before(() => {
-  process.env.MERRYMEN_SOLANA = "1";
+  process.env.AGENTCAP_SOLANA = "1";
   const directory = fileURLToPath(new URL("./", import.meta.url));
   const loader = Module as unknown as { _load: (id: string, parent: { filename?: string }, isMain: boolean) => unknown };
   const original = loader._load;
@@ -49,7 +49,7 @@ before(() => {
   try { POST = (createRequire(import.meta.url)(`${directory}route.ts`) as { POST: typeof POST }).POST; }
   finally { interception.mock.restore(); }
 });
-after(() => { if (flag === undefined) delete process.env.MERRYMEN_SOLANA; else process.env.MERRYMEN_SOLANA = flag; });
+after(() => { if (flag === undefined) delete process.env.AGENTCAP_SOLANA; else process.env.AGENTCAP_SOLANA = flag; });
 beforeEach(() => { ran.length = 0; });
 const post = (action: string, mode = "paper") => POST(new Request("https://app.example.test/api/solana/intent", { method: "POST", body: JSON.stringify({ mode, action, intent: { requestId: "x" } }) }));
 

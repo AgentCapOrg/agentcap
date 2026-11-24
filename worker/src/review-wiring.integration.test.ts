@@ -21,10 +21,10 @@ import { after, describe, it } from "node:test";
 import type { BrainDecision } from "./brain-client";
 import type { ShadowInputs } from "./brain-shadow";
 
-const scratch = mkdtempSync(path.join(os.tmpdir(), "merrymen-review-wiring-"));
+const scratch = mkdtempSync(path.join(os.tmpdir(), "agentcap-review-wiring-"));
 const isolatedCwd = path.join(scratch, "cwd");
 mkdirSync(isolatedCwd);
-process.env.MERRYMEN_HOME = path.join(scratch, "home");
+process.env.AGENTCAP_HOME = path.join(scratch, "home");
 delete process.env.DATABASE_URL;
 const originalCwd = process.cwd();
 const store = await import("./store");
@@ -34,7 +34,7 @@ try {
 } finally {
   process.chdir(originalCwd);
 }
-const raw = new DatabaseSync(path.join(process.env.MERRYMEN_HOME, "merrymen.db"));
+const raw = new DatabaseSync(path.join(process.env.AGENTCAP_HOME, "agentcap.db"));
 const { marketReview, quietReviewRow, reviewSource, PRIVATE_REVIEW_SOURCE } = await import("./market-review");
 const { reviewRecord, runShadow } = await import("./brain-shadow");
 

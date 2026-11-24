@@ -1,0 +1,11 @@
+{
+  "name": "agentcap-grok",
+  "version": "1.0.0",
+  "description": "Connect to hosted AgentCap, prepare owner-reviewed setup, and inspect your AgentCapAvatar with an optional read-only monitoring workflow.",
+  "author": { "name": "AgentCap" },
+  "homepage": "https://agentcap.xyz/grok",
+  "repository": "https://github.com/millw14/agentcap",
+  "license": "MIT",
+  "logo": "assets/logo.png",
+  "keywords": ["agentcap", "grok", "mcp", "portfolio", "monitoring"]
+}

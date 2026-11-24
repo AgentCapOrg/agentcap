@@ -13,7 +13,7 @@
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, it, mock } from "node:test";
 import React, { act } from "react";
-import { autonomyOf } from "@merrymen/core";
+import { autonomyOf } from "@agentcap/core";
 import { Agent } from "./screens/Agent";
 import type { LiveMine, Thesis } from "./live";
 import { json, testDom } from "./test-dom";

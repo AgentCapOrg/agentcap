@@ -74,12 +74,12 @@ describe("what a check reads", () => {
     assert.deepEqual(checkTargetOf(other)?.target, { kind: "coin", address: CA, chain: "evm", site: null });
   });
 
-  it("nothing for two contracts, its own posts, platforms, plain http or a merrymen page", () => {
+  it("nothing for two contracts, its own posts, platforms, plain http or a agentcap page", () => {
     assert.equal(checkTargetOf(tag(`@alanaidale ${CA} ${"0x" + "1".repeat(40)} check`)), null);
     const own = tag("@alanaidale larp check", { context: [{ id: "490", relation: "replied_to", text: `bought ${CA}`, links: [], authorId: "111" }] });
     assert.equal(checkTargetOf(own, { ownId: "111" }), null);
     assert.equal(checkTargetOf(own, { ownPosts: new Set(["490"]) }), null);
-    for (const u of ["https://x.com/a", "https://t.me/a", "http://acme.example", "https://merrymen.dev", "https://dexscreener.com/solana/abc", "https://localhost/x", "https://10.0.0.1/"]) {
+    for (const u of ["https://x.com/a", "https://t.me/a", "http://acme.example", "https://agentcap.xyz", "https://dexscreener.com/solana/abc", "https://localhost/x", "https://10.0.0.1/"]) {
       assert.equal(siteLink(u), null, u);
     }
   });

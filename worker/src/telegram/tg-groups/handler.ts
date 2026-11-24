@@ -847,7 +847,7 @@ export function createTgGroups(d: TgGroupsDeps): TgGroups {
   const collapses = new Map<string, Map<string, Permit>>();
   const MEASURED_PERMIT_MS = 12 * 60 * MIN;
   const ROOM_PERMIT_MS = 30 * MIN;
-  /** When each chat last said a Merrymen brag: none again for 20 minutes. */
+  /** When each chat last said a AgentCap brag: none again for 20 minutes. */
   const bragAt = new Map<number, number>();
   const BRAG_GAP_MS = 20 * MIN;
   /** When each recent message reached this process, for the staleness of a coin line about it. */
@@ -1063,10 +1063,10 @@ export function createTgGroups(d: TgGroupsDeps): TgGroups {
       return null;
     }
   };
-  /** MERRYMEN_TG_GROUPS=0: the operator's off switch, read on every update. */
+  /** AGENTCAP_TG_GROUPS=0: the operator's off switch, read on every update. */
   const switchOn = (): boolean => {
     try {
-      return env().MERRYMEN_TG_GROUPS?.trim() !== "0";
+      return env().AGENTCAP_TG_GROUPS?.trim() !== "0";
     } catch {
       return false;
     }
@@ -1103,10 +1103,10 @@ export function createTgGroups(d: TgGroupsDeps): TgGroups {
       return null;
     }
   };
-  /** The research port, unless the operator switched the lane off (MERRYMEN_TG_GROUPS_FOMO=0). */
+  /** The research port, unless the operator switched the lane off (AGENTCAP_TG_GROUPS_FOMO=0). */
   const fomoNow = (): TgFomoPort | null => {
     try {
-      if ((env().MERRYMEN_TG_GROUPS_FOMO ?? "").trim() === "0") return null;
+      if ((env().AGENTCAP_TG_GROUPS_FOMO ?? "").trim() === "0") return null;
       return d.fomo?.() ?? null;
     } catch {
       return null;
@@ -1506,7 +1506,7 @@ export function createTgGroups(d: TgGroupsDeps): TgGroups {
     store.update(chatId, (r) => {
       r.lastOwnAtMs = now;
     });
-    // A Merrymen brag said, in any words: the next waits (SPENT_BRAG, BRAG_GAP_MS).
+    // A AgentCap brag said, in any words: the next waits (SPENT_BRAG, BRAG_GAP_MS).
     if (SPENT_BRAG.test(text)) noteBrag(chatId, now);
   };
   const noteBrag = (chatId: number, at: number): void => {
@@ -2095,9 +2095,9 @@ export function createTgGroups(d: TgGroupsDeps): TgGroups {
 
   /**
    * SMALL TALK SAID TO IT, a room's welcome included. detect.ts reads a line
-   * that is small talk and nothing more ("hey there merryman", "thanks
+   * that is small talk and nothing more ("hey there agentcapavatar", "thanks
    * pine!"). A welcome is small talk too, but it carries words that reader
-   * rightly does not know: in "Hey there Merryman, and welcome to lust rage
+   * rightly does not know: in "Hey there AgentCapAvatar, and welcome to lust rage
    * mode (the redemption)! How are you?" the long part is the chat's own
    * title. Read whole, that line is a question, and without a model its
    * answer was "hmm good question". So when the whole line is not small
@@ -2126,7 +2126,7 @@ export function createTgGroups(d: TgGroupsDeps): TgGroups {
   };
 
   const signalsOf = (text: string, room: TgRoom, addressed: LineJob["addressed"]): PaceInput["signals"] => {
-    // Every name the room calls it by: "pine is trash" is "merryman is trash".
+    // Every name the room calls it by: "pine is trash" is "agentcapavatar is trash".
     const names = selfNamesOf(selfNow());
     return {
       shush: isShush(text),
@@ -2750,7 +2750,7 @@ export function createTgGroups(d: TgGroupsDeps): TgGroups {
   // ── the market desk (docs/tg-groups.md "Market analysis") ──────────────
 
   const deskNow = (): TgDeskPort | null => {
-    if ((env().MERRYMEN_TG_GROUPS_DESK ?? "").trim() === "0") return null;
+    if ((env().AGENTCAP_TG_GROUPS_DESK ?? "").trim() === "0") return null;
     try {
       return d.desk?.() ?? null;
     } catch {
@@ -3454,9 +3454,9 @@ export function createTgGroups(d: TgGroupsDeps): TgGroups {
   // ── what a line wants, when no rule knew (route.ts) ──
 
   const routeBreaker = new RouteBreaker(clock);
-  /** MERRYMEN_TG_GROUPS_ROUTER=0 turns it off; it needs a model and something to route to. */
+  /** AGENTCAP_TG_GROUPS_ROUTER=0 turns it off; it needs a model and something to route to. */
   const routerOn = (): boolean =>
-    (env().MERRYMEN_TG_GROUPS_ROUTER ?? "").trim() !== "0" && modelNow() !== null && (fomoNow() !== null || deskNow() !== null);
+    (env().AGENTCAP_TG_GROUPS_ROUTER ?? "").trim() !== "0" && modelNow() !== null && (fomoNow() !== null || deskNow() !== null);
   const ownerNow = (): TgOwnerPort | null => {
     try {
       return d.owner?.() ?? null;
@@ -3567,8 +3567,8 @@ export function createTgGroups(d: TgGroupsDeps): TgGroups {
   /**
    * A FOMO TAIL ASKED FOR IN THE ROOM (docs/fomo.md "Tailing a trader";
    * docs/tg-groups.md rules 1 and 3). Groups never order trades, and who
-   * Merrymen tails is never a room's (a trader's public data is, Milla
-   * 2026-10-07; what Merrymen watches is not), so:
+   * AgentCap tails is never a room's (a trader's public data is, Milla
+   * 2026-10-07; what AgentCap watches is not), so:
    *
    * - the owner's line (j.isOwner: the trusted sender id, never a line sent
    *   through a chat) goes to her DM as the confirm card, through

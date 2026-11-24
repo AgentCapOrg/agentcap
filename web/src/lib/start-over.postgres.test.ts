@@ -3,7 +3,7 @@
  * ORCHESTRATOR WHILE THE BOOK IS HELD. Opt-in, like
  * worker/src/pg-upgrade.postgres.test.ts (see its header):
  *
- *   MERRYMEN_TEST_PG_URL=postgres://merrymen@localhost:55432/merrymen_pgtest \
+ *   AGENTCAP_TEST_PG_URL=postgres://agentcap@localhost:55432/agentcap_pgtest \
  *     npx tsx --test web/src/lib/start-over.postgres.test.ts
  *
  * Skipped without it. A LOCAL Postgres only, in a schema of its own, dropped
@@ -59,7 +59,7 @@ import { queuePaperReset } from "./start-over";
 import { queueRecoveryCheckedCommand } from "./recovery-commands";
 import { recordFleetRecoveryHold, recordFleetSourceVerified } from "../../../worker/src/fleet-recovery";
 
-const url = process.env.MERRYMEN_TEST_PG_URL ?? process.env.MERRYMEN_TEST_POSTGRES_URL;
+const url = process.env.AGENTCAP_TEST_PG_URL ?? process.env.AGENTCAP_TEST_POSTGRES_URL;
 interface PgClient {
   connect(): Promise<void>;
   query(sql: string): Promise<unknown>;
@@ -146,12 +146,12 @@ test("Postgres: Start over's practice reset, honoured while the book is held", {
   const scoped = (who: string) => {
     const u = new URL(target);
     u.searchParams.set("options", `-c search_path=${schema} -c statement_timeout=20000 -c lock_timeout=10000`);
-    u.searchParams.set("application_name", `merrymen-web-reset-test-${who}`);
+    u.searchParams.set("application_name", `agentcap-web-reset-test-${who}`);
     return u.toString();
   };
-  const saved = { db: process.env.DATABASE_URL, home: process.env.MERRYMEN_HOME };
+  const saved = { db: process.env.DATABASE_URL, home: process.env.AGENTCAP_HOME };
   const home = mkdtempSync(path.join(os.tmpdir(), "mm-web-reset-"));
-  process.env.MERRYMEN_HOME = home;
+  process.env.AGENTCAP_HOME = home;
   // queuePaperReset's ledger (lib/ledger.ts withReadDb) picks Postgres by DATABASE_URL: this run's schema only.
   process.env.DATABASE_URL = scoped("web");
 
@@ -509,7 +509,7 @@ test("Postgres: Start over's practice reset, honoured while the book is held", {
     await admin.query(`DROP SCHEMA ${schema} CASCADE`).catch(() => {});
     for (const c of clients) await c.end().catch(() => {});
     rmSync(home, { recursive: true, force: true });
-    for (const [k, v] of [["DATABASE_URL", saved.db], ["MERRYMEN_HOME", saved.home]] as const) {
+    for (const [k, v] of [["DATABASE_URL", saved.db], ["AGENTCAP_HOME", saved.home]] as const) {
       if (v === undefined) delete process.env[k];
       else process.env[k] = v;
     }

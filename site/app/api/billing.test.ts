@@ -105,7 +105,7 @@ test('the account and chain are read again at the click, and a mismatch sends no
     assert.equal(w.sent().length, 0, method);
   }
   const poor = wallet({ ...fine, eth_call: () => '0x' + (80_000n * UNIT).toString(16) });
-  await assert.rejects(payWithWallet({ provider: poor.provider, wallet: WALLET, treasury: TREASURY, amount: 100_000n * UNIT }), /holds 80,000 MERRYMEN; this payment needs 100,000/);
+  await assert.rejects(payWithWallet({ provider: poor.provider, wallet: WALLET, treasury: TREASURY, amount: 100_000n * UNIT }), /holds 80,000 AGENTCAP; this payment needs 100,000/);
   assert.equal(poor.sent().length, 0);
   // A balance the wallet cannot read is the wallet's to refuse, not a reason to block.
   const blind = wallet({ ...fine, eth_call: () => { throw new Error('unsupported'); } });
@@ -118,7 +118,7 @@ test('the account and chain are read again at the click, and a mismatch sends no
     const said = await payWithWallet({ provider: w.provider, wallet: WALLET, treasury: TREASURY, amount: UNIT }).then(() => 'sent', walletError);
     assert.match(said, /cannot tell whether the payment was sent.*paste its hash below instead of paying again/, JSON.stringify(error)); assert.doesNotMatch(said, /Nothing was sent|try again/i);
   }
-  // No ETH for the network fee: the node refuses the transaction before it exists, so nothing was sent, and the fix is gas, not MERRYMEN.
+  // No ETH for the network fee: the node refuses the transaction before it exists, so nothing was sent, and the fix is gas, not AGENTCAP.
   for (const error of [{ code: -32000, message: 'insufficient funds for gas * price + value' }, { code: -32603, data: { originalError: { code: -32000, message: 'Insufficient funds for gas' } } }]) {
     const w = wallet({ ...fine, eth_sendTransaction: () => { throw error; } });
     const said = await payWithWallet({ provider: w.provider, wallet: WALLET, treasury: TREASURY, amount: UNIT }).then(() => 'sent', walletError);
@@ -180,7 +180,7 @@ test('the static plans table matches the gateway\'s, when that file is here', as
 
 const livePlans = (over: Record<string, unknown> = {}) => ({
   billing: { mode: 'enforce', enforced: true }, period_days: 30, treasury: TREASURY.toUpperCase().replace('0X', '0x'),
-  currency: { symbol: 'MERRYMEN', address: TOKEN.address.toUpperCase().replace('0X', '0x'), chain_id: 4663, decimals: 18, explorer_url: 'javascript:alert(1)' },
+  currency: { symbol: 'AGENTCAP', address: TOKEN.address.toUpperCase().replace('0X', '0x'), chain_id: 4663, decimals: 18, explorer_url: 'javascript:alert(1)' },
   confirmations: { blocks: 64, min_age_sec: 120 },
   plans: FALLBACK_PLANS.plans.map(p => ({ id: p.id, name: p.name, price_tokens: String(BigInt(p.price_raw) / UNIT), price_raw: p.price_raw, requests: p.requests, rpm: p.rpm })),
   ...over,
@@ -333,11 +333,11 @@ test('a preview that renews another plan from credit says so before anything is 
     due_raw: (850_000n * UNIT).toString(), starts_at: null, ends_at: null, period_requests: 1_000_000 })!;
   assert.equal(preview.charge_now_tier, 'crumbs');
   assert.equal(previewSentence(preview, feast, 'Free', 'Free', { plans: FALLBACK_PLANS.plans }),
-    '100,000 MERRYMEN of your credit renews Crumbs now, the plan your last period was on. Feast starts as soon as 850,000 MERRYMEN arrives. Confirm, then pay below.');
+    '100,000 AGENTCAP of your credit renews Crumbs now, the plan your last period was on. Feast starts as soon as 850,000 AGENTCAP arrives. Confirm, then pay below.');
   // A gateway that does not name the tier still names the charge.
-  assert.match(previewSentence({ ...preview, charge_now_tier: null }, feast, 'Free'), /^100,000 MERRYMEN of your credit renews your last paid plan now\. Feast starts as soon as/);
+  assert.match(previewSentence({ ...preview, charge_now_tier: null }, feast, 'Free'), /^100,000 AGENTCAP of your credit renews your last paid plan now\. Feast starts as soon as/);
   // Nothing charged now: nothing said about credit.
-  assert.equal(previewSentence({ ...preview, charge_now_raw: '0', charge_now_tier: null }, feast, 'Free'), 'Feast starts as soon as 850,000 MERRYMEN arrives. Confirm, then pay below.');
+  assert.equal(previewSentence({ ...preview, charge_now_raw: '0', charge_now_tier: null }, feast, 'Free'), 'Feast starts as soon as 850,000 AGENTCAP arrives. Confirm, then pay below.');
 });
 
 test('an upgrade preview gives the quota the period gets, not the plan card\'s 30-day figure', () => {
@@ -346,10 +346,10 @@ test('an upgrade preview gives the quota the period gets, not the plan card\'s 3
   const now = normalizePreview({ effect: 'upgrade_now', charge_now_raw: (150_000n * UNIT).toString(), due_raw: null,
     starts_at: '2027-01-30T08:00:00.000Z', ends_at: '2027-02-14T08:00:00.000Z', period_requests: 150_000 })!;
   assert.equal(now.period_requests, 150_000);
-  assert.equal(previewSentence(now, loaf, 'Crumbs'), 'You move to Loaf now for the rest of this period until 14 Feb 2027. 150,000 MERRYMEN comes out of your credit, and the requests you have used so far carry over. '
+  assert.equal(previewSentence(now, loaf, 'Crumbs'), 'You move to Loaf now for the rest of this period until 14 Feb 2027. 150,000 AGENTCAP comes out of your credit, and the requests you have used so far carry over. '
     + 'An upgrade adds requests only for the time left: this period\'s quota becomes 150,000 requests, and Loaf\'s full 250,000 starts with the next period.');
   const later = normalizePreview({ effect: 'waiting_for_payment', charge_now_raw: '0', due_raw: (150_000n * UNIT).toString(), starts_at: null, ends_at: null, period_requests: 150_000 })!;
-  assert.equal(previewSentence(later, loaf, 'Crumbs'), 'Loaf starts as soon as 150,000 MERRYMEN arrives. '
+  assert.equal(previewSentence(later, loaf, 'Crumbs'), 'Loaf starts as soon as 150,000 AGENTCAP arrives. '
     + 'An upgrade adds requests only for the time left: this period\'s quota becomes at most 150,000 requests, and Loaf\'s full 250,000 starts with the next period. Confirm, then pay below.');
   // A whole period, or a gateway that does not say: nothing about quota.
   for (const period_requests of [250_000, null]) assert.doesNotMatch(previewSentence({ ...later, period_requests }, loaf, 'Free'), /quota/);
@@ -359,14 +359,14 @@ test('an upgrade preview gives the quota the period gets, not the plan card\'s 3
 test('choosing the running plan again says it renews and what is dropped; cancelling says where the credit goes', () => {
   const [free, crumbs] = FALLBACK_PLANS.plans;
   const again = normalizePreview({ effect: 'at_renewal', charge_now_raw: '0', due_raw: null, starts_at: '2027-02-14T08:00:00.000Z', ends_at: '2027-03-16T08:00:00.000Z' })!;
-  const renews = 'Crumbs renews when this period ends on 14 Feb 2027 (100,000 MERRYMEN, from your credit or a payment)';
+  const renews = 'Crumbs renews when this period ends on 14 Feb 2027 (100,000 AGENTCAP, from your credit or a payment)';
   assert.equal(previewSentence(again, crumbs, 'Crumbs', 'Free', { currentId: 'crumbs' }), `${renews}, so renewal is on again. Nothing is charged now.`);
   assert.equal(previewSentence(again, crumbs, 'Crumbs', 'Loaf', { currentId: 'crumbs' }), `${renews}, and the pending Loaf change is dropped. Nothing is charged now.`);
   assert.equal(previewSentence(again, crumbs, 'Crumbs'), `${renews}. Nothing is charged now.`, 'by name when the id is not given');
   assert.doesNotMatch(previewSentence(again, crumbs, 'Crumbs', 'Loaf', { currentId: 'crumbs' }), /takes over when Crumbs ends/);
   const cancel = normalizePreview({ effect: 'cancel_renewal', charge_now_raw: '0', due_raw: null, starts_at: '2027-02-14T08:00:00.000Z', ends_at: null })!;
   assert.equal(previewSentence(cancel, free, 'Crumbs', 'Crumbs', { credit_raw: (100_000n * UNIT).toString() }),
-    'Crumbs runs to the end of its period (14 Feb 2027), then your account moves to Free. Nothing is charged. Your 100,000 MERRYMEN of credit stays on this account for later charges; it is not returned.');
+    'Crumbs runs to the end of its period (14 Feb 2027), then your account moves to Free. Nothing is charged. Your 100,000 AGENTCAP of credit stays on this account for later charges; it is not returned.');
   assert.equal(previewSentence(cancel, free, 'Crumbs', 'Crumbs', { credit_raw: '0' }), 'Crumbs runs to the end of its period (14 Feb 2027), then your account moves to Free. Nothing is charged.');
 });
 
@@ -374,7 +374,7 @@ test('with payments not open, a preview does not promise a payment step that is 
   const crumbs = FALLBACK_PLANS.plans[1];
   const waiting = normalizePreview({ effect: 'waiting_for_payment', charge_now_raw: '0', due_raw: (100_000n * UNIT).toString(), starts_at: null, ends_at: null })!;
   const closed = previewSentence(waiting, crumbs, 'Free', 'Free', { paymentsOpen: false });
-  assert.equal(closed, 'Crumbs starts once payments open and 100,000 MERRYMEN arrives. Your selection waits until then.');
+  assert.equal(closed, 'Crumbs starts once payments open and 100,000 AGENTCAP arrives. Your selection waits until then.');
   assert.doesNotMatch(closed, /pay below/);
   assert.match(previewSentence(waiting, crumbs, 'Free', 'Free', { paymentsOpen: true }), /Confirm, then pay below\.$/);
 });
@@ -382,9 +382,9 @@ test('with payments not open, a preview does not promise a payment step that is 
 test('a plan preview says what confirming does, in whole tokens', () => {
   const loaf = FALLBACK_PLANS.plans[2];
   const p = (body: Record<string, unknown>) => normalizePreview({ charge_now_raw: '0', due_raw: null, starts_at: null, ends_at: '2026-11-07T12:00:00.000Z', ...body })!;
-  assert.match(previewSentence(p({ effect: 'activate_now', charge_now_raw: (400_000n * UNIT).toString() }), loaf, 'Free'), /^Loaf starts now and runs until 7 Nov 2026\. 400,000 MERRYMEN comes out of your credit\.$/);
-  assert.match(previewSentence(p({ effect: 'upgrade_now', charge_now_raw: '150000000000000000000000' }), loaf, 'Crumbs'), /150,000 MERRYMEN comes out of your credit, and the requests you have used so far carry over/);
-  assert.match(previewSentence(p({ effect: 'waiting_for_payment', due_raw: '340000000000000000000001' }), loaf, 'Free'), /as soon as 340,001 MERRYMEN arrives/);
+  assert.match(previewSentence(p({ effect: 'activate_now', charge_now_raw: (400_000n * UNIT).toString() }), loaf, 'Free'), /^Loaf starts now and runs until 7 Nov 2026\. 400,000 AGENTCAP comes out of your credit\.$/);
+  assert.match(previewSentence(p({ effect: 'upgrade_now', charge_now_raw: '150000000000000000000000' }), loaf, 'Crumbs'), /150,000 AGENTCAP comes out of your credit, and the requests you have used so far carry over/);
+  assert.match(previewSentence(p({ effect: 'waiting_for_payment', due_raw: '340000000000000000000001' }), loaf, 'Free'), /as soon as 340,001 AGENTCAP arrives/);
   assert.match(previewSentence(p({ effect: 'at_renewal', starts_at: '2026-11-07T12:00:00.000Z' }), FALLBACK_PLANS.plans[1], 'Loaf'), /Crumbs takes over when Loaf ends on 7 Nov 2026\. Nothing is charged now\./);
   assert.match(previewSentence(p({ effect: 'cancel_renewal' }), FALLBACK_PLANS.plans[0], 'Loaf'), /then your account moves to Free\. Nothing is charged\./);
   assert.equal(normalizePreview({ effect: 'charge_everything' }), null);
@@ -392,9 +392,9 @@ test('a plan preview says what confirming does, in whole tokens', () => {
   const back = p({ effect: 'activate_now', ends_at: null, starts_at: '2026-10-08T00:00:00.000Z' });
   assert.equal(previewSentence(back, FALLBACK_PLANS.plans[0], 'Free', 'Crumbs'), 'Your account stays on Free and the pending Crumbs selection is dropped. Nothing is charged.');
   assert.equal(previewSentence(back, FALLBACK_PLANS.plans[0], 'Free'), 'Your account stays on Free. Nothing is charged.');
-  // No end date, no dangling "runs"; no charge, no "0 MERRYMEN comes out".
+  // No end date, no dangling "runs"; no charge, no "0 AGENTCAP comes out".
   assert.equal(previewSentence(p({ effect: 'activate_now', ends_at: null }), loaf, 'Free'), 'Loaf starts now. Nothing is charged.');
-  for (const sentence of [previewSentence(back, FALLBACK_PLANS.plans[0], 'Free', 'Crumbs'), previewSentence(p({ effect: 'upgrade_now' }), loaf, 'Crumbs')]) assert.doesNotMatch(sentence, /\b0 MERRYMEN|runs\./);
+  for (const sentence of [previewSentence(back, FALLBACK_PLANS.plans[0], 'Free', 'Crumbs'), previewSentence(p({ effect: 'upgrade_now' }), loaf, 'Crumbs')]) assert.doesNotMatch(sentence, /\b0 AGENTCAP|runs\./);
 });
 
 test('a payment check is read as credited, still pending, worth retrying, or refused with its reason', () => {
@@ -457,16 +457,16 @@ test('a submitted hash is checked until the gateway credits it, backing off and 
 
 test('a refusal stops the checks at once, with the gateway\'s words, or the remedy when it sent none', async () => {
   // The gateway's own wrong_sender message already says what to do; the page does not say it again.
-  const said = 'This transfer was not sent from your signed-in wallet 0x1111…1111. Only $MERRYMEN sent from 0x1111…1111 is credited to this account; a transfer from another wallet is credited by signing in with that wallet and submitting the hash there.';
+  const said = 'This transfer was not sent from your signed-in wallet 0x1111…1111. Only $AGENTCAP sent from 0x1111…1111 is credited to this account; a transfer from another wallet is credited by signing in with that wallet and submitting the hash there.';
   const s = scripted([pendingAnswer(), { status: 422, data: { error: { code: 'payment_not_found', reason: 'wrong_sender', message: said } } }, pendingAnswer()]);
   const end = await s.run;
   assert.equal(end.kind, 'failed'); assert.equal(s.checks(), 2); assert.deepEqual(s.waits, [6000]);
   assert.equal(endMessage(end as Parameters<typeof endMessage>[0], WALLET), said);
   const bare = (reason: string | null) => endMessage({ kind: 'failed', code: 'payment_not_found', reason, message: '' }, WALLET);
   assert.equal(bare('wrong_sender'), 'Only transfers from 0x1111…1111 count for this account. If you sent it from another wallet, sign in with that wallet, create its account and submit this hash there.');
-  assert.equal(bare('wrong_recipient'), 'This transfer did not go to the Merrymen payments wallet shown here.');
+  assert.equal(bare('wrong_recipient'), 'This transfer did not go to the AgentCap payments wallet shown here.');
   assert.equal(bare(null), 'This transaction cannot be credited.');
-  assert.equal(endMessage({ kind: 'failed', code: 'payment_not_found', reason: 'wrong_recipient', message: 'This transfer did not go to the Merrymen payments wallet 0x3333.' }, WALLET), 'This transfer did not go to the Merrymen payments wallet 0x3333.');
+  assert.equal(endMessage({ kind: 'failed', code: 'payment_not_found', reason: 'wrong_recipient', message: 'This transfer did not go to the AgentCap payments wallet 0x3333.' }, WALLET), 'This transfer did not go to the AgentCap payments wallet 0x3333.');
   const out = await scripted([{ status: 401, data: { error: { code: 'signed_out' } } }]).run;
   assert.deepEqual(out, { kind: 'signed_out' });
 });
@@ -535,7 +535,7 @@ test('history never promises tokens back', () => {
     historyLabel({ type: 'charge', at, amount_raw: '1', tier: 'loaf', tx_hash: null, reason: 'upgrade' }, plans),
     historyLabel({ type: 'charge', at, amount_raw: '0', tier: 'feast', tx_hash: null, reason: 'comp' }, plans),
   ];
-  assert.deepEqual(labels, ['Payment received', 'Payment reversed by the chain', 'Adjustment by Merrymen', 'Upgrade to Loaf', 'Feast from Merrymen']);
+  assert.deepEqual(labels, ['Payment received', 'Payment reversed by the chain', 'Adjustment by AgentCap', 'Upgrade to Loaf', 'Feast from AgentCap']);
   for (const l of labels) assert.doesNotMatch(l, /refund|burn/i);
   assert.equal(txHash(` ${HASH.toUpperCase().replace('0X', '0x')} `), HASH);
   assert.equal(txHash('0x1234'), null);
