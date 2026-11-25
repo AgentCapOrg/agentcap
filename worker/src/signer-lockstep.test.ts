@@ -19,98 +19,12 @@ const HERE = fileURLToPath(new URL(".", import.meta.url));
 const WEB = readFileSync(`${HERE}../../web/src/lib/session.ts`, "utf8");
 const MOBILE = readFileSync(`${HERE}../../mobile/src/crypto/signGrant.ts`, "utf8");
 
-test("both signers thread the adapter address and mint its marker together", () => {
+test("neither signer can seal a removed route", () => {
   for (const [name, src] of [
     ["web/src/lib/session.ts", WEB],
     ["mobile/src/crypto/signGrant.ts", MOBILE],
   ] as const) {
-    assert.ok(src.includes("GRANT_V4_ADAPTER"), `${name} must mint the marker`);
-    assert.ok(src.includes("v4AdapterAddress"), `${name} must thread the sealed address`);
-    // The marker must be CONDITIONAL on the address — minted by the
-    // permission, never ahead of it. An unconditional mint is exactly the
-    // transfer saga again.
-    assert.match(
-      src,
-      /v4AdapterAddress\s*\?\s*\[GRANT_V4_ADAPTER\]\s*:\s*\[\]/,
-      `${name} must mint GRANT_V4_ADAPTER only when the permission was sealed`,
-    );
-  }
-});
-
-test("the legacy v4 route stays never-minted, in both signers", () => {
-  // allowUniswapV4 opens Permit2 + UniversalRouter, whose execute() the policy
-  // cannot read — "the whole non-USDG book to any address, in one UserOp". The
-  // adapter exists precisely so this flag never has to flip. If someone turns
-  // it on, this fails and demands they read wall.ts:148-176 first.
-  for (const [name, src] of [
-    ["web/src/lib/session.ts", WEB],
-    ["mobile/src/crypto/signGrant.ts", MOBILE],
-  ] as const) {
-    assert.ok(
-      src.includes("const allowUniswapV4: boolean = false"),
-      `${name} must keep the legacy v4 route off — the adapter is the v4 route now`,
-    );
-  }
-});
-
-test("both signers persist the sealed address alongside the marker", () => {
-  // The marker alone is a claim. The worker calls grantV4Adapter, which
-  // demands the address the permission was actually sealed against — so a
-  // signer that mints the marker but drops the field produces a grant the
-  // worker correctly treats as adapter-less, and v4 silently never routes.
-  for (const [name, src] of [
-    ["web/src/lib/session.ts", WEB],
-    ["mobile/src/crypto/signGrant.ts", MOBILE],
-  ] as const) {
-    assert.match(
-      src,
-      /v4AdapterAddress[^\n]*toLowerCase\(\)/,
-      `${name} must write the sealed address (lowercased) onto the grant`,
-    );
-  }
-});
-
-test("both signers mint the PONS adapter marker only when the permission was sealed", () => {
-  // Same lockstep rule as GRANT_V4_ADAPTER, and it has to be re-pinned rather
-  // than assumed: the two adapters are separate opt-ins, so a signer could
-  // thread one and forget the other and nothing else would notice. The failure
-  // is the transfer saga again — a marker the wall does not back means the
-  // worker builds a UserOp the account contract refuses.
-  // PINNED BY RELATIONSHIP, NOT BY VARIABLE NAME.
-  //
-  // This used to match the literal `ponsAdapterAddress` in all three places,
-  // which pinned the right property for the wrong reason: it held only while the
-  // value the wall receives happens to be the raw parameter. Once the signers
-  // resolve a platform default (`ponsAdapterForSigning`), the parameter and the
-  // sealed value are DIFFERENT expressions, and a name-matching guard would
-  // either fail on correct code or — far worse — pass while the marker was
-  // minted off the parameter and the wall pinned the default. That is exactly
-  // the drift this test exists to catch, so it now reads the identifier the wall
-  // was actually given and demands the other two sites use that same one.
-  for (const [name, src] of [
-    ["web/src/lib/session.ts", WEB],
-    ["mobile/src/crypto/signGrant.ts", MOBILE],
-  ] as const) {
-    assert.ok(src.includes("GRANT_PONS_ADAPTER"), `${name} must mint the marker`);
-    assert.ok(src.includes("ponsAdapterAddress"), `${name} must thread the sealed address`);
-
-    // The value handed to buildWallPolicies — `ponsAdapterAddress: <ident>,`.
-    // Dots are excluded from the identifier so the persisted
-    // `<ident>.toLowerCase()` site below cannot match here instead.
-    const sealed = /ponsAdapterAddress:\s*([A-Za-z_$][\w$]*)\s*,/.exec(src);
-    assert.ok(sealed, `${name} must pass an adapter address into the wall options`);
-    const ident = sealed[1]!;
-
-    assert.match(
-      src,
-      new RegExp(`${ident}\\s*\\?\\s*\\[GRANT_PONS_ADAPTER\\]\\s*:\\s*\\[\\]`),
-      `${name} must mint GRANT_PONS_ADAPTER off the SAME value the wall sealed (${ident})`,
-    );
-    assert.match(
-      src,
-      new RegExp(`ponsAdapterAddress:\\s*${ident}\\.toLowerCase\\(\\)`),
-      `${name} must persist the value the wall sealed (${ident}) — the marker alone is a claim`,
-    );
+    assert.doesNotMatch(src, /allowUniswapV4|allowRialto|v4AdapterAddress|GRANT_V4|PERMIT2_ABI|ponsAdapterAddress|ponsClassVault|energyBuy|GRANT_PONS|GRANT_ENERGY/, name);
   }
 });
 
@@ -152,91 +66,6 @@ test("both signers seal the platform's official coins, so a listing is reachable
   }
 });
 
-test("both signers mint the CLASS marker off the resolved vault, not the factory", () => {
-  // The same lockstep rule a third time, with one twist that is easy to get
-  // wrong and impossible to see afterwards.
-  //
-  // The class opt-in is a FACTORY address; what the wall pins is the per-account
-  // VAULT the factory names. Minting GRANT_PONS_CLASS off the factory would mint
-  // it off the REQUEST rather than the result — a grant claiming a class route
-  // whose target the wall may never have pinned. resolveClassVault throws rather
-  // than returning undefined precisely so the two can never disagree, and this
-  // pins the conditional to the resolved value so a later edit cannot quietly
-  // swap in the factory.
-  for (const [name, src] of [
-    ["web/src/lib/session.ts", WEB],
-    ["mobile/src/crypto/signGrant.ts", MOBILE],
-  ] as const) {
-    assert.ok(src.includes("GRANT_PONS_CLASS"), `${name} must mint the marker`);
-    assert.ok(src.includes("resolveClassVault"), `${name} must resolve the vault from core`);
-    assert.match(
-      src,
-      /ponsClassVaultAddress\s*\?\s*\[GRANT_PONS_CLASS\]\s*:\s*\[\]/,
-      `${name} must mint GRANT_PONS_CLASS only when a vault was actually resolved`,
-    );
-    assert.ok(
-      !/ponsClassVaultFactory\s*\?\s*\[GRANT_PONS_CLASS\]/.test(src),
-      `${name} must not mint the class marker off the factory — that is the request, not the pin`,
-    );
-    assert.match(
-      src,
-      /ponsClassVaultAddress:\s*ponsClassVaultAddress\.toLowerCase\(\)/,
-      `${name} must persist the sealed vault — the marker alone is a claim`,
-    );
-  }
-});
-
-test("both signers seal the FACTORY alongside the vault", () => {
-  // The vault address is a CREATE2 prediction and the contract does not exist
-  // until the factory is called. A grant carrying the vault and not the factory
-  // is a key that can reach a contract it can never create — and because a CALL
-  // to a codeless address succeeds with empty returndata, its first class buy
-  // would approve USDG, no-op, and report a landed trade that bought nothing.
-  //
-  // buildWallPolicies throws on that combination, so this is the belt to its
-  // braces: it catches a signer that forwards the factory to the wall and then
-  // forgets to RECORD it, which throws nowhere and leaves the worker with a
-  // marker, a vault, and no way to create it.
-  for (const [name, src] of [
-    ["web/src/lib/session.ts", WEB],
-    ["mobile/src/crypto/signGrant.ts", MOBILE],
-  ] as const) {
-    // EITHER SPELLING. The web signer now defaults an absent setting to the
-    // platform deploy constant and records the RESOLVED value, so pinning the
-    // raw setting name would forbid the fix that makes a re-sign seal anything
-    // at all. What matters is that the factory RECORDED is the one forwarded,
-    // which the pair of assertions below still enforces.
-    const FACTORY_VAR = /ponsClassVaultFactoryAddress:\s*(args\.)?(ponsClassVaultFactory|sealedClassFactory)/;
-    const FACTORY_PERSISTED =
-      /ponsClassVaultFactoryAddress:\s*(args\.)?(ponsClassVaultFactory|sealedClassFactory)!?\.toLowerCase\(\)/;
-    assert.match(src, FACTORY_VAR, `${name} must forward the factory into the wall`);
-    assert.match(
-      src,
-      FACTORY_PERSISTED,
-      `${name} must persist the sealed factory — the worker reads it to build the deploy call`,
-    );
-  }
-});
-
-test("the factory is recorded only WITH a vault, never on its own", () => {
-  // The pair is the unit. A recorded factory with no vault would be a grant
-  // claiming a class route whose target the wall never pinned — the mirror image
-  // of the case above, and equally a marker without evidence.
-  for (const [name, src] of [
-    ["web/src/lib/session.ts", WEB],
-    ["mobile/src/crypto/signGrant.ts", MOBILE],
-  ] as const) {
-    assert.ok(
-      !/ponsClassVaultFactory\s*\?\s*\{\s*ponsClassVaultFactoryAddress/.test(src),
-      `${name} must not record the factory off its own presence`,
-    );
-    // Both fields live inside the SAME conditional spread, keyed on the vault.
-    const spread = /ponsClassVaultAddress\s*\?\s*\{([\s\S]{0,400}?)\}/.exec(src);
-    assert.ok(spread, `${name} must record both under one condition`);
-    assert.match(spread[1]!, /ponsClassVaultFactoryAddress/, `${name}: the factory must ride with the vault`);
-  }
-});
-
 test("a class route is never implied by another venue's opt-in", () => {
   // THREE venues, three decisions. Class is the one that most invites being
   // folded into Pons — it trades the same curves — and folding it in would give
@@ -254,95 +83,6 @@ test("a class route is never implied by another venue's opt-in", () => {
       !/ponsClassVaultAddress\s*\?\s*\[[^\]]*GRANT_PONS_ADAPTER/.test(src),
       `${name} must not mint the Pons adapter marker off the class vault`,
     );
-  }
-});
-
-test("the two adapter opt-ins stay INDEPENDENT in both signers", () => {
-  // One venue must never imply the other. If a future edit collapses them into
-  // a single flag, this fails and demands the author read the wall's note on
-  // why the owner's choice is not all-or-nothing.
-  for (const [name, src] of [
-    ["web/src/lib/session.ts", WEB],
-    ["mobile/src/crypto/signGrant.ts", MOBILE],
-  ] as const) {
-    assert.ok(
-      !/v4AdapterAddress\s*\?\s*\[GRANT_V4_ADAPTER,\s*GRANT_PONS_ADAPTER\]/.test(src),
-      `${name} must not mint the Pons marker off the v4 address`,
-    );
-    assert.ok(
-      !/ponsAdapterAddress\s*\?\s*\[GRANT_PONS_ADAPTER,\s*GRANT_V4_ADAPTER\]/.test(src),
-      `${name} must not mint the v4 marker off the Pons address`,
-    );
-  }
-});
-
-test("both signers seal the energy buy and mint its marker from ONE boolean", () => {
-  // The lockstep rule a fifth time, for the one opt-in that is DECIDED rather
-  // than passed in: whether the energy buy is sealed depends on the chain and
-  // on whether the wall still fits (energyBuyFits). So there are two ways to
-  // get it wrong that no behavioural test of one signer would see — mint the
-  // marker off something else (the chain id, a setting), or decide AFTER the
-  // wall was built, so the marker and the sealed wall describe different
-  // decisions. Both are the transfer saga again: a marker the wall does not
-  // back sends the worker building a buy the chain refuses.
-  //
-  // Comments are stripped: this file's prose names these identifiers freely.
-  const strip = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/\/\/[^\n]*/g, " ");
-  for (const [name, raw] of [
-    ["web/src/lib/session.ts", WEB],
-    ["mobile/src/crypto/signGrant.ts", MOBILE],
-  ] as const) {
-    const src = strip(raw);
-
-    // CLOSED in the literal, so the option exists in exactly one place and
-    // defaults to the closed position like every other wall option.
-    const literal = /const wallOpts = \{([\s\S]*?)\};/.exec(src);
-    assert.ok(literal, `${name} must collect its wall options in one literal`);
-    assert.match(literal[1]!, /energyBuy:\s*false as boolean/, `${name} must start the energy buy CLOSED inside wallOpts`);
-
-    // DECIDED ONCE, by the shared policy, over the real deployment state. The
-    // web signer asks it for the Spot wallet only: a Perps wallet never seals
-    // the energy buy in this build (decision D5), and the guard is the
-    // purpose it signs, in that same one assignment.
-    assert.match(src, /wallOpts\.energyBuy\s*=\s*(?:purpose === "spot" &&\s*)?energyBuyFits\(/, `${name} must decide the energy buy with energyBuyFits`);
-    assert.equal(
-      (src.match(/wallOpts\.energyBuy\s*=(?!=)/g) ?? []).length,
-      1,
-      `${name} must decide the energy buy exactly once`,
-    );
-    assert.match(
-      src,
-      /energyBuyFits\([^;]*!alreadyDeployed[^;]*wallOpts\)/,
-      `${name} must ask with the account's real deployment state and its own wall options`,
-    );
-
-    // MINTED FROM THAT SAME BOOLEAN, and never unconditionally.
-    assert.match(
-      src,
-      /wallOpts\.energyBuy\s*\?\s*\[GRANT_ENERGY\]\s*:\s*\[\]/,
-      `${name} must mint GRANT_ENERGY only when the permission was sealed`,
-    );
-    const uses = [...src.matchAll(/GRANT_ENERGY/g)].map((m) => m.index!);
-    const guarded = [...src.matchAll(/wallOpts\.energyBuy\s*\?\s*\[GRANT_ENERGY\]/g)].map((m) => m.index! + m[0].indexOf("GRANT_ENERGY"));
-    const importOnly = /import\s*\{[^}]*\bGRANT_ENERGY\b[^}]*\}\s*from\s*"@agentcap\/core"/.exec(src);
-    assert.ok(importOnly, `${name} must import GRANT_ENERGY from core, never define its own`);
-    for (const at of uses) {
-      const inImport = at >= importOnly.index && at < importOnly.index + importOnly[0].length;
-      assert.ok(inImport || guarded.includes(at), `${name} uses GRANT_ENERGY outside the one guarded mint (offset ${at})`);
-    }
-    assert.equal(guarded.length, 1, `${name} must mint GRANT_ENERGY in exactly one place`);
-
-    // ORDER: deployment read, then the decision, then the wall that is checked
-    // and sealed. Deciding after buildWallPolicies would seal one wall and mint
-    // a marker for another.
-    const deployedAt = src.indexOf("alreadyDeployed = code");
-    const decidedAt = src.indexOf("wallOpts.energyBuy =");
-    const signableAt = src.indexOf("wallSignable(");
-    const sealedAt = src.indexOf("buildWallPolicies(");
-    assert.ok(deployedAt >= 0 && decidedAt >= 0 && signableAt >= 0 && sealedAt >= 0, `${name}: the scan must find every site`);
-    assert.ok(deployedAt < decidedAt, `${name} must read the account's deployment state BEFORE deciding the energy buy`);
-    assert.ok(decidedAt < signableAt, `${name} must decide the energy buy before asking whether the wall is signable`);
-    assert.ok(decidedAt < sealedAt, `${name} must decide the energy buy before buildWallPolicies seals the wall`);
   }
 });
 
@@ -369,20 +109,6 @@ test("both signers seal the SCOPED wall and mint its marker from the same field"
   }
 });
 
-test("the worker never quotes a v4 leg the wall does not cover", () => {
-  // A scoped wall trades stocks on v3 only, and on any wall a coin added since
-  // signing is on no adapter leg. Both v4 gates — the quote and the impact
-  // probe that re-prices it — ask the same function the wall was built from.
-  const INDEX = readFileSync(`${HERE}index.ts`, "utf8");
-  const gates = [...INDEX.matchAll(/\bv4:\s*\n?[^,]*?grantV4Adapter\(active\.grant\) !== null[\s\S]{0,160}/g)].map((m) => m[0]);
-  assert.equal(gates.length, 2, "the quote gate and the impact-probe gate");
-  for (const g of gates) {
-    // When the adapter will execute, its legs decide — the legacy marker is
-    // only the fallback for a grant with no live adapter, never an OR beside it.
-    assert.match(g, /!== null\s*\?\s*grantV4AdapterReaches\(active\.grant, intent\.sellToken, intent\.buyToken\)\s*:\s*grantHasV4\(active\.grant\)/);
-  }
-});
-
 test("both signers seal perps, mint its marker and write grant.perp from ONE value", () => {
   // The lockstep rule a sixth time, for the permission whose miss costs most.
   // `perp-lighter-v1` is three things that must describe one decision: the
@@ -393,10 +119,9 @@ test("both signers seal perps, mint its marker and write grant.perp from ONE val
   // block naming a key the wall did not pin is a key that can never register;
   // a wall with the permission and no marker is a key the worker never arms.
   //
-  // And ONE ORDER: perps are REFUSED when they do not fit while the energy buy
-  // is dropped, so perps are decided (and fit-checked) after the deployment
-  // read and BEFORE the energy buy — the capability that may give way is asked
-  // about the wall that already carries the one that may not.
+  // And ONE ORDER: perps are decided (and fit-checked) after the deployment
+  // read and before the wall is checked and sealed. When they do not fit they
+  // are REFUSED, never dropped.
   const strip = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/\/\/[^\n]*/g, " ");
   for (const [name, raw] of [
     ["web/src/lib/session.ts", WEB],
@@ -423,7 +148,7 @@ test("both signers seal perps, mint its marker and write grant.perp from ONE val
     assert.match(
       src,
       /if\s*\(\s*wallOpts\.perpLighter\s*&&\s*!perpFits\([^;]*!alreadyDeployed[^;]*wallOpts\)\s*\)\s*\{?\s*throw/,
-      `${name} must REFUSE (throw) when perps do not fit — never drop them the way the energy buy is dropped`,
+      `${name} must REFUSE (throw) when perps do not fit — never drop them`,
     );
 
     // THE MARKER, from that same value, in exactly one place.
@@ -450,19 +175,18 @@ test("both signers seal perps, mint its marker and write grant.perp from ONE val
     assert.equal((src.match(/route:\s*GRANT_PERP_LIGHTER/g) ?? []).length, 1, `${name} must write grant.perp in exactly one place`);
     assert.doesNotMatch(src, /apiPrivateKey/, `${name} must never handle a Lighter private key — signers see the public half only`);
 
-    // ORDER: deployment read → perps decided and fit-checked → energy → signable → sealed.
+    // ORDER: deployment read → perps decided and fit-checked → signable → sealed.
     const deployedAt = src.indexOf("alreadyDeployed = code");
     const perpAt = src.indexOf("const perpLighter =");
     const fitAt = src.indexOf("!perpFits(");
-    const energyAt = src.indexOf("wallOpts.energyBuy =");
     const signableAt = src.indexOf("wallSignable(");
     const sealedAt = src.indexOf("buildWallPolicies(");
-    for (const [what, i] of [["deploy", deployedAt], ["perp", perpAt], ["fit", fitAt], ["energy", energyAt], ["signable", signableAt], ["seal", sealedAt]] as const) {
+    for (const [what, i] of [["deploy", deployedAt], ["perp", perpAt], ["fit", fitAt], ["signable", signableAt], ["seal", sealedAt]] as const) {
       assert.ok(i >= 0, `${name}: the scan must find the ${what} site`);
     }
     assert.ok(deployedAt < perpAt, `${name} must read the deployment state BEFORE deciding perps`);
-    assert.ok(perpAt < fitAt && fitAt < energyAt, `${name} must settle perps BEFORE the energy buy, so energy is what gives way`);
-    assert.ok(energyAt < signableAt && signableAt < sealedAt, `${name} must decide both before the wall is checked and sealed`);
+    assert.ok(perpAt < fitAt && fitAt < signableAt, `${name} must settle perps before the wall is checked`);
+    assert.ok(signableAt < sealedAt, `${name} must decide both before the wall is checked and sealed`);
   }
 });
 
@@ -541,11 +265,6 @@ test("both signers list their markers in ONE order, and perps come last", () => 
   const WEB_ORDER = [
     "GRANT_TRENCHER",
     "TRADEABLE_V2",
-    "GRANT_V4",
-    "GRANT_V4_ADAPTER",
-    "GRANT_PONS_ADAPTER",
-    "GRANT_PONS_CLASS",
-    "GRANT_ENERGY",
     "GRANT_SCOPED_SPENDERS",
     "GRANT_PERP_LIGHTER",
   ];
@@ -564,10 +283,6 @@ test("the server accepts exactly the markers the dashboard can mint, perps appen
   // a signer can mint and the list lacks is a fresh grant refused at handoff
   // ("declares features the AgentCap wall does not grant"); one the list has
   // and no signer mints is a route nothing could ever have sealed.
-  //
-  // GRANT_V4 is the one deliberate gap. The signers keep it behind the
-  // never-flipped allowUniswapV4 (pinned above), and the server not listing it
-  // is what keeps a hand-built grant claiming the legacy route out.
   const CANONICAL = code(readFileSync(`${HERE}../../web/src/lib/canonical-wall.ts`, "utf8"));
   const listed = markersIn(CANONICAL, /CANONICAL_GRANT_FEATURES:\s*readonly string\[\]\s*=\s*\[/g, "web/src/lib/canonical-wall.ts");
   // Main's list, untouched and in main's order, with perps appended — so the
@@ -575,17 +290,13 @@ test("the server accepts exactly the markers the dashboard can mint, perps appen
   // changed position or meaning.
   assert.deepEqual(listed, [
     "TRADEABLE_V2",
-    "GRANT_V4_ADAPTER",
-    "GRANT_PONS_ADAPTER",
-    "GRANT_PONS_CLASS",
     "GRANT_TRENCHER",
-    "GRANT_ENERGY",
     "GRANT_SCOPED_SPENDERS",
     "GRANT_PERP_LIGHTER",
   ]);
   assert.deepEqual(listed.slice(-2), ["GRANT_SCOPED_SPENDERS", "GRANT_PERP_LIGHTER"], "perps are appended after main's last marker");
 
-  const minted = markersIn(code(WEB), /grantFeatures:\s*\[/g, "web/src/lib/session.ts").filter((m) => m !== "GRANT_V4");
+  const minted = markersIn(code(WEB), /grantFeatures:\s*\[/g, "web/src/lib/session.ts");
   assert.deepEqual([...minted].sort(), [...listed].sort(), "the server's allowlist and the dashboard's mint are one set");
 });
 

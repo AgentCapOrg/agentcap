@@ -167,7 +167,7 @@ test("casual wording cannot hide commands, hostile content or an expired request
 });
 
 test("lore stays an attributed claim and does not invent missing or mismatched lore", async () => {
-  let value = evidence({ lore: { description: "A frog-themed community token.", source: "GeckoTerminal token info", url: `https://www.geckoterminal.com/robinhood/tokens/${TOKEN}`, observedAtMs: NOW } });
+  let value = evidence({ lore: { description: "A frog-themed community token.", source: "GeckoTerminal token info", url: `https://www.geckoterminal.com/bsc/tokens/${TOKEN}`, observedAtMs: NOW } });
   const reply = createRecoveryPublicReply({ now: () => NOW, look: async () => ({ ok: true, evidence: value }) });
   assert.match((await reply(request("lore $FROG"))).text, /Published project claim.*frog-themed/);
   assert.doesNotMatch((await reply(request("lore $FROG"))).text, /hourly trend/);

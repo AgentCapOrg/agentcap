@@ -31,7 +31,7 @@ import { CHAT_TOOLS, FOMO_TOOL_LABEL, FOMO_TOOL_MAX_CALLS, FOMO_TOOL_TIMEOUT_MS,
 const NOW_SEC = 1_790_000_000;
 const NOW_MS = NOW_SEC * 1000;
 const PONS = "0x39dbed3a00000000000000000000000000000c0d";
-const PONS_ID: TokenIdentity = { chain: { namespace: "eip155", networkId: 4663, slug: "robinhood" }, address: PONS, key: `eip155:4663:${PONS}` };
+const PONS_ID: TokenIdentity = { chain: { namespace: "eip155", networkId: 56, slug: "bsc" }, address: PONS, key: `eip155:56:${PONS}` };
 
 function okEnvelope(tool: FomoToolName, data: unknown, subject: FomoEnvelope["subject"] = null): FomoEnvelope {
   const base = brokerFailureEnvelope(tool, "x", "x", NOW_MS);
@@ -152,7 +152,7 @@ describe("the research lookups the DM model may call", () => {
 
   it("the local lines know only Robinhood Chain coins, and say nothing when there is nothing installed", () => {
     assert.equal(localResearchLines(PONS_ID, NOW_MS), null, "no funnel, no book: nothing");
-    assert.equal(localResearchLines({ ...PONS_ID, chain: { namespace: "solana", networkId: 1399811149, slug: "solana" } }, NOW_MS), null);
+    assert.equal(localResearchLines({ ...PONS_ID, chain: { namespace: "eip155", networkId: 56, slug: "bsc" } }, NOW_MS), null);
     installDecisionFunnel(new FunnelRecorder({ now: () => NOW_MS }));
     assert.match(localResearchLines(PONS_ID, NOW_MS)!, /No record: this coin was not on the tape/);
   });

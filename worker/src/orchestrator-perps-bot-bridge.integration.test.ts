@@ -37,7 +37,7 @@ orch.setSpawnForTest((_c: string, _a: readonly string[], _o: SpawnOptions) => ne
 orch.setSpawnPacingForTest(0, 0); orch.setLeaseAcquireForTest(acquireTenantLease);
 orch.setPaperRestoreForTest(async () => ({ ok: true, line: null }));
 orch.setPerpsFeedStartForTest(() => ({ stop() {} }));
-orch.setSolanaKillForTest(async () => {}); orch.setKillConfirmForTest(async () => {});
+orch.setKillConfirmForTest(async () => {});
 let next = 0x7200, update = 1;
 const owners: `0x${string}`[] = [];
 const address = (n: number) => `0x${n.toString(16).padStart(40, "0")}` as `0x${string}`;

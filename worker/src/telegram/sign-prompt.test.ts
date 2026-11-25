@@ -149,7 +149,7 @@ describe("the message and the button", () => {
 
   it("opens the dashboard's own re-sign anchor, and pins the network only for a wrong-chain fix", () => {
     assert.equal(signUrl("https://app.agentcap.xyz/", "dead-policy"), "https://app.agentcap.xyz/grant#resign");
-    assert.equal(signUrl("https://app.agentcap.xyz", "wrong-chain"), "https://app.agentcap.xyz/grant?chain=4663#resign");
+    assert.equal(signUrl("https://app.agentcap.xyz", "wrong-chain"), "https://app.agentcap.xyz/grant?chain=56#resign");
     assert.deepEqual(signKeyboard("https://x/grant#resign"), [[{ text: "✍️ Sign now", url: "https://x/grant#resign" }]]);
   });
 });

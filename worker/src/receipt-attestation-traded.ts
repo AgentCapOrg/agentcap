@@ -26,6 +26,7 @@
  * else refuses: two transfers that sum to the change cannot be told from one
  * that is it beside one that is not.
  */
+import { cashFromMicro, cashNumber, cashToMicro } from "../../packages/core/src/cash";
 import { createHash } from "node:crypto";
 import { closeSync, constants, fsyncSync, lstatSync, openSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
@@ -69,7 +70,7 @@ const KEY_WINDOW = 50_000;
 const MAX_ROWS = 5_000_000;
 const HASH = /^0x[0-9a-f]{64}$/i;
 const HEX = /^0x[0-9a-f]+$/i;
-const USDG = CASH.USDG.toLowerCase();
+const USDG = CASH.USDT.toLowerCase();
 /** Tables an account's history makes long, read in pages; the other protected tables are snapshots. */
 const LONG = new Set<string>(["trades", "equity", "fee_accruals", "owner_operations"]);
 
@@ -323,7 +324,7 @@ async function chainEvidence(o: TradedReceiptAttestationOptions, local: Read, co
   if (!journal) refuse("original journal is unread");
   // Amount and time are what the amendment never changes, so a resumed repair reads them from the amended row alike.
   const account = o.smartAccount.toLowerCase(), window = windowOf(journal), booked = bookedOf(local, common);
-  const expectedAmount = micro(local.book.flow), bookedAt = safeInteger(local.book.flow.at);
+  const expectedAmount = cashFromMicro(micro(local.book.flow)), bookedAt = safeInteger(local.book.flow.at);
   // Deliberately project only public custody fields, as the untouched protocol does.
   const publicGrant = await o.shared.prepare(`SELECT grant_json->>'grantFeatures' AS "grantFeatures",
     grant_json->>'ponsClassVaultAddress' AS "ponsClassVaultAddress", grant_json->>'trencherVaultAddress' AS "trencherVaultAddress",
@@ -415,7 +416,8 @@ async function chainEvidence(o: TradedReceiptAttestationOptions, local: Read, co
 async function anchorAfter(shared: Db, plan: Plan, sharedAmended: boolean): Promise<TradedReceiptAttestationReport["anchor"]> {
   const a = await deriveBootstrapAccounting(shared, plan.account);
   if (a.kind !== "established" || a.anchoredContributionsUsdg === undefined || a.unanchoredFlowCount === undefined) return null;
-  const add = sharedAmended ? 0n : BigInt(plan.receipt.amountUsdg6);
+  // The anchor counts micro-USDT; the receipt is in base units.
+  const add = sharedAmended ? 0n : cashToMicro(BigInt(plan.receipt.amountUsdg6));
   return { contributions: a.netContributionsUsdg, evidenced: String(BigInt(a.anchoredContributionsUsdg) + add),
     unevidencedRows: a.unanchoredFlowCount - (sharedAmended ? 0 : 1) };
 }
@@ -464,7 +466,7 @@ export async function attestTradedReceipt(o: TradedReceiptAttestationOptions): P
   const digest = approvalDigest(plan), marker = path.join(o.home, MARKER), epoch = safeInteger(plan.local.agent.epoch);
   const report = async (state: TradedReceiptAttestationReport["state"], sharedAmended: boolean): Promise<TradedReceiptAttestationReport> => ({
     state, protocol: "traded-book", approvalDigest: digest, tenant: plan.tenant, account: plan.account,
-    amountUsdg: Number(plan.receipt.amountUsdg6) / 1_000_000, localFlowId: safeInteger(plan.local.flow.id), sharedFlowId: safeInteger(plan.shared.flow.id),
+    amountUsdg: cashNumber(BigInt(plan.receipt.amountUsdg6)), localFlowId: safeInteger(plan.local.flow.id), sharedFlowId: safeInteger(plan.shared.flow.id),
     receipt: plan.receipt, window: plan.window, anchor: await anchorAfter(o.shared, plan, sharedAmended) });
   if (o.mode !== "commit") {
     return report(old?.state === "pending" ? "pending" : old?.state === "applied" ? "applied" : "preview", old?.state === "applied");

@@ -35,7 +35,6 @@ import { withSettingsFileLock } from "./settings-file-lock";
 import { MAX_DECISION_INTERVAL_SEC } from "./decision-cadence";
 import { normalizeAgentBrief } from "./agent-brief";
 import type { DiscoveryFocus } from "./discovery-focus";
-import { energyExemptAccountsOf, energyModeOf, type EnergyMode } from "./energy";
 import { perpsCeilingOf, type PerpsCeiling } from "../../packages/core/src/perps-ceiling";
 // AGENTCAP_PERPS's one parser lives in core now, so the web reads the lever
 // exactly as this worker and the orchestrator do. Re-exported so every import
@@ -69,8 +68,6 @@ export interface ResolvedConfig {
   llmBaseUrl: string | undefined;
   /** Model override for the selected provider; undefined = provider default. */
   llmProviderModel: string | undefined;
-  rialtoApiKey: string | undefined;
-  rialtoApiKeyHeader: string;
   breakerAddress: `0x${string}` | undefined;
   agentName: string | undefined;
   /** Saved per-agent preferences never grant execution authority. */
@@ -86,10 +83,6 @@ export interface ResolvedConfig {
    * because a proof somebody can set from a shell is not a proof.
    */
   xProof: { handle: string; at: number } | undefined;
-  v4AdapterAddress: `0x${string}` | undefined;
-  ponsAdapterAddress: `0x${string}` | undefined;
-  /** The PonsClassVaultFactory. A HINT for signing; the grant is the authority. */
-  ponsClassVaultFactory: `0x${string}` | undefined;
   /** Which kinds of thing may be BOUGHT. Never filters the watch set. */
   assetMode: "all" | "stocks" | "crypto";
   paperTradingEnabled: boolean;
@@ -102,21 +95,9 @@ export interface ResolvedConfig {
    * outage until somebody has written the field for the people mid-trade.
    */
   enforceLiveIntent: boolean;
-  /**
-   * The energy gate (core energy.ts, worker/src/energy.ts): off, observe or
-   * enforce. OPERATOR ENV ONLY — AGENTCAP_ENERGY_GATE, never a settings-file
-   * key, never a house key a tenant could strip or set — and HOSTED ONLY:
-   * self-hosted is always 'off' whatever the env says. On their own machine the
-   * owner pays their own model and runs open code; a throttle there would be
-   * both unenforceable and against the token's stance.
-   */
-  energyGate: EnergyMode;
-  /** Operator env only: exact verified smart accounts whose energy is observed, not enforced. */
-  energyExemptAccounts: readonly string[];
   paperStartUsdg: number;
   /** Builtin name, or a user strategy filename (strategies/<name>.ts). */
   strategy: string;
-  swapVenue: "uniswap" | "rialto";
   slippageBps: number;
   maxImpactBps: number;
   perfFeeBps: number;
@@ -167,14 +148,6 @@ export interface ResolvedConfig {
   scoutBudgetUsdg: number;
   /** Max USDG into any single unpriceable token. */
   scoutPerTokenUsdg: number;
-  /** The class route. See AgentCapSettings.classSnipeEnabled — OFF by default. */
-  classSnipeEnabled: boolean;
-  classPerEntryUsdg: number;
-  classMaxPositions: number;
-  classMinDepthUsdg: number;
-  /** The class EXIT. See AgentCapSettings.classMaxHoldSec — a clock, not a price. */
-  classMaxHoldSec: number;
-  classExitAtGraduationPct: number;
   /**
    * The platform's official coins. See AgentCapSettings.officialCoinsEnabled —
    * ON by default, and the only member of this block that is.
@@ -183,13 +156,10 @@ export interface ResolvedConfig {
   strategistStopLossBps: number;
   takeProfitBps: number;
   buyPerTickUsdg: number;
-  idleFloorUsdg: number;
   gapEnterBudgetUsdg: number;
   llmModel: string;
   llmIntervalMin: number;
   llmMaxActionUsdg: number;
-  /** Wallet holding $AGENTCAP — sets the Merry Circle tier / fee discount. */
-  holderAddress: `0x${string}` | undefined;
   /** Virtuals API key (secret) — streams agent activity to its Virtuals page. */
   virtualsApiKey: string | undefined;
   bitqueryApiKey: string | undefined;
@@ -488,7 +458,7 @@ export function mergeSettings(
   const xHandle = str(file.xHandle, env.AGENTCAP_X_HANDLE);
   // Shape-checked before use, because a settings blob is data: a malformed
   // proof falls back to "unproven" rather than reaching the column as whatever
-  // it happens to be. Same treatment holderProof gets in the orchestrator.
+  // it happens to be. 
   const rawProof = file.xProof;
   const xProof =
     rawProof &&
@@ -498,23 +468,6 @@ export function mergeSettings(
     typeof rawProof.at === "number"
       ? { handle: rawProof.handle, at: rawProof.at }
       : undefined;
-
-  const rawAdapter = str(file.v4AdapterAddress, env.AGENTCAP_V4_ADAPTER_ADDRESS);
-  const v4AdapterAddress =
-    rawAdapter && /^0x[0-9a-fA-F]{40}$/.test(rawAdapter) ? (rawAdapter as `0x${string}`) : undefined;
-
-  const rawPons = str(file.ponsAdapterAddress, env.AGENTCAP_PONS_ADAPTER_ADDRESS);
-  const rawClassFactory = str(file.ponsClassVaultFactory, env.AGENTCAP_CLASS_VAULT_FACTORY);
-  const ponsClassVaultFactory =
-    rawClassFactory && /^0x[0-9a-fA-F]{40}$/.test(rawClassFactory)
-      ? (rawClassFactory as `0x${string}`)
-      : undefined;
-  const ponsAdapterAddress =
-    rawPons && /^0x[0-9a-fA-F]{40}$/.test(rawPons) ? (rawPons as `0x${string}`) : undefined;
-
-  const rawHolder = str(file.holderAddress, env.AGENTCAP_HOLDER_ADDRESS);
-  const holderAddress =
-    rawHolder && /^0x[0-9a-fA-F]{40}$/.test(rawHolder) ? (rawHolder as `0x${string}`) : undefined;
 
   // Owner-added tokens. Shape-validated here (address/symbol/decimals) — depth
   // and manipulation checks happen on-chain at price time, and the grant still
@@ -621,17 +574,12 @@ export function mergeSettings(
     llmApiKey: str(file.llmApiKey, env.AGENTCAP_LLM_API_KEY),
     llmBaseUrl: str(file.llmBaseUrl, env.AGENTCAP_LLM_BASE_URL),
     llmProviderModel: str(file.llmProviderModel, env.AGENTCAP_LLM_PROVIDER_MODEL),
-    rialtoApiKey: str(file.rialtoApiKey, env.AGENTCAP_RIALTO_API_KEY),
-    rialtoApiKeyHeader: str(file.rialtoApiKeyHeader, env.AGENTCAP_RIALTO_API_KEY_HEADER, d.rialtoApiKeyHeader)!,
     breakerAddress,
     agentName,
     agentBrief: normalizeAgentBrief(file.agentBrief),
     discoveryFocus: oneOf(file.discoveryFocus, undefined, ["balanced", "new-projects"] as const, "balanced"),
     xHandle,
     xProof,
-    v4AdapterAddress,
-    ponsAdapterAddress,
-    ponsClassVaultFactory,
     assetMode: oneOf(file.assetMode, env.AGENTCAP_ASSET_MODE, ["all", "stocks", "crypto"] as const, d.assetMode),
     paperTradingEnabled: bool(file.paperTradingEnabled, env.AGENTCAP_PAPER_TRADING, d.paperTradingEnabled),
     // NO ENVIRONMENT OVERRIDE, and the omission is the point.
@@ -667,14 +615,6 @@ export function mergeSettings(
     // `liveTradingEnabled` recorded yet — a fresh self-hosted upgrade — and
     // remove it in the same session, as docs/live-trading-consent.md sets out.
     enforceLiveIntent: (env.AGENTCAP_LIVE_INTENT_STAND_DOWN ?? "").trim() !== "1",
-    // THE ENERGY GATE, from the operator's environment and nowhere else — the
-    // same shape as the line above. `file` is never consulted: a tenant must
-    // not be able to switch off the throttle they are under, and a key in the
-    // file would be exactly that. Off unless the operator says otherwise, and
-    // off self-hosted whatever they say. Reaches hosted children through
-    // childEnv; it is not a secret, so CHILD_SECRET_STRIP leaves it alone.
-    energyGate: hosted ? energyModeOf(env.AGENTCAP_ENERGY_GATE) : "off",
-    energyExemptAccounts: hosted ? energyExemptAccountsOf(env.AGENTCAP_ENERGY_EXEMPT_ACCOUNTS) : [],
     paperStartUsdg: num(file.paperStartUsdg, env.AGENTCAP_PAPER_START_USDG, d.paperStartUsdg, 1, 10_000_000),
     // Any sane token is a valid strategy name — builtins resolve directly,
     // everything else resolves to strategies/<name>.* (missing file = honest
@@ -683,7 +623,6 @@ export function mergeSettings(
       const v = str(file.strategy, env.AGENTCAP_STRATEGY);
       return v && /^[A-Za-z0-9_-]{1,64}$/.test(v) ? v : d.strategy;
     })(),
-    swapVenue: oneOf(file.swapVenue, env.AGENTCAP_SWAP_VENUE, ["uniswap", "rialto"], d.swapVenue),
     slippageBps: num(file.slippageBps, env.AGENTCAP_SLIPPAGE_BPS, d.slippageBps, 1, SLIPPAGE_BPS_MAX),
     // Floor of 0 is meaningful here: it turns the guard off. Ceiling of 10_000
     // is 100% impact, past which the number stops meaning anything.
@@ -723,27 +662,16 @@ export function mergeSettings(
     scoutEnabled: bool(file.scoutEnabled, env.AGENTCAP_SCOUT_ENABLED, d.scoutEnabled),
     scoutBudgetUsdg: num(file.scoutBudgetUsdg, env.AGENTCAP_SCOUT_BUDGET_USDG, d.scoutBudgetUsdg, 0, 1_000_000),
     scoutPerTokenUsdg: num(file.scoutPerTokenUsdg, env.AGENTCAP_SCOUT_PER_TOKEN_USDG, d.scoutPerTokenUsdg, 0, 1_000_000),
-    classSnipeEnabled: bool(file.classSnipeEnabled, env.AGENTCAP_CLASS_SNIPE, d.classSnipeEnabled),
-    classPerEntryUsdg: num(file.classPerEntryUsdg, env.AGENTCAP_CLASS_PER_ENTRY_USDG, d.classPerEntryUsdg, 0, 1_000_000),
-    classMaxPositions: num(file.classMaxPositions, env.AGENTCAP_CLASS_MAX_POSITIONS, d.classMaxPositions, 0, 1_000),
-    classMinDepthUsdg: num(file.classMinDepthUsdg, env.AGENTCAP_CLASS_MIN_DEPTH_USDG, d.classMinDepthUsdg, 0, 10_000_000),
-    // FLOOR OF 60s, not 0. A zero hold window would sell every position on the
-    // tick after it opened, turning the route into a fee pump; the exit exists
-    // to bound a hold, not to forbid one.
-    classMaxHoldSec: num(file.classMaxHoldSec, env.AGENTCAP_CLASS_MAX_HOLD_SEC, d.classMaxHoldSec, 60, 30 * 86_400),
-    classExitAtGraduationPct: num(file.classExitAtGraduationPct, env.AGENTCAP_CLASS_EXIT_GRAD_PCT, d.classExitAtGraduationPct, 1, 100),
     officialCoinsEnabled: bool(file.officialCoinsEnabled, env.AGENTCAP_OFFICIAL_COINS, d.officialCoinsEnabled),
     // 0 disables it; the ceiling is 100x, past which it is not a take-profit
     // rule, it is a number nobody will ever hit.
     strategistStopLossBps: num(file.strategistStopLossBps, env.AGENTCAP_STRATEGIST_STOP_LOSS_BPS, d.strategistStopLossBps ?? 0, 0, 10_000),
     takeProfitBps: num(file.takeProfitBps, env.AGENTCAP_TAKE_PROFIT_BPS, d.takeProfitBps ?? 0, 0, 1_000_000),
     buyPerTickUsdg: num(file.buyPerTickUsdg, env.AGENTCAP_BUY_PER_TICK_USDG, d.buyPerTickUsdg, 1, 100_000),
-    idleFloorUsdg: num(file.idleFloorUsdg, env.AGENTCAP_IDLE_FLOOR_USDG, d.idleFloorUsdg, 0, 1_000_000),
     gapEnterBudgetUsdg: num(file.gapEnterBudgetUsdg, env.AGENTCAP_GAP_BUDGET_USDG, d.gapEnterBudgetUsdg, 1, 1_000_000),
     llmModel: str(file.llmModel, env.AGENTCAP_LLM_MODEL, d.llmModel)!,
     llmIntervalMin: num(file.llmIntervalMin, env.AGENTCAP_LLM_INTERVAL_MIN, d.llmIntervalMin, 1, 1_440),
     llmMaxActionUsdg: num(file.llmMaxActionUsdg, env.AGENTCAP_LLM_MAX_ACTION_USDG, d.llmMaxActionUsdg, 1, 100_000),
-    holderAddress,
     virtualsApiKey: str(file.virtualsApiKey, env.AGENTCAP_VIRTUALS_API_KEY),
     bitqueryApiKey: str(file.bitqueryApiKey, env.BITQUERY_API_KEY),
     agentcapToken: str(file.agentcapToken, env.AGENTCAP_TOKEN),
@@ -801,10 +729,10 @@ export function mergeSettings(
     perpsTakeProfitPct: perpsNum(file, "perpsTakeProfitPct"),
     perpsLiqBufferPct: perpsNum(file, "perpsLiqBufferPct"),
     perpsMaxSlippageBps: perpsNum(file, "perpsMaxSlippageBps"),
-    // THE OPERATOR'S THREE, from env ONLY and restrict-only — the energyGate
+    // THE OPERATOR'S THREE, from env ONLY and restrict-only
     // shape: `file` is never consulted, so a tenant can neither lift a ceiling
     // they are under nor halt someone else's entries. They reach hosted
-    // children through childEnv like AGENTCAP_ENERGY_GATE (not secrets, so
+    // children through childEnv (not secrets, so
     // CHILD_SECRET_STRIP leaves them alone).
     perpsOperatorCeiling: perpsCeilingOf(env.AGENTCAP_PERPS),
     perpsLiveTenants: perpsLiveTenantsOf(env.AGENTCAP_PERPS_LIVE_TENANTS, hosted),
@@ -813,7 +741,7 @@ export function mergeSettings(
     // A PERPS WALLET'S WORKER RUNS NO SPOT PRODUCER, whatever its settings file
     // says. The Perps wallet holds the Lighter account and nothing else
     // (docs/perps.md "One login, two wallets"); its paper cash is the perp
-    // book's collateral, and a basket buy, a launch snipe or a scout entry
+    // book's collateral, and a basket buy or a scout entry
     // would spend it on tokens. `perps-only` is the builtin that proposes
     // nothing (strategies/registry.ts); the perp lane runs beside it.
     ...(workerWallet === "perps"
@@ -821,7 +749,6 @@ export function mergeSettings(
           strategy: "perps-only",
           discoveryEnabled: false,
           officialCoinsEnabled: false,
-          classSnipeEnabled: false,
           scoutEnabled: false,
           trencherLiveEnabled: false,
           trencherFastEnabled: false,
@@ -1120,7 +1047,7 @@ export function connectionKey(cfg: ResolvedConfig): string {
  */
 export function bundlerChainMismatch(bundlerUrl: string | undefined, grantChainId: number): number | null {
   if (!bundlerUrl) return null;
-  const ids = [...bundlerUrl.matchAll(/(?:\/|=)(4663|46630)(?:\/|$|&|\?)/g)].map((m) => Number(m[1]));
+  const ids = [...bundlerUrl.matchAll(/(?:\/|=)(56|97)(?:\/|$|&|\?)/g)].map((m) => Number(m[1]));
   if (ids.length === 0) return null;
   // 4663 is a substring of 46630 — the regex boundaries prevent that collision.
   return ids.every((id) => id === grantChainId) ? null : ids.find((id) => id !== grantChainId)!;
@@ -1150,7 +1077,6 @@ export function telegramKey(cfg: ResolvedConfig): string {
 export function strategyKey(cfg: ResolvedConfig): string {
   return [
     cfg.strategy,
-    cfg.swapVenue,
     cfg.basketSymbols.join(","),
     // Owner-added tokens are part of the watch set, so a change here has to
     // rebuild it — otherwise a token added mid-run is never read or priced until
@@ -1167,7 +1093,6 @@ export function strategyKey(cfg: ResolvedConfig): string {
     // OFFICIAL_COINS[4663] is empty, so there has been nothing to remove.
     cfg.officialCoinsEnabled,
     cfg.buyPerTickUsdg,
-    cfg.idleFloorUsdg,
     cfg.gapEnterBudgetUsdg,
     // key/provider text included: rotating a key or switching brains rebuilds the driver
     cfg.llmProvider ?? "",

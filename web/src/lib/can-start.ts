@@ -36,7 +36,6 @@
 export interface StartBalances {
   ethWei?: string | null;
   cashUsdg?: string | null;
-  vaultUsdg?: string | null;
 }
 
 /**
@@ -53,12 +52,7 @@ export function hasGas(wei?: string | null): boolean {
 }
 
 /**
- * Anything to trade with — cash OR the vault.
- *
- * The vault counts because idle cash is SWEPT there on the first tick, so an
- * owner who funded and waited a minute has capital with a zero cash balance.
- * Leaving it out would push exactly the people who did everything right back
- * onto the fund step.
+ * Anything to trade with.
  *
  * Stricter than `hasGas` on purpose: an unparseable amount is false rather than
  * coerced with Number(), because this arm is the one that can wave somebody past
@@ -73,7 +67,7 @@ export function hasCapital(b?: StartBalances): boolean {
       return 0n;
     }
   };
-  return read(b?.cashUsdg) + read(b?.vaultUsdg) > 0n;
+  return read(b?.cashUsdg) > 0n;
 }
 
 /**
@@ -116,6 +110,6 @@ export function setupStep(
   const unread = (v?: string | null) => v === null || v === undefined;
   const b = status.balances;
   if (unread(b?.ethWei)) return "unread";
-  if (status.gasSponsored && (unread(b?.cashUsdg) || unread(b?.vaultUsdg))) return "unread";
+  if (status.gasSponsored && unread(b?.cashUsdg)) return "unread";
   return "fund";
 }

@@ -14,6 +14,9 @@ import { describe, it } from "node:test";
 import { makeTrencher, TRENCHER_DEFAULTS, type Candidate, type OpenPosition } from "./strategies/trencher";
 import { takeTick, type Snapshot } from "./strategies/types";
 
+// 6dp micro figures, scaled to 18dp USDT base units.
+const MICRO = 10n ** 12n;
+
 const ROUTER = "0x1111111111111111111111111111111111111111" as const;
 const USDG = "0x3333333333333333333333333333333333333333" as const;
 const DELTA = "0x6666666666666666666666666666666666666666" as const;
@@ -24,7 +27,7 @@ const cfg = { ...TRENCHER_DEFAULTS, maxFdvUsd: 100_000_000, maxAgeSec: 1e9, maxH
 const sliver: OpenPosition = {
   symbol: "DELTA",
   token: DELTA,
-  entryPrice8: 100_000_000n,
+  entryPrice8: (100_000_000n * MICRO),
   entryLiquidityUsd: 2_000_000,
   entrySec: NOW - 2 * 3600,
   costUsdg: 0n,
@@ -39,19 +42,19 @@ const candidate: Candidate = {
   liquidityUsd: 2_247_103,
   fdvUsd: 22_199_016,
   ageSec: 81_278 * 60,
-  price8: 100_000_000n,
+  price8: (100_000_000n * MICRO),
 } as Candidate;
 
 const snap = (valueUsdg: bigint, over: Partial<Snapshot> = {}): Snapshot => ({
-  cashUsdg: 10_546_505n,
+  cashUsdg: (10_546_505n * MICRO),
   vaultUsdg: 0n,
   holdings: new Map([["DELTA", { token: DELTA, rawBalance: 40_000_000_000_000n, valueUsdg, priceStale: false }]]),
-  prices: new Map([["DELTA", { price8: 100_000_000n, stale: false } as never]]),
+  prices: new Map([["DELTA", { price8: (100_000_000n * MICRO), stale: false } as never]]),
   pausedTokens: new Set(),
   staleFeeds: new Set(),
   sequencerUp: true,
-  spendHeadroomUsdg: 1_000_000_000n,
-  perTradeCapUsdg: 10_000_000n,
+  spendHeadroomUsdg: (1_000_000_000n * MICRO),
+  perTradeCapUsdg: (10_000_000n * MICRO),
   ...over,
 });
 
@@ -82,7 +85,7 @@ describe("a zero-value sliver", () => {
 
 describe("what is not a sliver", () => {
   it("a position with value is still sold when its window ends", async () => {
-    const t = takeTick(await desk([sliver]).tick(snap(3_000_000n)));
+    const t = takeTick(await desk([sliver]).tick(snap((3_000_000n * MICRO))));
     const sells = t.intents.filter((i) => i.kind === "swap" && i.sellToken === DELTA);
     assert.equal(sells.length, 1);
     const sell = sells[0];
@@ -93,7 +96,7 @@ describe("what is not a sliver", () => {
 
   it("an unpriceable position is still exited — no price is not worth zero", async () => {
     const t = takeTick(
-      await desk([{ ...sliver, costUsdg: 5_000_000n }], new Set(["DELTA"])).tick(snap(0n, { holdings: new Map() })),
+      await desk([{ ...sliver, costUsdg: (5_000_000n * MICRO) }], new Set(["DELTA"])).tick(snap(0n, { holdings: new Map() })),
     );
     const sells = t.intents.filter((i) => i.kind === "swap" && i.sellToken === DELTA);
     assert.equal(sells.length, 1);
@@ -105,11 +108,11 @@ describe("re-entering on top of a sliver starts a fresh clock", () => {
     const { buysOntoDust } = await import("./strategies/trencher");
     // The DELTA case: 4e13 raw left behind (valued at 0 USDG), then 5 USDG
     // buys 5e21 raw. At that price the sliver is 0.04 micro-USDG: dust.
-    assert.equal(buysOntoDust(40_000_000_000_000n, 5_000_000_000_000_000_000_000n, 5_000_000n), true);
+    assert.equal(buysOntoDust(40_000_000_000_000n, 5_000_000_000_000_000_000_000n, (5_000_000n * MICRO)), true);
     // A real holding of 1e21 raw at the same price is 1 USDG: a top-up keeps its baseline.
-    assert.equal(buysOntoDust(1_000_000_000_000_000_000_000n, 5_000_000_000_000_000_000_000n, 5_000_000n), false);
+    assert.equal(buysOntoDust(1_000_000_000_000_000_000_000n, 5_000_000_000_000_000_000_000n, (5_000_000n * MICRO)), false);
     // Nothing held is not dust — there is simply no old entry to forget.
-    assert.equal(buysOntoDust(0n, 5_000_000_000_000_000_000_000n, 5_000_000n), false);
+    assert.equal(buysOntoDust(0n, 5_000_000_000_000_000_000_000n, (5_000_000n * MICRO)), false);
   });
 
   it("clearing then stamping replaces a stale entry time", async () => {

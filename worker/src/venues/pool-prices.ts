@@ -26,7 +26,7 @@
  */
 
 import type { PublicClient } from "viem";
-import { CASH, type PriceQuote, type StockToken } from "../../../packages/core/src/index";
+import { CASH, CASH_DECIMALS, cashNumber, type PriceQuote, type StockToken } from "../../../packages/core/src/index";
 import {
   poolPriceUsable,
   readRoutedPrice,
@@ -115,7 +115,7 @@ export interface PoolPriceReader {
 
 /** Human-readable provenance. Shown wherever a pool-priced value is displayed. */
 export function describeRoute(r: RoutedPrice): string {
-  const depth = Number(r.liquidityUsdg) / 1e6;
+  const depth = cashNumber(r.liquidityUsdg);
   const hop = r.route === "direct" ? "USDG pool" : "via WETH";
   return `${r.twapWindowSec / 60}m TWAP, ${hop}, $${depth.toLocaleString(undefined, { maximumFractionDigits: 0 })} deep`;
 }
@@ -177,7 +177,7 @@ export function keepTwapOver(previous: { routed: RoutedPrice | null; fetchedAt: 
 
 /** Human-readable provenance for a sampled price, beside `describeRoute`. */
 export function describeSampled(r: RoutedPrice, s: SampledPrice): string {
-  const depth = Number(s.liquidityUsdg) / 1e6;
+  const depth = cashNumber(s.liquidityUsdg);
   const hop = r.route === "direct" ? "USDG pool" : "via WETH";
   const span = s.spanSec >= 60 ? `${Math.round(s.spanSec / 60)}m` : `${s.spanSec}s`;
   return `new pool, ${span} sampled spot (${s.readings} readings), ${hop}, $${depth.toLocaleString(undefined, { maximumFractionDigits: 0 })} deep`;
@@ -211,7 +211,7 @@ export function createPoolPriceReader(opts?: { ttlSec?: number; sampler?: SpotSa
       // it (pool-price.ts, readWethLeg). Started only if something is stale.
       let wethLeg: Promise<PoolPrice | null> | undefined;
       const sharedWethLeg = () =>
-        (wethLeg ??= readWethLeg(client, { weth: CASH.WETH as `0x${string}`, cash: CASH.USDG as `0x${string}`, cashDecimals: 6 }).catch(() => null));
+        (wethLeg ??= readWethLeg(client, { weth: CASH.WBNB as `0x${string}`, cash: CASH.USDT as `0x${string}`, cashDecimals: CASH_DECIMALS }).catch(() => null));
 
       await Promise.all(
         stale.map(async (t) => {
@@ -222,9 +222,9 @@ export function createPoolPriceReader(opts?: { ttlSec?: number; sampler?: SpotSa
             routed = await readRoutedPrice(client, {
               token: t.address,
               tokenDecimals: t.decimals ?? 18,
-              cash: CASH.USDG as `0x${string}`,
-              cashDecimals: 6,
-              weth: CASH.WETH as `0x${string}`,
+              cash: CASH.USDT as `0x${string}`,
+              cashDecimals: CASH_DECIMALS,
+              weth: CASH.WBNB as `0x${string}`,
               // A pool too new for an oracle comes back priced at its spot,
               // and is judged off the sampled series below — never off that
               // one spot reading.

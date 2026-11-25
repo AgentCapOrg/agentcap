@@ -58,7 +58,7 @@ const ADVICE: Readonly<Record<string, BlockerAdvice>> = Object.freeze({
   // THE ONE THIS WAS BUILT FOR. Every operation pays its own fee before it
   // reaches the chain, and USDG cannot pay it.
   "no-gas": {
-    say: "Your agent has no ETH, and every trade pays a network fee before it reaches the chain. Send a small amount of ETH to the same address — a few dollars covers a lot of trades.",
+    say: "Your agent has no BNB, and every trade pays a network fee before it reaches the chain. Send a small amount of BNB on BNB Chain to the same address — a few dollars covers a lot of trades.",
     funding: true,
     resign: false,
     fault: true,
@@ -79,7 +79,7 @@ const ADVICE: Readonly<Record<string, BlockerAdvice>> = Object.freeze({
     fault: true,
   },
   "wrong-chain": {
-    say: "This agent's permission is for a different network than the one trading happens on. It needs a new grant on Robinhood Chain; funds sent here will sit unused. And funds already sent to this address on another network are not recovered by that new grant — it routes future deposits only, never moves what is stuck elsewhere.",
+    say: "This agent's permission is for a different network than the one trading happens on. It needs a new grant on BNB Chain; funds sent here will sit unused. And funds already sent to this address on another network are not recovered by that new grant — it routes future deposits only, never moves what is stuck elsewhere.",
     funding: false,
     resign: true,
     fault: true,

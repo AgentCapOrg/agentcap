@@ -12,8 +12,8 @@ export const AGENT_ARG = z.string().regex(/^[0-9a-hjkmnp-tv-z]{16}$/, "an agent 
 
 export const ADDRESS_ARG = z.string().regex(/^0x[0-9a-fA-F]{40}$/, "a 0x-prefixed 20-byte address");
 
-export const CHAIN_ARG = z.union([z.literal(4663), z.literal(46630)]).default(4663)
-  .describe("Robinhood Chain id: 4663 mainnet (default) or 46630 testnet");
+export const CHAIN_ARG = z.union([z.literal(56), z.literal(97)]).default(56)
+  .describe("BNB Chain id: 56 mainnet (default) or 97 testnet");
 
 export const LIMIT_ARG = (max: number, def: number) => z.number().int().min(1).max(max).default(def);
 

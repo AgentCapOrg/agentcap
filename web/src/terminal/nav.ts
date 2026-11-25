@@ -17,10 +17,9 @@ import type { Screen, Tab } from "./live";
  *
  * FOUR, because a newcomer asks four questions: how is my agentcapavatar doing
  * (Home), can I talk to him (Chat), what is everybody else doing (Explore),
- * and where are my account and settings (Me). The bar used to be five — Feed
- * and Alpha each had a slot, and Alpha was a lock screen for most people and
- * unreachable on desktop. Both now live under Explore, beside the leaderboard
- * and the market list that Home used to stack under the balance.
+ * and where are my account and settings (Me). The feed lives under Explore,
+ * beside the leaderboard and the market list that Home used to stack under the
+ * balance.
  *
  * THE LOGO IS EXPLORE'S ICON. `TabIcon` renders `<LogoMark/>` for `feed`, and
  * Explore opens on the feed, so the mark still leads to the room.
@@ -28,8 +27,8 @@ import type { Screen, Tab } from "./live";
  * The ids are NOT the labels. They are wired into TabIcon's exhaustive switch,
  * the record below, the `data-screen` attribute CSS selects on, and FirstVisit
  * — so `agent` stays `agent` while it reads "Chat", `feed` reads "Explore" and
- * `you` reads "Me". `alpha` is still a tab id (its screen and URL are
- * unchanged); it is simply reached through Explore rather than the bar.
+ *
+ * `you` reads "Me".
  */
 export const TABS: { id: Tab; label: string }[] = [
   { id: "home", label: "Home" },
@@ -39,26 +38,20 @@ export const TABS: { id: Tab; label: string }[] = [
 ];
 
 /** The views inside Explore, in order. Each is its own URL so Back works. */
-export const EXPLORE: { id: "feed" | "leaders" | "markets" | "alpha"; label: string; path: string }[] = [
+export const EXPLORE: { id: "feed" | "leaders" | "markets"; label: string; path: string }[] = [
   { id: "feed", label: "Feed", path: "/feed" },
   { id: "leaders", label: "Leaders", path: "/leaders" },
   { id: "markets", label: "Markets", path: "/markets" },
-  { id: "alpha", label: "Research", path: "/alpha" },
 ];
 
 /** Which Explore view a screen is, or null when it is not part of Explore. */
 export function exploreViewOf(screen: Screen): (typeof EXPLORE)[number]["id"] | null {
   if (screen.kind === "leaders" || screen.kind === "markets") return screen.kind;
-  if (screen.kind === "tab" && (screen.tab === "feed" || screen.tab === "alpha")) return screen.tab;
+  if (screen.kind === "tab" && screen.tab === "feed") return screen.tab;
   return null;
 }
 
-/**
- * `solana` is whether this deployment offers Solana (solanaEnabled, handed down
- * from the server). Without it /solana is an unknown path and opens Home, so a
- * Back into an old /solana entry cannot mount the screen.
- */
-export function screenForPath(path: string, solana = false, perps = false): Screen {
+export function screenForPath(path: string, perps = false): Screen {
   if (path.startsWith("/t/")) return { kind: "token", id: decodeURIComponent(path.slice(3)) };
   if (path.startsWith("/a/")) return { kind: "profile", slug: decodeURIComponent(path.slice(3)) };
   if (path === "/search") return { kind: "search" };
@@ -66,7 +59,6 @@ export function screenForPath(path: string, solana = false, perps = false): Scre
   if (path === "/settings") return { kind: "settings" };
   if (path === "/grant") return { kind: "grant" };
   if (path === "/perps" && perps) return { kind: "perps" };
-  if (path === "/solana" && solana) return { kind: "solana" };
   if (path === "/limits") return { kind: "limits" };
   // The room every agent is in. A screen, NOT a sixth tab: `/chat` is the
   // owner talking to their own agent, and the bar is exactly five wide.
@@ -96,9 +88,7 @@ export function screenForPath(path: string, solana = false, perps = false): Scre
           ? "you"
           : path === "/feed"
             ? "feed"
-            : path === "/alpha"
-              ? "alpha"
-              : "home",
+            : "home",
   };
 }
 
@@ -106,7 +96,7 @@ export function pathForScreen(screen: Screen): string {
   if (screen.kind === "token") return `/t/${encodeURIComponent(screen.id)}`;
   if (screen.kind === "profile") return `/a/${encodeURIComponent(screen.slug)}`;
   if (screen.kind === "tab")
-    return ({ home: "/home", agent: "/chat", you: "/profile", feed: "/feed", alpha: "/alpha" })[screen.tab];
+    return ({ home: "/home", agent: "/chat", you: "/profile", feed: "/feed" })[screen.tab];
   return `/${screen.kind}`;
 }
 

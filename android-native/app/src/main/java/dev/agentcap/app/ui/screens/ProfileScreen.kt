@@ -342,7 +342,7 @@ fun ProfileScreen(nav: NavHostController) {
  * sense (`--down`): re-arming needs a fresh signature, which is a web handoff.
  *
  * A lost reply remains uncertain: a Spot-only read cannot establish whether
- * Perps and Solana also stopped. There is no automatic retry.
+ * Perps also stopped. There is no automatic retry.
  *
  * [signedIn] is the wallet this page shows, sent as the stop's expected
  * tenant: hosted refuses (409) to stop a different one that signed in since.

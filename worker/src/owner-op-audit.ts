@@ -33,12 +33,14 @@
  * SQLite copy, which this audit cannot see and which a Postgres edit never
  * changes. The report says so.
  */
+import { usdgUnits } from "../../packages/core/src/wall";
+import { formatCash6 } from "../../packages/core/src/cash";
 import { createHash } from "node:crypto";
 import type { Db } from "./db";
 import { CASH, ENTRYPOINT } from "../../packages/core/src/index";
 import { segmentReceipt, validatorOfNonce } from "./asset-movements";
 import type { RawChainLog, RpcCall } from "./chain-capital";
-import { custodyAddressesOf } from "./custody";
+import { custodyAddressesOf, historicalClassVault } from "./custody";
 import { ownerOperationOf, type OwnerOperationReading } from "./owner-operations";
 import { classifyRpcError } from "./rpc-error";
 
@@ -54,7 +56,7 @@ export type Dialect = "postgres" | "sqlite";
 const ADDRESS = /^0x[0-9a-f]{40}$/;
 const HASH = /^0x[0-9a-f]{64}$/;
 const EP_V07 = String(ENTRYPOINT.v07).toLowerCase();
-const USDG = String(CASH.USDG).toLowerCase();
+const USDG = String(CASH.USDT).toLowerCase();
 const lower = (v: unknown) => String(v ?? "").toLowerCase();
 const strOrNull = (v: unknown): string | null => (v === null || v === undefined ? null : String(v));
 const numOrNull = (v: unknown): number | null => (v === null || v === undefined || v === "" || !Number.isFinite(Number(v)) ? null : Number(v));
@@ -143,12 +145,11 @@ export async function readAuditSnapshot(db: Db, o: { dialect: Dialect; tenant?: 
     const raw = typeof g.grant_features === "string" ? (() => { try { return JSON.parse(g.grant_features as string) as unknown; } catch { return null; } })() : g.grant_features;
     const stored = {
       grantFeatures: Array.isArray(raw) ? raw.filter((f): f is string => typeof f === "string") : [],
-      ponsClassVaultAddress: strOrNull(g.pons_class_vault_address) ?? undefined,
       trencherVaultAddress: strOrNull(g.trencher_vault_address) ?? undefined,
       trencherFactoryAddress: strOrNull(g.trencher_factory_address) ?? undefined,
     } as Parameters<typeof custodyAddressesOf>[0];
     const chainId = numOrNull(g.chain_id);
-    grants.push({ tenant: lower(g.tenant), account, chainId: chainId !== null && Number.isSafeInteger(chainId) ? chainId : null, custody: custodyAddressesOf(stored).map(lower).sort() });
+    grants.push({ tenant: lower(g.tenant), account, chainId: chainId !== null && Number.isSafeInteger(chainId) ? chainId : null, custody: [...custodyAddressesOf(stored).map(lower), ...[historicalClassVault(stored!.grantFeatures ?? [], g.pons_class_vault_address)].filter((a) => a !== null)].sort() });
   }
   const scoped = tenant ? grants.map((g) => g.account) : null;
   if (tenant && scoped!.length === 0) throw new AuditRefused("no-grant-for-tenant");
@@ -315,8 +316,8 @@ export interface AuditReport {
   auditDigest: string;
 }
 
-const usdg6 = (raw: bigint) => `${raw / 1_000_000n}.${(raw % 1_000_000n).toString().padStart(6, "0")}`;
-const sum6 = (values: number[]) => usdg6(values.reduce((s, v) => s + BigInt(Math.round(v * 1e6)), 0n));
+const usdg6 = formatCash6;
+const sum6 = (values: number[]) => usdg6(values.reduce((s, v) => s + usdgUnits(v), 0n));
 
 /**
  * THE AUDIT. PURE: the snapshot and the chain in, the report out. Nothing here

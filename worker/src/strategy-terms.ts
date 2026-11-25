@@ -170,7 +170,8 @@ export function trencherStrategyTerms(cfg: TrencherTermsConfig): StrategyTerms |
   // cost of `c` bps on every exit (breakEvenRate).
   const bar = (s: number, c: number) => Math.round(100 * breakEvenRate(s, c, tp));
   const realised = realisedStopBps(sl);
-  const cap = (Number(cfg.perEntryUsdg) / 1e6).toFixed(2);
+  // 18dp USDT, read to a millionth. Inlined: this module imports types only.
+  const cap = (Number(cfg.perEntryUsdg / 10n ** 12n) / 1e6).toFixed(2);
 
   const terms = [
     `STRATEGY: Trencher, short-horizon memecoin momentum. Each entry is capped at ${cap} USDG and by the owner's limits; ` +

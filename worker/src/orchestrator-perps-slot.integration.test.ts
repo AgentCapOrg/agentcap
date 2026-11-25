@@ -36,7 +36,7 @@ process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 41).toString("base64");
 const {
   childEnv, childHome, hasLeaseForTest, honourFleetHalt, honourPendingKills, mirrorLoginPausesForTest, perpsFeedMarketsForTest, reconcile,
   refreshPerpsFeedForTest, setKillConfirmForTest, setLeaseAcquireForTest, setPaperRestoreForTest, setPerpsFeedStartForTest,
-  setSolanaKillForTest, setSpawnForTest, setPerpsPilotAdmissionReaderForTest, refreshPerpsPilotAdmissionForTest,
+  setSpawnForTest, setPerpsPilotAdmissionReaderForTest, refreshPerpsPilotAdmissionForTest,
 } = await import("./orchestrator");
 const { getGrantStore } = await import("./grant-store");
 const { getSettingsStore } = await import("./settings-store");
@@ -109,8 +109,6 @@ setKillConfirmForTest(async (tenant, done) => {
     perpsGrantCopy: existsSync(path.join(childHome(perpsKey(tenant)), "grant.json")),
   });
 });
-const solanaStops: string[] = [];
-setSolanaKillForTest(async (tenant) => { solanaStops.push(tenant); });
 setPaperRestoreForTest(async () => ({ ok: true, line: null }));
 const feedStarts: Array<{ markets: () => readonly number[]; stopped: boolean }> = [];
 setPerpsFeedStartForTest((options) => {
@@ -170,7 +168,6 @@ afterEach(async () => {
   spawned.length = 0;
   leaseAsks.length = 0;
   confirmed.length = 0;
-  solanaStops.length = 0;
   feedStarts.length = 0;
   said.length = 0;
 });
@@ -301,7 +298,6 @@ describe("at AGENTCAP_PERPS=paper, a login's Perps worker", () => {
     assert.equal(await spotStore.get(BOTH), null);
     assert.equal(await perpsStore.get(BOTH), null, "the Perps grant is revoked too");
     assert.equal((await getSettingsStore("perps").get(BOTH))?.perpsEnabled, false, "and its paper strategy turned off");
-    assert.deepEqual(solanaStops, [BOTH]);
     assert.equal(confirmed.length, 1);
     assert.equal(confirmed[0]!.perps, true);
     assert.equal(confirmed[0]!.perpsWorkerSignalled, true, "the Perps worker was signalled before the ✅");
@@ -322,7 +318,6 @@ describe("at AGENTCAP_PERPS=paper, a login's Perps worker", () => {
     await settle();
     assert.equal(await perpsStore.get(PERPS_ONLY), null);
     assert.equal((await getSettingsStore("perps").get(PERPS_ONLY))?.perpsEnabled, false);
-    assert.deepEqual(solanaStops, [PERPS_ONLY], "Solana's half, by the owner");
     assert.equal(confirmed.length, 1);
     assert.equal(confirmed[0]!.perpsHome, true);
     assert.equal(confirmed[0]!.perpsWorkerSignalled, true);

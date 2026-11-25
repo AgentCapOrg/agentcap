@@ -20,6 +20,7 @@
  * the wall would not.
  */
 import type { VenueLeg, VenueQuote } from "./venue";
+import { CASH_UNIT, cashNumber } from "../../../packages/core/src/cash";
 
 export type RiskStyle = "conservative" | "balanced" | "aggressive";
 
@@ -67,21 +68,21 @@ export interface StyleThresholds {
  */
 const THRESHOLDS: Readonly<Record<RiskStyle, StyleThresholds>> = Object.freeze({
   conservative: {
-    minRealDepthRaw: 2_000_000_000n, // 2,000 USDG
+    minRealDepthRaw: 2_000n * CASH_UNIT, // 2,000 USDT
     maxCostBps: 300,
     minAgeSec: 3600,
     maxGraduationBps: 5_000,
     minRecentTrades: 10,
   },
   balanced: {
-    minRealDepthRaw: 500_000_000n, // 500 USDG
+    minRealDepthRaw: 500n * CASH_UNIT, // 500 USDT
     maxCostBps: 600,
     minAgeSec: 600,
     maxGraduationBps: 6_000,
     minRecentTrades: 3,
   },
   aggressive: {
-    minRealDepthRaw: 250_000_000n, // 250 USDG — the existing classMinDepthUsdg floor
+    minRealDepthRaw: 250n * CASH_UNIT, // 250 USDT — the existing classMinDepthUsdg floor
     maxCostBps: 900,
     minAgeSec: 0,
     maxGraduationBps: 7_000,
@@ -163,7 +164,7 @@ export interface Verdict {
   reason: string | null;
 }
 
-const usdg = (raw: bigint): string => `${(Number(raw) / 1e6).toFixed(2)} USDG`;
+const usdg = (raw: bigint): string => `${cashNumber(raw).toFixed(2)} USDG`;
 
 /**
  * Judge one verified leg at one style.
@@ -261,7 +262,7 @@ export function scoreLeg(leg: VenueLeg, style: Thresholds, entry: VenueQuote | n
    * term for the reason the ceiling exists: room to live in is worth more than
    * momentum toward a cliff the position cannot cross.
    */
-  const depthScore = Math.log10(Math.max(1, Number(leg.realDepthRaw) / 1e6)) * 40;
+  const depthScore = Math.log10(Math.max(1, cashNumber(leg.realDepthRaw))) * 40;
   const costScore = (t.maxCostBps - entry.costBps) / 10;
   const roomScore = (t.maxGraduationBps - leg.graduationBps) / 100;
   return { ok: true, kind: null, score: Math.round(depthScore + costScore + roomScore), reason: null };

@@ -1,14 +1,14 @@
 {
- "_fixture": "trimmed from GeckoTerminal's public API, read 2026-10-09 ~01:15 UTC (AUTON on Solana); fields the facts reader does not use removed",
+ "_fixture": "trimmed from GeckoTerminal's public API, read 2026-10-09 ~01:15 UTC (AUTON on BSC); fields the facts reader does not use removed",
  "data": [
   {
-   "id": "solana_FiYyzxapRvkbUhF5ZD3mJigWwqBGhtVLH49MDSgCLHdB",
+   "id": "bsc_0x0b8e0770dda3fd26b2f81254be3cc4b6b2ec1e8d",
    "type": "pool",
    "attributes": {
     "base_token_price_usd": "0.00003633764859",
     "quote_token_price_usd": "108.953554506553635459647803246422338912946373682",
-    "address": "FiYyzxapRvkbUhF5ZD3mJigWwqBGhtVLH49MDSgCLHdB",
-    "name": "AUTON / SOL",
+    "address": "0x0b8e0770dda3fd26b2f81254be3cc4b6b2ec1e8d",
+    "name": "AUTON / WBNB",
     "pool_created_at": "2026-10-06T18:43:40Z",
     "fdv_usd": "36245.4588991482",
     "price_change_percentage": {
@@ -30,26 +30,26 @@
    "relationships": {
     "base_token": {
      "data": {
-      "id": "solana_39ahtL8ynzE4amH26J29C93PA5172V3ft9UuUcqQS8fz",
+      "id": "bsc_0x2980a1f1bcd7307ff6b9084a435357d5cb8d30cb",
       "type": "token"
      }
     },
     "quote_token": {
      "data": {
-      "id": "solana_So11111111111111111111111111111111111111112",
+      "id": "bsc_0xd77cf5c8a1c79d6b78408a3f545dea88441790fb",
       "type": "token"
      }
     }
    }
   },
   {
-   "id": "solana_AECVu5BJndph7k61MmGWeidDh2PVeaHJysXzb2avXwBW",
+   "id": "bsc_0x53a64bdd0dc354385f926feedf52fd9edf93c3d9",
    "type": "pool",
    "attributes": {
     "base_token_price_usd": "0.00003770103622",
     "quote_token_price_usd": "108.953554506553635459647803246422338912946373682",
-    "address": "AECVu5BJndph7k61MmGWeidDh2PVeaHJysXzb2avXwBW",
-    "name": "AUTON / SOL",
+    "address": "0x53a64bdd0dc354385f926feedf52fd9edf93c3d9",
+    "name": "AUTON / WBNB",
     "pool_created_at": "2026-10-06T20:52:50Z",
     "fdv_usd": "37605.3875743451",
     "price_change_percentage": {
@@ -71,26 +71,26 @@
    "relationships": {
     "base_token": {
      "data": {
-      "id": "solana_39ahtL8ynzE4amH26J29C93PA5172V3ft9UuUcqQS8fz",
+      "id": "bsc_0x2980a1f1bcd7307ff6b9084a435357d5cb8d30cb",
       "type": "token"
      }
     },
     "quote_token": {
      "data": {
-      "id": "solana_So11111111111111111111111111111111111111112",
+      "id": "bsc_0xd77cf5c8a1c79d6b78408a3f545dea88441790fb",
       "type": "token"
      }
     }
    }
   },
   {
-   "id": "solana_4sYCu1udA5DS4GG7xyTtNYUY86hUurKLLQ2a3Tw82Z9D",
+   "id": "bsc_0x3c52ed6027232b5953f0232a0b76443014fe6a35",
    "type": "pool",
    "attributes": {
     "base_token_price_usd": "0.0004286217986",
     "quote_token_price_usd": "112.480002346143340230484568164806333917802265464",
-    "address": "4sYCu1udA5DS4GG7xyTtNYUY86hUurKLLQ2a3Tw82Z9D",
-    "name": "AUTON / SOL",
+    "address": "0x3c52ed6027232b5953f0232a0b76443014fe6a35",
+    "name": "AUTON / WBNB",
     "pool_created_at": "2026-10-06T21:06:44Z",
     "fdv_usd": "427534.372400492",
     "price_change_percentage": {
@@ -112,25 +112,25 @@
    "relationships": {
     "base_token": {
      "data": {
-      "id": "solana_39ahtL8ynzE4amH26J29C93PA5172V3ft9UuUcqQS8fz",
+      "id": "bsc_0x2980a1f1bcd7307ff6b9084a435357d5cb8d30cb",
       "type": "token"
      }
     },
     "quote_token": {
      "data": {
-      "id": "solana_So11111111111111111111111111111111111111112",
+      "id": "bsc_0xd77cf5c8a1c79d6b78408a3f545dea88441790fb",
       "type": "token"
      }
     }
    }
   },
   {
-   "id": "solana_ErW52xixSRZUymkjXL9APcZ5ygoQvvL1VEgsedj9TxHm",
+   "id": "bsc_0x6d0d8f696bce02e96a7d34d03ac0fee238db7625",
    "type": "pool",
    "attributes": {
     "base_token_price_usd": "0.0004922038822",
     "quote_token_price_usd": "0.999657562484443795044614433618877720202403522709050918889958999",
-    "address": "ErW52xixSRZUymkjXL9APcZ5ygoQvvL1VEgsedj9TxHm",
+    "address": "0x6d0d8f696bce02e96a7d34d03ac0fee238db7625",
     "name": "AUTON / USDC",
     "pool_created_at": "2026-10-06T22:03:46Z",
     "fdv_usd": "490955.146370996",
@@ -153,26 +153,26 @@
    "relationships": {
     "base_token": {
      "data": {
-      "id": "solana_39ahtL8ynzE4amH26J29C93PA5172V3ft9UuUcqQS8fz",
+      "id": "bsc_0x2980a1f1bcd7307ff6b9084a435357d5cb8d30cb",
       "type": "token"
      }
     },
     "quote_token": {
      "data": {
-      "id": "solana_EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "id": "bsc_0xf249bbf137c2e667140519a7e8db0c5ff45a3cb7",
       "type": "token"
      }
     }
    }
   },
   {
-   "id": "solana_J8sGjRKPaFHFxfLR44T3yFWaaZmohcgzzBLz1zfqGNzH",
+   "id": "bsc_0xe6b71d7b8b067be0e5e51d9f38dbc5aa08ec445a",
    "type": "pool",
    "attributes": {
     "base_token_price_usd": "0.00005737046637",
     "quote_token_price_usd": "109.316787616838026887055936999797374138730826964",
-    "address": "J8sGjRKPaFHFxfLR44T3yFWaaZmohcgzzBLz1zfqGNzH",
-    "name": "AUTON / SOL",
+    "address": "0xe6b71d7b8b067be0e5e51d9f38dbc5aa08ec445a",
+    "name": "AUTON / WBNB",
     "pool_created_at": "2026-10-06T20:54:51Z",
     "fdv_usd": "57224.9157974148",
     "price_change_percentage": {
@@ -194,26 +194,26 @@
    "relationships": {
     "base_token": {
      "data": {
-      "id": "solana_39ahtL8ynzE4amH26J29C93PA5172V3ft9UuUcqQS8fz",
+      "id": "bsc_0x2980a1f1bcd7307ff6b9084a435357d5cb8d30cb",
       "type": "token"
      }
     },
     "quote_token": {
      "data": {
-      "id": "solana_So11111111111111111111111111111111111111112",
+      "id": "bsc_0xd77cf5c8a1c79d6b78408a3f545dea88441790fb",
       "type": "token"
      }
     }
    }
   },
   {
-   "id": "solana_H7fxfgPvkkjVFLsNKtPAN8Yc28NTZNf5u8ygapzfyZjN",
+   "id": "bsc_0x1898dbd3cc4b2fd6c32dd31de64ba1b72b561312",
    "type": "pool",
    "attributes": {
     "base_token_price_usd": "0.00006649551428",
     "quote_token_price_usd": "112.444208021264573076732701600832596454162592731",
-    "address": "H7fxfgPvkkjVFLsNKtPAN8Yc28NTZNf5u8ygapzfyZjN",
-    "name": "AUTON / SOL",
+    "address": "0x1898dbd3cc4b2fd6c32dd31de64ba1b72b561312",
+    "name": "AUTON / WBNB",
     "pool_created_at": "2026-10-06T18:48:55Z",
     "fdv_usd": "66326.8131905686",
     "price_change_percentage": {
@@ -235,26 +235,26 @@
    "relationships": {
     "base_token": {
      "data": {
-      "id": "solana_39ahtL8ynzE4amH26J29C93PA5172V3ft9UuUcqQS8fz",
+      "id": "bsc_0x2980a1f1bcd7307ff6b9084a435357d5cb8d30cb",
       "type": "token"
      }
     },
     "quote_token": {
      "data": {
-      "id": "solana_So11111111111111111111111111111111111111112",
+      "id": "bsc_0xd77cf5c8a1c79d6b78408a3f545dea88441790fb",
       "type": "token"
      }
     }
    }
   },
   {
-   "id": "solana_8cb4G9fBVmFRR5sdo4LZHfzBmFRdzjzeq1XouNCrSJ41",
+   "id": "bsc_0x4b4d75faab7e2d1e485c56a5d8895db78192384d",
    "type": "pool",
    "attributes": {
     "base_token_price_usd": "0.0002560136857",
     "quote_token_price_usd": "112.194310576276820937064575531234165609540736406",
-    "address": "8cb4G9fBVmFRR5sdo4LZHfzBmFRdzjzeq1XouNCrSJ41",
-    "name": "AUTON / SOL",
+    "address": "0x4b4d75faab7e2d1e485c56a5d8895db78192384d",
+    "name": "AUTON / WBNB",
     "pool_created_at": "2026-10-07T03:04:16Z",
     "fdv_usd": "255364.171395846",
     "price_change_percentage": {
@@ -276,26 +276,26 @@
    "relationships": {
     "base_token": {
      "data": {
-      "id": "solana_39ahtL8ynzE4amH26J29C93PA5172V3ft9UuUcqQS8fz",
+      "id": "bsc_0x2980a1f1bcd7307ff6b9084a435357d5cb8d30cb",
       "type": "token"
      }
     },
     "quote_token": {
      "data": {
-      "id": "solana_So11111111111111111111111111111111111111112",
+      "id": "bsc_0xd77cf5c8a1c79d6b78408a3f545dea88441790fb",
       "type": "token"
      }
     }
    }
   },
   {
-   "id": "solana_FZ7rJwCDnoFg2zZ8zF2afiJdRwzLL9Pfco4KApnkJ2Vo",
+   "id": "bsc_0x197166006d82c298e07a09125ad056876ce4bb74",
    "type": "pool",
    "attributes": {
     "base_token_price_usd": "0.00003808453113",
     "quote_token_price_usd": "108.953554506553635459647803246422338912946373682",
-    "address": "FZ7rJwCDnoFg2zZ8zF2afiJdRwzLL9Pfco4KApnkJ2Vo",
-    "name": "AUTON / SOL",
+    "address": "0x197166006d82c298e07a09125ad056876ce4bb74",
+    "name": "AUTON / WBNB",
     "pool_created_at": "2026-10-06T20:53:49Z",
     "fdv_usd": "37987.9095463987",
     "price_change_percentage": {
@@ -317,26 +317,26 @@
    "relationships": {
     "base_token": {
      "data": {
-      "id": "solana_39ahtL8ynzE4amH26J29C93PA5172V3ft9UuUcqQS8fz",
+      "id": "bsc_0x2980a1f1bcd7307ff6b9084a435357d5cb8d30cb",
       "type": "token"
      }
     },
     "quote_token": {
      "data": {
-      "id": "solana_So11111111111111111111111111111111111111112",
+      "id": "bsc_0xd77cf5c8a1c79d6b78408a3f545dea88441790fb",
       "type": "token"
      }
     }
    }
   },
   {
-   "id": "solana_4EPUHiv4uEyiKnFX98YwzGJ5LkwwMB2iwU9x7rWiQwuW",
+   "id": "bsc_0x0e0debd4aa8ec7c3265824619a525aefb6d95f9e",
    "type": "pool",
    "attributes": {
     "base_token_price_usd": "0.00004461081038",
     "quote_token_price_usd": "110.57",
-    "address": "4EPUHiv4uEyiKnFX98YwzGJ5LkwwMB2iwU9x7rWiQwuW",
-    "name": "AUTON / SOL",
+    "address": "0x0e0debd4aa8ec7c3265824619a525aefb6d95f9e",
+    "name": "AUTON / WBNB",
     "pool_created_at": "2026-10-06T22:22:48Z",
     "fdv_usd": "44497.6314326227",
     "price_change_percentage": {
@@ -358,26 +358,26 @@
    "relationships": {
     "base_token": {
      "data": {
-      "id": "solana_39ahtL8ynzE4amH26J29C93PA5172V3ft9UuUcqQS8fz",
+      "id": "bsc_0x2980a1f1bcd7307ff6b9084a435357d5cb8d30cb",
       "type": "token"
      }
     },
     "quote_token": {
      "data": {
-      "id": "solana_So11111111111111111111111111111111111111112",
+      "id": "bsc_0xd77cf5c8a1c79d6b78408a3f545dea88441790fb",
       "type": "token"
      }
     }
    }
   },
   {
-   "id": "solana_6uB5xXCbNQd58eY6hBg7VAahoB1ifkDwy9kHXWgtMFhZ",
+   "id": "bsc_0xae2fa7e6cfbccd758d5a69bcf6757bee7dc84d84",
    "type": "pool",
    "attributes": {
     "base_token_price_usd": "0.00003483795549",
     "quote_token_price_usd": "109.18",
-    "address": "6uB5xXCbNQd58eY6hBg7VAahoB1ifkDwy9kHXWgtMFhZ",
-    "name": "AUTON / SOL",
+    "address": "0xae2fa7e6cfbccd758d5a69bcf6757bee7dc84d84",
+    "name": "AUTON / WBNB",
     "pool_created_at": "2026-10-07T08:44:13Z",
     "fdv_usd": "34749.5705649662",
     "price_change_percentage": {
@@ -399,26 +399,26 @@
    "relationships": {
     "base_token": {
      "data": {
-      "id": "solana_39ahtL8ynzE4amH26J29C93PA5172V3ft9UuUcqQS8fz",
+      "id": "bsc_0x2980a1f1bcd7307ff6b9084a435357d5cb8d30cb",
       "type": "token"
      }
     },
     "quote_token": {
      "data": {
-      "id": "solana_So11111111111111111111111111111111111111112",
+      "id": "bsc_0xd77cf5c8a1c79d6b78408a3f545dea88441790fb",
       "type": "token"
      }
     }
    }
   },
   {
-   "id": "solana_A7SFA6eaSCXZQqRsoTXjmjM9s6Gfpw7HK3kbpaw6zhmY",
+   "id": "bsc_0x19e13a6814e1b01d6a4f282343672a585c1b913e",
    "type": "pool",
    "attributes": {
     "base_token_price_usd": "0.0006575533744",
     "quote_token_price_usd": "112.763693988157526752200542289242982540757452789",
-    "address": "A7SFA6eaSCXZQqRsoTXjmjM9s6Gfpw7HK3kbpaw6zhmY",
-    "name": "AUTON / SOL",
+    "address": "0x19e13a6814e1b01d6a4f282343672a585c1b913e",
+    "name": "AUTON / WBNB",
     "pool_created_at": "2026-10-07T12:49:00Z",
     "fdv_usd": "655885.142011369",
     "price_change_percentage": {
@@ -440,25 +440,25 @@
    "relationships": {
     "base_token": {
      "data": {
-      "id": "solana_39ahtL8ynzE4amH26J29C93PA5172V3ft9UuUcqQS8fz",
+      "id": "bsc_0x2980a1f1bcd7307ff6b9084a435357d5cb8d30cb",
       "type": "token"
      }
     },
     "quote_token": {
      "data": {
-      "id": "solana_So11111111111111111111111111111111111111112",
+      "id": "bsc_0xd77cf5c8a1c79d6b78408a3f545dea88441790fb",
       "type": "token"
      }
     }
    }
   },
   {
-   "id": "solana_A3Fzz74kLiYA69KpQatk7r1PVsEygVYVahVDk7QSEgki",
+   "id": "bsc_0xf3f205cbb8d4c2cafa338cd2971a1ed3f53be1bf",
    "type": "pool",
    "attributes": {
     "base_token_price_usd": "0.0001166417883",
     "quote_token_price_usd": "0.999748470402242",
-    "address": "A3Fzz74kLiYA69KpQatk7r1PVsEygVYVahVDk7QSEgki",
+    "address": "0xf3f205cbb8d4c2cafa338cd2971a1ed3f53be1bf",
     "name": "AUTON / USDC",
     "pool_created_at": "2026-10-07T22:47:53Z",
     "fdv_usd": "116345.864627967",
@@ -481,26 +481,26 @@
    "relationships": {
     "base_token": {
      "data": {
-      "id": "solana_39ahtL8ynzE4amH26J29C93PA5172V3ft9UuUcqQS8fz",
+      "id": "bsc_0x2980a1f1bcd7307ff6b9084a435357d5cb8d30cb",
       "type": "token"
      }
     },
     "quote_token": {
      "data": {
-      "id": "solana_EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "id": "bsc_0xf249bbf137c2e667140519a7e8db0c5ff45a3cb7",
       "type": "token"
      }
     }
    }
   },
   {
-   "id": "solana_8zGiHTsjpWoH6ipnir45c7X4Yx3oiVE9o5N8bQga4zjK",
+   "id": "bsc_0x1a133262fb003eb7616e45820c2c64f755ff5308",
    "type": "pool",
    "attributes": {
     "base_token_price_usd": "0.00003676085535",
     "quote_token_price_usd": "109.435391212928424062020818748094080367449173885",
-    "address": "8zGiHTsjpWoH6ipnir45c7X4Yx3oiVE9o5N8bQga4zjK",
-    "name": "AUTON / SOL",
+    "address": "0x1a133262fb003eb7616e45820c2c64f755ff5308",
+    "name": "AUTON / WBNB",
     "pool_created_at": "2026-10-08T16:49:00Z",
     "fdv_usd": "36667.591971062",
     "price_change_percentage": {
@@ -522,26 +522,26 @@
    "relationships": {
     "base_token": {
      "data": {
-      "id": "solana_39ahtL8ynzE4amH26J29C93PA5172V3ft9UuUcqQS8fz",
+      "id": "bsc_0x2980a1f1bcd7307ff6b9084a435357d5cb8d30cb",
       "type": "token"
      }
     },
     "quote_token": {
      "data": {
-      "id": "solana_So11111111111111111111111111111111111111112",
+      "id": "bsc_0xd77cf5c8a1c79d6b78408a3f545dea88441790fb",
       "type": "token"
      }
     }
    }
   },
   {
-   "id": "solana_AJbTPqTxSiNjfsnkja99LH2TcfsBUL8Bd1rP2ufSYazu",
+   "id": "bsc_0xae6166ebacbbcd76b822ad1e5e7feee509c113a8",
    "type": "pool",
    "attributes": {
     "base_token_price_usd": "0.000107943088",
     "quote_token_price_usd": "112.419316654766094140710008454",
-    "address": "AJbTPqTxSiNjfsnkja99LH2TcfsBUL8Bd1rP2ufSYazu",
-    "name": "AUTON / SOL",
+    "address": "0xae6166ebacbbcd76b822ad1e5e7feee509c113a8",
+    "name": "AUTON / WBNB",
     "pool_created_at": "2026-10-07T00:07:53Z",
     "fdv_usd": "107669.233188298",
     "price_change_percentage": {
@@ -563,25 +563,25 @@
    "relationships": {
     "base_token": {
      "data": {
-      "id": "solana_39ahtL8ynzE4amH26J29C93PA5172V3ft9UuUcqQS8fz",
+      "id": "bsc_0x2980a1f1bcd7307ff6b9084a435357d5cb8d30cb",
       "type": "token"
      }
     },
     "quote_token": {
      "data": {
-      "id": "solana_So11111111111111111111111111111111111111112",
+      "id": "bsc_0xd77cf5c8a1c79d6b78408a3f545dea88441790fb",
       "type": "token"
      }
     }
    }
   },
   {
-   "id": "solana_5Cz7bnZ2s64BqaYjPhG8WF3WmtDreK8tcbF1gaiXzGD",
+   "id": "bsc_0x54879d9243a5cc23d65665c0275c942a335b354f",
    "type": "pool",
    "attributes": {
     "base_token_price_usd": "0.00004800948015",
     "quote_token_price_usd": "0.99436135941133473372216330088888974006558826623092177473299372",
-    "address": "5Cz7bnZ2s64BqaYjPhG8WF3WmtDreK8tcbF1gaiXzGD",
+    "address": "0x54879d9243a5cc23d65665c0275c942a335b354f",
     "name": "AUTON / USDT",
     "pool_created_at": "2026-10-06T18:44:40Z",
     "fdv_usd": "47887.6786767422",
@@ -604,26 +604,26 @@
    "relationships": {
     "base_token": {
      "data": {
-      "id": "solana_39ahtL8ynzE4amH26J29C93PA5172V3ft9UuUcqQS8fz",
+      "id": "bsc_0x2980a1f1bcd7307ff6b9084a435357d5cb8d30cb",
       "type": "token"
      }
     },
     "quote_token": {
      "data": {
-      "id": "solana_Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
+      "id": "bsc_0xee6e6ef71e602ddc10f36ec038ccf1621c68a41f",
       "type": "token"
      }
     }
    }
   },
   {
-   "id": "solana_2iTirDNGLyrApx858CNwAwx5tL3zPCCM2HaEyXkkfKB2",
+   "id": "bsc_0xbba734f6ef92b9bd80c0da569c21ece375da8a24",
    "type": "pool",
    "attributes": {
     "base_token_price_usd": "0.00003573034469",
     "quote_token_price_usd": "108.785450341449607021947896737352968858679606112",
-    "address": "2iTirDNGLyrApx858CNwAwx5tL3zPCCM2HaEyXkkfKB2",
-    "name": "AUTON / SOL",
+    "address": "0xbba734f6ef92b9bd80c0da569c21ece375da8a24",
+    "name": "AUTON / WBNB",
     "pool_created_at": "2026-10-06T18:44:44Z",
     "fdv_usd": "35639.6957471318",
     "price_change_percentage": {
@@ -645,25 +645,25 @@
    "relationships": {
     "base_token": {
      "data": {
-      "id": "solana_39ahtL8ynzE4amH26J29C93PA5172V3ft9UuUcqQS8fz",
+      "id": "bsc_0x2980a1f1bcd7307ff6b9084a435357d5cb8d30cb",
       "type": "token"
      }
     },
     "quote_token": {
      "data": {
-      "id": "solana_So11111111111111111111111111111111111111112",
+      "id": "bsc_0xd77cf5c8a1c79d6b78408a3f545dea88441790fb",
       "type": "token"
      }
     }
    }
   },
   {
-   "id": "solana_CXcNGUNBZfs6v35KVEp7d1UCwrhkkub7MyMbL8DF5KPC",
+   "id": "bsc_0xb516b74667356f39e590f89ee00d29782bed7160",
    "type": "pool",
    "attributes": {
     "base_token_price_usd": "0.00005653339768",
     "quote_token_price_usd": "0.999850143676101588902370456795438564745929971167163402120318722",
-    "address": "CXcNGUNBZfs6v35KVEp7d1UCwrhkkub7MyMbL8DF5KPC",
+    "address": "0xb516b74667356f39e590f89ee00d29782bed7160",
     "name": "AUTON / USDC",
     "pool_created_at": "2026-10-06T18:46:36Z",
     "fdv_usd": "56389.9707754766",
@@ -686,25 +686,25 @@
    "relationships": {
     "base_token": {
      "data": {
-      "id": "solana_39ahtL8ynzE4amH26J29C93PA5172V3ft9UuUcqQS8fz",
+      "id": "bsc_0x2980a1f1bcd7307ff6b9084a435357d5cb8d30cb",
       "type": "token"
      }
     },
     "quote_token": {
      "data": {
-      "id": "solana_EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "id": "bsc_0xf249bbf137c2e667140519a7e8db0c5ff45a3cb7",
       "type": "token"
      }
     }
    }
   },
   {
-   "id": "solana_k8jTthiySUpdZaENaTpKBCMNVdpfgUYfuga4SdEJ21G",
+   "id": "bsc_0x686e2100e5fe14a89e3f1b6bb15821f9b43aad25",
    "type": "pool",
    "attributes": {
     "base_token_price_usd": "0.00009613012937",
     "quote_token_price_usd": "0.000036434461799868637092511476758815529681438950132048466515247936",
-    "address": "k8jTthiySUpdZaENaTpKBCMNVdpfgUYfuga4SdEJ21G",
+    "address": "0x686e2100e5fe14a89e3f1b6bb15821f9b43aad25",
     "name": "LPPP / AUTON",
     "pool_created_at": "2026-10-06T21:33:59Z",
     "fdv_usd": "36342.0264910356",
@@ -727,26 +727,26 @@
    "relationships": {
     "base_token": {
      "data": {
-      "id": "solana_44sHXMkPeciUpqhecfCysVs7RcaxeM24VPMauQouBREV",
+      "id": "bsc_0x6ea0fcb18867fbe9e8d79695ff4661e6bee51abe",
       "type": "token"
      }
     },
     "quote_token": {
      "data": {
-      "id": "solana_39ahtL8ynzE4amH26J29C93PA5172V3ft9UuUcqQS8fz",
+      "id": "bsc_0x2980a1f1bcd7307ff6b9084a435357d5cb8d30cb",
       "type": "token"
      }
     }
    }
   },
   {
-   "id": "solana_8MbgovAELuwXY6MzCiujDrAH4B29jrTMMF5did9Vwdwk",
+   "id": "bsc_0xdb4b48213d5e300509e6d666b376cc068b09e18c",
    "type": "pool",
    "attributes": {
     "base_token_price_usd": "0.0000352674316",
     "quote_token_price_usd": "109.436410583788",
-    "address": "8MbgovAELuwXY6MzCiujDrAH4B29jrTMMF5did9Vwdwk",
-    "name": "AUTON / SOL",
+    "address": "0xdb4b48213d5e300509e6d666b376cc068b09e18c",
+    "name": "AUTON / WBNB",
     "pool_created_at": "2026-10-06T22:29:32Z",
     "fdv_usd": "35177.9570813533",
     "price_change_percentage": {
@@ -768,25 +768,25 @@
    "relationships": {
     "base_token": {
      "data": {
-      "id": "solana_39ahtL8ynzE4amH26J29C93PA5172V3ft9UuUcqQS8fz",
+      "id": "bsc_0x2980a1f1bcd7307ff6b9084a435357d5cb8d30cb",
       "type": "token"
      }
     },
     "quote_token": {
      "data": {
-      "id": "solana_So11111111111111111111111111111111111111112",
+      "id": "bsc_0xd77cf5c8a1c79d6b78408a3f545dea88441790fb",
       "type": "token"
      }
     }
    }
   },
   {
-   "id": "solana_ECqtTtP6ojGHPwRCEQp6qC2ean6dhn4Kv4e4iTh52rca",
+   "id": "bsc_0xeb15a12714098b783f70ce5f474f7edcf85c5b87",
    "type": "pool",
    "attributes": {
     "base_token_price_usd": "0.003203765774",
     "quote_token_price_usd": "0.17231936949099872607850260363464591019541890192374270396878645",
-    "address": "ECqtTtP6ojGHPwRCEQp6qC2ean6dhn4Kv4e4iTh52rca",
+    "address": "0xeb15a12714098b783f70ce5f474f7edcf85c5b87",
     "name": "AUTON / STONK",
     "pool_created_at": "2026-10-06T21:32:12Z",
     "fdv_usd": "3195637.72533072",
@@ -809,13 +809,13 @@
    "relationships": {
     "base_token": {
      "data": {
-      "id": "solana_39ahtL8ynzE4amH26J29C93PA5172V3ft9UuUcqQS8fz",
+      "id": "bsc_0x2980a1f1bcd7307ff6b9084a435357d5cb8d30cb",
       "type": "token"
      }
     },
     "quote_token": {
      "data": {
-      "id": "solana_6GmAFSYs4gk3FDao5FzzySQpPZaWsa4rUJHacpMpUNgx",
+      "id": "bsc_0xd2917e52516cae5d8967ccd815c6c6a1dfbde2ec",
       "type": "token"
      }
     }

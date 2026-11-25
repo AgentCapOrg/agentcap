@@ -32,7 +32,7 @@ ${errors}
 const METRICS_DOC = `# AgentCap metrics
 
 - **Book**: "paper" (simulated funds) or "live" (real funds on chain). Figures are never combined across books.
-- **Equity**: cash + savings (Morpho vault, valued at its share price) + positions at their last price + tokens carried at cost when they cannot be priced. Gas ETH is excluded.
+- **Equity**: cash + savings (the ledger's savings term) + positions at their last price + tokens carried at cost when they cannot be priced. Gas ETH is excluded.
 - **Realised P&L**: proceeds minus weighted-average cost of the quantity sold. A sell whose cost basis is unknown has no realised figure (null), never zero.
 - **Unrealised P&L**: last value minus cost basis of the open quantity. Null when the price is missing or stale.
 - **Return (leaderboard)**: (latest equity − net contributions − gas) ÷ net contributions over the current run. Published only when contributions are known and at least one live trade landed.

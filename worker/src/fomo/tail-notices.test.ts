@@ -9,7 +9,7 @@ import { describe, it } from "node:test";
 import type { FollowReadiness } from "../fomo-child";
 import { typesExecutable } from "./chat";
 import type { ChildTail, ChildTailEvent } from "./contract";
-import { robinhoodChain, tokenIdentity } from "./identity";
+import { bnbChain, tokenIdentity } from "./identity";
 import {
   BLOCKER_WORDS,
   emptyTailLog,
@@ -35,7 +35,7 @@ const HOUR = 60 * MIN;
 const NOW = Date.UTC(2026, 9, 7, 14, 0);
 const UNI = "7b1e2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d";
 const OTHER = "0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d";
-const coin = (n: number): TokenIdentity => tokenIdentity(robinhoodChain(), `0x${n.toString(16).padStart(40, "0")}`)!;
+const coin = (n: number): TokenIdentity => tokenIdentity(bnbChain(), `0x${n.toString(16).padStart(40, "0")}`)!;
 const FULL = `0x${"ab".repeat(20)}`;
 
 function ev(n: number, over: Partial<ChildTailEvent> = {}): ChildTailEvent {
@@ -109,7 +109,7 @@ describe("which notices are due", () => {
     const t = tail([ev(1), ev(2, { at: NOW - 8 * MIN }), ev(3, { at: NOW - 7 * MIN }), ev(4, { at: NOW - 3 * MIN, observedAt: NOW - 3 * MIN })]);
     const r = pass(input([t]));
     assert.equal(r.notices.length, 2);
-    assert.match(r.notices[0]!.html, /bought <b>PONS<\/b> on Fomo \(Robinhood Chain\) · 13:50 UTC \(3 buys in 5 min\)/);
+    assert.match(r.notices[0]!.html, /bought <b>PONS<\/b> on Fomo \(BNB Chain\) · 13:50 UTC \(3 buys in 5 min\)/);
     assert.match(r.notices[1]!.html, /13:57 UTC/);
     // Fed its own log back, nothing is due again.
     assert.deepEqual(tailNotices(input([t], { log: r.notices.at(-1)!.logAfter })).notices, []);
@@ -224,7 +224,7 @@ describe("what a notice says", () => {
     assert.equal(
       n.html,
       [
-        "👀 <b>unipcs</b> bought <b>PONS</b> on Fomo (Robinhood Chain) · 13:50 UTC",
+        "👀 <b>unipcs</b> bought <b>PONS</b> on Fomo (BNB Chain) · 13:50 UTC",
         "Their position after it: about $41k (their whole position, not this buy).",
         "Their thesis (their words, unverified): “Robinhood memes are early; PONS has a real community.”",
         "My read: worth a small look; it goes to my normal review.",
@@ -291,7 +291,7 @@ describe("what a notice says", () => {
   });
 
   it("a coin without a ticker is named by its address in short form, never the full address", () => {
-    const n = pass(input([tail([ev(1, { label: { symbol: null, name: null }, token: tokenIdentity(robinhoodChain(), FULL)! })])])).notices[0]!;
+    const n = pass(input([tail([ev(1, { label: { symbol: null, name: null }, token: tokenIdentity(bnbChain(), FULL)! })])])).notices[0]!;
     assert.match(n.html, /bought <b>0xabab…abab<\/b>/);
     assert.ok(!typesExecutable(n.html));
   });
@@ -414,7 +414,7 @@ describe("the sent log", () => {
     const t = tail([late], { createdAt: NOW - 11 * HOUR, expiresAt: NOW + HOUR });
     const first = pass(input([t], { now: NOW + 3 * MIN }));
     assert.equal(first.notices.length, 1);
-    assert.match(first.notices[0]!.html, /bought <b>PONS<\/b> on Fomo \(Robinhood Chain\) · 07:00 UTC/);
+    assert.match(first.notices[0]!.html, /bought <b>PONS<\/b> on Fomo \(BNB Chain\) · 07:00 UTC/);
     let log = first.notices[0]!.logAfter;
     assert.equal(log.sent[first.notices[0]!.key], NOW + 3 * MIN, "recorded by when it was told");
     for (const later of [HOUR, 90 * MIN, 2 * HOUR]) {

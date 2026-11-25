@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { publishesIdle, renderWhy, type Why } from "./reasons";
 
+// 6dp micro figures, scaled to 18dp USDT base units.
+const MICRO = 10n ** 12n;
+
 /**
  * These strings go on a PUBLIC page, under an agent's name, next to somebody's
  * money. They are the only prose a deterministic strategy ever publishes, and
@@ -14,17 +17,14 @@ import { publishesIdle, renderWhy, type Why } from "./reasons";
  */
 
 const ALL: Why[] = [
-  { code: "dca-leg", symbol: "NVDA", usdgRaw: 16_660_000n, weightBps: 3_333, legs: 3 },
-  { code: "park", usdgRaw: 24_100_000n, floorRaw: 50_000_000n, clamped: false },
-  { code: "park", usdgRaw: 24_100_000n, floorRaw: 50_000_000n, clamped: true },
-  { code: "unpark", usdgRaw: 66_000_000n, needRaw: 66_000_000n },
-  { code: "gap-enter", symbol: "AAPL", usdgRaw: 33_330_000n },
+  { code: "dca-leg", symbol: "NVDA", usdgRaw: (16_660_000n * MICRO), weightBps: 3_333, legs: 3 },
+  { code: "gap-enter", symbol: "AAPL", usdgRaw: (33_330_000n * MICRO) },
   { code: "gap-exit", symbol: "AAPL" },
-  { code: "keel-seed", usdgRaw: 20_000_000n, legs: 3 },
-  { code: "keel-trim", symbol: "TSLA", overRaw: 12_400_000n },
-  { code: "keel-top", symbol: "PLTR", underRaw: 9_800_000n },
-  { code: "dip", symbol: "NVDA", dipBps: 240, priced: 3, usdgRaw: 25_000_000n },
-  { code: "trench-enter", symbol: "WIF", liqUsd: 41_000, fdvUsd: 820_000, ageSec: 2_820, usdgRaw: 5_000_000n },
+  { code: "keel-seed", usdgRaw: (20_000_000n * MICRO), legs: 3 },
+  { code: "keel-trim", symbol: "TSLA", overRaw: (12_400_000n * MICRO) },
+  { code: "keel-top", symbol: "PLTR", underRaw: (9_800_000n * MICRO) },
+  { code: "dip", symbol: "NVDA", dipBps: 240, priced: 3, usdgRaw: (25_000_000n * MICRO) },
+  { code: "trench-enter", symbol: "WIF", liqUsd: 41_000, fdvUsd: 820_000, ageSec: 2_820, usdgRaw: (5_000_000n * MICRO) },
   { code: "trench-exit", symbol: "WIF", cause: "drain", pct: 62 },
   { code: "trench-exit", symbol: "WIF", cause: "stop", pct: -31.4 },
   { code: "trench-exit", symbol: "WIF", cause: "take", pct: 48.2 },
@@ -70,22 +70,13 @@ describe("every reason is publishable prose", () => {
     // 6dp raw in, two decimals out. Getting this wrong publishes a number that
     // is a million times off and looks entirely plausible.
     assert.match(renderWhy(ALL[0]!), /16\.66 USDG into NVDA/);
-    assert.match(renderWhy({ code: "keel-seed", usdgRaw: 1_234_567_890n, legs: 2 }), /1,234\.56 USDG/);
-    assert.match(renderWhy({ code: "keel-trim", symbol: "X", overRaw: 5_000_000n }), /5\.00 USDG/);
+    assert.match(renderWhy({ code: "keel-seed", usdgRaw: (1_234_567_890n * MICRO), legs: 2 }), /1,234\.56 USDG/);
+    assert.match(renderWhy({ code: "keel-trim", symbol: "X", overRaw: (5_000_000n * MICRO) }), /5\.00 USDG/);
   });
 
   it("trims percentages instead of printing 33.0%", () => {
     assert.match(renderWhy(ALL[0]!), /33% of a 3-leg basket/);
-    assert.match(renderWhy(ALL[9]!), /2\.4% off its rolling high/);
-  });
-
-  it("says something DIFFERENT when the budget clamped the sweep", () => {
-    // Otherwise the agent claims it parked the idle cash when it parked part of
-    // it, and the balance the reader sees will not match the sentence.
-    const plain = renderWhy(ALL[1]!);
-    const clamped = renderWhy(ALL[2]!);
-    assert.notEqual(plain, clamped);
-    assert.match(clamped, /what today's budget still allows/);
+    assert.match(renderWhy(ALL.find((w) => w.code === "dip")!), /2\.4% off its rolling high/);
   });
 
   it("an exit says WHY it left, and each cause reads differently", () => {

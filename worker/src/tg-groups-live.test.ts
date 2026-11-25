@@ -38,7 +38,7 @@ const ponsPool = (): GeckoPool => ({
   poolAddress: null,
   tokenAddress: CA,
   name: "APPSHARE / WETH",
-  dex: "pons-v2",
+  dex: "pancakeswap-v4-bsc",
   priceUsd: 0.0001,
   reserveUsd: 5_000,
   fdvUsd: 20_000,
@@ -180,7 +180,7 @@ describe("a Pons coin posted while the chain reads are declined: the real look, 
     rmSync(home, { recursive: true, force: true });
   });
 
-  it("the bare CA gets the curve line, tagging her: GeckoTerminal's Robinhood page stood in for the failed getCode", async () => {
+  it("the bare CA gets the cannot-buy line, tagging her: GeckoTerminal's Robinhood page stood in for the failed getCode", async () => {
     make({});
     const post = msg(CA);
     await said(post);
@@ -188,11 +188,11 @@ describe("a Pons coin posted while the chain reads are declined: the real look, 
     assert.equal(replyOf(sends[0]), post.messageId);
     const text = String(sends[0]?.text);
     assert.match(text, new RegExp(`^<a href="tg://user\\?id=${OWNER}">Milla</a> `), text);
-    assert.match(text, /curve/, text);
+    assert.match(text, /pool type i don't touch/, text);
     assert.ok(!/\d/.test(text.replace(/^<a [^>]+>[^<]*<\/a> /, "")), "no figure");
     assert.deepEqual(reads, { code: 1, pools: 1, probe: 0 }, "one failed getCode, one index page, no multicall on the chain that failed");
-    assert.equal(nominations.length, 0, "a curve coin is never nominated");
-    assert.equal(store.coin(CHAT, CA)?.verdict, "curve", "remembered as the Robinhood Chain coin it is");
+    assert.equal(nominations.length, 0, "a v4-only coin is never nominated");
+    assert.equal(store.coin(CHAT, CA)?.verdict, "v4-only", "remembered as the Robinhood Chain coin it is");
 
     // Then "@bot didnt you see" (a reply to the CA) and "@bot ??": answered.
     const didnt = msg("@agentcapavatarme_bot didnt you see", { replyTo: { messageId: post.messageId!, fromId: OWNER, fromIsBot: false } });
@@ -230,7 +230,7 @@ describe("a Pons coin posted while the chain reads are declined: the real look, 
     });
     await said(msg(CA));
     assert.equal(sends.length, 1);
-    assert.match(String(sends[0]?.text), /curve/);
+    assert.match(String(sends[0]?.text), /pool type i don't touch/);
     assert.deepEqual(reads, { code: 1, pools: 1, probe: 0 });
   });
 });
@@ -245,13 +245,13 @@ describe("the Shogun exchange: a Robinhood coin while the chain AND GeckoTermina
   const SHOGUN = { id: 888888, username: "shogun_merry_bot", name: "Shogun" };
   const VRAX = "0x7a3c0d5e11b2f4c6a8e9d0b1c2d3e4f5a6b7c8d9";
   const DODGE = "my owner's rules say i don't do 'should you buy this' talks";
-  /** DexScreener's `/tokens/v1/robinhood/<token>` answer for it, as the real parser reads it. */
+  /** DexScreener's `/tokens/v1/bsc/<token>` answer for it, as the real parser reads it. */
   const dexBody = (nowMs: number) =>
     JSON.stringify([
       {
-        chainId: "robinhood",
-        dexId: "uniswap",
-        url: `https://dexscreener.com/robinhood/0x${"5".repeat(40)}`,
+        chainId: "bsc",
+        dexId: "pancakeswap",
+        url: `https://dexscreener.com/bsc/0x${"5".repeat(40)}`,
         pairAddress: `0x${"5".repeat(40)}`,
         labels: ["v3"],
         baseToken: { address: VRAX, name: "Commander Vrax", symbol: "VRAX" },

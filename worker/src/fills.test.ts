@@ -18,13 +18,14 @@ const transfer = (token: string, from: string, to: string, value: bigint): Recei
 });
 
 const ONE = 10n ** 18n;
-const usdg = (v: number) => BigInt(Math.round(v * 1e6));
+// Cash is 18dp USDT.
+const usdg = (v: number) => BigInt(Math.round(v * 1e6)) * 10n ** 12n;
 
 it("values a discovered six-decimal token from its receipt without an 18-decimal assumption", () => {
-  const fill=fillFromDeltas({deltas:new Map([[USDG,-5_000_000n],[NVDA,250_000_000n]]),usdgToken:USDG,stockToken:NVDA,symbol:"COIN",decimals:6});
+  const fill=fillFromDeltas({deltas:new Map([[USDG,-5n*10n**18n],[NVDA,250_000_000n]]),usdgToken:USDG,stockToken:NVDA,symbol:"COIN",decimals:6});
   assert.equal(fill?.priceUsd,0.02);
   assert.equal(fill?.qtyRaw,250_000_000n);
-  assert.equal(fill?.cashUsdg,5_000_000n);
+  assert.equal(fill?.cashUsdg,5n*10n**18n);
 });
 
 describe("netTokenDeltas — the account's own ledger, not the transaction's", () => {

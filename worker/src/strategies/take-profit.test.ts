@@ -23,6 +23,9 @@ import { renderWhy } from "./reasons";
 import { steadyBasketTick, type SteadyBasketConfig } from "./steady-basket";
 import type { Snapshot } from "./types";
 
+// 6dp micro figures, scaled to 18dp USDT base units.
+const MICRO = 10n ** 12n;
+
 const TSLA = "0x0000000000000000000000000000000000000001" as const;
 const NVDA = "0x0000000000000000000000000000000000000002" as const;
 const USDG = "0x00000000000000000000000000000000000000dd" as const;
@@ -30,10 +33,8 @@ const ROUTER = "0x00000000000000000000000000000000000000rr".replace("rr", "ff") 
 
 const cfg = (over: Partial<SteadyBasketConfig> = {}): SteadyBasketConfig => ({
   legs: [{ symbol: "TSLA", token: TSLA, weightBps: 10_000 }],
-  buyPerTickUsdg: 25_000_000n,
-  idleFloorUsdg: 50_000_000n,
+  buyPerTickUsdg: (25_000_000n * MICRO),
   swapRouter: ROUTER,
-  vault: "0x00000000000000000000000000000000000000aa",
   usdg: USDG,
   ...over,
 });
@@ -45,9 +46,9 @@ const held = (over: Partial<{ value: bigint; cost: bigint | null; stale: boolean
       {
         token: over.token ?? TSLA,
         rawBalance: 1_000_000_000_000_000_000n,
-        valueUsdg: over.value ?? 30_000_000n,
+        valueUsdg: over.value ?? (30_000_000n * MICRO),
         priceStale: over.stale ?? false,
-        costUsdg: over.cost === undefined ? 10_000_000n : over.cost,
+        costUsdg: over.cost === undefined ? (10_000_000n * MICRO) : over.cost,
       },
     ],
   ]);
@@ -61,8 +62,8 @@ const snap = (over: Partial<Snapshot> = {}): Snapshot => ({
   pausedTokens: new Set(),
   staleFeeds: new Set(),
   sequencerUp: true,
-  spendHeadroomUsdg: 1_000_000_000n,
-  perTradeCapUsdg: 1_000_000_000n,
+  spendHeadroomUsdg: (1_000_000_000n * MICRO),
+  perTradeCapUsdg: (1_000_000_000n * MICRO),
   ...over,
 });
 
@@ -88,14 +89,14 @@ describe("it can finally sell", () => {
 
   it("A LEG THAT HAS NOT RUN FAR ENOUGH IS LEFT ALONE", () => {
     // +20%, against a 2x rule.
-    const t = steadyBasketTick(cfg({ takeProfitBps: 10_000 }), snap({ holdings: held({ value: 12_000_000n }) }));
+    const t = steadyBasketTick(cfg({ takeProfitBps: 10_000 }), snap({ holdings: held({ value: (12_000_000n * MICRO) }) }));
     assert.equal(t.intents.filter((i) => i.kind === "swap" && i.sellToken === TSLA).length, 0);
   });
 
   it("and ONE exit per tick, so a basket that ran does not liquidate itself", () => {
     const two = new Map([
       ...held(),
-      ["NVDA", { token: NVDA, rawBalance: 5n, valueUsdg: 90_000_000n, priceStale: false, costUsdg: 10_000_000n }],
+      ["NVDA", { token: NVDA, rawBalance: 5n, valueUsdg: (90_000_000n * MICRO), priceStale: false, costUsdg: (10_000_000n * MICRO) }],
     ]);
     const t = steadyBasketTick(cfg({ takeProfitBps: 10_000 }), snap({ holdings: two }));
     assert.equal(t.intents.filter((i) => i.kind === "swap").length, 1);
@@ -144,52 +145,7 @@ describe("off by default, and off means off", () => {
   it("and buying is untouched when it is on", () => {
     // The exit runs first, but it does not replace the sleeve: a tick with cash
     // and no winner still does its scheduled buy.
-    const t = steadyBasketTick(cfg({ takeProfitBps: 10_000 }), snap({ cashUsdg: 100_000_000n }));
+    const t = steadyBasketTick(cfg({ takeProfitBps: 10_000 }), snap({ cashUsdg: (100_000_000n * MICRO) }));
     assert.ok(t.intents.some((i) => i.kind === "swap" && i.buyToken === TSLA), "the DCA leg still fires");
-  });
-});
-
-describe("the sweep stops eating the day's buying power", () => {
-  it("A BUY IS RESERVED BEFORE IDLE CASH IS PARKED", () => {
-    // A vault deposit counts toward the daily spend (only withdrawals are
-    // excluded), and the sweep took everything left — so on nine production
-    // agents the parked cash exactly consumed the cap and every buy after it
-    // was refused with `daily-cap`. The fit was exact: vault 483.335 +
-    // positions 16.498 against a 500 cap. And the sweep repeats daily, so
-    // those agents were capped permanently.
-    const t = steadyBasketTick(
-      cfg(),
-      snap({ cashUsdg: 500_000_000n, spendHeadroomUsdg: 100_000_000n, perTradeCapUsdg: 1_000_000_000n }),
-    );
-    const dep = t.intents.find((i) => i.kind === "vault-deposit");
-    assert.ok(dep, "the cash is still parked — it is not stranded");
-    // 100 headroom - 25 spent on this tick's buy - 25 reserved for the next.
-    assert.equal(dep!.kind === "vault-deposit" && dep!.amountUsdg, 50_000_000n);
-  });
-
-  it("and the reserve is the buy the WALL would take, not the one configured", () => {
-    // A tick size above the per-trade cap is refused whatever the budget says,
-    // so reserving the configured number holds cash back for a trade that
-    // cannot happen.
-    const t = steadyBasketTick(
-      cfg({ buyPerTickUsdg: 900_000_000n }),
-      snap({ cashUsdg: 500_000_000n, spendHeadroomUsdg: 100_000_000n, perTradeCapUsdg: 10_000_000n }),
-    );
-    const dep = t.intents.find((i) => i.kind === "vault-deposit");
-    // The buy shrinks to the cap: 100 - 10 spent - 10 reserved.
-    assert.equal(dep!.kind === "vault-deposit" && dep!.amountUsdg, 80_000_000n);
-  });
-
-  it("uses the remaining budget for a smaller buy before parking cash", () => {
-    // If even the wall-sized buy does not fit in what is left, the buy is
-    // impossible today — holding cash back for it enables nothing.
-    const t = steadyBasketTick(
-      cfg({ buyPerTickUsdg: 900_000_000n }),
-      snap({ cashUsdg: 500_000_000n, spendHeadroomUsdg: 5_000_000n, perTradeCapUsdg: 900_000_000n }),
-    );
-    const dep = t.intents.find((i) => i.kind === "vault-deposit");
-    assert.equal(dep, undefined);
-    const buy = t.intents.find(i => i.kind === "swap");
-    assert.equal(buy?.kind === "swap" && buy.sellAmountRaw, 5_000_000n);
   });
 });

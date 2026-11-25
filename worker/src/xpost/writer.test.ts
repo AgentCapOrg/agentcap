@@ -5,7 +5,7 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { SETTINGS_DEFAULTS, SOLANA_USDG_MINT } from "../../../packages/core/src/index";
+import { SETTINGS_DEFAULTS } from "../../../packages/core/src/index";
 import { everyBand } from "../class-evidence";
 import { resetReasoningRefusalsForTest, type LlmCreds } from "../llm";
 import { similarity } from "../social-post";
@@ -1015,11 +1015,6 @@ describe("an active agent's answers and conversation memory", () => {
     }
     for (const q of ["what have you been buying lately?", "how do you pick your coins?", "gm, how's your day?", "", null]) assert.equal(coinNamedIn(q, names), false, String(q));
     assert.equal(coinNamedIn("gm, how are you?", ["GM"]), true, "errs toward a name: a coin called GM");
-    // A Solana contract names a coin as a 0x one does (Solana P0).
-    assert.equal(coinNamedIn(`thoughts on ${SOLANA_USDG_MINT}?`, names), true);
-    assert.equal(coinNamedIn(`is solscan.io/token/${SOLANA_USDG_MINT} legit?`, []), true);
-    // Glued to a word, it still names a coin: never answered from the agent's recent buys.
-    for (const q of [`did you buy CA${SOLANA_USDG_MINT}?`, `${SOLANA_USDG_MINT}is it legit?`, `CA:${SOLANA_USDG_MINT}x`]) assert.equal(coinNamedIn(q, []), true, q);
     const facts = { ...BASE, mode: "live" as const, recentBuys: [{ label: "Pepe", paper: false }], boughtLately: "live" as const, recentOwn: ["grabbed some pepe, the buying looked real"],
       said: ["grabbed some pepe, the buying looked real"], walletPublic: false };
     const research = ["you bought it lately", "your own words when you bought it: the buying looked steady", "what you posted on X about your latest buy: grabbed some pepe", "the public index shows liquidity is thin"];
@@ -1293,7 +1288,7 @@ describe("an active agent's answers and conversation memory", () => {
       assert.equal(line, line.toLowerCase());
       assert.doesNotMatch(line, /opt out|\bstop\b/i, "no opt-out line on an answer (2026-10-12)");
       assert.doesNotMatch(line, /\p{N}|\$|@|#|https?:|0x/u, line);
-      assert.doesNotMatch(line, /\b(?:pepe|bonk|wif|doge|shib|btc|eth|sol|bitcoin|solana|sherwood|agentcap|groq|qwen|gpt|claude|llama)\b/i, line);
+      assert.doesNotMatch(line, /\b(?:pepe|bonk|wif|doge|shib|btc|eth|bnb|bitcoin|sherwood|agentcap|groq|qwen|gpt|claude|llama)\b/i, line);
       assert.doesNotMatch(line, /\b(?:bought|holding|hold|profit|loss|moon|pump|gem|buy|sell|price)\b/i, `${line}: no claim, no call`);
       assert.equal(sherwoodNamed(line), false, line);
       assert.equal(vocabularyRefusal(line), null, line);
@@ -1454,7 +1449,7 @@ describe("focused insight voice", () => {
         style: { lower: true, emoji: 0, exclaim: 0 }, recentOwn: [], read, angleSeed })!;
       assert.ok(p);
       for (const angle of INSIGHT_ANGLES) if (p.prompt.includes(angle)) seen.add(angle);
-      assert.doesNotMatch(p.prompt, /\p{N}|BTC|ETH|SOL\b|\$|https?:/u);
+      assert.doesNotMatch(p.prompt, /\p{N}|BTC|ETH|BNBb\b|\$|https?:/u);
       for (const prohibition of ["Never say what comes next", "never tell anyone to buy, sell, long, short", "Never say you hold, bought, sold", "Name no coin, no ticker"]) assert.ok(p.prompt.includes(prohibition), prohibition);
       assert.match(p.prompt, /at most one bit of jargon/);
       assert.doesNotMatch(p.prompt, /upper or the lower half|where things sit/);

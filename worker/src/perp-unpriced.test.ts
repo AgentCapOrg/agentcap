@@ -52,8 +52,6 @@ const dark = (over: Partial<AgentState> = {}): AgentState => ({
 
 const buy: TradeIntent = { kind: "swap", target: ROUTER, sellToken: USDG, buyToken: AAPL, sellAmountRaw: 25_000_000n, notionalUsdg: 25_000_000n };
 const sell: TradeIntent = { kind: "swap", target: ROUTER, sellToken: AAPL, buyToken: USDG, sellAmountRaw: 1_000_000_000_000_000_000n, notionalUsdg: 25_000_000n };
-const deposit: TradeIntent = { kind: "vault-deposit", target: VAULT, amountUsdg: 25_000_000n } as TradeIntent;
-const withdraw: TradeIntent = { kind: "vault-withdraw", target: VAULT, amountUsdg: 25_000_000n } as TradeIntent;
 
 describe("while Lighter is unread", () => {
   it("A SPOT BUY IS REFUSED — the breaker cannot see the venue, so nothing new goes on in the dark", () => {
@@ -63,14 +61,8 @@ describe("while Lighter is unread", () => {
     assert.match(!v.ok ? v.detail : "", /Exits still go out/);
   });
 
-  it("and so is a vault deposit — every non-exit, not just trades", () => {
-    const v = checkPolicy(deposit, limits, dark());
-    assert.equal(!v.ok && v.rule, "perp-unpriced");
-  });
-
-  it("EXITS STILL GO OUT: the sell into cash and the vault withdrawal", () => {
+  it("EXITS STILL GO OUT: the sell into cash", () => {
     assert.deepEqual(checkPolicy(sell, limits, dark()), { ok: true });
-    assert.deepEqual(checkPolicy(withdraw, limits, dark()), { ok: true });
   });
 
   it("UNKNOWN IS NOT ZERO: a venue never read, or read to an unknown figure, refuses like a funded one", () => {

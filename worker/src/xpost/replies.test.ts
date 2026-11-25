@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { XReply } from "./client";
 import { confusedWords, greetingOnly, isAnswerOptOut, isReplyOptOut, plainAsk, reactionOnly, replyCandidate, tagCandidate } from "./replies";
-import { base58Encode, SOLANA_USDG_MINT } from "../../../packages/core/src/ids";
 
 const CTX = { rootTweetId: "111", xUserId: "222", coin: "pepe" };
 /**
@@ -416,7 +415,7 @@ describe("tags an active agent may answer", () => {
   it("advice is flagged for a decline only as one plain question, with no claim or rumour beside it (red-team review of 1ed46625, 2026-10-12)", () => {
     // Each declined at 1ed46625 from the account that bought ZAPX.
     for (const text of ["is binance listing zapx tomorrow? should i buy before?", "are the zapx devs about to dump? should i sell?", "zapx is a scam right? should i sell?",
-      "is the sec about to approve the sol etf? should i buy?", "is coinbase about to list zapx? should i buy now?",
+      "is the sec about to approve the bnb etf? should i buy?", "is the sec about to approve the sol etf? should i buy?", "is coinbase about to list zapx? should i buy now?",
       "should i buy zapx before the binance listing?", "should i sell before the devs dump?", "will zapx pump after the launch?", "should i buy, the team confirmed it?",
       "what's hot. buy?", "should i buy pepe, or wait?"]) {
       for (const research of [true, false]) {
@@ -426,29 +425,6 @@ describe("tags an active agent may answer", () => {
     for (const text of ["should i buy zapx now?", "gm, should i buy pepe?", "hey alan, is $WOJAK a good buy?", "will $pepe go up?", "what should i buy?", "are you bullish?", "wen moon"]) {
       assert.ok(advised(tagCandidate(tag(`@alanaidale ${text}`), { xUserId: "222", username: "alanaidale", research: true })), text);
     }
-  });
-  it("a Solana key or signature is refused where a 0x run with research off is: link-or-secret (Solana P0)", () => {
-    // Only a 0x contract is taken out as a lookup key; a base58 one went on as words.
-    const sig = base58Encode(Uint8Array.from({ length: 64 }, (_, i) => (i * 37 + 11) & 0xff));
-    for (const research of [true, false]) {
-      for (const text of [`@Pine what is ${SOLANA_USDG_MINT}?`, `@Pine did you buy ${SOLANA_USDG_MINT}?`, `@Pine thoughts on ${SOLANA_USDG_MINT}...`, `@Pine what was ${sig} about?`]) {
-        assert.deepEqual(tagCandidate(tag(text), { ...ON, research }), { ok: false, reason: "link-or-secret" }, text);
-      }
-    }
-    // The comment path already refused any digit; still refused.
-    assert.equal(replyCandidate(comment(`Why did you pick ${SOLANA_USDG_MINT} here?`), CTX).ok, false);
-  });
-  it("a Solana id glued to the words around it is refused the same way, before any model reads it (audit regressions F3)", () => {
-    const sig = base58Encode(Uint8Array.from({ length: 64 }, (_, i) => (i * 37 + 11) & 0xff));
-    const letters = "EEuxbXvdXfvgGiFWKYyEksxzabPKjwhYTNvGXFitaqqT";
-    for (const research of [true, false]) {
-      for (const text of [`@Pine what is CA${SOLANA_USDG_MINT}?`, `@Pine did you buy ${SOLANA_USDG_MINT}is it good?`, `@Pine what was tx${sig}done about?`, `@Pine thoughts on ca${letters}...`]) {
-        assert.deepEqual(tagCandidate(tag(text), { ...ON, research }), { ok: false, reason: "link-or-secret" }, text);
-      }
-    }
-    // The comment path refuses any digit first, so only a letters-only key reaches its scan.
-    assert.deepEqual(replyCandidate(comment(`Why did you pick ca${letters} here, what was the reason?`), CTX), { ok: false, reason: "link-or-secret" });
-    assert.equal(replyCandidate(comment("Why did you pick this coin here, what was the reason?"), CTX).ok, true);
   });
 });
 
@@ -638,7 +614,7 @@ describe("red-team review of a964a74c: what the answer path answers by nothing (
   it("a home, a car, an inheritance, insurance, a card, a ring or everything someone owns is distress on the answer path; the comment path as before (red-team review of 1ed46625, 2026-10-12)", () => {
     // Each POSTED at 1ed46625 as code's joking decline.
     for (const text of ["i'm about to lose my home, should i buy btc to save it?", "i'm homeless, should i buy doge?", "should i sell my house and go all in on btc?",
-      "should i cash out my life insurance for btc?", "should i max out my card for sol?", "should i sell my car to buy eth?", "should i use my inheritance to buy sol?",
+      "should i cash out my life insurance for btc?", "should i max out my card for bnb?", "should i max out my card for sol?", "should i sell my car to buy eth?", "should i use my inheritance to buy bnb?", "should i use my inheritance to buy sol?",
       "should i sell my wedding ring to buy btc?", "should i bet my house on eth?", "should i put everything i own into eth?",
       "should i go all in on pepe?", "should i put my kids' money in eth?"]) {
       for (const research of [true, false]) assert.deepEqual(at(text, research), { ok: false, reason: "distress" }, text);

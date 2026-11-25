@@ -1,19 +1,12 @@
 import {
   CASH,
-  MORPHO,
-  RIALTO,
   STOCK_TOKENS,
-  UNISWAP,
+  PANCAKESWAP,
   LIGHTER_ROUTE_V1,
-  grantEnergyRoute,
   grantHasTransfer,
   grantPerp,
-  grantTrencher,
-  grantHasV4,
-  grantV4Adapter,
-  grantPonsAdapter,
-  grantPonsClassVault,
   builtinGrantTargets,
+  grantTrencher,
   sellableAssets,
   usdgUnits,
   type StockToken,
@@ -25,101 +18,20 @@ import type { AgentLimits } from "./policy";
 export function limitsFromGrant(
   grant: StoredGrant,
   watchTokens: readonly StockToken[] = STOCK_TOKENS,
-  /**
-   * Curves this agent has seen launch, from the FACTORY-FILTERED scan.
-   *
-   * Passed in rather than read here because this module is deliberately pure
-   * and grant-sourced; the caller owns the store. Defaulting to undefined —
-   * not [] — matters: undefined means the rule cannot run, [] would mean every
-   * curve is unknown and would refuse the venue outright. A check that did not
-   * run must never read as one that passed, and it must not silently become a
-   * blanket refusal either.
-   */
-  knownCurves?: readonly string[],
 ): AgentLimits {
   return {
     perTradeUsdg: usdgUnits(grant.caps.perTradeUsdg),
     dailyUsdg: usdgUnits(grant.caps.dailyUsdg),
     allowedTargets: [
-      // RIALTO IS NOT HERE, and its absence is the fix.
-      //
-      // It used to be listed for every grant, while the wall only ever emits
-      // that permission under `allowRialto` — which no signer sets, so no grant
-      // this repo can produce carries it. That is the mirror LOOSER than the
-      // chain, the one direction this file exists to prevent: the worker
-      // believed it could route through Rialto, built the UserOp, and the chain
-      // refused it. Gas spent to be told no, by a revert that names nothing.
-      //
-      // Deliberately not replaced with a marker check. There is no marker,
-      // because there is no capability to mark; inventing one would be
-      // scaffolding for a route nothing grants. If Rialto is ever enabled it
-      // gets a marker then, the way GRANT_V4_ADAPTER and GRANT_PONS_ADAPTER
-      // did — permission and marker minted together, never one without the
-      // other.
-      UNISWAP.swapRouter02 as `0x${string}`,
-      MORPHO.steakhouseUsdgVault as `0x${string}`,
-      CASH.USDG as `0x${string}`,
+      PANCAKESWAP.smartRouter as `0x${string}`,
+      CASH.USDT as `0x${string}`,
       ...(grantTrencher(grant) ? [grantTrencher(grant)!.vault] : []),
-      ...(grantHasV4(grant)
-        ? [UNISWAP.permit2 as `0x${string}`, UNISWAP.universalRouter as `0x${string}`]
-        : []),
-      // THE V4 ADAPTER, MIRRORED — and mirrored from the GRANT, not from
-      // settings. grantV4Adapter returns the address the swapExactIn
-      // permission was actually sealed against (marker AND address, or null),
-      // so this list can never admit an adapter the chain would refuse. The
-      // transfer-mirror lesson runs in both directions: without this entry a
-      // correctly-granted adapter call dies off-chain at `target-allowlist`,
-      // a route that looks granted and never fires — the multihop bug's
-      // silent sibling.
-      ...((): `0x${string}`[] => {
-        const a = grantV4Adapter(grant);
-        return a ? [a] : [];
-      })(),
-      // THE PONS ADAPTER, MIRRORED, on exactly the same terms and from the same
-      // authority: the GRANT, never settings. `cfg.ponsAdapterAddress` is a
-      // configuration field anyone with the dashboard can edit; the address the
-      // `tradeExactIn` permission was actually sealed against is the only one
-      // the chain will honour, and grantPonsAdapter returns it only when the
-      // marker and a valid address both exist.
-      //
-      // Reading settings here would let a setting silently redirect the
-      // agent's trades at a contract the signature never covered — the mirror
-      // going LOOSER than the chain, which is the one direction that is never
-      // safe. Omitting it entirely would be the other failure: a correctly
-      // granted adapter call dying off-chain at `target-allowlist`, a route
-      // that looks granted and never fires.
-      ...((): `0x${string}`[] => {
-        const a = grantPonsAdapter(grant);
-        return a ? [a] : [];
-      })(),
-      // THE CLASS VAULT, on the same terms again — and this one is a per-ACCOUNT
-      // address, so mirroring it from anywhere but the grant would not merely be
-      // loose, it would point one owner's agent at another owner's vault. The
-      // vault refuses that on chain (`only`), but the refusal arrives as a spent
-      // UserOp instead of a rule.
-      ...((): `0x${string}`[] => {
-        const a = grantPonsClassVault(grant);
-        return a ? [a] : [];
-      })(),
     ],
-    allowedAssets: [CASH.USDG as `0x${string}`, ...watchTokens.map((token) => token.address)],
+    allowedAssets: [CASH.USDT as `0x${string}`, ...watchTokens.map((token) => token.address)],
     sellableAssets: [...sellableAssets(grant)],
-    // The quote side only -- see AgentLimits.quoteAssets. sellableAssets minus
-    // this is the set of tokens a curve trade could be buying INTO.
+    // The quote side only -- see AgentLimits.quoteAssets.
     quoteAssets: [...builtinGrantTargets(grant)],
-    knownCurves,
     ...(grantTrencher(grant) ? {trencherVault:grantTrencher(grant)!.vault,knownTrencherAssets:[]} : {}),
-    // THE CLASS FLAG. Same accessor as the target entry above, deliberately —
-    // one source, so the address checkPolicy calls a class trade and the address
-    // it will permit as a target can never be two different things.
-    //
-    // Spread, not `ponsClassVault: grantPonsClassVault(grant) ?? undefined`,
-    // because ABSENT and PRESENT are the two states AgentLimits reads and a key
-    // holding undefined is neither in the eyes of a fixture that spreads it.
-    ...((): { ponsClassVault?: string } => {
-      const a = grantPonsClassVault(grant);
-      return a ? { ponsClassVault: a } : {};
-    })(),
     // THE TRANSFER PERMISSION, MIRRORED. checkPolicy has always known how to
     // judge this — it was simply never told. A grant without the transfer
     // marker has NO USDG transfer permission in its call policy:
@@ -133,20 +45,8 @@ export function limitsFromGrant(
     // transfer intent rather than just the Telegram command — and it turns an
     // opaque on-chain revert into the sentence checkPolicy already writes.
     ...(grantHasTransfer(grant) ? {} : { withdrawalAddresses: [] as string[] }),
-    // THE ENERGY BUY, MIRRORED — from the GRANT, and NOT into allowedTargets.
-    //
-    // grantEnergyRoute answers only for the GRANT_ENERGY marker on chain 4663,
-    // which is exactly when the wall sealed the v2 swap permission (both signers
-    // mint the marker from the same boolean that built it). The router is kept
-    // OUT of allowedTargets on purpose: there it would let any `swap` intent
-    // name it, and the swap builder would route that through a v3 router it
-    // never quoted. Only an `energy-buy` is judged against this (policy.ts).
-    ...((): { energy?: { router: string; token: string } } => {
-      const route = grantEnergyRoute(grant);
-      return route ? { energy: { router: route.router, token: route.path[route.path.length - 1]! } } : {};
-    })(),
     // THE LIGHTER ROUTE, MIRRORED — from the GRANT, and NOT into allowedTargets
-    // (docs/perps.md rule 3; the energy precedent above).
+    // (docs/perps.md rule 3).
     //
     // grantPerp answers only for the perp-lighter-v1 marker on chain 4663 with
     // the route's key index and a canonical public key — all four, which is
@@ -156,7 +56,7 @@ export function limitsFromGrant(
     // (`perp-not-granted`) instead of building a UserOp the chain refuses. The
     // proxy stays OUT of allowedTargets because the wall reaches it through
     // three exact selectors and the USDG approve's ONE_OF spenders only; listed
-    // with the generic targets, any `swap` or `vault-deposit` could name it.
+    // with the generic targets, any `swap` could name it.
     // The sealed private-key blob (`apiKeySealed`) is deliberately not copied:
     // limits are logged and shown, and nothing that judges needs it.
     ...((): { perp?: { proxy: `0x${string}`; apiKeyIndex: number; apiPublicKey: `0x${string}` } } => {
@@ -164,7 +64,7 @@ export function limitsFromGrant(
       return p ? { perp: { proxy: LIGHTER_ROUTE_V1.proxy, apiKeyIndex: p.apiKeyIndex, apiPublicKey: p.apiPublicKey } } : {};
     })(),
     // So the breaker can tell a de-risking sell (swap INTO cash) from a buy.
-    cashToken: CASH.USDG as string,
+    cashToken: CASH.USDT as string,
     maxDrawdownBps: grant.caps.maxDrawdownPct * 100,
     expiresAt: grant.expiresAt,
     maxOpsPerDay: grant.caps.maxOpsPerDay,

@@ -7,7 +7,7 @@
  * of a model call. Now:
  *
  *   - `cannotBuy` names those symbols in the signals, routed the way
- *     proposalsToIntents routes them (a curve leg asks the curve gate);
+ *     proposalsToIntents routes them;
  *   - a buy of one is withheld before it is journaled, with a note to the
  *     owner, and counted as the key's refusal if nothing else went out;
  *   - a SELL of one is untouched — the gate is never asked about an exit;
@@ -19,8 +19,10 @@ import { describe, it } from "node:test";
 import { entryGatesOf } from "../entry-gates";
 import type { Snapshot, Strategy, Tick } from "../strategies/types";
 import type { ProposalDriver, Signals } from "./driver";
-import type { CurveLeg } from "./proposals";
 import { makeLlmStrategist, type StrategistDecision } from "./strategy";
+
+// 6dp micro figures, scaled to 18dp USDT base units.
+const MICRO = 10n ** 12n;
 
 const TSLA = "0x0000000000000000000000000000000000000001" as const;
 const MEME = "0x0000000000000000000000000000000000000002" as const;
@@ -32,20 +34,20 @@ const ROUTER = "0x00000000000000000000000000000000000000ff" as const;
 const GATES = entryGatesOf({ allowedAssets: [USDG, TSLA, MEME, PEPE], sellableAssets: [USDG, TSLA, PEPE] });
 
 const snap = (over: Partial<Snapshot> = {}): Snapshot => ({
-  cashUsdg: 100_000_000n,
+  cashUsdg: (100_000_000n * MICRO),
   vaultUsdg: 0n,
   holdings: new Map(),
   prices: new Map(),
   pausedTokens: new Set(),
   staleFeeds: new Set(),
   sequencerUp: true,
-  spendHeadroomUsdg: 1_000_000_000n,
-  perTradeCapUsdg: 10_000_000n,
+  spendHeadroomUsdg: (1_000_000_000n * MICRO),
+  perTradeCapUsdg: (10_000_000n * MICRO),
   entryGates: GATES,
   ...over,
 });
 
-function build(actions: unknown[], over: { curve?: boolean } = {}) {
+function build(actions: unknown[]) {
   let seen: Signals | null = null;
   const decisions: StrategistDecision[] = [];
   const notes: string[] = [];
@@ -63,19 +65,9 @@ function build(actions: unknown[], over: { curve?: boolean } = {}) {
       legs: new Map([["TSLA", TSLA], ["MEME", MEME]]),
       swapRouter: ROUTER,
       usdg: USDG,
-      maxPerActionUsdg: 10_000_000n,
+      maxPerActionUsdg: (10_000_000n * MICRO),
       maxActionsPerTick: 4,
     },
-    ...(over.curve
-      ? {
-          curveLegsNow: () => ({
-            legs: new Map([["PEPE", curveLeg()]]),
-            tokens: new Map([["PEPE", PEPE as `0x${string}`]]),
-            slippageBps: 100,
-            maxImpactBps: 10_000,
-          }),
-        }
-      : {}),
     decisionIntervalMs: 0,
     onDecision: (d) => void decisions.push(d),
     onNote: (level, m) => {
@@ -97,25 +89,6 @@ describe("the model is told", () => {
     await tickOf(b.s, snap());
     assert.deepEqual(b.signals()?.cannotBuy, ["MEME"]);
     assert.ok(b.signals()?.tradableSymbols.includes("MEME"));
-  });
-
-  it("a curve leg asks the CURVE gate — the venue proposalsToIntents would route it to", async () => {
-    const narrow = entryGatesOf({ allowedAssets: [USDG, TSLA, MEME, PEPE], sellableAssets: [USDG, TSLA, MEME] });
-    const b = build([], { curve: true });
-    await tickOf(b.s, snap({ entryGates: narrow }));
-    assert.deepEqual(b.signals()?.cannotBuy, ["PEPE"]);
-  });
-
-  it("and NOT the swap gate: a curve leg in the grant but not watched is buyable, as the wall says", async () => {
-    // The case above gates PEPE on both venues, so it cannot tell which one
-    // was asked. Here only the swap gate would refuse PEPE (`asset-allowlist`,
-    // not watched); the curve branch never reads the watch list, and the
-    // wall accepts the curve buy. Asking the swap gate would withhold a buy
-    // the wall lets through — this mirror going stricter than the chain.
-    const signedNotWatched = entryGatesOf({ allowedAssets: [USDG, TSLA, MEME], sellableAssets: [USDG, TSLA, MEME, PEPE] });
-    const b = build([], { curve: true });
-    await tickOf(b.s, snap({ entryGates: signedNotWatched }));
-    assert.equal(b.signals()?.cannotBuy, undefined);
   });
 
   it("omitted when nothing is gated, and when the hint was never read", async () => {
@@ -159,7 +132,7 @@ describe("and held to it", () => {
   });
 
   it("A SELL OF THE SAME COIN IS UNTOUCHED — the gate is never asked about an exit", async () => {
-    const holdings = new Map([["MEME", { token: MEME, rawBalance: 10n ** 18n, valueUsdg: 8_000_000n, priceStale: false }]]);
+    const holdings = new Map([["MEME", { token: MEME, rawBalance: 10n ** 18n, valueUsdg: (8_000_000n * MICRO), priceStale: false }]]);
     const b = build([{ action: "sell", symbol: "MEME", sizeUsdg: 8, reason: "done with it" }]);
     const t = await tickOf(b.s, snap({ holdings }));
     assert.equal(t.intents.length, 1);
@@ -180,17 +153,3 @@ describe("and held to it", () => {
   });
 });
 
-function curveLeg(): CurveLeg {
-  return {
-    curve: "0x00000000000000000000000000000000000000c0",
-    quoteToken: USDG,
-    adapter: "0x00000000000000000000000000000000000000ad",
-    reserves: {
-      quoteRaw: 400_000_000n,
-      tokenRaw: 4_000_000_000_000_000_000_000n,
-      quoteDecimals: 6,
-      tokenDecimals: 18,
-      graduationThresholdRaw: 5_000_000_000n,
-    },
-  } as CurveLeg;
-}

@@ -156,7 +156,6 @@ describe("and it never buys what it can never sell", () => {
     const backstop = at("if (entry && entryGateRows.withhold(intent, active.limits)) continue;");
     assert.ok(entry < backstop, "an exit is never asked — `entry` decides first");
     assert.ok(backstop < at("tgClaimGroupEntry(intent)"), "before a group claim is spent");
-    assert.ok(backstop < at("await claimEntry()"), "before energy is claimed");
     assert.ok(backstop < at("await ensureDecision("), "before a decision row is written");
   });
 
@@ -168,13 +167,11 @@ describe("and it never buys what it can never sell", () => {
     };
     const settle = at("entryGateRows.settle(intent, active.limits, facts);");
     // Every `continue` between the backstop and the wall — a refused group
-    // claim, closed energy, a failed decision row — comes first, so none of
+    // claim, a failed decision row — comes first, so none of
     // them can spend the one row with nothing written.
     assert.ok(at("if (groupEntry?.group && !groupEntry.ok) continue;") < settle);
-    assert.ok(at("await withholdEntry(agentId);") < settle);
     assert.ok(at("if (!stamped.ok) {") < settle);
     assert.ok(at("const facts = await processIntentReporting(intent, equityUsdg, !bookIncomplete);") < settle, "with what the wall wrote");
-    assert.ok(settle < at("const exits = await proposeClassExits();"), "in the strategy loop, not the class route");
     assert.equal((INDEX.match(/entryGateRows\.settle\(/g) ?? []).length, 1);
   });
 

@@ -36,7 +36,7 @@
  */
 
 import { createPublicClient, erc20Abi, formatUnits, http, type Address, type Chain } from "viem";
-import { robinhoodChain, robinhoodTestnet } from "@agentcap/core";
+import { bnbChain, bnbTestnet } from "@agentcap/core";
 import { classifyBalance, ownerFromAddress, planRecovery, sweepList } from "@agentcap/recover";
 
 export interface Holding {
@@ -76,7 +76,7 @@ export interface Lookup {
   input: Address;
   chainId: number;
   /** The address read AS AN OWNER: the account it derives, and what that holds. */
-  asOwner: { derived: Address; reading: Reading; classVault: Address | null; classHoldings: Holding[] } | null;
+  asOwner: { derived: Address; reading: Reading } | null;
   /** Why the owner reading is absent, when it is. */
   ownerError: string | null;
   /** The address read AS AN ACCOUNT, directly. */
@@ -85,8 +85,8 @@ export interface Lookup {
 }
 
 export const CHAINS: Record<number, Chain> = {
-  [robinhoodChain.id]: robinhoodChain,
-  [robinhoodTestnet.id]: robinhoodTestnet,
+  [bnbChain.id]: bnbChain,
+  [bnbTestnet.id]: bnbTestnet,
 };
 
 const clientFor = (chain: Chain) => createPublicClient({ chain, transport: http() });
@@ -100,7 +100,7 @@ const shortReason = (e: unknown) => {
 /** Read one address directly — no derivation, no assumptions about what it is. */
 export async function readAddress(chain: Chain, address: Address): Promise<Reading> {
   const client = clientFor(chain);
-  const tokens = sweepList(chain.id);
+  const tokens = sweepList();
   const unreadable: string[] = [];
 
   const deployed = await client
@@ -151,13 +151,9 @@ export type OwnerReading = NonNullable<Lookup["asOwner"]>;
 /**
  * Read the address AS AN OWNER: derive its account and read that.
  *
- * MUCH SLOWER THAN THE DIRECT READ, and separated from it for exactly that
- * reason. `planRecovery` also looks for a class vault, which means scanning a
- * very large block range for the log that names it — measured at roughly thirty
- * seconds against chain 4663. Awaiting both halves together made the whole page
- * wait on this one, so somebody who pasted their account address sat in front of
- * "reading the chain…" for half a minute before seeing a balance that had been
- * available in two seconds.
+ * SEPARATE FROM THE DIRECT READ, because it derives the account first and then
+ * plans a sweep of it. Awaiting both halves together would make the whole page
+ * wait on the slower one.
  */
 export async function readAsOwner(chain: Chain, address: Address): Promise<OwnerReading> {
   const plan = await planRecovery({ chain, owner: ownerFromAddress(address) });
@@ -180,14 +176,6 @@ export async function readAsOwner(chain: Chain, address: Address): Promise<Owner
       })),
       unreadable: plan.unreadable,
     } satisfies Reading,
-    classVault: plan.classVault ?? null,
-    classHoldings: plan.classHoldings.map((h) => ({
-      symbol: h.symbol,
-      address: h.token,
-      raw: h.raw,
-      decimals: h.decimals,
-      amount: h.amount,
-    })),
   };
 }
 
@@ -245,7 +233,7 @@ export type Verdict =
  */
 export function verdictOf(l: Lookup): Verdict {
   const ownerReading = l.asOwner?.reading ?? null;
-  const ownerHas = hasValue(ownerReading) || (l.asOwner?.classHoldings.length ?? 0) > 0;
+  const ownerHas = hasValue(ownerReading);
   const accountHas = hasValue(l.asAccount);
 
   if (ownerHas && accountHas) return { kind: "both" };

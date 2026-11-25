@@ -14,10 +14,11 @@
  * only two shapes it is ever shown in.
  */
 
+import { cashNumber } from "../../../packages/core/src/cash";
 import type { SQLInputValue } from "node:sqlite";
 import type { PublicClient } from "viem";
 
-import { isEnergyReserveToken, type CustomToken } from "../../../packages/core/src/index";
+import { type CustomToken } from "../../../packages/core/src/index";
 import { rejectRuleLabel } from "../thesis-policy";
 import {
   isRestartCopy,
@@ -130,12 +131,9 @@ export const KEY_INSTALL_LABEL = "your trading key's permissions";
  */
 export const ENERGY_LABEL = "energy ($AGENTCAP)";
 
-/**
- * Is this row an energy purchase? The worker's own kind, or — for an older
- * or recovered row — a non-cash leg that is the energy reserve token.
- */
-export function isEnergyRow(r: { kind: string; sell_token?: string | null; buy_token?: string | null }): boolean {
-  return r.kind === ENERGY_BUY_KIND || isEnergyReserveToken(nonCashLeg(r));
+/** Is this a historical energy purchase row (the persisted kind)? */
+export function isEnergyRow(r: { kind: string }): boolean {
+  return r.kind === ENERGY_BUY_KIND;
 }
 
 /** Asked for "agentcap", "$AGENTCAP" or "energy", the energy rows answer. */
@@ -230,7 +228,7 @@ async function view(db: LabelDb, agentId: string, r: RawRow, own: readonly strin
     if (facts) {
       token = token ?? facts.token;
       side = side ?? facts.side;
-      usdg = Number(facts.cashUsdg) / 1e6;
+      usdg = cashNumber(facts.cashUsdg);
       if (facts.blockTime) {
         at = facts.blockTime;
         atIsRestart = false;
@@ -239,11 +237,10 @@ async function view(db: LabelDb, agentId: string, r: RawRow, own: readonly strin
   }
   // An equity order names its stock in `target` — the one row shape where it does.
   const equityTicker = r.kind === "equity-order" && r.target && !/^0x/i.test(r.target) ? r.target.toUpperCase() : null;
-  // AN ENERGY PURCHASE IS NAMED FOR WHAT IT IS, by kind or by its reserve leg
-  // (a restart copy's leg comes from its receipt, above). It is only ever
-  // bought, so a leg-less row of the worker's own kind is a buy.
-  const energy = r.kind === ENERGY_BUY_KIND || isEnergyReserveToken(token);
-  if (energy && side === null && r.kind === ENERGY_BUY_KIND) side = "buy";
+  // A HISTORICAL ENERGY PURCHASE IS NAMED FOR WHAT IT IS. It was only ever
+  // bought, so a leg-less row of that kind is a buy.
+  const energy = r.kind === ENERGY_BUY_KIND;
+  if (energy && side === null) side = "buy";
   const lbl = token && !energy
     ? o.client
       ? await tokenLabel(db, agentId, token, { customTokens: o.customTokens, own, client: o.client })

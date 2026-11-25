@@ -1,5 +1,5 @@
 /**
- * THE FACT LAYER — what was measurably true when a class trade was decided.
+ * THE FACT LAYER — the closed vocabulary a published post is written from.
  *
  * ── WHY THERE ARE TWO LAYERS AT ALL ──────────────────────────────────────
  *
@@ -36,7 +36,8 @@
  * this repo's oldest rule and the one most easily undone by a `?? 0` written in
  * a hurry.
  */
-import type { Why } from "./strategies/reasons";
+
+import { cashNumber } from "../../packages/core/src/cash";
 
 /**
  * A measurement rendered as one of a FIXED set of words.
@@ -100,8 +101,8 @@ export interface ClassEvidence {
   raw: Record<string, string | number | null>;
 }
 
-/** USDG, raw 6dp, as a number of whole units. */
-const usdgNum = (raw: bigint): number => Number(raw) / 1e6;
+/** Cash base units as a number of whole units. */
+const usdgNum = cashNumber;
 
 /**
  * BANDS, AND WHY THE EDGES ARE WHERE THEY ARE.
@@ -190,114 +191,6 @@ export function heldBand(heldSec: number, maxHoldSec: number): Band {
   return "held briefly";
 }
 
-/** The thresholds a band is measured against — passed in, never guessed. */
-export interface BandBounds {
-  depthFloorUsdg: number;
-  roundTripCeilingBps: number;
-  exitAtBps: number;
-  activityFloorTrades: number;
-  impactCeilingBps: number;
-  maxHoldSec: number;
-}
-
-/**
- * Turn one `Why` from the class route into the fact layer.
- *
- * Returns null for any other `Why`, so a caller that passes the wrong thing
- * gets no evidence rather than evidence about something else.
- */
-export function classEvidenceOf(w: Why | null | undefined, b: BandBounds): ClassEvidence | null {
-  if (!w) return null;
-
-  if (w.code === "class-enter") {
-    const bands: Record<string, Band> = {
-      depth: depthBand(usdgNum(w.depthRaw), b.depthFloorUsdg),
-      curve: curveBand(w.graduationBps, b.exitAtBps),
-      impact: impactBand(w.impactBps, b.impactCeilingBps),
-    };
-    // ABSENT, NOT ZERO. A null tape contributes no key at all, so a writer
-    // handed these bands has nothing to say about buyers and cannot invent it.
-    if (w.trades !== null) bands.activity = activityBand(w.trades, b.activityFloorTrades);
-    if (w.traders !== null && w.trades !== null) {
-      const breadth = breadthBand(w.traders, w.trades);
-      if (breadth) bands.breadth = breadth;
-    }
-    if (w.costBps !== null) bands.cost = costBand(w.costBps, b.roundTripCeilingBps);
-    if (w.field > 1) bands.field = "picked over others";
-    return {
-      act: "enter",
-      symbol: w.symbol,
-      decidedBy: "rule",
-      bands,
-      raw: {
-        usdg: usdgNum(w.usdgRaw),
-        trades: w.trades,
-        traders: w.traders,
-        depthUsdg: usdgNum(w.depthRaw),
-        impactBps: w.impactBps,
-        costBps: w.costBps,
-        graduationBps: w.graduationBps,
-        field: w.field,
-      },
-    };
-  }
-
-  if (w.code === "class-exit") {
-    const bands: Record<string, Band> = {
-      held: heldBand(w.heldSec, b.maxHoldSec),
-    };
-    /**
-     * THE CAUSE IS A BAND ONLY WHEN IT ADDS SOMETHING.
-     *
-     * The clock fires at `heldSec >= maxHold`, so `heldBand` has ALREADY
-     * returned "held its full window" — every clock exit would carry that
-     * sentence twice, which the first run of the harness printed back as
-     * "held its full window · held its full window · curve building". Two slots
-     * of a small evidence budget spent saying one thing, and a writer handed a
-     * doubled phrase reasonably concludes it is being emphasised.
-     *
-     * The cliff is different and needs its own words: a position can be sold
-     * having been held five minutes, and the reason is a contract that is about
-     * to stop accepting sells rather than anything about the clock.
-     */
-    /**
-     * WHY IT LEFT, IN WORDS THAT LEAVE NO ROOM FOR A BETTER STORY.
-     *
-     * The first run of this produced "I sensed the upside was capped" for a
-     * clock exit and "before the rally could finish" for a cliff one. Neither is
-     * a fabricated MEASUREMENT — the gate is right to admit them — and both are
-     * fabricated REASONS, which is just as bad in public: the clock is a rule
-     * the owner set and has nothing to do with upside, and the cliff is a
-     * contract that stops accepting sells and has nothing to do with a rally.
-     *
-     * A writer handed only "held its full window" will reach for a market
-     * narrative, because that is what a sentence about selling normally has in
-     * it. So it is given the actual reason instead of being left to infer one.
-     * This is the cheaper half of the no-invention rule: the expensive half
-     * refuses bad output, this half removes the reason to produce it.
-     */
-    bands.why =
-      w.cause === "cliff"
-        ? "sold because the vault cannot sell it once it graduates, not because of the price"
-        : "sold on my own time limit, not on anything the market did";
-    if (w.graduationBps !== null) bands.curve = curveBand(w.graduationBps, b.exitAtBps);
-    return {
-      act: "exit",
-      symbol: w.symbol,
-      decidedBy: "rule",
-      bands,
-      raw: {
-        heldSec: w.heldSec,
-        graduationBps: w.graduationBps,
-        proceedsUsdg: usdgNum(w.proceedsRaw),
-        cause: w.cause,
-      },
-    };
-  }
-
-  return null;
-}
-
 /**
  * Every band word this module can produce, for any bounds.
  *
@@ -309,7 +202,7 @@ export function classEvidenceOf(w: Why | null | undefined, b: BandBounds): Class
  */
 export function everyBand(): ReadonlySet<Band> {
   const out = new Set<Band>();
-  const bounds: BandBounds = {
+  const bounds = {
     depthFloorUsdg: 100,
     roundTripCeilingBps: 600,
     exitAtBps: 8500,

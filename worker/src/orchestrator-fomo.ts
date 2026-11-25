@@ -66,7 +66,7 @@ import {
   type CohortWindowStats,
 } from "./fomo/cohort";
 import { policyFor } from "./fomo/freshness";
-import { isRobinhoodToken, robinhoodChain, tokenFromKey, tokenIdentity } from "./fomo/identity";
+import { isRobinhoodToken, bnbChain, tokenFromKey, tokenIdentity } from "./fomo/identity";
 import {
   createIngestor,
   evidenceRevOf,
@@ -302,8 +302,8 @@ export const TAIL_ENDED_KEEP_MS = FOMO_LIMITS.tailEndedKeepMs;
 const TAIL_EVENT_SCAN = 60;
 /** Events read to tally a whole ended tail (a floor past this, said so). */
 const TAIL_TOTALS_SCAN = 500;
-/** Robinhood Chain token keys, for the thesis read's prefix. */
-const ROBINHOOD_KEY_PREFIX = "eip155:4663:";
+/** Our chain's (BNB Chain) token keys, for the thesis read's prefix. */
+const ROBINHOOD_KEY_PREFIX = "eip155:56:";
 /** A replica that is not the leader asks for the lease this often. */
 const LEASE_RETRY_MS = MIN;
 /** The leader's interest snapshot (cohort, deps, watches, holdings) is rebuilt this often. */
@@ -944,7 +944,7 @@ export function xpostConsentLookup(db: Db): (tenant: string) => Promise<{ accoun
  */
 export function heldTokensFrom(byTenant: ReadonlyMap<string, readonly string[]>): Map<string, string[]> {
   const out = new Map<string, string[]>();
-  const chain = robinhoodChain();
+  const chain = bnbChain();
   for (const [tenant, addresses] of byTenant) {
     const t = tenantKey(tenant);
     if (!t) continue;

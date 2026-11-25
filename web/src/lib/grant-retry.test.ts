@@ -146,8 +146,7 @@ it("a legacy bound retry still requires both its distinct login signer and owner
 
 it("permission status matching includes every bound and stable provenance field, not just the session key",()=>{
   const complete:Grant={...grant,grantFeatures:["scoped-spenders","tradeable-v2"],grantTokens:[`0x${"e".repeat(40)}`],
-    v4AdapterAddress:`0x${"1".repeat(40)}`,ponsAdapterAddress:`0x${"2".repeat(40)}`,ponsClassVaultAddress:`0x${"3".repeat(40)}`,
-    ponsClassVaultFactoryAddress:`0x${"4".repeat(40)}`,trencherVaultAddress:`0x${"5".repeat(40)}`,trencherFactoryAddress:`0x${"6".repeat(40)}`};
+    trencherVaultAddress:`0x${"5".repeat(40)}`,trencherFactoryAddress:`0x${"6".repeat(40)}`};
   const {serialized:_serialized,demoSessionPrivateKey:_session,...publicView}=complete;
   assert.equal(sameGrantPermission(publicView,complete),true);
   assert.equal(sameGrantPermission({...publicView,binding:{...publicView.binding!,nonce:"fresh-one-time-link",ownerSignature:"0x1234"}},complete),true);
@@ -158,7 +157,7 @@ it("permission status matching includes every bound and stable provenance field,
   for(const key of ["chainId","grantedAt","expiresAt"] as const){
     assert.equal(sameGrantPermission({...publicView,[key]:publicView[key]+1},complete),false,key);
   }
-  for(const key of ["owner","smartAccount","sessionKeyAddress","v4AdapterAddress","ponsAdapterAddress","ponsClassVaultAddress","ponsClassVaultFactoryAddress","trencherVaultAddress","trencherFactoryAddress"] as const){
+  for(const key of ["owner","smartAccount","sessionKeyAddress","trencherVaultAddress","trencherFactoryAddress"] as const){
     assert.equal(sameGrantPermission({...publicView,[key]:`0x${"f".repeat(40)}`},complete),false,key);
     assert.equal(sameGrantPermission({...publicView,[key]:undefined},complete),false,`missing ${key}`);
   }
@@ -181,7 +180,7 @@ it("a Privy Spot resume still matches its server view after perps slice 5b, and 
   // naming no wallet this build knows, matches nothing.
   assert.equal(sameGrantPermission({ ...spotView, purpose: "perps" }, grant), false);
   assert.equal(sameGrantPermission(spotView, { ...grant, purpose: "perps" }), false);
-  assert.equal(sameGrantPermission({ ...spotView, purpose: "solana" } as never, grant), false);
+  assert.equal(sameGrantPermission({ ...spotView, purpose: "other" } as never, grant), false);
 });
 
 

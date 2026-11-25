@@ -110,7 +110,7 @@ export function parseRepairArgs(args: readonly string[]): RepairArgs {
 
 // ── the chain transport ──────────────────────────────────────────────────────
 
-const FEED = (CASH_FEEDS.ETH_USD as string).toLowerCase();
+const FEED = (CASH_FEEDS.BNB_USD as string).toLowerCase();
 /** The three view calls this tool makes, by selector: decimals(), latestRoundData(), getRoundData(uint80). */
 const FEED_SELECTORS = [
   encodeFunctionData({ abi: CHAINLINK_ABI, functionName: "decimals" }),

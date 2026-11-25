@@ -25,7 +25,7 @@ const { DatabaseSync } = await import("node:sqlite");
 
 const A = "0x00000000000000000000000000000000000000a1";
 const B = "0x00000000000000000000000000000000000000b2";
-const USDG = CASH.USDG;
+const USDG = CASH.USDT;
 const COIN = "0x1111111111111111111111111111111111111111";
 const CLASS = "0x2222222222222222222222222222222222222222";
 const FAKE = "0x3333333333333333333333333333333333333333";
@@ -72,7 +72,7 @@ describe("fillSymbolFor", () => {
   });
   it("the cash legs and non-addresses have no fill name", () => {
     assert.equal(fillSymbolFor(USDG, ["X"]), null);
-    assert.equal(fillSymbolFor(CASH.WETH, ["X"]), null);
+    assert.equal(fillSymbolFor(CASH.WBNB, ["X"]), null);
     assert.equal(fillSymbolFor("NVDA", ["X"]), null);
   });
 });

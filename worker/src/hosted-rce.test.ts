@@ -15,18 +15,17 @@ import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { buildStrategy, type StrategyBuildOpts } from "./strategies/registry";
 import { mergeSettings } from "./settings";
-import { UNISWAP, type AgentCapSettings } from "../../packages/core/src/index";
+import { PANCAKESWAP, type AgentCapSettings } from "../../packages/core/src/index";
 
 afterEach(() => {
   delete process.env.AGENTCAP_HOSTED;
 });
 
 const opts = (onNote?: StrategyBuildOpts["onNote"]): StrategyBuildOpts => ({
-  swapRouter: UNISWAP.swapRouter02 as `0x${string}`,
+  swapRouter: PANCAKESWAP.smartRouter as `0x${string}`,
   usdg6: (v: number) => BigInt(Math.round(v * 1e6)),
   basketSymbols: ["AAPL"],
   buyPerTickUsdg: 5,
-  idleFloorUsdg: 200,
   gapEnterBudgetUsdg: 10,
   llm: { creds: null, intervalMin: 30, maxActionUsdg: 5 },
   onNote,

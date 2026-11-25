@@ -208,7 +208,6 @@ export function evenKeelTick(cfg: EvenKeelConfig, snap: Snapshot): Tick {
           code: "under-one-buy",
           cashRaw: snap.cashUsdg,
           needRaw: cfg.seedBudgetUsdg,
-          vaultRaw: snap.vaultUsdg,
         },
       };
     }

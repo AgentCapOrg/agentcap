@@ -14,6 +14,8 @@
  * symbol is reduced to a plain ticker before it is written anywhere a model or
  * a group will read it.
  */
+// Type only: a value import would pull viem into the keyless recovery read graph.
+import type { bnbChain } from "../../../packages/core/src/chain";
 import type { GeckoFetch, GeckoPool, PoolFeed } from "../venues/geckoterminal";
 import type { TgDeskAsk, TgDeskStance, TgDeskThought } from "../telegram/tg-groups/types";
 import type { BarsRead } from "./gecko";
@@ -42,6 +44,7 @@ export interface DeskReads {
   now(): number;
 }
 
+const CHAIN_ID: typeof bnbChain.id = 56;
 const CURVE_DEX = "pons-v2";
 const QUOTES = new Set(["WETH", "ETH", "USDG", "USDC", "USDT", "USDE", "DAI", "WBTC"]);
 
@@ -235,7 +238,7 @@ export async function measureCoin(ask: Extract<TgDeskAsk, { kind: "coin" }>, rea
     ...(reads.lore ? [budget.run((options) => reads.lore!(token, options), { failed: true } as LoreRead, sliceMs)
       .then((value) => {
         const candidate = value.failed ? undefined : value.profile;
-        if (candidate?.chainId === 4663 && candidate.token.toLowerCase() === token && candidate.description) profile = candidate;
+        if (candidate?.chainId === CHAIN_ID && candidate.token.toLowerCase() === token && candidate.description) profile = candidate;
         onPartial?.(fromChart(chart));
       })] : []),
     budget.run((options) => reads.hourly(pool.poolId, token, options), unavailable, sliceMs)

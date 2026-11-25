@@ -36,7 +36,7 @@ import {
   isValidCustomToken,
   officialCoinsFor,
   perpsNumberOk,
-  robinhoodChain,
+  bnbChain,
   type LlmProviderInfo,
   type AgentCapSettings,
   type PerpsDriver,
@@ -55,7 +55,6 @@ import { parseAmount, settingDecimals } from "@/lib/parse-amount";
 import { getSettingsStore, putSettingsIfUnchanged, readSettingsVersioned } from "@agentcap/settings-store";
 import { agentNameSave } from "@/lib/settings-agent-name";
 import { clearsStaleProviderModel } from "@/lib/settings-llm-model";
-import { withoutEnergyReserve, withoutReserveBasket } from "@/lib/energy-reserve";
 import {
   botClaimForSave,
   isBotToken,
@@ -89,7 +88,6 @@ export interface SettingsView {
   groqApiKey: SecretView;
   anthropicApiKey: SecretView;
   llmApiKey: SecretView;
-  rialtoApiKey: SecretView;
   telegramBotToken: SecretView;
   telegramTranscribeKey: SecretView;
   virtualsApiKey: SecretView;
@@ -139,8 +137,7 @@ export interface SettingsView {
 }
 
 const STRATEGIES_DIR = homePaths.strategies();
-// Free + Merry Circle (holder-gated) builtins — both selectable; the worker runs
-// the Circle ones only for $AGENTCAP holders. Mirrors worker/src/strategies/registry.ts.
+// The builtins. Mirrors worker/src/strategies/registry.ts.
 const BUILTIN_STRATEGIES = ["steady-basket", "weekend-gap", "llm-strategist", "trencher", "even-keel", "dip-hunter"];
 
 async function listCustomStrategies(): Promise<string[]> {
@@ -253,7 +250,6 @@ export async function GET(req: Request) {
   const tenant = isHostedMode() ? tenantOf(req) : null;
   const stored: AgentCapSettings = isHostedMode() && !tenant ? {} : await readStored(tenant);
   const { secrets, values } = splitSecrets(stored);
-  const servedTokens = withoutEnergyReserve(values.customTokens);
   // These URL fields can embed API keys — redact before they leave the server.
   const safeValues = {
     ...values,
@@ -261,20 +257,13 @@ export async function GET(req: Request) {
     rpcMainnet: redactUrl(values.rpcMainnet),
     rpcTestnet: redactUrl(values.rpcTestnet),
     telegramTranscribeBase: redactUrl(values.telegramTranscribeBase),
-    // Every signer builds its wall from this list — an old iOS engine or a
-    // stale tab would seal $AGENTCAP from it and be refused (energy-reserve.ts).
-    customTokens: servedTokens,
-    // AND THE BASKET SYMBOL ONLY THAT RESERVE ENTRY SUPPLIED, or every client
-    // that saves both fields is refused for a coin its own list no longer
-    // has (energy-reserve.ts withoutReserveBasket). Read-side, like the above.
-    basketSymbols: withoutReserveBasket(values.basketSymbols, values.customTokens, selectableSymbols(servedTokens)),
   };
   const view: SettingsView = {
     ...secrets,
     values: safeValues,
     defaults: SETTINGS_DEFAULTS,
     knownSymbols: STOCK_TOKENS.map((t) => t.symbol),
-    officialCoins: officialCoinsFor(robinhoodChain.id).map((c) => c.symbol),
+    officialCoins: officialCoinsFor(bnbChain.id).map((c) => c.symbol),
     strategies: { builtin: BUILTIN_STRATEGIES, custom: await listCustomStrategies() },
     llmProviders: LLM_PROVIDERS,
     owner: isHostedMode() ? (tenant ?? "") : null,
@@ -315,7 +304,6 @@ const NUM_FIELDS: Record<string, [number, number]> = {
   // is also off. A tight floor on a small ticket pays the chain to churn — gas
   // is 0.44-0.78 USDG a leg, so a 10 USDG round trip is 9-16% of notional.
   strategistStopLossBps: [0, 10_000],
-  idleFloorUsdg: [0, 1_000_000],
   gapEnterBudgetUsdg: [1, 1_000_000],
   paperStartUsdg: [1, 10_000_000],
   llmIntervalMin: [1, 1_440],
@@ -341,23 +329,6 @@ const NUM_FIELDS: Record<string, [number, number]> = {
   deskMaxSteps: [1, 12],
   scoutBudgetUsdg: [0, 1_000_000],
   scoutPerTokenUsdg: [0, 1_000_000],
-  // THE CLASS ROUTE. Bounded here as well as defaulted, for the reason
-  // deskMaxSteps is: these numbers ARE the exposure an owner is choosing.
-  //
-  // And present here at all because this handler is the only writer of the
-  // hosted tenant store — a field missing from this file is silently dropped
-  // while the PUT returns {ok:true}, which is exactly what happened to
-  // ponsAdapterAddress and made its deploy script and runbook impossible to
-  // follow.
-  classPerEntryUsdg: [0, 1_000_000],
-  classMaxPositions: [0, 1_000],
-  classMaxHoldSec: [60, 30 * 86_400],
-  classMinDepthUsdg: [0, 10_000_000],
-  // The class exit by curve progress: the worker's clamp (settings.ts, 1-100)
-  // and the chat spec's bounds. It was missing, so a change approved from an
-  // assistant or saved from a client came back {ok:true, ignored:[…]} and
-  // the owner's exit never moved (spec-coverage.test.ts holds the two lists equal).
-  classExitAtGraduationPct: [1, 100],
 };
 const BOOL_FIELDS = [
   "paperTradingEnabled",
@@ -399,11 +370,6 @@ const BOOL_FIELDS = [
   "trencherLiveEnabled",
   "trencherFastEnabled",
   "scoutEnabled",
-  // BUYING A TOKEN NOBODY ENUMERATED. See AgentCapSettings.classSnipeEnabled
-  // for what this actually permits. It is a SECOND decision on top of sealing a
-  // class vault at /grant — the signature says the key could reach class
-  // tokens, this says go and do it — and both are required.
-  "classSnipeEnabled",
   // THE ONLY ONE HERE THAT IS ON BY DEFAULT, so this entry is what lets an owner
   // turn something OFF rather than on — and a field missing from this list is
   // dropped with an {ok:true}, which for an opt-OUT means the owner's refusal is
@@ -688,14 +654,6 @@ async function saveSettings(
       errors.push(`strategy: not a builtin and no strategies/${String(v)}.ts file exists`);
     }
   }
-  if ("swapVenue" in body) {
-    const v = body.swapVenue;
-    if (v === "" || v === null || v === undefined) setOrClear("swapVenue", undefined);
-    else if (["uniswap", "rialto"].includes(v as string))
-      setOrClear("swapVenue", v as AgentCapSettings["swapVenue"]);
-    else errors.push("swapVenue: unknown venue");
-  }
-
   // ── strings with light validation ──────────────────────────────────────
   if ("breakerAddress" in body) {
     const v = body.breakerAddress;
@@ -703,52 +661,6 @@ async function saveSettings(
     else if (typeof v === "string" && /^0x[0-9a-fA-F]{40}$/.test(v.trim()))
       setOrClear("breakerAddress", v.trim());
     else errors.push("breakerAddress: must be a 0x… address");
-  }
-  if ("v4AdapterAddress" in body) {
-    const v = body.v4AdapterAddress;
-    if (v === "" || v === null || v === undefined) setOrClear("v4AdapterAddress", undefined);
-    else if (typeof v === "string" && /^0x[0-9a-fA-F]{40}$/.test(v.trim()))
-      setOrClear("v4AdapterAddress", v.trim());
-    else errors.push("v4AdapterAddress: must be a 0x… address");
-  }
-  // THE PONS ADAPTER. Absent from this allowlist until now, which made the
-  // deploy script's own instruction ("paste the address into /settings") and
-  // docs/owner-runbook-pons.md impossible to follow: this handler is the only
-  // writer of the hosted tenant store, and an unknown key returned {ok:true}
-  // with the field silently dropped. See the unknown-key rejection below —
-  // silent success is why a documented-but-unwired field went unnoticed.
-  if ("ponsAdapterAddress" in body) {
-    const v = body.ponsAdapterAddress;
-    if (v === "" || v === null || v === undefined) setOrClear("ponsAdapterAddress", undefined);
-    else if (typeof v === "string" && /^0x[0-9a-fA-F]{40}$/.test(v.trim()))
-      setOrClear("ponsAdapterAddress", v.trim());
-    else errors.push("ponsAdapterAddress: must be a 0x… address");
-  }
-  // THE CLASS VAULT FACTORY, which follows the note above rather than
-  // rediscovering it: the field is here so /settings can actually write it, and
-  // it is the FACTORY rather than a vault because a vault is CREATE2-salted with
-  // one smart account — the signer derives each account's own from this.
-  if ("ponsClassVaultFactory" in body) {
-    const v = body.ponsClassVaultFactory;
-    if (v === "" || v === null || v === undefined) setOrClear("ponsClassVaultFactory", undefined);
-    else if (typeof v === "string" && /^0x[0-9a-fA-F]{40}$/.test(v.trim()))
-      setOrClear("ponsClassVaultFactory", v.trim());
-    else errors.push("ponsClassVaultFactory: must be a 0x… address");
-  }
-  // $AGENTCAP holder wallet — a read-only address for the Merry Circle fee tier.
-  if ("holderAddress" in body) {
-    const v = body.holderAddress;
-    if (v === "" || v === null || v === undefined) setOrClear("holderAddress", undefined);
-    else if (typeof v === "string" && /^0x[0-9a-fA-F]{40}$/.test(v.trim()))
-      setOrClear("holderAddress", v.trim());
-    else errors.push("holderAddress: must be a 0x… address");
-  }
-  if ("rialtoApiKeyHeader" in body) {
-    const v = body.rialtoApiKeyHeader;
-    if (v === "" || v === null || v === undefined) setOrClear("rialtoApiKeyHeader", undefined);
-    else if (typeof v === "string" && /^[A-Za-z0-9-]{1,64}$/.test(v.trim()))
-      setOrClear("rialtoApiKeyHeader", v.trim());
-    else errors.push("rialtoApiKeyHeader: must be a plain header name");
   }
   if ("llmModel" in body) {
     const v = body.llmModel;
@@ -932,15 +844,7 @@ async function saveSettings(
       // selecting it in one save works.
       const custom = ("customTokens" in body ? body.customTokens : stored.customTokens) ?? [];
       const selectable = selectableSymbols(custom);
-      // A SYMBOL ONLY THE ENERGY RESERVE SUPPLIED IS DROPPED, NOT REFUSED. GET
-      // no longer serves the reserve, so a client built on an older view (or a
-      // stored basket that outlived its reserve entry) still sends AGENTCAP
-      // with nothing left to select it by — refusing it left the owner a basket
-      // they could not edit from any client (energy-reserve.ts).
-      const legs = withoutReserveBasket(v as unknown[], [
-        ...(Array.isArray(stored.customTokens) ? stored.customTokens : []),
-        ...(Array.isArray(body.customTokens) ? body.customTokens : []),
-      ], selectable) ?? [];
+      const legs = v as unknown[];
       const bad = legs.filter((s) => typeof s !== "string" || !selectable.has(s));
       if (bad.length > 0) errors.push(`basketSymbols: unknown symbols ${bad.join(", ")}`);
       else if (legs.length > 10) errors.push("basketSymbols: at most 10 legs");
@@ -954,10 +858,9 @@ async function saveSettings(
   //
   // This handler is an allowlist with no else, and it is the ONLY writer of the
   // hosted tenant store. A key it does not know about produced {ok:true} and
-  // vanished. Not hypothetical: deploy-ponsselftrade.ts and the Pons runbook both
-  // told the owner to save `ponsAdapterAddress` here, and for as long as that
-  // branch was missing the instruction was impossible to follow and said so to
-  // nobody.
+  // vanished. Not hypothetical: a runbook once told
+  // the owner to save a field here whose branch was missing, so the instruction
+  // was impossible to follow and said so to nobody.
   //
   // REPORTED, NOT REJECTED, deliberately. A 400 on unknown keys is the stricter
   // fix and would break every client that round-trips a settings blob containing
@@ -1061,8 +964,8 @@ async function saveSettings(
  *     perpetuals, and a true here would refuse the practice book
  *     (exec-mode.ts perpsModeOf, perp-live-not-enabled).
  * Every other key is REPORTED in `ignored` and never stored, as Spot's
- * handler reports a key it does not know: a secret, a URL, a Telegram token
- * or a holder address has no reader on this wallet, and a stored one would be
+ * handler reports a key it does not know: a secret, a URL or a Telegram token
+ * has no reader on this wallet, and a stored one would be
  * one more copy to leak.
  *
  * NEVER THE BOT CLAIM. A Telegram bot belongs to the login's Spot wallet

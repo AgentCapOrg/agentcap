@@ -343,7 +343,7 @@ describe("a buy post is about a fresh buy after consent, once", () => {
   it("never names a coin by an address-derived id", () => {
     assert.equal(coinOf({ name: null, symbol: "T7631DACC21B" }), null);
     assert.equal(coinOf({ name: "Pepe 2", symbol: "T7631DACC21B" }), null);
-    assert.equal(coinOf({ name: "pump.fun cat", symbol: null }), null);
+    assert.equal(coinOf({ name: "four.meme cat", symbol: null }), null);
     assert.deepEqual(coinOf({ name: "Pepe 2", symbol: "PEPE" }), { label: "PEPE", key: "pepe 2" });
     assert.deepEqual(coinOf({ name: "Moo Deng", symbol: "T7631DACC21B" }), { label: "Moo Deng", key: "moo deng" });
     assert.deepEqual(coinOf({ name: null, symbol: "TSLA" }), { label: "TSLA", key: "tsla" });

@@ -25,12 +25,23 @@ import {
   chainFactsPostgresLacks, chainGapCheck, knownChainFacts, ownerAnswersFor, ownerOperationsPresent, readPgEvidence, resumePreconditions, type GapChain,
 } from "./ledger-resume";
 import type { RawLog } from "./inflight-reconcile";
+import { usdt } from "./testdata/bnb-cash";
 
 type FixtureLog = [string, string[], string, string];
 interface Fixture { tx: string; block: string; timestamp: number; logs: FixtureLog[] }
 const FX = JSON.parse(readFileSync(new URL("./testdata/owner-operations-receipts.json", import.meta.url), "utf8")) as Record<string, Fixture>;
 const USDG = "0x5fc5360d0400a0fd4f2af552add042d716f1d168";
 const EP = "0x0000000071727de22e5e9d8baf0edac6f37da032";
+// The receipts were recorded at six decimals; cash is read at eighteen now.
+// Left as recorded, a $1.16 transfer would read as dust.
+const TRANSFER = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+for (const f of Object.values(FX)) {
+  for (const log of (f as Partial<Fixture>).logs ?? []) {
+    if (log[0].toLowerCase() === USDG && log[1][0]?.toLowerCase() === TRANSFER) {
+      log[2] = `0x${usdt(BigInt(log[2])).toString(16).padStart(64, "0")}`;
+    }
+  }
+}
 const UOE = "0x49628fd1471006c1482da88028e9ce4dbb080b815c9b0344d39e5a8e6ec1419f";
 const TENANT = "0x4b6dcd559c82ea897c34dacfb785fb0c8f85d4c5";
 const A4B = "0xa96bf429888e1aab4255762d17d29c53f6a0370d";

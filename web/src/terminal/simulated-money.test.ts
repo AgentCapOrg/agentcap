@@ -173,7 +173,7 @@ describe("an owner who needs to re-sign is told so where the money is", () => {
     // replaced, the prominent control read "re-sign this key (free)", and the
     // signature minted another testnet grant.
     const chained = autonomyOf({ mode: "paper", liveBlocker: "wrong-chain" });
-    assert.equal(chained.action?.chain, 4663, "the verdict names the target network");
+    assert.equal(chained.action?.chain, 56, "the verdict names the target network");
     assert.match(
       SURFACES["Desktop.tsx"],
       /action\.chain/,

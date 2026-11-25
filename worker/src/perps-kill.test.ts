@@ -8,11 +8,11 @@
  * (`accounts/perps`). Its kill archives that grant, owner key and all, into
  * that home's archive, then removes it; an archive it cannot write keeps the
  * grant, pauses that home and says the kill is incomplete. It runs before the
- * Spot grant is touched, like Solana's half, and a Spot-only install's kill
+ * Spot grant is touched, and a Spot-only install's kill
  * records a disabled Perps revision, with no grant or worker.
  *
  * The Telegram row runs the Perps half and the answer it renders, and reads
- * index.ts for the order, as solana-kill.test.ts does for Solana: the kill
+ * index.ts for the order: the kill
  * dependency lives inside the worker's start-up. `agentcap kill` is spawned
  * for real.
  */
@@ -24,7 +24,6 @@ import path from "node:path";
 import { test, type TestContext } from "node:test";
 import { fileURLToPath } from "node:url";
 import { PerpsKillIncomplete, PerpsPaperNotStopped, selfHostedPerpsKill, stopLocalPerpsForKill, stopPerpsForKill } from "./perps-kill";
-import { selfHostedSolanaKill } from "./solana-kill";
 import { killDoneText } from "./telegram/kill-confirm";
 
 type Owner = "spot-only" | "perps-only" | "two-wallet";
@@ -77,19 +76,18 @@ test("self-hosted: a Perps owner key that cannot be archived keeps that grant, p
   assert.ok(existsSync(path.join(perpsHome, "paused")));
 });
 
-test("the Telegram answer has a Perps line after the Solana one, and none for an owner without a Perps wallet", () => {
+test("the Telegram answer has a Perps line, and none for an owner without a Perps wallet", () => {
   assert.match(killDoneText({ ok: true, archived: "0xabc", perps: "stopped" }), /grant destroyed[\s\S]*Your Perps wallet's grant is revoked too: it can no longer sign anything\.$/);
-  assert.match(killDoneText({ ok: true, archived: null, solana: "stopped", perps: "stopped" }), /Your Solana strategy is stopped too\.\nYour Perps wallet's grant is revoked too/);
   assert.match(killDoneText({ ok: false, reason: "no grant", perps: "stopped" }), /^nothing to kill: no grant\nYour Perps wallet's grant is revoked too/);
   assert.match(killDoneText({ ok: true, archived: null, perps: "not-stopped" }), /Kill incomplete: your Perps wallet's grant could not be revoked and it may still sign\. \/kill again\.$/);
   // The grant went, the paper strategy could not be switched off: incomplete, and never said to be a live grant.
   const paper = killDoneText({ ok: true, archived: null, perps: "paper-not-stopped" });
   assert.match(paper, /Kill incomplete: your Perps wallet has no grant left, so nothing trades on it, but its practice perpetuals could not be switched off\./);
   assert.doesNotMatch(paper, /may still sign/);
-  assert.doesNotMatch(killDoneText({ ok: true, archived: null, solana: "stopped" }), /Perps/);
+  assert.doesNotMatch(killDoneText({ ok: true, archived: null }), /Perps/);
 });
 
-test("the worker's self-hosted Telegram kill runs the Perps half beside Solana's, before it touches the grant", () => {
+test("the worker's self-hosted Telegram kill runs the Perps half before it touches the grant", () => {
   const source = readFileSync(fileURLToPath(new URL("./index.ts", import.meta.url)), "utf8");
   const start = source.indexOf("    kill: async () => {");
   assert.ok(start > 0, "the Telegram kill dependency");
@@ -187,12 +185,11 @@ function unreadable(dir: string): () => void {
   return () => chmodSync(dir, 0o700);
 }
 
-test("self-hosted Telegram /kill on a home it cannot read: Solana and Perps both answer not-stopped, never none", { skip: asRoot }, async (t) => {
+test("self-hosted Telegram /kill on a home it cannot read: Perps answers not-stopped, never none", { skip: asRoot }, async (t) => {
   const { dir } = install(t, "two-wallet");
   const restore = unreadable(dir);
   try {
     assert.equal(await selfHostedPerpsKill(), "not-stopped");
-    assert.equal(await selfHostedSolanaKill(), "not-stopped", "an accounts file that cannot be looked for may be a strategy that is on");
   } finally {
     restore();
   }
@@ -219,7 +216,7 @@ for (const owner of ["two-wallet", "perps-only"] as const) {
   });
 }
 
-test("`agentcap kill` on a home it cannot read says nothing is done: Solana, Perps and the grant all incomplete", { skip: asRoot, timeout: 120_000 }, (t) => {
+test("`agentcap kill` on a home it cannot read says nothing is done: Perps and the grant both incomplete", { skip: asRoot, timeout: 120_000 }, (t) => {
   const { dir } = install(t, "two-wallet");
   const restore = unreadable(dir);
   let said: string;
@@ -233,7 +230,6 @@ test("`agentcap kill` on a home it cannot read says nothing is done: Solana, Per
   }
   assert.equal(status, 1, said);
   assert.doesNotMatch(said, /already home|the band stands down on the next tick/);
-  assert.match(said, /Kill incomplete: your Solana strategy could not be stopped/);
   assert.match(said, /Kill incomplete: your Perps wallet's grant could not be revoked/);
   assert.match(said, /grant NOT destroyed — grant\.json could not be read \(EACCES\)/);
 });

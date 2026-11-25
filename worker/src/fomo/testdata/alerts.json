@@ -157,9 +157,9 @@
       "tradeId": "5c1d2e3f-0000-4000-8000-000000000001",
       "trader": "CryptoKaleo",
       "token": "FU2O",
-      "tokenAddress": "Fu2oZoGxFtCDp29NKA4A89xcn255khq9xbxG7Mmtpump",
-      "chainId": 1399811149,
-      "chain": "solana",
+      "tokenAddress": "0xc66101b7bbddc5e8738608b393c2eac96bbfef6a",
+      "chainId": 56,
+      "chain": "bsc",
       "usdValue": 3195,
       "positionValueUsd": 3195,
       "ts": 1788377960000

@@ -1,6 +1,6 @@
 /** Browser-only wallet preparation. Partner API keys belong on your server. */
 import { type LocalAccount } from "viem";
-import { robinhoodChain, robinhoodTestnet } from "../packages/core/src/chain";
+import { bnbChain, bnbTestnet } from "../packages/core/src/chain";
 import { type GrantCaps, type StoredGrant } from "../packages/core/src/grant";
 import { carriesOwnerKey } from "../packages/core/src/hosted";
 import {
@@ -31,14 +31,13 @@ export const SDK_VERSION = `${PARTNER_API_VERSION}+${typeof __AGENTCAP_SDK_BUILD
 /**
  * WHAT A PARTNER CHOOSES: the owner, the limits and the chain. Nothing else.
  *
- * The dashboard signer also takes a v4 or Pons adapter, a class vault factory
- * and extra tokens, and seals whatever address it is given into the
- * owner-signed wall as a call target or approved spender. Partner activation
- * rebuilds that wall from the grant's own declared addresses, so it cannot tell
- * a partner's contract from the deployed one: a partner that named its own
- * "adapter" got the owner's one opaque signature approving it as a USDG
- * spender, and activation linked the grant. Left out, the signer seals only the
- * platform's own class vault factory and listed tokens.
+ * The dashboard signer also takes extra tokens and a Trencher factory, and
+ * seals the addresses it is given into the owner-signed wall as call targets or
+ * approved spenders. Partner activation rebuilds that wall from the grant's own
+ * declared addresses, so it cannot tell a partner's contract from a listed one:
+ * a partner that named its own contract would get the owner's one opaque
+ * signature approving it, and activation would link the grant. Left out, the
+ * signer seals only the platform's own routes and listed tokens.
  *
  * NO TRENCHER either. `trencherFactory` seals `trencherFactoryAddress` and
  * `trencherVaultAddress`, which activation refuses (validGrant in
@@ -107,9 +106,9 @@ export async function prepareAgentCapAvatar(options: PrepareAgentCapAvatarOption
   // real-funds Robinhood Chain permission without a word.
   // Only an ABSENT chainId means mainnet: `?? mainnet` read null, which config
   // like `chainId: cfg.testnet ?? null` produces, as a request for real funds.
-  const chainId = options.chainId === undefined ? robinhoodChain.id : options.chainId;
-  if (chainId !== robinhoodChain.id && chainId !== robinhoodTestnet.id) {
-    throw new Error(`chainId ${shown(options.chainId)} is not a partner enrollment chain: use Robinhood Chain ${robinhoodChain.id} or its testnet ${robinhoodTestnet.id}. Nothing was signed.`);
+  const chainId = options.chainId === undefined ? bnbChain.id : options.chainId;
+  if (chainId !== bnbChain.id && chainId !== bnbTestnet.id) {
+    throw new Error(`chainId ${shown(options.chainId)} is not a partner enrollment chain: use Robinhood Chain ${bnbChain.id} or its testnet ${bnbTestnet.id}. Nothing was signed.`);
   }
   if (!activatableCaps(caps)) {
     throw new Error(

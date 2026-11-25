@@ -12,6 +12,7 @@ import { MIRROR_STATE_DDL } from "./ledger-mirror";
 import type { TradedReceiptAttestationOptions } from "./receipt-attestation-traded";
 import type { TenantLease } from "./tenant-lease";
 import { TEST_ACCOUNT, TEST_TENANT } from "./receipt-attestation-fixture";
+import { usdt } from "./testdata/bnb-cash";
 
 export { TEST_ACCOUNT, TEST_TENANT };
 export const DEPOSITOR = "0x00000000000000000000000000000000000000f1";
@@ -19,7 +20,7 @@ const POOL = "0x00000000000000000000000000000000000000e7";
 const TOKEN = "0x00000000000000000000000000000000000000c5";
 /** Alan's 10-18 top-up, to the micro-USDG. */
 export const TOP_UP = 59.95446;
-export const TOP_UP_RAW = 59_954_460n;
+export const TOP_UP_RAW = usdt(59_954_460n);
 export const BLOCK = { open: 1_000, baseline: 2_000_000, deposit: 2_000_600, booking: 2_000_700, trade: 2_001_194, next: 2_001_300 } as const;
 export const HEAD = 2_300_000n;
 export const LOCAL_FLOW = 2, SHARED_FLOW = 428;
@@ -33,7 +34,7 @@ const topic = (address: string) => `0x${address.toLowerCase().slice(2).padStart(
 const word = (n: bigint) => `0x${n.toString(16).padStart(64, "0")}`;
 export interface FixtureLog { address: string; topics: string[]; data: string; blockNumber: string; blockHash: string; transactionHash: string; logIndex: string; removed: boolean }
 export function transferLog(o: { token?: string; from: string; to: string; raw: bigint; block: number; tx: string; index: number }): FixtureLog {
-  return { address: o.token ?? CASH.USDG, topics: [TRANSFER_TOPIC, topic(o.from), topic(o.to)], data: word(o.raw),
+  return { address: o.token ?? CASH.USDT, topics: [TRANSFER_TOPIC, topic(o.from), topic(o.to)], data: word(o.raw),
     blockNumber: `0x${o.block.toString(16)}`, blockHash: blockHash(o.block), transactionHash: o.tx, logIndex: `0x${o.index.toString(16)}`, removed: false };
 }
 
@@ -50,14 +51,14 @@ export async function tradedFixture(sharedDb?: Db, lease?: TenantLease, opts: { 
   for (const ddl of [LEDGER_IMPORT_SCHEMA, LEDGER_IMPORT_GENERATIONS_SCHEMA, MIRROR_STATE_DDL]) await shared.exec(ddl);
   if (!sharedDb) await shared.exec("CREATE TABLE grants(tenant TEXT PRIMARY KEY,grant_json TEXT,updated_at INTEGER,row_version INTEGER)");
   await shared.prepare("INSERT INTO grants(tenant,grant_json,updated_at,row_version) VALUES(?,?,?,?)").run(TEST_TENANT,
-    JSON.stringify({ smartAccount: TEST_ACCOUNT, owner: TEST_TENANT, chainId: 4663 }), 1234, 1);
+    JSON.stringify({ smartAccount: TEST_ACCOUNT, owner: TEST_TENANT, chainId: 56 }), 1234, 1);
   const flowAt = { open: blockTime(BLOCK.open) + 5, inferred: BOOKED_AT };
   for (const [db, ids] of [[local, { open: 1, inferred: LOCAL_FLOW, trade: 1 }], [shared, { open: 501, inferred: SHARED_FLOW, trade: 900 }]] as const) {
-    await db.prepare("INSERT INTO agents(smart_account,owner_address,session_key_address,chain_id,caps,granted_at,expires_at,mode,hwm_usdg,epoch,hwm_withdrawn_usdg,accrued_fee_usdg) VALUES(?,?,?,4663,?,1,9999999999,'live',?,1,0,0.12)")
+    await db.prepare("INSERT INTO agents(smart_account,owner_address,session_key_address,chain_id,caps,granted_at,expires_at,mode,hwm_usdg,epoch,hwm_withdrawn_usdg,accrued_fee_usdg) VALUES(?,?,?,56,?,1,9999999999,'live',?,1,0,0.12)")
       .run(TEST_ACCOUNT, TEST_TENANT, DEPOSITOR, '{"perTradeUsdg":40,"dailyUsdg":100,"maxDrawdownPct":5}', 100 + TOP_UP);
-    await db.prepare("INSERT INTO flows(id,agent_id,direction,amount_usdg,tx_hash,block_number,log_index,source,at,epoch,chain_id) VALUES(?,?,'in',100,?,?,4,'chain-log',?,1,4663)")
+    await db.prepare("INSERT INTO flows(id,agent_id,direction,amount_usdg,tx_hash,block_number,log_index,source,at,epoch,chain_id) VALUES(?,?,'in',100,?,?,4,'chain-log',?,1,56)")
       .run(ids.open, TEST_ACCOUNT, TX.open, BLOCK.open, flowAt.open);
-    await db.prepare("INSERT INTO flows(id,agent_id,direction,amount_usdg,source,at,epoch,chain_id) VALUES(?,?,'in',?,'inferred',?,1,4663)")
+    await db.prepare("INSERT INTO flows(id,agent_id,direction,amount_usdg,source,at,epoch,chain_id) VALUES(?,?,'in',?,'inferred',?,1,56)")
       .run(ids.inferred, TEST_ACCOUNT, TOP_UP, flowAt.inferred);
     for (const [i, t] of [[0, { hash: TX.early, op: tx("01"), at: blockTime(BLOCK.baseline) - 900 }], [1, { hash: TX.trade, op: tx("02"), at: blockTime(BLOCK.trade) }]] as const) {
       await db.prepare("INSERT INTO trades(id,agent_id,kind,target,amount_usdg,user_op_hash,tx_hash,status,fill_side,fill_cash_usdg,created_at,epoch) VALUES(?,?,'swap','pool',2.5,?,?,'landed','buy',2.5,?,1)")
@@ -73,7 +74,7 @@ export async function tradedFixture(sharedDb?: Db, lease?: TenantLease, opts: { 
     }
   }
   await local.exec("CREATE TABLE ledger_source_identity(id INTEGER PRIMARY KEY,book_id TEXT,tenant TEXT,smart_account TEXT,chain_id INTEGER)");
-  await local.prepare("INSERT INTO ledger_source_identity VALUES(1,?,?,?,4663)").run("original-book-id", TEST_TENANT, TEST_ACCOUNT.toLowerCase());
+  await local.prepare("INSERT INTO ledger_source_identity VALUES(1,?,?,?,56)").run("original-book-id", TEST_TENANT, TEST_ACCOUNT.toLowerCase());
   // THE ORIGINAL JOURNAL, as the worker appends it (store.ts appendJournalRow).
   let head = JOURNAL_GENESIS;
   const journal = async (kind: string, payload: unknown, at: number) => {
@@ -105,10 +106,10 @@ export async function tradedFixture(sharedDb?: Db, lease?: TenantLease, opts: { 
   // THE CHAIN: the opening deposit, the top-up, and two trades whose USDG leg pairs with a token leg.
   const deposit = transferLog({ from: DEPOSITOR, to: TEST_ACCOUNT, raw: TOP_UP_RAW, block: BLOCK.deposit, tx: TX.deposit, index: 2 });
   const logs: FixtureLog[] = [
-    transferLog({ from: DEPOSITOR, to: TEST_ACCOUNT, raw: 100_000_000n, block: BLOCK.open, tx: TX.open, index: 4 }),
+    transferLog({ from: DEPOSITOR, to: TEST_ACCOUNT, raw: usdt(100_000_000n), block: BLOCK.open, tx: TX.open, index: 4 }),
     deposit,
-    transferLog({ from: TEST_ACCOUNT, to: POOL, raw: 2_500_000n, block: BLOCK.baseline - 9_000, tx: TX.early, index: 7 }),
-    transferLog({ from: TEST_ACCOUNT, to: POOL, raw: 2_500_000n, block: BLOCK.trade, tx: TX.trade, index: 7 }),
+    transferLog({ from: TEST_ACCOUNT, to: POOL, raw: usdt(2_500_000n), block: BLOCK.baseline - 9_000, tx: TX.early, index: 7 }),
+    transferLog({ from: TEST_ACCOUNT, to: POOL, raw: usdt(2_500_000n), block: BLOCK.trade, tx: TX.trade, index: 7 }),
   ];
   const tokenLegs: FixtureLog[] = [
     transferLog({ token: TOKEN, from: POOL, to: TEST_ACCOUNT, raw: 1_000n, block: BLOCK.baseline - 9_000, tx: TX.early, index: 8 }),
@@ -118,7 +119,7 @@ export async function tradedFixture(sharedDb?: Db, lease?: TenantLease, opts: { 
   const state = { logs, tokenLegs, receipts: new Map<string, unknown>(), calls: [] as string[] };
   const rpc: RpcCall = async (method, params) => {
     state.calls.push(method);
-    if (method === "eth_chainId") return "0x1237";
+    if (method === "eth_chainId") return "0x38";
     if (method === "eth_blockNumber") return `0x${chainHead.toString(16)}`;
     if (method === "eth_getBlockByNumber") {
       const n = BigInt(String(params[0]));
@@ -139,7 +140,7 @@ export async function tradedFixture(sharedDb?: Db, lease?: TenantLease, opts: { 
     }
     throw new Error(`Unexpected fixture RPC ${method}`);
   };
-  const options: TradedReceiptAttestationOptions = { tenant: TEST_TENANT, smartAccount: TEST_ACCOUNT, chainId: 4663, home, volume, shared, rpc,
+  const options: TradedReceiptAttestationOptions = { tenant: TEST_TENANT, smartAccount: TEST_ACCOUNT, chainId: 56, home, volume, shared, rpc,
     sharedFlowId: SHARED_FLOW,
     lease: lease ?? { tenant: TEST_TENANT, backend: "postgres", healthy: () => healthy, async release() { healthy = false; } },
     assertQuiescent() { if (!quiet) throw new Error("Supervisor still owns a process"); }, dialect: sharedDb ? "postgres" : "sqlite" };

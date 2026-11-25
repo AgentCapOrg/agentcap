@@ -30,7 +30,7 @@ type HistoryTrade = import("../history-files").HistoryTrade;
 
 const SHOGUN = "0x05a198a677fbcd8f5c168d397fa7ef5eb6d65487";
 const VAULT = "0x2ca2b5bd3b6635d630419c57a13c6b6a856ec96d";
-const USDG = CASH.USDG.toLowerCase();
+const USDG = CASH.USDT.toLowerCase();
 const NOW = Math.floor(Date.now() / 1000);
 const RESTART = NOW - 3_600;
 const coin = (i: number) => "0x7a11ce" + String(i).padStart(34, "0");

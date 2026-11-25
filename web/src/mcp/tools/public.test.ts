@@ -66,7 +66,7 @@ afterEach(() => {
 
 async function seed(d: TestDb) {
   const agent = d.raw.prepare(`INSERT INTO agents (smart_account, name, owner_address, session_key_address, chain_id, caps, granted_at, expires_at, status, mode, beat_at, epoch, contributions_known, x_handle, created_at)
-    VALUES (?, ?, ?, '0x1', 4663, '{"perTradeUsdg":25}', ?, 4102444800, 'active', ?, ?, ?, ?, ?, ?)`);
+    VALUES (?, ?, ?, '0x1', 56, '{"perTradeUsdg":25}', ?, 4102444800, 'active', ?, ?, ?, ?, ?, ?)`);
   agent.run(ACCOUNT_A, "Shogun", OWNER_A, T - 5 * H, "live", T - 30, 2, 1, "shogun_x", T - 3 * 86_400);
   agent.run(ACCOUNT_B, "Paperboy", OWNER_B, T - 5 * H, "paper", T - 60, 1, null, null, T - 2 * 86_400);
   agent.run(ACCOUNT_C, "Glassbox", OWNER_C, T - 5 * H, "live", T - 10, 1, 1, null, T - 86_400);
@@ -95,7 +95,7 @@ async function seed(d: TestDb) {
   trade.run(ACCOUNT_C, USDG, addr("NVDA"), 33.33, "0xopc1", "0xtxc1", "landed", "d-c-buy", "buy", "NVDA", 33.33, null, "receipt", "1000", 0.05, 1, T - H);
 
   d.raw.prepare(`INSERT INTO positions (agent_id, symbol, token, raw_balance, ui_multiplier, price_usd, price_stale, value_usdg, updated_at) VALUES (?, 'NVDA', ?, '1000000000000000000', '1', 36, 0, 36, ?)`).run(ACCOUNT_C, addr("NVDA"), T - H);
-  d.raw.prepare(`INSERT INTO cost_basis (agent_id, mode, symbol, qty_raw, cost_usdg, updated_at) VALUES (?, 'live', 'NVDA', '1000000000000000000', '33330000', ?)`).run(ACCOUNT_C, T - H);
+  d.raw.prepare(`INSERT INTO cost_basis (agent_id, mode, symbol, qty_raw, cost_usdg, updated_at) VALUES (?, 'live', 'NVDA', '1000000000000000000', '33330000000000000000', ?)`).run(ACCOUNT_C, T - H);
   // A private book's holding, which must never be listed.
   d.raw.prepare(`INSERT INTO positions (agent_id, symbol, token, raw_balance, ui_multiplier, price_usd, price_stale, value_usdg, updated_at) VALUES (?, 'AAPL', ?, '1', '1', 10, 0, 66.66, ?)`).run(ACCOUNT_A, addr("AAPL"), T - H);
 }
@@ -164,7 +164,7 @@ test("a running account with no public id is counted, never listed", async () =>
   const { d, connect } = await setup();
   const stray = "0x000000000000000000000000000000000000d00d";
   d.raw.prepare(`INSERT INTO agents (smart_account, name, owner_address, session_key_address, chain_id, caps, granted_at, expires_at, status, mode, beat_at, epoch, contributions_known)
-    VALUES (?, 'Stray', '0x9', '0x1', 4663, '{}', ?, 4102444800, 'active', 'live', ?, 1, 1)`).run(stray, T - H, T - 5);
+    VALUES (?, 'Stray', '0x9', '0x1', 56, '{}', ?, 4102444800, 'active', 'live', ?, 1, 1)`).run(stray, T - H, T - 5);
   const { sc, json } = await call(await connect(OWNER_B), "list_public_agents", {});
   assert.equal(sc.unlinked_accounts, 1);
   assert.equal(sc.total, 3);
@@ -357,7 +357,7 @@ test("FIX 4 (perps slice 5b): a Perps wallet on an identity is never the public 
   const { d, connect } = await setup();
   const PERPS_C = "0x000000000000000000000000000000000000c0e1" as const;
   d.raw.prepare(`INSERT INTO agents (smart_account, name, owner_address, session_key_address, chain_id, caps, granted_at, expires_at, status, mode, beat_at, epoch, contributions_known, created_at)
-    VALUES (?, 'Perps paper agent', ?, '0x1', 4663, '{}', ?, 4102444800, 'active', 'paper', ?, 1, 1, ?)`).run(PERPS_C, OWNER_C, T - H, T - 1, T - 60);
+    VALUES (?, 'Perps paper agent', ?, '0x1', 56, '{}', ?, 4102444800, 'active', 'paper', ?, 1, 1, ?)`).run(PERPS_C, OWNER_C, T - H, T - 1, T - 60);
   d.raw.prepare(`INSERT INTO equity (agent_id, eth_wei, cash_usdg, vault_usdg, positions_usdg, equity_usdg, epoch, mode, at) VALUES (?, '0', 5000, 0, 0, 5000, 1, 'paper', ?)`).run(PERPS_C, T - 1);
   const withPerps = IDS.map((i) => (i.slug === SLUG_C ? { ...i, accounts: [ACCOUNT_C, PERPS_C] } : i));
   setPublicIdentitiesForTest({
@@ -369,7 +369,7 @@ test("FIX 4 (perps slice 5b): a Perps wallet on an identity is never the public 
   assert.equal((await call(principal, "get_public_agent", { agent: SLUG_C })).sc.name, "Perps paper agent");
 
   const { recordPerpsWallet } = await import("../../../../worker/src/perps-wallets");
-  await recordPerpsWallet(d.db, { smartAccount: PERPS_C, owner: OWNER_C, chainId: 4663, nowSec: T });
+  await recordPerpsWallet(d.db, { smartAccount: PERPS_C, owner: OWNER_C, chainId: 56, nowSec: T });
   const list = await call(principal, "list_public_agents", {});
   const row = list.sc.agents.find((r: { agent: string }) => r.agent === SLUG_C);
   assert.equal(row.name, "Glassbox");
@@ -642,7 +642,7 @@ test("a transfer recorded as both the agent's own and its chain log puts the ret
   // with its tx, and a later scan books the same transfer from its log: which
   // one is right is a question, and summing them is the one wrong answer.
   const flow = d.raw.prepare(`INSERT INTO flows (agent_id, direction, amount_usdg, tx_hash, log_index, chain_id, source, epoch, at)
-    VALUES (?, 'out', 10, '0xhomec', ?, 4663, ?, 1, ?)`);
+    VALUES (?, 'out', 10, '0xhomec', ?, 56, ?, 1, ?)`);
   flow.run(ACCOUNT_C, null, "transfer-intent", T - 2 * H);
   flow.run(ACCOUNT_C, 0, "chain-log", T - 2 * H + 60);
   const b = await connect(OWNER_B);

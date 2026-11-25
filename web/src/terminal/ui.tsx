@@ -405,15 +405,6 @@ export function TabIcon({ id }: { id: import("./live").Tab }) {
           <path d="M20.5 12c0 3.8-3.8 6.9-8.5 6.9a10 10 0 0 1-2.6-.34L4.4 20l1.2-3.4A6.4 6.4 0 0 1 3.5 12C3.5 8.2 7.3 5.1 12 5.1s8.5 3.1 8.5 6.9Z" />
         </svg>
       );
-    case "alpha":
-      // A rising edge with a mark on it — a call, not a chart. Deliberately not
-      // the bar chart the leaderboard used, which now lives on Home.
-      return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-          <path d="M3.5 16.4 9 10.6l3.6 3.4 6.4-7.2" />
-          <path d="M15.2 6.4h4.4v4.3" />
-        </svg>
-      );
     case "you":
       return (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">

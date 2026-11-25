@@ -301,13 +301,6 @@ test("BUT IT KEEPS WATCHING THE REAL ACCOUNT, or it can never come back", () => 
   assert.doesNotMatch(arm.slice(0, 600), /lastGasWei = 0n/, "a failed read must not become a zero");
 });
 
-test("a curve trade with no adapter leaves a row, not just an event", () => {
-  // Otherwise the decision has no trade to join and the public feed says "no
-  // trade came of it" — true, and silent about the one fact that explains it.
-  const src = readFileSync("worker/src/index.ts", "utf8");
-  assert.match(src, /reject_rule: "no-curve-adapter"/);
-});
-
 // ── perpetuals: one rail, derived from the account's, never beside it ──────
 
 /**

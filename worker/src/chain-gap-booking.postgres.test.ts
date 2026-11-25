@@ -49,7 +49,7 @@ const loadPg = async () => createRequire(import.meta.url)("pg") as unknown;
 
 const TENANT = "0x4b6dcd559c82ea897c34dacfb785fb0c8f85d4c5";
 const ACCOUNT = `0x${"a4".repeat(20)}`, POOL = `0x${"9f".repeat(20)}`, COIN = `0x${"c0".repeat(20)}`;
-const USDG = String(CASH.USDG).toLowerCase();
+const USDG = String(CASH.USDT).toLowerCase();
 const EP = "0x0000000071727de22e5e9d8baf0edac6f37da032";
 const TR = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 const UOE = "0x49628fd1471006c1482da88028e9ce4dbb080b815c9b0344d39e5a8e6ec1419f";

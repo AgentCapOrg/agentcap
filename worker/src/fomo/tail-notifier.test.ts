@@ -9,7 +9,7 @@ import { describe, it } from "node:test";
 
 import { FOMO_STATE_KEYS, type DurableStatePort } from "../fomo-child";
 import type { BrokerCallOptions, ChildTail, ChildTailEvent, FomoBroker } from "./contract";
-import { robinhoodChain, tokenIdentity } from "./identity";
+import { bnbChain, tokenIdentity } from "./identity";
 import { emptyTailLog, NO_RESEARCH_READ, parseTailLog, TAIL_NOTICE_LIMITS, tailNotices } from "./tail-notices";
 import { createTailNotifier, TAIL_THESIS_READ_TIMEOUT_MS, type TailNotifierDeps } from "./tail-notifier";
 import type { FomoEnvelope, FomoToolName } from "./types";
@@ -18,7 +18,7 @@ const MIN = 60_000;
 const HOUR = 60 * MIN;
 const NOW = Date.UTC(2026, 9, 7, 14, 0);
 const UNI = "7b1e2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d";
-const coin = (n: number) => tokenIdentity(robinhoodChain(), `0x${n.toString(16).padStart(40, "0")}`)!;
+const coin = (n: number) => tokenIdentity(bnbChain(), `0x${n.toString(16).padStart(40, "0")}`)!;
 
 function ev(n: number, over: Partial<ChildTailEvent> = {}): ChildTailEvent {
   return { eventKey: `ev-${n}`, kind: "buy", token: coin(n), label: { symbol: `C${n}`, name: null }, at: NOW - 10 * MIN + n * MIN, observedAt: NOW - 10 * MIN + n * MIN, positionValueUsd: null, text: null, ...over };
@@ -149,7 +149,7 @@ describe("the tail notifier", () => {
     const firstCall = s.ops.indexOf("call:fomo_get_token_theses");
     const firstWrite = s.ops.indexOf(`write:${FOMO_STATE_KEYS.tailNotified}`);
     assert.ok(firstWrite >= 0 && firstWrite < firstCall, "the reads were claimed durably before the first read");
-    assert.deepEqual(calls[0]!.args, { token: coin(1).address, chain: "robinhood", trader: UNI, limit: 3 });
+    assert.deepEqual(calls[0]!.args, { token: coin(1).address, chain: "bsc", trader: UNI, limit: 3 });
     assert.deepEqual(calls[0]!.opts, { surface: "telegram-dm", audience: "owner", priority: "interactive", conversationKey: null, timeoutMs: TAIL_THESIS_READ_TIMEOUT_MS });
     assert.equal(TAIL_THESIS_READ_TIMEOUT_MS, 8_000);
     assert.equal(sent.length, 3);

@@ -1,29 +1,21 @@
-import { erc20Abi, parseAbi, type Address } from "viem";
+import { erc20Abi, type Address } from "viem";
 import { trencherAddresses, trencherPermissions, type TrencherPermission } from "./trencher-vault";
 import { PolicyFlags } from "@zerodev/permissions";
 import { CallPolicyVersion, ParamCondition, toCallPolicy } from "@zerodev/permissions/policies";
 import { toTimestampPolicy } from "@zerodev/permissions/policies";
 import {
   UNISWAP_SWAP_ROUTER_ABI,
-  UNISWAP_V2_ENERGY_ABI,
-  PERMIT2_ABI,
-  UNIVERSAL_ROUTER_ABI,
-  V4SELFSWAP_ABI,
-  PONS_SELFTRADE_ABI,
-  PONS_CLASS_VAULT_ABI,
-  PONS_CLASS_VAULT_FACTORY_DEPLOY_ABI,
   LIGHTER_DEPOSIT_ABI,
   LIGHTER_CHANGE_PUBKEY_ABI,
   LIGHTER_WITHDRAW_PENDING_ABI,
 } from "./abis";
-import { MORPHO, RIALTO, UNISWAP } from "./protocols";
-import { CASH, STOCK_TOKENS, TRADEABLE_SYMBOLS, USDG_DECIMALS, isValidCustomToken, type CustomToken } from "./tokens";
+import { PANCAKESWAP } from "./protocols";
+import { CASH, STOCK_TOKENS, TRADEABLE_SYMBOLS, CASH_DECIMALS, isValidCustomToken, type CustomToken } from "./tokens";
 import { GRANT_SCOPED_SPENDERS, builtinGrantTargets, grantPurpose, type GrantCaps } from "./grant";
-import { ENERGY_ROUTE_V1, GRANT_ENERGY, isEnergyReserveToken } from "./energy";
 // perps.ts imports only perps-styles.ts, which imports nothing, so this cannot
 // become a cycle through grant.ts.
 import { LIGHTER_ROUTE_V1, grantPerp, pubKeyWords, validatePerpPubKey } from "./perps";
-// The deployability policy, for `energyBuyFits` below. first-enable-gas.ts
+// The deployability policy, for `perpFits` below. first-enable-gas.ts
 // deliberately imports nothing (it counts permissions structurally), so this
 // is not a cycle and cannot become one without that file changing its rule.
 import { wallShape, wallSignable } from "./first-enable-gas";
@@ -48,23 +40,24 @@ import { wallShape, wallSignable } from "./first-enable-gas";
  * grants signed afterwards, so the fleet will be running a mix of walls.
  */
 
-const VAULT_ABI = parseAbi([
-  "function deposit(uint256 assets, address receiver) returns (uint256)",
-  "function withdraw(uint256 assets, address receiver, address owner) returns (uint256)",
-]);
+/** UI amounts are exact to a millionth of a USDT; the chain counts in 18dp. */
+const MICRO = 1_000_000;
+const BASE_UNITS_PER_MICRO = 10n ** BigInt(CASH_DECIMALS - 6);
 
-const USDG_SCALE = 10 ** USDG_DECIMALS;
+/** Largest UI-unit value that can be converted to exact base units. */
+export const MAX_USDG_UI = Number.MAX_SAFE_INTEGER / MICRO;
 
-/** Largest UI-unit value that can be converted to exact USDG base units. */
-export const MAX_USDG_UI = Number.MAX_SAFE_INTEGER / USDG_SCALE;
-
-/** Convert a finite UI-unit USDG amount to its exact 6-decimal base units. */
+/**
+ * Convert a finite UI-unit cash amount to its base units. Rounded to a
+ * micro-unit FIRST and scaled as integers: multiplying a float by 1e18
+ * directly turns 10.1 into 10099999999999999… base units.
+ */
 export function usdgUnits(value: number): bigint {
-  const scaled = Math.round(value * USDG_SCALE);
-  if (!Number.isFinite(value) || !Number.isSafeInteger(scaled)) {
-    throw new RangeError(`USDG amount must be finite and no larger than ${MAX_USDG_UI}`);
+  const micro = Math.round(value * MICRO);
+  if (!Number.isFinite(value) || !Number.isSafeInteger(micro)) {
+    throw new RangeError(`USDT amount must be finite and no larger than ${MAX_USDG_UI}`);
   }
-  return BigInt(scaled);
+  return BigInt(micro) * BASE_UNITS_PER_MICRO;
 }
 
 /**
@@ -77,20 +70,17 @@ export function usdgUnits(value: number): bigint {
  * session key can produce ERC-1271 signatures the account will honour.
  *
  * That was a hole straight through the wall, and the worst one, because it
- * bypasses the wall rather than stretching it. Permit2 is an approved spender
- * (allowedSpenders) and the stock approvals carry no amount condition, so a
- * Permit2 `permitTransferFrom` SIGNED by the session key — and submitted by
- * anyone, from their own EOA — moves tokens to any recipient with no UserOp at
- * all. No call policy is consulted, the rate limit never fires, and nothing in
- * the ledger records it. The same shape covers EIP-2612 permits and any
- * off-chain order that settles against an ERC-1271 signature.
+ * bypasses the wall rather than stretching it. Anything that moves tokens
+ * against a signature — an EIP-2612 permit, or an off-chain order that settles
+ * against an ERC-1271 signature — could be SIGNED by the session key and
+ * submitted by anyone, from their own EOA, with no UserOp at all. No call
+ * policy is consulted, the rate limit never fires, and nothing in the ledger
+ * records it.
  *
  * NOT_FOR_VALIDATE_SIG closes it: the kernel refuses to validate signatures
  * from this permission, while UserOp execution is untouched. This costs
- * agentcap nothing — the entire trading path is UserOps, and the v4 route
- * authorises Permit2 with a CALL (`permit2.approve`, see venues/uniswap-v4.ts)
- * rather than a signed permit. Grep confirms nothing in worker/, packages/ or
- * web/src/lib signs with the session account.
+ * agentcap nothing — the entire trading path is UserOps. Grep confirms nothing
+ * in worker/, packages/ or web/src/lib signs with the session account.
  *
  * The flag travels ON-CHAIN in the validator's enable data, so the account
  * itself enforces it — this is not a client-side promise. It is also hashed
@@ -130,68 +120,12 @@ export const WALL_POLICY_CONTRACTS: readonly { name: string; address: Address }[
 
 /**
  * The only contracts a token approval may ever name as spender.
- *
- * Permit2 is here only to serve the v4 route, and follows the same opt-in: v4
- * never pulls tokens directly, so the account approves PERMIT2 and Permit2
- * grants the router its allowance — the router itself is approved for nothing.
  */
-export function allowedSpenders(
-  allowRialto = false,
-  allowUniswapV4 = false,
-  v4AdapterAddress?: Address,
-  ponsAdapterAddress?: Address,
-  ponsClassVaultAddress?: Address,
-  trencherVaultAddress?: Address,
-): Address[] {
+export function allowedSpenders(trencherVaultAddress?: Address): Address[] {
   return [
-    // Rialto is OPT-IN, and off by default — see WallOptions.allowRialto. An
-    // approved spender can pull whatever it was approved for, and the stock
-    // approvals carry no amount condition, so an unused router in this list is
-    // not free: it is a standing licence to move every share the agent holds.
-    ...(allowRialto ? [RIALTO.routerSnapshot as Address] : []),
-    UNISWAP.swapRouter02 as Address,
-    MORPHO.steakhouseUsdgVault as Address,
-    // Permit2 used to sit here unconditionally, which made the sentence above
-    // literally true of it: with the stock approvals uncapped, the session key
-    // could approve Permit2 for every share it held. Harmless only while the
-    // v4 CALL permissions are absent, so the two are now granted together or
-    // not at all — see WallOptions.allowUniswapV4.
-    ...(allowUniswapV4 ? [UNISWAP.permit2 as Address] : []),
-    // The V4SelfSwap adapter pulls tokenIn with a plain transferFrom, so it
-    // must be nameable as a spender. That is ALL it gets here: joining this
-    // list puts it inside the existing capped USDG approve (buy-side bound)
-    // and the per-token approves (sell-side, over exactly the sealed set) —
-    // zero new approve permissions. Its own call permission is added below,
-    // and the licence-to-move-shares caveat above is answered by the contract
-    // itself: everything it pulls it settles into the pool, and everything
-    // that comes out lands with msg.sender. See contracts/V4SelfSwap.sol.
-    ...(v4AdapterAddress ? [v4AdapterAddress] : []),
-    // The PonsSelfTrade adapter, on exactly the same terms and for exactly the
-    // same reason: it pulls assetIn with a plain transferFrom, so it must be
-    // nameable as a spender, and that is ALL it gets here — zero new approve
-    // permissions, inside the existing caps.
-    //
-    // The licence-to-move-shares caveat above is answered the same way it is
-    // for the v4 adapter, by the contract: everything it pulls it either
-    // spends on the curve or hands straight back, everything the curve pays
-    // goes to msg.sender, and nothing survives the call. Where it differs is
-    // that its CURVE argument cannot be pinned by any policy — see the call
-    // permission below, which says so rather than implying otherwise.
-    ...(ponsAdapterAddress ? [ponsAdapterAddress] : []),
-    // The class vault, for the same reason as its two siblings and with the
-    // same "this is ALL it gets" caveat: it must be nameable as a spender so
-    // the account's capped USDG approve can fund a class buy. It gains no
-    // approve permission of its own.
-    //
-    // The difference worth stating: the other two hand everything straight
-    // back within the call, and this one KEEPS the token — that is its entire
-    // purpose. What makes that safe to approve is not that it holds nothing,
-    // but that it holds for exactly one owner and has no code path that names
-    // anyone else.
-    ...(ponsClassVaultAddress ? [ponsClassVaultAddress] : []),
-    // The Trencher vault, on exactly the class vault's terms and for exactly
-    // the same reason: `buy()` pulls cash from the owner with transferFrom, so
-    // it must be nameable inside the capped USDG approve. It gains no approve
+    PANCAKESWAP.smartRouter as Address,
+    // The Trencher vault: `buy()` pulls cash from the owner with transferFrom,
+    // so it must be nameable inside the capped USDG approve. It gains no approve
     // permission of its own.
     //
     // IT USED TO HAVE ONE, and that is why this entry exists. `trencherPermissions`
@@ -201,10 +135,10 @@ export function allowedSpenders(
     // `AA23 reverted duplicate permissionHash`. Naming the vault here is the
     // same authority expressed once instead of twice.
     //
-    // The caveat the class vault answers applies unchanged: it keeps what it
-    // buys, which is its purpose, and what makes that safe is that it holds for
-    // exactly one owner, sends sale proceeds only to that owner, and has no
-    // code path that names anyone else (contracts/TrencherVault.sol).
+    // What makes it safe to approve: it keeps what it buys, which is its
+    // purpose, but it holds for exactly one owner, sends sale proceeds only to
+    // that owner, and has no code path that names anyone else
+    // (contracts/TrencherVault.sol).
     ...(trencherVaultAddress ? [trencherVaultAddress] : []),
   ];
 }
@@ -223,17 +157,13 @@ export interface WallOptions extends TrencherPermission {
    *
    * The one field here that only ever NARROWS. A Perps wallet (index 1,
    * grant.purpose "perps") trades perpetuals and nothing else, so its wall
+   * The one field here that only ever NARROWS. A Perps wallet (index 1,
+   * grant.purpose "perps") trades perpetuals and nothing else, so its wall
    * carries no stock, coin or USDG approve to a Spot spender, no swap, no
-   * adapter, no vault (Morpho, class or Trencher), no Rialto or v4 route and
-   * no USDG transfer out. What it may carry is the perp route (when a perp
-   * block is sealed: the deposit, the key registration and the proxy in the
-   * one USDG approve) and the energy buy (only when `energyBuy` is asked for,
-   * on the same terms as Spot). With neither, it is EMPTY, and an empty wall
-   * can do nothing on chain: that is the paper Perps wallet.
-   *
-   * Applied as a filter over the permission list Spot would get, not as a
-   * second builder, so every permission a Perps wall keeps is byte for byte the
-   * one a Spot wall carries for the same route — one description per route,
+   * Trencher vault and no USDG transfer out. What it may carry is the perp
+   * route (when a perp block is sealed: the deposit, the key registration and
+   * the proxy in the one USDG approve). With none, it is EMPTY, and an empty
+   * wall can do nothing on chain: that is the paper Perps wallet.
    * not two that can drift. Absent (every grant signed before Perps) is the
    * Spot wall, unchanged.
    *
@@ -265,194 +195,24 @@ export interface WallOptions extends TrencherPermission {
    */
   withdrawalAddresses?: readonly Address[];
   /**
-   * The Rialto meta-router. OFF by default.
-   *
-   * Its calldata comes from a quote API, so there is no shape for a call
-   * policy to constrain — target-scoping is the entire control, which means
-   * granting it is granting "call anything on this contract". That is
-   * defensible only if you actually use it, and it needs an integrator API key
-   * to work at all, so the default is off and the risk is opt-in.
-   */
-  /**
-   * The per-account class vault — the ONLY way this wall can reach a token the
-   * owner never enumerated. ABSENT (the default) means it cannot, at all.
-   *
-   * WHAT MAKES THIS EXPRESSIBLE. A permission is keyed by (target, selector),
-   * and the class token cannot be a target — nobody knows it at signing time.
-   * The vault can: its address is CREATE2-derived from the account, so it is
-   * knowable before it is deployed. Pinning the vault and letting it hold the
-   * token moves the un-nameable thing out of the policy entirely; the token is
-   * not even an argument to the calls below.
-   *
-   * WHY IT IS A SEPARATE OPT-IN FROM ponsAdapterAddress. That one trades the
-   * curve tokens the owner LISTED. This one trades tokens that did not exist
-   * when the grant was signed. An owner may want the first and refuse the
-   * second, and the widening is real: up to the per-trade USDG cap, repeatedly
-   * until expiry, into anything reachable through a curve. What still bounds it
-   * is below — the funding leg stays enumerated, the size stays under the capped
-   * approve, and the vault can pay nobody but the account.
-   *
-   * WHAT IT DOES NOT BUY. The chain cannot check the curve's provenance, so for
-   * the class case the CHAIN IS LOOSER THAN THE OFF-CHAIN MIRROR and the
-   * worker's factory-filtered `knownCurves` is the only provenance gate. That is
-   * the reverse of this file's usual posture and must be understood before it is
-   * signed.
-   */
-  ponsClassVaultAddress?: string;
-  /**
-   * The deployed PonsClassVaultFactory, required alongside a class vault.
-   *
-   * A deploy constant rather than a per-account address, but sealed all the
-   * same: the vault address is a CREATE2 function OF this one, so a factory
-   * that could be swapped would relocate the account's custody. Passing a
-   * vault without this THROWS — see the refusal in buildCallPermissions.
-   */
-  ponsClassVaultFactoryAddress?: string;
-  allowRialto?: boolean;
-  /**
-   * The Uniswap v4 route — Permit2 plus the UniversalRouter. OFF by default.
-   *
-   * The UniversalRouter takes an opaque `bytes[] inputs`, and the swap
-   * recipient lives inside it. A call policy derives one selector from
-   * `functionName` and can only constrain declared `args`, so there is no
-   * shape here to constrain: granting `execute` is granting "call anything on
-   * this contract". That is the same reasoning as allowRialto, and it should
-   * have carried the same default.
-   *
-   * It did not. These two permissions were granted UNCONDITIONALLY, and
-   * Permit2 was an unconditional approved spender, while the stock approvals
-   * carry no amount condition. Chained — approve(stock, permit2, unbounded),
-   * permit2.approve(stock, universalRouter, max, max), execute(...) — that is
-   * the whole non-USDG book to any address, in one UserOp. The comment on the
-   * execute permission asserted a bound ("Permit2 is only ever granted one
-   * trade's worth, expiring") that described what the worker CHOOSES to
-   * encode, not what the policy PERMITS. Same failure as the vault-withdraw
-   * recipient and the FOR_ALL_VALIDATION default: a comment describing intent
-   * over a policy allowing the opposite.
-   *
-   * Turning it on is a real trade, not a formality: v4 is where new pairs on
-   * this chain launch, so an agent without it cannot buy them — or sell one it
-   * already holds. The stock basket is unaffected; every tradeable symbol has
-   * v3 depth. Off is the honest default because the front page promises the
-   * chain enforces the wall, and with this granted it does not.
-   */
-  allowUniswapV4?: boolean;
-  /**
-   * The V4SelfSwap adapter to grant, or absent for none — the CLOSED default,
-   * like everything here.
-   *
-   * This is the route that replaces allowUniswapV4: instead of Permit2 plus a
-   * router whose calldata the policy cannot read, one contract with one
-   * declared selector whose eight arguments are all static words — and whose
-   * recipient is `msg.sender` in bytecode, so the one thing the old route
-   * could never constrain simply does not exist as a parameter.
-   *
-   * An ADDRESS rather than a boolean because the adapter is per-deploy and
-   * per-chain: the wall must name the exact contract the signature covers,
-   * and the grant records it (StoredGrant.v4AdapterAddress) so the worker
-   * calls that address and no other.
-   */
-  v4AdapterAddress?: Address;
-  /**
-   * The PonsSelfTrade adapter to grant, or absent for none — CLOSED by default.
-   *
-   * A SECOND, SEPARATE opt-in from the v4 adapter, not a widening of it. The two
-   * reach different venues with different risks, and one address granting both
-   * would make the owner's only choice all-or-nothing.
-   *
-   * WHAT THIS ONE CANNOT PIN, SAID PLAINLY. Every other call permission in this
-   * file names a target the policy vouches for. A Pons buy goes to a PER-TOKEN
-   * bonding curve — roughly 475 new addresses an hour — so the curve is an
-   * argument, and no ONE_OF list over it would be anything but wrong tomorrow or
-   * unbounded today. The bound is therefore NOT "the policy checks the venue".
-   * It is:
-   *
-   *   - `assetIn` and `assetOut` pinned ONE_OF the same asset list the approve
-   *     permissions cover, so a trade can only move assets this signature
-   *     already covers;
-   *   - the amount bounded by those same approve caps;
-   *   - and the adapter refusing to deliver anywhere but `msg.sender`, checked
-   *     against the account's own balance rather than the curve's word for it.
-   *
-   * That is the same exposure the v4 adapter carries with its caller-chosen pool
-   * key, and the same one SwapRouter02 carries today: a compromised session key
-   * can trade an allowlisted asset into a venue the attacker controls, at a
-   * price they pick, up to the standing allowance. Not zero, and worth the owner
-   * knowing before they turn it on.
-   *
-   * Note also what it does NOT reach: native-quoted curves, which are 53.6% of
-   * the launchpad. The adapter is non-payable so this permission keeps
-   * `valueLimit: 0n`, and native support would be a different contract behind a
-   * different selector — see contracts/PonsSelfTrade.sol.
-   *
-   * An ADDRESS rather than a boolean, for the same reason as the v4 adapter:
-   * per-deploy and per-chain, so the wall names the exact contract the signature
-   * covers.
-   */
-  ponsAdapterAddress?: Address;
-  /**
-   * The ENERGY BUY — USDG into $AGENTCAP, delivered to this account, over the
-   * one frozen route ENERGY_ROUTE_V1 (energy.ts). CLOSED by default, like
-   * everything here.
-   *
-   * A BOOLEAN, NOT AN ADDRESS, and that is deliberate rather than an exception
-   * to the adapters above. Their addresses are per-deploy, so the grant must
-   * record which one it sealed. This route is a versioned constant: the marker
-   * GRANT_ENERGY ("energy-buy-v1") names ENERGY_ROUTE_V1 forever, and any change
-   * to it is a v2 marker, never an edit — so marker + account + the frozen
-   * literals ARE the sealed fields. `grantWallOptions` rebuilds it from the
-   * marker alone for exactly that reason.
-   *
-   * A SEPARATE OPT-IN THAT SIGNERS SEAL ONLY WHEN IT FITS, and only on chain
-   * 4663. It costs 1,408 stub bytes (six EQUAL rules plus one spender entry),
-   * about 1.25M bounded first-enable gas, and a class+Trencher wall with a
-   * token or two has no such room. So both signers ask `energyBuyFits` and seal
-   * it only when the answer is yes; an owner whose basket fills the wall signs
-   * exactly the wall they would have signed before this existed, and energy
-   * reaches that agent as $AGENTCAP sent to it directly. Sealing it
-   * unconditionally would have refused existing owners' re-signs.
-   *
-   * On any other chain the router is codeless and a CALL to it SUCCEEDS with
-   * empty returndata, so a buy would "land" having bought nothing — the class
-   * vault's trap. `energyBuyFits` answers false off 4663 and `grantEnergyRoute`
-   * refuses the marker there too.
-   *
-   * BUY-ONLY BY CONSTRUCTION: $AGENTCAP never receives an approve in this wall
-   * (usableExtraTokens drops it), so nothing here can spend it once bought.
-   */
-  energyBuy?: boolean;
-  /**
    * EACH SPENDER NAMED ONLY ON THE TOKENS IT ACTUALLY PULLS. Off for every
    * grant signed before GRANT_SCOPED_SPENDERS existed, so those rebuild byte
    * for byte as they were signed; both signers now seal it on.
    *
-   * Without it, every spender is pinned on every approve: the Morpho vault,
-   * the class vault and the Trencher vault — which only ever pull USDG — sat in
-   * the ONE_OF of all fourteen stock approves and every custom-token approve,
-   * and the v4 adapter's two legs listed every stock. That is reach nothing
-   * uses, and it is not free: each entry is 32 bytes of the enable data the
-   * first operation carries, and it is why a class + Trencher + v4 wall with
-   * three custom tokens came to ~15.75M bounded gas against the 14M product
-   * maximum (first-enable-gas.ts) and could not be signed at all.
+   * Without it, every spender is pinned on every approve, the Trencher vault —
+   * which only ever pulls USDG — included, in the ONE_OF of all the stock
+   * approves and every custom-token approve. That is reach nothing uses, and it
+   * is not free: each entry is 32 bytes of the enable data the first operation
+   * carries.
    *
    * Scoped:
    *   - USDG approve: every spender, unchanged — every venue is funded in USDG.
-   *     The energy router and the Lighter proxy, when sealed, are named on this
-   *     approve alone (`usdgSpenders`), never on a stock or coin approve.
-   *   - custom-token approves: the routers that can SELL a coin — Router02, the
-   *     v4 adapter and the Pons adapter (plus Rialto/Permit2 where opted in).
-   *   - stock approves: Router02 only (plus Rialto/Permit2 where opted in).
-   *   - the v4 adapter trades USDG and the owner's own coins, never a stock.
-   *     Every tradeable stock has v3 depth (see allowUniswapV4); what this
-   *     gives up is the occasional better v4 fill on a stock. What it closes is
-   *     the equity book's exposure to a caller-chosen v4 pool: `hooks` and
-   *     `minAmountOut` are unpinned, so a stolen key could sell every share
-   *     through a hostile pool for one wei — the reason `curveAssets` already
-   *     keeps stocks away from the Pons venues.
+   *     The Lighter proxy, when sealed, is named on this approve alone
+   *     (`usdgSpenders`), never on a stock or coin approve.
+   *   - stock and custom-token approves: the swap router only.
    *
    * Strictly narrower: every call the scoped wall permits, the unscoped one
-   * permits too. The worker reads the same marker (grantV4AdapterAssets) and
-   * never quotes a v4 leg the scoped wall does not cover.
+   * permits too.
    */
   scopedSpenders?: boolean;
   /**
@@ -461,9 +221,8 @@ export interface WallOptions extends TrencherPermission {
    * frozen LIGHTER_ROUTE_V1 (perps.ts, docs/perps.md rule 3). CLOSED by
    * default, like everything here.
    *
-   * AN OBJECT, NOT A BOOLEAN, and that is the one way it differs from the
-   * energy buy. The route is a versioned constant exactly as ENERGY_ROUTE_V1 is
-   * — GRANT_PERP_LIGHTER ("perp-lighter-v1") names it forever — but the API key
+   * AN OBJECT, NOT A BOOLEAN. The route is a versioned constant —
+   * GRANT_PERP_LIGHTER ("perp-lighter-v1") names it forever — but the API key
    * is per-agent and the wall pins its exact bytes, so the key has to be sealed
    * here and recorded on the grant (StoredGrant.perp). `grantWallOptions`
    * rebuilds this from `grantPerp(grant)` for that reason: marker + chain +
@@ -473,7 +232,7 @@ export interface WallOptions extends TrencherPermission {
    * refusal below never echoes what it was given: a signer that passed the
    * wrong half of a key pair must not print it into a log on the way out.
    *
-   * THE CHAIN IS NOT AN INPUT TO THIS FILE, for the energy buy's reason:
+   * THE CHAIN IS NOT AN INPUT TO THIS FILE:
    * nothing here can see which chain a signature is for. So the chain gate
    * sits at the two doors that can set this field — `perpFits` answers false
    * off 4663 (signers), and `grantPerp`, behind `grantWallOptions`, refuses the
@@ -481,7 +240,7 @@ export interface WallOptions extends TrencherPermission {
    * the proxy is codeless, a CALL to it succeeds with empty returndata, and a
    * deposit would "land" having posted nothing.
    *
-   * SEALED ONLY WHEN IT FITS, and — unlike the energy buy — NEVER DROPPED
+   * SEALED ONLY WHEN IT FITS, and NEVER DROPPED
    * SILENTLY once a previous grant carried it: a registered Lighter key stays
    * valid at the venue whatever the grant says, so a re-sign that lost the
    * block would leave a live venue account with no key (rule 5). The refusal
@@ -498,41 +257,11 @@ function tradeableStockAddresses(): Address[] {
 }
 
 /**
- * The assets the V4SelfSwap adapter may trade, on EITHER leg, for this wall.
- *
- * ONE function for the wall and for the worker's router gate, so the set a key
- * may swap and the set the worker will quote cannot drift apart: quoting a v4
- * leg the wall does not cover picks a route that reverts at validation.
- *
- * Unscoped (every grant before GRANT_SCOPED_SPENDERS): USDG, every tradeable
- * stock and the owner's coins — the same list Router02 is pinned to. Scoped:
- * USDG and the owner's coins only, which is exactly the set of approves that
- * name the adapter as a spender.
- */
-export function v4AdapterAssets(opts: Pick<WallOptions, "scopedSpenders" | "extraTokens">): Address[] {
-  return [
-    CASH.USDG as Address,
-    ...(opts.scopedSpenders === true ? [] : tradeableStockAddresses()),
-    ...usableExtraTokens(opts.extraTokens).map((t) => t.address as Address),
-  ];
-}
-
-/**
  * Owner-added tokens that are safe to seal into a policy.
  *
  * Validated HERE, at the last point before an address becomes on-chain policy: a
  * malformed entry either bricks the grant or silently widens it. Anything already
  * covered by the built-in set is dropped so the policy carries no duplicates.
- *
- * THE ENERGY RESERVE IS NEVER AN EXTRA, whoever lists it. An extra gets an
- * UNCAPPED approve to every spender and a place in `curveAssets`, where the Pons
- * adapter's unpinnable curve and unpinned minAmountOut would let a stolen key
- * hand the whole $AGENTCAP balance to a contract it controls for one wei. The
- * energy permission's safety case is that the reserve has no approve anywhere in
- * this wall — nothing here can spend it once bought — and this filter is what
- * makes that true rather than merely usual. Dropped here, so `grantTokens`
- * (recorded post-filter by both signers) never carries it either and the
- * executor's rebuild stays idempotent.
  */
 export function usableExtraTokens(extraTokens: readonly CustomToken[] = []): CustomToken[] {
   const builtin = builtinGrantTargets();
@@ -540,7 +269,6 @@ export function usableExtraTokens(extraTokens: readonly CustomToken[] = []): Cus
   return extraTokens.filter((t) => {
     if (!isValidCustomToken(t)) return false;
     const key = t.address.toLowerCase();
-    if (isEnergyReserveToken(key)) return false;
     if (builtin.has(key) || seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -573,57 +301,6 @@ export function buildCallPermissions(
   smartAccount: Address,
   opts: WallOptions = {},
 ) {
-  // The adapter address is validated HERE, at the last point before it
-  // becomes on-chain policy — a malformed address in a call permission is a
-  // policy that can never match anything, i.e. a bricked route that looks
-  // granted. Throwing beats sealing garbage into a signature.
-  let adapter: Address | undefined;
-  if (opts.v4AdapterAddress !== undefined) {
-    if (!/^0x[0-9a-fA-F]{40}$/.test(opts.v4AdapterAddress)) {
-      throw new Error(`v4AdapterAddress is not an address: ${JSON.stringify(opts.v4AdapterAddress)}`);
-    }
-    adapter = opts.v4AdapterAddress.toLowerCase() as Address;
-  }
-  let ponsAdapter: Address | undefined;
-  if (opts.ponsAdapterAddress !== undefined) {
-    if (!/^0x[0-9a-fA-F]{40}$/.test(opts.ponsAdapterAddress)) {
-      throw new Error(`ponsAdapterAddress is not an address: ${JSON.stringify(opts.ponsAdapterAddress)}`);
-    }
-    ponsAdapter = opts.ponsAdapterAddress.toLowerCase() as Address;
-  }
-  let classVault: Address | undefined;
-  if (opts.ponsClassVaultAddress !== undefined) {
-    if (!/^0x[0-9a-fA-F]{40}$/.test(opts.ponsClassVaultAddress)) {
-      throw new Error(`ponsClassVaultAddress is not an address: ${JSON.stringify(opts.ponsClassVaultAddress)}`);
-    }
-    classVault = opts.ponsClassVaultAddress.toLowerCase() as Address;
-  }
-  let classFactory: Address | undefined;
-  if (opts.ponsClassVaultFactoryAddress !== undefined) {
-    if (!/^0x[0-9a-fA-F]{40}$/.test(opts.ponsClassVaultFactoryAddress)) {
-      throw new Error(
-        `ponsClassVaultFactoryAddress is not an address: ${JSON.stringify(opts.ponsClassVaultFactoryAddress)}`,
-      );
-    }
-    classFactory = opts.ponsClassVaultFactoryAddress.toLowerCase() as Address;
-  }
-  // TWO OF THREE CLASS PERMISSIONS IS NOT A SUBSET, IT IS A TRAP.
-  //
-  // A vault address is a CREATE2 prediction and the contract does not exist
-  // until the factory is called. Seal `buy`/`sell` without `deploy` and the key
-  // can reach a vault it has no way to create — and because a CALL to a codeless
-  // address SUCCEEDS with empty returndata, the first buy would approve USDG,
-  // no-op, and report `landed`. A ledger row for a purchase that bought nothing,
-  // repeated every tick.
-  //
-  // Refuse at signing time rather than hand back a grant that looks complete.
-  if (classVault && !classFactory) {
-    throw new Error(
-      "refusing to seal a class vault with no factory: the vault is a CREATE2 prediction and " +
-        "nothing could ever deploy it, so every class buy would silently no-op against an empty " +
-        "address. Pass ponsClassVaultFactoryAddress alongside ponsClassVaultAddress.",
-    );
-  }
   // THE PERP KEY IS VALIDATED HERE, for the adapters' reason above and with
   // more at stake. The wall pins the key's exact calldata words, so a key the
   // contract would reject (a limb ≥ p, all zero, the wrong length) is a
@@ -667,123 +344,53 @@ export function buildCallPermissions(
   // being silently dropped from the spender list while its call permissions
   // are built.
   const trencherVault = trencherAddresses(opts)?.vault;
-  const spenders = allowedSpenders(
-    opts.allowRialto,
-    opts.allowUniswapV4,
-    adapter,
-    ponsAdapter,
-    classVault,
-    trencherVault,
-  );
-  // THE ENERGY ROUTER JOINS THE USDG APPROVE, AND ONLY THE USDG APPROVE.
+  const spenders = allowedSpenders(trencherVault);
+  // THE LIGHTER PROXY JOINS THE USDG APPROVE, AND ONLY THE USDG APPROVE.
   //
-  // It must be nameable there: Router02 pulls path[0] with transferFrom, and a
-  // second USDG `approve` permission scoped to the router alone would collide
-  // with this one on Kernel's (target, selector) key — `AA23 reverted duplicate
-  // permissionHash`, the Trencher failure (wall-duplicate-permission.test.ts).
+  // It must be nameable there: `deposit` pulls USDG from msg.sender with
+  // safeTransferFrom (AdditionalZkLighter.sol), and a second USDG `approve`
+  // permission scoped to the proxy alone would collide with this one on
+  // Kernel's (target, selector) key — `AA23 reverted duplicate permissionHash`,
+  // the Trencher failure (wall-duplicate-permission.test.ts).
   //
   // It must NOT join `spenders`. That list is the ONE_OF on every stock and
-  // extra approve, which carry no amount condition; joining it would hand the
-  // router an uncapped allowance over the whole equity book. Router02 only ever
-  // pulls from msg.sender today and only the pinned selector is granted, so
-  // those allowances would be inert — by ARGUMENT, not by construction, and the
-  // day any other router selector is granted they are live. That is the Permit2
-  // trap documented above ("any one of the three alone is inert, all three is a
-  // drain"), and it would also cost 448 bytes for nothing.
-  //
-  // THE LIGHTER PROXY JOINS ON EXACTLY THE SAME TERMS, for the same two
-  // reasons. `deposit` pulls USDG from msg.sender with safeTransferFrom
-  // (AdditionalZkLighter.sol), so the proxy must be nameable in the one USDG
-  // approve, capped at perTradeUsdg; a second USDG approve scoped to it would
-  // be the Trencher collision. And it must never join `spenders`: an uncapped
-  // allowance over every stock, held by an upgradeable contract whose
-  // governance can skip its notice period, is a licence nobody should sign for
-  // a venue that only ever takes cash. Because the proxy pulls only from
-  // msg.sender, the allowance this approve creates is spendable by no one but
-  // this account's own `deposit` call below.
+  // extra approve, which carry no amount condition: an uncapped allowance over
+  // every stock, held by an upgradeable contract whose governance can skip its
+  // notice period, is a licence nobody should sign for a venue that only ever
+  // takes cash. Because the proxy pulls only from msg.sender, the allowance
+  // this approve creates is spendable by no one but this account's own
+  // `deposit` call below.
   //
   // A PERPS WALL NAMES NO SPOT SPENDER HERE (WallOptions.perpsOnly). The one
-  // USDG approve is kept for the venue and the energy router alone, so the
-  // allowance it can create is never one a Spot spender could pull.
-  const energy = opts.energyBuy === true;
+  // USDG approve is kept for the venue alone, so the allowance it can create is
+  // never one a Spot spender could pull.
   const usdgSpenders: Address[] = [
     ...(opts.perpsOnly ? [] : spenders),
-    ...(energy ? [ENERGY_ROUTE_V1.router as Address] : []),
     ...(perp ? [LIGHTER_ROUTE_V1.proxy as Address] : []),
   ];
   const extras = usableExtraTokens(opts.extraTokens);
   // Every asset this signature may hold a leg in: USDG plus everything the
-  // approve permissions below cover. This is what the adapter's tokenIn and
+  // approve permissions below cover. This is what the swap router's tokenIn and
   // tokenOut are pinned to — same source, same call, so the approve set and
   // the swap set cannot drift apart within one grant.
-  const adapterAssets: Address[] = [
-    CASH.USDG as Address,
+  const swapAssets: Address[] = [
+    CASH.USDT as Address,
     ...tradeableStockAddresses(),
     ...extras.map((t) => t.address as Address),
   ];
-  // THE V4 ADAPTER'S LEGS — `adapterAssets` on an unscoped wall, USDG and the
-  // owner's coins on a scoped one. Same function the worker's router gate
-  // calls (grantV4AdapterAssets), so the quote and the wall agree.
-  const v4Assets = v4AdapterAssets(opts);
   // ── WHO MAY BE APPROVED FOR WHAT (WallOptions.scopedSpenders) ─────────────
   //
   // Unscoped, every approve below names every spender. Scoped, each token's
-  // approve names only the contracts that can pull THAT token:
-  //   - the Morpho, class and Trencher vaults pull USDG and nothing else
-  //     (Morpho's asset is USDG; the class buy's funding leg is pinned to
-  //     USDG below; TrencherVault's `cash` is immutable), so they stay on the
-  //     USDG approve only;
-  //   - the v4 and Pons adapters trade cash against the owner's coins, so
-  //     they stay on the custom-token approves and leave the stock ones.
+  // approve names only the contracts that can pull THAT token: the Trencher
+  // vault pulls USDG and nothing else (TrencherVault's `cash` is immutable), so
+  // it stays on the USDG approve only.
   // Filtered from `spenders` rather than rebuilt, so the order — and with it
   // the encoded bytes of every entry that remains — is the one the unscoped
   // wall already uses.
-  const scoped = opts.scopedSpenders === true;
-  const usdgOnly = new Set(
-    [MORPHO.steakhouseUsdgVault as Address, classVault, trencherVault]
-      .filter((a): a is Address => a !== undefined)
-      .map((a) => a.toLowerCase()),
-  );
-  const coinSpenders = scoped ? spenders.filter((s) => !usdgOnly.has(s.toLowerCase())) : spenders;
-  const curveOrV4 = new Set([adapter, ponsAdapter].filter((a): a is Address => a !== undefined).map((a) => a.toLowerCase()));
-  const stockSpenders = scoped ? coinSpenders.filter((s) => !curveOrV4.has(s.toLowerCase())) : spenders;
-  /**
-   * WHAT A CURVE TRADE MAY TOUCH: cash and the owner's own coins. Never the
-   * equity book.
-   *
-   * A STRICT SUBSET OF `adapterAssets`, and the only place in this file where
-   * one venue gets a narrower asset list than another. The reason is that the
-   * Pons venues are the only ones whose COUNTERPARTY is a caller-supplied
-   * address that no policy can pin — the launchpad mints ~475 new curve
-   * addresses an hour, so there is no set to enumerate — and both
-   * `PonsSelfTrade.tradeExactIn` and `PonsClassVault.buy` hand that address a
-   * live ERC-20 allowance over the pulled input before calling it.
-   *
-   * `allowedSpenders` above warns twice that an approved spender is "a standing
-   * licence to move every share the agent holds", and exempts the two adapters
-   * on the grounds that everything they pull they hand straight back. That
-   * argument holds for V4SelfSwap, which pins its PoolManager as an immutable
-   * because there is exactly one singleton to trust. It does NOT hold here: a
-   * compromised session key can name a contract it controls as the curve, and
-   * the delta check is satisfied by returning one wei, `minAmountOut` being
-   * unpinned. There is no on-chain repetition limit either — RateLimitPolicy is
-   * codeless on 4663, so `maxOpsPerDay` is worker-enforced only.
-   *
-   * Narrowing the CALL is what closes it, not capping the approve: an allowance
-   * the wall's call permissions can never spend is inert. So the stock approvals
-   * stay uncapped — share counts are 18dp and not comparable to a USDG figure,
-   * exactly as the comment there says — and a curve trade simply cannot name a
-   * stock token as either leg.
-   *
-   * WHAT THIS GIVES UP, stated rather than discovered later: curves quoted in a
-   * Robinhood stock token, which are 42.8% of the launchpad. Reaching those
-   * would mean letting the equity book fund an unpinnable counterparty, which is
-   * the whole exposure. USDG-quoted curves and the owner's own coins remain.
-   */
-  const curveAssets: Address[] = [
-    CASH.USDG as Address,
-    ...extras.map((t) => t.address as Address),
-  ];
+  const coinSpenders =
+    opts.scopedSpenders === true
+      ? spenders.filter((s) => s.toLowerCase() !== trencherVault?.toLowerCase())
+      : spenders;
   const self = { condition: ParamCondition.EQUAL, value: smartAccount } as const;
   // Deduped and lowercased so a list with the same address twice doesn't bloat
   // the on-chain policy, and a case difference can't read as a second address.
@@ -795,9 +402,9 @@ export function buildCallPermissions(
     ...trencherPermissions(opts, smartAccount, usdgUnits(caps.perTradeUsdg)),
     {
       // approve USDG, only to the allowed spenders, only up to one trade's size.
-      // `usdgSpenders`, not `spenders`: the energy router and the Lighter
-      // proxy, when sealed, are named HERE and nowhere else — see above.
-      target: CASH.USDG as Address,
+      // `usdgSpenders`, not `spenders`: the Lighter proxy, when sealed, is
+      // named HERE and nowhere else — see above.
+      target: CASH.USDT as Address,
       valueLimit: 0n,
       abi: erc20Abi,
       functionName: "approve",
@@ -817,7 +424,7 @@ export function buildCallPermissions(
           valueLimit: 0n,
           abi: erc20Abi,
           functionName: "approve",
-          args: [{ condition: ParamCondition.ONE_OF, value: stockSpenders }, null],
+          args: [{ condition: ParamCondition.ONE_OF, value: coinSpenders }, null],
         }) as const,
     ),
     // Owner-added tokens, same shape and same routers. Present ONLY because the
@@ -844,7 +451,7 @@ export function buildCallPermissions(
     ...(withdrawals.length > 0
       ? [
           {
-            target: CASH.USDG as Address,
+            target: CASH.USDT as Address,
             valueLimit: 0n,
             abi: erc20Abi,
             functionName: "transfer",
@@ -852,17 +459,6 @@ export function buildCallPermissions(
               { condition: ParamCondition.ONE_OF, value: withdrawals },
               { condition: ParamCondition.LESS_THAN_OR_EQUAL, value: usdgUnits(caps.perTradeUsdg) },
             ],
-          } as const,
-        ]
-      : []),
-    // Rialto router: target-scoped ONLY, because its calldata comes from a
-    // quote API and has no shape to constrain — so this permission is "call
-    // anything on this contract". Opt-in for that reason; absent by default.
-    ...(opts.allowRialto
-      ? [
-          {
-            target: RIALTO.routerSnapshot as Address,
-            valueLimit: 0n,
           } as const,
         ]
       : []),
@@ -900,23 +496,20 @@ export function buildCallPermissions(
       // token. The stocks left via the pool, so the ops-per-day cap never
       // bites — one op is enough to convert the entire non-cash book.
       //
-      // The paragraph below at the v4 adapter already described this attack and
-      // said the adapter's ONE_OF pin closes it; the adapter has never shipped
-      // (allowUniswapV4 is hardcoded false in both signers), so the pin belongs
-      // here, on the route grants actually carry. Same list, same variable as
-      // the approve permissions above — `adapterAssets` — so the set a key may
-      // APPROVE and the set it may SWAP INTO cannot drift apart within a grant.
+      // The ONE_OF pin on both legs closes it. Same list as the approve
+      // permissions above — `swapAssets` — so the set a key may APPROVE and the
+      // set it may SWAP INTO cannot drift apart within a grant.
       //
       // Cost: one bytes32 per allowed address per rule, so two legs over the
       // default 15-address list is ~960 bytes of extra enable-data, paid once
       // on the first UserOp of each session key.
-      target: UNISWAP.swapRouter02 as Address,
+      target: PANCAKESWAP.smartRouter as Address,
       valueLimit: 0n,
       abi: UNISWAP_SWAP_ROUTER_ABI,
       functionName: "exactInputSingle",
       args: [
-        { condition: ParamCondition.ONE_OF, value: adapterAssets },
-        { condition: ParamCondition.ONE_OF, value: adapterAssets },
+        { condition: ParamCondition.ONE_OF, value: swapAssets },
+        { condition: ParamCondition.ONE_OF, value: swapAssets },
         null,
         self,
         null,
@@ -947,91 +540,7 @@ export function buildCallPermissions(
     // pools quote against WETH, so any token with no direct USDG pair becomes
     // unreachable. That is a real loss of reach and it is the honest trade —
     // the alternative is shipping a hole that cannot be closed. The way back is
-    // an adapter with static args (V4SelfSwap is the pattern), not this.
-    // ── the ENERGY BUY, when the signer sealed it ────────────────────────
-    //
-    // Uniswap v2 Router02 `swapExactTokensForTokensSupportingFeeOnTransferTokens`
-    // over ENERGY_ROUTE_V1: USDG → VIRTUAL → $AGENTCAP, into THIS account, and
-    // nothing else. One selector on one target; the route's addresses are the
-    // frozen literals GRANT_ENERGY names forever (energy.ts).
-    //
-    // WHY THIS PATH IS PINNABLE WHEN exactInput's WAS NOT — the paragraph above
-    // says a multi-hop path cannot be constrained, and for a PACKED `bytes`
-    // path that is true: tokens straddle words and their word index moves with
-    // the hop count. v2's path is an ABI `address[]`, a dynamic array of
-    // STATIC elements. The head holds an offset word (w2) saying where the
-    // array lives; at that offset sit its length and then one right-aligned
-    // word per address. Pin the offset (w2 = 0xa0, i.e. straight after the five
-    // head words) and the length (w5 = 3), and the three elements are forced
-    // into w6, w7 and w8 — fixed offsets, each individually EQUAL-pinnable. The
-    // call policy maps args[i] to calldata offset i*32 with no ABI arity check
-    // (@zerodev/permissions callPolicyUtils getPermissionFromABI: `offset: i *
-    // 32`, the ABI consulted only for the selector and SLICE_EQUAL), which is
-    // why this args array is NINE long for a FIVE-parameter function, exactly
-    // as exactInputSingle's is seven long for one tuple parameter.
-    //
-    // EVERY PIN IS LOAD-BEARING, and wall.test.ts refuses each counterexample
-    // against a model of CallPolicy's own check:
-    //   w2 — unpinned, the array relocates past the pins: the router reads
-    //        path from wherever w2 points while w5..w8 still hold the pinned
-    //        words, so path[2] can be anything.
-    //   w5 — 2 buys VIRTUAL; 4 appends an unpinned hop into an attacker pair.
-    //   w6 — USDG, the only asset whose approve can name this router.
-    //   w7 — VIRTUAL, which pins the intermediate PAIR: an attacker-seeded
-    //        middle pool would extract the input.
-    //   w8 — $AGENTCAP.
-    //   w3 — `to`, this account. EQUAL is FULL-word equality, so dirty high
-    //        bits are refused before the router's decoder could mask them.
-    // Router02 is solc 0.6.6 (its CBOR tail on chain), whose v1 decoder takes
-    // the array's location solely from w2 and its length from the word there.
-    // CallPolicy V0_0_4 reads `bytes32(data[4+offset : 4+offset+32])`, and an
-    // out-of-range slice reverts, so the pinned calldata is at least 292 bytes.
-    //
-    // PINNED VALUES ARE BIGINT OR HEX, NEVER DECIMAL STRINGS. The library
-    // encodes a non-hex value with `toHex`, and `toHex("160")` is the UTF-8
-    // bytes 0x313630 — a pin that matches nothing and reads as strict. Nothing
-    // type-checks it: this function returns an untyped literal and
-    // buildWallPolicies casts it `as never`.
-    //
-    // THE WORDS LEFT OPEN, and why:
-    //   w0 amountIn — bounded by the capped USDG approve, the only allowance
-    //        this wall lets the key give this router (set, never added to;
-    //        increaseAllowance is not granted). A w0 pin would be redundant,
-    //        would not bound a UserOp (a batch can repeat approve+swap), and
-    //        would cost 192 bytes — the same reasoning every swap above uses.
-    //   w1 amountOutMin — $AGENTCAP units after the token's buy tax; the
-    //        worker's floor, fenced off-chain. No single figure means anything
-    //        across prices.
-    //   w4 deadline.
-    //
-    // WHAT A STOLEN SESSION KEY GAINS, said plainly: it can turn up to
-    // perTradeUsdg of USDG per call into $AGENTCAP in THIS account, at a price
-    // it can worsen (amountOutMin is open) — the same exposure exactInputSingle
-    // already carries into attacker-seeded pools, and no wider. It cannot sell
-    // what it bought: $AGENTCAP has no approve anywhere in this wall
-    // (usableExtraTokens drops it), so the reserve is buy-only by construction.
-    // The owner key recovers it.
-    ...(energy
-      ? [
-          {
-            target: ENERGY_ROUTE_V1.router as Address,
-            valueLimit: 0n,
-            abi: UNISWAP_V2_ENERGY_ABI,
-            functionName: "swapExactTokensForTokensSupportingFeeOnTransferTokens",
-            args: [
-              null, // w0 amountIn — bounded by the capped USDG approve
-              null, // w1 amountOutMin — post-tax $AGENTCAP, the worker's floor
-              { condition: ParamCondition.EQUAL, value: 0xa0n }, // w2 offset of path — WHERE the array is read
-              self, // w3 to — this account
-              null, // w4 deadline
-              { condition: ParamCondition.EQUAL, value: 3n }, // w5 path.length
-              { condition: ParamCondition.EQUAL, value: ENERGY_ROUTE_V1.path[0] }, // w6 USDG
-              { condition: ParamCondition.EQUAL, value: ENERGY_ROUTE_V1.path[1] }, // w7 VIRTUAL
-              { condition: ParamCondition.EQUAL, value: ENERGY_ROUTE_V1.path[2] }, // w8 $AGENTCAP
-            ],
-          } as const,
-        ]
-      : []),
+    // an adapter with static args, not this.
     // ── PERPETUALS ON LIGHTER, when the signer sealed them ───────────────
     //
     // Three permissions on the ZkLighter proxy of LIGHTER_ROUTE_V1, plus the
@@ -1069,7 +578,7 @@ export function buildCallPermissions(
     // It cannot register any other key, withdraw on-chain, deposit for another
     // address or asset, move native value, or cancel a stop.
     //
-    // PINNED VALUES ARE BIGINT OR FULL-WORD HEX, as for the energy buy: the
+    // PINNED VALUES ARE BIGINT OR FULL-WORD HEX, never decimal strings: the
     // library encodes a non-hex value with `toHex` and LEFT-pads anything
     // shorter than 32 bytes, so a decimal string or a short hex pins a word the
     // encoder never produces — a permission that matches nothing and reads as
@@ -1085,8 +594,8 @@ export function buildCallPermissions(
             //   w0 _to — THIS account. The Lighter account is keyed on `_to`
             //        and the proxy credits it whoever paid (registerDeposit), so
             //        unpinned this is a USDG transfer to any stranger's venue
-            //        account wearing a deposit's clothes — the Morpho receiver
-            //        lesson below, on a venue with no withdraw-to-owner rule.
+            //        account wearing a deposit's clothes, on a venue with no
+            //        withdraw-to-owner rule.
             //   w1 _assetIndex — 3, USDG: the only asset the account approves
             //        this proxy for, pinned so the permission says so rather
             //        than leaning on that.
@@ -1117,9 +626,8 @@ export function buildCallPermissions(
             // can call it with no EIP-191/1271 signature (and why the wall's
             // NOT_FOR_VALIDATE_SIG costs perps nothing).
             //
-            // `bytes` is dynamic, so the layout is the energy route's trick
-            // again: SIX args for three parameters, because the call policy
-            // maps args[i] to offset i*32 with no arity check.
+            // `bytes` is dynamic, so SIX args for three parameters: the call
+            // policy maps args[i] to offset i*32 with no arity check.
             //
             //   w0 _accountIndex — OPEN, BY NECESSITY. The index does not exist
             //        at signing: the first deposit creates the account and the
@@ -1176,7 +684,7 @@ export function buildCallPermissions(
             //   w0 _owner — THIS account.
             //   w1 _assetIndex — 3, the one asset this route moves.
             //   w2 _baseAmount — OPEN: money coming home is not a risk the wall
-            //        needs to bound (the Morpho withdraw's reasoning), and the
+            //        needs to bound, and the
             //        pending figure is only known at claim time.
             target: LIGHTER_ROUTE_V1.proxy as Address,
             valueLimit: 0n,
@@ -1190,259 +698,9 @@ export function buildCallPermissions(
           } as const,
         ]
       : []),
-    // ── the V4SelfSwap adapter, when the owner opted in ──────────────────
-    //
-    // ONE permission, and STRICTER than the v3 routes above it. `swapExactIn`
-    // has eight all-static arguments, so each maps to its own calldata word
-    // and each is individually pinnable — proven against viem's encoder in
-    // wall.test.ts, the same way the two routes above are.
-    //
-    // tokenIn and tokenOut are pinned ONE_OF over the same asset set the
-    // approve targets derive from — USDG plus every token this signature can
-    // approve for a sell. Computed inside this same call from the same
-    // `extras`, so the two lists cannot drift within one grant. That closes
-    // the attack the v3 routes still accept: a stolen session key minting a
-    // worthless token and swapping the whole approved balance into it costs
-    // the attacker only gas. Here, both legs must be assets the OWNER named.
-    // The cost of that strictness is zero, not small: a new token needs a
-    // re-sign to be SELLABLE anyway (the no-exit rule), so being pinned here
-    // adds no friction that does not already exist.
-    //
-    // The words left null are null for stated reasons. amountIn (word 5) is
-    // denominated in tokenIn's own units — a USDG-derived cap would be
-    // meaningless on a sell — and the approve caps above are the real bound:
-    // the adapter can only pull what was approved, and pulls are further
-    // bounded by its own PullExceedsAmountIn check. minAmountOut (word 6) is
-    // denominated in the OUTPUT token, so no single figure means anything
-    // across pairs; the adapter's NoOutput guard is what stops a null here
-    // meaning "zero is acceptable". hooks (word 4) is null DELIBERATELY:
-    // hooked pools are the entire point (new pairs launch through them), and
-    // a hostile hook is inside the adapter's tested threat model — it can
-    // worsen a price, never redirect the output or overdraw the pull.
-    //
-    // And the word that is not here at all is the reason this contract
-    // exists: there is no recipient argument. It is msg.sender, in bytecode.
-    ...(adapter
-      ? [
-          {
-            target: adapter,
-            valueLimit: 0n,
-            abi: V4SELFSWAP_ABI,
-            functionName: "swapExactIn",
-            args: [
-              // `v4Assets`: equal to `adapterAssets` unless the wall is scoped,
-              // when stocks leave both legs (WallOptions.scopedSpenders).
-              { condition: ParamCondition.ONE_OF, value: v4Assets },
-              { condition: ParamCondition.ONE_OF, value: v4Assets },
-              null, // fee — any tier the pool actually has
-              null, // tickSpacing — pool identity, bounded by the quote
-              null, // hooks — see above
-              null, // amountIn — bounded by the approve caps
-              null, // minAmountOut — see above
-              null, // deadline
-            ],
-          } as const,
-        ]
-      : []),
-    // The Pons bonding-curve adapter. Same shape, one honest difference.
-    //
-    // THE CURVE IS NOT PINNED AND CANNOT BE. A buy goes to a per-token curve —
-    // ~475 new addresses an hour — so any ONE_OF list over word 0 is either
-    // stale tomorrow or unbounded today. This comment exists to say that
-    // outright, because the failure mode this file keeps warning about is a
-    // comment describing intent over a policy allowing the opposite, and a
-    // reader skimming `null` deserves to know it is deliberate rather than an
-    // oversight.
-    //
-    // What still binds: both asset legs are pinned to the SAME list the approve
-    // permissions cover — same variable, same call, so the trade set cannot
-    // drift from the approve set within one grant — the size is bounded by
-    // those approves, and the adapter delivers only to msg.sender, verified
-    // against the account's own balance rather than the curve's claim.
-    //
-    // `valueLimit: 0n` like every other entry here, and that is load-bearing
-    // rather than incidental: the adapter is non-payable, which is exactly why
-    // native-quoted curves are out of reach and why granting this does not
-    // become the first permission in the wall that can move native ETH.
-    ...(ponsAdapter
-      ? [
-          {
-            target: ponsAdapter,
-            valueLimit: 0n,
-            abi: PONS_SELFTRADE_ABI,
-            functionName: "tradeExactIn",
-            args: [
-              null, // curve — unpinnable, see above
-              // `curveAssets`, NOT `adapterAssets`: cash and the owner's coins,
-              // never the equity book. The curve is caller-supplied and gets a
-              // live allowance over whatever is pulled, so this list is the only
-              // thing deciding what an unpinnable counterparty can be handed.
-              { condition: ParamCondition.ONE_OF, value: curveAssets },
-              { condition: ParamCondition.ONE_OF, value: curveAssets },
-              null, // amountIn — bounded by the approve caps
-              null, // minAmountOut — denominated in the output asset, says nothing useful
-              null, // deadline
-            ],
-          } as const,
-        ]
-      : []),
-    // THE CLASS PERMISSIONS — the only route in this wall to a token the owner
-    // never enumerated, and the reason PonsClassVault exists.
-    //
-    // READ THE ARGUMENT LISTS: the class token is not among them. `buy` names
-    // the FUNDING asset, which stays pinned to the same enumerated list as
-    // everything else here, and derives the token from the curve. `sell` names
-    // no asset at all. So nothing below is a loosened constraint — there is no
-    // token word to loosen. The capability comes from the vault HOLDING the
-    // token, which is what removes the per-token `approve` from the exit path;
-    // that approve is the thing no policy can express for an unknown address,
-    // and it is why a buy-side-only class permission would be a trap.
-    //
-    // What still binds: the funding leg is ONE_OF the same `adapterAssets` the
-    // approve permissions cover; the size is bounded by the capped USDG approve;
-    // and the vault has no recipient argument anywhere, so every payout is its
-    // own owner. What does NOT bind, stated rather than implied: the curve is
-    // unpinnable here exactly as it is for the adapter above, and NOTHING on
-    // chain vouches for the token. Provenance lives only in the worker's
-    // factory-filtered knownCurves — for this permission the chain is looser
-    // than the mirror, which is the reverse of this file's usual posture.
-    //
-    // `sweep` is deliberately NOT granted. It is a recovery action taken with
-    // the OWNER key, which the wall does not bind; giving it to the session key
-    // would only let an agent move a token into the account, where it cannot be
-    // sold for want of the very approve this design avoids.
-    ...(classVault
-      ? [
-          {
-            target: classVault,
-            valueLimit: 0n,
-            abi: PONS_CLASS_VAULT_ABI,
-            functionName: "buy",
-            args: [
-              null, // curve — unpinnable, same as the adapter above
-              // USDG AND NOTHING ELSE, narrower still than the adapter's list.
-              //
-              // The class producer only ever funds an entry in USDG
-              // (`proposeClassEntries` passes `usdg: CASH.USDG`, and
-              // `readClassLegs` filters to it), so every other asset here was
-              // reach nothing uses. It mattered more than an unused branch
-              // usually does: `buy` pulls this asset FROM THE ACCOUNT and then
-              // approves the caller-supplied curve for it, so the funding list
-              // is exactly the list of things a hostile curve can be handed.
-              // With one capped asset, that is bounded by the capped USDG
-              // approve — which is what the old comment on `quoteIn` already
-              // claimed, and which only becomes true here.
-              { condition: ParamCondition.ONE_OF, value: [CASH.USDG as Address] },
-              null, // quoteIn — bounded by the capped USDG approve
-              null, // minTokensOut — denominated in a token nobody enumerated
-              null, // deadline
-            ],
-          } as const,
-          {
-            target: classVault,
-            valueLimit: 0n,
-            abi: PONS_CLASS_VAULT_ABI,
-            functionName: "sell",
-            args: [
-              null, // curve — unpinnable
-              null, // tokensIn — the vault can only sell what it holds
-              null, // minQuoteOut
-              null, // deadline
-            ],
-          } as const,
-          {
-            // CREATING THE VAULT, which nothing else in this wall can do.
-            //
-            // The address above is a CREATE2 prediction; the contract exists
-            // only once somebody calls this. Deployment is permissionless, so
-            // the key needs no privilege — only permission, and without it the
-            // first class buy CALLs a codeless address, succeeds with empty
-            // returndata, and books a purchase that bought nothing.
-            //
-            // `owner_` is pinned EQUAL to this account, which matters even
-            // though anyone may deploy anyone's vault. Left unpinned, a
-            // compromised session key could burn the account's gas creating
-            // vaults for strangers, repeatedly, inside the ops cap. Pinned, this
-            // permission can produce exactly ONE contract: the vault whose salt
-            // is this account, which is the address the wall already names as a
-            // target above. It cannot make a second one — CREATE2 collides.
-            target: classFactory!,
-            valueLimit: 0n,
-            abi: PONS_CLASS_VAULT_FACTORY_DEPLOY_ABI,
-            functionName: "deploy",
-            args: [self],
-          } as const,
-        ]
-      : []),
-    {
-      // Morpho vault deposits, capped per call at the daily limit — and the
-      // SHARES must come back to the agent's own account.
-      //
-      // Not in the original five exits, found while pinning the withdrawal:
-      // deposit(assets, receiver) mints vault shares to `receiver`. Unpinned,
-      // a compromised agent could spend the owner's USDG and mint the shares
-      // to itself elsewhere — the money leaves just as surely as a transfer,
-      // only wearing a deposit's clothes.
-      target: MORPHO.steakhouseUsdgVault as Address,
-      valueLimit: 0n,
-      abi: VAULT_ABI,
-      functionName: "deposit",
-      args: [{ condition: ParamCondition.LESS_THAN_OR_EQUAL, value: usdgUnits(caps.dailyUsdg) }, self],
-    },
-    {
-      // Withdrawals are unrestricted in SIZE — money coming home is not a risk
-      // the wall needs to bound. But "coming home" has to be enforced, not
-      // assumed: withdraw(assets, receiver, owner) takes a receiver, and with
-      // no args at all the session key could drain the entire vault position
-      // to any address in one call, uncapped, because the size rule that would
-      // have bounded it was deliberately absent.
-      //
-      // The old comment described the INTENT ("money coming home") while the
-      // policy permitted the opposite. Size stays unbounded; the destination
-      // does not.
-      target: MORPHO.steakhouseUsdgVault as Address,
-      valueLimit: 0n,
-      abi: VAULT_ABI,
-      functionName: "withdraw",
-      args: [null, self, null],
-    },
-    // The v4 pair — OPT-IN, and off by default. See WallOptions.allowUniswapV4
-    // for why, and note these two travel together with the Permit2 spender in
-    // allowedSpenders: any one of the three alone is inert, all three is a
-    // drain. Granting them individually is how this became a hole.
-    ...(opts.allowUniswapV4
-      ? [
-          {
-            // Permit2 may be told to grant an allowance, but ONLY to the
-            // UniversalRouter. Without that EQUAL condition this single
-            // permission would let the session key hand any spender an
-            // allowance on any token — strictly more power than trading.
-            //
-            // The token, the amount and the expiration all stay unconstrained,
-            // so this is a bound on WHO, never on how much or for how long.
-            // That is precisely why the whole pair is opt-in.
-            target: UNISWAP.permit2 as Address,
-            valueLimit: 0n,
-            abi: PERMIT2_ABI,
-            functionName: "approve",
-            args: [null, { condition: ParamCondition.EQUAL, value: UNISWAP.universalRouter as Address }, null, null],
-          },
-          {
-            // The UniversalRouter executes opaque command bundles, so a call
-            // policy cannot constrain its calldata — including the recipient.
-            // Nothing upstream bounds it either: the Permit2 allowance above
-            // is uncapped and non-expiring as far as the POLICY is concerned.
-            // Enabling this grants "move approved tokens anywhere".
-            target: UNISWAP.universalRouter as Address,
-            valueLimit: 0n,
-            abi: UNIVERSAL_ROUTER_ABI,
-            functionName: "execute",
-          },
-        ]
-      : []),
   ];
   if (!opts.perpsOnly) return permissions;
-  // A PERPS WALLET KEEPS THE PERP ROUTE AND THE ENERGY BUY, AND NOTHING ELSE
+  // A PERPS WALLET KEEPS THE PERP ROUTE AND NOTHING ELSE
   // (WallOptions.perpsOnly). A filter over the Spot list rather than a second
   // list, so a kept permission is the very object Spot would seal for that
   // route: its recipient pins, its key words and its per-call cap included.
@@ -1450,15 +708,12 @@ export function buildCallPermissions(
   // By TARGET, and USDG by selector too: the USDG `transfer` to a registered
   // withdrawal address shares the approve's target and must not ride along.
   // The approve itself survives only when it names someone (`usdgSpenders`,
-  // already stripped of every Spot spender above); with no perp block and no
-  // energy buy there is nobody to name, and the wall is empty.
+  // already stripped of every Spot spender above); with no perp block there is
+  // nobody to name, and the wall is empty.
   return permissions.filter((permission) => {
     const target = permission.target.toLowerCase();
-    if (target === CASH.USDG.toLowerCase()) return permission.functionName === "approve" && usdgSpenders.length > 0;
-    return (
-      (perp !== undefined && target === LIGHTER_ROUTE_V1.proxy.toLowerCase()) ||
-      (energy && target === ENERGY_ROUTE_V1.router.toLowerCase())
-    );
+    if (target === CASH.USDT.toLowerCase()) return permission.functionName === "approve" && usdgSpenders.length > 0;
+    return perp !== undefined && target === LIGHTER_ROUTE_V1.proxy.toLowerCase();
   });
 }
 
@@ -1516,17 +771,12 @@ export function buildWallPolicies(args: {
     // deployment and it is deliberately not bundled with this correction.
     toCallPolicy({
       policyVersion: CallPolicyVersion.V0_0_4,
-      // EVERY adapter must be forwarded, and the type system will not tell you.
-      // `ponsAdapterAddress` was missing here and it type-checked, because this
-      // function's argument is an intersection with WallOptions — so the field
-      // was accepted at the call site and silently dropped one line later. The
-      // result would be the exact failure the grant module warns about: a
-      // signature carrying the `pons-adapter` MARKER and a sealed address, over
-      // a call policy with no `tradeExactIn` permission and no adapter in the
-      // approve spender set. `limitsFromGrant` would allow the target, the
-      // worker would build the UserOp, and both calls would revert at the wall.
-      // A mirror looser than the chain is the one shape this file exists to
-      // prevent.
+      // EVERY option must be forwarded, and the type system will not tell you:
+      // this function's argument is an intersection with WallOptions, so a field
+      // is accepted at the call site and can be silently dropped one line later.
+      // The result would be a signature carrying a feature marker over a call
+      // policy without the permission behind it — a mirror looser than the chain
+      // is the one shape this file exists to prevent.
       permissions: buildCallPermissions(args.caps, args.smartAccount, {
         // And the one that narrows, which is no less a trap to drop: a Perps
         // grant would be signed over the Spot wall, the stock approvals and
@@ -1534,32 +784,14 @@ export function buildWallPolicies(args: {
         perpsOnly: args.perpsOnly,
         extraTokens: args.extraTokens,
         withdrawalAddresses: args.withdrawalAddresses,
-        allowRialto: args.allowRialto,
-        allowUniswapV4: args.allowUniswapV4,
-        v4AdapterAddress: args.v4AdapterAddress,
-        ponsAdapterAddress: args.ponsAdapterAddress,
-        // Forwarded for exactly the reason the comment above documents: omit it
-        // and the field is accepted at the call site (the argument is an
-        // intersection with WallOptions) and dropped one line later, producing a
-        // grant that carries the `pons-class` marker and a sealed vault address
-        // over a call policy with no class permission and no vault in the
-        // spender set. The mirror would allow it, the worker would build it, and
-        // the chain would refuse it.
-        ponsClassVaultAddress: args.ponsClassVaultAddress,
-        ponsClassVaultFactoryAddress: args.ponsClassVaultFactoryAddress,
         trencherVaultAddress: args.trencherVaultAddress,
         trencherFactoryAddress: args.trencherFactoryAddress,
-        // The same trap a fourth time, and the most expensive one to miss: a
-        // signer would mint GRANT_ENERGY off `wallOpts.energyBuy` over a call
-        // policy with no router permission and no router in the USDG approve.
-        // The worker would build the buy, and the chain would refuse it.
-        energyBuy: args.energyBuy,
-        // And a fifth: a signer that sized the SCOPED wall (wallSignable over
-        // buildCallPermissions) and minted GRANT_SCOPED_SPENDERS would have
-        // signed the unscoped one here — the wall it had just refused as too
-        // large to install.
+        // And one that, missed, is just as bad: a signer that sized the SCOPED
+        // wall (wallSignable over buildCallPermissions) and minted
+        // GRANT_SCOPED_SPENDERS would have signed the unscoped one here — the
+        // wall it had just refused as too large to install.
         scopedSpenders: args.scopedSpenders,
-        // And a fifth, where the miss would be worst of all: a grant carrying
+        // And where the miss would be worst of all: a grant carrying
         // `perp-lighter-v1` and a sealed key over a wall with no deposit, no
         // key registration and no proxy in the USDG approve. The worker would
         // plan an onboarding the chain refuses at its first step — or, after a
@@ -1598,14 +830,8 @@ export function buildWallPolicies(args: {
  * differ exactly when someone added a token without re-signing — and sizing a
  * wall from the larger list would refuse a wall that is genuinely small.
  *
- * `energyBuy` FROM THE MARKER ALONE. GRANT_ENERGY is versioned over the frozen
- * ENERGY_ROUTE_V1, so the marker plus the account IS the whole permission —
- * there is no sealed address to read beside it, and none is needed. A rebuild
- * that dropped it would size (and, server-side, byte-compare) a wall one
- * permission and one spender entry narrower than the one that was signed.
- *
- * `perpLighter` FROM `grantPerp(grant)`, AND ONLY FROM IT. Unlike the energy
- * buy the marker is not the whole permission — the wall pins the sealed API
+ * `perpLighter` FROM `grantPerp(grant)`, AND ONLY FROM IT. The marker is not
+ * the whole permission — the wall pins the sealed API
  * public key — so the rebuild needs the grant's `perp` block and its chain as
  * well, and takes them through the one reader the worker trusts: marker,
  * chain 4663, route, the route's key index and a canonical key, all or
@@ -1642,79 +868,11 @@ export function grantWallOptions(grant: {
     // with exactly the keys it always had.
     ...(grantPurpose(grant) === "perps" ? { perpsOnly: true } : {}),
     extraTokens,
-    allowRialto: features.has("rialto"),
-    allowUniswapV4: features.has("v4"),
-    energyBuy: features.has(GRANT_ENERGY),
     scopedSpenders: features.has(GRANT_SCOPED_SPENDERS),
     // Present only when granted, so a grant without perps yields an options
     // object with exactly the keys it always had.
     ...(perp ? { perpLighter: { apiKeyIndex: perp.apiKeyIndex, apiPublicKey: perp.apiPublicKey } } : {}),
   };
-}
-
-/**
- * The assets this grant's v4 adapter may trade, lowercased — for the worker's
- * router gate, from the same marker and tokens the wall was rebuilt from.
- */
-export function grantV4AdapterAssets(grant: {
-  grantTokens?: readonly string[];
-  grantFeatures?: readonly string[];
-}): ReadonlySet<string> {
-  return new Set(v4AdapterAssets(grantWallOptions(grant)).map((a) => a.toLowerCase()));
-}
-
-/**
- * Can this grant's v4 adapter take BOTH legs of this swap? The router gate's
- * question: a v4 quote for a pair the wall does not cover is a route that
- * reverts at validation, which is worse than never having considered it.
- */
-export function grantV4AdapterReaches(
-  grant: { grantTokens?: readonly string[]; grantFeatures?: readonly string[] },
-  tokenIn: string,
-  tokenOut: string,
-): boolean {
-  const assets = grantV4AdapterAssets(grant);
-  return assets.has(tokenIn.toLowerCase()) && assets.has(tokenOut.toLowerCase());
-}
-
-/**
- * SHOULD THIS SIGNATURE CARRY THE ENERGY BUY? Asked by both signers before
- * they sign, and the ONLY thing that may set `WallOptions.energyBuy` to true.
- *
- * Two conditions, both about safety rather than preference:
- *
- *   - CHAIN 4663 ONLY. The route's addresses are mainnet deployments; on any
- *     other chain the router is codeless, a CALL to it succeeds with empty
- *     returndata, and a buy would book USDG out for $AGENTCAP that never
- *     arrived. (grantEnergyRoute refuses the marker off 4663 as well.)
- *   - ONLY WHEN THE WALL STILL FITS. The permission costs 1,408 stub bytes —
- *     about 1.25M bounded first-enable gas — and a wall already near the
- *     product maximum (class vault + Trencher + a token or two) has no such
- *     room. Adding it there would turn an owner's re-sign into a refusal; an
- *     owner without room signs exactly the wall they signed before this
- *     existed, and energy reaches that agent as $AGENTCAP sent to it directly.
- *
- * THE SAME POLICY, NOT A COPY OF IT: `wallSignable` over `wallShape` over the
- * real `buildCallPermissions` objects, with the caller's own options and the
- * account's real deployment state — exactly the check the signer is about to
- * make, one permission wider. So "fits" here and "signable" there cannot
- * disagree, and the marker the signer mints from this boolean is the
- * permission it built (signer-lockstep.test.ts pins that).
- *
- * `deploying` follows `wallSignable`'s rule: an account whose code could not be
- * read counts as undeployed, which can only make this answer false.
- */
-export function energyBuyFits(
-  caps: GrantCaps,
-  smartAccount: Address,
-  chainId: number,
-  deploying: boolean,
-  opts: WallOptions,
-): boolean {
-  if (chainId !== ENERGY_ROUTE_V1.chainId) return false;
-  return wallSignable(wallShape(buildCallPermissions(caps, smartAccount, { ...opts, energyBuy: true })), {
-    deploying,
-  }).ok;
 }
 
 /**
@@ -1734,7 +892,7 @@ const PERP_SIZING_KEY = `0x${"0100000000000000".repeat(5)}` as `0x${string}`;
  * the only door besides `grantWallOptions` through which `WallOptions.perpLighter`
  * should be set.
  *
- * The energy buy's two conditions, for the energy buy's reasons:
+ * Two conditions, both about safety rather than preference:
  *
  *   - CHAIN 4663 ONLY. The proxy is a mainnet deployment and there is no
  *     Lighter on testnet 46630; elsewhere a CALL to it succeeds with empty
@@ -1742,16 +900,12 @@ const PERP_SIZING_KEY = `0x${"0100000000000000".repeat(5)}` as `0x${string}`;
  *     (`grantPerp` refuses the marker off 4663 as well.)
  *   - ONLY WHEN THE WALL STILL FITS. Three permissions, eleven EQUAL/LTE rules
  *     and one spender entry: 2,816 stub bytes, about 2.5M bounded first-enable
- *     gas — twice the energy buy.
+ *     gas.
  *
- * WHAT THE CALLER DOES WITH `false` IS NOT WHAT IT DOES FOR ENERGY. An energy
- * buy that does not fit is dropped and the agent is funded another way. Perps
- * that do not fit are REFUSED when the previous grant carried them — a
- * registered key outlives any grant, so silently signing without the block
- * would leave a live venue account with no key (docs/perps.md rule 3, rule 5).
- * The same asymmetry decides the ORDER: settle perps first, then ask
- * `energyBuyFits` over the wall that already carries them, so the droppable
- * capability is the one that gives way.
+ * `false` IS NEVER A SILENT DROP. Perps that do not fit are REFUSED when the
+ * previous grant carried them — a registered key outlives any grant, so
+ * silently signing without the block would leave a live venue account with no
+ * key (docs/perps.md rule 3, rule 5).
  *
  * THE SAME POLICY, NOT A COPY OF IT: `wallSignable` over `wallShape` over the
  * real `buildCallPermissions`, with the caller's own options — so a caller that

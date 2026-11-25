@@ -32,6 +32,7 @@
  * Proposed as 'chain-log' it would collide with a different source and fail
  * verification; left out, contributions would disagree with the ledger.
  */
+import { cashNumber } from "../../packages/core/src/cash";
 import { createHash } from "node:crypto";
 import { isEvidencedFlow } from "./accounting-scope";
 import type { AccountCapital } from "./chain-capital";
@@ -118,8 +119,8 @@ const num = (v: unknown): number => {
   return Number.isFinite(n) ? n : 0;
 };
 
-/** Base units to decimal USDG. Six places, which is all the column can hold. */
-const toUsdg = (raw: string): number => Number(BigInt(raw)) / 1e6;
+/** Base units to decimal USDT. Six places, which is all the column can hold. */
+const toUsdg = (raw: string): number => cashNumber(BigInt(raw));
 
 /** Every stored flow column, including receipt identity and original timestamp. */
 export const FLOW_SNAPSHOT_COLUMNS =

@@ -8,22 +8,10 @@ import {
   type GeckoWindow,
   type PoolFeed,
 } from "../../../worker/src/venues/geckoterminal";
-import { recentPonsLaunches } from "../../../worker/src/venues/pons";
-import {
-  readCurveActivity,
-  isActive,
-  MAX_ACTIVITY_BLOCKS,
-} from "../../../worker/src/venues/pons-activity";
-import { readTokenMeta } from "../../../worker/src/venues/pons-meta";
-import {
-  readCardFacts,
-  readBlockClock,
-  ageSecOf,
-} from "../../../worker/src/venues/pons-card";
 import { resolveConfig } from "../../../worker/src/settings";
 import { resolveLlm } from "../../../worker/src/llm";
 import { createMemecoinScout } from "../../../worker/src/strategist/memecoin-scout";
-import { researchCoins, scoutFieldsFor, type ScoutSiteFields } from "../../../worker/src/strategist/coin-research";
+import { researchCoins, scoutFieldsFor } from "../../../worker/src/strategist/coin-research";
 
 /**
  * What is trading on this chain.
@@ -58,10 +46,6 @@ import { researchCoins, scoutFieldsFor, type ScoutSiteFields } from "../../../wo
 /** The same floor the worker's own screen uses, so the two agree on "worth showing". */
 const LIMITS = { minReserveUsd: 25_000, minVolume24hUsd: 50_000, minBuyers24h: 100 };
 
-/** GeckoTerminal's venue slugs for the two halves of the Pons launchpad. */
-const GRADUATED = "pons-v2-dex";
-const ON_CURVE = "pons-v2";
-
 /**
  * The three lists, in the order they are walked.
  *
@@ -90,24 +74,13 @@ export interface DiscoveryRow {
   name: string;
   venue: string;
   priceUsd: number | null;
-  /**
-   * Depth as the INDEX reports it.
-   *
-   * For a coin still on its bonding curve this is mostly the VIRTUAL SEED — a
-   * fresh curve reports about $4,100 of "reserve" while holding none of it —
-   * so the UI must never present it as money you could sell into. That is why
-   * `onCurve` travels with it.
-   */
+  /** Depth as the INDEX reports it: the pool's total value, not a depth you can trade against. */
   reserveUsd: number | null;
   fdvUsd: number | null;
   volume24hUsd: number | null;
   change24hPct: number | null;
   buyers24h: number | null;
   ageDays: number | null;
-  /** Graduated off a Pons bonding curve into a real pool. */
-  graduated: boolean;
-  /** Still on its bonding curve — treat `reserveUsd` with suspicion. */
-  onCurve: boolean;
   /**
    * The scout's own line on this coin, when it had one.
    *
@@ -135,7 +108,7 @@ export interface DiscoveryRow {
    * The pool this row describes, as the index identifies it.
    *
    * TWO WIDTHS AND THE DIFFERENCE MATTERS: 20 bytes is a pool contract, 32 is
-   * a v4/Pons poolId that cannot be called. Both are perfectly good keys for
+   * a poolId that cannot be called. Both are perfectly good keys for
    * the index's own OHLCV endpoint, which is the only thing this field is for
    * — it is never somewhere to send an eth_call.
    */
@@ -159,88 +132,11 @@ function toRow(p: GeckoPool, nowSec: number): DiscoveryRow {
     change24hPct: p.change24hPct,
     buyers24h: p.buyers24h,
     ageDays: p.createdAt === null ? null : Math.max(0, (nowSec - p.createdAt) / 86_400),
-    graduated: p.dex === GRADUATED,
-    onCurve: p.dex === ON_CURVE,
     buckets: p.buckets,
     poolId: p.poolId,
     dex: p.dex,
   };
 }
-
-/** A launch from the last few minutes that people are actually trading. */
-export interface FreshRow {
-  token: string;
-  curve: string;
-  trades: number;
-  /** Distinct trading ADDRESSES, from the trade event's own indexed field. */
-  traders: number;
-  /** The launcher's own words. Sanitised, and a claim rather than a fact. */
-  description: string;
-  twitter: string;
-  telegram: string;
-  website: string;
-  /** Published nothing at all — the shape an abandoned template has. */
-  bare: boolean;
-  /** The ERC-20's own ticker, from the chain. Empty when unreadable. */
-  symbol: string;
-  /** The ERC-20's own name, from the chain. Empty when unreadable. */
-  name: string;
-  /**
-   * The launcher's logo URI, usually `ipfs://…`. Never given to a browser
-   * directly — it goes through /api/coin-image, which is both what makes it
-   * load at all (every gateway 403s a browser User-Agent) and what keeps an
-   * attacker-chosen URL out of the reader's browser.
-   */
-  logo: string;
-  /** Seconds since it launched, measured from a real block clock. Null when unknown. */
-  ageSec: number | null;
-  /** Basis points of its own graduation threshold, net of the virtual seed. */
-  progressBps: number | null;
-}
-
-/**
- * The other end of the launchpad: what launched in the last quarter hour and
- * has a tape.
- *
- * Pons runs at roughly 940 launches an hour, so this is a FUNNEL rather than a
- * list. The gate is trading — 25 trades and 3 distinct addresses — which keeps
- * about an eighth of launches and holds 96% of the ones that go on to graduate.
- * A dev buy, having socials, and the creator's history were all measured and
- * are worth nothing as filters.
- *
- * Three RPC calls for the whole thing, whatever the launch rate: the launches,
- * one chain-wide sweep of every curve trade, and one Multicall3 batch for the
- * survivors' metadata.
- */
-/**
- * Which of the three enrichment reads came back.
- *
- * These fail as a WAVE, not one coin at a time — the RPC refuses the burst and
- * all three return nothing together — so the answer belongs to the page, not to
- * a card. Observed in production on 2026-08-30: 28 rows with real trade counts
- * and every enriched field blank, served for about two and a half minutes.
- */
-export interface ChainStatus {
-  /**
-   * The launch scan and the trade sweep — the reads that produce the ROWS.
-   *
-   * Separate from the three below because it fails differently and worse: when
-   * this goes, there are no rows at all, and an empty list renders as "nothing
-   * launched in the last few minutes has anyone trading it" — a confident claim
-   * about a launchpad running at 940 launches an hour. Same mistake as `bare`,
-   * one level up.
-   */
-  launchpad: boolean;
-  /** The launcher's description, logo and socials (pons-meta). */
-  meta: boolean;
-  /** Symbol, name and curve progress (pons-card). */
-  facts: boolean;
-  /** The block clock that turns a block number into an age. */
-  clock: boolean;
-}
-
-/** Space out a burst: the reads are cheap, the RPC's tolerance for concurrency is not. */
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
  * Rank the screened set with the same scout the worker uses.
@@ -348,26 +244,6 @@ async function rankUncached(
 ): Promise<{
   picks: { pool: GeckoPool; conviction: number; reason: string }[];
   /**
-   * Offered to the model and NOT chosen.
-   *
-   * The coins page shows what was picked; this is the other half of the same
-   * judgement, and it is the half that is actually hard to get anywhere else.
-   * Optional because the closed paths below return without a model call at all,
-   * and an empty array there would claim the scout looked and rejected
-   * everything — which is the one thing `why` exists to prevent.
-   */
-  passed?: readonly GeckoPool[];
-  /**
-   * What was read about each coin before the model saw it, keyed by lowercased
-   * token address.
-   *
-   * Booleans and counts only — never the launcher's prose, which is an
-   * instruction channel (memecoin-scout.ts:60-70). Absent whenever no browser
-   * is configured on this service, which is most of the time; absent and empty
-   * are different and the reader must say which.
-   */
-  research?: ReadonlyMap<string, ScoutSiteFields>;
-  /**
    * Why there are no verdicts, when there are none.
    *
    * "no-model", "model-failed" and "chose nothing" are three different facts and
@@ -401,87 +277,10 @@ async function rankUncached(
       });
       research = new Map([...found].map(([k, r]) => [k, scoutFieldsFor(r)]));
     }
-    // The research travels back out with the verdicts rather than being
-    // discarded at the end of this function. It was already paid for — one
-    // batched chain read and at most a handful of page visits — and it is the
-    // working behind the one-line reason the coins page shows.
-    return { ...(await createMemecoinScout(creds).rank(kept, nowSec, research)), research };
+    const ranked = await createMemecoinScout(creds).rank(kept, nowSec, research);
+    return { picks: ranked.picks };
   } catch {
     return { picks: [] };
-  }
-}
-
-async function readFresh(): Promise<{ rows: FreshRow[]; chain: ChainStatus }> {
-  // `true` means "read it", so a total failure below reports three honest
-  // falses rather than three optimistic trues.
-  const chain: ChainStatus = { launchpad: false, meta: false, facts: false, clock: false };
-  try {
-    const client = createPublicClient({ transport: webChainRead(process.env.AGENTCAP_RPC_MAINNET) });
-    const W = MAX_ACTIVITY_BLOCKS;
-    const [scan, activity] = await Promise.all([
-      recentPonsLaunches(client as never, W),
-      readCurveActivity(client as never, W),
-    ]);
-    // A null activity map means the node refused, which is a different fact
-    // from a quiet launchpad — showing nothing is right, inventing an empty
-    // tape for every launch is not.
-    if (scan.failed || !activity) return { rows: [], chain };
-    chain.launchpad = true;
-    const live = scan.launches.filter((l) => isActive(activity.get(l.curve.toLowerCase())));
-
-    // SEQUENTIAL, NOT Promise.all — and this is the one behavioural change here.
-    // These three used to fire as a burst immediately after two heavy log
-    // sweeps, and the whole burst is what the node refuses: all three come back
-    // empty together while the sweeps that preceded them succeeded. They cost
-    // ~700ms in total, so spacing them is nearly free, and the alternative
-    // (more retries) multiplies the burst that draws the refusal.
-    const meta = await readTokenMeta(client as never, live.map((l) => l.token));
-    chain.meta = meta.size > 0 || live.length === 0;
-    await sleep(120);
-    const facts = await readCardFacts(client as never, live);
-    chain.facts = facts.size > 0 || live.length === 0;
-    await sleep(120);
-    const clock = await readBlockClock(client as never);
-    chain.clock = clock !== null;
-
-    return {
-      chain,
-      rows: live
-        .map((l) => {
-          const a = activity.get(l.curve.toLowerCase())!;
-          const m = meta.get(l.token.toLowerCase());
-          const f = facts.get(l.token.toLowerCase());
-          return {
-            token: l.token,
-            curve: l.curve,
-            trades: a.buys + a.sells,
-            traders: a.traders,
-            description: m?.description ?? "",
-            twitter: m?.twitter ?? "",
-            telegram: m?.telegram ?? "",
-            website: m?.website ?? "",
-            // `bare` means "this launcher published NOTHING", which is a claim
-            // about the coin — so it may only be made when the read succeeded.
-            // It used to be `m ? m.bare : true`, which turned every unread coin
-            // into an accusation: the card said "Published nothing about
-            // itself" and "no socials" about coins that published plenty.
-            // readTokenMeta returns a MAP precisely so a caller can tell "read
-            // and empty" from "not read", and this threw that away.
-            bare: m ? m.bare : false,
-            symbol: f?.symbol ?? "",
-            name: f?.name ?? "",
-            logo: m?.logo ?? "",
-            ageSec: ageSecOf(clock, l.blockNumber),
-            progressBps: f?.progressBps ?? null,
-          };
-        })
-        // By distinct addresses, not trade count: 291 trades from 25 addresses is
-        // a different thing from 223 trades from 176, and only one of them looks
-        // like people.
-        .sort((x, y) => y.traders - x.traders),
-    };
-  } catch {
-    return { rows: [], chain };
   }
 }
 
@@ -490,9 +289,6 @@ export interface Payload {
   scanned: number;
   indexUnreachable: boolean;
   rows: DiscoveryRow[];
-  graduated: number;
-  fresh: FreshRow[];
-  chain: ChainStatus;
   /**
    * Why no coin carries a verdict, when none does.
    *
@@ -523,9 +319,8 @@ export interface Payload {
  * minutes, a degraded one for ten seconds.
  *
  * The single-flight part is not optional once the route is dynamic. The console
- * polls this every 120s PER OPEN TAB; without it, every tab that misses fires
- * two heavy log sweeps plus three enrichment reads into a keyless RPC — which is
- * precisely the burst that makes the enrichment fail in the first place.
+ * polls this every 120s PER OPEN TAB; without it, every tab that misses walks
+ * the keyless index again — which is precisely the burst it refuses.
  *
  * AND NOBODY WAITS FOR A REBUILD THERE IS AN ANSWER FOR. Once the life ran out,
  * the next caller used to wait for the whole of `build()` — measured at
@@ -654,8 +449,8 @@ export function sharedRead(): Promise<Payload> {
  * What the index said about ONE token, and whether it could be asked at all.
  *
  * Reads sharedPools, NOT the whole payload. A token page wanting four figures
- * was otherwise waiting on a launchpad sweep, three chain enrichment reads and
- * the scout's LLM pass — none of which say anything about the token in the URL.
+ * was otherwise waiting on the scout's LLM pass, which says nothing about the
+ * token in the URL.
  *
  * A null row means the index answered and this token was not among the pools
  * it returned. That is only an absence if it answered, which is what the
@@ -676,32 +471,6 @@ export async function readPoolFor(
 interface Shared {
   payload: Payload;
   unscreened: Map<string, DiscoveryRow>;
-  alpha: AlphaExtras;
-}
-
-/**
- * THE SCOUT'S WORKING — everything the coins page throws away.
- *
- * `/api/discoveries` is public and always will be: the verdict on a listed coin
- * is what makes that page worth loading, and the plan is explicit that gating
- * it "would empty the panel for every viewer". So this is deliberately NOT a
- * copy of the payload behind a lock — it is the two things the payload drops.
- *
- * `passed` is the other half of the same judgement: the coins the model was
- * shown and declined. `research` is what was read about each coin before the
- * model saw it. Both are already paid for and neither is reachable over HTTP.
- */
-export interface AlphaExtras {
-  /** Screened in, offered to the model, not chosen. Empty is a real answer. */
-  passed: DiscoveryRow[];
-  /**
-   * Per-coin research, keyed by lowercased token address.
-   *
-   * `null` — not the empty object — when no browser was configured, because
-   * "we did not look" and "we looked and the site published nothing" are
-   * different facts about a coin and only one of them is about the coin.
-   */
-  research: Record<string, ScoutSiteFields> | null;
 }
 
 /** What the index said about the market, before anything is built on top. */
@@ -720,10 +489,9 @@ interface Pools {
  * THE FEEDS, AND ONLY THE FEEDS.
  *
  * Split out of build() because a page wanting four figures about ONE token was
- * waiting for the whole discovery panel: a launchpad sweep over chain logs,
- * three enrichment reads, and AN LLM CALL — the scout's verdict pass runs
- * inside build(), so a cold memo made a token page view block on a model.
- * None of that says anything about the token being looked at.
+ * waiting for the whole discovery panel, including AN LLM CALL — the scout's
+ * verdict pass runs inside build(), so a cold memo made a token page view block
+ * on a model. None of that says anything about the token being looked at.
  *
  * Memoised in its own right, so the two paths still share the three fetches
  * rather than doubling them.
@@ -862,7 +630,6 @@ async function build(): Promise<Shared> {
   // The feeds, shared with every token page. The only await the two paths
   // still have in common.
   const { byToken, all, asked, reached, truncated, nowSec } = await sharedPools();
-  const { rows: fresh, chain } = await readFresh();
   const { kept } = screenPools(all, LIMITS);
 
   // ── THE AGENT'S OWN VERDICT, FORMED HERE ────────────────────────────────
@@ -913,23 +680,12 @@ async function build(): Promise<Shared> {
   const rows = kept
     .map((p) => unscreened.get(p.tokenAddress.toLowerCase()))
     .filter((r): r is DiscoveryRow => r !== undefined);
-  // Graduated first, then by 24h move: a coin that just made it off the
-  // launchpad is the thing this page exists to surface.
-  rows.sort((a, b) => Number(b.graduated) - Number(a.graduated) || (b.change24hPct ?? 0) - (a.change24hPct ?? 0));
+  // By 24h move.
+  rows.sort((a, b) => (b.change24hPct ?? 0) - (a.change24hPct ?? 0));
 
   // A render worth keeping is one where every source answered. Anything less
   // gets a short life, so the next viewer re-asks instead of inheriting it.
-  //
-  // CACHING IS WHAT TURNED A BLINK INTO AN OUTAGE. The enrichment reads fail as
-  // an occasional wave and recover in seconds, but a degraded render used to be
-  // cached like any other: measured in production, one bad render was served
-  // `x-nextjs-cache: HIT` for six consecutive polls — about two and a half
-  // minutes of every card claiming its coin had published nothing. Only the
-  // cache made it last that long. A render worth keeping is one where every
-  // source answered; anything less gets a short life, so the next viewer
-  // re-asks instead of inheriting it.
-  const degraded =
-    !chain.launchpad || !chain.meta || !chain.facts || !chain.clock || (reached === 0 && asked > 0);
+  const degraded = reached === 0 && asked > 0;
 
   const payload: Payload = {
     fetchedAt: nowSec,
@@ -937,9 +693,6 @@ async function build(): Promise<Shared> {
     // False only when NOT ONE feed answered. A partial read is still a read.
     indexUnreachable: reached === 0 && asked > 0,
     rows,
-    graduated: rows.filter((r) => r.graduated).length,
-    fresh,
-    chain,
     // Null means the scout looked and picked nothing, which is a real and often
     // correct answer. A value means it could not look at all — and that must
     // not read on the page as a considered pass.
@@ -947,27 +700,5 @@ async function build(): Promise<Shared> {
     truncated,
     degraded,
   };
-  // The working, for the one screen that is allowed to see it. Built from
-  // `unscreened` so a passed-over coin renders with the same figures and the
-  // same caveats as a picked one — and carrying `verdict: null`, which is
-  // exactly what it is.
-  const alpha: AlphaExtras = {
-    passed: (scoutRes.passed ?? [])
-      .map((p) => unscreened.get(p.tokenAddress.toLowerCase()))
-      .filter((r): r is DiscoveryRow => r !== undefined),
-    research: scoutRes.research ? Object.fromEntries(scoutRes.research) : null,
-  };
-  return { payload, unscreened, alpha };
-}
-
-/**
- * The payload plus the scout's working. Same single-flight read as `sharedRead`
- * — calling this costs nothing a viewer of the coins page has not already paid.
- *
- * Module-scoped on purpose: there is no HTTP route that serves this, and the
- * one route that may serve part of it (`/api/alpha`) checks a holder balance
- * first.
- */
-export function sharedAlpha(): Promise<{ payload: Payload; alpha: AlphaExtras }> {
-  return sharedReadFull().then((s) => ({ payload: s.payload, alpha: s.alpha }));
+  return { payload, unscreened };
 }

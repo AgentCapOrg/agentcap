@@ -659,8 +659,8 @@ const HASHTAG = /[#＃﹟]/;
 /** A $cashtag or any currency sign. */
 const CURRENCY = /\p{Sc}/u;
 const LINK =
-  /https?|:\/\/|\bwww\b|\b[\p{L}\p{N}-]+\s?\.\s?(?:com|net|org|io|xyz|gg|ly|fun|app|me|co|ai|so|to|tv|dev|finance|exchange|family|eth|sol|link|site|club|info|pro|vip|top|lol|meme|money|cash|news|bot)\b|\b[\p{L}\p{N}-]+\.\p{L}{2,}\b|\bdot\s+(?:com|io|xyz|net|org|eth)\b/iu;
-/** An address-shaped run (hex, base58) or any word too long to be one. */
+  /https?|:\/\/|\bwww\b|\b[\p{L}\p{N}-]+\s?\.\s?(?:com|net|org|io|xyz|gg|ly|fun|app|me|co|ai|so|to|tv|dev|finance|exchange|family|eth|link|site|club|info|pro|vip|top|lol|meme|money|cash|news|bot)\b|\b[\p{L}\p{N}-]+\.\p{L}{2,}\b|\bdot\s+(?:com|io|xyz|net|org|eth)\b/iu;
+/** An address-shaped run (hex) or any word too long to be one. */
 const ADDRESS = /\b0x[0-9a-f]+|[\p{L}\p{N}]{25,}/iu;
 /** The provider and its subject platform are never named: a post must not read as their feed or as their partner. */
 const PROVIDER = /\bfomo(?:api)?\b|fomoapi|fomo\s*\.?\s*family|fomoscan/i;

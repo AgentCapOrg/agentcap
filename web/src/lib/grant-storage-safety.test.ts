@@ -64,6 +64,6 @@ it("clearing one wallet's slot archives and clears that slot alone: Spot's key i
   assert.equal(storage.get(`agentcap.grant.archive.${perpsAccount}`), perps, "and Spot's clear leaves the Perps archive alone");
   // A wallet this build does not know clears nothing.
   storage.set(key, raw);
-  assert.throws(() => clearGrant("solana" as never));
+  assert.throws(() => clearGrant("other" as never));
   assert.equal(storage.get(key), raw);
 });

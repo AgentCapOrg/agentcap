@@ -508,7 +508,7 @@ test("a credential fingerprint is short, stable, distinct per key and not the ke
 test("endpoint families drop queries and ids, never keep addresses", () => {
   assert.equal(endpointFamily(`/networks/robinhood/pools/0x${"a".repeat(64)}/ohlcv/minute?aggregate=5&token=0x${"b".repeat(40)}`), "networks/robinhood/pools/{id}/ohlcv/minute");
   assert.equal(endpointFamily("/search/pools?query=chump&network=robinhood"), "search/pools");
-  assert.equal(endpointFamily("/networks/solana/tokens/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/pools?page=1"), "networks/solana/tokens/{id}/pools");
+  assert.equal(endpointFamily("/networks/bsc/tokens/0x55d398326f99059ff775485246999027b3197955/pools?page=1"), "networks/bsc/tokens/{id}/pools");
   assert.equal(endpointFamily("/networks/robinhood/trending_pools?page=2"), "networks/robinhood/trending_pools");
   assert.deepEqual(["http-401", "http-403", "plan-restricted", "http-429", "http-500", "http-404", undefined].map(isPlanRefusal), [true, false, true, false, false, false, false]);
 });

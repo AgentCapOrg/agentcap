@@ -20,7 +20,7 @@ function draft(over: Record<string, unknown> = {}) {
       action: "Create a new AgentCapAvatar", purpose: "create", risk_level: "careful", requested_by: "Grok Bot",
       settings: {
         agentName: "Marian", strategy: "steady-basket", basketSymbols: ["NVDA", "AAPL"],
-        assetMode: "stocks", slippageBps: 50, buyPerTickUsdg: 10, classMaxHoldSec: 7200,
+        assetMode: "stocks", slippageBps: 50, buyPerTickUsdg: 10, llmIntervalMin: 30,
       },
       left_out: [{ key: "maxImpactBps", why: "The price-impact safety floor stays unchanged." }],
       after_approval: "Owner wallet creation and permission signing are still required.",
@@ -83,7 +83,7 @@ test("collapsed setup details preserve the exact proposed configuration, units a
   assert.ok(details);
   assert.equal(details.open, false);
   const text = details.textContent ?? "";
-  for (const expected of ["Marian", "NVDA, AAPL", "stocks", "0.5%", "10 USDG", "2 hours"]) assert.ok(text.includes(expected), `details retain ${expected}`);
+  for (const expected of ["Marian", "NVDA, AAPL", "stocks", "0.5%", "10 USDG", "minutes between AI decisions"]) assert.ok(text.includes(expected), `details retain ${expected}`);
   assert.match(text, /steady.basket/i);
   assert.match(m.text(), /careful/i);
   assert.match(initiallyVisibleText(m.root), /expir/i, "the expiry remains visible without opening details");

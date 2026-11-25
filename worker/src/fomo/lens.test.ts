@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { STATS_UNAVAILABLE_UNKNOWN, buildDossier, type BuildDossierInput } from "./dossier";
-import { chainFromProvider, robinhoodChain, tokenIdentity } from "./identity";
+import { chainFromProvider, bnbChain, tokenIdentity } from "./identity";
 import { TRADER_FLOW_LENS, lensCitations, lensRefs, renderTraderFlowLens } from "./lens";
 import type { CoinDossier, Thesis, TokenStats, TraderEvent } from "./types";
 
@@ -9,12 +9,11 @@ const NOW = 1_790_000_000_000;
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
 const EVM = "0x" + "ab".repeat(20);
-const MINT = "So11111111111111111111111111111111111111112";
-const TOKEN = tokenIdentity(robinhoodChain(), EVM)!;
-const SOL_TOKEN = tokenIdentity(chainFromProvider(1399811149, "solana"), MINT)!;
+const MINT = "0xd77cf5c8a1c79d6b78408a3f545dea88441790fb";
+const TOKEN = tokenIdentity(bnbChain(), EVM)!;
+const BSC_TOKEN = tokenIdentity(chainFromProvider(56, "bsc"), MINT)!;
 
 const ADDRESS_HEX = /0x[0-9a-fA-F]{6,}/;
-const BASE58_RUN = /[1-9A-HJ-NP-Za-km-z]{32,}/;
 
 function author(userId: string) {
   return { userId, handle: userId, displayName: null, verified: null };
@@ -125,7 +124,6 @@ describe("renderTraderFlowLens", () => {
     assert.match(text, /Summary built 2h ago/);
     assert.doesNotMatch(text, /fomo/i);
     assert.doesNotMatch(text, ADDRESS_HEX);
-    assert.doesNotMatch(text, BASE58_RUN);
     assert.doesNotMatch(text, /ignore|instructions|https?:/i);
     assert.doesNotMatch(text, /\n/);
     assert.match(text, /Strongest objection/);
@@ -164,18 +162,17 @@ describe("renderTraderFlowLens", () => {
     assert.match(text, /may have moved since/);
   });
 
-  it("works for a Solana coin without leaking the mint", () => {
+  it("works for a BSC coin without leaking the mint", () => {
     const d = buildDossier(
       input({
-        token: SOL_TOKEN,
-        theses: [thesis("s1", "undervalued, breakout", { token: SOL_TOKEN })],
-        events: [event("x1", "sell", "a", { token: SOL_TOKEN }), event("x2", "sell", "b", { token: SOL_TOKEN })],
+        token: BSC_TOKEN,
+        theses: [thesis("s1", "undervalued, breakout", { token: BSC_TOKEN })],
+        events: [event("x1", "sell", "a", { token: BSC_TOKEN }), event("x2", "sell", "b", { token: BSC_TOKEN })],
       }),
     ).dossier;
     const text = renderTraderFlowLens(d, NOW)!;
     assert.ok(text);
-    assert.doesNotMatch(text, BASE58_RUN);
-    assert.doesNotMatch(text, /So1111/);
+    assert.doesNotMatch(text, ADDRESS_HEX);
   });
 
   it("withholds the whole lens if anything address-shaped reaches it", () => {

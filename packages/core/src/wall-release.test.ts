@@ -157,5 +157,5 @@ function fingerprint(keys: readonly string[]): string {
 // ── THE PINNED VALUES ──────────────────────────────────────────────────────
 // Re-pin these ONLY together with WALL_CHANGED_AT. Changing them on their own
 // is how the prompt stops firing for the release that needed it.
-const PINNED_PERMISSION_COUNT = 18;
-const PINNED_FINGERPRINT = "5bc02ceb";
+const PINNED_PERMISSION_COUNT = 16;
+const PINNED_FINGERPRINT = "d04149ec";

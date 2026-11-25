@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { describe, it } from "node:test";
 
-import { SOLANA_USDG_MINT, TOKEN_2022_PROGRAM } from "../../packages/core/src/ids";
 import {
   formatRoi,
   formatUsdg,
@@ -19,7 +18,10 @@ import {
 } from "./pnl-card";
 import { PNL_GLYPHS } from "./pnl-glyphs";
 
-const usdg = (n: number) => BigInt(Math.round(n * 1e6));
+// 6dp micro figures, scaled to 18dp USDT base units.
+const MICRO = 10n ** 12n;
+
+const usdg = (n: number) => BigInt(Math.round(n * 1e6)) * 10n ** 12n;
 
 const WIN: PnlCardData = {
   symbol: "DOGGOS",
@@ -34,15 +36,15 @@ describe("the numbers on the card are the fill's own arithmetic", () => {
     assert.equal(formatUsdg(usdg(1840.02)), "1840.02");
     assert.equal(formatUsdg(0n), "0.00");
     // Half-up at the second decimal, not truncation.
-    assert.equal(formatUsdg(1_005_000n), "1.01");
-    assert.equal(formatUsdg(1_004_999n), "1.00");
+    assert.equal(formatUsdg((1_005_000n * MICRO)), "1.01");
+    assert.equal(formatUsdg((1_004_999n * MICRO)), "1.00");
   });
 
   it("keeps full precision on sums a float would round", () => {
     // 9,007,199,254.740993 USDG is past 2^53 base units: if this ever goes
     // through Number the last digit is lost, and a P&L card that disagrees
     // with the ledger is worse than no card.
-    assert.equal(formatUsdg(9_007_199_254_740_993n), "9007199254.74");
+    assert.equal(formatUsdg((9_007_199_254_740_993n * MICRO)), "9007199254.74");
   });
 
   it("signs the P&L column and only that column", () => {
@@ -223,36 +225,14 @@ describe("a trade row becomes a card only when it closed something knowable", ()
   it("a near-total loss IS a result, even though it sold for under a cent", () => {
     const card = pnlCardFromFill({ ...sell, fill_cash_usdg: 0.003, realized_pnl_usdg: -4.997 }, "RUGCOIN");
     assert.ok(card);
-    assert.equal(card.investedUsdg, 5_000_000n);
+    assert.equal(card.investedUsdg, (5_000_000n * MICRO));
   });
 
   it("a short address passed as the name still draws nothing", () => {
     assert.equal(pnlCardFromFill({ ...sell, target: "0x2ca2b5bd3b6635d630419c57a13c6b6a856ec96d" }, "0x020b…18b4"), null);
   });
 
-  it("NEVER prints a Solana key as the coin either, as the target or as the name (Solana P0)", () => {
-    // A Solana row's target would be a program or a vault: base58, no 0x.
-    assert.equal(pnlCardFromFill({ ...sell, target: TOKEN_2022_PROGRAM }), null);
-    assert.equal(pnlCardFromFill({ ...sell, target: TOKEN_2022_PROGRAM }, SOLANA_USDG_MINT), null);
-    assert.equal(pnlCardFromFill({ ...sell, target: TOKEN_2022_PROGRAM }, "musebook")?.symbol, "musebook");
-    assert.equal(printableCoinName(SOLANA_USDG_MINT), null);
-    assert.equal(printableCoinName("musebook"), "musebook");
-  });
-
-  it("NEVER prints a Solana key glued to the words around it as the coin (audit regressions F3)", () => {
-    const letters = "EEuxbXvdXfvgGiFWKYyEksxzabPKjwhYTNvGXFitaqqT";
-    for (const name of [`CA${SOLANA_USDG_MINT}`, `buy${SOLANA_USDG_MINT}now`, `${letters}pump`]) {
-      assert.ok(name.length <= 64, name);
-      assert.equal(printableCoinName(name), null, name);
-      assert.equal(pnlCardFromFill({ ...sell, target: TOKEN_2022_PROGRAM }, name), null, name);
-      // Refused as the name, the card falls back to the target, a ticker here; as the target, it draws nothing.
-      assert.equal(pnlCardFromFill(sell, name)?.symbol, "DOGGOS", name);
-      assert.equal(pnlCardFromFill({ ...sell, target: name }), null, name);
-    }
-    for (const name of ["musebook", "PEPE 2", "BONKpump", "dogwifhat", "SuperLongCoinNameWithNoBreaks"]) assert.equal(printableCoinName(name), name);
-  });
-
-  it("NEVER prints a name with a whole 0x address inside it (tightened in Solana P0)", () => {
+  it("NEVER prints a name with a whole 0x address inside it", () => {
     // Before, only a leading 0x was refused, so this was drawn as the coin.
     const named = "PEPE 0x2ca2b5bd3b6635d630419c57a13c6b6a856ec96d";
     assert.equal(printableCoinName(named), null);
@@ -282,7 +262,7 @@ describe("a live sale's card follows one rule, wherever it is shown", () => {
 
   it("draws a completed, evidenced live sell under its coin's name, never the row's target", async () => {
     const r = await liveSellCard(live, vouched);
-    assert.deepEqual(r, { kind: "card", card: { symbol: "DOGGOS", investedUsdg: 5_000_000n, proceedsUsdg: 17_390_000n, realisedUsdg: 12_390_000n } });
+    assert.deepEqual(r, { kind: "card", card: { symbol: "DOGGOS", investedUsdg: (5_000_000n * MICRO), proceedsUsdg: (17_390_000n * MICRO), realisedUsdg: (12_390_000n * MICRO) } });
   });
 
   it("refuses paper, a buy, a pending attempt and any other kind, before evidence is read", async () => {

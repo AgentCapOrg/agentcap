@@ -34,6 +34,7 @@
  * gets that instance or null — never a fresh empty one that would answer
  * "never seen" about a coin the desk looked at a minute ago.
  */
+import { DATA } from "../../packages/core/src/chain";
 import type { FunnelStage } from "./fomo/types";
 import { sanitizeText } from "./research/news";
 import { recordedHoldKind, type ShadowOutcome } from "./brain-shadow";
@@ -83,9 +84,7 @@ export type DiscoveryScreen = TrenchScreen | "beyond-discovery-slice" | "pool-no
 export type TickBlock =
   | "brain-not-configured"
   | "book-incomplete"
-  | "review-energy-spent"
-  | "drawdown-breaker"
-  | "entries-energy-spent";
+  | "drawdown-breaker";
 
 export type FunnelInput =
   | {
@@ -137,7 +136,6 @@ const RULE_STAGE: Readonly<Record<string, FunnelStage>> = {
   "target-allowlist": "PERMISSION_BLOCKED",
   "ticker-allowlist": "PERMISSION_BLOCKED",
   "curve-provenance": "PERMISSION_BLOCKED",
-  "energy-not-granted": "PERMISSION_BLOCKED",
   expiry: "PERMISSION_BLOCKED",
   "transfer-not-permitted": "PERMISSION_BLOCKED",
   "transfer-recipient": "PERMISSION_BLOCKED",
@@ -157,8 +155,6 @@ const RULE_STAGE: Readonly<Record<string, FunnelStage>> = {
   "drawdown-breaker": "BUDGET_EXHAUSTED",
   "transfer-daily-cap": "BUDGET_EXHAUSTED",
   "no-cash": "BUDGET_EXHAUSTED",
-  "energy-needs-live": "BUDGET_EXHAUSTED",
-  "entry-energy-withheld": "BUDGET_EXHAUSTED",
   "group-entry-cap": "BUDGET_EXHAUSTED",
   // A size that is not a trade.
   "non-positive": "SIZE_BELOW_ECONOMIC_FLOOR",
@@ -175,12 +171,7 @@ const RULE_STAGE: Readonly<Record<string, FunnelStage>> = {
   "sell-locked": "UNSUPPORTED_ROUTE",
   "sell-unverified": "UNSUPPORTED_ROUTE",
   "no-quote": "UNSUPPORTED_ROUTE",
-  "router-migrated": "UNSUPPORTED_ROUTE",
   "no-curve-adapter": "UNSUPPORTED_ROUTE",
-  "no-rialto-key": "UNSUPPORTED_ROUTE",
-  "energy-no-quote": "UNSUPPORTED_ROUTE",
-  "energy-tax": "UNSUPPORTED_ROUTE",
-  "energy-tax-unreadable": "UNSUPPORTED_ROUTE",
   // The house failing to pay a fee is not the wall refusing.
   "sponsor-refused": "SPONSORSHIP_UNAVAILABLE",
   "sponsor-unreachable": "SPONSORSHIP_UNAVAILABLE",
@@ -311,9 +302,7 @@ const SKIP_STAGE: Readonly<Record<CandidateSkip, FunnelStage>> = {
 const BLOCK_STAGE: Readonly<Record<TickBlock, FunnelStage>> = {
   "brain-not-configured": "RESEARCH_INCOMPLETE",
   "book-incomplete": "RESEARCH_INCOMPLETE",
-  "review-energy-spent": "BUDGET_EXHAUSTED",
   "drawdown-breaker": "BUDGET_EXHAUSTED",
-  "entries-energy-spent": "BUDGET_EXHAUSTED",
 };
 
 /** Micro-USDG as a decimal string. bigint throughout: a size is never a float here. */
@@ -431,7 +420,6 @@ export function classifyStage(input: FunnelInput): Classified {
  */
 export function classifyReview(outcome: ShadowOutcome, ctx: { held: boolean; priceStale: boolean }): Classified | null {
   if (!outcome.ran) {
-    if (/^energy/.test(outcome.why)) return { stage: "BUDGET_EXHAUSTED", detail: detailOf("review-energy-spent", outcome.why) };
     if (/not configured/.test(outcome.why)) return { stage: "RESEARCH_INCOMPLETE", detail: "brain-not-configured" };
     if (!outcome.trigger.fire) return null;
     return { stage: "RESEARCH_INCOMPLETE", detail: detailOf("review-not-run", outcome.why) };
@@ -484,17 +472,15 @@ export function trenchReviewBlock(t: {
   brainConfigured: boolean;
   bookIncomplete: boolean;
   brainTick: boolean;
-  reviewsOpen: boolean;
 }): TickBlock | null {
   if (!t.brainTick) return null;
   if (!t.brainConfigured) return "brain-not-configured";
   if (t.bookIncomplete) return "book-incomplete";
-  if (!t.reviewsOpen) return "review-energy-spent";
   return null;
 }
 
 /** The venue autonomous discovery verifies (trencher-discovery.ts). */
-const AUTONOMOUS_VENUE = "uniswap-v3-robinhood";
+const AUTONOMOUS_VENUE = DATA.pancakeswapV3DexId;
 
 /** Characters of venue names a `venue-not-supported` detail carries. */
 const VENUE_LIST_MAX = 80;
@@ -572,7 +558,7 @@ export function unqualifiedReasons(args: {
 export function entryTokenOf(intent: { kind: string; sellToken?: string; buyToken?: string }): string | null {
   if ((intent.kind !== "swap" && intent.kind !== "curve-trade") || !intent.sellToken || !intent.buyToken) return null;
   const sell = intent.sellToken.toLowerCase();
-  if (sell !== CASH.USDG.toLowerCase() && sell !== CASH.WETH.toLowerCase()) return null;
+  if (sell !== CASH.USDT.toLowerCase() && sell !== CASH.WBNB.toLowerCase()) return null;
   return intent.buyToken.toLowerCase();
 }
 

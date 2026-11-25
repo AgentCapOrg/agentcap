@@ -60,7 +60,7 @@ export const ROUTE_ACTIONS = [
 export type RouteAction = (typeof ROUTE_ACTIONS)[number];
 
 /** The chains a Fomo list can be narrowed to (types.ts TgFomoChain): the `chain` field's menu. */
-export const ROUTE_CHAINS: readonly TgFomoChain[] = ["robinhood", "solana", "base", "ethereum", "bsc"];
+export const ROUTE_CHAINS: readonly TgFomoChain[] = ["robinhood", "base", "ethereum", "bsc"];
 
 /** What this agent can serve: an action it cannot is never on the menu. */
 export interface RouteServes {
@@ -111,7 +111,7 @@ export function routeSpec(can: RouteServes): TgChoiceSpec {
 const ACTION_LINES: Record<RouteAction, string> = {
   chat: "chat: anything else: banter, opinions, jokes, life, questions about you or the people here, a feeling of fomo (\"i have fomo\"), or anything you are not sure about.",
   fomo_leaderboard: "fomo_leaderboard: who the best or top traders on Fomo are, who is winning, who made the most; also when they ask what the top one made money on, holds or traded.",
-  fomo_board: "fomo_board: Fomo's coin lists: what is trending (board trending), newly graduated or launched coins (board graduated), the most held coins (board most_held). Put a chain in chain only when they want one chain's coins (\"robinhood coins\", \"on solana\").",
+  fomo_board: "fomo_board: Fomo's coin lists: what is trending (board trending), newly graduated or launched coins (board graduated), the most held coins (board most_held). Put a chain in chain only when they want one chain's coins (\"robinhood coins\", \"on base\").",
   fomo_coin: "fomo_coin: Fomo's view of ONE coin: its theses (aspect theses), who is buying it (buyers), who is selling it (sellers), a full research dive (research), what is going on with it (activity), or what happened to it, why it fell or rugged, or its numbers (facts). Put its name in coin.",
   fomo_crowd: "fomo_crowd: what Fomo's traders as a group are buying or selling (side buy or sell). Put a chain in chain only when they want one chain's coins.",
   fomo_small_coins: "fomo_small_coins: small or early coins getting attention on Fomo. Put a chain in chain only when they want one chain's coins.",
@@ -344,32 +344,31 @@ function sideIn(text: string, model: unknown): "buy" | "sell" {
   return sideNamed(text) ?? (model === "sell" ? "sell" : "buy");
 }
 
-/** A list of coins (or the chain itself) after a short chain name: "hood coins", "sol memes", "base chain". */
+/** A list of coins (or the chain itself) after a short chain name: "hood coins", "bsc memes", "base chain". */
 const LIST_AFTER = String.raw`(?:chain|network|coins?|tokens?|memes?|memecoins?|tickers?|plays?|gems?|launches|ones)`;
-/** A chain position before a short chain name: "on hood", "for the rh", "across sol". */
+/** A chain position before a short chain name: "on hood", "for the rh", "across bsc". */
 const AT_BEFORE = String.raw`(?:on|for|from|across|in|only) (?:the )?`;
 /**
- * HOW PEOPLE WRITE EACH CHAIN. Full names count anywhere ("solana ones",
- * "robinhood coins"); short names only in a chain position ("on sol", "hood
- * coins", "on base"), so "SOL is ripping", "the base case" and "eth price"
+ * HOW PEOPLE WRITE EACH CHAIN. Full names count anywhere ("bsc ones",
+ * "robinhood coins"); short names only in a chain position ("on base", "hood
+ * coins", "on base"), so "BNB is ripping", "the base case" and "eth price"
  * name no chain.
  */
 const CHAIN_WORDS: Readonly<Record<TgFomoChain, RegExp>> = {
   robinhood: new RegExp(String.raw`\brobin ?hood\b|\b${AT_BEFORE}(?:hood|rh)\b|\b(?:hood|rh) ${LIST_AFTER}\b`, "u"),
-  solana: new RegExp(String.raw`\bsolana\b|\b${AT_BEFORE}sol\b|\bsol ${LIST_AFTER}\b`, "u"),
   base: new RegExp(String.raw`\b${AT_BEFORE}base\b(?! (?:case|layer|price|camp|line|rate|model|level|hit)\b)|\bbase ${LIST_AFTER}\b`, "u"),
   ethereum: new RegExp(String.raw`\bethereum\b|\b${AT_BEFORE}eth\b(?! (?:price|chart)\b)|\beth ${LIST_AFTER}\b`, "u"),
   bsc: new RegExp(String.raw`\bbsc\b|\bbnb chain\b|\bbinance smart chain\b|\b${AT_BEFORE}bnb\b`, "u"),
 };
 
 /** Every way a chain is written, for CHAIN_EXCLUDED. */
-const ANY_CHAIN = String.raw`(?:robin ?hood|hood|rh|solana|sol|base|ethereum|eth|bsc|bnb)`;
+const ANY_CHAIN = String.raw`(?:robin ?hood|hood|rh|base|ethereum|eth|bsc|bnb)`;
 /**
- * A CHAIN THE LINE LEAVES OUT OR DISMISSES: "besides solana", "other than
- * robinhood coins", "isn't on sol", "solana is dead", "base sucks". A board
+ * A CHAIN THE LINE LEAVES OUT OR DISMISSES: "besides base", "other than
+ * robinhood coins", "isn't on bsc", "bsc is dead", "base sucks". A board
  * can be cut to one chain or left on every chain; it cannot leave one out,
  * so such a line names no chain at all (every chain, plus the Robinhood line).
- * "over" counts only as "over solana", never "over on solana".
+ * "over" counts only as "over base", never "over on base".
  */
 const CHAIN_EXCLUDED = new RegExp(
   String.raw`\b(?:not|isn't|isnt|aren't|arent|without|besides|except|excluding|other than|outside(?: of)?|apart from|instead of|but not|sick of|tired of|done with|over(?! (?:on|in|at|there|here)\b))[,:]?(?: \S+){0,3}? ${ANY_CHAIN}\b` +
@@ -388,8 +387,8 @@ export function chainExcluded(text: unknown): boolean {
 
 /**
  * The ONE chain a line's own words name; undefined for none, for two
- * ("solana or robinhood?"), and for a line that leaves a chain out
- * ("what's trending besides solana": every chain, never Solana only).
+ * ("bsc or robinhood?"), and for a line that leaves a chain out
+ * ("what's trending besides base": every chain, never Base only).
  */
 export function chainIn(text: unknown): TgFomoChain | undefined {
   const t = chainText(text);
@@ -403,7 +402,7 @@ export function chainIn(text: unknown): TgFomoChain | undefined {
  * the → line's own words first, whatever the model picked; else the model's
  * pick, only when the asker's own earlier lines it was shown (or their
  * unanswered question) name that same chain. Never the line it replies to (a
- * board names every row's chain: "ETAC on solana" must not narrow "send
+ * board names every row's chain: "ETAC on base" must not narrow "send
  * it?"), never the persona's offer, never a chain nobody here wrote.
  */
 function groundedChain(model: unknown, ctx: RouteCtx): TgFomoChain | undefined {

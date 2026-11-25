@@ -1,6 +1,6 @@
 /**
  * The orchestrator's flow service and its glue: who may ask, on whose budget,
- * and where a creator's address comes from — the three things a lane cannot
+ * and when it must answer — the things a lane cannot
  * decide for itself.
  */
 import assert from "node:assert/strict";
@@ -12,15 +12,20 @@ import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import type { ChildProcess } from "node:child_process";
 import { createFlowClient, FLOW_BROKER_LIMITS, type FlowPort } from "./flow-broker";
-import { answerReadingsPerDay, attachFlowBroker, CREATOR_WINDOW_MIN, FLOW_DEADLINE_MS, makeFlowService, ponsLaunchCreatorLookup, startFlowRuntime, type CreatorLookup, type FlowService } from "./orchestrator-flow";
+import {
+  answerReadingsPerDay,
+  attachFlowBroker,
+  FLOW_DEADLINE_MS,
+  makeFlowService,
+  startFlowRuntime,
+  type FlowService,
+} from "./orchestrator-flow";
 import { BITQUERY_LANE_DEFAULTS, LANE_POINTS, bitqueryLaneSetup, type BitqueryLane, type LaneAnswer, type CreatorFlowRead, type TokenFlowRead } from "./venues/bitquery-lane";
-import { PONS_LAUNCH_TOPIC, PONS_V2_FACTORY } from "./venues/pons";
 import { FLOW_X_GLOSS, flowXLines } from "./flow-facts";
 import { admitAgentLine } from "./groupchat/policy";
 import { admitXPost, vocabularyRefusal } from "./xpost/gate";
 
 const TOKEN = "0x00000000000000000000000000000000000000c1";
-const CREATOR = "0x00000000000000000000000000000000000000a7";
 /** A placeholder smart account. The real allowlist lives in the deploy environment, never in this repo. */
 const LISTED_ACCOUNT = "0x00000000000000000000000000000000000000A1";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -47,160 +52,53 @@ function fakeLane(o: { flow?: LaneAnswer<TokenFlowRead>; creator?: LaneAnswer<Cr
 }
 
 describe("makeFlowService — one reading, assembled on the orchestrator", () => {
-  it("joins the flow and the creator's sells, the creator resolved here from the chain", async () => {
+  it("the launcher is 'not-derivable', and nothing is spent asking", async () => {
     const { lane, calls } = fakeLane();
-    const looked: string[] = [];
-    const svc = makeFlowService({ lane, creatorOf: async (t) => (looked.push(t), { state: "known", creator: CREATOR }) });
-    const r = await svc.flowFor(TOKEN.toUpperCase().replace("0X", "0x"));
-    assert.ok(r.ok);
-    assert.deepEqual(r.facts.creator, { state: "read", windowMin: CREATOR_WINDOW_MIN, sells: 1, sellUsd: 50, transfersOut: 1, transferOutUsd: 50 });
-    assert.equal(r.facts.observedAt, 1_000);
-    assert.deepEqual(looked, [TOKEN]);
-    assert.deepEqual(calls.map((c) => c.q), ["tokenFlow", "creatorFlow"]);
-    assert.deepEqual(calls[1]!.args.slice(0, 2), [TOKEN, CREATOR]);
-    assert.ok(!JSON.stringify(r).includes(CREATOR.slice(2)), "the creator's address is a query variable, never part of the reading");
-  });
-
-  it("a coin with no recorded creator is 'not-derivable', and nothing is spent asking", async () => {
-    const { lane, calls } = fakeLane();
-    const r = await makeFlowService({ lane, creatorOf: async () => ({ state: "none" }) }).flowFor(TOKEN);
+    const r = await makeFlowService({ lane }).flowFor(TOKEN);
     assert.ok(r.ok);
     assert.deepEqual(r.facts.creator, { state: "not-derivable" });
     assert.deepEqual(calls.map((c) => c.q), ["tokenFlow"]);
   });
 
-  it("an unreadable chain, or a failed creator query, is 'unavailable' — never 'did not sell'", async () => {
-    const a = await makeFlowService({ lane: fakeLane().lane, creatorOf: async () => { throw new Error("rpc down"); } }).flowFor(TOKEN);
-    assert.ok(a.ok);
-    assert.deepEqual(a.facts.creator, { state: "unavailable", failure: "unavailable" });
-    const b = await makeFlowService({ lane: fakeLane({ creator: { ok: false, failure: "budget" } }).lane, creatorOf: async () => ({ state: "known", creator: CREATOR }) }).flowFor(TOKEN);
-    assert.ok(b.ok);
-    assert.deepEqual(b.facts.creator, { state: "unavailable", failure: "budget" });
-  });
-
-  it("a failed flow reading is the whole answer, and the creator's query is never sent", async () => {
+  it("a failed flow reading is the whole answer", async () => {
     const { lane, calls } = fakeLane({ flow: { ok: false, failure: "provider-cooldown" } });
-    const r = await makeFlowService({ lane, creatorOf: async () => ({ state: "known", creator: CREATOR }) }).flowFor(TOKEN);
+    const r = await makeFlowService({ lane }).flowFor(TOKEN);
     assert.deepEqual(r, { ok: false, failure: "provider-cooldown" });
     assert.deepEqual(calls.map((c) => c.q), ["tokenFlow"]);
   });
 
   it("the purpose decides the budget share, and the caller cannot pick a window", async () => {
     const { lane, calls } = fakeLane();
-    const svc = makeFlowService({ lane, creatorOf: async () => ({ state: "known", creator: CREATOR }) });
-    await svc.flowFor(TOKEN, { purpose: "evidence" });
-    assert.deepEqual(calls.map((c) => (c.args.at(-1) as { purpose: string }).purpose), ["evidence", "evidence"]);
-    assert.equal((calls[1]!.args[2] as { windowMin: number }).windowMin, CREATOR_WINDOW_MIN);
+    await makeFlowService({ lane }).flowFor(TOKEN, { purpose: "evidence" });
+    assert.deepEqual(calls.map((c) => (c.args.at(-1) as { purpose: string }).purpose), ["evidence"]);
   });
 
-  it("a creator lookup is remembered, a failed one only briefly", async () => {
-    let t = 0;
-    let n = 0;
-    let answer: CreatorLookup = { state: "unreadable" };
-    const svc = makeFlowService({ lane: fakeLane().lane, now: () => t, creatorOf: async () => (n++, answer) });
-    await svc.flowFor(TOKEN);
-    t += 61_000;
-    answer = { state: "known", creator: CREATOR };
-    await svc.flowFor(TOKEN);
-    t += 12 * 3_600_000;
-    await svc.flowFor(TOKEN);
-    assert.equal(n, 2, "unreadable retried after a minute; known kept for a day");
-  });
-
-  it("a recorded 'creator' that is the token itself is no creator", async () => {
-    const r = await makeFlowService({ lane: fakeLane().lane, creatorOf: async () => ({ state: "known", creator: TOKEN as `0x${string}` }) }).flowFor(TOKEN);
-    assert.ok(r.ok);
-    assert.deepEqual(r.facts.creator, { state: "not-derivable" });
-  });
-
-  it("one deadline for the whole reading, passed to both lane calls, under the broker's ceiling", async () => {
+  it("one deadline for the whole reading, passed to the lane, under the broker's ceiling", async () => {
     assert.ok(FLOW_DEADLINE_MS < FLOW_BROKER_LIMITS.serveMaxCallMs, "a reading that succeeded is never discarded by the broker's ceiling");
     const { lane, calls } = fakeLane();
     const t = 5_000_000;
-    await makeFlowService({ lane, now: () => t, creatorOf: async () => ({ state: "known", creator: CREATOR }) }).flowFor(TOKEN);
-    assert.deepEqual(calls.map((c) => (c.args.at(-1) as { deadline: number }).deadline), [t + FLOW_DEADLINE_MS, t + FLOW_DEADLINE_MS]);
+    await makeFlowService({ lane, now: () => t }).flowFor(TOKEN);
+    assert.deepEqual(calls.map((c) => (c.args.at(-1) as { deadline: number }).deadline), [t + FLOW_DEADLINE_MS]);
   });
 
   it("a caller waiting on less shortens the reading's deadline, never lengthens it", async () => {
     const t = 5_000_000;
     const deadlines = async (timeoutMs?: number) => {
       const { lane, calls } = fakeLane();
-      await makeFlowService({ lane, now: () => t, creatorOf: async () => ({ state: "known", creator: CREATOR }) })
-        .flowFor(TOKEN, timeoutMs === undefined ? {} : { timeoutMs });
+      await makeFlowService({ lane, now: () => t }).flowFor(TOKEN, timeoutMs === undefined ? {} : { timeoutMs });
       return calls.map((c) => (c.args.at(-1) as { deadline: number }).deadline);
     };
-    assert.deepEqual(await deadlines(8_000), [t + 8_000, t + 8_000], "an X answer's share");
-    assert.deepEqual(await deadlines(60_000), [t + FLOW_DEADLINE_MS, t + FLOW_DEADLINE_MS], "never past the reading's own deadline");
-    assert.deepEqual(await deadlines(0), [t + FLOW_DEADLINE_MS, t + FLOW_DEADLINE_MS], "a nonsense wait is no wait");
-    assert.deepEqual(await deadlines(), [t + FLOW_DEADLINE_MS, t + FLOW_DEADLINE_MS]);
-  });
-
-  it("a slow launcher lookup gives back the flow facts in time, launcher unavailable, and no launcher query is started", async () => {
-    const { lane, calls } = fakeLane();
-    const started = Date.now();
-    const r = await makeFlowService({ lane, deadlineMs: 300, minLaneMs: 100, creatorOf: () => new Promise<CreatorLookup>(() => {}) }).flowFor(TOKEN);
-    const took = Date.now() - started;
-    assert.ok(r.ok, "the flow reading is not thrown away");
-    assert.deepEqual(r.facts.creator, { state: "unavailable", failure: "timeout" });
-    assert.deepEqual(calls.map((c) => c.q), ["tokenFlow"], "nothing more is spent once the time is gone");
-    assert.ok(took < 1_000, `answered in ${took} ms`);
-  });
-
-  it("a flow reading that used up the time returns at once, launcher unavailable, never a late launcher query", async () => {
-    let t = 0;
-    const lane: Pick<BitqueryLane, "tokenFlow" | "creatorFlow"> = {
-      async tokenFlow() {
-        t += FLOW_DEADLINE_MS - BITQUERY_LANE_DEFAULTS.minRequestMs + 1;
-        return { ok: true, data: READ, observedAt: 1_000, servedFrom: "live" };
-      },
-      async creatorFlow() {
-        throw new Error("must not be asked");
-      },
-    };
-    const r = await makeFlowService({ lane, now: () => t, creatorOf: async () => ({ state: "known", creator: CREATOR }) }).flowFor(TOKEN);
-    assert.ok(r.ok);
-    assert.deepEqual(r.facts.creator, { state: "unavailable", failure: "timeout" });
+    assert.deepEqual(await deadlines(8_000), [t + 8_000], "an X answer's share");
+    assert.deepEqual(await deadlines(60_000), [t + FLOW_DEADLINE_MS], "never past the reading's own deadline");
+    assert.deepEqual(await deadlines(0), [t + FLOW_DEADLINE_MS], "a nonsense wait is no wait");
+    assert.deepEqual(await deadlines(), [t + FLOW_DEADLINE_MS]);
   });
 
   it("not a token is 'invalid-request'; nothing throws", async () => {
-    const svc = makeFlowService({ lane: fakeLane().lane, creatorOf: async () => ({ state: "none" }) });
+    const svc = makeFlowService({ lane: fakeLane().lane });
     assert.deepEqual(await svc.flowFor("pepe"), { ok: false, failure: "invalid-request" });
-    const broken = makeFlowService({ lane: { tokenFlow: () => { throw new Error("boom"); }, creatorFlow: async () => ({ ok: false, failure: "network" }) }, creatorOf: async () => ({ state: "none" }) });
+    const broken = makeFlowService({ lane: { tokenFlow: () => { throw new Error("boom"); } } });
     assert.deepEqual(await broken.flowFor(TOKEN), { ok: false, failure: "unavailable" });
-  });
-});
-
-describe("ponsLaunchCreatorLookup — the launchpad's record, never the token's word", () => {
-  const pad = (a: string) => `0x${"0".repeat(24)}${a.slice(2)}`;
-  const DECOY = "0x00000000000000000000000000000000000000d3";
-
-  it("a contract that is not a Pons launch gets 'none', however it answers the template's metadata selector", async () => {
-    let readContract = 0;
-    let calls = 0;
-    // The forger: answers eth_call (the metadata getter) with a decoy deployer.
-    // The factory has no launch of it, so its logs come back empty.
-    const client = {
-      getBlockNumber: async () => 50_000_000n,
-      request: async ({ method }: { method: string }) => (calls++, method === "eth_getLogs" ? [] : DECOY),
-      readContract: async () => (readContract++, [{ success: true, returnData: "0x" }]),
-    };
-    assert.deepEqual(await ponsLaunchCreatorLookup(() => client as never)(TOKEN as `0x${string}`), { state: "none" });
-    assert.equal(readContract, 0, "the token's own metadata is never asked who deployed it");
-    assert.equal(calls, 1);
-  });
-
-  it("the creator topic of the factory's launch event is the launcher; an RPC failure is 'unreadable'", async () => {
-    const launch = {
-      address: PONS_V2_FACTORY.toLowerCase(),
-      topics: [PONS_LAUNCH_TOPIC, pad(TOKEN), pad("0x00000000000000000000000000000000000000e9"), pad(CREATOR)],
-      data: `0x${"0".repeat(64)}${"0".repeat(64)}${"1".padStart(64, "0")}`,
-      blockNumber: "0x10",
-      transactionHash: "0xabc",
-    };
-    const ok = { getBlockNumber: async () => 100n, request: async () => [launch] };
-    assert.deepEqual(await ponsLaunchCreatorLookup(() => ok as never)(TOKEN as `0x${string}`), { state: "known", creator: CREATOR });
-    const down = { getBlockNumber: async () => { throw new Error("rpc down"); }, request: async () => [] };
-    assert.deepEqual(await ponsLaunchCreatorLookup(() => down as never)(TOKEN as `0x${string}`), { state: "unreadable" });
   });
 });
 
@@ -245,7 +143,7 @@ describe("flow facts reach X only as glosses the existing writer and gate admit 
           ],
           venues: [],
           largestSells: [{ usd: 2_000, at: 1, protocol: "uniswap_v4" }],
-          creator: { state: "read", windowMin: CREATOR_WINDOW_MIN, sells: 3, sellUsd: 2_000, transfersOut: 1, transferOutUsd: 10 },
+          creator: { state: "read", windowMin: 60, sells: 3, sellUsd: 2_000, transfersOut: 1, transferOutUsd: 10 },
         },
       },
       "0x00000000000000000000000000000000000000f1|coin",
@@ -253,6 +151,7 @@ describe("flow facts reach X only as glosses the existing writer and gate admit 
     assert.equal(lines.length, 5);
     for (const l of lines) assert.equal(admitAgentLine(l, room).ok, true, l);
   });
+
 });
 
 describe("answerReadingsPerDay — X answers stay out of the evidence share", () => {
@@ -276,7 +175,7 @@ describe("startFlowRuntime — off without a key, and nothing built while off", 
   it("no key: no service, no store, a line saying so", () => {
     const lines: string[] = [];
     const home = mkdtempSync(path.join(os.tmpdir(), "agentcap-flow-rt-"));
-    const rt = startFlowRuntime({ env: {}, home, rpcUrl: "https://example.invalid", log: (l) => lines.push(l) });
+    const rt = startFlowRuntime({ env: {}, home, log: (l) => lines.push(l) });
     assert.equal(rt.service, null);
     assert.match(lines.join("\n"), /bitquery lane: off/);
   });
@@ -284,7 +183,7 @@ describe("startFlowRuntime — off without a key, and nothing built while off", 
   it("with a key: a service, its store under the fleet home, and the key never logged", () => {
     const lines: string[] = [];
     const home = mkdtempSync(path.join(os.tmpdir(), "agentcap-flow-rt-"));
-    const rt = startFlowRuntime({ env: { AGENTCAP_BITQUERY_API_KEY: "ory_at_never_logged" }, home, rpcUrl: "https://example.invalid", log: (l) => lines.push(l) });
+    const rt = startFlowRuntime({ env: { AGENTCAP_BITQUERY_API_KEY: "ory_at_never_logged" }, home, log: (l) => lines.push(l) });
     assert.ok(rt.service);
     assert.doesNotMatch(lines.join("\n"), /ory_at_never_logged/);
     assert.ok(readFileSync(path.join(home, "bitquery-lane", "lane.sqlite")).length >= 0, "the fleet cache lives under the fleet home");
@@ -339,13 +238,13 @@ describe("attachFlowBroker — only allowlisted accounts, only as evidence", () 
   it("the review's own budget bounds the reading: the lane is never still spending after the child gave up", async () => {
     const { lane, calls } = fakeLane();
     const t = 5_000_000;
-    const svc = makeFlowService({ lane, now: () => t, creatorOf: async () => ({ state: "known", creator: CREATOR }) });
+    const svc = makeFlowService({ lane, now: () => t });
     const c = fakeChild();
     attachFlowBroker(svc, "0x00000000000000000000000000000000000000f1", c.proc, LISTED_ACCOUNT, () => {}, { AGENTCAP_DECISION_RESEARCH_ACCOUNTS: LISTED_ACCOUNT });
     assert.equal((await createFlowClient(c.childPort).facts(TOKEN, { timeoutMs: 5_000 })).ok, true);
     const deadline = t + 5_000 - FLOW_BROKER_LIMITS.ipcMarginMs;
     assert.deepEqual(calls.map((x) => [(x.args.at(-1) as { purpose: string }).purpose, (x.args.at(-1) as { deadline: number }).deadline]),
-      [["evidence", deadline], ["evidence", deadline]], "five seconds less the trip back, not the reading's eighteen");
+      [["evidence", deadline]], "five seconds less the trip back, not the reading's eighteen");
   });
 
   it("any other account is answered 'unavailable' and costs nothing", async () => {
@@ -396,11 +295,11 @@ describe("the orchestrator's wiring", () => {
     assert.match(SRC, /export \{ flowFor \};/, "and orchestrator.ts re-exports it");
   });
 
-  it("X answers read flow only with the lane on, through flowFor, on Robinhood Chain, with their own day's count", () => {
+  it("X answers read flow only with the lane on, through flowFor, on BNB Chain, with their own day's count", () => {
     const fn = SRC.slice(SRC.indexOf("function xAnswerFlow("), SRC.indexOf("function xAnswerFlow(") + 900);
     assert.match(fn, /const rt = flowRuntimeNow\(\);\s*if \(!rt\.service\) return \{\};/, "nothing at all with the lane off");
     assert.match(fn, /const flowPerDay = answerReadingsPerDay\(rt\.setup\);/);
-    assert.match(fn, /q\.chainId === 4663 \? flowFor\(q\.address, \{ timeoutMs: q\.timeoutMs \}\)/);
+    assert.match(fn, /q\.chainId === bnbChain\.id \? flowFor\(q\.address, \{ timeoutMs: q\.timeoutMs \}\)/);
     const research = SRC.slice(SRC.indexOf("research: createXResearch({"), SRC.indexOf("research: createXResearch({") + 900);
     assert.match(research, /\.\.\.xAnswerFlow\(\),/, "handed to the research, which runs only with AGENTCAP_XPOST_RESEARCH=1");
   });

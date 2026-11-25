@@ -236,14 +236,9 @@ describe("a rename from chat survives the next tick", () => {
       "assetMode",
       "basketSymbols",
       "buyPerTickUsdg",
-      "classExitAtGraduationPct",
-      "classMaxHoldSec",
-      "classMaxPositions",
-      "classPerEntryUsdg",
       "discoveryEnabled",
       "discoveryIntervalMin",
       "gapEnterBudgetUsdg",
-      "idleFloorUsdg",
       "llmIntervalMin",
       "llmMaxActionUsdg",
       "memecoinMinFdvUsd",
@@ -326,7 +321,6 @@ describe("a rename from chat survives the next tick", () => {
       "anthropicApiKey",
       "telegramBotToken",
       "tickSeconds",
-      "swapVenue",
     ];
     for (const k of forbidden) assert.ok(!CHAT_SETTABLE.has(k), `${k} became chat-settable`);
     for (const k of PERPS_SETTING_KEYS) assert.ok(forbidden.includes(k), `${k} is a perps key missing from this list`);

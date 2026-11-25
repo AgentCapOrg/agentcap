@@ -16,7 +16,6 @@ import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { DatabaseSync } from "node:sqlite";
 import { agentNameForSlug, DEFAULT_AGENT_NAME } from "../../../packages/core/src/agent-name";
-import { SOLANA_USDG_MINT } from "../../../packages/core/src/ids";
 import { CASH } from "../../../packages/core/src/tokens";
 import { everyBand } from "../class-evidence";
 import { wrapSqlite, type Db } from "../db";
@@ -208,14 +207,14 @@ async function seed(db: Db): Promise<void> {
       raw: { depthUsdg: RAW_DEPTH, usdg: 5 },
     },
   });
-  await trade(db, { agent: A1, decision: ids.classBuy, status: "landed", buy: COIN1, sell: CASH.USDG });
+  await trade(db, { agent: A1, decision: ids.classBuy, status: "landed", buy: COIN1, sell: CASH.USDT });
   await post(db, A1, ids.classBuy, "  Liking how early this curve still is, so keeping it small and watching.  ");
 
   ids.paperBuy = await decision(db, { agent: A1, source: "strategy:steady-basket", action: "buy", at: NOW - 200, symbol: "TSLA" });
-  await trade(db, { agent: A1, decision: ids.paperBuy, status: "paper", buy: TSLA, sell: CASH.USDG });
+  await trade(db, { agent: A1, decision: ids.paperBuy, status: "paper", buy: TSLA, sell: CASH.USDT });
 
   ids.sell = await decision(db, { agent: A1, source: "strategy:steady-basket", action: "sell", at: NOW - 300, symbol: "TSLA" });
-  await trade(db, { agent: A1, decision: ids.sell, status: "landed", buy: CASH.USDG, sell: TSLA });
+  await trade(db, { agent: A1, decision: ids.sell, status: "landed", buy: CASH.USDT, sell: TSLA });
 
   // A model reason with a figure in it, and a post that names an address.
   ids.addressPost = await decision(db, {
@@ -226,7 +225,7 @@ async function seed(db: Db): Promise<void> {
     symbol: "NVDA",
     reason: `buying because cash sits at ${REASON_FIGURE} idle`,
   });
-  await trade(db, { agent: A1, decision: ids.addressPost, status: "landed", buy: CASH.USDG, sell: CASH.USDG });
+  await trade(db, { agent: A1, decision: ids.addressPost, status: "landed", buy: CASH.USDT, sell: CASH.USDT });
   await post(db, A1, ids.addressPost, "Sent the rest to 0x1234567890abcdef just in case.");
 
   // Retried: rejected first, then landed. The latest trade is the outcome.
@@ -247,7 +246,7 @@ async function seed(db: Db): Promise<void> {
 
   // A long post is clipped exactly as the feed clips it.
   ids.longPost = await decision(db, { agent: A1, source: "class-route", action: "sell", at: NOW - 700, symbol: "T1A2B3C4D5E6" });
-  await trade(db, { agent: A1, decision: ids.longPost, status: "landed", sell: COIN1, buy: CASH.USDG });
+  await trade(db, { agent: A1, decision: ids.longPost, status: "landed", sell: COIN1, buy: CASH.USDT });
   await post(db, A1, ids.longPost, `${"Left before the curve got crowded and the exit got thin. ".repeat(6)}`);
 
   // Outside the six-hour window.
@@ -352,18 +351,11 @@ describe("chatProfileOf", () => {
   });
 
   it("derives traits relative to the shipped defaults, through traitsOf", () => {
-    assert.deepEqual(chatProfileOf({ classMaxHoldSec: 1800 }).traits, ["moves early and does not wait around"]);
-    assert.deepEqual(chatProfileOf({ classMinDepthUsdg: 1000 }).traits, ["wants real liquidity before committing"]);
-    assert.deepEqual(chatProfileOf({ classExitAtGraduationPct: 50 }).traits, ["leaves well before the curve graduates"]);
     assert.deepEqual(chatProfileOf({ maxImpactBps: 100 }).traits, ["dislikes pushing a price around"]);
   });
 
   it("ignores a value the child itself would refuse, so no trait is claimed from it", () => {
-    // Below settings.ts's 60 s floor: the child runs the default, so there is no trait.
-    assert.deepEqual(chatProfileOf({ classMaxHoldSec: 10 }).traits, []);
-    assert.deepEqual(chatProfileOf({ classMaxHoldSec: "1800" }).traits, []);
     assert.deepEqual(chatProfileOf({ maxImpactBps: Number.NaN }).traits, []);
-    assert.deepEqual(chatProfileOf({ classExitAtGraduationPct: 0 }).traits, []);
   });
 });
 
@@ -382,15 +374,8 @@ describe("roomName", () => {
     assert.equal(roomName("0xdeadbeefcafe", SLUG1), generated);
     assert.equal(roomName("rh:12345", SLUG1), generated);
     assert.equal(roomName("evil‮eman", SLUG1), generated, "a bidi override fails the stored-name rule");
-    // A Solana mint is an address too (Solana P0).
-    assert.equal(roomName(SOLANA_USDG_MINT, SLUG1), generated);
-    assert.equal(roomName(SOLANA_USDG_MINT, null), DEFAULT_AGENT_NAME);
   });
 
-  it("addressy reads a Solana key glued to a word as an id, as thesis-policy.ts's backstop does", () => {
-    for (const s of [`CA${SOLANA_USDG_MINT}`, `${SOLANA_USDG_MINT}is`, `buy CA${SOLANA_USDG_MINT} now`, SOLANA_USDG_MINT, "0xdeadbeefcafe", "rh:12345"]) assert.equal(addressy(s), true, s);
-    for (const s of ["Pine Stoat", "Robin", "CASHCAT", "x".repeat(60)]) assert.equal(addressy(s), false, s);
-  });
 
   it("never falls back to an address when there is no slug to seed on", () => {
     assert.equal(roomName("0xdeadbeefcafe", null), DEFAULT_AGENT_NAME);
@@ -873,7 +858,7 @@ describe("loadFacts against the ledger schema", () => {
       const made: string[] = [];
       for (let i = 0; i < CALLS_PER_AGENT + 20; i++) {
         const id = await decision(d, { agent: A1, source: "strategy:steady-basket", action: "buy", at: NOW - 5 * 3600 + i * 60, symbol: "TSLA" });
-        await trade(d, { agent: A1, decision: id, status: "paper", buy: TSLA, sell: CASH.USDG });
+        await trade(d, { agent: A1, decision: id, status: "paper", buy: TSLA, sell: CASH.USDT });
         made.push(id);
       }
       const anchor = made[0]!;
@@ -923,7 +908,7 @@ describe("loadFacts against the ledger schema", () => {
       const made: string[] = [];
       for (let i = 0; i < CALLS_PER_AGENT + 40; i++) {
         const id = await decision(d, { agent: A1, source: "strategy:steady-basket", action: "buy", at: NOW - 5 * 3600 + i * 60, symbol: "TSLA" });
-        await trade(d, { agent: A1, decision: id, status: "paper", buy: TSLA, sell: CASH.USDG });
+        await trade(d, { agent: A1, decision: id, status: "paper", buy: TSLA, sell: CASH.USDT });
         made.push(id);
       }
       const roster = [{ tenant: T1, agentId: A1 }];
@@ -1014,7 +999,7 @@ describe("the gate holds without the SQL", () => {
       evidence_json: null,
       at: NOW - 10,
       buy_token: TSLA,
-      sell_token: CASH.USDG,
+      sell_token: CASH.USDT,
       post: null,
     };
     const rows = [

@@ -156,7 +156,7 @@ describe("perp-trend: each entry condition ALONE blocks the entry", () => {
       { code: "perp-max-positions", max: 2 },
     ],
     ["the breaker tripped", () => ({ v: base(), c: ctx({ breakerIdle: false, breakerLimitBps: 1_500 }) }), { code: "breaker-tripped", limitBps: 1_500 }],
-    ["today's energy spent", () => ({ v: base(), c: ctx({ energyEntriesLeft: false }) }), null],
+    ["the caller's day of opens spent", () => ({ v: base(), c: ctx({ entriesLeft: false }) }), null],
     ["the day's operations spent", () => ({ v: base(), c: ctx({ opsHeadroom: false }) }), { code: "ops-spent" }],
     ["the grant good for less than 168 h", () => ({ v: base({ grantExpiresAtSec: NOW_SEC + 167 * 3600 }) }), { code: "perp-grant-expiring", withinHours: 168 }],
     ["a live book with no known grant expiry", () => ({ v: base({ mode: "live", grantExpiresAtSec: null }) }), { code: "perp-grant-expiring", withinHours: 168 }],
@@ -327,7 +327,7 @@ describe("perp-trend: each exit ALONE fires, and exits come first", () => {
   it("exits read no brake: breaker, energy, ops, caps, grant — the close still goes", () => {
     const closes = [...flat(100, 820_000n), ...flat(19, 800_000n), 800_100n];
     const v = { ...holding("BTC-PERP", "long", closes), opensBlocked: "breaker-tripped" as const, grantExpiresAtSec: NOW_SEC + 60 };
-    const t = perpTrendTick(v, settings({ perpsMarkets: ["ETH-PERP"] }), ctx({ breakerIdle: false, energyEntriesLeft: false, opsHeadroom: false, equityMicro: null, perTradeSealedMicro: 0n }));
+    const t = perpTrendTick(v, settings({ perpsMarkets: ["ETH-PERP"] }), ctx({ breakerIdle: false, entriesLeft: false, opsHeadroom: false, equityMicro: null, perTradeSealedMicro: 0n }));
     assert.equal(t.exits.length, 1, "even for a market no longer allowed");
   });
 

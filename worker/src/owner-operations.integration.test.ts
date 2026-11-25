@@ -27,11 +27,14 @@ const { ownerOperationOf, ownerOperationRow } = await import("./owner-operations
 const { findTransferFlows } = await import("./deposit-log");
 
 type FixtureLog = [string, string[], string, string];
-const FX = JSON.parse(readFileSync(new URL("./testdata/owner-operations-receipts.json", import.meta.url), "utf8")) as
-  Record<string, { tx: string; block: string; timestamp: number; logs: FixtureLog[] }>;
+type Fixture = { tx: string; block: string; timestamp: number; logs: FixtureLog[] };
+const { bnbCashTx, usdt } = await import("./testdata/bnb-cash");
+const { CASH } = await import("../../packages/core/src/index");
+const RECORDED = JSON.parse(readFileSync(new URL("./testdata/owner-operations-receipts.json", import.meta.url), "utf8")) as Record<string, Fixture>;
+const FX = Object.fromEntries(Object.entries(RECORDED).map(([name, f]) => [name, Array.isArray(f?.logs) ? bnbCashTx(f) : f])) as Record<string, Fixture>;
 const ACCOUNT = "0xa96bf429888e1aab4255762d17d29c53f6a0370d";
 const VAULT = "0xc8776faff15212c359b23bae531ff3ac7d760e0f";
-const USDG = "0x5fc5360d0400a0fd4f2af552add042d716f1d168";
+const USDG = CASH.USDT.toLowerCase();
 const OPS = {
   invalidateNonce: "0x496e7211db25d250d9142105ab5024debcf05519c734d83191145af8eac09ffa",
   vaultSweep: "0x0ea85970d6cd230721eb03d667ad46795f1f215647cbad9d1f456779be91c9b9",
@@ -39,8 +42,8 @@ const OPS = {
 } as const;
 const receipt = (name: string) => FX[name]!.logs.map(([address, topics, data, logIndex]) => ({ address, topics, data, logIndex }));
 const rowOf = (name: keyof typeof OPS) => {
-  const r = ownerOperationOf({ receiptLogs: receipt(name), userOpHash: OPS[name], txHash: FX[name]!.tx, account: ACCOUNT, custody: [VAULT], usdg: USDG, chainId: 4663 })!;
-  return ownerOperationRow(r, { agentId: ACCOUNT, chainId: 4663, blockNumber: BigInt(FX[name]!.block), blockTime: FX[name]!.timestamp, recordedEpoch: 1 });
+  const r = ownerOperationOf({ receiptLogs: receipt(name), userOpHash: OPS[name], txHash: FX[name]!.tx, account: ACCOUNT, custody: [VAULT], usdg: USDG, chainId: 56 })!;
+  return ownerOperationRow(r, { agentId: ACCOUNT, chainId: 56, blockNumber: BigInt(FX[name]!.block), blockTime: FX[name]!.timestamp, recordedEpoch: 1 });
 };
 
 after(() => {
@@ -73,7 +76,7 @@ describe("recording the owner's operations", () => {
     const insert = (validator: string, disposition: string, reason: string | null) => raw((db) =>
       db.prepare(`INSERT INTO owner_operations (agent_id, chain_id, user_op_hash, tx_hash, block_number, block_time, log_index, nonce, validator, disposition,
           review_reason, usdg_legs_json, covers_logs_json, token_moves_json, paymaster, gas_wei, source, recorded_epoch)
-        VALUES (?, 4663, ?, ?, 1, 1, 0, '0x0', ?, ?, ?, '[]', '[]', '[]', '0x', NULL, 'test', 1)`)
+        VALUES (?, 56, ?, ?, 1, 1, 0, '0x0', ?, ?, ?, '[]', '[]', '[]', '0x', NULL, 'test', 1)`)
         .run(ACCOUNT, `0x${"9".repeat(63)}${++n}`, `0x${"8".repeat(64)}`, validator, disposition, reason));
     assert.throws(() => insert("permission", "acknowledged", null), /CHECK/);
     assert.throws(() => insert("root", "acknowledged", "token-arrived"), /CHECK/);
@@ -105,11 +108,11 @@ describe("recording the owner's operations", () => {
       async getReceiptLogs() { return receipt("recoverFunds"); },
     };
     const scan = (tradeTxHashes: Set<string>) => findTransferFlows({ chain, smartAccount: ACCOUNT as `0x${string}`, usdgToken: USDG as `0x${string}`,
-      fromBlock: BigInt(f.block), toBlock: BigInt(f.block), knownKeys: new Set(), tradeTxHashes, custodyAddresses: [VAULT], chainId: 4663 });
+      fromBlock: BigInt(f.block), toBlock: BigInt(f.block), knownKeys: new Set(), tradeTxHashes, custodyAddresses: [VAULT], chainId: 56 });
     const tradeTxs = await recentTradeTxHashes(ACCOUNT);
     assert.equal(tradeTxs.has(f.tx), false, "an owner operation is not a trade the scan skips");
     const flows = await scan(tradeTxs);
-    assert.deepEqual(flows.map((x) => [x.direction, x.amountUsdg6, x.logIndex]), [["out", 348_368488n, 8]]);
+    assert.deepEqual(flows.map((x) => [x.direction, x.amountUsdg6, x.logIndex]), [["out", usdt(348_368488n), 8]]);
     // THE OLD SUPPRESSION, for contrast: a 'swap' row carrying this tx hid the withdrawal, and the peak never came down.
     assert.deepEqual(await scan(new Set([f.tx])), []);
   });
@@ -126,7 +129,7 @@ describe("recording the owner's operations", () => {
     };
     const scan = async () => findTransferFlows({ chain, smartAccount: ACCOUNT as `0x${string}`, usdgToken: USDG as `0x${string}`,
       fromBlock: BigInt(f.block), toBlock: BigInt(f.block), knownKeys: new Set(), tradeTxHashes: await recentTradeTxHashes(ACCOUNT),
-      tradeOpsInTx: (tx) => tradeOpsInTx(ACCOUNT, tx), custodyAddresses: [VAULT], chainId: 4663 });
+      tradeOpsInTx: (tx) => tradeOpsInTx(ACCOUNT, tx), custodyAddresses: [VAULT], chainId: 56 });
     const trade = (opHash: string | null) => raw((db) => {
       db.prepare("DELETE FROM trades").run();
       db.prepare("INSERT INTO trades (agent_id, kind, target, amount_usdg, user_op_hash, tx_hash, status) VALUES (?, 'swap', 'x', 1, ?, ?, 'landed')")
@@ -136,7 +139,7 @@ describe("recording the owner's operations", () => {
     trade(`0x${"5e".repeat(32)}`);
     assert.equal((await recentTradeTxHashes(ACCOUNT)).has(f.tx), true, "the transaction is a trade's");
     assert.deepEqual([...(await tradeOpsInTx(ACCOUNT, f.tx.toUpperCase().replace(/^0X/, "0x")))!], [`0x${"5e".repeat(32)}`], "by the transaction in any spelling");
-    assert.deepEqual((await scan()).map((x) => [x.direction, x.amountUsdg6, x.logIndex]), [["out", 348_368488n, 8]]);
+    assert.deepEqual((await scan()).map((x) => [x.direction, x.amountUsdg6, x.logIndex]), [["out", usdt(348_368488n), 8]]);
     // A misbooked 'swap' row of this very operation: still skipped (booking it moves a peak: hwm-repair's decision).
     trade(OPS.recoverFunds.toUpperCase().replace(/^0X/, "0x"));
     assert.deepEqual(await scan(), []);

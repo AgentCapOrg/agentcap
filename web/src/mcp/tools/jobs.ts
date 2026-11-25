@@ -34,7 +34,6 @@ const USDG_SETTING = z.number().positive().max(JOB_LIMITS.maxUsdgSetting);
 const VARIANT_IN = z.object({
   label: z.string().regex(VARIANT_LABEL_RE, "1-40 letters, digits, spaces, _ . or -").describe("A short name for this settings variant, e.g. 'base' or 'cheap fills'"),
   buy_per_tick_usdg: USDG_SETTING.optional().describe("steady-basket: USDG bought per bar (default 2.5% of initial_usdg)"),
-  idle_floor_usdg: USDG_SETTING.optional().describe("steady-basket: cash kept out of the savings vault (default 5%)"),
   gap_enter_budget_usdg: USDG_SETTING.optional().describe("weekend-gap: USDG spread across the basket at a market close (default 10%)"),
   per_trade_usdg: USDG_SETTING.optional().describe("Policy limit per trade (default 50%)"),
   daily_usdg: USDG_SETTING.optional().describe("Policy limit per day (default 50%)"),
@@ -49,7 +48,6 @@ const JOB_ID = z.string().regex(/^job_[0-9a-f]{32}$/, "a job id from run_backtes
 
 const SETTINGS_OUT = z.object({
   buy_per_tick_usdg: z.number(),
-  idle_floor_usdg: z.number(),
   gap_enter_budget_usdg: z.number(),
   per_trade_usdg: z.number(),
   daily_usdg: z.number(),
@@ -67,7 +65,6 @@ const PARAMS_OUT = z.object({
   variants: z.array(z.object({
     label: z.string(),
     buy_per_tick_usdg: z.number().optional(),
-    idle_floor_usdg: z.number().optional(),
     gap_enter_budget_usdg: z.number().optional(),
     per_trade_usdg: z.number().optional(),
     daily_usdg: z.number().optional(),
@@ -79,11 +76,11 @@ const PARAMS_OUT = z.object({
 const VARIANT_RESULT = z.object({
   label: z.string(),
   settings: SETTINGS_OUT.describe("The settings this variant ran with, defaults filled in"),
-  final_equity_usdg: z.number().describe("Cash + vault + holdings valued at the last bar's price, before that bar's own trades; simulated"),
+  final_equity_usdg: z.number().describe("Cash + holdings valued at the last bar's price, before that bar's own trades; simulated"),
   pnl_usdg: z.number(),
   return_pct: z.number(),
   max_drawdown_bps: z.number().describe("Largest fall from a running peak of equity, in bps"),
-  executed_operations: z.number().describe("Intents the policy passed: swaps and vault moves, including ones that then found no price or cash"),
+  executed_operations: z.number().describe("Intents the policy passed, including ones that then found no price or cash"),
   swap_fills: z.number().describe("Swaps that actually filled"),
   turnover_usdg: z.number().describe("USDG notional of the filled swaps (buy spend plus sell proceeds, before the execution cost)"),
   rejected_by_rule: z.array(z.object({ rule: z.string(), count: z.number() })).describe("Intents the policy refused, by rule (top 20)"),
@@ -121,8 +118,6 @@ export const BACKTEST_RESULT = z.object({
     execution_cost_bps: z.string(),
     fills: z.string(),
     budgets: z.string(),
-    vault_apy_bps: z.number(),
-    vault_apy_note: z.string(),
     limits: z.string(),
     defaults: z.string(),
   }),
@@ -261,7 +256,7 @@ const runBacktestTool = defineTool({
     "Queue a backtest of steady-basket or weekend-gap over stock and ETF tokens, comparing 1-4 settings variants. It replays the agent's real strategy and policy code with naive fills (at the bar's price, flat cost, no depth or MEV).",
     `data 'oracle' replays Chainlink history (hourly bars, up to ${JOB_LIMITS.oracleMaxDays} days, symbols: ${ORACLE_SYMBOLS.join(", ")}); data 'synthetic' is a seeded random walk (daily bars, up to ${JOB_LIMITS.syntheticMaxDays} days, any of ${ALL_SYMBOLS.join(", ")}).`,
     `Returns a job_id at once. ${WHERE_IT_RUNS} Poll get_job for progress and the result.`,
-    `At most ${JOB_LIMITS.maxActivePerTenant} queued or running per owner. Results are simulations, never promises of live returns. Memecoins and launchpad coins cannot be backtested.`,
+    `At most ${JOB_LIMITS.maxActivePerTenant} queued or running per owner. Results are simulations, never promises of live returns. Memecoins cannot be backtested.`,
   ].join(" "), " with get_job", " Poll get_job for progress and the result."),
   capability: "jobs.run",
   input: z.object({

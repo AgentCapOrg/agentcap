@@ -78,8 +78,8 @@ describe("a restored floor is swept with its basis", () => {
       positions: [],
       unpricedByDesign: [],
       missingPrice: [],
-      classHeld: [],
-      classReadOk: true,
+      
+      
       watched: ["PEPE"],
     });
     assert.deepEqual(stranded, ["PEPE"], "the sweep finds it, because a basis sits beside the floor");

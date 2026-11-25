@@ -16,7 +16,6 @@
       "followers": 19967,
       "holdings": 4,
       "wallets": {
-        "solana": "5AhfPStn66hRYoNNDfJHSDgCH7fBbwMQZUECRrhTo62F",
         "evm": "0x7b4d16237683fe1765e727eadf99c6f02adf0b59"
       },
       "topTokens": [
@@ -36,7 +35,6 @@
       "followers": 249483,
       "holdings": 12,
       "wallets": {
-        "solana": "5AhfPStn66hRYoNNDfJHSDgCH7fBbwMQZUECRrhTo62F",
         "evm": null
       },
       "topTokens": [

@@ -249,7 +249,6 @@ before(async () => {
   const enrollment = createPartnerEnrollmentService({
     store,
     derive: async owner => derivationOf(accounts.get(owner.toLowerCase())),
-    classVault: async () => { throw new Error("no grant in this file seals a class vault"); },
     grants: {
       get: async tenant => savedGrants.get(tenant) ?? null,
       tenantForAccount: async account => [...savedGrants].find(([, g]) => g.smartAccount.toLowerCase() === account.toLowerCase())?.[0] as `0x${string}` ?? null,
@@ -333,7 +332,7 @@ function grantFor(owner: PrivateKeyAccount, account: Address, extra: Partial<Sto
   const wall = buildWallPolicies({ caps: CAPS, smartAccount: account, now: seconds, ...wallOptions });
   return {
     owner: owner.address, smartAccount: account, sessionKeyAddress: privateKeyToAccount(sessionKey).address,
-    demoSessionPrivateKey: sessionKey, caps: CAPS, grantedAt: seconds, expiresAt: wall.expiresAt, chainId: 4663,
+    demoSessionPrivateKey: sessionKey, caps: CAPS, grantedAt: seconds, expiresAt: wall.expiresAt, chainId: 56,
     grantFeatures: ["tradeable-v2"],
     serialized: encode({
       privateKey: sessionKey, accountParams: { accountAddress: account, initCode: "0x1234" },
@@ -397,7 +396,7 @@ test("the embedded flow, end to end: create, authorize with the SDK, activate, c
   const activated = expectStatus(await partner("POST", `/agents/${id}/activate`, authorization), 200);
   assert.equal(activated.id, id);
   assert.equal(activated.status, "starting", "linked, and reported with the worker's own status");
-  assert.deepEqual(activated.wallet, { smart_account: account, chain_id: 4663 });
+  assert.deepEqual(activated.wallet, { smart_account: account, chain_id: 56 });
   assert.equal(activated.agent.id, "robin");
   assert.equal(savedGrants.get(tenant)?.demoSessionPrivateKey, grant.demoSessionPrivateKey, "the owner-signed grant reached the worker's store");
   assert.equal(savedGrants.get(tenant)?.serialized, grant.serialized);
@@ -477,16 +476,16 @@ test("a grant sealing the partner's own adapter is refused through the gateway, 
   const user = "user-e2e-hostile";
   const created = expectStatus(await partner("POST", "/agents", { external_user_id: user }), 202);
 
-  // A permission that genuinely installs what the grant declares, so the
-  // canonical wall alone would accept it; the worker would trade through FOREIGN.
-  const hostile = grantFor(owner, account, { grantFeatures: ["tradeable-v2", "pons-adapter"], ponsAdapterAddress: FOREIGN }, { ponsAdapterAddress: FOREIGN });
-  assert.deepEqual(checkCanonicalWall(hostile as unknown as Record<string, unknown>), { ok: true }, "precondition: the wall matches the grant");
+  // What a stale or hostile client would send: a removed route's marker and
+  // sealed address. Neither this door nor the canonical wall takes it.
+  const hostile = grantFor(owner, account, { grantFeatures: ["tradeable-v2", "pons-adapter"], ponsAdapterAddress: FOREIGN } as never);
+  assert.equal(checkCanonicalWall(hostile as unknown as Record<string, unknown>).ok, false);
   const authorization = await authorize(created.id, user, owner, hostile);
   const refused = await partner("POST", `/agents/${created.id}/activate`, authorization);
-  expectStatus(refused, 422);
-  assert.equal(refused.body.error.code, "unsupported_permission");
+  expectStatus(refused, 400);
+  assert.equal(refused.body.error.code, "bad_request");
   // Refused before the single-use nonce: the same authorization is refused for the same reason, not as used.
-  assert.equal(expectStatus(await partner("POST", `/agents/${created.id}/activate`, authorization), 422).error.code, "unsupported_permission");
+  assert.equal(expectStatus(await partner("POST", `/agents/${created.id}/activate`, authorization), 400).error.code, "bad_request");
 
   assert.equal(savedGrants.has(owner.address.toLowerCase()), false, "nothing was installed");
   assert.equal(expectStatus(await partner("GET", `/agents/${created.id}`), 200).status, "pending_authorization");

@@ -571,6 +571,8 @@ describe("address", () => {
     ["fade", "0xd8da6bf2 is not for me"],
     ["banter", "0X D8DA 6BF2 6964 AF9D 7EED 9E03"],
     ["banter", "0x-d8da-6bf2-6964-af9d-7eed-9e03-e534"],
+    ["banter", "TaT7UdgF6LWe1GKoDAwwZkEp74PsVrS4Lt"],
+    ["banter", "mint TaR7ETZX4U9W6bus4jUyH9fuBPftnwLvYK"],
     ["banter", "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"],
     ["banter", "mint So11111111111111111111111111111111111111112"],
     ["banter", "0x​d8da6bf26964af9d"],
@@ -1080,6 +1082,7 @@ describe("money: no figure about money in any line", () => {
     "a hundred percent agree",
     "ten percent",
     "0.2 eth",
+    "0,5 bnb",
     "0,5 sol",
     "costs like 3 dollars",
     "usdg 25",
@@ -1599,14 +1602,17 @@ describe("names may be said, never @-tagged, and never loosen the clauses that m
     assert.equal(reason("ape in", { kind: "fade", names: ["ape in"] }), "advice");
     withHate("gloomwisp", () => assert.equal(reason("gloomwisp lol", { names: ["gloomwisp"] }), "hateful"));
   });
-  it("a name that holds a money unit keeps the unit in: 'Sol' or 'Bucks' never hides '3 sol'", () => {
-    assert.equal(reason("prob like 2 sol lol", { kind: "answer", names: ["Sol"] }), "money");
-    assert.equal(reason("sol, a couple bucks tops", { kind: "answer", names: ["Sol", "Bucks"] }), "money");
+  it("a name that holds a money unit keeps the unit in: 'Bnb' or 'Bucks' never hides '3 bnb'", () => {
+    assert.equal(reason("prob like 2 bnb lol", { kind: "answer", names: ["Bnb"] }), "money");
+    assert.equal(reason("bnb, a couple bucks tops", { kind: "answer", names: ["Bnb", "Bucks"] }), "money");
     assert.equal(reason("like 3 usdc", { kind: "banter", names: ["USDC"] }), "money");
     assert.equal(reason("20 rand lol", { kind: "banter", names: ["Rand Paul"] }), "money");
+    assert.equal(reason("prob like 2 bnb lol", { kind: "answer", agentName: "Bnb", names: [] }), "money");
+    assert.equal(reason("prob like 2 sol lol", { kind: "answer", names: ["Sol"] }), "money");
     assert.equal(reason("prob like 2 sol lol", { kind: "answer", agentName: "Sol", names: [] }), "money");
-    // …and the name alone is still sayable, and a unit inside a longer word is no unit.
     assert.equal(reason("sol lol", { kind: "answer", names: ["Sol"] }), "ok");
+    // …and the name alone is still sayable, and a unit inside a longer word is no unit.
+    assert.equal(reason("bnb lol", { kind: "answer", names: ["Bnb"] }), "ok");
     assert.equal(reason("solace99 lol", { kind: "coin", names: ["Solace99"] }), "ok");
     assert.equal(reason("max99 lol", { kind: "coin", names: ["Max99"] }), "ok");
   });
@@ -1773,6 +1779,9 @@ describe("quote kind: a stranger's thesis said back in a room, held to every thi
     ["giveaway for top holders, snapshot tomorrow", "lure"],
     ["rewards distributed to holders", "lure"],
     ["free mint", "lure"],
+    ["send 1 BNB to get 2 back", "lure"],
+    ["double your bnb", "lure"],
+    ["envia 1 bnb y recibe 2 de vuelta", "lure"],
     ["send 1 SOL to get 2 back", "lure"],
     ["double your sol", "lure"],
     ["envia 1 sol y recibe 2 de vuelta", "lure"],
@@ -1843,7 +1852,7 @@ describe("quote kind: a stranger's thesis said back in a room, held to every thi
     assert.ok(admitTgLine(line("i bought the dip and im still in"), quote).ok, "a first person is the author's");
     assert.equal(reason(line("check t.me/autonarmy"), { kind: "quote" }), "link");
     assert.equal(reason(line("this is fucking great"), { kind: "quote" }), "profanity");
-    assert.equal(reason(line("AUTON is the best AI agent play on sol 🚀🚀"), { kind: "quote" }), "alert");
+    assert.equal(reason(line("AUTON is the best AI agent play on bnb 🚀🚀"), { kind: "quote" }), "alert");
     assert.equal(reason(line("loading up more here"), { kind: "quote" }), "advice");
     assert.equal(reason(line("their API is live"), { kind: "quote" }), "ops");
     assert.equal(reason(line("i'm a real person who has followed this since launch"), { kind: "quote" }), "human");

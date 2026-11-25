@@ -39,6 +39,7 @@
  * either, so anything that is not one of this tool's own refusals is printed
  * as a fixed code.
  */
+import { bnbChain } from "../../packages/core/src/chain";
 import { createHash, randomUUID } from "node:crypto";
 import { closeSync, constants, fchmodSync, fsyncSync, lstatSync, openSync, readFileSync, realpathSync, renameSync, rmSync, writeSync } from "node:fs";
 import path from "node:path";
@@ -50,7 +51,7 @@ import {
   readChainEvidence, revertBooking, stampCommitOutcome, type ApplyReport, type BookingPlan, type BookingReceipts, type RevertReport,
 } from "./chain-gap-booking";
 
-export const DEFAULT_RPC = "https://rpc.mainnet.chain.robinhood.com";
+export const DEFAULT_RPC = bnbChain.rpcUrls.default.http[0]!;
 export const HELP = `Chain-gap booking — PREVIEW FIRST. docs/chain-gap-booking.md is the runbook.
 
   node --import tsx worker/src/chain-gap-booking-cli.ts --tenant 0xTENANT --output /absolute/new-preview.json [--dry-run]

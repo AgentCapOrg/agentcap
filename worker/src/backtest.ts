@@ -11,6 +11,7 @@
 
 import { checkPolicy, type AgentLimits, type AgentState, type TradeIntent } from "./policy";
 import { takeTick, type Holding, type Snapshot, type Strategy } from "./strategies/types";
+import { cashFromMicro } from "../../packages/core/src/cash";
 
 /** One bar of the input series. Prices in USD (8dp bigint), per symbol. */
 export interface Bar {
@@ -29,8 +30,6 @@ export interface BacktestConfig {
   initialCashUsdg: bigint;
   /** Flat execution cost applied to every swap, in bps of notional. */
   executionCostBps?: number;
-  /** Simple vault APY in bps applied to vault balance over elapsed time. */
-  vaultApyBps?: number;
   /** Capture every rejection for timeline UIs. Off by default to keep long runs bounded. */
   collectRejectedEvents?: boolean;
 }
@@ -46,7 +45,7 @@ export interface BacktestResult {
   /**
    * USDG notional of the swaps that actually FILLED: a buy's spend, a sell's
    * gross proceeds, both before the execution cost. `executed` counts every
-   * intent the policy passed, including vault moves and intents that then found
+   * intent the policy passed, including intents that then found
    * no price or no cash, so it cannot say how much was traded; this can.
    */
   turnoverUsdg: bigint;
@@ -55,25 +54,22 @@ export interface BacktestResult {
 }
 
 const ONE = 10n ** 18n;
-const YEAR_SEC = 365n * 86_400n;
 
-/** shares(18dp) valued at price8 → USDG 6dp. */
+/** shares(18dp) valued at price8 → cash base units, floored to a millionth. */
 function valueUsdg(shares: bigint, price8: bigint): bigint {
-  return (shares * price8) / 10n ** 20n;
+  return cashFromMicro((shares * price8) / 10n ** 20n);
 }
 
-/** USDG 6dp → shares(18dp) at price8. */
+/** cash base units (18dp) → shares(18dp) at price8. */
 function sharesFor(usdg: bigint, price8: bigint): bigint {
-  return price8 > 0n ? (usdg * 10n ** 20n) / price8 : 0n;
+  return price8 > 0n ? (usdg * 10n ** 8n) / price8 : 0n;
 }
 
 export async function runBacktest(cfg: BacktestConfig, bars: readonly Bar[]): Promise<BacktestResult> {
   const costBps = BigInt(cfg.executionCostBps ?? 30);
-  const apyBps = BigInt(cfg.vaultApyBps ?? 0);
   const tokenToSymbol = new Map([...cfg.legs.entries()].map(([s, t]) => [t.toLowerCase(), s]));
 
   let cash = cfg.initialCashUsdg;
-  let vault = 0n;
   const shares = new Map<string, bigint>(); // symbol → raw 18dp
   let hwm = 0n;
   // The daily caps are a ROLLING 24h budget in production, so the harness has to
@@ -92,15 +88,8 @@ export async function runBacktest(cfg: BacktestConfig, bars: readonly Bar[]): Pr
   const rejectCounts = new Map<string, number>();
   const rejectedEvents: { tSec: number; rule: string }[] = [];
   const equitySeries: { tSec: number; equityUsdg: bigint }[] = [];
-  let prevT: number | null = null;
 
   for (const bar of bars) {
-    // Vault accrues simple interest over elapsed time.
-    if (prevT !== null && apyBps > 0n && vault > 0n) {
-      vault += (vault * apyBps * BigInt(bar.tSec - prevT)) / (10_000n * YEAR_SEC);
-    }
-    prevT = bar.tSec;
-
     // New day → the daily spend/ops budget refills. Live is a TRAILING 24h
     // window re-read from the ledger each tick, not a calendar-day reset, so
     // this is an approximation: a backtest refills all at once at midnight
@@ -131,7 +120,7 @@ export async function runBacktest(cfg: BacktestConfig, bars: readonly Bar[]): Pr
       });
     }
 
-    const equity = cash + vault + positionsUsdg;
+    const equity = cash + positionsUsdg;
     hwm = equity > hwm ? equity : hwm;
     peak = equity > peak ? equity : peak;
     if (peak > 0n && equity < peak) {
@@ -142,7 +131,7 @@ export async function runBacktest(cfg: BacktestConfig, bars: readonly Bar[]): Pr
 
     const snap: Snapshot = {
       cashUsdg: cash,
-      vaultUsdg: vault,
+      vaultUsdg: 0n,
       holdings,
       prices: new Map(
         // Historical bars are feed history, so "chainlink" is the honest label —
@@ -190,12 +179,10 @@ export async function runBacktest(cfg: BacktestConfig, bars: readonly Bar[]): Pr
         // coming home as spend is how a replay would refuse the next exit.
         if (intent.kind === "perp-order" && intent.effect === "open") spentToday += intent.notionalUsdg;
         else if (intent.kind === "perp-margin" && intent.direction === "deposit") spentToday += intent.amountUsdg;
-      } else if (intent.kind !== "vault-withdraw") {
+      } else {
         spentToday +=
           intent.kind === "swap" ||
-          intent.kind === "equity-order" ||
-          intent.kind === "curve-trade" ||
-          intent.kind === "energy-buy"
+          intent.kind === "equity-order"
             ? intent.notionalUsdg
             : intent.amountUsdg;
       }
@@ -216,15 +203,6 @@ export async function runBacktest(cfg: BacktestConfig, bars: readonly Bar[]): Pr
           // inventing a fill model for them would be fiction. Counted (above),
           // never filled.
           return;
-        }
-        if (intent.kind === "vault-deposit") {
-          const amt = intent.amountUsdg > cash ? cash : intent.amountUsdg;
-          cash -= amt;
-          vault += amt;
-        } else if (intent.kind === "vault-withdraw") {
-          const amt = intent.amountUsdg > vault ? vault : intent.amountUsdg;
-          vault -= amt;
-          cash += amt;
         }
         // An energy buy falls through for the same reason as below, and one
         // more: no strategy emits it (only an owner's confirmed order does),
@@ -274,7 +252,7 @@ export async function runBacktest(cfg: BacktestConfig, bars: readonly Bar[]): Pr
       if (raw === 0n) continue;
       closingPositions += valueUsdg(raw, lastBar.prices.get(symbol) ?? 0n);
     }
-    const closing = cash + vault + closingPositions;
+    const closing = cash + closingPositions;
     peak = closing > peak ? closing : peak;
     if (peak > 0n && closing < peak) {
       const dd = Number(((peak - closing) * 10_000n) / peak);

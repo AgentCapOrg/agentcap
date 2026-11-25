@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-import { RIALTO, UNISWAP, type GrantCaps } from "../../packages/core/src/index";
+import { PANCAKESWAP, type GrantCaps } from "../../packages/core/src/index";
 import { buildCallPermissions } from "../../packages/core/src/wall";
 
 /**
@@ -15,9 +15,7 @@ import { buildCallPermissions } from "../../packages/core/src/wall";
  *     policy rejection, no-route, no-gas, a bundler refusal, an on-chain revert
  *     all record a row and return normally — so "did not throw" carries no
  *     information whatsoever. It printed "done" for UserOps the wall refused.
- *  2. The approve leg was hardcoded to the Rialto router, so a green result
- *     said nothing about the default Uniswap path. Worse — see the test below —
- *     Rialto is not in the wall of any grant this repo can sign, so the probe
+ *  2. The approve leg named a router the wall did not carry, so the probe
  *     violated the call policy on every install, and reported success.
  *  3. It passed equityUsdg = 0n with equityKnown defaulting to true: an
  *     unknown book asserted as a zero one, in a codebase whose central rule is
@@ -47,32 +45,25 @@ const SELFTEST = SRC.slice(SRC.indexOf("  if (selftest) {"));
 
 test("the probe approves the router this install will actually use", () => {
   const intent = SRC.slice(SRC.indexOf("function selfTestIntent("), SRC.indexOf("/** Everything tied to the currently"));
-  assert.match(intent, /target:\s*swapRouterFor\(cfg\)/, "the probe's target must follow swapVenue");
-  assert.doesNotMatch(intent, /RIALTO\./, "no hardcoded venue in the probe");
+  assert.match(intent, /target:\s*PANCAKESWAP\.smartRouter/, "the probe's target is the one swap route");
   // And the approve call it actually emits.
   assert.match(
     SRC,
-    /args:\s*\[swapRouterFor\(cfg\),\s*intent\.sellAmountRaw\]/,
-    "the approve spender must follow swapVenue too — the intent and the calldata must agree",
+    /args:\s*\[PANCAKESWAP\.smartRouter as `0x\$\{string\}`,\s*intent\.sellAmountRaw\]/,
+    "the approve spender must be the same router — the intent and the calldata must agree",
   );
 });
 
-test("a grant this repo can sign does NOT carry the Rialto router — which is why the old probe always violated the wall", () => {
-  // Not a source scan: the actual wall, from the actual builder, with the
-  // options both signers actually pass (neither passes allowRialto).
+test("the router the probe approves is in the wall this repo signs", () => {
+  // Not a source scan: the actual wall, from the actual builder.
   const SELF = "0x00000000000000000000000000000000000000a1" as const;
   const CAPS: GrantCaps = { perTradeUsdg: 50, dailyUsdg: 500, expiryDays: 14, maxDrawdownPct: 10, maxOpsPerDay: 48 };
   const perms = buildCallPermissions(CAPS, SELF) as unknown as { target: string; functionName?: string }[];
   const targets = perms.map((p) => p.target.toLowerCase());
   assert.equal(
-    targets.includes(RIALTO.routerSnapshot.toLowerCase()),
-    false,
-    "Rialto is opt-in and no signer opts in — so approving it could only ever be refused",
-  );
-  assert.equal(
-    targets.includes(UNISWAP.swapRouter02.toLowerCase()),
+    targets.includes(PANCAKESWAP.smartRouter.toLowerCase()),
     true,
-    "…while the Uniswap router IS in every wall, so the probe now approves something real",
+    "the swap router is in every wall, so the probe approves something real",
   );
 });
 
@@ -125,16 +116,12 @@ test("selftest declares the probe's book UNKNOWN rather than zero", () => {
 });
 
 test("selftest warns when the answer cannot mean what it looks like", () => {
-  // Both are cases where the run can go green while proving nothing: a testnet
-  // grant approves an address with no code, and a Rialto-configured install is
-  // about to be refused by a wall that never carried its router.
+  // A case where the run can go green while proving nothing: a testnet grant
+  // approves an address with no code.
   //
   // The chain caveat is in the PROBE, so the dashboard gets it too — a hosted
   // tenant on testnet needs that sentence at least as much as a terminal user.
-  // The Rialto note stays CLI-only: swapVenue 'rialto' is not reachable from
-  // the hosted settings API, which strips the field.
   assert.match(PROBE, /TRADEABLE_CHAIN_ID/, "a non-mainnet grant must be called out, on both surfaces");
-  assert.match(SELFTEST, /swapVenue === "rialto"/, "a Rialto install must be told the wall will refuse");
 });
 
 test("the CLI and the dashboard run the SAME probe", () => {

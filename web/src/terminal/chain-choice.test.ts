@@ -11,7 +11,7 @@
  * THREE THINGS COMBINED, and each is defensible alone.
  *
  * One: "paper mode" in the create wizard is `paperTradingEnabled`, a SETTING.
- * The chain there is a hardcoded 4663 and the step even prints "Network:
+ * The chain there is a hardcoded 56 and the step even prints "Network:
  * Robinhood Chain". A reasonable person reads "paper" as "test network".
  *
  * Two: `chainId` on the wallet screen initialises to MAINNET, and the mount
@@ -110,9 +110,9 @@ describe("the re-sign button's promise reaches the screen it opens", () => {
 
 describe("the chain a hosted owner cannot use says so before they pick it", () => {
   it("THE PRACTICE CARD WARNS ON THE HOSTED SERVICE", () => {
-    // The worker trades Robinhood Chain, so a hosted key signed for the sandbox
+    // The worker trades BNB Chain, so a hosted key signed for the sandbox
     // cannot trade at all. That was only discoverable afterwards, from the chat.
-    assert.match(SRC, /Not for this service — your agent trades Robinhood Chain/);
+    assert.match(SRC, /Not for this service — your agent trades BNB Chain/);
   });
 
   it("AND SO DOES THE MOVE-TO-TESTNET CHECKBOX", () => {
@@ -146,6 +146,6 @@ describe("and the wizard stops reading like a network choice", () => {
   it("and the wizard still mints on the one chain it always did", () => {
     // The fix is in the words, not the behaviour: creation has never had a
     // chain choice, and adding one here would be a new way to get this wrong.
-    assert.match(CREATE, /chainId:4663/);
+    assert.match(CREATE, /chainId:56,/);
   });
 });

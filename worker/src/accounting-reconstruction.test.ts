@@ -15,7 +15,7 @@ const flow = (over: Record<string, unknown> = {}): Record<string, unknown> => ({
 
 function reconstruct(epoch: number, flows = [flow()]) {
   const movements: CapitalMovement[] = [{
-    txHash: TX, blockNumber: 76889897, logIndex: 16, at: 1790800000, direction: "in", amountRaw: "299000000",
+    txHash: TX, blockNumber: 76889897, logIndex: 16, at: 1790800000, direction: "in", amountRaw: `299${"0".repeat(18)}`,
     counterparty: OWNER,
     classification: { kind: "capital-in", why: "external receipt", evidence: {
       counterparty: OWNER, direction: "in", txLegCount: 1, rule: "no-pair-external",

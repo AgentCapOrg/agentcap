@@ -1,7 +1,7 @@
 /** Bounded, read-only project context for an already eligible Brain candidate. */
 import type { PublicClient } from "viem";
-import { robinhoodChain, safeFetchUrl } from "../../../packages/core/src/index";
-import { readTokenMeta, sanitizeMeta } from "../venues/pons-meta";
+import { bnbChain, safeFetchUrl } from "../../../packages/core/src/index";
+import { readTokenMeta, sanitizeMeta } from "../venues/token-meta";
 import { readPage, type BrowserConfig } from "../venues/research";
 
 const CACHE_MAX = 128;
@@ -27,7 +27,7 @@ export class ProjectPurposeReader {
   }
 
   read(client: PublicClient, token: string, chainId: number, browser: BrowserConfig | null): Promise<string | null> {
-    if (chainId !== robinhoodChain.id || !/^0x[0-9a-fA-F]{40}$/.test(token)) return Promise.resolve(null);
+    if (chainId !== bnbChain.id || !/^0x[0-9a-fA-F]{40}$/.test(token)) return Promise.resolve(null);
     const address = token.toLowerCase() as `0x${string}`;
     const key = `${chainId}:${address}`;
     const cached = this.cache.get(key);

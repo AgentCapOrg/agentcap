@@ -6,7 +6,7 @@ import { LIGHTER_FEED_FILE, parseLighterFeed } from "./feed-reader";
 import type { PerpsReplayFrame } from "./backtest";
 
 export const CAPTURE_LIMITS = { maxFrameBytes: 1_048_576, maxRecordingBytes: 67_108_864, maxSamples: 8_640, maxDurationMs: 86_400_000 } as const;
-export const CAPTURE_REPLAY_CONFIG = { initialCashUsdg: 100, perTradeUsdg: 25, dailyUsdg: 100, maxOpsPerDay: 48, energyOpensPerDay: 2, maxDrawdownBps: 500 } as const;
+export const CAPTURE_REPLAY_CONFIG = { initialCashUsdg: 100, perTradeUsdg: 25, dailyUsdg: 100, maxOpsPerDay: 48, opensPerDay: 2, maxDrawdownBps: 500 } as const;
 const fields = (value: unknown, allowed: readonly string[]): value is Record<string, unknown> => !!value && typeof value === "object" && !Array.isArray(value) && Object.keys(value).every(key => allowed.includes(key));
 const SPEC = ["marketId", "sizeDecimals", "priceDecimals", "minBaseAmount", "minQuoteMicro", "minImfBp", "defaultImfBp", "mmfBp", "closeoutBp", "liquidationFeeBp", "status"];
 const MARKET = ["observedAt", "priceSource", "mark", "index", "fundingRatePctPerHour", "lastFundingRatePctPerHour", "lastFundingAt", "status", "spec", "specObservedAt", "takerFeePpm", "makerFeePpm", "bids", "asks", "bookObservedAt", "bookSource", "closed4h", "candlesObservedAt", "fundings1h", "fundingsObservedAt"];

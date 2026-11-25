@@ -37,7 +37,7 @@ const DEX_BASE = "https://api.dexscreener.com";
 export const DEX_CHAIN = DATA.dexScreenerChainId;
 
 /** The dex id GeckoTerminal gives Uniswap v3 on Robinhood Chain — what the look reads as "a v3 pool trencher can buy through". */
-const V3_DEX = "uniswap-v3-robinhood";
+const V3_DEX = DATA.pancakeswapV3DexId;
 
 const ADDRESS = /^0x[0-9a-f]{40}$/;
 const POOL_ID = /^0x[0-9a-f]{64}$/;
@@ -83,9 +83,12 @@ export function parseDexPair(raw: unknown, token: string): GeckoPool | null {
 
   const labels = Array.isArray(p.labels) ? p.labels.map(lower) : [];
   const dexId = lower(p.dexId);
-  const uniswap = dexId.startsWith("uniswap");
+  // DexScreener calls PancakeSwap "pancakeswap" on every version and says
+  // which in `labels`. Only a v3 pair with a pool contract is the venue
+  // this agent can trade; another dex's v3 pool is not (its factory differs).
+  const pancake = dexId === "pancakeswap";
   const v4 = !isContract || labels.includes("v4");
-  const dex = uniswap && !v4 && labels.includes("v3") ? V3_DEX : uniswap && v4 ? "uniswap-v4-robinhood" : `${dexId || "unknown"}-robinhood`;
+  const dex = pancake && !v4 && labels.includes("v3") ? V3_DEX : v4 ? `${dexId || "unknown"}-v4-bsc` : `${dexId || "unknown"}-bsc`;
 
   const txns = obj(p.txns);
   const volume = obj(p.volume);

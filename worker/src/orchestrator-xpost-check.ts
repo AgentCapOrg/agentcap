@@ -61,7 +61,7 @@ const FACTS_MS = 5_000;
 const CACHE_MS = 30 * 60_000;
 const CACHE_MAX = 200;
 
-/** The chains a 0x contract is looked for on, the house chain first. A Solana mint is Solana's. */
+/** The chains a 0x contract is looked for on, the house chain first. */
 const EVM_NETWORKS: readonly FactsNetwork[] = ["robinhood", "base", "ethereum", "bsc"];
 
 export interface LarpCheckerDeps {
@@ -91,7 +91,7 @@ export interface LarpChecker {
   check(target: CheckTarget, o: { budgetMs: number; chatId: number }): Promise<CheckRun>;
 }
 
-const sameAddress = (chain: "evm" | "solana", a: string, b: string) => (chain === "evm" ? a.toLowerCase() === b.toLowerCase() : a === b);
+const sameAddress = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
 
 /** A github.com link is read on GitHub's API, never in the browser: the page is GitHub's, the code is theirs. */
 function githubOf(url: string): { owner: string; repo: string | null } | null {
@@ -128,10 +128,10 @@ export function createLarpChecker(d: LarpCheckerDeps): LarpChecker {
       let lookups = 0;
 
       /** A coin on the index: the first chain that lists it, held to what is left. */
-      const factsFor = async (address: string, chain: "evm" | "solana"): Promise<CoinFacts | null> => {
+      const factsFor = async (address: string, chain: "evm"): Promise<CoinFacts | null> => {
         // Not found everywhere and some chain unreadable are different notes: the second is the index's window, not the coin.
         let unread = false;
-        for (const network of chain === "solana" ? (["solana"] as const) : EVM_NETWORKS) {
+        for (const network of EVM_NETWORKS) {
           if (left() < 1_000) {
             notes.push("check-late");
             return null;
@@ -207,12 +207,12 @@ export function createLarpChecker(d: LarpCheckerDeps): LarpChecker {
             : r.failure === "busy" ? "busy" : r.failure === "unreachable" ? "unreachable" : "none";
           let namesCoin: NonNullable<CheckEvidence["site"]>["namesCoin"] = null;
           if (page && target.kind === "coin") {
-            const all = [...page.findings.evm, ...page.findings.solana];
+            const all = page.findings.evm;
             const written = page.allText.includes(target.address) || (target.chain === "evm" && page.allText.toLowerCase().includes(target.address.toLowerCase()));
             // Named anywhere (a dapp that hardcodes its own token in its bundle names it too);
             // "other" only for contracts a visitor is shown, never a library's address in a bundle.
             const visible = all.filter((a) => a.where.some((w) => WHERE_RANK[w] <= WHERE_RANK.text));
-            namesCoin = written || all.some((a) => a.chain === target.chain && sameAddress(target.chain, a.address, target.address)) ? "yes" : visible.length ? "other" : "none";
+            namesCoin = written || all.some((a) => a.chain === target.chain && sameAddress(a.address, target.address)) ? "yes" : visible.length ? "other" : "none";
           }
           site = { url: siteUrl, read, textChars: page ? Math.max(page.allText.length, page.text.length) : 0, ownCalls: page ? page.loaded.ownCalls : null,
             docs: page?.findings.docs === true, namesCoin };
@@ -227,7 +227,7 @@ export function createLarpChecker(d: LarpCheckerDeps): LarpChecker {
 
       // 3. THE GITHUB, and 4. FOR A SITE, THE ONE CONTRACT IT SHOWS: side by side.
       const shown = target.kind === "site" && page
-        ? [...page.findings.evm, ...page.findings.solana].filter((a) => a.where.some((w) => WHERE_RANK[w] <= WHERE_RANK.text))
+        ? page.findings.evm.filter((a) => a.where.some((w) => WHERE_RANK[w] <= WHERE_RANK.text))
         : [];
       const [ghRead, shownFacts] = await Promise.all([
         repoAsked && left() > 1_500 ? (lookups++, github(repoAsked.owner, repoAsked.repo, Math.min(GITHUB_MS, left() - 500)).catch((): GithubRead => ({ ok: false, failure: "unreachable", detail: "" }))) : Promise.resolve(null),

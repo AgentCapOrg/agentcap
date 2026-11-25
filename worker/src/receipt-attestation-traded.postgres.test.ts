@@ -70,7 +70,7 @@ test("Postgres: one inferred deposit of a traded book, durable interruptions and
     const f = await tradedFixture(shared, lease);
     const competitor = new PgTenantLeaseManager(async () => freshClient());
     // Another tenant's book in the same shared tables, with an inferred row of the same amount.
-    await shared.prepare("INSERT INTO agents(smart_account,owner_address,session_key_address,chain_id,caps,granted_at,expires_at,mode,hwm_usdg) VALUES(?,?,?,4663,'{}',1,9999999999,'live',77)").run(OTHER, OTHER, OTHER);
+    await shared.prepare("INSERT INTO agents(smart_account,owner_address,session_key_address,chain_id,caps,granted_at,expires_at,mode,hwm_usdg) VALUES(?,?,?,56,'{}',1,9999999999,'live',77)").run(OTHER, OTHER, OTHER);
     await shared.prepare("INSERT INTO flows(agent_id,direction,amount_usdg,source,epoch) VALUES(?,'in',?,'inferred',1)").run(OTHER, TOP_UP);
     await shared.prepare("INSERT INTO trades(agent_id,kind,target,amount_usdg,tx_hash,status) VALUES(?,'swap','pool',2.5,?,'landed')").run(OTHER, TX.trade);
     return { ...f, connect, wrap, main, competitor, lease, application,
@@ -116,7 +116,7 @@ test("Postgres: one inferred deposit of a traded book, durable interruptions and
       assert.equal((await attestTradedReceipt(options)).state, "applied");
       assert.equal((await attestTradedReceipt(options)).state, "applied", "exact replay is idempotent");
       for (const [db, id, row] of [[f.local, LOCAL_FLOW, flows.local], [fresh, SHARED_FLOW, flows.shared]] as const) {
-        assert.deepEqual(await flow(db, id), { ...row, source: "chain-log", tx_hash: TX.deposit, block_number: BLOCK.deposit, log_index: 2, chain_id: 4663 });
+        assert.deepEqual(await flow(db, id), { ...row, source: "chain-log", tx_hash: TX.deposit, block_number: BLOCK.deposit, log_index: 2, chain_id: 56 });
       }
       assert.deepEqual(await books(f, fresh), original, "no money, peak, cursor, grant, source or other tenant changed");
       assert.equal((await readReceiptAttestation(fresh, TEST_TENANT))!.plan_json, permanentPlan, "retries retain the original approval and evidence");
@@ -154,7 +154,7 @@ test("Postgres: one inferred deposit of a traded book, durable interruptions and
       const preserved = `${f.file}.preserved`, before = readFileSync(f.file);
       renameSync(f.file, preserved);
       try {
-        const restore = { tenant: TEST_TENANT, smartAccount: TEST_ACCOUNT.toLowerCase(), chainId: 4663, home: f.options.home,
+        const restore = { tenant: TEST_TENANT, smartAccount: TEST_ACCOUNT.toLowerCase(), chainId: 56, home: f.options.home,
           volume: f.options.volume, shared: f.shared, lease: f.lease, dek: Buffer.alloc(32, 8) };
         await assert.rejects(restoreLedgerImport(restore), /attestation is unfinished/);
         await assert.rejects(registerLedgerSource(restore), /attestation is unfinished/);

@@ -256,7 +256,7 @@ export type TgPublicFact =
   | { kind: "calculation"; input: ChatMathInput }
   | {
       kind: "site";
-      topic: "overview" | "pnl" | "trades" | "attempts" | "wallet" | "groups" | "limits" | "onboarding" | "funding" | "withdrawals" | "modes" | "v4" | "readiness" | "drawdown" | "privacy" | "capabilities" | "dm-policy";
+      topic: "overview" | "pnl" | "trades" | "attempts" | "wallet" | "groups" | "limits" | "onboarding" | "funding" | "withdrawals" | "modes" | "readiness" | "drawdown" | "privacy" | "capabilities" | "dm-policy";
       /**
        * "capabilities" and "dm-policy" only: what is wired in this process,
        * set by the handler (never from the line), so the list names only
@@ -485,7 +485,7 @@ export type TgTraderAbout = "profile" | "holdings" | "trades" | "earnings";
  * the planner's own words (tg-fomo-port.ts requestText), and the router takes
  * one only when the asker's own words name it (route.ts groundedChain).
  */
-export type TgFomoChain = "robinhood" | "solana" | "base" | "ethereum" | "bsc";
+export type TgFomoChain = "robinhood" | "base" | "ethereum" | "bsc";
 
 /**
  * One row of the trader leaderboard asked about ("who's the top trader on
@@ -536,7 +536,7 @@ export interface TgThesesMaterial {
 export interface TgThesesQuotes {
   /** The coin's plain name (never an address). */
   coin: string;
-  /** Its chain in words ("Solana"), or "". */
+  /** Its chain in words ("Base"), or "". */
   where: string;
   /** What the line asked for (may be more than `n`). */
   asked: number;

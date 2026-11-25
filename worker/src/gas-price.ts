@@ -6,7 +6,7 @@
  * produced was GROSS OF GAS — which at the 6.25 USDG trade size in the July
  * ledger was ~55 bps of an ~89 bps round trip, i.e. most of the cost.
  *
- * (There IS a Chainlink ETH/USD feed on this chain, CASH_FEEDS.ETH_USD. The
+ * (There IS a Chainlink ETH/USD feed on this chain, CASH_FEEDS.BNB_USD. The
  * worker reads it as the fallback when the pool below is refused, and to price
  * gas settled after the fact at the round then in force — eth-feed.ts.)
  *
@@ -26,12 +26,13 @@
  */
 
 import type { StockToken } from "../../packages/core/src/index";
+import { cashFromMicro } from "../../packages/core/src/cash";
 
-/** 1e18 (wei per ETH) × 1e8 (price8) ÷ 1e6 (USDG units) = 1e20. */
-const WEI_PRICE8_TO_USDG = 10n ** 20n;
+/** 1e18 (wei per native coin) × 1e8 (price8) ÷ 1e6 (micro-USDT) = 1e20. */
+const WEI_PRICE8_TO_MICRO = 10n ** 20n;
 
 /**
- * Convert gas paid in wei to USDG (6dp) at a given ETH price (8dp).
+ * Convert gas paid in wei to cash base units (18dp) at a given native price (8dp).
  *
  * Truncates rather than rounds, so a cost is never overstated by the
  * conversion. At realistic gas figures the difference is under a millionth of a
@@ -39,7 +40,7 @@ const WEI_PRICE8_TO_USDG = 10n ** 20n;
  */
 export function gasCostUsdg(gasWei: bigint, ethPrice8: bigint): bigint {
   if (gasWei <= 0n || ethPrice8 <= 0n) return 0n;
-  return (gasWei * ethPrice8) / WEI_PRICE8_TO_USDG;
+  return cashFromMicro((gasWei * ethPrice8) / WEI_PRICE8_TO_MICRO);
 }
 
 /**

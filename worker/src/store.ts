@@ -5,36 +5,15 @@
  * Postgres is a schema port when the platform goes multi-user.
  */
 
+import { usdgUnits } from "../../packages/core/src/wall";
+import { CASH_PER_MICRO, cashFromMicro, cashNumber, cashToMicro } from "../../packages/core/src/cash";
 import { RISK_PERIOD_SCHEMA, mergeRiskPeriod, markRiskPeriod, adjustRiskCapital, type RiskPeriod } from "./risk-period";
-import {
-  ENERGY_DAYS_ALTERS,
-  ENERGY_DAYS_SCHEMA,
-  claimEnergyDay,
-  claimEnergyNoticeDay,
-  lastEnergyReadDay,
-  noteEnergyReadDay,
-  readEnergyDay,
-  refundEnergyDay,
-  type EnergyField,
-} from "./energy-days";
-import type { EnergyCounters, LastGood } from "./energy";
-import { energyDayUnrestored } from "./energy-seed";
 import { initialCapitalHistoryEmpty } from "./initial-capital-history";
 import { BUDGET_SEED_SCHEMA, budgetUnrestored } from "./budget-seed";
 import { DatabaseSync } from "node:sqlite";
 import { createHash, randomUUID } from "node:crypto";
 import type { StoredGrant } from "../../packages/core/src/index";
-import {
-  CASH,
-  ENERGY_RESERVE_TOKENS,
-  PERP_COI_MAX,
-  PERP_LEG,
-  officialCoinCurve,
-  officialCoinsFor,
-  perpCoi,
-  perpMarketById,
-  robinhoodChain,
-} from "../../packages/core/src/index";
+import { CASH, PERP_COI_MAX, PERP_LEG, perpCoi, perpMarketById } from "../../packages/core/src/index";
 import type { PerpSide } from "../../packages/core/src/index";
 // The perp ledger's vocabulary and which way each status may move — shared
 // with ledger-mirror.ts and paper-checkpoint.ts so the three cannot disagree.
@@ -114,7 +93,14 @@ export const getRiskPeriodPeak = (account: string, equity: number | null = null)
 
 const SQLITE_SCHEMA = `
     ${RISK_PERIOD_SCHEMA};
-    ${ENERGY_DAYS_SCHEMA};
+    /* A historical table, kept so the ledger schema does not change. */
+    CREATE TABLE IF NOT EXISTS energy_days (
+      agent_id TEXT NOT NULL, day TEXT NOT NULL,
+      reviews INTEGER NOT NULL DEFAULT 0, entries INTEGER NOT NULL DEFAULT 0,
+      told_at INTEGER, read_at INTEGER, read_full INTEGER,
+      entries_refunded INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (agent_id, day)
+    );
     /* agent_id (= smart_account here) threads EVERY per-agent table: trades,
        decisions, positions, cost_basis, equity, fee_accruals. On the EVM rail
        it is the ERC-4337 smart-account address; on the broker rail it is the
@@ -469,10 +455,7 @@ const SQLITE_SCHEMA = `
  * 0x and 64 hex digits, either case, exactly as bookInitialCapital admits one
  * (bookCapitalFlow admits the same with a lowercase x only). An EVM hash is
  * case-insensitive, so it is kept lowercased: 0xAB… and 0xab… are one log to
- * `flows_chain_identity`. Anything else is kept EXACTLY AS WRITTEN. A Solana
- * signature is base58 and case-sensitive (packages/core/src/ids.ts), so a
- * lowercased one names a signature that does not exist; and base58 has no "0",
- * so no Solana id can ever take this shape.
+ * `flows_chain_identity`. Anything else is kept EXACTLY AS WRITTEN.
  *
  * Every hash on the books today has this shape, so the rule changes nothing
  * that is there: each one is still folded, to the same string as before.
@@ -1155,11 +1138,7 @@ const SQLITE_ALTERS: string[] = [
     // and null means "not said yet" — never "no positions": a reader shows
     // unknown, and the mirror keeps the last non-null value.
     "ALTER TABLE agents ADD COLUMN perps TEXT",
-    // THE DAY'S HANDED-BACK ENTRY CLAIMS, a counter of their own that only
-    // rises — so a refund survives the mirror's larger-wins copy up and the
-    // seed's copy back down (energy-days.ts). Here for both the child's sqlite
-    // and the shared Postgres the mirror migrates with this list.
-    ...ENERGY_DAYS_ALTERS,
+    "ALTER TABLE energy_days ADD COLUMN entries_refunded INTEGER NOT NULL DEFAULT 0",
     // WHO OWNS this agent, for a public page to credit — the X handle its owner
     // typed, nothing more.
     //
@@ -1287,7 +1266,7 @@ const SQLITE_ALTERS: string[] = [
     // because that is the chain the transaction was actually on.
     //
     // ONLY AN EVM HASH IS FOLDED (EVM_TX_HASH above). This runs on every open,
-    // so a Solana signature booked as written would otherwise be lowercased on
+    // so a non-EVM id booked as written would otherwise be lowercased on
     // the next one, out from under its own row and its journal entry.
     `UPDATE flows SET tx_hash = LOWER(tx_hash)
        WHERE tx_hash IS NOT NULL AND tx_hash <> LOWER(tx_hash) AND ${EVM_TX_HASH_SQL}`,
@@ -2737,7 +2716,7 @@ export async function bookInitialCapital(
 ): Promise<CapitalBooking> {
   const refuse = (): CapitalBooking => ({ kind: "refused", why: "initial capital requires an untouched epoch-one live book and complete matching receipts" });
   if (capital.account !== agentId.toLowerCase() || !Number.isSafeInteger(capital.chainId) || capital.chainId <= 0
-    || capital.cashUsdg6 <= 0n || capital.cashUsdg6 > BigInt(Number.MAX_SAFE_INTEGER)
+    || capital.cashUsdg6 <= 0n || cashToMicro(capital.cashUsdg6) > BigInt(Number.MAX_SAFE_INTEGER)
     || !capital.deposits.length || capital.deposits.length > 64 || !/^0x[0-9a-f]{64}$/i.test(capital.blockHash)) return refuse();
   const keys = new Set<string>();
   for (const d of capital.deposits) {
@@ -2748,8 +2727,18 @@ export async function bookInitialCapital(
     keys.add(key);
   }
   if (capital.deposits.reduce((sum, d) => sum + d.amountUsdg6, 0n) !== capital.cashUsdg6) return refuse();
-  if (capital.deposits.some(d => BigInt(Math.round((Number(d.amountUsdg6) / 1e6) * 1e6)) !== d.amountUsdg6)
-    || BigInt(Math.round(capital.deposits.reduce((sum, d) => sum + Number(d.amountUsdg6) / 1e6, 0) * 1e6)) !== capital.cashUsdg6) return refuse();
+  // USDT carries 18 places and the REAL columns keep six. Each row is its
+  // receipt truncated to a millionth, and the peak is the sum of those rows, so
+  // the book is never above what arrived. A receipt wholly under a millionth
+  // gets no row, as the deposit scanner skips one; the journal mark below keeps
+  // every receipt's exact base units as text.
+  const bookable = capital.deposits.filter(d => cashToMicro(d.amountUsdg6) > 0n);
+  const bookedRaw = bookable.reduce((sum, d) => sum + cashFromMicro(cashToMicro(d.amountUsdg6)), 0n);
+  if (!bookable.length) return refuse();
+  // What is kept must be exact in those columns: it survives the round trip,
+  // one by one and summed.
+  if (bookable.some(d => usdgUnits(cashNumber(d.amountUsdg6)) !== cashFromMicro(cashToMicro(d.amountUsdg6)))
+    || usdgUnits(bookable.reduce((sum, d) => sum + cashNumber(d.amountUsdg6), 0)) !== bookedRaw) return refuse();
   return getDb().tx(async (db): Promise<CapitalBooking> => {
     const account = await db.prepare(`UPDATE agents SET epoch = epoch WHERE smart_account = ?
       RETURNING epoch, chain_id, mode, hwm_usdg, hwm_withdrawn_usdg, accrued_fee_usdg`).get(agentId) as
@@ -2764,23 +2753,23 @@ export async function bookInitialCapital(
     if (prior.length) {
       // Only a complete, exact retry is idempotent. Partial or inferred history
       // needs the separate maintenance path, never a top-up of this batch.
-      if (prior.length !== capital.deposits.length || Number(account.hwm_usdg) !== Number(capital.cashUsdg6) / 1e6
-        || prior.some(p => !capital.deposits.some(d => p.tx_hash?.toLowerCase() === d.txHash.toLowerCase()
-          && p.log_index === d.logIndex && p.block_number === d.blockNumber && p.amount_usdg === Number(d.amountUsdg6) / 1e6
+      if (prior.length !== bookable.length || Number(account.hwm_usdg) !== cashNumber(bookedRaw)
+        || prior.some(p => !bookable.some(d => p.tx_hash?.toLowerCase() === d.txHash.toLowerCase()
+          && p.log_index === d.logIndex && p.block_number === d.blockNumber && p.amount_usdg === cashNumber(d.amountUsdg6)
           && p.direction === "in" && p.source === "chain-log" && p.epoch === 1 && p.chain_id === capital.chainId))) return refuse();
-      if (!await initialCapitalHistoryEmpty(db, agentId, { ignoreFlows: true, bookedCashUsdg: Number(capital.cashUsdg6) / 1e6 })) return refuse();
+      if (!await initialCapitalHistoryEmpty(db, agentId, { ignoreFlows: true, bookedCashUsdg: cashNumber(capital.cashUsdg6) })) return refuse();
       return { kind: "already" };
     }
     if (Number(account.hwm_usdg) !== 0) return refuse();
-    if (!await initialCapitalHistoryEmpty(db, agentId, { ignoreFlows: true, heldCashUsdg: Number(capital.cashUsdg6) / 1e6 })) return refuse();
+    if (!await initialCapitalHistoryEmpty(db, agentId, { ignoreFlows: true, heldCashUsdg: cashNumber(capital.cashUsdg6) })) return refuse();
     if (await db.prepare("SELECT 1 FROM journal WHERE LOWER(agent_id) = LOWER(?) AND kind = 'flow' LIMIT 1").get(agentId)) return refuse();
-    for (const d of capital.deposits) {
-      const inserted = await insertFlowWithJournal(db, { agentId, direction: "in", amountUsdg: Number(d.amountUsdg6) / 1e6,
+    for (const d of bookable) {
+      const inserted = await insertFlowWithJournal(db, { agentId, direction: "in", amountUsdg: cashNumber(d.amountUsdg6),
         source: "chain-log", txHash: d.txHash, blockNumber: d.blockNumber, logIndex: d.logIndex,
         mode: "live", chainId: capital.chainId }, 1, capital.chainId);
       if (!inserted) throw new Error("Initial capital receipt identity changed during booking");
     }
-    await applyHwmDelta(db, agentId, Number(capital.cashUsdg6) / 1e6);
+    await applyHwmDelta(db, agentId, cashNumber(bookedRaw));
     await appendJournalRow(db, agentId, 1, "mark", { initialCapital: {
       chainId: capital.chainId, blockNumber: capital.blockNumber.toString(), blockHash: capital.blockHash,
       cashUsdg6: capital.cashUsdg6.toString(), receipts: capital.deposits.map(d => ({
@@ -3515,18 +3504,6 @@ export async function setAgentMode(
     /* a missing heartbeat is a worse thing to crash over than to lose */
   }
 }
-/**
- * Publish the worker's energy report (core EnergyStatus, as JSON) on the agents
- * row. Best-effort like the heartbeat: a report that fails to write must never
- * take a tick down — the next tick writes a fresh one.
- */
-export async function setAgentEnergy(agentId: string, json: string | null): Promise<void> {
-  try {
-    await getDb().prepare("UPDATE agents SET energy = ? WHERE smart_account = ?").run(json, agentId);
-  } catch {
-    /* the next tick reports again */
-  }
-}
 
 /**
  * Publish the worker's perps report (core PerpsReport, as JSON) on the agents
@@ -3539,77 +3516,6 @@ export async function setAgentPerps(agentId: string, json: string | null): Promi
     await getDb().prepare("UPDATE agents SET perps = ? WHERE smart_account = ?").run(json, agentId);
   } catch {
     /* the next pass reports again */
-  }
-}
-
-// ── ENERGY: today's durable counters (energy-days.ts), on this child's ledger ──
-//
-// Every one of these fails in the SAFE direction for its own question: an
-// unreadable day is `null` (the plan then fails closed on new work, never on
-// an exit), a claim that errors is refused, a notice claim that errors is not
-// sent, and a refund or a read-note that errors only under-spends.
-
-/**
- * Today's counters; zeros when there is no row; null when the ledger could not
- * be read — OR when this is a day whose history the orchestrator could not put
- * back after a rebuild (energy-seed.ts). The table is empty then, but empty is
- * not "nothing used": the day's durable counts are somewhere this child cannot
- * see, and reading zeros would hand out the day's allowance again.
- */
-export async function getEnergyDay(agentId: string, day: string): Promise<EnergyCounters | null> {
-  if (energyDayUnrestored(agentcapHome(), day)) return null;
-  try {
-    return await readEnergyDay(getDb(), agentId, day);
-  } catch {
-    return null;
-  }
-}
-
-/** Claim one review or entry against `cap`. False when the cap is reached — or the write failed. */
-export async function claimEnergy(agentId: string, day: string, field: EnergyField, cap: number): Promise<boolean> {
-  try {
-    return await claimEnergyDay(getDb(), agentId, day, field, cap);
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Return one unused ENTRY claim. Never below zero. Entries only: a review that
- * ran was paid for, and so is never given back.
- */
-export async function refundEnergy(agentId: string, day: string, _field: "entries"): Promise<void> {
-  try {
-    await refundEnergyDay(getDb(), agentId, day);
-  } catch {
-    /* a lost refund under-spends by one — the conservative direction */
-  }
-}
-
-/** Claim today's owner notice. True exactly once per agent per UTC day; false on any failure. */
-export async function claimEnergyNotice(agentId: string, day: string, atSec: number): Promise<boolean> {
-  try {
-    return await claimEnergyNoticeDay(getDb(), agentId, day, atSec);
-  } catch {
-    return false;
-  }
-}
-
-/** Remember a balance reading that decided the level. */
-export async function noteEnergyRead(agentId: string, day: string, full: boolean, atSec: number): Promise<void> {
-  try {
-    await noteEnergyReadDay(getDb(), agentId, day, full, atSec);
-  } catch {
-    /* the in-memory reading still stands for this process */
-  }
-}
-
-/** The newest decided reading since `sinceSec`, or null. */
-export async function lastEnergyRead(agentId: string, sinceSec: number): Promise<LastGood | null> {
-  try {
-    return await lastEnergyReadDay(getDb(), agentId, sinceSec);
-  } catch {
-    return null;
   }
 }
 
@@ -4822,90 +4728,6 @@ export async function opsSignedWithNonce(agentId: string, nonce: bigint, exceptH
   return [...out];
 }
 
-/**
- * IS AN ENERGY BUY STILL IN FLIGHT? — the ledger's half of "one at a time".
- *
- * The energy buy is sized from the chain every time, so the one way to buy
- * twice is to size a second buy on a reading taken before the first one
- * settled: an owner asking again while the first is between broadcast and
- * receipt, or a stranded 'submitted' op the resolver has not reached. This is
- * the question asked before any sizing: does the ledger hold a 'submitted'
- * energy purchase from the last `sinceSec` seconds?
- *
- * BY KIND OR BY LEGS. The pre-broadcast row is written with kind 'energy-buy'
- * and legs USDG → the reserve (index.ts tokenLegs), and a row whose kind was
- * ever rewritten must still be seen — so either matches. The reserve set is
- * every chain's (core ENERGY_RESERVE_TOKENS), because a false "in flight" costs
- * an owner a minute and a false "clear" costs a double buy.
- *
- * NULL WHEN THE LEDGER WOULD NOT ANSWER, and the caller refuses on it: an
- * unreadable ledger is not an empty one.
- *
- * The window exists because an op past its router deadline (ENERGY.deadlineSec)
- * can no longer buy anything, and a row the resolver cannot settle must not
- * block the owner forever; six hours is far past any deadline.
- */
-export async function energyBuysInFlight(agentId: string, sinceSec: number): Promise<boolean | null> {
-  const reserve = [...new Set(Object.values(ENERGY_RESERVE_TOKENS).flat().map((a) => a.toLowerCase()))];
-  try {
-    const row = await getDb()
-      .prepare(
-        `SELECT 1 AS n FROM trades
-          WHERE agent_id = ? AND status = 'submitted' AND created_at > ?
-            AND (kind = 'energy-buy'
-                 OR (LOWER(COALESCE(sell_token, '')) = ?
-                     AND LOWER(COALESCE(buy_token, '')) IN (${reserve.map(() => "?").join(", ")})))
-          LIMIT 1`,
-      )
-      .get(agentId, Math.floor(sinceSec), (CASH.USDG as string).toLowerCase(), ...reserve);
-    return row !== undefined && row !== null;
-  } catch (e) {
-    console.error("[store] energy in-flight read failed:", e);
-    return null;
-  }
-}
-
-/**
- * THE NEWEST ENERGY PURCHASE THAT LANDED, and the block it landed in when the
- * ledger knows it — what the buy's balance-read pin is seeded from at arm.
- *
- * The pin (index.ts lastEnergyLandedBlock) makes the next ask read both
- * $AGENTCAP halves and the cash no earlier than the last purchase's landing,
- * so a load-balanced node still behind it answers with an error rather than a
- * pre-purchase balance the planner would top up a second time. It was held in
- * memory only, so a restart after a landing forgot it — and the in-flight
- * guard does not cover a LANDED row.
- *
- * The block comes from the purchase's own 'energy-buy' flow row (booked from
- * the receipt's USDG log, before the landed row was written). A landed
- * purchase with no flow row — its booking was refused or skipped — answers
- * `blockNumber: null` with its tx hash, and the caller reads that one receipt.
- * By kind OR by legs, like energyBuysInFlight. Throws when the ledger will not
- * answer; the caller treats that as "no pin" (fail-soft: the pin is a
- * freshness floor, never a gate).
- */
-export async function newestLandedEnergyBuy(agentId: string): Promise<{ txHash: string; blockNumber: number | null } | null> {
-  const reserve = [...new Set(Object.values(ENERGY_RESERVE_TOKENS).flat().map((a) => a.toLowerCase()))];
-  const row = (await getDb()
-    .prepare(
-      `SELECT t.tx_hash AS tx_hash,
-              (SELECT MAX(f.block_number) FROM flows f
-                WHERE f.agent_id = t.agent_id AND f.source = 'energy-buy'
-                  AND LOWER(COALESCE(f.tx_hash, '')) = LOWER(t.tx_hash)) AS block_number
-         FROM trades t
-        WHERE t.agent_id = ? AND t.status = 'landed' AND t.tx_hash IS NOT NULL
-          AND (t.kind = 'energy-buy'
-               OR (LOWER(COALESCE(t.sell_token, '')) = ?
-                   AND LOWER(COALESCE(t.buy_token, '')) IN (${reserve.map(() => "?").join(", ")})))
-        ORDER BY t.created_at DESC, t.id DESC
-        LIMIT 1`,
-    )
-    .get(agentId, (CASH.USDG as string).toLowerCase(), ...reserve)) as { tx_hash: string; block_number: number | string | null } | undefined;
-  if (!row) return null;
-  const block = row.block_number === null || row.block_number === undefined ? null : Number(row.block_number);
-  return { txHash: String(row.tx_hash).toLowerCase(), blockNumber: block !== null && Number.isSafeInteger(block) && block > 0 ? block : null };
-}
-
 // ── chat turns — the conversation survives a restart ──────────────────────
 
 /** Kept per chat on disk. Only the newest few reach a prompt (see service.ts);
@@ -5323,23 +5145,6 @@ export async function seenPools(): Promise<Set<string>> {
   }
 }
 
-/**
- * Tokens the LAUNCHPAD discoverer has already announced.
- *
- * The curve column is the marker because only that path ever writes it, so this
- * needs no flag of its own. Independent of `seenPools` by design — see above.
- */
-export async function seenCurves(): Promise<Set<string>> {
-  try {
-    const rows = await getDb()
-      .prepare("SELECT address FROM discovered_pools WHERE curve IS NOT NULL")
-      .all() as { address: string }[];
-    return new Set(rows.map((r) => r.address.toLowerCase()));
-  } catch {
-    return new Set();
-  }
-}
-
 /** Record a POOL sighting so the pool discoverer never announces it twice. */
 export async function markPoolSeen(address: string, symbol: string): Promise<void> {
   try {
@@ -5397,19 +5202,6 @@ export interface PoolCandidate {
     tickSpacing: number;
     hooks: string;
   };
-  /**
-   * Where a bonding-curve token trades, when this came from the Pons launchpad.
-   *
-   * `quoteToken` is `0x000…0` for native ETH — a meaningful zero, not a missing
-   * one — so absence is expressed by the whole object being undefined rather
-   * than by any field inside it.
-   */
-  curve?: {
-    curve: string;
-    quoteToken: string;
-    /** Raw quote units, decimal string. Required to interpret the reserves. */
-    graduationThresholdRaw: string;
-  };
 }
 
 /**
@@ -5430,17 +5222,9 @@ export async function recordCandidate(c: PoolCandidate): Promise<void> {
         // Bitquery hiccup — can never blank a key that was already captured.
         // Keys are learned once from the Initialize event and then only ever
         // replaced by another full key.
-        // The pool-key and curve columns use COALESCE(excluded.x, x) so a
-        // re-sighting that lacks them — the gateway path, an older worker, a
-        // Bitquery hiccup, or simply the OTHER discoverer — can never blank
-        // what was already captured. Both are learned once and then only ever
-        // replaced by another full reading.
-        //
         // liquidity_usd and fdv_usd use CASE ... > 0 for a related but distinct
-        // reason. There are now TWO discoverers writing this table, and the Pons
-        // one legitimately has no USD figures for a curve quoted in an asset
-        // this repo cannot price. Left unconditional, such a re-sighting would
-        // overwrite a Uniswap pass's real figures with zeros — silently, since
+        // reason. A discoverer can legitimately have no USD figures. Left
+        // unconditional, such a re-sighting would overwrite a Uniswap pass's real figures with zeros — silently, since
         // the catch below only logs — and the trencher's $25,000 depth and
         // $50,000 FDV gates would then disqualify a candidate that had
         // previously qualified.
@@ -5451,9 +5235,8 @@ export async function recordCandidate(c: PoolCandidate): Promise<void> {
         // a live reading — trencher re-derives depth every tick from
         // lastLiquidityUsd and only falls back to this value.
         `INSERT INTO discovered_pools (address, symbol, decimals, liquidity_usd, fdv_usd,
-                                       pool_currency0, pool_currency1, pool_fee, pool_tick_spacing, pool_hooks,
-                                       curve, quote_token, graduation_threshold)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                       pool_currency0, pool_currency1, pool_fee, pool_tick_spacing, pool_hooks)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(address) DO UPDATE SET
            symbol = excluded.symbol, decimals = excluded.decimals,
            liquidity_usd = CASE WHEN excluded.liquidity_usd > 0 THEN excluded.liquidity_usd ELSE liquidity_usd END,
@@ -5462,10 +5245,7 @@ export async function recordCandidate(c: PoolCandidate): Promise<void> {
            pool_currency1 = COALESCE(excluded.pool_currency1, pool_currency1),
            pool_fee = COALESCE(excluded.pool_fee, pool_fee),
            pool_tick_spacing = COALESCE(excluded.pool_tick_spacing, pool_tick_spacing),
-           pool_hooks = COALESCE(excluded.pool_hooks, pool_hooks),
-           curve = COALESCE(excluded.curve, curve),
-           quote_token = COALESCE(excluded.quote_token, quote_token),
-           graduation_threshold = COALESCE(excluded.graduation_threshold, graduation_threshold)`,
+           pool_hooks = COALESCE(excluded.pool_hooks, pool_hooks)`,
       )
       .run(
         c.address.toLowerCase(),
@@ -5478,9 +5258,6 @@ export async function recordCandidate(c: PoolCandidate): Promise<void> {
         c.key ? c.key.fee : null,
         c.key ? c.key.tickSpacing : null,
         c.key ? c.key.hooks.toLowerCase() : null,
-        c.curve ? c.curve.curve.toLowerCase() : null,
-        c.curve ? c.curve.quoteToken.toLowerCase() : null,
-        c.curve ? c.curve.graduationThresholdRaw : null,
       );
   } catch (e) {
     console.error("[store] candidate upsert failed:", e);
@@ -5535,168 +5312,25 @@ export async function poolKeysFor(
 /**
  * Candidates seen within `maxAgeSec`, freshest first.
  *
- * `poolsOnly` excludes bonding-curve rows, and the caller that wants candidates
- * to TRADE must pass it. The launchpad adds roughly ten rows an hour against a
- * 25-row window ordered by recency, so within a few hours the window is nothing
- * but curve tokens — which have no pool, cannot be priced by the pool guards
- * and cannot be entered at all today. They would crowd out every genuine pool
- * discovery, and "nothing qualified" would be indistinguishable from "the one
- * that qualified fell off the end of the list".
- *
- * Filtered in SQL rather than after the fact, because the LIMIT is applied by
- * the database: dropping them in JavaScript would still leave the window full.
+ * Rows with a `curve` (written by an older build) have no pool and are excluded
+ * in SQL, before the LIMIT, so they cannot crowd genuine pool discoveries out of
+ * the window.
  */
-/**
- * WHERE THE USDG CANDIDATES GO — a read-only census, for one question.
- *
- * Milla's class producer surfaced USDG-quoted candidates at ~0.5% while the
- * chain, the launch parser and the depth filter all independently put them near
- * 10-18%. Every layer reachable from outside the container tested clean, so the
- * remaining suspects are this table's contents and the window/LIMIT this query
- * applies to them — neither observable without being inside the worker.
- *
- * The census counts the same rows at THREE points, which is what separates the
- * four possible answers:
- *
- *   all rows, any age       0 USDG -> they are NEVER WRITTEN
- *   inside the age window   0 here, >0 above -> they AGED OUT
- *   after ORDER BY + LIMIT  0 here, >0 above -> DISPLACED by newer rows
- *   (producer sees them)    >0 here -> they arrive and fail a LATER guard
- *
- * Diagnostic only: nothing reads this to make a decision, and it changes no
- * behaviour. It exists to be deleted once the question is answered.
- */
-export interface CandidateCensus {
-  /** Rows carrying a curve, at each narrowing stage. */
-  allWithCurve: number;
-  inWindow: number;
-  returned: number;
-  /** USDG-quoted counts at the same three stages. */
-  usdgAll: number;
-  usdgInWindow: number;
-  usdgReturned: number;
-  /** Native-ETH and everything-else, for the returned slice only. */
-  nativeReturned: number;
-  otherReturned: number;
-  /** Seconds since the OLDEST row the producer actually received — the cutoff. */
-  cutoffAgeSec: number | null;
-  /** Seconds since the newest USDG row in the table, at any age. Null if none. */
-  newestUsdgAgeSec: number | null;
-}
-
-export async function classCandidateCensus(
-  maxAgeSec: number,
-  limit: number,
-): Promise<CandidateCensus | null> {
-  const USDG = (CASH.USDG as string).toLowerCase();
-  try {
-    const db = getDb();
-    const one = async (sql: string, ...args: unknown[]): Promise<number> => {
-      const r = (await db.prepare(sql).get(...args)) as { n?: number } | undefined;
-      return Number(r?.n ?? 0);
-    };
-    // ONE DEFINITION OF "CARRIES A CURVE", used by every stage.
-    //
-    // `recentCandidates` requires all three columns together, because a curve
-    // without a threshold cannot be read as money and is dropped on the way
-    // out. The first draft of this census tested `curve IS NOT NULL` at the
-    // earlier stages and `quote_token != null` at the last one, so a row
-    // missing a threshold counted as a candidate at one stage and not the next
-    // — the census would have reported a drop that was only its own definition
-    // changing, and sent me hunting it in code that was behaving.
-    const HAS_CURVE = `curve IS NOT NULL AND quote_token IS NOT NULL AND graduation_threshold IS NOT NULL`;
-    const allWithCurve = await one(`SELECT COUNT(*) AS n FROM discovered_pools WHERE ${HAS_CURVE}`);
-    const usdgAll = await one(
-      `SELECT COUNT(*) AS n FROM discovered_pools WHERE ${HAS_CURVE} AND LOWER(quote_token) = ?`,
-      USDG,
-    );
-    const inWindow = await one(
-      `SELECT COUNT(*) AS n FROM discovered_pools WHERE ${HAS_CURVE} AND first_seen > unixepoch() - ?`,
-      maxAgeSec,
-    );
-    const usdgInWindow = await one(
-      `SELECT COUNT(*) AS n FROM discovered_pools
-        WHERE ${HAS_CURVE} AND LOWER(quote_token) = ? AND first_seen > unixepoch() - ?`,
-      USDG,
-      maxAgeSec,
-    );
-    // The returned slice, reproduced EXACTLY as recentCandidates builds it —
-    // same window, same ORDER BY, same LIMIT. A census that ordered differently
-    // would answer a question nobody asked.
-    const slice = (await db
-      .prepare(
-        `SELECT curve, quote_token, graduation_threshold, first_seen FROM discovered_pools
-          WHERE first_seen > unixepoch() - ? ORDER BY first_seen DESC LIMIT ?`,
-      )
-      .all(maxAgeSec, limit)) as {
-      curve: string | null;
-      quote_token: string | null;
-      graduation_threshold: string | null;
-      first_seen: number | null;
-    }[];
-    // The SAME predicate as HAS_CURVE above, in JS because the LIMIT is applied
-    // by the database: filtering in SQL here would refill the window from older
-    // rows and measure a slice the producer never receives.
-    const withCurve = slice.filter(
-      (r) => r.curve != null && r.quote_token != null && r.graduation_threshold != null,
-    );
-    let usdgReturned = 0;
-    let nativeReturned = 0;
-    let otherReturned = 0;
-    for (const r of withCurve) {
-      const q = String(r.quote_token).toLowerCase();
-      if (q === USDG) usdgReturned += 1;
-      else if (/^0x0{40}$/.test(q)) nativeReturned += 1;
-      else otherReturned += 1;
-    }
-    const now = Math.floor(Date.now() / 1000);
-    const oldestReturned = withCurve.length
-      ? Math.min(...withCurve.map((r) => Number(r.first_seen ?? now)))
-      : null;
-    const newestUsdg = (await db
-      .prepare(
-        `SELECT MAX(first_seen) AS n FROM discovered_pools WHERE ${HAS_CURVE} AND LOWER(quote_token) = ?`,
-      )
-      .get(USDG)) as { n?: number | null } | undefined;
-    return {
-      allWithCurve,
-      inWindow,
-      returned: withCurve.length,
-      usdgAll,
-      usdgInWindow,
-      usdgReturned,
-      nativeReturned,
-      otherReturned,
-      cutoffAgeSec: oldestReturned === null ? null : now - oldestReturned,
-      newestUsdgAgeSec: newestUsdg?.n ? now - Number(newestUsdg.n) : null,
-    };
-  } catch {
-    // A diagnostic must never be the thing that breaks a tick.
-    return null;
-  }
-}
-
 export async function recentCandidates(
   maxAgeSec: number,
   limit = 25,
-  opts: { poolsOnly?: boolean } = {},
 ): Promise<PoolCandidate[]> {
   try {
     const rows = await getDb()
       .prepare(
-        // The curve columns ARE selected, unlike the pool-key ones. Those have
-        // their own accessor (poolKeysFor, which the router asks directly); a
-        // curve has none, and a pre-graduation token cannot be reached at all
-        // without it — so a caller holding a candidate needs it in hand.
-        `SELECT address, symbol, decimals, liquidity_usd, fdv_usd, first_seen, curve, quote_token, graduation_threshold
-         FROM discovered_pools WHERE first_seen > unixepoch() - ?
-         ${opts.poolsOnly ? "AND curve IS NULL" : ""}
+        // Rows an older build stamped with a bonding curve have no pool: left out.
+        `SELECT address, symbol, decimals, liquidity_usd, fdv_usd, first_seen
+         FROM discovered_pools WHERE first_seen > unixepoch() - ? AND curve IS NULL
          ORDER BY first_seen DESC LIMIT ?`,
       )
       .all(maxAgeSec, limit) as {
       address: string; symbol: string; decimals: number;
       liquidity_usd: number; fdv_usd: number; first_seen: number;
-      curve: string | null; quote_token: string | null; graduation_threshold: string | null;
     }[];
     return rows.map((r) => ({
       address: r.address,
@@ -5705,12 +5339,6 @@ export async function recentCandidates(
       liquidityUsd: Number(r.liquidity_usd) || 0,
       fdvUsd: Number(r.fdv_usd) || 0,
       firstSeen: Number(r.first_seen) || 0,
-      // `!= null` rather than truthiness: quote_token is legitimately the
-      // all-zero address for a native-ETH curve, which is 53.6% of launches
-      // and would read as absent under a truthy test.
-      ...(r.curve != null && r.quote_token != null && r.graduation_threshold != null
-        ? { curve: { curve: r.curve, quoteToken: r.quote_token, graduationThresholdRaw: r.graduation_threshold } }
-        : {}),
     }));
   } catch {
     return [];
@@ -5860,171 +5488,6 @@ export async function clearTrenchEntry(agentId: string, mode: BasisMode, symbol:
 }
 
 /**
- * Every curve this agent has recorded from a launch scan — the provenance set.
- *
- * WHY THIS EXISTS. The curve is the one argument the wall cannot pin: a new
- * address per token, hundreds an hour, so wall.ts passes `null` for it and says
- * so outright. Off-chain is therefore the ONLY place a curve can be constrained
- * at all, and checkPolicy's `curve-provenance` rule is the constraint.
- *
- * What makes the set trustworthy is upstream, not here: `recordCandidate`'s only
- * non-test callers are in the worker tick, and the launch scan that feeds them
- * filters on PONS_V2_FACTORY (venues/pons.ts). So a row in this column is an
- * address that appeared as the curve of a token launched by the real factory.
- * That property was INCIDENTAL until the policy rule started depending on it —
- * which is exactly why it is written down here.
- *
- * THE QUERY is not age-windowed and not LIMIT-bounded, unlike `recentCandidates`.
- * THE TABLE UNDER IT IS BOTH, and this comment used to promise otherwise: it
- * said "a position opened last week must still be exitable today", which is the
- * right requirement and is not something this function can deliver on its own.
- * `pruneDiscovered` trims `discovered_pools` to the 5,000 newest rows by
- * `first_seen`, and the launchpad alone adds roughly ten an hour — about 21 days
- * to full turnover, against a 14-day default grant.
- *
- * So a curve CAN age out from under an open position, and for a class position
- * that is fatal rather than inconvenient: its output leg is un-enumerated by
- * design, so `curve-provenance` is the only rule vouching for it, and losing the
- * row means the mirror refuses the sell that would close it while the wall would
- * have allowed it — the exit trap the vault exists to remove, rebuilt off-chain.
- *
- * The requirement is met by the CALLER instead, which unions this with
- * `classPositionCurves` — an agent's own open positions, which nothing prunes.
- * Written down here because the promise was made here.
- *
- * Returns null on failure, never []. Empty means "no curves known", which would
- * refuse the whole venue; null means "could not ask", which leaves the rule
- * unable to run rather than silently converting a database hiccup into a
- * blanket refusal.
- */
-/** One token this agent's class vault is believed to hold. See `class_positions`. */
-export interface ClassPositionRow {
-  token: string;
-  symbol: string | null;
-  decimals: number;
-  curve: string | null;
-  quoteToken: string | null;
-  /**
-   * When this position was first recorded, unix seconds.
-   *
-   * Selected because the EXIT needs a clock that does not depend on a price. A
-   * class token has no oracle and may have no depth at all, so a stop-loss
-   * cannot reach it — but "you have held this for N hours" is always answerable,
-   * and a position that can always be closed is the difference between a
-   * position and a trap.
-   */
-  firstSeen: number;
-  /** The vault this was bought into, for recovery when no grant is available. */
-  vault: string | null;
-  /** The transaction that opened it, and the one that closed it. */
-  entryTx: string | null;
-  exitTx: string | null;
-  /**
-   * ACTUAL USDG spent and ACTUAL tokens received, raw, from `ClassBuy`.
-   *
-   * Null means UNKNOWN, which is the honest state for a position rediscovered
-   * from a vault balance whose entry log is outside the scanned range. It is
-   * not zero: a zero cost reports the whole exit as profit, and a zero quantity
-   * hides somebody's money.
-   */
-  costRaw: bigint | null;
-  qtyRaw: bigint | null;
-  /** USDG returned by sells so far. */
-  proceedsRaw: bigint | null;
-  /** Block of the first buy — the clock the chain keeps, immune to a redeploy. */
-  openedAtBlock: bigint | null;
-  /** 'open' | 'closed' | 'recovered' — see the column comment in the migration. */
-  state: string;
-}
-
-/**
- * The candidate list for this agent's class vault, or null.
- *
- * NULL ON FAILURE, NEVER []. The two mean opposite things to every caller: []
- * is "this vault holds nothing", which is an honest zero, and null is "the
- * question could not be asked", which must never close a cost basis or publish
- * an equity figure. Same discipline as `knownCurves` below, and it matters more
- * here because the consequence downstream is a deletion.
- */
-export async function classPositions(agentId: string): Promise<ClassPositionRow[] | null> {
-  try {
-    const rows = (await getDb()
-      .prepare(
-        `SELECT token, symbol, decimals, curve, quote_token, first_seen, vault, entry_tx, exit_tx,
-                cost_usdg, qty_raw, proceeds_usdg, opened_at_block, state
-           FROM class_positions WHERE agent_id = ?`,
-      )
-      .all(agentId)) as {
-      token: string;
-      symbol: string | null;
-      decimals: number;
-      curve: string | null;
-      quote_token: string | null;
-      first_seen: number | null;
-      vault: string | null;
-      entry_tx: string | null;
-      exit_tx: string | null;
-      cost_usdg: string | null;
-      qty_raw: string | null;
-      proceeds_usdg: string | null;
-      opened_at_block: string | null;
-      state: string | null;
-      swept_raw: string | null;
-    }[];
-    // NULL STAYS NULL through this map. Every one of these is money or the
-    // clock money is measured against, and `?? 0n` on any of them would turn
-    // "we do not know" into a confident wrong number.
-    const big = (v: string | null): bigint | null => {
-      if (v === null) return null;
-      try {
-        return BigInt(v);
-      } catch {
-        return null;
-      }
-    };
-    return rows.map((r) => ({
-      token: r.token.toLowerCase(),
-      symbol: r.symbol,
-      decimals: r.decimals,
-      curve: r.curve ? r.curve.toLowerCase() : null,
-      quoteToken: r.quote_token ? r.quote_token.toLowerCase() : null,
-      vault: r.vault ? r.vault.toLowerCase() : null,
-      entryTx: r.entry_tx,
-      exitTx: r.exit_tx,
-      costRaw: big(r.cost_usdg),
-      qtyRaw: big(r.qty_raw),
-      proceedsRaw: big(r.proceeds_usdg),
-      openedAtBlock: big(r.opened_at_block),
-      state: r.state ?? "open",
-      sweptRaw: big(r.swept_raw),
-      // A NULL clock reads as "right now", not as 1970. The column has a
-      // default so this should not happen, but a zero would make every position
-      // instantly older than any hold window and force an immediate exit — an
-      // unreadable age must not be able to sell somebody's book.
-      firstSeen: r.first_seen ?? Math.floor(Date.now() / 1000),
-    }));
-  } catch {
-    return null;
-  }
-}
-
-/**
- * The curves of this agent's OWN open class positions.
- *
- * Unioned into `knownCurves` at arm time so a position can never be evicted out
- * of its own exit — see the `class_positions` migration for why that is a real
- * hazard rather than a theoretical one. Null on failure, and the caller must
- * treat a null from EITHER source as "the rule cannot run" rather than merging a
- * partial list: for a class trade a short list is a refusal, so a partial one is
- * a silent refusal of exactly the positions that were dropped.
- */
-export async function classPositionCurves(agentId: string): Promise<string[] | null> {
-  const rows = await classPositions(agentId);
-  if (rows === null) return null;
-  return rows.map((r) => r.curve).filter((c): c is string => !!c);
-}
-
-/**
  * Write what the CHAIN says about one class position.
  *
  * IDEMPOTENT BY CONSTRUCTION, and that is the whole design rather than a nice
@@ -6053,197 +5516,8 @@ export async function classPositionCurves(agentId: string): Promise<string[] | n
  */
 function isCashRow(token: string, quoteToken?: string | null): boolean {
   const t = token.toLowerCase();
-  if (t === CASH.USDG.toLowerCase()) return true;
+  if (t === CASH.USDT.toLowerCase()) return true;
   return quoteToken != null && t === quoteToken.toLowerCase();
-}
-export async function writeClassLedger(
-  agentId: string,
-  row: {
-    token: string;
-    vault: string;
-    curve: string | null;
-    costRaw: bigint | null;
-    qtyRaw: bigint | null;
-    proceedsRaw: bigint | null;
-    openedAtBlock: bigint | null;
-    entryTx: string | null;
-    exitTx: string | null;
-    state: "open" | "closed" | "recovered" | "swept";
-    /**
-     * Tokens the owner swept out. Null when the tape could not say.
-     *
-     * Stored so "gone because it was sold" and "gone because the owner took it
-     * home" stay distinguishable after the fact. The row is the only place that
-     * difference survives, and every consequence of the position turns on it:
-     * a sale has proceeds and a result, a withdrawal has neither.
-     */
-    sweptRaw: bigint | null;
-  },
-): Promise<void> {
-  // Cash in the vault is custody. See isCashRow. This row carries no
-  // `quoteToken` column, so only the address test applies here — which is the
-  // one that catches the real case, since a cash row has no curve to read a
-  // pair token from in the first place.
-  if (isCashRow(row.token)) return;
-  try {
-    await getDb()
-      .prepare(
-        `INSERT INTO class_positions
-           (agent_id, token, vault, curve, cost_usdg, qty_raw, proceeds_usdg, opened_at_block, entry_tx, exit_tx, state, swept_raw)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT(agent_id, token) DO UPDATE SET
-           vault = COALESCE(excluded.vault, vault),
-           curve = COALESCE(excluded.curve, curve),
-           cost_usdg = COALESCE(excluded.cost_usdg, cost_usdg),
-           qty_raw = COALESCE(excluded.qty_raw, qty_raw),
-           proceeds_usdg = COALESCE(excluded.proceeds_usdg, proceeds_usdg),
-           opened_at_block = COALESCE(excluded.opened_at_block, opened_at_block),
-           entry_tx = COALESCE(excluded.entry_tx, entry_tx),
-           exit_tx = COALESCE(excluded.exit_tx, exit_tx),
-           state = excluded.state,
-           swept_raw = COALESCE(excluded.swept_raw, swept_raw)`,
-      )
-      .run(
-        agentId,
-        row.token.toLowerCase(),
-        row.vault.toLowerCase(),
-        row.curve,
-        // Stored as TEXT. A bigint through a REAL column loses precision at
-        // 2^53, and a memecoin quantity at 18dp passes that in the first token.
-        row.costRaw === null ? null : row.costRaw.toString(),
-        row.qtyRaw === null ? null : row.qtyRaw.toString(),
-        row.proceedsRaw === null ? null : row.proceedsRaw.toString(),
-        row.openedAtBlock === null ? null : row.openedAtBlock.toString(),
-        row.entryTx,
-        row.exitTx,
-        row.state,
-        row.sweptRaw === null ? null : row.sweptRaw.toString(),
-      );
-  } catch (e) {
-    console.error("[store] class ledger write failed:", e);
-  }
-}
-
-/** Remember that the class vault now holds this token. Idempotent by (agent, token). */
-export async function upsertClassPosition(
-  agentId: string,
-  // THE CANDIDATE FIELDS ONLY — which token, on which curve, priced in what.
-  //
-  // Not the whole row, and not the clock. The money columns are written by
-  // `writeClassLedger` from the chain's own events, because they are the one
-  // thing a caller must never be able to assert: a proposal knows the size it
-  // ASKED for, and booking that as a cost is how a budget drifts from reality
-  // by one slippage per fill. The clock is excluded for the matching reason —
-  // a re-record on a top-up must not rejuvenate a position past its exit.
-  row: Pick<ClassPositionRow, "token" | "symbol" | "decimals" | "curve" | "quoteToken">,
-): Promise<void> {
-  // Cash in the vault is custody. See isCashRow.
-  if (isCashRow(row.token, row.quoteToken)) return;
-  try {
-    await getDb()
-      .prepare(
-        `INSERT INTO class_positions (agent_id, token, symbol, decimals, curve, quote_token)
-         VALUES (?, ?, ?, ?, ?, ?)
-         ON CONFLICT(agent_id, token) DO UPDATE SET
-           symbol = COALESCE(excluded.symbol, symbol),
-           decimals = excluded.decimals,
-           curve = COALESCE(excluded.curve, curve),
-           quote_token = COALESCE(excluded.quote_token, quote_token)`,
-      )
-      .run(
-        agentId,
-        row.token.toLowerCase(),
-        row.symbol,
-        row.decimals,
-        row.curve,
-        row.quoteToken,
-      );
-  } catch (e) {
-    console.error("[store] class_positions insert failed:", e);
-  }
-}
-
-export async function knownCurves(): Promise<string[] | null> {
-  try {
-    const rows = (await getDb()
-      .prepare(`SELECT DISTINCT curve FROM discovered_pools WHERE curve IS NOT NULL`)
-      .all()) as { curve: string | null }[];
-    const discovered = rows.map((r) => r.curve).filter((c): c is string => !!c).map((c) => c.toLowerCase());
-    // OFFICIAL CURVES JOIN THE PROVENANCE SET, for the same reason `curveFor`
-    // consults the listing first: the launch scan may never have seen a listed
-    // coin (it launched before this worker existed, or its row was pruned), and
-    // the curve-provenance rule would then refuse the very trades the platform
-    // published the coin to make — including the SELL that closes a position.
-    //
-    // Unioned ONLY on a successful read. A failed read returns null below, and
-    // must keep returning null: `null` means "could not tell" and makes the
-    // caller pass `undefined`, while a list containing only the official curves
-    // would be a PARTIAL answer, which silently refuses exactly the positions it
-    // dropped. A short provenance list is a refusal; a partial one is a silent
-    // refusal, which is worse.
-    const official = officialCoinsFor(robinhoodChain.id).map((c) => c.curve.toLowerCase());
-    return [...new Set([...discovered, ...official])];
-  } catch {
-    return null;
-  }
-}
-
-
-/**
- * Where a specific token trades on the launchpad — by address, not by recency.
- *
- * `recentCandidates` cannot serve this: it is age-windowed, LIMIT-bounded, and
- * its only production caller passes `poolsOnly`, whose SQL filters out exactly
- * these rows. Pricing asks a different question — "this token, right now" — and
- * needs its own query.
- *
- * All three fields or nothing. The threshold is what makes the reserves
- * interpretable (the virtual seed is 40% of it), so a row missing it can be
- * READ but not priced, and returning a partial answer would invite a caller to
- * fill the gap with a zero.
- */
-export async function curveFor(
-  address: string,
-): Promise<{ curve: string; quoteToken: string; graduationThresholdRaw: bigint } | null> {
-  // AN OFFICIAL LISTING CARRIES ITS OWN CURVE, and it is consulted before the
-  // table rather than as a fallback behind it.
-  //
-  // `discovered_pools` cannot be the authority for a listing. It is wiped on
-  // every redeploy in hosted mode (the child's sqlite is rebuilt beneath it),
-  // and `pruneDiscovered` trims it to the 5,000 newest rows against a launchpad
-  // measured at ~475 launches an hour — so a coin the PLATFORM published would
-  // lose its own provenance within hours and become unpriceable and unsellable.
-  // A position the platform put an owner into and then forgot how to value is
-  // the no-exit trap in its purest form, so the pinned record wins.
-  //
-  // The two cannot meaningfully disagree — both decode the same launch log —
-  // but where they could, the verified constant is the one to trust.
-  const official = officialCoinCurve(robinhoodChain.id, address);
-  if (official) {
-    return {
-      curve: official.curve,
-      quoteToken: official.quoteToken,
-      graduationThresholdRaw: official.graduationThresholdRaw,
-    };
-  }
-  try {
-    const row = (await getDb()
-      .prepare(
-        `SELECT curve, quote_token, graduation_threshold FROM discovered_pools
-         WHERE address = ? AND curve IS NOT NULL AND graduation_threshold IS NOT NULL`,
-      )
-      .get(address.toLowerCase())) as
-      | { curve: string; quote_token: string | null; graduation_threshold: string }
-      | undefined;
-    // `!= null` on quote_token, never truthiness: the all-zero address is the
-    // legitimate native-ETH case and covers 53.6% of launches.
-    if (!row || row.quote_token == null) return null;
-    const threshold = BigInt(row.graduation_threshold);
-    if (threshold <= 0n) return null;
-    return { curve: row.curve, quoteToken: row.quote_token, graduationThresholdRaw: threshold };
-  } catch {
-    return null;
-  }
 }
 
 /**
@@ -6325,37 +5599,6 @@ export async function positionsExplained(agentId: string, tokens: readonly strin
     return want.every((t) => seen.has(t));
   } catch {
     return false;
-  }
-}
-
-/**
- * Correct a class position's hold clock to when the chain says it opened.
- *
- * SEPARATE FROM `upsertClassPosition` ON PURPOSE. That function excludes the
- * clock, and its comment says why: a re-record on a top-up must not rejuvenate a
- * position past its exit. This is the one legitimate exception — restoring a
- * clock that a container rebuild reset is the opposite of rejuvenating it — so
- * it gets its own narrow function rather than a flag on the general one.
- *
- * ONLY EVER EARLIER. Guarded in SQL rather than by the caller: a write that
- * could move a clock FORWARD is a write that could postpone an exit, and the
- * whole point of the hold timer is that it cannot be postponed.
- */
-export async function setClassFirstSeen(
-  agentId: string,
-  token: string,
-  firstSeen: number,
-): Promise<void> {
-  if (!Number.isFinite(firstSeen) || firstSeen <= 0) return;
-  try {
-    await getDb()
-      .prepare(
-        `UPDATE class_positions SET first_seen = ?
-          WHERE agent_id = ? AND LOWER(token) = LOWER(?) AND first_seen > ?`,
-      )
-      .run(Math.floor(firstSeen), agentId, token, Math.floor(firstSeen));
-  } catch (e) {
-    console.error("[store] class first_seen update failed:", e);
   }
 }
 

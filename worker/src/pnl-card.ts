@@ -27,9 +27,10 @@
  * rasterising anything.
  */
 
+import { usdgUnits } from "../../packages/core/src/wall";
+import { CASH_CENT, CASH_UNIT } from "../../packages/core/src/cash";
 import { fileURLToPath } from "node:url";
 
-import { onchainIdIn } from "../../packages/core/src/ids";
 import { PNL_GLYPHS, PNL_GLYPH_EM } from "./pnl-glyphs";
 
 /** Template geometry, measured off `pnl/PNL.jpg` (1280x853). */
@@ -61,9 +62,6 @@ const LOSS = "#ff6b5e";
 const WHITE = "#ffffff";
 const DIM = "#98a09a";
 
-/** USDG is 6dp everywhere in this codebase. */
-const USDG_DECIMALS = 6;
-
 export interface PnlCardData {
   /** The token that was closed, e.g. "DOGGOS". */
   symbol: string;
@@ -79,7 +77,7 @@ export interface PnlCardData {
 export function formatUsdg(raw: bigint, signed = false): string {
   const neg = raw < 0n;
   const abs = neg ? -raw : raw;
-  const scale = 10n ** BigInt(USDG_DECIMALS);
+  const scale = CASH_UNIT;
   // Round half-up at the second decimal rather than truncating, so a card and a
   // ledger that both claim 2dp cannot disagree by a cent.
   const hundredths = (abs * 100n + scale / 2n) / scale;
@@ -200,8 +198,8 @@ export interface ClosedFillRow {
   status?: string | null;
 }
 
-/** USDG float (as stored) to base units, without compounding the rounding. */
-const toBase = (n: number) => BigInt(Math.round(n * 10 ** USDG_DECIMALS));
+/** USDT float (as stored) to base units, without compounding the rounding. */
+const toBase = usdgUnits;
 
 /**
  * The card for a sale that realised a P&L — or null when there is nothing to
@@ -236,10 +234,9 @@ export function pnlCardFromFill(row: ClosedFillRow, coin?: string | null): PnlCa
   const named = (coin ?? "").trim();
   // Neither may be address-shaped: a resolver that could not name the coin
   // falls back to a short address, and that is exactly what must never be drawn.
-  // A Solana key or program id has no 0x: core's detector catches a whole one,
-  // and a whole 0x address inside a longer name too. Glued to the words around
-  // it as well (CARD_ID_SCAN).
-  const addressy = (s: string): boolean => /^0x/i.test(s) || onchainIdIn(s, CARD_ID_SCAN);
+  // A whole 0x address inside a longer name is refused too, glued to the words
+  // around it as well.
+  const addressy = (s: string): boolean => /^0x/i.test(s) || CARD_ADDR.test(s);
   const symbol = (addressy(named) ? "" : named) || (addressy(fromTarget) ? "" : fromTarget);
   if (!symbol) return null;
 
@@ -255,8 +252,8 @@ export function pnlCardFromFill(row: ClosedFillRow, coin?: string | null): PnlCa
   return { symbol, investedUsdg: invested, proceedsUsdg: proceeds, realisedUsdg: realised };
 }
 
-/** One cent, in USDG base units — below this a figure prints as 0.00. */
-const DUST_USDG = 10_000n;
+/** One cent, in USDT base units — below this a figure prints as 0.00. */
+const DUST_USDG = CASH_CENT;
 
 /**
  * A `trades` row as the live-sell card reads it, joined to its decision for
@@ -272,25 +269,21 @@ export interface LiveSellRow extends ClosedFillRow {
 export type LiveSellCard = { kind: "card"; card: PnlCardData } | { kind: "ineligible"; reason: string };
 
 /**
- * THE CARD'S ID SCANS ARE GLUED (audit regressions F3). A token names itself:
- * one called "buy<mint>now" or "CA<mint>" would be drawn with the mint in it,
- * and the card is an image, which no text backstop on X reads
- * (xpost/public-wallet.ts sees only the words). The glued scan also finds a
- * key or signature written against neighbouring letters or digits. Its one
- * cost, an unbroken base58 run of 43 or more characters read as an id, is a
- * name no coin has inside this 64-character ceiling; such a name is not
- * printed, and the card falls back to the target or is not drawn.
+ * A token names itself: one called "buy0x…now" would be drawn with the address
+ * in it, and the card is an image, which no text backstop on X reads
+ * (xpost/public-wallet.ts sees only the words). So a whole 0x address anywhere
+ * in a name, glued to its neighbours or not, keeps it off the card.
  */
-const CARD_ID_SCAN = { glued: true } as const;
+const CARD_ADDR = /0x[0-9a-fA-F]{40}/;
 
 /**
  * A coin's name fit to print: plain characters, not a contract address, not an
- * autonomous token id, and carrying no address (0x or Solana) anywhere in it,
- * glued to its neighbours or not (CARD_ID_SCAN). Null otherwise.
+ * autonomous token id, and carrying no address (0x) anywhere in it,
+ * glued to its neighbours or not. Null otherwise.
  */
 export function printableCoinName(value: string | null | undefined): string | null {
   const name = (value ?? "").trim();
-  return name && name.length <= 64 && /^[\x20-\x7e]+$/.test(name) && !/^0x/i.test(name) && !onchainIdIn(name, CARD_ID_SCAN) && !/^T[0-9A-F]{11}$/i.test(name) ? name : null;
+  return name && name.length <= 64 && /^[\x20-\x7e]+$/.test(name) && !/^0x/i.test(name) && !CARD_ADDR.test(name) && !/^T[0-9A-F]{11}$/i.test(name) ? name : null;
 }
 
 /**

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
@@ -225,7 +225,8 @@ describe("the seam is the only way through", () => {
     const out = execFileSync("git", ["ls-files", "src"], { cwd: SRC, encoding: "utf8" });
     return out
       .split("\n")
-      .filter((f) => /\.tsx?$/.test(f) && !f.includes(".test."));
+      // A file deleted but not yet committed is still listed by git.
+      .filter((f) => /\.tsx?$/.test(f) && !f.includes(".test.") && existsSync(new URL(`../../${f}`, import.meta.url)));
   }
 
   it("NO CALL SITE NAMES A LOCALE OF ITS OWN", () => {

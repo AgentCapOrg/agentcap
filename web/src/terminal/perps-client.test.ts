@@ -13,8 +13,8 @@ afterEach(() => { globalThis.fetch = original; });
 const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers: { "content-type": "application/json" } });
 
 test("Perps navigation is gated, explicit, and never defaults a malformed wallet to Spot", () => {
-  assert.deepEqual(screenForPath("/perps", true, true), { kind: "perps" });
-  assert.deepEqual(screenForPath("/perps", true, false), { kind: "tab", tab: "home" });
+  assert.deepEqual(screenForPath("/perps", true), { kind: "perps" });
+  assert.deepEqual(screenForPath("/perps", false), { kind: "tab", tab: "home" });
   assert.equal(pathForScreen({ kind: "perps" }), "/perps");
   for (const page of ["/grant", "/settings", "/withdraw", "/deposit"]) {
     assert.equal(terminalWallet(page, "wallet=perps"), "perps");
@@ -23,7 +23,7 @@ test("Perps navigation is gated, explicit, and never defaults a malformed wallet
   assert.equal(terminalWallet("/create", "for=perps"), "perps");
   assert.equal(terminalWallet("/create", "for=spot&for=perps"), "invalid");
   assert.equal(terminalWallet("/create", "For=perps"), "invalid");
-  assert.equal(terminalWallet("/solana", "wallet=perps"), "spot");
+  assert.equal(terminalWallet("/unknown", "wallet=perps"), "spot");
   assert.equal(terminalWallet("/profile", "wallet=perps"), "spot");
 });
 

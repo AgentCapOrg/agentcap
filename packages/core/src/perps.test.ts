@@ -65,7 +65,7 @@ import {
   type PerpSide,
   type PerpsReport,
 } from "./perps";
-import { CASH } from "./tokens";
+import { isBnbChainId } from "./chain";
 
 // ── fixtures (live mainnet reads, 2026-09-29; copied in so the test needs no network) ──
 
@@ -255,10 +255,11 @@ describe("LIGHTER_ROUTE_V1 is the venue as probed, frozen", () => {
     assert.equal(LIGHTER_ROUTE_V1.minDepositMicro, 1_000_000n);
   });
 
-  it("collateral is the same USDG the rest of agentcap holds", () => {
-    // Two spellings of one address are two chances to disagree; this is the
-    // one place perps and spot must agree on what cash is.
-    assert.equal(LIGHTER_ROUTE_V1.usdg, CASH.USDG.toLowerCase());
+  it("is on neither chain this product runs on, so no grant can ever arm it", () => {
+    // Lighter is a Robinhood Chain deployment and perps are disabled on BNB
+    // Chain: grantPerp and perpFits compare a grant's chain with this one, so
+    // it must never name 56 or 97 while the route's addresses are these.
+    assert.equal(isBnbChainId(LIGHTER_ROUTE_V1.chainId), false);
   });
 
   it("every address is lowercase and every level is frozen", () => {

@@ -15,7 +15,7 @@
 import { statSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { CASH, MORPHO, RIALTO, STOCK_TOKENS, UNISWAP, USDG_DECIMALS } from "../../../packages/core/src/index";
+import { CASH, PANCAKESWAP, STOCK_TOKENS, usdgUnits } from "../../../packages/core/src/index";
 import { homePaths } from "../home";
 import type { TradeIntent } from "../policy";
 import type { Snapshot, Strategy } from "./types";
@@ -33,25 +33,21 @@ export function customStrategiesDir(): string {
  */
 export interface StrategyCtx {
   CASH: typeof CASH;
-  UNISWAP: typeof UNISWAP;
-  RIALTO: typeof RIALTO;
-  MORPHO: typeof MORPHO;
+  PANCAKESWAP: typeof PANCAKESWAP;
   STOCK_TOKENS: typeof STOCK_TOKENS;
   /** token address by symbol, lowercase-safe lookups left to the caller */
   tokenBySymbol: Record<string, `0x${string}`>;
-  /** 25 → 25_000_000n (USDG 6dp) */
+  /** 25 → 25 × 10^18 (USDT base units) */
   usdg: (v: number) => bigint;
 }
 
 export function buildStrategyCtx(): StrategyCtx {
   return {
     CASH,
-    UNISWAP,
-    RIALTO,
-    MORPHO,
+    PANCAKESWAP,
     STOCK_TOKENS,
     tokenBySymbol: Object.fromEntries(STOCK_TOKENS.map((t) => [t.symbol, t.address])),
-    usdg: (v: number) => BigInt(Math.round(v * 10 ** USDG_DECIMALS)),
+    usdg: usdgUnits,
   };
 }
 
@@ -101,13 +97,6 @@ export function validateIntent(raw: unknown): { intent: TradeIntent | null; reas
         notionalUsdg: i.notionalUsdg,
       },
     };
-  }
-  if (i.kind === "vault-deposit" || i.kind === "vault-withdraw") {
-    if (!isHexAddress(i.target)) return { intent: null, reason: `${i.kind}.target is not an address` };
-    if (typeof i.amountUsdg !== "bigint" || i.amountUsdg <= 0n) {
-      return { intent: null, reason: `${i.kind}.amountUsdg must be a positive bigint` };
-    }
-    return { intent: { kind: i.kind, target: i.target, amountUsdg: i.amountUsdg } };
   }
   return { intent: null, reason: `unknown kind ${String(i.kind)}` };
 }

@@ -15,7 +15,7 @@
  * signed.
  *
  * WHY THERE AND NOWHERE ELSE. An owner's typed order, a Brain order, the
- * strategy loop, the class route, a dashboard command, the energy buy and the
+ * strategy loop, a dashboard command and the
  * selftest probe all reach the chain through that one function, on the one
  * serialising intent chain; admission-invariant.test.ts pins that nothing
  * signs from anywhere else. A gate at each producer would be a gate some new
@@ -32,14 +32,13 @@
  * it is taken before `reserveBudget`, so it reserves nothing and holds nothing
  * open: there is no half-done operation for a crash to leave behind, and
  * nothing a restart could replay. Every gate behind this one — the wall, the
- * caps, the breaker, the energy plan — still runs for whatever this lets past.
+ * caps, the breaker — still runs for whatever this lets past.
  *
  * AND THE LEVEL IS READ ONCE, at boot. The orchestrator changes it by
  * respawning the child, never by editing a live process's environment, so a
  * level that changed under a running process is not a thing that happens.
  */
 
-import { countsAsEntry, sellsHeldLeg, type HeldCurveLeg } from "./energy";
 import { isExitIntent, type AgentLimits, type TradeIntent } from "./policy";
 
 /**
@@ -59,10 +58,10 @@ export const ADMISSION_LEVEL_ENV = "AGENTCAP_ADMISSION_LEVEL";
  *                 looked at yet, and "it only sold" is still a trade nobody
  *                 has checked the book behind.
  *   exits-only  — close what it holds. An intent that would count as a NEW
- *                 trade (energy.ts countsAsEntry: anything the drawdown
- *                 breaker's own exit test does not call money coming home,
- *                 short of a curve sale out of a held leg or a vault deposit)
- *                 is refused; everything else goes on to the usual gates.
+ *                 trade (countsAsEntry: anything the drawdown breaker's own
+ *                 exit test does not call money coming home, short of a perp
+ *                 margin deposit) is refused; everything else goes on to the
+ *                 usual gates.
  *   trade       — no admission refusal at all. What a worker always was.
  */
 export const ADMISSION_LEVELS = ["observe", "exits-only", "trade"] as const;
@@ -118,6 +117,40 @@ export function admissionFrom(raw: string | undefined, hosted: boolean): Admissi
 export type AdmissionRule = "rollout-hold" | "draining";
 
 /**
+ * Does this intent count as a NEW trade?
+ *
+ * Exits never do — the breaker's own exit test decides (policy.ts
+ * isExitIntent).
+ *
+ * PERPS (docs/perps.md rule 8): an OPEN is an entry. A reduce, a close, a
+ * withdrawal and a claim are exits by the breaker's own test and never reach the
+ * switch. A margin DEPOSIT is never an entry either: it only funds an open, and
+ * the open it funds is the entry.
+ *
+ * A SWITCH WITH A `never` DEFAULT, so a kind added to TradeIntent does not
+ * compile until someone decides what it is to the gate.
+ */
+export function countsAsEntry(kind: TradeIntent["kind"], isExit: boolean): boolean {
+  if (isExit) return false;
+  switch (kind) {
+    case "perp-margin":
+      return false;
+    case "swap":
+    case "transfer":
+    case "equity-order":
+    case "perp-order":
+      return true;
+    default: {
+      // A kind nobody has placed is judged like an entry: something unknown is
+      // not known to carry no risk.
+      const unplaced: never = kind;
+      void unplaced;
+      return true;
+    }
+  }
+}
+
+/**
  * May this intent start? Null when it may, or the rule it is refused under.
  *
  * DRAINING WINS. A worker on its way out refuses everything new whatever its
@@ -125,26 +158,15 @@ export type AdmissionRule = "rollout-hold" | "draining";
  * the owner whose order it was, because retrying in a minute may just work.
  * And it is asked again later, at each broadcast (DrainingRefused below): this
  * function judges the intent once, where it enters; the signal can come after.
- *
- * THE ENTRY TEST IS THE TICK'S OWN (index.ts, the strategy loop and the class
- * entries): energy.ts countsAsEntry over the breaker's isExitIntent and a
- * curve sale out of a held leg. `held` is the tick's most recent answer to
- * which legs it holds. A stale one cannot let a buy through: sellsHeldLeg is
- * true only of a curve trade that PAYS WITH the held token into that leg's own
- * quote, which is a sale whatever the book holds now — at worst the sale fails
- * for want of a balance, the same as it would at any level. An empty map (no
- * tick yet) is the strict reading: such a sale is then judged by the breaker's
- * test alone.
  */
 export function admissionRefusal(
   gate: { level: AdmissionLevel; draining: boolean },
   intent: TradeIntent,
-  limits: Pick<AgentLimits, "cashToken" | "quoteAssets">,
-  held: ReadonlyMap<string, HeldCurveLeg>,
+  limits: Pick<AgentLimits, "cashToken">,
 ): AdmissionRule | null {
   if (gate.draining) return "draining";
   if (gate.level === "observe") return "rollout-hold";
-  if (gate.level === "exits-only" && countsAsEntry(intent.kind, isExitIntent(intent, limits), sellsHeldLeg(intent, held))) {
+  if (gate.level === "exits-only" && countsAsEntry(intent.kind, isExitIntent(intent, limits))) {
     return "rollout-hold";
   }
   return null;

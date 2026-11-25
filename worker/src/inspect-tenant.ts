@@ -1,10 +1,10 @@
 /**
- * ONE TENANT'S CLASS-ROUTE CONFIGURATION, READ AND PRINTED, NOTHING ELSE.
+ * ONE TENANT'S TRADING SETTINGS AND BOOKS, READ AND PRINTED, NOTHING ELSE.
  *
  * WHY THIS EXISTS. The grant and the settings blob live in a Postgres reachable
  * only from inside Railway — `DATABASE_URL` names `postgres.railway.internal`
- * and the service publishes no proxy — so "does this owner's signed wall carry a
- * class vault?" cannot be answered from an operator's machine at all. It was
+ * and the service publishes no proxy — so "what is this
+ * owner's agent set to do?" cannot be answered from an operator's machine at all. It was
  * answered by guessing twice before this existed.
  *
  * ZERO WRITES. It opens the stores read-only, reads, formats and returns. There
@@ -23,62 +23,20 @@
  * larger thing to leave armed by accident.
  */
 
-import { activeClassPositions, isActiveClassState, isQuoteTokenRow } from "./class-active";
 
 /** Exactly the fields this diagnostic reports. Nothing else may be passed in. */
 export interface TenantFacts {
   tenant: string;
   smartAccount: string | null;
-  /** The vault the SIGNATURE sealed, from the grant. Null when none. */
-  grantClassVault: string | null;
-  /** `vaultFor(smartAccount)` — deterministic, whether or not it was sealed. */
-  derivedClassVault: string | null;
-  /**
-   * The factory the derivation came from, so a reader can tell WHICH one.
-   *
-   * A diagnostic printing one derived address while the grant seals another
-   * sends an operator looking for a bug that is not there — and after v2 the two
-   * factories produce different addresses for the same account, so the address
-   * alone cannot say which was asked. Null when nothing was derived.
-   */
-  derivedFromFactory?: string | null;
-  /**
-   * Has the vault contract been created?
-   *
-   * Null when the chain would not answer. Not false — an unread code check and
-   * an absent contract are different facts, and this module exists because
-   * somebody was about to act on the difference.
-   */
-  vaultDeployed: boolean | null;
   /** Settings, each null when the tenant has no stored value for it. */
   assetMode: string | null;
   liveTradingEnabled: boolean | null;
-  /**
-   * THE SUPPLY SIDE, and the reason this field is here at all.
-   *
-   * Every other setting below governs whether a candidate may be BOUGHT. This
-   * one governs whether a candidate ever EXISTS: `runPonsDiscovery` opens with
-   * `if (!cfg.discoveryEnabled ...) return` and that return is silent, so with
-   * it off the launchpad scanner never runs, `discovered_pools` is never
-   * written, and the class funnel honestly reports `scanned 0 → 0 qualified`
-   * forever.
-   *
-   * Left out, this module reported "every gate this module can see is OPEN"
-   * about an agent that could not see a single launch — which is worse than
-   * silence, because it moves the search to the gates that were already fine.
-   */
   discoveryEnabled: boolean | null;
-  classSnipeEnabled: boolean | null;
-  classPerEntryUsdg: number | null;
-  classMaxPositions: number | null;
   scoutEnabled: boolean | null;
   scoutBudgetUsdg: number | null;
   scoutPerTokenUsdg: number | null;
-  classMinDepthUsdg: number | null;
   maxImpactBps: number | null;
   slippageBps: number | null;
-  classMaxHoldSec: number | null;
-  classExitAtGraduationPct: number | null;
   /** True when the tenant has no settings row at all. */
   settingsMissing: boolean;
   /** Set when the settings read threw — distinct from "no row". */
@@ -90,37 +48,23 @@ const DEFAULTS: Record<string, string> = {
   assetMode: '"all"',
   liveTradingEnabled: "false",
   discoveryEnabled: "true",
-  classSnipeEnabled: "false",
-  classPerEntryUsdg: "0",
-  classMaxPositions: "0",
   scoutEnabled: "false",
   scoutBudgetUsdg: "0",
   scoutPerTokenUsdg: "25",
-  classMinDepthUsdg: "250",
   maxImpactBps: "300",
   slippageBps: "100",
-  classMaxHoldSec: "21600",
-  classExitAtGraduationPct: "85",
 };
 
 const SETTING_ORDER = [
   "assetMode",
   "liveTradingEnabled",
   "discoveryEnabled",
-  "classSnipeEnabled",
-  "classPerEntryUsdg",
-  "classMaxPositions",
   "scoutEnabled",
   "scoutBudgetUsdg",
   "scoutPerTokenUsdg",
-  "classMinDepthUsdg",
   "maxImpactBps",
   "slippageBps",
-  "classMaxHoldSec",
-  "classExitAtGraduationPct",
 ] as const;
-
-const yesNo = (v: boolean | null): string => (v === null ? "UNKNOWN (could not read)" : v ? "YES" : "NO");
 
 /**
  * The report.
@@ -134,13 +78,6 @@ export function describeTenant(f: TenantFacts): string[] {
   const lines: string[] = [
     `tenant                        ${f.tenant}`,
     `smartAccount                  ${f.smartAccount ?? "UNKNOWN"}`,
-    `grantPonsClassVault(grant)    ${f.grantClassVault ?? "null"}`,
-    `derived vaultFor(account)     ${f.derivedClassVault ?? "UNKNOWN"}${
-      f.derivedFromFactory ? `   (via factory ${f.derivedFromFactory})` : ""
-    }`,
-    ``,
-    `class vault sealed in grant:  ${yesNo(f.grantClassVault === null ? false : true)}`,
-    `class vault deployed on-chain: ${yesNo(f.vaultDeployed)}`,
     ``,
   ];
 
@@ -163,147 +100,6 @@ export function describeTenant(f: TenantFacts): string[] {
     lines.push(`${name.padEnd(29)} ${shown}`);
   }
 
-  /**
-   * THE ONE DERIVED LINE, because it is the question that gets asked next.
-   *
-   * A sealed vault is necessary and not sufficient: `proposeClassEntries` also
-   * requires the route switched on, a non-zero size, room for another position,
-   * and a live rail. Listing the fields without saying which of them is the
-   * blocker invites the same guess this module was written to stop.
-   */
-  const blockers: string[] = [];
-  if (f.grantClassVault === null) blockers.push("no class vault sealed in the grant (needs a re-sign)");
-  if (f.classSnipeEnabled !== true) blockers.push("classSnipeEnabled is not true");
-  if ((f.classPerEntryUsdg ?? 0) <= 0) blockers.push("classPerEntryUsdg is 0");
-  // Not `classMaxPositions` 0: that is NO ceiling (class-active.ts
-  // ceilingBlocks returns false for it), and naming it here sent the same
-  // advice the chat once gave an owner, to raise a limit that was not there.
-  if (f.liveTradingEnabled !== true) blockers.push("liveTradingEnabled is not true");
-  if (f.assetMode === "stocks") blockers.push('assetMode is "stocks", which excludes the whole route');
-  // EXPLICIT FALSE, not falsy. Every other test above reads an unset field as
-  // off, because those fields default off. This one defaults ON, so `null` here
-  // means "discovery is running under the default" and treating it as a blocker
-  // would report a starved route for most of the fleet.
-  if (f.discoveryEnabled === false) {
-    blockers.push(
-      "discoveryEnabled is false — the launchpad scanner never runs, so the candidate table stays empty " +
-        "and the funnel reports `scanned 0` however open the gates below are",
-    );
-  }
-
-  lines.push(``);
-  lines.push(
-    blockers.length === 0
-      ? `class route: every gate this module can see is OPEN`
-      : `class route BLOCKED BY: ${blockers.join("; ")}`,
-  );
-  // WHAT THIS MODULE STILL CANNOT SEE, said out loud next to the verdict.
-  //
-  // The candidate table is `discovered_pools` in the CHILD's sqlite, which is
-  // ephemeral and reachable from nowhere but the child. So "every gate is OPEN"
-  // is a statement about configuration and never a statement about supply: a
-  // route with every gate open and an empty table buys nothing, and the only
-  // thing that can report that is the child's own `[class census]` line.
-  lines.push(
-    `not visible from here: the candidate table itself (child sqlite) — ` +
-      `read the child's "[class census] curve rows N all" line for supply`,
-  );
-  return lines;
-}
-
-/**
- * THE POSITION CEILING, AND WHAT IT IS ACTUALLY COUNTING.
- *
- * `proposeClassEntries` ends with
- *   `if (cfg.classMaxPositions > 0 && held.length >= cfg.classMaxPositions) return []`
- * where `held` is `classPositions(agentId)` — which selects
- * `WHERE agent_id = ?` and applies NO state predicate. So CLOSED, SWEPT and
- * RECOVERED rows count against the ceiling exactly like open ones, and nothing
- * ever deletes them.
- *
- * WHY IT MATTERS MORE THAN AN ORDINARY OFF-BY-ONE. The gate sits BELOW the
- * funnel, writes no log line, and is not covered by the `· BUYING OFF` suffix
- * (which keys only on `classSnipeEnabled` and `classPerEntryUsdg`). An agent at
- * the ceiling therefore prints `… → 1 qualified` every tick and never buys,
- * which is the exact reading that sends an operator to the executor and the
- * wall. A route that has completed `classMaxPositions` round trips is off
- * permanently, and says nothing.
- *
- * Reported as BOTH numbers, never one: the count the gate uses, and the count
- * of positions actually standing. When they differ, the difference is the bug
- * and this says so rather than leaving it to be noticed.
- */
-export interface ClassPositionCensus {
-  /**
-   * Every row for this agent, whole — not just its state.
-   *
-   * It used to be a list of states, and that was not enough to answer the
-   * question this section exists for. Shogun's phantom is `recovered`, a
-   * perfectly good standing state, so a state-only census reported
-   * "standing: 1" about a row that is the vault's own cash. Identity and state
-   * are independent tests and the census needs both — see class-active.ts.
-   */
-  rows: readonly {
-    token: string;
-    quoteToken: string | null;
-    state: string | null;
-    symbol?: string | null;
-  }[];
-  /** `classMaxPositions`, or null when unset (the gate is then inert). */
-  ceiling: number | null;
-}
-
-export function describeClassPositions(c: ClassPositionCensus): string[] {
-  const lines: string[] = [];
-  const total = c.rows.length;
-  // THE SAME FUNCTION THE GATE USES. A census that counted its own way could
-  // report a route open that the agent has shut, which is worse than no census.
-  const active = activeClassPositions(c.rows);
-  const standing = active.length;
-  const tally = new Map<string, number>();
-  for (const r of c.rows) tally.set(r.state ?? "(null)", (tally.get(r.state ?? "(null)") ?? 0) + 1);
-  const shown = [...tally].sort().map(([s, n]) => `${n}×${s}`).join(", ");
-
-  lines.push(``);
-  lines.push(`class positions: ${total} row(s) — ${shown || "none"}`);
-  for (const r of c.rows) {
-    const why = isQuoteTokenRow(r)
-      ? "NOT COUNTED — this is the vault's cash, not a position"
-      : isActiveClassState(r.state)
-        ? "counted"
-        : `not counted — ${r.state ?? "unknown state"}`;
-    lines.push(`    ${r.symbol ?? "(no symbol)"} ${r.token}  state=${r.state ?? "(null)"}  ${why}`);
-  }
-  lines.push(`  standing (open/recovered, excluding cash): ${standing}`);
-  lines.push(`  counted by the ceiling:                    ${standing}`);
-  if (c.ceiling === null || c.ceiling <= 0) {
-    lines.push(`  classMaxPositions is ${c.ceiling === null ? "unset" : String(c.ceiling)} — the ceiling does not bind`);
-    return lines;
-  }
-  lines.push(`  classMaxPositions:                         ${c.ceiling}`);
-  if (standing >= c.ceiling) {
-    lines.push(
-      `  *** ENTRIES ARE SHUT: ${standing} >= ${c.ceiling} — the book is genuinely full. ` +
-        `Entries resume when a position closes.`,
-    );
-  } else {
-    lines.push(`  ceiling OPEN — room for ${c.ceiling - standing} more`);
-    if (total >= c.ceiling) {
-      /**
-       * THE LINE THAT PROVES THE FIX, and the reason the old count is still
-       * computed at all.
-       *
-       * Before `activeClassPositions`, this gate compared the ceiling against
-       * every row the ledger had ever carried, so Shogun sat at 3 of 3 holding
-       * nothing. Saying only "OPEN" would leave an operator unable to tell a
-       * tenant that was never stuck from one this repaired.
-       */
-      lines.push(
-        `  (the old count would have shut it: ${total} ledger rows >= ${c.ceiling}. ` +
-          `${total - standing} of them are closed, swept or cash.)`,
-      );
-    }
-  }
   return lines;
 }
 

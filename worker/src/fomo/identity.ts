@@ -4,7 +4,7 @@
  * The rest of the worker assumes one chain (Robinhood Chain, 4663) and keys a
  * token by its lowercased address. That is fine for what the worker can
  * trade, and wrong for what a social-trading feed reports: the same feed
- * carries Solana mints, Arc and Hyperliquid rows, and EVM addresses from
+ * carries Arc and Hyperliquid rows, and EVM addresses from
  * networks it does not always number. So identity here is explicit:
  *
  *   (namespace, network id AS RETURNED, address)
@@ -15,12 +15,11 @@
  *   2. The same 0x hex on two EVM networks is two tokens. Nothing here merges
  *      them, and a row whose network is unknown keeps `networkId: null`
  *      rather than being assumed to be the chain we asked for.
- *   3. Solana mints are base58 and CASE-SENSITIVE. Lowercasing one makes a
- *      different (usually nonexistent) mint. Only EVM addresses are lowercased.
+ *   3. Only EVM addresses are lowercased.
  *
  * WHY THIS DOES NOT CALL packages/core chainForId: that helper maps every id
  * other than the testnet to Robinhood mainnet, which is right for the
- * product's own chain selection and catastrophic for a Solana row. Nothing
+ * product's own chain selection and catastrophic for a foreign row. Nothing
  * from the provider is allowed near it; `isRobinhoodToken` is the only door
  * from research identity toward anything executable, and it demands the
  * network id the provider actually returned.
@@ -28,10 +27,15 @@
 
 import type { ChainIdentity, ChainNamespace, ExecutionAvailability, TokenIdentity } from "./types";
 
-/** Robinhood Chain mainnet: AgentCap's only executable network, and the provider's "robinhood". */
-export const ROBINHOOD_NETWORK_ID = 4663;
-/** The provider's slug for it, used for chain-scoped queries. */
-export const ROBINHOOD_SLUG = "robinhood";
+/**
+ * BNB Chain mainnet: AgentCap's only executable network. (The names keep
+ * "ROBINHOOD" from the chain this ran on before; they mean OUR chain.) A token
+ * the provider places anywhere else, Robinhood Chain included, is research
+ * only: the same address there is a different token.
+ */
+export const ROBINHOOD_NETWORK_ID = 56;
+/** The provider's slug for it (observed beside chainId 56, 2026-10-04). */
+export const ROBINHOOD_SLUG = "bsc";
 
 /**
  * Network ids the provider DOCUMENTS (fetched 2026-10-04). Only these slugs map
@@ -40,8 +44,7 @@ export const ROBINHOOD_SLUG = "robinhood";
  * with `networkId: null` unless a row carries the number itself.
  */
 const DOCUMENTED: ReadonlyArray<{ slugs: readonly string[]; namespace: ChainNamespace; networkId: number; slug: string }> = [
-  { slugs: ["robinhood", "hood", "rh"], namespace: "eip155", networkId: ROBINHOOD_NETWORK_ID, slug: "robinhood" },
-  { slugs: ["solana", "sol"], namespace: "solana", networkId: 1_399_811_149, slug: "solana" },
+  { slugs: ["robinhood", "hood", "rh"], namespace: "eip155", networkId: 4663, slug: "robinhood" },
   { slugs: ["arc"], namespace: "eip155", networkId: 5042, slug: "arc" },
   { slugs: ["hyperliquid", "hl"], namespace: "hyperliquid", networkId: 1337, slug: "hyperliquid" },
 ];
@@ -77,8 +80,6 @@ const EVM_SLUGS_UNNUMBERED: ReadonlyMap<string, string> = new Map([
 ]);
 
 const EVM_ADDRESS = /^0x[0-9a-fA-F]{40}$/;
-/** Base58 alphabet (no 0, O, I, l), 32–44 characters: the shape of a Solana mint. */
-const SOLANA_MINT = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const SLUG_SHAPE = /^[a-z][a-z0-9-]{0,23}$/;
 
 function cleanSlug(raw: unknown): string | null {
@@ -127,7 +128,7 @@ export function chainFromProvider(networkId: unknown, slug: unknown): ChainIdent
   return { namespace: "unknown", networkId: id, slug: s };
 }
 
-/** A user-typed chain ("rh", "Robinhood", "sol", "base") → identity, or null when it is not a chain word. */
+/** A user-typed chain ("rh", "Robinhood", "bsc", "base") → identity, or null when it is not a chain word. */
 export function chainFromUserText(raw: string): ChainIdentity | null {
   const s = cleanSlug(raw.replace(/\s+chain$/i, ""));
   if (!s) return null;
@@ -137,7 +138,7 @@ export function chainFromUserText(raw: string): ChainIdentity | null {
   return null;
 }
 
-export function robinhoodChain(): ChainIdentity {
+export function bnbChain(): ChainIdentity {
   return { namespace: "eip155", networkId: ROBINHOOD_NETWORK_ID, slug: ROBINHOOD_SLUG };
 }
 
@@ -160,27 +161,17 @@ export function tokenIdentity(chain: ChainIdentity, rawAddress: unknown): TokenI
   const address = rawAddress.trim();
   if (!address) return null;
   if (EVM_ADDRESS.test(address)) {
-    if (chain.namespace === "solana" || chain.namespace === "hyperliquid") return null;
+    if (chain.namespace === "hyperliquid") return null;
     const c: ChainIdentity = chain.namespace === "eip155" ? chain : { namespace: "eip155", networkId: chain.networkId, slug: chain.slug };
     const a = address.toLowerCase();
     return { chain: c, address: a, key: keyOf(c, a) };
-  }
-  if (SOLANA_MINT.test(address)) {
-    if (chain.namespace !== "solana") {
-      // A base58 string on a chain that is not Solana (or an unknown one) cannot
-      // be placed. Treated as unresolved rather than guessed onto Solana.
-      if (chain.namespace !== "unknown") return null;
-      const c: ChainIdentity = { namespace: "solana", networkId: null, slug: chain.slug };
-      return { chain: c, address, key: keyOf(c, address) };
-    }
-    return { chain, address, key: keyOf(chain, address) };
   }
   return null;
 }
 
 /** Parse a stored key back. Null for anything that is not a key this module wrote. */
 export function tokenFromKey(key: string): TokenIdentity | null {
-  const m = /^(eip155|solana|hyperliquid|unknown):(\d+|\?):(.+)$/.exec(key);
+  const m = /^(eip155|hyperliquid|unknown):(\d+|\?):(.+)$/.exec(key);
   if (!m) return null;
   const namespace = m[1] as ChainNamespace;
   const networkId = m[2] === "?" ? null : Number(m[2]);
@@ -262,4 +253,4 @@ export function shortAddress(address: string): string {
   return address.length > 12 ? `${address.slice(0, 6)}…${address.slice(-4)}` : address;
 }
 
-export const IDENTITY_GUARDS = { EVM_ADDRESS, SOLANA_MINT, DOCUMENTED, OBSERVED_EVM_IDS } as const;
+export const IDENTITY_GUARDS = { EVM_ADDRESS, DOCUMENTED, OBSERVED_EVM_IDS } as const;

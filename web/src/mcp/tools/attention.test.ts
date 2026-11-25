@@ -74,7 +74,7 @@ const grantExpiry = new Map<string, number | null>();
 
 function agentRow(d: TestDb, account: string, o: { status?: string; mode?: string; beat?: number | null; blocker?: string | null; expires?: number } = {}) {
   d.raw.prepare(`INSERT INTO agents (smart_account, name, owner_address, session_key_address, chain_id, caps, granted_at, expires_at, status, mode, beat_at, live_blocker, sponsor_gas, epoch)
-    VALUES (?, 'Alan', ?, '0x1', 4663, '{}', 1700000000, ?, ?, ?, ?, ?, 0, 1)`)
+    VALUES (?, 'Alan', ?, '0x1', 56, '{}', 1700000000, ?, ?, ?, ?, ?, 0, 1)`)
     .run(account, account === ACCOUNT_A ? OWNER_A : OWNER_B, o.expires ?? grantExpiry.get(account) ?? 4102444800, o.status ?? "armed", o.mode ?? "live", o.beat === undefined ? NOW - 30 : o.beat, o.blocker ?? null);
 }
 
@@ -157,7 +157,7 @@ test("live blockers: funding and re-signing are act_now with the page that fixes
   assert.equal(item.severity, "act_now");
   assert.equal(item.link, "https://app.test/deposit");
   assert.equal(item.owner_can_fix, true);
-  assert.match(item.what_to_do ?? "", /ETH/);
+  assert.match(item.what_to_do ?? "", /BNB/);
 
   d.raw.prepare("UPDATE agents SET live_blocker = 'dead-policy'").run();
   item = only(await ask(), "live-blocker");
@@ -517,7 +517,7 @@ test("a recovery hold is tested first: the held agent gets one item with no chor
   const { d, ask } = await setup({ agentA: { expiresAt: NOW - HOUR } });
   agentRow(d, ACCOUNT_A, { status: "armed", beat: NOW - 2 * HOUR, blocker: "no-gas" });
   d.raw.exec(FLEET_RECOVERY_SCHEMA);
-  d.raw.prepare("INSERT INTO fleet_recovery_health VALUES (?, ?, ?, 1, 'persistent-source', ?, ?)").run(OWNER_A, ACCOUNT_A, 4663, NOW - DAY, NOW - 60);
+  d.raw.prepare("INSERT INTO fleet_recovery_health VALUES (?, ?, ?, 1, 'persistent-source', ?, ?)").run(OWNER_A, ACCOUNT_A, 56, NOW - DAY, NOW - 60);
   const seen = [`worker-stale:${SLUG_A}:${NOW - 2 * HOUR}`, `live-blocker:${SLUG_A}:no-gas`, `permission-expired:${SLUG_A}:${NOW - HOUR}`];
   const r = await ask({ seen_keys: seen });
   assert.deepEqual(r.items.map((i) => [i.key, i.severity, i.owner_can_fix, i.what_to_do, i.link]), [[`recovery-hold:${SLUG_A}:on`, "today", false, null, null]]);

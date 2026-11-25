@@ -1,24 +1,11 @@
 /**
- * ONE LOGIN, TWO WALLETS, HOSTED: POST /api/grants?wallet=perps (perps slice 5b).
+ * ONE LOGIN, TWO WALLETS, HOSTED: /api/grants?wallet=perps.
  *
- * The Perps wallet is wallet authority, and every rule here is one a skipped
- * check would break:
- *
- * - it is made only while AGENTCAP_PERPS is paper (D1), and refused with
- *   nothing written otherwise — creation and renewal alike, the renewal's
- *   first step (its permission-replacement stop) included; the kill is not a
- *   renewal and still stops it;
- * - its account is the owner's own Kernel account at index 1: the owner's
- *   index-0 (Spot) account, or anyone's, is refused 403, and a derivation that
- *   cannot be made is a 503, never a pass;
- * - its claim is bound to the wallet in the signed text: a Spot binding
- *   replayed onto a Perps grant, or the reverse, is refused 403 with its nonce
- *   unspent;
- * - it is owned by the login's own wallet (D4), so a browser-key owner is
- *   refused 403 by name, before the nonce;
- * - it lands in the Perps store and nowhere else, beside a Spot grant it
- *   leaves byte for byte, and NEVER joins the public identity (D2);
- * - a store that refuses answers 409 with its code or a fixed 503, never a 500.
+ * Perps are not offered on BNB Chain, so no Perps wallet is made or renewed:
+ * both are refused with nothing written, the renewal's first step (its
+ * permission-replacement stop) included. A Perps record that already exists is
+ * still shown by GET, held to by the stores and stopped by the kill, and a
+ * binding signed for one wallet is never accepted for the other.
  *
  * Driven through the real route over the real file-backed stores (the
  * single-service hosted deploy), a real session, real Privy access tokens
@@ -28,11 +15,6 @@
  * its initCode, so index 0 and index 1 are two real, different addresses. Only
  * the single-use nonce store, which needs Postgres hosted, is stood in (it
  * counts what it spends).
- *
- * Adapted from the perps branch's dual-purpose.test.ts (112dbeb6) for main:
- * `?wallet=`, the store's owner rule (the branch's legacy-binding owner is
- * refused here), the store's conflict codes, and an identity that must NOT
- * gain the Perps account (the branch asserted it did).
  */
 import assert from "node:assert/strict";
 import { pilotFixture } from "@/lib/perps-pilot-fixture";
@@ -88,7 +70,7 @@ async function login(name: string, admitted = true): Promise<Login> {
   // their generated owners; read/kill tests below also withdraw that admission.
   process.env.AGENTCAP_PERPS_PAPER_TENANTS = [process.env.AGENTCAP_PERPS_PAPER_TENANTS, account.address].filter(Boolean).join(",");
   const at = async (wallet: GrantPurpose) => {
-    const d = await derive(account.address, 4663, wallet);
+    const d = await derive(account.address, 56, wallet);
     assert.ok(d.ok, "the stub chain derives");
     return d.address;
   };
@@ -134,23 +116,6 @@ const perpsGrantOf = async (who: Login) => stores.getGrantStore("perps").get(who
 const perpsGrant = async (who: Login, account = who.perps, owner = who.account) =>
   (await fixture.signerGrant({ owner, account, purpose: "perps" })).grant;
 const spotGrant = async (who: Login) => (await fixture.signerGrant({ owner: who.account, account: who.spot })).grant;
-
-/** Return a real positive preflight whose admission was revoked while its
- * reply was in flight. The final authority write must consult the locked store. */
-function revokeAfterPositivePreflight(t: TestContext, who: Login) {
-  const get = pilot.store.get.bind(pilot.store);
-  let revoked = false;
-  t.mock.method(pilot.store, "get", async (owner: string) => {
-    const answer = await get(owner);
-    if (!revoked && owner.toLowerCase() === who.account.address.toLowerCase()) {
-      assert.equal(answer.status, "allowed", "the request really passed its initial admission read");
-      revoked = true;
-      await pilot.set(owner, "revoked");
-    }
-    return answer;
-  });
-  return () => assert.equal(revoked, true, "the revocation must occur between admission preflight and mutation");
-}
 
 before(async () => {
   home = mkdtempSync(path.join(tmpdir(), "mm-grants-dual-purpose-"));
@@ -209,237 +174,50 @@ after(() => {
   rmSync(home, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
 });
 
-describe("pilot revocation is ordered before the final hosted grant mutation", () => {
-  it("a valid invitation cannot install a grant until an admin approves its pending owner", async () => {
-    const who = await login("pending-approval", false), grant = await perpsGrant(who);
-    const { code } = await pilot.store.createInvite({ actor: who.account.address, maxUses: 1, expiresAt: Date.now() + 60_000 });
-    assert.equal((await pilot.store.redeem({ owner: who.account.address, code })).outcome, "pending");
-    const before = nonces;
-    const denied = await privyPost(grant, "?wallet=perps", who, "perps");
-    assert.equal(denied.status, 403, JSON.stringify(denied.body));
-    assert.equal(nonces, before, "pending owners cannot consume a grant nonce");
-    assert.equal(await perpsGrantOf(who), null); assert.equal(read(tenantFile("tenants-perps", who)), null);
-    await pilot.set(who.account.address, "allowed");
-    assert.equal((await privyPost(grant, "?wallet=perps", who, "perps")).status, 200);
-    assert.equal((await perpsGrantOf(who))?.smartAccount.toLowerCase(), who.perps.toLowerCase());
-  });
+/**
+ * A Perps record already on the server. No route makes one on BNB Chain, so it
+ * is put into the Perps store as one made before would sit there.
+ */
+async function seedPerps(who: Login, grant?: StoredGrant): Promise<StoredGrant> {
+  const record = {
+    ...(grant ?? (await perpsGrant(who))),
+    binding: { version: "privy-did-owner-v1" as const, nonce: "seeded", did: who.did, ownerSignature: `0x${"22".repeat(65)}` as const },
+  };
+  await stores.getGrantStore("perps").put(who.account.address, record);
+  return record;
+}
 
-  it("a positive preflight cannot install a new grant after access is revoked", async t => {
-    const who = await login("late-revocation-create"), grant = await perpsGrant(who);
-    const assertRevoked = revokeAfterPositivePreflight(t, who);
-    const result = await privyPost(grant, "?wallet=perps", who, "perps");
-    assertRevoked();
-    assert.equal(result.status, 403, JSON.stringify(result.body));
-    assert.equal(result.body.code, "perps-pilot-invitation-required");
-    assert.equal(await perpsGrantOf(who), null);
-    assert.equal(read(tenantFile("tenants-perps", who)), null, "no signing authority was persisted");
-  });
-
-  it("a positive preflight cannot replace the existing grant after access is revoked", async t => {
-    const who = await login("late-revocation-replace"), original = await perpsGrant(who);
-    assert.equal((await privyPost(original, "?wallet=perps", who, "perps")).status, 200);
-    const before = read(tenantFile("tenants-perps", who));
-    const replacement = await perpsGrant(who);
-    assert.notEqual(replacement.demoSessionPrivateKey, original.demoSessionPrivateKey);
-    const assertRevoked = revokeAfterPositivePreflight(t, who);
-    const result = await privyPost(replacement, "?wallet=perps", who, "perps");
-    assertRevoked();
-    assert.equal(result.status, 403, JSON.stringify(result.body));
-    assert.equal(read(tenantFile("tenants-perps", who)), before, "the retained grant is byte-for-byte unchanged");
-    assert.equal((await perpsGrantOf(who))?.demoSessionPrivateKey, original.demoSessionPrivateKey);
-  });
-
-  it("a renewal stop with a stale positive preflight preserves the existing permission", async t => {
-    const who = await login("late-revocation-stop"), grant = await perpsGrant(who);
-    assert.equal((await privyPost(grant, "?wallet=perps", who, "perps")).status, 200);
-    const before = read(tenantFile("tenants-perps", who));
-    const assertRevoked = revokeAfterPositivePreflight(t, who);
-    const result = await route.DELETE(new Request(`${ORIGIN}/api/grants?wallet=perps`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json", cookie: `${auth.SESSION_COOKIE}=${auth.mintSession(who.account.address)}` },
-      body: JSON.stringify({ purpose: "permission-replacement", expectedTenant: who.account.address, expectedAccount: grant.smartAccount }),
-    }));
-    assertRevoked();
-    assert.equal(result.status, 403, await result.clone().text());
-    assert.equal(read(tenantFile("tenants-perps", who)), before, "the rejected renewal cannot retire or erase its current key");
-    assert.equal((await perpsGrantOf(who))?.demoSessionPrivateKey, grant.demoSessionPrivateKey);
-  });
-});
-
-describe("hosted: a Perps wallet is made beside the Spot one, and only as itself", () => {
-  let alice: Login;
-  before(async () => { alice = await login("alice"); });
-
-  it("one login makes both: the Perps grant lands in the Perps store at index 1; the Spot record and the public identity do not move", async () => {
-    assert.notEqual(alice.perps.toLowerCase(), alice.spot.toLowerCase(), "premise: index 1 is another account");
-    const spot = await privyPost(await spotGrant(alice), "", alice, "spot");
-    assert.equal(spot.status, 200, JSON.stringify(spot.body));
-    const spotRecord = read(tenantFile("tenants", alice));
-    const identity = await identities.getIdentityStore().get(alice.account.address);
-    assert.ok(identity?.slug, "the Spot grant minted the public id");
-    assert.deepEqual(identity.accounts.map((a) => a.toLowerCase()), [alice.spot.toLowerCase()]);
-
-    const grant = await perpsGrant(alice);
-    const made = await privyPost(grant, "?wallet=perps", alice, "perps");
-    assert.deepEqual(made, { status: 200, body: { ok: true } });
-    const stored = await perpsGrantOf(alice);
-    assert.equal(stored?.smartAccount.toLowerCase(), alice.perps.toLowerCase());
-    assert.equal(stored?.purpose, "perps");
-    assert.equal(stored?.demoSessionPrivateKey, grant.demoSessionPrivateKey, "its own session key, sealed in its own store");
-    assert.equal(read(tenantFile("tenants", alice)), spotRecord, "the Spot record is byte for byte what it was");
-    assert.equal((await stores.getGrantStore("spot").get(alice.account.address))?.smartAccount.toLowerCase(), alice.spot.toLowerCase());
-    // D2: THE PERPS WALLET NEVER JOINS THE PUBLIC IDENTITY.
-    assert.deepEqual(await identities.getIdentityStore().get(alice.account.address), identity, "the identity is unchanged by a Perps intake");
-
-    // A renewal replaces it, in the Perps store only.
-    const renewed = await perpsGrant(alice);
-    assert.equal((await privyPost(renewed, "?wallet=perps", alice, "perps")).status, 200);
-    assert.equal((await perpsGrantOf(alice))?.demoSessionPrivateKey, renewed.demoSessionPrivateKey);
-    assert.equal(read(tenantFile("tenants", alice)), spotRecord);
-    assert.deepEqual(await identities.getIdentityStore().get(alice.account.address), identity);
-  });
-
-  it("a Spot binding replayed onto the Perps grant, and a Perps binding onto the Spot grant: 403, nonce unspent, nothing stored", async () => {
-    const before = { spot: read(tenantFile("tenants", alice)), perps: read(tenantFile("tenants-perps", alice)), spent: nonces };
-    const asPerps = await privyPost(await perpsGrant(alice), "?wallet=perps", alice, "spot");
-    assert.equal(asPerps.status, 403, JSON.stringify(asPerps.body));
-    const asSpot = await privyPost(await spotGrant(alice), "", alice, "perps");
-    assert.equal(asSpot.status, 403, JSON.stringify(asSpot.body));
-    assert.equal(nonces, before.spent, "a refused claim spends no nonce");
-    assert.equal(read(tenantFile("tenants", alice)), before.spot);
-    assert.equal(read(tenantFile("tenants-perps", alice)), before.perps);
-  });
-
-  it("D6: a Perps renewal's stopped key stays fenced — no on-chain revocation needed for the server to refuse it again", async () => {
-    // The renewal's first step stops the Perps grant on the server (a
-    // permission replacement naming the wallet); the stopped session key's hash
-    // is retired in the Perps store, so the same grant posted again is refused,
-    // whatever the chain says about the old key.
-    const current = await perpsGrantOf(alice);
-    assert.ok(current);
-    const stop = await route.DELETE(new Request(`${ORIGIN}/api/grants?wallet=perps`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json", cookie: `${auth.SESSION_COOKIE}=${auth.mintSession(alice.account.address)}` },
-      body: JSON.stringify({ purpose: "permission-replacement", expectedTenant: alice.account.address, expectedAccount: current.smartAccount }),
-    }));
-    assert.equal(stop.status, 200, await stop.clone().text());
-    assert.equal(await perpsGrantOf(alice), null, "the Perps key is stopped");
-    assert.ok(await stores.getGrantStore("spot").get(alice.account.address), "and the Spot one is not");
-    const replayed = await privyPost(current, "?wallet=perps", alice, "perps");
-    assert.equal(replayed.status, 409, JSON.stringify(replayed.body));
-    assert.equal(await perpsGrantOf(alice), null);
-    // A fresh key renews it.
-    assert.equal((await privyPost(await perpsGrant(alice), "?wallet=perps", alice, "perps")).status, 200);
-  });
-
-  it("the store's refusals answer 409 with their code, and anything else a fixed 503 — never a 500 or the error's own text", async () => {
-    // owner-differs: the Spot wallet already belongs to a key made in the browser.
-    const carol = await login("carol");
-    const browserKey = privateKeyToAccount(generatePrivateKey());
-    await stores.getGrantStore("spot").put(carol.account.address, (await fixture.signerGrant({ owner: browserKey, account: carol.spot })).grant);
-    const differs = await privyPost(await perpsGrant(carol), "?wallet=perps", carol, "perps");
-    assert.equal(differs.status, 409, JSON.stringify(differs.body));
-    assert.equal(differs.body.code, "owner-differs");
-    assert.equal(await perpsGrantOf(carol), null);
-
-    // legacy-perps: the Spot wallet still carries the perpetuals marker.
-    const dave = await login("dave");
-    const legacy = await spotGrant(dave);
-    await stores.getGrantStore("spot").put(dave.account.address, { ...legacy, grantFeatures: [...(legacy.grantFeatures ?? []), "perp-lighter-v1"] });
-    const retired = await privyPost(await perpsGrant(dave), "?wallet=perps", dave, "perps");
-    assert.equal(retired.status, 409);
-    assert.equal(retired.body.code, "legacy-perps");
-
-    // Anything else: the service failed, not the owner.
-    const erin = await login("erin");
-    const put = mock.method(stores.getGrantStore("perps"), "put", async () => {
-      throw new Error("connect ECONNREFUSED 10.1.2.3:5432 (postgres://admin:hunter2@db.internal)");
-    });
-    try {
-      const failed = await privyPost(await perpsGrant(erin), "?wallet=perps", erin, "perps");
-      assert.equal(failed.status, 503);
-      assert.equal(failed.body.ownerFacing, true);
-      assert.equal(failed.body.error, "Your permission could not be saved. Please try again.");
-      // It may answer a renewal or restore after that flow's own stop: never that neither wallet changed.
-      assert.doesNotMatch(failed.body.error ?? "", /neither wallet/i);
-      assert.doesNotMatch(JSON.stringify(failed.body), /ECONNREFUSED|hunter2|10\.1\.2\.3/);
-    } finally {
-      put.mock.restore();
-    }
-  });
-});
-
-describe("hosted: the account is the owner's own, at index 1", () => {
-  it("THE OWNER'S INDEX-0 ACCOUNT UNDER wallet=perps: 403, nothing stored — the derivation alone refuses it", async () => {
-    // A fresh login with no Spot grant, so no store rule stands in the way:
-    // only the derivation at the Perps index tells the two accounts apart.
-    const bob = await login("bob");
-    const atSpot = await perpsGrant(bob, bob.spot);
-    const refused = await privyPost(atSpot, "?wallet=perps", bob, "perps");
-    assert.equal(refused.status, 403, JSON.stringify(refused.body));
-    assert.match(refused.body.error ?? "", /does not match|derive/i);
-    assert.equal(await perpsGrantOf(bob), null);
-    assert.equal(read(tenantFile("tenants-perps", bob)), null);
-    // And somebody else's Perps account, signed for by bob's own key: refused too.
-    const mallory = await login("mallory");
-    assert.equal((await privyPost(await perpsGrant(bob, mallory.perps), "?wallet=perps", bob, "perps")).status, 403);
-    assert.equal(await perpsGrantOf(bob), null);
-    // The honest one goes through, so the refusals above were the account.
-    assert.equal((await privyPost(await perpsGrant(bob), "?wallet=perps", bob, "perps")).status, 200);
-  });
-
-  it("A DERIVATION THAT CANNOT BE MADE: 503, nothing stored — never a pass", async () => {
-    const frank = await login("frank");
-    const grant = await perpsGrant(frank);
-    chain.state.down = true;
-    try {
-      const down = await privyPost(grant, "?wallet=perps", frank, "perps");
-      assert.equal(down.status, 503, JSON.stringify(down.body));
-    } finally {
-      chain.state.down = false;
-    }
-    assert.equal(await perpsGrantOf(frank), null);
-    assert.equal(read(tenantFile("tenants-perps", frank)), null);
-  });
-});
-
-describe("hosted: refused before anything, with nothing written", () => {
-  it("PERPS OFF (unset, off, a typo, or live): creation AND renewal 403 perps-wallet-not-offered — no store, no identity, no nonce", async () => {
+describe("hosted: no Perps wallet is made or renewed on BNB Chain", () => {
+  it("WHATEVER AGENTCAP_PERPS SAYS, paper included: creation is 403 perps-wallet-not-offered — no store, no identity, no nonce", async () => {
     const grace = await login("grace");
     assert.equal((await privyPost(await spotGrant(grace), "", grace, "spot")).status, 200);
     const identity = await identities.getIdentityStore().get(grace.account.address);
-    const tryAll = async (what: string) => {
-      for (const ceiling of [undefined, "off", "papr", "live", "on"]) {
+    try {
+      for (const ceiling of [undefined, "off", "papr", "live", "on", "paper"]) {
         if (ceiling === undefined) delete process.env.AGENTCAP_PERPS;
         else process.env.AGENTCAP_PERPS = ceiling;
-        const before = { perps: read(tenantFile("tenants-perps", grace)), spot: read(tenantFile("tenants", grace)), spent: nonces };
+        const before = { spot: read(tenantFile("tenants", grace)), spent: nonces };
         const res = await privyPost(await perpsGrant(grace), "?wallet=perps", grace, "perps");
-        assert.equal(res.status, 403, `${what} at ${String(ceiling)}`);
+        assert.equal(res.status, 403, String(ceiling));
         assert.equal(res.body.code, "perps-wallet-not-offered");
         assert.match(res.body.error ?? "", /Nothing was saved/);
         assert.equal(nonces, before.spent, "no nonce spent");
-        assert.equal(read(tenantFile("tenants-perps", grace)), before.perps, "the Perps store is untouched");
+        assert.equal(await perpsGrantOf(grace), null);
+        assert.equal(read(tenantFile("tenants-perps", grace)), null, "the Perps store is untouched");
         assert.equal(read(tenantFile("tenants", grace)), before.spot, "and the Spot one");
         assert.deepEqual(await identities.getIdentityStore().get(grace.account.address), identity, "and the identity");
       }
+    } finally {
       process.env.AGENTCAP_PERPS = "paper";
-    };
-    await tryAll("creation");
-    assert.equal(await perpsGrantOf(grace), null);
-    // A Perps wallet made while paper was on is not renewed once it is off.
-    assert.equal((await privyPost(await perpsGrant(grace), "?wallet=perps", grace, "perps")).status, 200);
-    await tryAll("renewal");
+    }
   });
 
-  it("PERPS OFF: a Perps renewal's FIRST STEP is refused too — the stop changes nothing, and the kill still stops the wallet", async () => {
-    // THE STATE THIS CLOSES: the renewal's stop (a permission replacement on
-    // ?wallet=perps) was accepted with perps off, the Perps key was stopped and
-    // retired, and the POST that should have followed was refused 403. The
-    // owner was left with a stopped Perps wallet nobody could renew until the
-    // lever came back. A renewal that cannot finish must not start.
+  it("a Perps renewal's FIRST STEP is refused too — the stop changes nothing, and the kill still stops the wallet", async () => {
+    // A renewal that cannot finish must not start: the stop would retire the
+    // Perps key and the grant that should follow is refused.
     const nina = await login("nina");
     assert.equal((await privyPost(await spotGrant(nina), "", nina, "spot")).status, 200);
-    assert.equal((await privyPost(await perpsGrant(nina), "?wallet=perps", nina, "perps")).status, 200);
+    await seedPerps(nina);
     const held = await perpsGrantOf(nina);
     assert.ok(held);
     const del = (query: string, body: Record<string, unknown>) => route.DELETE(new Request(`${ORIGIN}/api/grants${query}`, {
@@ -449,7 +227,7 @@ describe("hosted: refused before anything, with nothing written", () => {
     }));
     const before = { perps: read(tenantFile("tenants-perps", nina)), spot: read(tenantFile("tenants", nina)) };
     try {
-      for (const ceiling of [undefined, "off", "papr", "live"]) {
+      for (const ceiling of [undefined, "off", "papr", "live", "paper"]) {
         if (ceiling === undefined) delete process.env.AGENTCAP_PERPS;
         else process.env.AGENTCAP_PERPS = ceiling;
         const res = await del("?wallet=perps", { purpose: "permission-replacement", expectedAccount: held.smartAccount, expectedSession: held.sessionKeyAddress });
@@ -460,7 +238,7 @@ describe("hosted: refused before anything, with nothing written", () => {
         assert.match(body.error ?? "", /was not stopped[\s\S]*Nothing was changed/);
         assert.equal(read(tenantFile("tenants-perps", nina)), before.perps, `the Perps record is byte for byte what it was (${String(ceiling)})`);
         assert.equal(read(tenantFile("tenants", nina)), before.spot, "and the Spot one");
-        assert.equal((await perpsGrantOf(nina))?.demoSessionPrivateKey, held.demoSessionPrivateKey, "the Perps key still signs");
+        assert.equal((await perpsGrantOf(nina))?.demoSessionPrivateKey, held.demoSessionPrivateKey, "the Perps key is still stored");
       }
       // The kill is not a renewal: it names no wallet and stops the Perps one
       // whatever the lever says.
@@ -476,51 +254,18 @@ describe("hosted: refused before anything, with nothing written", () => {
     }
   });
 
-  it("D4: a Perps wallet owned by a key made in the browser: 403 perps-owner, by name, before the nonce", async () => {
-    const heidi = await login("heidi");
-    const browserKey = privateKeyToAccount(generatePrivateKey());
-    const d = await derive(browserKey.address, 4663, "perps");
-    assert.ok(d.ok);
-    const grant = await perpsGrant(heidi, d.address, browserKey);
-    // A legacy binding: the login authorizes, the browser key co-signs.
-    const nonce = auth.issueChallengeNonce(ORIGIN);
-    const message = bindingMessage({ origin: ORIGIN, nonce, owner: browserKey.address, smartAccount: grant.smartAccount, chainId: 4663, purpose: "perps" });
-    const spent = nonces;
-    const res = await withNonceStore(async () => route.POST(new Request(`${ORIGIN}/api/grants?wallet=perps`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", cookie: `${auth.SESSION_COOKIE}=${auth.mintSession(heidi.account.address)}` },
-      body: JSON.stringify({ ...grant, binding: { nonce, walletSignature: await heidi.account.signMessage({ message }), ownerSignature: await browserKey.signMessage({ message }) } }),
-    })));
-    assert.equal(res.status, 403);
-    const body = (await res.json()) as { code?: string; error?: string; ownerFacing?: boolean };
-    assert.equal(body.code, "perps-owner");
-    assert.equal(body.ownerFacing, true);
-    assert.match(body.error ?? "", /owned by the wallet you sign in with/);
-    assert.equal(nonces, spent);
-    assert.equal(await perpsGrantOf(heidi), null);
+  it("a Spot binding replayed onto the Perps grant, and a Perps binding onto the Spot grant: 403, nonce unspent, nothing stored", async () => {
+    const alice = await login("alice");
+    const before = { spot: read(tenantFile("tenants", alice)), perps: read(tenantFile("tenants-perps", alice)), spent: nonces };
+    const asPerps = await privyPost(await perpsGrant(alice), "?wallet=perps", alice, "spot");
+    assert.equal(asPerps.status, 403, JSON.stringify(asPerps.body));
+    const asSpot = await privyPost(await spotGrant(alice), "", alice, "perps");
+    assert.equal(asSpot.status, 403, JSON.stringify(asSpot.body));
+    assert.equal(nonces, before.spent, "a refused claim spends no nonce");
+    assert.equal(read(tenantFile("tenants", alice)), before.spot);
+    assert.equal(read(tenantFile("tenants-perps", alice)), before.perps);
   });
 
-  it("a Perps wallet on any chain but Robinhood Chain mainnet: 400 perps-chain, before the nonce", async () => {
-    const ivan = await login("ivan");
-    const spent = nonces;
-    const res = await privyPost({ ...(await perpsGrant(ivan)), chainId: 46630 }, "?wallet=perps", ivan, "perps");
-    assert.equal(res.status, 400);
-    assert.equal(res.body.code, "perps-chain");
-    assert.equal(nonces, spent);
-    assert.equal(await perpsGrantOf(ivan), null);
-  });
-
-  it("a Perps grant sealed over the Spot wall: 400 invalid_wall, before the nonce", async () => {
-    const judy = await login("judy");
-    const grant = await perpsGrant(judy);
-    const overSpot = await fixture.resealed(grant, judy.account, { perpsOnly: false });
-    const spent = nonces;
-    const res = await privyPost(overSpot, "?wallet=perps", judy, "perps");
-    assert.equal(res.status, 400);
-    assert.equal(res.body.code, "invalid_wall");
-    assert.equal(nonces, spent);
-    assert.equal(await perpsGrantOf(judy), null);
-  });
 });
 
 describe("hosted: GET ?wallet=perps answers for the Perps wallet, and only it", () => {
@@ -531,8 +276,7 @@ describe("hosted: GET ?wallet=perps answers for the Perps wallet, and only it", 
   before(async () => {
     kim = await login("kim");
     assert.equal((await privyPost(await spotGrant(kim), "", kim, "spot")).status, 200);
-    grant = await perpsGrant(kim);
-    assert.equal((await privyPost(grant, "?wallet=perps", kim, "perps")).status, 200);
+    grant = await seedPerps(kim);
     // The ledger the hosted GET reads: hosted it is the shared Postgres; with
     // no DATABASE_URL (this file-backed deploy) each wallet's read opens its
     // own home's sqlite file (ledger.ts withReadDb).
@@ -586,17 +330,11 @@ describe("hosted: GET ?wallet=perps answers for the Perps wallet, and only it", 
 
   it("A PERPS RECORD STOPPED FOR A RENEWAL is `stored`, never none: the Spot put still holds a Spot grant to it, so the Wallet screen's restore and renewal ask it through the login", async () => {
     const mia = await login("mia");
-    const current = await perpsGrant(mia);
-    assert.equal((await privyPost(current, "?wallet=perps", mia, "perps")).status, 200);
+    const current = await seedPerps(mia);
     const viaGet = (async (url: string | URL | Request) => get(mia, String(url).replace(/^\/api\/grants/, ""))) as typeof fetch;
     // Shown, the hosted Perps wallet refuses every restore, the login's own key included (the legacy binding refuses that key).
     assert.equal(await restorePerpsRefusal(mia.account.address, viaGet), RESTORE_PERPS_HOSTED);
-    const stop = await route.DELETE(new Request(`${ORIGIN}/api/grants?wallet=perps`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json", cookie: `${auth.SESSION_COOKIE}=${auth.mintSession(mia.account.address)}` },
-      body: JSON.stringify({ purpose: "permission-replacement", expectedTenant: mia.account.address, expectedAccount: current.smartAccount }),
-    }));
-    assert.equal(stop.status, 200, await stop.clone().text());
+    assert.equal(await stores.getGrantStore("perps").stopForReplacement(mia.account.address, current.smartAccount), "stopped");
     assert.equal(await perpsGrantOf(mia), null, "set-up: the store will not show it");
     const body = await (await get(mia, "?wallet=perps")).json();
     assert.deepEqual(body, { exists: false, tenant: mia.account.address.toLowerCase(), stored: true });
@@ -614,7 +352,7 @@ describe("hosted: GET ?wallet=perps answers for the Perps wallet, and only it", 
   it("ON THE FILE STORE, A PERPS RECORD THE SPOT PUT WOULD REFUSE ON is a 503, never `stored`: the restore and the renewal are refused before their stop", async () => {
     const nia = await login("nia");
     assert.equal((await privyPost(await spotGrant(nia), "", nia, "spot")).status, 200);
-    assert.equal((await privyPost(await perpsGrant(nia), "?wallet=perps", nia, "perps")).status, 200);
+    await seedPerps(nia);
     const tenant = nia.account.address.toLowerCase();
     const perpsFile = path.join(home, "tenants-perps", `${tenant}.json`);
     const record = JSON.parse(readFileSync(perpsFile, "utf8")) as { grant: Record<string, unknown> };
@@ -646,8 +384,7 @@ describe("hosted: GET ?wallet=perps answers for the Perps wallet, and only it", 
 
   it("an active Perps record whose session key cannot be opened is unreadable, not stopped for renewal", async () => {
     const noa = await login("noa-unread-key");
-    const grant = await perpsGrant(noa);
-    assert.equal((await privyPost(grant, "?wallet=perps", noa, "perps")).status, 200);
+    const grant = await seedPerps(noa);
     const file = tenantFile("tenants-perps", noa);
     const original = readFileSync(file, "utf8");
     const record = JSON.parse(original) as Record<string, unknown>;

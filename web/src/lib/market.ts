@@ -6,17 +6,15 @@
  *    DEX-derived prices (GeckoTerminal etc.) are junk while stock pools are shallow.
  *  - Stock contracts (on-chain, multicall): tokenPaused, uiMultiplier.
  *  - Blockscout API: official Robinhood logo (cdn.robinhood.com), holders, 24h volume.
- *  - Rialto /tokens (public): whether Rialto considers the token liquid.
  */
 
 import { webChainRead } from "@/lib/chain-read";
 import { createPublicClient } from "viem";
 import {
   CHAINLINK_ABI,
-  RIALTO,
   STOCK_ABI,
   STOCK_TOKENS,
-  robinhoodChain,
+  bnbChain,
 } from "@agentcap/core";
 
 export interface MarketToken {
@@ -39,8 +37,6 @@ export interface MarketToken {
   paused: boolean | null;
   /** 1.0 = no pending corporate action. */
   uiMultiplier: number | null;
-  /** Whether Rialto considers it liquid. Null when Rialto could not be asked. */
-  rialtoLiquid: boolean | null;
   volume24hUsd: number | null;
   holders: number | null;
 }
@@ -50,24 +46,10 @@ export interface MarketData {
   tokens: MarketToken[];
 }
 
-const client = createPublicClient({ chain: robinhoodChain, transport: webChainRead() });
+const client = createPublicClient({ chain: bnbChain, transport: webChainRead() });
 
-const BLOCKSCOUT = "https://robinhoodchain.blockscout.com/api/v2";
 const LOGO_CDN = (address: string) =>
   `https://cdn.robinhood.com/ncw_assets/logos/${address.toLowerCase()}.png`;
-
-async function fetchRialtoLiquidity(): Promise<Map<string, boolean>> {
-  const map = new Map<string, boolean>();
-  try {
-    const res = await fetch(`${RIALTO.apiBase}/tokens`, { next: { revalidate: 300 } });
-    if (!res.ok) return map;
-    const j = (await res.json()) as { tokens?: { address: string; liquid: boolean }[] };
-    for (const t of j.tokens ?? []) map.set(t.address.toLowerCase(), t.liquid);
-  } catch {
-    // Rialto being down must not take the market table down.
-  }
-  return map;
-}
 
 interface BlockscoutStats {
   iconUrl: string | null;
@@ -75,19 +57,10 @@ interface BlockscoutStats {
   holders: number | null;
 }
 
-async function fetchBlockscoutStats(address: string): Promise<BlockscoutStats> {
-  try {
-    const res = await fetch(`${BLOCKSCOUT}/tokens/${address}`, { next: { revalidate: 300 } });
-    if (!res.ok) return { iconUrl: null, volume24hUsd: null, holders: null };
-    const j = await res.json();
-    return {
-      iconUrl: typeof j.icon_url === "string" ? j.icon_url : null,
-      volume24hUsd: j.volume_24h != null ? Number(j.volume_24h) : null,
-      holders: j.holders_count != null ? Number(j.holders_count) : null,
-    };
-  } catch {
-    return { iconUrl: null, volume24hUsd: null, holders: null };
-  }
+// BNB Chain has no Blockscout index to ask, so these three are unknown. The
+// old chain's index is never asked: the same address there is another token.
+async function fetchBlockscoutStats(_address: string): Promise<BlockscoutStats> {
+  return { iconUrl: null, volume24hUsd: null, holders: null };
 }
 
 export async function fetchMarket(): Promise<MarketData> {
@@ -102,10 +75,9 @@ export async function fetchMarket(): Promise<MarketData> {
     { address: t.address, abi: STOCK_ABI, functionName: "uiMultiplier" } as const,
   ]);
 
-  const [feedResults, stateResults, rialtoLiquid, blockscout] = await Promise.all([
+  const [feedResults, stateResults, blockscout] = await Promise.all([
     client.multicall({ contracts: feedCalls }),
     client.multicall({ contracts: stateCalls }),
-    fetchRialtoLiquidity(),
     Promise.all(STOCK_TOKENS.map((t) => fetchBlockscoutStats(t.address))),
   ]);
 
@@ -137,9 +109,6 @@ export async function fetchMarket(): Promise<MarketData> {
       paused: pausedRes?.status === "success" ? (pausedRes.result as boolean) : null,
       uiMultiplier:
         multRes?.status === "success" ? Number(multRes.result as bigint) / 1e18 : null,
-      // fetchRialtoLiquidity returns an EMPTY MAP when Rialto is down, so a
-      // `?? false` stamped "illiquid" on all 25 tokens during one outage.
-      rialtoLiquid: rialtoLiquid.get(t.address.toLowerCase()) ?? null,
       volume24hUsd: stats.volume24hUsd,
       holders: stats.holders,
     };

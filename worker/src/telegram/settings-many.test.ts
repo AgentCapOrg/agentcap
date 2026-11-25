@@ -16,7 +16,7 @@ import { decodeProposalLink, RISK_PROFILES } from "../../../packages/core/src/in
 import { appliedManyText, chatMayApply, proposeManyChanges, proposeSettingChange, requestedChanges, singleChange, wantsManyPath, type ProposalContext } from "./settings-chat";
 
 const ctx: ProposalContext = {
-  current: { buyPerTickUsdg: 25, strategistStopLossBps: 0, takeProfitBps: 0, liveTradingEnabled: false, assetMode: "all", classMaxPositions: 3, strategy: "trencher" },
+  current: { buyPerTickUsdg: 25, strategistStopLossBps: 0, takeProfitBps: 0, liveTradingEnabled: false, assetMode: "all", strategy: "trencher" },
   allowedSymbols: ["QQQ", "NVDA"],
   strategies: ["steady-basket", "trencher", "llm-strategist"],
   hosted: true,
@@ -101,12 +101,12 @@ describe("one dashboard button, when any change is the dashboard's", () => {
     assert.match(p.text, /⚠️ This lets the agent spend real money\./);
   });
 
-  it("a value the chat's own spec refuses is sent to the dashboard, not dropped", () => {
-    // 0 max launch coins means no limit; the chat may not lift a ceiling.
-    const p = proposeManyChanges(requestedChanges("unknown", "", "classMaxPositions=no limit; buyPerTickUsdg=$20"), ctx);
+  it("a value the chat may not apply is sent to the dashboard, not dropped", () => {
+    // A hosted agent may not switch to a strategy it does not offer from chat.
+    const p = proposeManyChanges(requestedChanges("unknown", "", "strategy=even-keel; buyPerTickUsdg=$20"), ctx);
     assert.equal(p.kind, "reply");
     if (p.kind !== "reply") return;
-    assert.deepEqual(decodeProposalLink(p.approve).find((c) => c.key === "classMaxPositions"), { key: "classMaxPositions", value: 0 });
+    assert.deepEqual(decodeProposalLink(p.approve).find((c) => c.key === "strategy"), { key: "strategy", value: "even-keel" });
   });
 });
 

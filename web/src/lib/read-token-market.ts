@@ -110,7 +110,7 @@ export const readTokenMarket = cache(async function readTokenMarket(
     // actually holds. Asked against those, this would report "no market data"
     // for a coin the index had just described in full.
     //
-    // And the panel is EXPENSIVE: building it sweeps the launchpad, makes
+    // And the panel is EXPENSIVE: building it sweeps discovery, makes
     // three chain enrichment reads and runs the scout's model. A token page
     // has no use for any of that and used to wait for all of it.
     const { row, indexUnreachable } = await readPoolFor(addr);

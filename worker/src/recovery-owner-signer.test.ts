@@ -41,7 +41,7 @@ import {
   ownerFromSigner,
   recoverFunds,
 } from "./recover";
-import { robinhoodChain } from "../../packages/core/src/index";
+import { bnbChain } from "../../packages/core/src/index";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const RECOVER = readFileSync(path.join(__dirname, "recover.ts"), "utf8");
@@ -81,7 +81,7 @@ describe("an address-only owner can reconstruct but never authorise", () => {
     await assert.rejects(
       () =>
         recoverFunds({
-          chain: { ...robinhoodChain, rpcUrls: { default: { http: ["http://127.0.0.1:1"] } } } as never,
+          chain: { ...bnbChain, rpcUrls: { default: { http: ["http://127.0.0.1:1"] } } } as never,
           owner: ownerFromAddress(SHOGUN_OWNER),
           bundlerUrl: "http://127.0.0.1:1",
           rpcUrl: "http://127.0.0.1:1",
@@ -163,26 +163,8 @@ describe("what the refactor must not have loosened", () => {
     assert.doesNotMatch(RECOVER_CODE, /paymaster/i, "the recovery engine must not attach a paymaster");
   });
 
-  it("the two-operation shape survives: sweep the vault, re-read, then transfer", () => {
-    const fn = RECOVER_CODE.slice(RECOVER_CODE.indexOf("export async function recoverFunds"));
-    const sweepAt = fn.indexOf('functionName: "sweep"');
-        // AFTER the sweep, deliberately. There is now also a balanceOf BEFORE it —
-    // the fresh vault read that revalidates an approved class leg — so the
-    // first occurrence is no longer the post-sweep re-read.
-    const rereadAt = fn.indexOf('functionName: "balanceOf"', sweepAt);
-    const transferAt = fn.indexOf('functionName: "transfer"');
-    assert.ok(sweepAt >= 0, "UserOp #1 empties the class vault");
-    assert.ok(rereadAt > sweepAt, "then the ACTUAL landed balance is re-read");
-    assert.ok(transferAt > rereadAt, "and only then is UserOp #2 built from it");
-  });
-
-  it("the class holdings still reach the caller, so the disclosure can show them", () => {
-    assert.match(RECOVER_CODE, /classHoldings/, "the plan must carry the vault's contents");
-    assert.match(
-      RECOVER_CODE,
-      /plan\.balances\.length === 0 && nativeSweptWei === 0n && plan\.classHoldings\.length === 0/,
-      "and an account with a funded vault must never be called empty",
-    );
+  it("an account that still has ETH to move is never returned as having nothing", () => {
+    assert.match(RECOVER_CODE, /plan\.balances\.length === 0 && nativeSweptWei === 0n\)/);
   });
 
   it("a Privy owner is still given a way to START recovery", () => {

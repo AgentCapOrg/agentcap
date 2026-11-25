@@ -37,7 +37,7 @@ const held = (over: Partial<Parameters<typeof unreadHeldOf>[0]> = {}) =>
   unreadHeldOf({ unread: [], basisOnRecord: [], vaultTokens: [], watch: WATCH, lastLiveHeld: none, heldThisTick: none, ...over });
 
 describe("classifyBookGaps — which gaps hold the tick", () => {
-  const base = { balances: [] as string[], classVault: [] as string[], positionsReadFailed: false, trencherCashUnread: false, unreadHeld: [] as string[] };
+  const base = { balances: [] as string[], positionsReadFailed: false, trencherCashUnread: false, unreadHeld: [] as string[] };
 
   it("A PER-TOKEN UNREAD HELD COIN NEVER REACHES THE EARLY RETURN — it makes the book incomplete instead", () => {
     const g = classifyBookGaps({ ...base, unreadHeld: ["GATO", "DELTA", "GATO"] });
@@ -46,15 +46,14 @@ describe("classifyBookGaps — which gaps hold the tick", () => {
   });
 
   it("and not beside a whole-book gap either: those hold, the coin is still only incomplete", () => {
-    const g = classifyBookGaps({ ...base, balances: ["cash"], classVault: ["class"], trencherCashUnread: true, unreadHeld: ["GATO"] });
-    assert.deepEqual(g.holdTick, ["cash", "class", TRENCHER_CASH_GAP]);
+    const g = classifyBookGaps({ ...base, balances: ["cash"], trencherCashUnread: true, unreadHeld: ["GATO"] });
+    assert.deepEqual(g.holdTick, ["cash", TRENCHER_CASH_GAP]);
     assert.ok(!g.holdTick.includes("GATO"));
     assert.deepEqual(g.incomplete, ["GATO"]);
   });
 
-  it("whole-book gaps hold the tick, in the order the owner reads them: cash, ETH, the vault, the class vault, the Trencher vault's cash", () => {
+  it("whole-book gaps hold the tick, in the order the owner reads them: cash, ETH, the vault, the Trencher vault's cash", () => {
     assert.deepEqual(classifyBookGaps({ ...base, balances: ["eth", "cash", "vault"] }).holdTick, ["eth", "cash", "vault"]);
-    assert.deepEqual(classifyBookGaps({ ...base, classVault: ["class"] }).holdTick, ["class"]);
     assert.deepEqual(classifyBookGaps({ ...base, trencherCashUnread: true }).holdTick, ["Trencher vault cash"]);
   });
 

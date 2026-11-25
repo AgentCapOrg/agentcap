@@ -1,35 +1,15 @@
 /**
  * Steady Basket — Phase 1's deterministic strategy. No LLM anywhere.
- * DCA a fixed USDG amount into a weighted stock-token basket on a schedule,
- * park idle USDG in the Morpho Steakhouse vault between buys.
+ * DCA a fixed USDG amount into a weighted stock-token basket on a schedule.
  *
  * A Strategy NEVER executes anything. It reads a snapshot and returns intents;
  * the runner pushes each intent through checkPolicy → simulate → execute.
  */
 
 import type { TradeIntent } from "../policy";
-import type { CurveLeg } from "../strategist/proposals";
-import {
-  curveBuyImpactBps,
-  curveBuyOut,
-  curveGraduated,
-  curveMinOut,
-} from "../venues/pons-price";
 import { entryGateFor, lockedLegs } from "../entry-gates";
 import { entryBrake, opsSpent, type Snapshot, type Tick } from "./types";
 import type { Why } from "./reasons";
-
-/**
- * The smallest park worth proposing: one cent, raw USDG (6dp).
- *
- * A RENDERING FLOOR, NOT A RISK SETTING. usdg() prints to two decimals, so any
- * amount below this renders as "0.00 USDG" — and a real intent for an amount
- * the sentence beside it calls zero is how "vault-deposit 0.00 USDG" reached
- * the public feed with a refusal badge on it. Nothing about WHEN cash above the
- * idle floor is parked changes; only that a park must be an amount somebody
- * could see.
- */
-export const MIN_PARK_RAW = 10_000n;
 
 export type { Snapshot };
 
@@ -42,43 +22,15 @@ export interface BasketLeg {
 export interface SteadyBasketConfig {
   legs: BasketLeg[];
   buyPerTickUsdg: bigint;
-  /** Idle USDG above this floor gets deposited to the vault. */
-  idleFloorUsdg: bigint;
-  /** Venue-agnostic: Rialto meta-router or Uniswap SwapRouter02, runner's pick. */
+  /** The swap router, the runner's pick. */
   swapRouter: `0x${string}`;
-  vault: `0x${string}`;
   usdg: `0x${string}`;
-  /**
-   * THE ALWAYS-ON SIDE OF THE CHAIN, for when the always-off side is shut.
-   *
-   * All 24 Chainlink equity feeds go stale at a weekend, so every leg is
-   * skipped and this strategy returns nothing for two days in three. That is
-   * most of what "no trading is being done" meant, and `all-legs-stale` below
-   * was only ever the honest sentence about it.
-   *
-   * SUPPLIED PER TICK, NOT CONFIGURED, because a curve leg carries THIS TICK'S
-   * reserves — the input a slippage floor is derived from, and curve-prices.ts
-   * measures p99 movement at 1,546 bps over 240 seconds. A cached leg is a
-   * floor for a market that has already moved.
-   *
-   * WHAT IS ALREADY TRUE OF ANYTHING IN HERE, before this file sees it: the
-   * owner put its symbol in their basket, their signature covers its address,
-   * the curve is one the worker knows, and the rail is live (paper cannot
-   * simulate a curve trade). `curveLegsNow` enforces all four. This strategy
-   * does not widen that set and cannot — it only decides whether to use it.
-   */
-  curve?: {
-    legs: ReadonlyMap<string, CurveLeg>;
-    tokens: ReadonlyMap<string, `0x${string}`>;
-    slippageBps: number;
-    maxImpactBps: number;
-  } | null;
   /**
    * TAKE A PROFIT WHEN A LEG HAS RUN THIS FAR AHEAD OF WHAT IT COST, in bps.
    * Zero means never, and zero is the default.
    *
    * WHY THIS STRATEGY HAD NO SELL AT ALL. Every intent it could emit was a
-   * buy, a vault deposit or a vault withdrawal — `sellToken` was always cash.
+   * buy — `sellToken` was always cash.
    * An agent on the shipped default could accumulate forever and never realise
    * anything, which is not a strategy anybody chose; it is a strategy nobody
    * noticed was one-way. In production one funded agent bought nine times with
@@ -109,28 +61,16 @@ export function steadyBasketTick(cfg: SteadyBasketConfig, snap: Snapshot): Tick 
   // The budget clamp below fixed "refused again" for the MONEY and left the
   // COUNT exactly as it was: with `maxOpsPerDay` used up and budget to spare,
   // this proposed the same legs every tick and the wall refused every one with
-  // `ops-cap`. So a buy, a park and an unpark are all withheld here — each is
-  // one operation, and none is an exit the wall exempts. The take-profit sell
+  // `ops-cap`. So a buy is withheld here — it is one operation, and not an exit
+  // the wall exempts. The take-profit sell
   // is untouched: the count does not bind it, so neither may this.
   const countSpent = opsSpent(snap);
   // THE DRAWDOWN BREAKER BINDS THE BUYS, and only the buys. Tripped, the wall
-  // refuses every buy and every park with `drawdown-breaker`; the take-profit
-  // and the unpark bring money home, which the breaker never blocks. A held
+  // refuses every buy with `drawdown-breaker`; the take-profit brings money
+  // home, which the breaker never blocks. A held
   // coin whose balance did not read binds them the same way (entryBrake;
   // policy.ts holding-unread).
   const braked = entryBrake(snap) !== undefined;
-
-  // Cash can't cover a buy but the vault can: pull enough back to fund the next
-  // tick's buy plus the liquidity floor. Withdraw-only tick — buys resume next
-  // tick once the cash has actually landed.
-  if (!countSpent && snap.cashUsdg < cfg.buyPerTickUsdg && snap.vaultUsdg > 0n) {
-    const need = cfg.buyPerTickUsdg + cfg.idleFloorUsdg - snap.cashUsdg;
-    const amountUsdg = need > snap.vaultUsdg ? snap.vaultUsdg : need;
-    return {
-      intents: [{ kind: "vault-withdraw", target: cfg.vault, amountUsdg }],
-      why: [{ code: "unpark", usdgRaw: amountUsdg, needRaw: need }],
-    };
-  }
 
   const intents: TradeIntent[] = [];
   // Positionally paired with `intents` — see Tick. Pushed together, always.
@@ -178,7 +118,7 @@ export function steadyBasketTick(cfg: SteadyBasketConfig, snap: Snapshot): Tick 
   let skippedPaused = 0;
   let skippedLocked = 0;
 
-  // ── THE DAY'S BUDGET BINDS THE BUYS, NOT JUST THE SWEEP ──────────────────
+  // ── THE DAY'S BUDGET BINDS THE BUYS ──────────────────────────────────────
   //
   // This loop consulted `snap.cashUsdg` and nothing else, so once the daily cap
   // was spent it proposed the same legs every tick and checkPolicy refused every
@@ -197,7 +137,7 @@ export function steadyBasketTick(cfg: SteadyBasketConfig, snap: Snapshot): Tick 
   // machine built to say why nothing happened could not fire in the commonest
   // way for nothing to happen. Proposing nothing is what lets it speak.
   //
-  // The clamp only ever SHRINKS the proposal, exactly like the sweep's below.
+  // The clamp only ever SHRINKS the proposal.
   // Reported as `idle` at the bottom, not pushed to `why` here — `why` is what
   // the tick DID, and this is the reason it did nothing. Same treatment as
   // `all-legs-stale` and `under-one-buy`.
@@ -257,102 +197,17 @@ export function steadyBasketTick(cfg: SteadyBasketConfig, snap: Snapshot): Tick 
     }
   }
 
-  // A sell consumes turnover headroom but does not spend existing cash. Do not
-  // count its proceeds until they settle, or reserve a full ticket for skipped legs.
-  const cashSpent = intents.reduce((sum, i) => sum +
-    (i.kind === "swap" && i.sellToken === cfg.usdg ? i.sellAmountRaw : 0n), 0n);
-  const idleAfterBuys = snap.cashUsdg - cashSpent;
-  // A deposit is an operation too, and the wall counts it like a buy.
-  if (!countSpent && !braked && idleAfterBuys > cfg.idleFloorUsdg) {
-    const excess = idleAfterBuys - cfg.idleFloorUsdg;
-    // Size the sweep to what the wall will actually take. A deposit is capped at
-    // the DAILY limit (policy.ts), and this tick's buys have already eaten into
-    // today's budget — so proposing the whole excess on a small grant meant the
-    // deposit was rejected every single tick, forever, while the cash never moved.
-    // Sweep what fits now; the rest goes next tick. Nothing here loosens a cap:
-    // the proposal only ever shrinks.
-    const spentOnBuys = intents.reduce(
-      (sum, i) => sum + (i.kind === "swap" ? i.notionalUsdg : 0n),
-      0n,
-    );
-    // ── BUYS KEEP FIRST CLAIM ON THE DAY'S BUDGET ─────────────────────────
-    //
-    // A vault deposit counts toward the daily spend (only withdrawals are
-    // excluded), and this sweep took everything that was left — so on nine
-    // agents the parked cash exactly consumed the cap, and every buy after it
-    // was refused with `daily-cap` until the day rolled. The fit was exact:
-    // vault 483.335 + positions 16.498 against a 500 cap. And because the sweep
-    // repeats daily, those agents were capped permanently.
-    //
-    // Reserving one tick's buy is enough to keep the sleeve alive, and it
-    // LOOSENS NOTHING — the sweep already shrinks itself to what the wall will
-    // take, and this shrinks it slightly further. The cap itself is untouched.
-    const roomToday = snap.spendHeadroomUsdg - spentOnBuys;
-    // THE BUY THE WALL WOULD ACTUALLY TAKE, not the one configured. A tick size
-    // above the per-trade cap is refused whatever the budget says, so reserving
-    // the configured number would hold back cash for a trade that cannot happen.
-    const oneBuy = cfg.buyPerTickUsdg < snap.perTradeCapUsdg ? cfg.buyPerTickUsdg : snap.perTradeCapUsdg;
-    // And if even that does not fit in what is left today, the buy is impossible
-    // today too — reserving for it would strand the cash without enabling
-    // anything, which is the opposite of the point.
-    const reserve = oneBuy <= roomToday ? oneBuy : 0n;
-    const headroom = roomToday > reserve ? roomToday - reserve : 0n;
-    const amountUsdg = excess < headroom ? excess : headroom;
-    // NOT DUST. This was `> 0n`, and a sub-cent excess produced a real intent
-    // for an amount the sentence beside it renders as "0.00 USDG" — the wall
-    // refused it, and the refusal went out as a public post reading
-    // "vault-deposit 0.00 USDG". The floor is the smallest amount usdg() can
-    // print as non-zero; it is a rendering floor, not a risk setting, and it
-    // changes nothing about when cash above the idle floor gets parked.
-    if (amountUsdg >= MIN_PARK_RAW) {
-      intents.push({ kind: "vault-deposit", target: cfg.vault, amountUsdg });
-      // `clamped` when the daily budget cut the sweep short. Saying 'parked the
-      // idle cash' while parking part of it would leave the sentence and the
-      // balance disagreeing in front of the owner.
-      why.push({
-        code: "park",
-        usdgRaw: amountUsdg,
-        floorRaw: cfg.idleFloorUsdg,
-        clamped: amountUsdg < excess,
-      });
-    }
-  }
-
   // NOTHING BOUGHT, AND THE FEEDS ARE WHY.
   //
   // Only reported when the schedule genuinely wanted to buy — cash was
   // sufficient and there were legs — and every one of them was skipped. A tick
   // that bought nothing because it had no cash is a different silence with a
   // different remedy, and saying "the feeds are stale" about it would be
-  // wrong. A sweep to the vault is not a buy, so this still fires beside one:
-  // over a weekend that sweep is the only thing an agent does, and its owner is
-  // still owed the sentence about why.
+  // wrong.
   const bought = intents.some((i) => i.kind === "swap" && i.sellToken === cfg.usdg);
   const shut =
     !bought && buyBudget > 0n && skippedStale + skippedPaused === cfg.legs.length && cfg.legs.length > 0;
 
-  // ── THE 24/7 FALLBACK ────────────────────────────────────────────────
-  //
-  // ONLY WHEN NOTHING ELSE COULD HAVE TRADED. `shut` is the same condition
-  // `all-legs-stale` reports: the schedule genuinely wanted to buy, there was
-  // cash for it, and every single leg was skipped. So this can never displace
-  // an equity buy, never fire on a short-cash tick, and never fire on a Monday.
-  //
-  // Stocks stay the default. This is the owner's own decision — "keep the
-  // basket, add a 24/7 fallback" — and its whole safety argument is that
-  // everything it can reach was already chosen twice: the symbol is in their
-  // basket ("trade it") and the address is in their signature ("you may").
-  // registry.ts calls that pairing deliberately not automatic, and it stays
-  // that way: a coin the owner merely WATCHES is not reachable from here.
-  if (shut && cfg.curve && snap.cashUsdg >= cfg.buyPerTickUsdg) {
-    const pick = pickCurveBuy(cfg, snap);
-    if (pick) {
-      intents.push(pick.intent);
-      why.push(pick.why);
-    }
-  }
-
-  const boughtCurve = intents.some((i) => i.kind === "curve-trade");
   // THE OTHER SILENCE, WHICH HAD NO SENTENCE AT ALL.
   //
   // The comment above `shut` names this case exactly — "a tick that bought
@@ -362,8 +217,7 @@ export function steadyBasketTick(cfg: SteadyBasketConfig, snap: Snapshot): Tick 
   // `skippedPaused` stay 0, so `shut` is false, so `all-legs-stale` cannot
   // fire; and the agent is not `no-cash` either, because only an exact zero
   // blocks the live rail. The owner sees "trading for real — every leg
-  // available" beside an empty tape, forever, on stock defaults (25 USDG a
-  // tick, a 50 USDG idle floor).
+  // available" beside an empty tape, forever.
   //
   // Reported only when there was something it WANTED to buy — no legs
   // configured is a different fact, and the basket screen already says it.
@@ -392,7 +246,7 @@ export function steadyBasketTick(cfg: SteadyBasketConfig, snap: Snapshot): Tick 
   // this list could have bought either, and this is the one that says why.
   const brake = !bought && cfg.legs.length > 0 ? entryBrake(snap) : undefined;
   const idle: Why | undefined = brake ??
-    (shut && !boughtCurve
+    (shut
       ? {
           code: "all-legs-stale",
           legs: cfg.legs.length,
@@ -412,81 +266,8 @@ export function steadyBasketTick(cfg: SteadyBasketConfig, snap: Snapshot): Tick 
             code: "under-one-buy",
             cashRaw: snap.cashUsdg,
             needRaw: cfg.buyPerTickUsdg,
-            // Named because it changes the remedy: with cash in the vault this
-            // clears itself on the unpark, and without it the owner has to act.
-            vaultRaw: snap.vaultUsdg,
           }
         : undefined);
 
   return idle ? { intents, why, idle } : { intents, why };
-}
-
-/**
- * ONE curve buy, or nothing.
- *
- * ONE, deliberately. A tick's budget is `buyPerTickUsdg` and the equity path
- * splits it across weighted legs; splitting it across memecoins would be an
- * allocation policy nobody chose. The highest-conviction thing available is the
- * owner's own basket order, so this takes the first leg that clears every
- * check rather than inventing a ranking.
- *
- * EVERY REFUSAL IS SILENT HERE, and that is right: the tick still reports
- * `all-legs-stale`, which is true and is the sentence the owner needs. A second
- * sentence explaining that a fallback the owner never asked about also declined
- * would be noise on a screen that already says nothing happened.
- */
-function pickCurveBuy(
-  cfg: SteadyBasketConfig,
-  snap: Snapshot,
-): { intent: TradeIntent; why: Why } | null {
-  const curve = cfg.curve;
-  if (!curve) return null;
-
-  for (const [symbol, leg] of curve.legs) {
-    const token = curve.tokens.get(symbol);
-    if (!token) continue;
-    if (snap.pausedTokens.has(token.toLowerCase())) continue;
-    // THE CURVE VENUE'S GATE: a non-class curve trade needs both legs in the
-    // signed grant, and the wall calls a miss `asset-allowlist`. `curveLegsNow`
-    // already filters on the same list, so this is the same answer asked at
-    // the point of the buy — the place a later change to that filter would
-    // otherwise go unnoticed.
-    if (entryGateFor(snap.entryGates, token, "curve")) continue;
-    // NATIVE-QUOTED CURVES ARE UNREACHABLE: the adapter is non-payable and
-    // every wall permission carries valueLimit 0. Same refusal proposals.ts
-    // makes, for the same reason.
-    if (/^0x0{40}$/i.test(leg.quoteToken)) continue;
-    // Only a USDG-quoted curve is one hop from the agent's cash.
-    if (leg.quoteToken.toLowerCase() !== cfg.usdg.toLowerCase()) continue;
-    // A graduated curve has a pool now; buying it belongs on the swap path.
-    if (curveGraduated(leg.reserves)) continue;
-
-    const amountInRaw = cfg.buyPerTickUsdg;
-    // THE IMPACT CEILING, on the producer, because this is where the reserves
-    // are. The executor holds only an intent, and reading them again would be a
-    // second read of a market that has already moved.
-    const impact = curveBuyImpactBps(leg.reserves, amountInRaw);
-    if (impact !== null && impact > curve.maxImpactBps) continue;
-
-    const quoted = curveBuyOut(leg.reserves, amountInRaw);
-    if (quoted === null) continue;
-    const minAmountOutRaw = curveMinOut(quoted, curve.slippageBps);
-    // NO FLOOR, NO TRADE. Sizing it blind is how a fill lands at any price.
-    if (minAmountOutRaw === null || minAmountOutRaw <= 0n) continue;
-
-    return {
-      intent: {
-        kind: "curve-trade",
-        target: leg.adapter,
-        curve: leg.curve,
-        assetIn: cfg.usdg,
-        assetOut: token,
-        amountInRaw,
-        minAmountOutRaw,
-        notionalUsdg: amountInRaw,
-      },
-      why: { code: "stale-fallback", symbol, usdgRaw: amountInRaw, legs: cfg.legs.length },
-    };
-  }
-  return null;
 }

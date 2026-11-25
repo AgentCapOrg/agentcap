@@ -8,7 +8,7 @@
  *   0x0e1ca0…                            a lone USDG transfer
  *
  * The receipts are Shogun's own, read from the public chain (Robinhood Chain
- * 4663): the Trencher sell at 2026-10-04 00:01:25 (tx 0x7a5bc1cc…), the
+ * 56): the Trencher sell at 2026-10-04 00:01:25 (tx 0x7a5bc1cc…), the
  * enable-mode buy at 00:00:47 (tx 0x8ca94fe3…) and an owner's root-key
  * operation at 2026-10-03 22:04:17 (tx 0xf7236957…). Which of Shogun's
  * operations Postgres actually lacks is for the preview to say; the shape is
@@ -27,7 +27,7 @@ import { PAPER_CHECKPOINT_SCHEMA } from "./paper-checkpoint";
 import { ensureLedgerResumeSchema, LEDGER_IMPORT_SCHEMA } from "./ledger-import";
 import { gasFields } from "./key-install-accounting";
 import { CHAIN_REFUSAL, chainGapCheck, knownChainFacts, resumePreconditions } from "./ledger-resume";
-import { CASH, GRANT_PONS_CLASS, GRANT_TRENCHER, AGENTCAP_TOKEN } from "../../packages/core/src/index";
+import { CASH, GRANT_TRENCHER } from "../../packages/core/src/index";
 import type { RpcCall } from "./chain-capital";
 import {
   APPLY_FORMAT, applyBooking, BOOKINGS_TABLE, BookingRefused, canonical, commitEvidence, currentXact, digestOf, factsStillMissing, gapChainOf, holdingVerdict, isServerXact,
@@ -35,6 +35,11 @@ import {
   stampCommitOutcome, staleBasisVerdict, TRADE_COLUMNS, walkFills, xactStatusOf, type ApplyReport, type BookingPlan, type Holdings, type RecordedFill, type StaleBasis,
   type XactStatus,
 } from "./chain-gap-booking";
+
+import { bnbCashTx, usdt } from "./testdata/bnb-cash";
+
+// The feature marker older stored grant rows carry.
+const GRANT_PONS_CLASS = "pons-class";
 
 // ── the public chain, as read ────────────────────────────────────────────────
 
@@ -97,7 +102,7 @@ const SHOGUN_TENANT = "0x8e93bad5a60a266b4283855ceffa0979720aed72";
 const ACCOUNT = "0x05a198a677fbcd8f5c168d397fa7ef5eb6d65487";
 const VAULT = "0x2ca2b5bd3b6635d630419c57a13c6b6a856ec96d";
 const COIN = "0xaa07a0e9209e16ac99708c3ec70159c6ef3128a3";
-const USDG = String(CASH.USDG).toLowerCase();
+const USDG = String(CASH.USDT).toLowerCase();
 const EP = "0x0000000071727de22e5e9d8baf0edac6f37da032";
 const UOE = "0x49628fd1471006c1482da88028e9ce4dbb080b815c9b0344d39e5a8e6ec1419f";
 const BEFORE = "0xbb47ee3e183a558b1a2ff0874b079f3fc5478b7454eacf2bfc5af2ff5878f972";
@@ -117,7 +122,7 @@ const SOURCE = { files: { "chain-gap-booking.ts": "test" } }, TARGET = "test-dat
 
 /** A transaction in the fake chain's model: its block, its receipt's logs. */
 interface ModelTx { tx: string; block: bigint; blockHash?: string; timestamp?: number; from: string; to: string | null; status?: string; logs: FixtureLog[] }
-const fromFixture = (f: FixtureTx): ModelTx => ({ tx: f.tx, block: BigInt(f.block), blockHash: f.blockHash, timestamp: f.timestamp, from: f.from, to: f.to, logs: f.logs });
+const fromFixture = (f: FixtureTx): ModelTx => bnbCashTx({ tx: f.tx, block: BigInt(f.block), blockHash: f.blockHash, timestamp: f.timestamp, from: f.from, to: f.to, logs: f.logs });
 
 /**
  * A JSON-RPC answering from one model: blocks dated at ten a second around the
@@ -142,7 +147,7 @@ function fakeRpc(o: {
   const logsOf = (t: ModelTx) => t.logs.map(([address, topics, data, logIndex]) => ({ address, topics, data, logIndex, blockNumber: `0x${t.block.toString(16)}`, transactionHash: t.tx }));
   const rpc: RpcCall = async (method, params) => {
     calls.push(method);
-    if (method === "eth_chainId") return `0x${(o.chainId ?? 4663).toString(16)}`;
+    if (method === "eth_chainId") return `0x${(o.chainId ?? 56).toString(16)}`;
     if (method === "eth_blockNumber") return `0x${head.toString(16)}`;
     if (method === "eth_getBlockByNumber") return blockOf(BigInt(params[0] as string));
     if (method === "eth_getLogs") {
@@ -196,7 +201,7 @@ function refuse(raw: DatabaseSync, o: { tenant: string; account: string; id?: st
   const reason = o.reason ?? `${CHAIN_REFUSAL}: operation ${SELL_OP} in tx ${CHAIN.sell.tx} at block ${SELL_BLOCK}`;
   const chain = (o.state ?? "refused") === "refused" && reason.startsWith(CHAIN_REFUSAL);
   raw.prepare(`INSERT INTO ledger_resume_approvals (approval_id, tenant, smart_account, chain_id, owner, evidence_digest, evidence_json, preview_run, state, generation,
-      reason, created_at_ms, updated_at_ms, chain_read_from_sec) VALUES (?, ?, ?, 4663, ?, ?, '{}', 'r', ?, ?, ?, ?, ?, ?)`)
+      reason, created_at_ms, updated_at_ms, chain_read_from_sec) VALUES (?, ?, ?, 56, ?, ?, '{}', 'r', ?, ?, ?, ?, ?, ?)`)
     .run(o.id ?? "refusal", o.tenant, o.account, o.tenant, h32(`evidence ${o.id ?? "refusal"}`).slice(2), o.state ?? "refused", o.generation ?? null,
       reason, at - 60_000, at, chain ? (o.readFromSec === undefined ? CHAIN.root.timestamp - 3600 - 600 : o.readFromSec) : null);
 }
@@ -213,17 +218,17 @@ async function books(o: { tenant?: string; account?: string; trencher?: boolean;
   await applyLedgerSchema(db); await db.exec(MIRROR_STATE_DDL); await db.exec(PAPER_CHECKPOINT_SCHEMA);
   raw.exec("CREATE TABLE grants(tenant TEXT PRIMARY KEY, grant_json TEXT NOT NULL, updated_at INTEGER NOT NULL, row_version INTEGER NOT NULL)");
   raw.prepare("INSERT INTO grants VALUES (?, ?, 1000, 1)").run(tenant, JSON.stringify({
-    smartAccount: account, owner: tenant, chainId: 4663, serialized: "never-read",
+    smartAccount: account, owner: tenant, chainId: 56, serialized: "never-read",
     grantFeatures: [...(o.trencher === false ? ["tradeable-v2"] : ["tradeable-v2", GRANT_TRENCHER]), ...(o.classVault ? [GRANT_PONS_CLASS] : [])],
     trencherVaultAddress: VAULT, trencherFactoryAddress: addr(0xfac7), ...(o.classVault ? { ponsClassVaultAddress: o.classVault } : {}),
   }));
   raw.prepare(`INSERT INTO agents (smart_account, owner_address, session_key_address, chain_id, caps, granted_at, expires_at, status, epoch, hwm_usdg, mode)
-    VALUES (?, ?, ?, 4663, '{}', 1, 9999999999, 'armed', 2, 25, ?)`).run(account, tenant, addr(1), o.mode ?? "live");
+    VALUES (?, ?, ?, 56, '{}', 1, 9999999999, 'armed', 2, 25, ?)`).run(account, tenant, addr(1), o.mode ?? "live");
   raw.prepare(`INSERT INTO agents (smart_account, owner_address, session_key_address, chain_id, caps, granted_at, expires_at, status, epoch, hwm_usdg, mode)
-    VALUES (?, ?, ?, 4663, '{}', 1, 9999999999, 'armed', 1, 0, 'live')`).run(addr(0x0ca1), addr(0x0ca2), addr(1));
+    VALUES (?, ?, ?, 56, '{}', 1, 9999999999, 'armed', 1, 0, 'live')`).run(addr(0x0ca1), addr(0x0ca2), addr(1));
   const opened = CHAIN.sell.timestamp - 3 * 86_400;
   raw.prepare(`INSERT INTO flows (agent_id, direction, amount_usdg, tx_hash, block_number, log_index, source, at, epoch, chain_id)
-    VALUES (?, 'in', 25, ?, 70000000, 3, 'chain-log', ?, 2, 4663)`).run(account, h32("first deposit"), opened);
+    VALUES (?, 'in', 25, ?, 70000000, 3, 'chain-log', ?, 2, 56)`).run(account, h32("first deposit"), opened);
   raw.prepare("INSERT INTO equity (agent_id, eth_wei, cash_usdg, vault_usdg, positions_usdg, equity_usdg, at, epoch, mode) VALUES (?, '0', 20, 0, 5, 25, ?, 2, 'live')")
     .run(account, CHAIN.sell.timestamp - 7200);
   if (o.knownBuy !== false) {
@@ -254,9 +259,9 @@ const CONTROLS = { readable: true, why: null, digest: "c".repeat(64) };
 const preconditions = (b: { db: Db; tenant: string; account: string }) =>
   resumePreconditions(b.db, { tenant: b.tenant, account: b.account, grantAccount: b.account, nowSec: NOW, controls: CONTROLS, homePendingImport: false });
 
-/** A synthetic plain USDG transfer: no EntryPoint, one Transfer log. */
+/** A synthetic plain USDT transfer, `amount` in micro-USDT: no EntryPoint, one Transfer log. */
 function lone(o: { from: string; to: string; amount: bigint; block: bigint; tag: string; sender?: string }): ModelTx {
-  return { tx: h32(o.tag), block: o.block, from: o.sender ?? o.from, to: USDG, logs: [[USDG, [TR, topic(o.from), topic(o.to)], `0x${word(o.amount)}`, "0x4"]] };
+  return { tx: h32(o.tag), block: o.block, from: o.sender ?? o.from, to: USDG, logs: [[USDG, [TR, topic(o.from), topic(o.to)], `0x${word(usdt(o.amount))}`, "0x4"]] };
 }
 /** A synthetic operation of the account: BeforeExecution, its execution's logs, its event. */
 function operation(o: { opHash: string; nonce: bigint; success?: boolean; paymaster?: string; gasWei?: bigint; gasUnits?: bigint; block: bigint; tag: string; logs?: FixtureLog[] }): ModelTx {
@@ -383,22 +388,16 @@ describe("0x4b6dcd's shape: an operation with no USDG leg", () => {
 
   it("a session key moving USDG with nothing back, and an unmeasured validator, are unresolved", async () => {
     const b = await books();
-    const out: FixtureLog = [USDG, [TR, topic(ACCOUNT), topic(addr(0xbeef))], `0x${word(1_000_000n)}`, "0x2"];
+    const out: FixtureLog = [USDG, [TR, topic(ACCOUNT), topic(addr(0xbeef))], `0x${word(usdt(1_000_000n))}`, "0x2"];
     const { rpc } = fakeRpc({ txs: [fromFixture(CHAIN.buy),
       operation({ opHash: h32("home"), nonce: SESSION_NONCE, block: SELL_BLOCK + 30n, tag: "home", logs: [out] }),
       operation({ opHash: h32("odd"), nonce: (0x0003n << 240n) | 1n, block: SELL_BLOCK + 40n, tag: "odd" })] });
     const p = await preview(b, rpc);
     assert.equal(p.verdict, "blocked");
     const home = p.items.find((i) => i.key === `op:${h32("home")}`)!;
-    assert.match(home.why, /a transfer home or an energy purchase books a flow beside its row/);
+    assert.match(home.why, /a transfer home books a flow beside its row/);
     assert.equal(p.items.find((i) => i.key === `log:${h32("home")}#2`)?.class, "unresolved");
     assert.match(p.items.find((i) => i.key === `op:${h32("odd")}`)!.why, /names no validator this tool reads/);
-    // An energy purchase is a clean USDG-for-one-token receipt and still not a trade: its flow moves both peaks.
-    const reserve = AGENTCAP_TOKEN.address.toLowerCase();
-    const energy = await preview(await books(), fakeRpc({ txs: [fromFixture(CHAIN.buy), operation({ opHash: h32("energy"), nonce: SESSION_NONCE, block: SELL_BLOCK + 50n, tag: "energy",
-      logs: [[USDG, [TR, topic(ACCOUNT), topic(addr(0x9001))], `0x${word(2_000_000n)}`, "0x2"], [reserve, [TR, topic(addr(0x9001)), topic(ACCOUNT)], `0x${word(77n)}`, "0x3"]] })] }).rpc);
-    assert.equal(energy.verdict, "blocked");
-    assert.match(energy.items.find((i) => i.key === `op:${h32("energy")}`)!.why, /energy purchase .* 'energy-buy' flow that moves both peaks/);
   });
 });
 
@@ -413,7 +412,7 @@ describe("owner records, as admission reads them", () => {
   const record = (raw: DatabaseSync, o: { disposition: "acknowledged" | "review"; tenant?: string }) =>
     raw.prepare(`INSERT INTO owner_operations (tenant, agent_id, chain_id, user_op_hash, tx_hash, block_number, block_time, log_index, nonce, validator, disposition, review_reason,
         usdg_legs_json, covers_logs_json, token_moves_json, paymaster, gas_wei, source, recorded_epoch, created_at)
-      VALUES (?, ?, 4663, ?, ?, ?, ?, 69, '0x0', 'root', ?, ?, '[]', '[]', '[]', ?, '1', 'arm-reconcile', 2, ?)`)
+      VALUES (?, ?, 56, ?, ?, ?, ?, 69, '0x0', 'root', ?, ?, '[]', '[]', '[]', ?, '1', 'arm-reconcile', 2, ?)`)
       .run(o.tenant ?? SHOGUN_TENANT, ACCOUNT, ROOT_OP, CHAIN.root.tx, Number(BigInt(CHAIN.root.block)), CHAIN.root.timestamp, o.disposition,
         o.disposition === "review" ? "segment-unread" : null, addr(0), CHAIN.root.timestamp + 60);
 
@@ -433,7 +432,7 @@ describe("owner records, as admission reads them", () => {
     const p = await preview(b, fakeRpc({ txs: [fromFixture(CHAIN.buy), fromFixture(CHAIN.root)] }).rpc);
     assert.equal(p.verdict, "blocked");
     assert.deepEqual(p.items.map((i) => [i.key, i.class]), [[`op:${ROOT_OP}`, "owner-operation"]]);
-    assert.deepEqual(p.items[0]!.evidence.ownerRecord, [{ disposition: "review", reviewReason: "segment-unread", tenant: SHOGUN_TENANT, chainId: 4663, txHash: CHAIN.root.tx }]);
+    assert.deepEqual(p.items[0]!.evidence.ownerRecord, [{ disposition: "review", reviewReason: "segment-unread", tenant: SHOGUN_TENANT, chainId: 56, txHash: CHAIN.root.tx }]);
     assert.equal((p.items[0]!.evidence.ownerReading as { disposition: string }).disposition, "acknowledged", "what the receipt says, beside what the row says");
     assert.match(p.items[0]!.why, /Postgres holds an owner record for it \(review: segment-unread\), and admission did not take it as an answer/);
     assert.equal(p.items[0]!.proposal, null, "and the tool never books an owner's operation");
@@ -452,10 +451,10 @@ describe("owner records, as admission reads them", () => {
     const op = h32("owner withdrew while no worker ran");
     const eoa = addr(0xe0e0);
     const ROOT = (0x845adb2c711129d4f3966735ed98a9f09fc4ce57n << 64n) | 9n;
-    const withdraw = operation({ opHash: op, nonce: ROOT, block: SELL_BLOCK + 60n, tag: "owner withdraw", logs: [[USDG, [TR, topic(ACCOUNT), topic(eoa)], `0x${word(7_000_000n)}`, "0x2"]] });
+    const withdraw = operation({ opHash: op, nonce: ROOT, block: SELL_BLOCK + 60n, tag: "owner withdraw", logs: [[USDG, [TR, topic(ACCOUNT), topic(eoa)], `0x${word(usdt(7_000_000n))}`, "0x2"]] });
     b.raw.prepare(`INSERT INTO owner_operations (tenant, agent_id, chain_id, user_op_hash, tx_hash, block_number, block_time, log_index, nonce, validator, disposition, review_reason,
         usdg_legs_json, covers_logs_json, token_moves_json, paymaster, gas_wei, source, recorded_epoch, created_at)
-      VALUES (?, ?, 4663, ?, ?, ?, 1, 3, '0x0', 'root', 'acknowledged', NULL, '[]', '[]', '[]', ?, '1', 'arm-reconcile', 2, 1)`)
+      VALUES (?, ?, 56, ?, ?, ?, 1, 3, '0x0', 'root', 'acknowledged', NULL, '[]', '[]', '[]', ?, '1', 'arm-reconcile', 2, 1)`)
       .run(SHOGUN_TENANT, ACCOUNT, op, withdraw.tx, Number(withdraw.block), addr(0));
     const p = await preview(b, fakeRpc({ txs: [fromFixture(CHAIN.buy), withdraw] }).rpc);
     assert.equal(p.verdict, "blocked", planLines(p).join("\n"));
@@ -467,7 +466,7 @@ describe("owner records, as admission reads them", () => {
     assert.match(item.why, /This tool books no owner's capital leg/);
     assert.doesNotMatch(item.why, /its row's tx hash differs/, "no trade row is involved, and the reason never says one is");
     assert.equal(item.evidence.ownerOperation, op);
-    assert.deepEqual({ ...(item.evidence.ownerLeg as object) }, { logIndex: 2, from: ACCOUNT, to: eoa, amountRaw: "7000000", kind: "capital-out", rule: "no-pair-external",
+    assert.deepEqual({ ...(item.evidence.ownerLeg as object) }, { logIndex: 2, from: ACCOUNT, to: eoa, amountRaw: "7000000000000000000", kind: "capital-out", rule: "no-pair-external",
       answeredBy: "flow" });
   });
 
@@ -504,7 +503,7 @@ describe("0x0e1ca0's shape: a lone USDG transfer", () => {
     assert.equal(p.verdict, "ready", planLines(p).join("\n"));
     assert.equal(p.items[0]!.class, "deposit");
     assert.deepEqual(p.items[0]!.proposal, { table: "flows", row: { agent_id: ACCOUNT, direction: "in", amount_usdg: 12.5, tx_hash: dep.tx,
-      block_number: Number(dep.block), log_index: 4, source: "chain-log", epoch: 2, chain_id: 4663, at: CHAIN.sell.timestamp + 100 } });
+      block_number: Number(dep.block), log_index: 4, source: "chain-log", epoch: 2, chain_id: 56, at: CHAIN.sell.timestamp + 100 } });
     assert.ok(p.warnings.some((w) => /without moving agents\.hwm_usdg/.test(w)), "the peaks are said not to move");
   });
 
@@ -539,7 +538,7 @@ describe("what is never booked, whatever its class", () => {
     assert.match(q.items[0]!.why, /before accounting epoch 2 opened/);
     // A USDG transfer of the account outside the sell's own execution: a row for the sell would cover it unbooked.
     const sell = fromFixture(CHAIN.sell);
-    sell.logs = [...sell.logs, [USDG, [TR, topic(addr(0xd0d0)), topic(ACCOUNT)], `0x${word(9n)}`, "0x20"]];
+    sell.logs = [...sell.logs, [USDG, [TR, topic(addr(0xd0d0)), topic(ACCOUNT)], `0x${word(usdt(9n))}`, "0x20"]];
     const r = await preview(await books(), fakeRpc({ txs: [fromFixture(CHAIN.buy), sell], decimals: { [COIN]: 18n } }).rpc);
     assert.equal(r.verdict, "blocked");
     assert.match(r.items.find((i) => i.key === `op:${SELL_OP}`)!.why, /1 USDG transfer\(s\) of the account outside this operation's execution/);
@@ -553,14 +552,14 @@ describe("what is never booked, whatever its class", () => {
     const b = await books();
     await ensureLedgerResumeSchema(b.db);
     b.raw.prepare(`INSERT INTO ledger_resume_approvals (approval_id, tenant, smart_account, chain_id, owner, evidence_digest, evidence_json, preview_run, state, created_at_ms, updated_at_ms)
-      VALUES ('a', ?, ?, 4663, ?, ?, '{}', 'r', 'approved', 1, 1)`).run(SHOGUN_TENANT, ACCOUNT, SHOGUN_TENANT, "e".repeat(64));
+      VALUES ('a', ?, ?, 56, ?, ?, '{}', 'r', 'approved', 1, 1)`).run(SHOGUN_TENANT, ACCOUNT, SHOGUN_TENANT, "e".repeat(64));
     const p = await preview(b, fakeRpc({ txs, decimals: { [COIN]: 18n } }).rpc);
     assert.equal(p.verdict, "blocked");
     assert.ok(p.refusals.some((r) => r.includes(`AGENTCAP_RESUME_REVOKE=${SHOGUN_TENANT}:${"e".repeat(64)}`)), p.refusals.join("; "));
     const c = await books();
     c.raw.prepare("INSERT INTO cost_basis VALUES (?, 'live', 'COIN', '1', '1', 1)").run(ACCOUNT.toUpperCase().replace("0X", "0x"));
     assert.ok((await preview(c, fakeRpc({ txs }).rpc)).refusals.some((r) => /spelled 2 ways/.test(r)));
-    assert.ok((await preview(await books(), fakeRpc({ txs, chainId: 46630 }).rpc)).refusals.some((r) => /serves chain 46630/.test(r)));
+    assert.ok((await preview(await books(), fakeRpc({ txs, chainId: 97 }).rpc)).refusals.some((r) => /serves chain 97/.test(r)));
     const down: RpcCall = async (m) => { if (m === "eth_chainId") return "0x1237"; throw new Error("rpc-read-failed"); };
     const d = await preview(await books(), down);
     assert.equal(d.verdict, "blocked");
@@ -622,7 +621,7 @@ describe("apply and revert", () => {
     assert.equal(rows(b.raw, "SELECT COUNT(*) AS n FROM trades WHERE user_op_hash = ?", SELL_OP)[0]!.n, 1);
     // And the receipts' own key refuses a second applied booking of the same evidence outright.
     assert.throws(() => b.raw.prepare(`INSERT INTO ${BOOKINGS_TABLE} (booking_id, tenant, account, epoch, chain_id, evidence_key, table_name, row_id, row_json, row_digest,
-      preview_digest, backup_ref, admission_json, state, applied_at_ms) VALUES ('x', ?, ?, 2, 4663, ?, 'trades', 1, '{}', 'd', 'p', 'b', '{}', 'applied', 1)`)
+      preview_digest, backup_ref, admission_json, state, applied_at_ms) VALUES ('x', ?, ?, 2, 56, ?, 'trades', 1, '{}', 'd', 'p', 'b', '{}', 'applied', 1)`)
       .run(SHOGUN_TENANT, ACCOUNT, `op:${SELL_OP}`), /UNIQUE/);
     // Each receipt keeps where the tenant stood with admission, as the report does: the chain refusal that held it, and nothing since.
     const kept = rows(b.raw, `SELECT DISTINCT admission_json FROM ${BOOKINGS_TABLE} WHERE booking_id = ?`, report.bookingId);
@@ -654,7 +653,7 @@ describe("apply and revert", () => {
       ...tx, exec: tx.exec.bind(tx), tx: tx.tx.bind(tx),
       prepare(sql: string) {
         if (/^INSERT INTO flows/.test(sql)) b.raw.prepare(`INSERT INTO flows (agent_id, direction, amount_usdg, tx_hash, block_number, log_index, source, epoch, chain_id, at)
-          VALUES (?, 'in', 12.5, ?, 1, 4, 'chain-log', 2, 4663, 1)`).run(ACCOUNT, p.items.find((i) => i.proposal?.table === "flows")!.proposal!.row.tx_hash);
+          VALUES (?, 'in', 12.5, ?, 1, 4, 'chain-log', 2, 56, 1)`).run(ACCOUNT, p.items.find((i) => i.proposal?.table === "flows")!.proposal!.row.tx_hash);
         return tx.prepare(sql);
       },
     })) } as Db;
@@ -688,7 +687,7 @@ describe("apply and revert", () => {
     b.raw.prepare("UPDATE trades SET realized_pnl_usdg = NULL WHERE user_op_hash = ?").run(SELL_OP);
     await ensureLedgerResumeSchema(b.db);
     b.raw.prepare(`INSERT INTO ledger_resume_approvals (approval_id, tenant, smart_account, chain_id, owner, evidence_digest, evidence_json, preview_run, state, created_at_ms, updated_at_ms)
-      VALUES ('a', ?, ?, 4663, ?, ?, '{}', 'r', 'registered', ?, ?)`).run(SHOGUN_TENANT, ACCOUNT, SHOGUN_TENANT, "e".repeat(64), NOW * 1000 + 1, NOW * 1000 + 1);
+      VALUES ('a', ?, ?, 56, ?, ?, '{}', 'r', 'registered', ?, ?)`).run(SHOGUN_TENANT, ACCOUNT, SHOGUN_TENANT, "e".repeat(64), NOW * 1000 + 1, NOW * 1000 + 1);
     await assert.rejects(revertBooking(b.db, report, { nowMs: NOW * 1000, dialect: "sqlite" }), (e: unknown) => (e as BookingRefused).code === "admitted");
     assert.equal(rows(b.raw, "SELECT COUNT(*) AS n FROM trades WHERE user_op_hash = ?", SELL_OP)[0]!.n, 1, "nothing changed");
     const tampered = { ...report, rows: report.rows.map((r) => ({ ...r, id: r.id + 1 })) };
@@ -908,7 +907,7 @@ describe("only a held tenant is booked (holdOf)", () => {
       // The deposit's sender registers as a hosted account of its own (while the chain is read, say): the classifier now reads that
       // transfer as internal, never a deposit, and nothing of this tenant's rows moved. Only the fleet's accounts, by digest, see it.
       ["the deposit's sender registered as a hosted account", (b) => b.raw.prepare(`INSERT INTO agents (smart_account, owner_address, session_key_address, chain_id, caps,
-        granted_at, expires_at, status, epoch, hwm_usdg, mode) VALUES (?, ?, ?, 4663, '{}', 1, 9999999999, 'armed', 1, 0, 'paper')`).run(addr(0xd0d0), addr(0xd0d1), addr(1))],
+        granted_at, expires_at, status, epoch, hwm_usdg, mode) VALUES (?, ?, ?, 56, '{}', 1, 9999999999, 'armed', 1, 0, 'paper')`).run(addr(0xd0d0), addr(0xd0d1), addr(1))],
     ];
     for (const [what, wake] of wakes) {
       const b = await books();
@@ -938,7 +937,7 @@ describe("a trade only where the seed already holds what the chain does (holding
   const snapshot = (b: Books, o: { positionAt: number; basisAt?: number | null; raw?: bigint }) => {
     b.raw.prepare(`INSERT INTO positions (agent_id, symbol, token, raw_balance, ui_multiplier, price_usd, price_stale, price_source, value_usdg, updated_at)
       VALUES (?, 'COIN', ?, ?, '1', 1, 0, 'pool', 1, ?)`).run(ACCOUNT, COIN, (o.raw ?? 1000n).toString(), o.positionAt);
-    if (o.basisAt !== null) b.raw.prepare("INSERT INTO cost_basis VALUES (?, 'live', 'COIN', ?, '5000000', ?)").run(ACCOUNT, (o.raw ?? 1000n).toString(), o.basisAt ?? o.positionAt);
+    if (o.basisAt !== null) b.raw.prepare("INSERT INTO cost_basis VALUES (?, 'live', 'COIN', ?, ?, ?)").run(ACCOUNT, (o.raw ?? 1000n).toString(), usdt(5_000_000n).toString(), o.basisAt ?? o.positionAt);
   };
   /** The 1000 that snapshot says, held in the Trencher vault at the pinned block. */
   const inVault = { balances: { [COIN]: { [VAULT]: 1000n } } };
@@ -969,7 +968,7 @@ describe("a trade only where the seed already holds what the chain does (holding
     assert.equal(p.capture.balanceBlock, (HEAD - 64n).toString());
     // A lot held ← the missed sell of one ← the buy of one ← the earlier buy of one, from flat; and (2 lots, 10 USDG) less half is the basis's cost exactly.
     assert.deepEqual([holding.fills.verdict, holding.fills.anchor], ["reproduced", "before every fill Postgres records in the token"]);
-    assert.deepEqual(holding.cost, { verdict: "replayed", why: null, basis: { qtyRaw: LOT.toString(), costUsdg: "5000000" } });
+    assert.deepEqual(holding.cost, { verdict: "replayed", why: null, basis: { qtyRaw: LOT.toString(), costUsdg: "5000000000000000000" } });
     assert.ok(!p.warnings.some((w) => /could not be walked/.test(w)), p.warnings.join("\n"));
   });
 
@@ -1068,8 +1067,8 @@ describe("the snapshot's contents against the chain, never its timestamps alone"
   /** A session key's swap of TOKEN against USDG, on chain: the missed one. */
   const swap = (o: { tag: string; side: "buy" | "sell"; qty: bigint; cash: bigint; block: bigint }) => operation({ opHash: h32(o.tag), nonce: SESSION_NONCE, block: o.block,
     tag: o.tag, logs: o.side === "buy"
-      ? [[USDG, [TR, topic(ACCOUNT), topic(POOL)], `0x${word(o.cash)}`, "0x2"], [TOKEN, [TR, topic(POOL), topic(ACCOUNT)], `0x${word(o.qty)}`, "0x3"]]
-      : [[TOKEN, [TR, topic(ACCOUNT), topic(POOL)], `0x${word(o.qty)}`, "0x2"], [USDG, [TR, topic(POOL), topic(ACCOUNT)], `0x${word(o.cash)}`, "0x3"]] });
+      ? [[USDG, [TR, topic(ACCOUNT), topic(POOL)], `0x${word(usdt(o.cash))}`, "0x2"], [TOKEN, [TR, topic(POOL), topic(ACCOUNT)], `0x${word(o.qty)}`, "0x3"]]
+      : [[TOKEN, [TR, topic(ACCOUNT), topic(POOL)], `0x${word(o.qty)}`, "0x2"], [USDG, [TR, topic(POOL), topic(ACCOUNT)], `0x${word(usdt(o.cash))}`, "0x3"]] });
   /** An ordinary fill Postgres holds, as the executor writes it; `cash` in micro-USDG, as fill_cash_usdg carries it (none when not given). */
   const recorded = (b: Books, o: { tag: string; side: "buy" | "sell"; qty: bigint; at: number; cash?: bigint; basisSource?: string; status?: string }) =>
     b.raw.prepare(`INSERT INTO trades (agent_id, kind, target, sell_token, buy_token, amount_usdg, user_op_hash, tx_hash, status, created_at, epoch,
@@ -1089,7 +1088,7 @@ describe("the snapshot's contents against the chain, never its timestamps alone"
     b.raw.prepare(`INSERT INTO positions (agent_id, symbol, token, raw_balance, ui_multiplier, price_usd, price_stale, price_source, value_usdg, updated_at)
       VALUES (?, 'TKN', ?, ?, '1', 1, 0, 'pool', 1, ?)`).run(ACCOUNT, TOKEN, o.raw.toString(), o.at + 5);
     if (o.basisQty !== null) {
-      b.raw.prepare("INSERT INTO cost_basis VALUES (?, 'live', 'TKN', ?, ?, ?)").run(ACCOUNT, o.basisQty.toString(), (o.cost ?? 1_000_000n).toString(), o.at);
+      b.raw.prepare("INSERT INTO cost_basis VALUES (?, 'live', 'TKN', ?, ?, ?)").run(ACCOUNT, o.basisQty.toString(), usdt(o.cost ?? 1_000_000n).toString(), o.at);
     }
   };
   const T0 = CHAIN.sell.timestamp + 100, MISSED = SELL_BLOCK + 2_000n, MISSED_AT = CHAIN.sell.timestamp + 200, T2 = CHAIN.sell.timestamp + 300;
@@ -1125,7 +1124,7 @@ describe("the snapshot's contents against the chain, never its timestamps alone"
     // 150 held ← the later buy of 50 ← the missed buy of 100, from flat; and 100 + 50 USDG is the basis's cost exactly.
     const { fills, cost } = holdingOf(holds, "missed buy");
     assert.deepEqual([fills.verdict, fills.anchor], ["reproduced", "before every fill Postgres records in the token"]);
-    assert.deepEqual(cost, { verdict: "replayed", why: null, basis: { qtyRaw: (150n * E18).toString(), costUsdg: "150000000" } });
+    assert.deepEqual(cost, { verdict: "replayed", why: null, basis: { qtyRaw: (150n * E18).toString(), costUsdg: "150000000000000000000" } });
     assert.ok(!holds.warnings.some((w) => /0x0+70c3:/.test(w)), holds.warnings.join("\n"));
 
     // The same, with the later buy's cash not on record: every quantity agrees, and the trades are all buys — but the cost cannot be replayed,
@@ -1159,7 +1158,7 @@ describe("the snapshot's contents against the chain, never its timestamps alone"
     assert.equal(holds.verdict, "ready", planLines(holds).join("\n"));
     // 30 held ← the later sell ← the missed sell ← the first buy, from flat; and 30 at 30 USDG is the basis exactly.
     assert.equal(holdingOf(holds, "missed sell").fills.verdict, "reproduced");
-    assert.deepEqual(holdingOf(holds, "missed sell").cost.basis, { qtyRaw: (30n * E18).toString(), costUsdg: "30000000" });
+    assert.deepEqual(holdingOf(holds, "missed sell").cost.basis, { qtyRaw: (30n * E18).toString(), costUsdg: "30000000000000000000" });
     // The trades booked here are all sells, and the quantities all agree — but with the buy's cash not on record, the cost is unproven.
     const unreplayed = await run(30n * E18, { cash: false });
     assert.equal(unreplayed.verdict, "blocked", planLines(unreplayed).join("\n"));
@@ -1178,7 +1177,7 @@ describe("the snapshot's contents against the chain, never its timestamps alone"
     const staleBooks = async () => {
       const s = await books();
       recorded(s, { tag: "first buy", side: "buy", qty: 100n * E18, at: T0 });
-      s.raw.prepare("INSERT INTO cost_basis VALUES (?, 'live', 'TKN', ?, '1000000', ?)").run(ACCOUNT, (100n * E18).toString(), T0);
+      s.raw.prepare("INSERT INTO cost_basis VALUES (?, 'live', 'TKN', ?, ?, ?)").run(ACCOUNT, (100n * E18).toString(), usdt(1_000_000n).toString(), T0);
       return s;
     };
     const named = await plan(await staleBooks(), missed);
@@ -1256,7 +1255,7 @@ describe("the snapshot's contents against the chain, never its timestamps alone"
     // A basis that holds the round trip books: both trades, and their legs.
     const right = await run({ cash: true, cost: 220_000_000n });
     assert.equal(right.verdict, "ready", planLines(right).join("\n"));
-    assert.deepEqual(holdingOf(right, "missed sell").cost, { verdict: "replayed", why: null, basis: { qtyRaw: (120n * E18).toString(), costUsdg: "220000000" } });
+    assert.deepEqual(holdingOf(right, "missed sell").cost, { verdict: "replayed", why: null, basis: { qtyRaw: (120n * E18).toString(), costUsdg: "220000000000000000000" } });
   });
 
   it("three missed fills with a round trip among them, though they net to a buy: refused without the cost to prove the basis holds them", async () => {
@@ -1315,30 +1314,30 @@ describe("the snapshot's contents against the chain, never its timestamps alone"
     // A basis built from every fill books.
     const right = await run({ firstCash: true, cost: 560_000_000n });
     assert.equal(right.verdict, "ready", planLines(right).join("\n"));
-    assert.deepEqual(holdingOf(right, "missed buy").cost.basis, { qtyRaw: (110n * E18).toString(), costUsdg: "560000000" });
+    assert.deepEqual(holdingOf(right, "missed buy").cost.basis, { qtyRaw: (110n * E18).toString(), costUsdg: "560000000000000000000" });
   });
 
   it("holdingVerdict over the same history, read directly: a held token whose cost cannot be replayed refuses, whichever way the trades booked here go", () => {
     const fill = (id: number, side: "buy" | "sell", qty: bigint, at: number, cashUsdg: string | null): RecordedFill => ({ id, status: "landed",
       buyToken: side === "buy" ? TOKEN : USDG, sellToken: side === "buy" ? USDG : TOKEN, side, qtyRaw: qty.toString(), symbol: "TKN", basisSource: "receipt", at, cashUsdg });
-    const fills = [fill(1, "buy", 100n * E18, 1000, null), fill(2, "sell", 50n * E18, 2000, "60000000"), fill(3, "buy", 10n * E18, 3100, "10000000")];
+    const fills = [fill(1, "buy", 100n * E18, 1000, null), fill(2, "sell", 50n * E18, 2000, "60000000000000000000"), fill(3, "buy", 10n * E18, 3100, "10000000000000000000")];
     const holdings = { positions: [{ symbol: "TKN", token: TOKEN, rawBalance: (110n * E18).toString(), updatedAt: 3200 }],
-      basis: [{ agentId: ACCOUNT, symbol: "TKN", qtyRaw: (110n * E18).toString(), costUsdg: "110000000", updatedAt: 3100 }],
-      seeded: [{ symbol: "TKN", qtyRaw: (110n * E18).toString(), costUsdg: "110000000" }] };
+      basis: [{ agentId: ACCOUNT, symbol: "TKN", qtyRaw: (110n * E18).toString(), costUsdg: "110000000000000000000", updatedAt: 3100 }],
+      seeded: [{ symbol: "TKN", qtyRaw: (110n * E18).toString(), costUsdg: "110000000000000000000" }] };
     const balance = { total: (110n * E18).toString(), by: { [ACCOUNT]: (110n * E18).toString() } };
     const v = holdingVerdict({ token: TOKEN, holdings, fills, balance, classVault: null, grantSpelling: ACCOUNT,
-      proposed: [{ key: "op:m", side: "buy", qtyRaw: (50n * E18).toString(), cashUsdg: "500000000", at: 3000, symbol: "TKN" }] });
+      proposed: [{ key: "op:m", side: "buy", qtyRaw: (50n * E18).toString(), cashUsdg: "500000000000000000000", at: 3000, symbol: "TKN" }] });
     assert.equal(v.refusal, "cost-unproven");
     assert.match(v.why!, /trades#1 records no exact cash for its buy/);
     assert.deepEqual(v.notes, []);
     // A sell booked here over a buy Postgres records and the basis never had: the same hole the other way, and the same refusal.
     const sold = holdingVerdict({ token: TOKEN, classVault: null, grantSpelling: ACCOUNT,
       balance: { total: (100n * E18).toString(), by: { [ACCOUNT]: (100n * E18).toString() } },
-      fills: [fill(1, "buy", 100n * E18, 1000, null), fill(2, "buy", 40n * E18, 2000, "400000000")],
+      fills: [fill(1, "buy", 100n * E18, 1000, null), fill(2, "buy", 40n * E18, 2000, "400000000000000000000")],
       holdings: { positions: [{ symbol: "TKN", token: TOKEN, rawBalance: (100n * E18).toString(), updatedAt: 3200 }],
-        basis: [{ agentId: ACCOUNT, symbol: "TKN", qtyRaw: (100n * E18).toString(), costUsdg: "100000000", updatedAt: 3100 }],
-        seeded: [{ symbol: "TKN", qtyRaw: (100n * E18).toString(), costUsdg: "100000000" }] },
-      proposed: [{ key: "op:s", side: "sell", qtyRaw: (40n * E18).toString(), cashUsdg: "30000000", at: 3000, symbol: "TKN" }] });
+        basis: [{ agentId: ACCOUNT, symbol: "TKN", qtyRaw: (100n * E18).toString(), costUsdg: "100000000000000000000", updatedAt: 3100 }],
+        seeded: [{ symbol: "TKN", qtyRaw: (100n * E18).toString(), costUsdg: "100000000000000000000" }] },
+      proposed: [{ key: "op:s", side: "sell", qtyRaw: (40n * E18).toString(), cashUsdg: "30000000000000000000", at: 3000, symbol: "TKN" }] });
     assert.deepEqual([sold.refusal, sold.notes], ["cost-unproven", []]);
   });
 
@@ -1353,7 +1352,7 @@ describe("the snapshot's contents against the chain, never its timestamps alone"
     };
     const right = await run(160_000_000n);
     assert.equal(right.verdict, "ready", planLines(right).join("\n"));
-    assert.deepEqual([holdingOf(right, "missed buy").cost.verdict, holdingOf(right, "missed buy").cost.basis?.costUsdg], ["replayed", "160000000"]);
+    assert.deepEqual([holdingOf(right, "missed buy").cost.verdict, holdingOf(right, "missed buy").cost.basis?.costUsdg], ["replayed", "160000000000000000000"]);
     assert.ok(!right.warnings.some((w) => /was not checked/.test(w)), right.warnings.join("\n"));
     const wrong = await run(150_000_000n);
     assert.equal(wrong.verdict, "blocked");
@@ -1399,7 +1398,7 @@ describe("the snapshot's contents against the chain, never its timestamps alone"
   });
 
   it("microUsdg: fill_cash_usdg back exactly as written, or not at all", () => {
-    assert.deepEqual([4.965021, 5, 0.5, "12.25", 0, 123456789.123456].map(microUsdg), ["4965021", "5000000", "500000", "12250000", "0", "123456789123456"]);
+    assert.deepEqual([4.965021, 5, 0.5, "12.25", 0, 123456789.123456].map(microUsdg), ["4965021", "5000000", "500000", "12250000", "0", "123456789123456"].map((v) => usdt(BigInt(v)).toString()));
     for (const v of [null, undefined, "", -1, 1e-7, 1.2345678, Number.NaN, Number.POSITIVE_INFINITY, 1234567890.123456, "1e3", "abc"]) {
       assert.equal(microUsdg(v), null, String(v));
     }
@@ -1465,13 +1464,13 @@ describe("Shogun's TSLA: a basis left over a flat token (staleBasisVerdict)", ()
   const TSLA_OP = prefixed("0x73578ec3", "tsla op"), TSLA_TX = prefixed("0xdb99af5b", "tsla tx");
   const TSLA_POOL = prefixed("0xc4f0172d", "tsla pool", 20), SHOGUN_CLASS = prefixed("0x3fcdde6e", "shogun class vault", 20);
   const TSLA_BLOCK = 63_838_886n, TSLA_AT = 1_789_493_909;
-  const MISSED = 23_387_133_169_451_971n, OTHER = 23_370_235_163_310_797n, SOLD = 46_757_368_332_762_768n, CASH = 8_332_500n;
+  const MISSED = 23_387_133_169_451_971n, OTHER = 23_370_235_163_310_797n, SOLD = 46_757_368_332_762_768n, TSLA_CASH = usdt(8_332_500n);
   const OTHER_AT = TSLA_AT + 3_600, SOLD_AT = 1_789_978_946, BASIS_AT = 1_790_028_733;
   const PAYMASTER = "0x777777777777aec03fd955926dbf81597e66834c";
   /** The buy Postgres lacks: the account's USDG out to the pool at log 13, TSLA into the Trencher vault, sponsored. */
   const missedBuy: ModelTx = { tx: TSLA_TX, block: TSLA_BLOCK, blockHash: h32("tsla block"), timestamp: TSLA_AT, from: addr(0x4337), to: EP, logs: [
     [EP, [BEFORE], "0x", "0xb"],
-    [USDG, [TR, topic(ACCOUNT), topic(TSLA_POOL)], `0x${word(CASH)}`, "0xd"],
+    [USDG, [TR, topic(ACCOUNT), topic(TSLA_POOL)], `0x${word(TSLA_CASH)}`, "0xd"],
     [TSLA, [TR, topic(TSLA_POOL), topic(VAULT)], `0x${word(MISSED)}`, "0xe"],
     [EP, [UOE, TSLA_OP, topic(ACCOUNT), topic(PAYMASTER)], `0x${word(SESSION_NONCE)}${word(1n)}${word(52_000_000_000_000n)}${word(410_000n)}`, "0xf"],
   ] };
@@ -1494,7 +1493,7 @@ describe("Shogun's TSLA: a basis left over a flat token (staleBasisVerdict)", ()
         fill_side, fill_symbol, fill_qty_raw, fill_cash_usdg, basis_source) VALUES (101069, ?, 'swap', ?, ?, ?, 17.250862, ?, ?, 'landed', ?, 1, 'sell', 'TSLA', ?, 17.250862, 'receipt')`)
       .run(ACCOUNT, ACCOUNT, TSLA, USDG, h32("the sell"), h32("the sell tx"), SOLD_AT, SOLD.toString());
     // The live basis: the other buy's lot, at what a lot cost, written after the sell that took both.
-    b.raw.prepare("INSERT INTO cost_basis VALUES (?, 'live', 'TSLA', ?, ?, ?)").run(ACCOUNT, OTHER.toString(), CASH.toString(), BASIS_AT);
+    b.raw.prepare("INSERT INTO cost_basis VALUES (?, 'live', 'TSLA', ?, ?, ?)").run(ACCOUNT, OTHER.toString(), TSLA_CASH.toString(), BASIS_AT);
     refuse(b.raw, { tenant: b.tenant, account: b.account, readFromSec: TSLA_AT - 86_400,
       reason: `${CHAIN_REFUSAL}: operation ${TSLA_OP} in tx ${TSLA_TX} at block ${TSLA_BLOCK}; USDG out 8.332500 in tx ${TSLA_TX} log 13 at block ${TSLA_BLOCK}` });
     return b;
@@ -1534,7 +1533,7 @@ describe("Shogun's TSLA: a basis left over a flat token (staleBasisVerdict)", ()
     assert.match(holding.fills.why!, /trade #94285 in 0x322f0929\S* records no fill \(side and quantity\)/);
     // THE STALE BASIS, IN THE EVIDENCE (so in the digest), with what was checked and the note.
     const stale = holding.staleBasis!;
-    assert.deepEqual(stale.rows, [{ agentId: ACCOUNT, symbol: "TSLA", qtyRaw: OTHER.toString(), costUsdg: CASH.toString(), updatedAt: BASIS_AT }]);
+    assert.deepEqual(stale.rows, [{ agentId: ACCOUNT, symbol: "TSLA", qtyRaw: OTHER.toString(), costUsdg: TSLA_CASH.toString(), updatedAt: BASIS_AT }]);
     assert.deepEqual([stale.names, stale.heldUnderNames, stale.seededUnderNames, stale.positionsUnderNames, stale.deletedAs], [["TSLA"], [], [], [], ACCOUNT]);
     assert.match(stale.note!, new RegExp(`^${TSLA}: Postgres's live cost basis under TSLA \\(23370235163310797 base units at 8\\.332500 USDG, written \\S+\\) ` +
       "is left over a token the book does not hold: the chain held none of it at the pinned block at any address of the book, and no position under TSLA is held\\. " +
@@ -1555,14 +1554,14 @@ describe("Shogun's TSLA: a basis left over a flat token (staleBasisVerdict)", ()
     // The digest binds the basis as it was read: the same books preview the same; a basis a micro-USDG away does not.
     assert.equal((await preview(b, model.rpc, NOW + 600)).previewDigest, p.previewDigest);
     const moved = await shogun();
-    moved.raw.prepare("UPDATE cost_basis SET cost_usdg = '8332501'").run();
+    moved.raw.prepare("UPDATE cost_basis SET cost_usdg = ?").run(usdt(8_332_501n).toString());
     assert.notEqual((await preview(moved, model.rpc)).previewDigest, p.previewDigest);
 
     // APPLIED: exactly the trade, and the basis and positions as they were.
     const report = await applyNow(b.db, p);
     assert.deepEqual(report.rows.map((r) => [r.table, r.evidenceKey]), [["trades", `op:${TSLA_OP}`]]);
     assert.deepEqual(rows(b.raw, "SELECT agent_id, mode, symbol, qty_raw, cost_usdg, updated_at FROM cost_basis"),
-      [{ agent_id: ACCOUNT, mode: "live", symbol: "TSLA", qty_raw: OTHER.toString(), cost_usdg: CASH.toString(), updated_at: BASIS_AT }]);
+      [{ agent_id: ACCOUNT, mode: "live", symbol: "TSLA", qty_raw: OTHER.toString(), cost_usdg: TSLA_CASH.toString(), updated_at: BASIS_AT }]);
     assert.equal(rows(b.raw, "SELECT COUNT(*) AS n FROM positions")[0]!.n, 0);
     assert.equal((await admissionSays(b, model.rpc)).status, "clean", "admission's chain check now finds the buy and its leg");
   });
@@ -1604,7 +1603,7 @@ describe("Shogun's TSLA: a basis left over a flat token (staleBasisVerdict)", ()
     const other = await shogun();
     position(other, addr(0x7e57a), "5");
     const seeded = holdingOf(await shogunPlan(other)).staleBasis!;
-    assert.deepEqual(seeded.seededUnderNames, [{ symbol: "TSLA", qtyRaw: OTHER.toString(), costUsdg: CASH.toString() }]);
+    assert.deepEqual(seeded.seededUnderNames, [{ symbol: "TSLA", qtyRaw: OTHER.toString(), costUsdg: TSLA_CASH.toString() }]);
     assert.deepEqual(seeded.heldUnderNames.map((p) => [p.symbol, p.token, p.rawBalance]), [["TSLA", addr(0x7e57a), "5"]]);
     // And with the walk going below zero, the basis passed its own checks: named in the evidence, the refusal the walk's.
     const exceeds = await shogun();
@@ -1626,7 +1625,7 @@ describe("Shogun's TSLA: a basis left over a flat token (staleBasisVerdict)", ()
       const stale = holdingOf(p).staleBasis!;
       assert.deepEqual(stale.heldUnderNames.map((x) => [x.symbol, x.token, x.rawBalance]), [["TSLA", addr(0x7e57a), raw]], `${what}: held under the name`);
       // planAttestedSeed's own SQL agrees: it would carry the basis into the new book.
-      assert.deepEqual(stale.seededUnderNames, [{ symbol: "TSLA", qtyRaw: OTHER.toString(), costUsdg: CASH.toString() }], what);
+      assert.deepEqual(stale.seededUnderNames, [{ symbol: "TSLA", qtyRaw: OTHER.toString(), costUsdg: TSLA_CASH.toString() }], what);
     }
   });
 
@@ -1644,7 +1643,7 @@ describe("Shogun's TSLA: a basis left over a flat token (staleBasisVerdict)", ()
 
   it("the basis named in the preview is compared again by the apply: changed, re-spelled, gone, or a position under its name since, the apply refuses and writes nothing", async () => {
     const changes: Array<[string, (b: Books) => void, RegExp?]> = [
-      ["its cost", (b) => b.raw.prepare("UPDATE cost_basis SET cost_usdg = '8332501'").run()],
+      ["its cost", (b) => b.raw.prepare("UPDATE cost_basis SET cost_usdg = ?").run(usdt(8_332_501n).toString())],
       ["its quantity", (b) => b.raw.prepare("UPDATE cost_basis SET qty_raw = ?").run((OTHER + 1n).toString())],
       ["its time", (b) => b.raw.prepare("UPDATE cost_basis SET updated_at = updated_at + 1").run()],
       // A second spelling across the financial tables is the first fact to differ.
@@ -1663,7 +1662,7 @@ describe("Shogun's TSLA: a basis left over a flat token (staleBasisVerdict)", ()
   });
 
   it("staleBasisVerdict read directly: each check refuses on its own, and none is needed where no basis is left", () => {
-    const basis = [{ agentId: ACCOUNT, symbol: "TSLA", qtyRaw: OTHER.toString(), costUsdg: CASH.toString(), updatedAt: BASIS_AT }];
+    const basis = [{ agentId: ACCOUNT, symbol: "TSLA", qtyRaw: OTHER.toString(), costUsdg: TSLA_CASH.toString(), updatedAt: BASIS_AT }];
     const zero = { total: "0", by: { [ACCOUNT]: "0", [SHOGUN_CLASS]: "0", [VAULT]: "0" } };
     const v = (o: { holdings?: Partial<Holdings>; balance?: typeof zero; classVault?: string | null; spelled?: string | null } = {}) => staleBasisVerdict({
       token: TSLA, names: new Set(["TSLA"]), holdings: { positions: [], basis, seeded: [], ...o.holdings }, balance: o.balance ?? zero,
@@ -1679,7 +1678,7 @@ describe("Shogun's TSLA: a basis left over a flat token (staleBasisVerdict)", ()
       ["held as this token", v({ holdings: { positions: [{ symbol: "TSLA.x", token: TSLA, rawBalance: "5", updatedAt: 1 }] } }), /Postgres's positions hold TSLA\.x/],
       ["the seed not asked", v({ holdings: { seeded: null } }), /what admission would seed could not be asked/],
       // The seed's own answer stands even where the positions read here say nothing is held.
-      ["the seed carrying it", v({ holdings: { seeded: [{ symbol: "TSLA", qtyRaw: OTHER.toString(), costUsdg: CASH.toString() }] } }),
+      ["the seed carrying it", v({ holdings: { seeded: [{ symbol: "TSLA", qtyRaw: OTHER.toString(), costUsdg: TSLA_CASH.toString() }] } }),
         /admission's own seed, asked on this same read \(planAttestedSeed\), would carry TSLA at 23370235163310797 into the new book/],
       ["another spelling", v({ spelled: ACCOUNT.toUpperCase().replace(/^0X/, "0x") }), /is spelled 0x05a198.*, not as the grant spells the account/],
       ["no grant", v({ spelled: null }), /not as the grant spells the account \(no grant\)/],
@@ -1714,7 +1713,7 @@ describe("the guards no test exercised", () => {
     const b = await books();
     const dep = depositAt(SELL_BLOCK + 1_000n);
     b.raw.prepare(`INSERT INTO flows (agent_id, direction, amount_usdg, tx_hash, block_number, log_index, source, at, epoch, chain_id)
-      VALUES (?, 'in', 12.5, ?, NULL, NULL, 'deposit', ?, 2, 4663)`).run(ACCOUNT, dep.tx, CHAIN.sell.timestamp + 100);
+      VALUES (?, 'in', 12.5, ?, NULL, NULL, 'deposit', ?, 2, 56)`).run(ACCOUNT, dep.tx, CHAIN.sell.timestamp + 100);
     const p = await preview(b, fakeRpc({ txs: [fromFixture(CHAIN.buy), dep] }).rpc);
     assert.equal(p.verdict, "ready", "admission's chain rule does not read a row with no log index as the log");
     await assert.rejects(applyNow(b.db, p), (e: unknown) => (e as BookingRefused).code === "flows");
@@ -1747,7 +1746,7 @@ describe("revert, decided by what the database recorded", () => {
     if (o.archived) b.raw.prepare("UPDATE ledger_resume_approvals SET archive_path = '/data/archive/x' WHERE approval_id = ?").run(id);
     if (o.attested && generation) {
       b.raw.prepare(`INSERT INTO ledger_resume_attestations (generation, approval_id, tenant, smart_account, chain_id, owner, evidence_digest, receipt_digest, mirror_state_digest,
-        snapshot_digest, created_at_ms) VALUES (?, ?, ?, ?, 4663, ?, 'e', 'r', 'm', 's', ?)`).run(generation, id, b.tenant, b.account, b.tenant, o.atSec * 1000);
+        snapshot_digest, created_at_ms) VALUES (?, ?, ?, ?, 56, ?, 'e', 'r', 'm', 's', ?)`).run(generation, id, b.tenant, b.account, b.tenant, o.atSec * 1000);
       if (o.consumed) {
         await b.db.exec(LEDGER_IMPORT_SCHEMA);
         b.raw.prepare(`INSERT INTO tenant_ledger_import (tenant, generation, target_volume_id, state, bytes, sha256, source_digest, bindings_json, created_at_ms,

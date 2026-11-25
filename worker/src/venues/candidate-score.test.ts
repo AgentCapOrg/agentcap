@@ -18,6 +18,9 @@ import {
 } from "./candidate-score";
 import type { VenueLeg, VenueQuote } from "./venue";
 
+// 6dp micro figures, scaled to 18dp USDT base units.
+const MICRO = 10n ** 12n;
+
 const leg = (over: Partial<VenueLeg> = {}): VenueLeg => ({
   venue: "pons",
   token: "0x1111111111111111111111111111111111111111",
@@ -25,7 +28,7 @@ const leg = (over: Partial<VenueLeg> = {}): VenueLeg => ({
   decimals: 18,
   route: "0x2222222222222222222222222222222222222222",
   quoteToken: "0x3333333333333333333333333333333333333333",
-  realDepthRaw: 5_000_000_000n, // 5,000 USDG — deep enough for every style
+  realDepthRaw: (5_000_000_000n * MICRO), // 5,000 USDG — deep enough for every style
   graduationBps: 1_000,
   ageSec: 7200,
   recentTrades: 50,
@@ -83,14 +86,14 @@ describe("the graduation trap", () => {
 
 describe("the styles actually differ", () => {
   it("aggressive takes a thin, new market that conservative refuses", () => {
-    const thin = leg({ realDepthRaw: 300_000_000n, ageSec: 60, recentTrades: 0 });
+    const thin = leg({ realDepthRaw: (300_000_000n * MICRO), ageSec: 60, recentTrades: 0 });
     assert.equal(scoreLeg(thin, "conservative", quote(250)).ok, false);
     assert.equal(scoreLeg(thin, "aggressive", quote(250)).ok, true);
   });
 
   it("but aggressive still refuses a market it cannot measure", () => {
     // Taste may loosen; safety may not.
-    const unknowable = leg({ realDepthRaw: 300_000_000n, graduationBps: null });
+    const unknowable = leg({ realDepthRaw: (300_000_000n * MICRO), graduationBps: null });
     assert.equal(scoreLeg(unknowable, "aggressive", quote(250)).ok, false);
   });
 
@@ -103,8 +106,8 @@ describe("choosing, and choosing nothing", () => {
   it("RETURNS NO PICK WHEN NOTHING QUALIFIES, and that is a correct answer", () => {
     const out = chooseEntry(
       [
-        { leg: leg({ symbol: "DOGE2", realDepthRaw: 41_000_000n }), entry: quote(100) },
-        { leg: leg({ symbol: "THIN", realDepthRaw: 10_000_000n }), entry: quote(100) },
+        { leg: leg({ symbol: "DOGE2", realDepthRaw: (41_000_000n * MICRO) }), entry: quote(100) },
+        { leg: leg({ symbol: "THIN", realDepthRaw: (10_000_000n * MICRO) }), entry: quote(100) },
       ],
       "balanced",
     );
@@ -114,7 +117,7 @@ describe("choosing, and choosing nothing", () => {
   });
 
   it("carries a sentence and a groupable cause for every reject", () => {
-    const out = chooseEntry([{ leg: leg({ symbol: "DOGE2", realDepthRaw: 41_000_000n }), entry: quote(100) }], "balanced");
+    const out = chooseEntry([{ leg: leg({ symbol: "DOGE2", realDepthRaw: (41_000_000n * MICRO) }), entry: quote(100) }], "balanced");
     const r = out.refused[0]!;
     assert.equal(r.symbol, "DOGE2");
     assert.equal(r.kind, "depth");
@@ -125,8 +128,8 @@ describe("choosing, and choosing nothing", () => {
   it("picks the deepest when several qualify", () => {
     const out = chooseEntry(
       [
-        { leg: leg({ symbol: "SHALLOW", realDepthRaw: 600_000_000n }), entry: quote(100) },
-        { leg: leg({ symbol: "DEEP", realDepthRaw: 9_000_000_000n }), entry: quote(100) },
+        { leg: leg({ symbol: "SHALLOW", realDepthRaw: (600_000_000n * MICRO) }), entry: quote(100) },
+        { leg: leg({ symbol: "DEEP", realDepthRaw: (9_000_000_000n * MICRO) }), entry: quote(100) },
       ],
       "balanced",
     );

@@ -1,3 +1,4 @@
+import { cashNumber } from "../../packages/core/src/cash";
 import type { BrainDecision, BrainResult } from "./brain-client";
 import { orderFromDecision } from "./brain-live";
 import type { ShadowInputs, ShadowOutcome } from "./brain-shadow";
@@ -11,7 +12,7 @@ import { CASH, instrumentClassOf } from "../../packages/core/src/index";
 import { TRENCHER_FAST } from "./strategies/trencher";
 
 /** The fast Trencher's entry, in whole USD, as the Brain is told it. */
-const ENTRY_USD = Number(TRENCHER_FAST.perEntryUsdg) / 1e6;
+const ENTRY_USD = cashNumber(TRENCHER_FAST.perEntryUsdg);
 
 export const TRENCH_VOLUME_MIN = 100_000;
 /**
@@ -396,7 +397,7 @@ export type TrenchScreen =
 export function trenchScreenReason(p: GeckoPool): TrenchScreen | null {
   // Quote assets are portfolio cash/bridge assets, never speculative entries.
   // instrumentClassOf deliberately classifies unknown addresses as memecoins.
-  if ([CASH.USDG, CASH.WETH].some(a => a.toLowerCase() === p.tokenAddress.toLowerCase())) return "quote-asset";
+  if ([CASH.USDT, CASH.WBNB].some(a => a.toLowerCase() === p.tokenAddress.toLowerCase())) return "quote-asset";
   if (instrumentClassOf(p.tokenAddress) !== "memecoin") return "not-memecoin";
   if (!Number.isFinite(p.volume24hUsd)) return "volume-unknown";
   if ((p.volume24hUsd ?? 0) < TRENCH_VOLUME_MIN && (p.buckets.h1?.volumeUsd ?? 0) < TRENCH_H1_VOLUME_MIN) return "volume-below-min";

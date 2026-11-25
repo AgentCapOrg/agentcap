@@ -35,13 +35,14 @@
  * process is offering for this process's agent. A tenant is never read from
  * an offer, a message or a model argument.
  */
-import { CASH, instrumentClassOf, isEnergyReserveToken } from "../../packages/core/src/index";
+import { DATA } from "../../packages/core/src/chain";
+import { CASH, instrumentClassOf } from "../../packages/core/src/index";
 import type { Classified } from "./decision-funnel";
 import type { GeckoPool } from "./venues/geckoterminal";
 
 /**
  * The caps. All are EXTRA bounds on what the early path may ask for; none can
- * raise anything the screen, the vault, the wall, energy or the breaker allow.
+ * raise anything the screen, the vault, the wall or the breaker allow.
  * Judgment calls, not measurements — named so an owner can see them.
  */
 export const EARLY = {
@@ -76,7 +77,7 @@ export const EARLY = {
 export const EARLY_PAGES_MAX = EARLY.activeMax;
 
 export type EarlyRefusal =
-  | "invalid-address" | "zero-address" | "quote-asset" | "not-memecoin" | "energy-reserve"
+  | "invalid-address" | "zero-address" | "quote-asset" | "not-memecoin"
   | "invalid-source" | "invalid-priority" | "invalid-size" | "invalid-probe" | "invalid-expiry" | "invalid-ref"
   | "expired" | "cooldown" | "awaiting-entry" | "full" | "daily";
 
@@ -163,9 +164,8 @@ export class EarlyCandidateBook {
     if (a === ZERO_ADDRESS) return "refused:zero-address";
     // Quote assets are cash, never a speculative entry; a known stock or ETF
     // token is not a memecoin and has its own rails.
-    if ([CASH.USDG, CASH.WETH].some(c => c.toLowerCase() === a)) return "refused:quote-asset";
+    if ([CASH.USDT, CASH.WBNB].some(c => c.toLowerCase() === a)) return "refused:quote-asset";
     if (instrumentClassOf(a) !== "memecoin") return "refused:not-memecoin";
-    if (isEnergyReserveToken(a)) return "refused:energy-reserve";
     if (!o || typeof o !== "object") return "refused:invalid-source";
     if (typeof o.source !== "string" || !SOURCE.test(o.source)) return "refused:invalid-source";
     if (typeof o.priority !== "number" || !Number.isFinite(o.priority)) return "refused:invalid-priority";
@@ -407,11 +407,11 @@ export function earlyEntryBound(baseUsdg: number, earlyMaxUsdg: number | null, h
 // ─── The early screen ───────────────────────────────────────────────────────
 
 /** The only venue the TrencherVault route supports (TrencherVault.sol, trencher-discovery.ts). */
-export const EARLY_VENUE = "uniswap-v3-robinhood";
+export const EARLY_VENUE = DATA.pancakeswapV3DexId;
 
 /** The first rule of the early screen a pool failed. See `earlyScreenReason`. */
 export type EarlyScreen =
-  | "quote-asset" | "not-memecoin" | "energy-reserve" | "venue-not-supported" | "pool-address-unknown"
+  | "quote-asset" | "not-memecoin" | "venue-not-supported" | "pool-address-unknown"
   | "buys-unknown" | "no-buys-24h" | "sells-unknown" | "no-sells-24h"
   | "activity-unknown" | "no-recent-volume" | "reserve-unknown" | "no-reserve";
 
@@ -446,10 +446,8 @@ const finite = (n: unknown): n is number => typeof n === "number" && Number.isFi
  */
 export function earlyScreenReason(p: GeckoPool): EarlyScreen | null {
   const token = lower(p?.tokenAddress);
-  if ([CASH.USDG, CASH.WETH].some(a => a.toLowerCase() === token)) return "quote-asset";
+  if ([CASH.USDT, CASH.WBNB].some(a => a.toLowerCase() === token)) return "quote-asset";
   if (instrumentClassOf(token) !== "memecoin") return "not-memecoin";
-  // Held as energy, never traded as a coin (discovery excludes it too).
-  if (isEnergyReserveToken(token)) return "energy-reserve";
   if (p.dex !== EARLY_VENUE) return "venue-not-supported";
   if (!p.poolAddress || !ADDRESS.test(lower(p.poolAddress))) return "pool-address-unknown";
   if (!finite(p.buys24h)) return "buys-unknown";

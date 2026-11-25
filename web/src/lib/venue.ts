@@ -122,10 +122,10 @@ export function chartUrl(symbol: string, window: string): string | null {
  * heard of. The bound that matters here is the SHAPE — twenty bytes of hex
  * cannot carry a path traversal, a query string or another host.
  */
-export function holdersUrl(address: string): string | null {
-  const want = address.trim().toLowerCase();
-  if (!/^0x[0-9a-f]{40}$/.test(want)) return null;
-  return `https://${VENUE_HOSTS.blockscout}/api/v2/tokens/${want}/holders`;
+export function holdersUrl(_address: string): string | null {
+  // No holder index is wired for BNB Chain. Refused rather than asked of the
+  // old chain's Blockscout, where the same address is another token.
+  return null;
 }
 
 /**

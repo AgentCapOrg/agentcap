@@ -17,7 +17,7 @@
  * equity row, no peak, no fee, no flow booking, equity unknown — while the
  * strategies, the drain and the class and perp routes keep running, so every
  * OTHER position can still be sold. Only whole-book gaps (cash, ETH, the
- * Morpho vault, the class vault, a whole positions read, the Trencher vault's
+ * the class vault, a whole positions read, the Trencher vault's
  * cash) still hold the tick.
  *
  * Unknown equity switches the drawdown breaker off (policy.ts), so this is
@@ -110,7 +110,7 @@ export function withoutUnreadHeld<P extends { symbol: string }>(
  *
  * `holdTick` takes the early return (index.ts `unreadBook`): the whole-book
  * gaps, every one a fixed protocol address or a whole read, so transient —
- * cash, ETH and the Morpho vault (`balances`), the class vault (all or
+ * cash and ETH (`balances`), the class vault (all or
  * nothing, snapshot.ts readClassCustody), a whole positions read that failed,
  * and the Trencher vault's USDG. index.ts relies on the ETH read being whole
  * below that return.
@@ -121,10 +121,9 @@ export function withoutUnreadHeld<P extends { symbol: string }>(
  * whole read failed, because "positions" then holds it and names it.
  */
 export function classifyBookGaps(g: {
-  /** bal.unread: "eth", "cash", "vault". */
+  /** bal.unread: "eth", "cash". */
   balances: readonly string[];
   /** classRead.unread: "class". */
-  classVault: readonly string[];
   /** The account's positions read, or the Trencher vault's, failed whole. */
   positionsReadFailed: boolean;
   /** The Trencher vault's USDG balance could not be read. */
@@ -134,7 +133,7 @@ export function classifyBookGaps(g: {
 }): { holdTick: string[]; incomplete: string[] } {
   return {
     holdTick: bookGaps({
-      unreadBalances: [...g.balances, ...g.classVault, ...(g.trencherCashUnread ? [TRENCHER_CASH_GAP] : [])],
+      unreadBalances: [...g.balances, ...(g.trencherCashUnread ? [TRENCHER_CASH_GAP] : [])],
       positionsReadFailed: g.positionsReadFailed,
       missingPrice: [], // reported separately by the tick — it has its own message
     }),

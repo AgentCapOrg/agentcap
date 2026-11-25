@@ -72,7 +72,7 @@ async function setup(o: { settingsA?: Record<string, unknown>; directory?: Agent
 
 function agentRow(d: TestDb, account: string, owner: string, o: { status?: string; mode?: string; beat?: number | null; blocker?: string | null; sponsor?: number | null } = {}) {
   d.raw.prepare(`INSERT INTO agents (smart_account, name, owner_address, session_key_address, chain_id, caps, granted_at, expires_at, status, mode, beat_at, live_blocker, sponsor_gas, epoch)
-    VALUES (?, 'Agent', ?, '0x1', 4663, '{}', 1700000000, 4102444800, ?, ?, ?, ?, ?, 1)`)
+    VALUES (?, 'Agent', ?, '0x1', 56, '{}', 1700000000, 4102444800, ?, ?, ?, ?, ?, 1)`)
     .run(account, owner, o.status ?? "active", o.mode ?? "live", o.beat === undefined ? NOW - 30 : o.beat, o.blocker ?? null, o.sponsor === undefined ? 0 : o.sponsor);
 }
 
@@ -428,7 +428,7 @@ test("get_refusals: histogram with labels, remedies, examples; free text classif
   assert.equal(by["couldnt-submit"].detail_withheld, true);
   assert.equal(by["couldnt-submit"].latest_detail_untrusted, null);
   assert.equal(by["prefund"].status, "reverted");
-  assert.match(by["prefund"].remedy, /ETH/);
+  assert.match(by["prefund"].remedy, /BNB/);
   assert.ok(!r.text.includes("secret-host"), "raw error text leaked");
   // A broker's raw review exception is withheld the same way.
   assert.equal(by["order-review"].detail_withheld, true);
@@ -848,7 +848,7 @@ test("inactivity: paper fills from before live was switched on do not read as a 
 function recoveryHold(d: TestDb, o: { tenant?: string; account?: string; chain?: number; held?: number; checkedAt?: number } = {}) {
   d.raw.exec(FLEET_RECOVERY_SCHEMA);
   d.raw.prepare("INSERT INTO fleet_recovery_health VALUES (?, ?, ?, ?, 'persistent-source', ?, ?)")
-    .run(o.tenant ?? OWNER_A, o.account ?? ACCOUNT_A, o.chain ?? 4663, o.held ?? 1, NOW - 86_400, o.checkedAt ?? NOW - 120);
+    .run(o.tenant ?? OWNER_A, o.account ?? ACCOUNT_A, o.chain ?? 56, o.held ?? 1, NOW - 86_400, o.checkedAt ?? NOW - 120);
 }
 
 test("inactivity: a recovery hold explains a stale, fresh or missing heartbeat, and is never called a dead worker", async () => {
@@ -1141,7 +1141,7 @@ test("diagnoseInactivity: a permission signed after the last heartbeat is pendin
   const settings = projectSettings({ liveTradingEnabled: true, tickSeconds: 240 });
   const base: InactivityInputs = {
     now: NOW, windowSec: 86_400, account: ACCOUNT_A, permission: { grantedAt: NOW - 60, expiresAt: NOW + 30 * 86_400 },
-    agentRow: { smart_account: ACCOUNT_A, name: "A", chain_id: 4663, status: "expired", mode: "live", beat_at: NOW - 7200, live_blocker: null, sponsor_gas: 0, epoch: 1, granted_at: 1, expires_at: NOW - 7300, contributions_known: null, contributions_why: null },
+    agentRow: { smart_account: ACCOUNT_A, name: "A", chain_id: 56, status: "expired", mode: "live", beat_at: NOW - 7200, live_blocker: null, sponsor_gas: 0, epoch: 1, granted_at: 1, expires_at: NOW - 7300, contributions_known: null, contributions_why: null },
     settings, valuation: null, liveFunding: null, decisions: { ...EMPTY_TALLY }, latestView: null, trades: { rows: [], truncated: false },
     lastLive: null, lastPaper: null, actedAfterPause: null, events: emptyEvents(), railNotice: null, pause: null, killAt: null, expiryNoticeAt: null, mirrorUpdatedAt: "unavailable",
     hold: null,

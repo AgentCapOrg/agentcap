@@ -1,11 +1,10 @@
 /**
- * ETH OR SOL INTO USDG ON ROBINHOOD CHAIN, PRICED BY RELAY AND SIGNED ON RELAY.
+ * ETH INTO USDG ON ROBINHOOD CHAIN, PRICED BY RELAY AND SIGNED ON RELAY.
  *
  * Milla picked Relay on 2026-11-19, from live quotes taken that day. It was the
- * one provider that priced all three routes the deposit panel offers:
+ * one provider that priced all two routes the deposit panel offers:
  * - ETH on Robinhood Chain itself
  * - ETH on Ethereum or an L2
- * - SOL on Solana
  * Robinhood's own bridging page names it too. The comparison is in the
  * deposit-path plan.
  *
@@ -38,22 +37,21 @@
  * cannot carry a slippage cap, so the panel also names ours for the owner to
  * check there.
  */
-import { CASH, USDG_DECIMALS } from "@agentcap/core";
-import { EVM_NATIVE, SOL_NATIVE, formatAmount, formatFixed, type DepositSource } from "./deposit-math";
+import { CASH, CASH_DECIMALS, bnbChain } from "@agentcap/core";
+import { EVM_NATIVE, formatAmount, formatFixed, type DepositSource } from "./deposit-math";
 
 export const RELAY_API = "https://api.relay.link";
 export const RELAY_APP = "https://relay.link";
-/** Relay's path name for Robinhood Chain, as Robinhood's bridging page links it. */
-export const RELAY_ROBINHOOD_PATH = "robinhood";
-export const ROBINHOOD_CHAIN_ID = 4663;
+/** Relay's name for chain 56 (api.relay.link/chains, read 2026-11-25), used as its bridge path. */
+export const RELAY_BNB_PATH = "bsc";
+export const DEPOSIT_CHAIN_ID: number = bnbChain.id;
 
 /** Senders `/price` accepts that are nobody's wallet. See the header. */
 export const PRICE_SENDER: Readonly<Record<DepositSource["family"], string>> = Object.freeze({
   evm: "0x0000000000000000000000000000000000000001",
-  solana: SOL_NATIVE,
 });
 
-const USDG = CASH.USDG.toLowerCase();
+const USDG = CASH.USDT.toLowerCase();
 
 export interface RelayPriceRequest {
   user: string;
@@ -73,9 +71,9 @@ export function priceRequest(source: DepositSource, amount: bigint, agent: strin
     user: PRICE_SENDER[source.family],
     recipient: agent,
     originChainId: source.relayChainId,
-    destinationChainId: ROBINHOOD_CHAIN_ID,
+    destinationChainId: DEPOSIT_CHAIN_ID,
     originCurrency: source.currency,
-    destinationCurrency: CASH.USDG,
+    destinationCurrency: CASH.USDT,
     amount: amount.toString(),
     tradeType: "EXACT_INPUT",
     slippageTolerance: String(source.slippageBps),
@@ -134,9 +132,7 @@ const sameAddress = (a: unknown, b: string, family: DepositSource["family"] | "e
 
 /** The route, as one line. */
 export function routeLabel(source: DepositSource): string {
-  return source.relayChainId === ROBINHOOD_CHAIN_ID
-    ? `Relay swap on Robinhood Chain: ${source.asset} → USDG`
-    : `Relay: ${source.asset} on ${source.network} → USDG on Robinhood Chain`;
+  return `Relay: ${source.asset} on ${source.network} → USDT on BNB Chain`;
 }
 
 /**
@@ -167,9 +163,9 @@ export function parseRelayPrice(body: unknown, request: { source: DepositSource;
   const outSide = obj(details.currencyOut);
   const outCurrency = obj(outSide?.currency);
   if (!outSide || !outCurrency) return mismatch("output");
-  if (outCurrency.chainId !== ROBINHOOD_CHAIN_ID) return mismatch("output network");
+  if (outCurrency.chainId !== DEPOSIT_CHAIN_ID) return mismatch("output network");
   if (typeof outCurrency.address !== "string" || outCurrency.address.toLowerCase() !== USDG) return mismatch("output token");
-  if (outCurrency.decimals !== USDG_DECIMALS) return mismatch("output decimals");
+  if (outCurrency.decimals !== CASH_DECIMALS) return mismatch("output decimals");
   const expectedOut = digits(outSide.amount);
   const minOut = digits(outSide.minimumAmount);
   if (expectedOut === null || minOut === null || expectedOut <= 0n || minOut <= 0n || minOut > expectedOut) return mismatch("output amount");
@@ -267,7 +263,7 @@ export function etaText(seconds: number): string {
 
 /** USDG base units as dollars, truncated to cents: "40.00". */
 export function usdgText(units: bigint): string {
-  return formatFixed(units, USDG_DECIMALS, 2);
+  return formatFixed(units, CASH_DECIMALS, 2);
 }
 
 /**
@@ -275,13 +271,13 @@ export function usdgText(units: bigint): string {
  * documents these parameters: fromChainId, fromCurrency, toCurrency,
  * toAddress, amount and tradeType.
  *
- * `to` is USDG by default. The agent's gas top-up asks for native ETH.
+ * `to` is the cash token by default. The agent's gas top-up asks for the native coin, BNB.
  */
-export function relayDeepLink(source: DepositSource, amount: bigint, agent: string, to: "USDG" | "ETH" = "USDG"): string {
-  const url = new URL(`/bridge/${RELAY_ROBINHOOD_PATH}`, RELAY_APP);
+export function relayDeepLink(source: DepositSource, amount: bigint, agent: string, to: "USDG" | "gas" = "USDG"): string {
+  const url = new URL(`/bridge/${RELAY_BNB_PATH}`, RELAY_APP);
   url.searchParams.set("fromChainId", String(source.relayChainId));
   url.searchParams.set("fromCurrency", source.currency);
-  url.searchParams.set("toCurrency", to === "USDG" ? CASH.USDG : EVM_NATIVE);
+  url.searchParams.set("toCurrency", to === "USDG" ? CASH.USDT : EVM_NATIVE);
   url.searchParams.set("toAddress", agent);
   url.searchParams.set("amount", formatAmount(amount, source.decimals));
   url.searchParams.set("tradeType", "EXACT_INPUT");

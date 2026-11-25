@@ -39,7 +39,7 @@ describe("parsePlaygroundRequest", () => {
 
 describe("usdgUnits", () => {
   it("converts six-decimal UI values exactly", () => {
-    assert.equal(usdgUnits(12.345678), 12_345_678n);
+    assert.equal(usdgUnits(12.345678), 12_345_678n * 10n ** 12n);
   });
 
   it("refuses non-finite and unsafe values before BigInt conversion", () => {

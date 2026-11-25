@@ -16,7 +16,7 @@ import {
   tokenLabelSync,
 } from "./token-label";
 
-const USDG = CASH.USDG.toLowerCase();
+const USDG = CASH.USDT.toLowerCase();
 const AGENT = "0x05a198a677fbcd8f5c168d397fa7ef5eb6d65487";
 const VAULT = "0x2ca2b5bd3b6635d630419c57a13c6b6a856ec96d";
 const MUSE = "0x91a2dae9699f0b82540b5886b0d8759c22820ba3";
@@ -61,7 +61,7 @@ function fakeChain(symbols: Record<string, string>) {
       // The musebook tail: the VAULT loses 6.06 musebook, the ACCOUNT gains $0.002131.
       return {
         blockNumber: 100n,
-        logs: [transfer(MUSE, VAULT, "0x000000000000000000000000000000000000dead", 6_061_100_000_000_000_000n), transfer(USDG, "0x000000000000000000000000000000000000beef", AGENT, 2_131n)],
+        logs: [transfer(MUSE, VAULT, "0x000000000000000000000000000000000000dead", 6_061_100_000_000_000_000n), transfer(USDG, "0x000000000000000000000000000000000000beef", AGENT, 2_131n * 10n ** 12n)],
       };
     }) as never,
     getBlock: (async () => ({ timestamp: 1_790_121_077n })) as never,
@@ -72,11 +72,11 @@ beforeEach(() => clearTokenLabelCacheForTest());
 
 describe("which leg is the coin, and which way it went", () => {
   it("the non-cash leg, whichever side it is on", () => {
-    assert.equal(nonCashLeg({ sell_token: CASH.USDG, buy_token: MUSE }), MUSE);
-    assert.equal(nonCashLeg({ sell_token: MUSE, buy_token: CASH.USDG }), MUSE);
+    assert.equal(nonCashLeg({ sell_token: CASH.USDT, buy_token: MUSE }), MUSE);
+    assert.equal(nonCashLeg({ sell_token: MUSE, buy_token: CASH.USDT }), MUSE);
     assert.equal(nonCashLeg({ sell_token: null, buy_token: null }), null);
-    assert.equal(sideOf({ sell_token: CASH.USDG, buy_token: MUSE }), "buy");
-    assert.equal(sideOf({ fill_side: "sell", sell_token: CASH.USDG }), "sell", "the fill's own side wins");
+    assert.equal(sideOf({ sell_token: CASH.USDT, buy_token: MUSE }), "buy");
+    assert.equal(sideOf({ fill_side: "sell", sell_token: CASH.USDT }), "sell", "the fill's own side wins");
   });
 
   it("recognises a row re-recorded after a restart — the account targeting itself", () => {
@@ -89,7 +89,7 @@ describe("tokenLabelSync — local sources, trusted first", () => {
   it("names stocks and cash from the curated tables", () => {
     const aapl = STOCK_TOKENS[0]!;
     assert.equal(tokenLabelSync(null, AGENT, aapl.address).ticker, aapl.symbol);
-    assert.equal(tokenLabelSync(null, AGENT, CASH.USDG).source, "cash");
+    assert.equal(tokenLabelSync(null, AGENT, CASH.USDT).source, "cash");
   });
 
   it("never calls the owner's own account or vault a coin", () => {
@@ -101,7 +101,7 @@ describe("tokenLabelSync — local sources, trusted first", () => {
   it("reads a launch coin's name from the decision that bought it", () => {
     const db = ledger();
     db.prepare("INSERT INTO decisions (id, agent_id, symbol, display_name, at) VALUES ('d1', ?, ?, 'musebook', 1)").run(AGENT, `T${MUSE.slice(-11).toUpperCase()}`);
-    db.prepare("INSERT INTO trades (agent_id, kind, target, sell_token, buy_token, amount_usdg, status, decision_id, created_at) VALUES (?, 'swap', ?, ?, ?, 5, 'landed', 'd1', 1)").run(AGENT, VAULT, CASH.USDG, MUSE);
+    db.prepare("INSERT INTO trades (agent_id, kind, target, sell_token, buy_token, amount_usdg, status, decision_id, created_at) VALUES (?, 'swap', ?, ?, ?, 5, 'landed', 'd1', 1)").run(AGENT, VAULT, CASH.USDT, MUSE);
     const l = tokenLabelSync(db, AGENT, MUSE);
     assert.equal(labelText(l), "musebook", "the Trencher id is not a name; the display name is");
     assert.equal(l.trusted, false);
@@ -123,17 +123,6 @@ describe("tokenLabelSync — local sources, trusted first", () => {
     assert.match(labelText(l), /USDG \(0x1111…1111, not the real USDG\)/);
   });
 
-  it("a Solana key is never a name or a ticker, as a 0x one is not (Solana P0)", () => {
-    const SYSTEM = "1".repeat(32);
-    // Not an EVM address, so it would have been echoed back as a ticker.
-    assert.equal(tokenLabelSync(null, AGENT, SYSTEM).ticker, null);
-    assert.equal(tokenLabelSync(null, AGENT, "PEPE").ticker, "PEPE");
-    const db = ledger();
-    db.prepare("INSERT INTO discovered_pools (address, symbol) VALUES (?, ?)").run(CASHCAT, SYSTEM);
-    assert.equal(tokenLabelSync(db, AGENT, CASHCAT).source, "none");
-    assert.equal(fillSymbolFor(CASHCAT, [SYSTEM, "CASHCAT"]), "CASHCAT");
-    assert.equal(fillSymbolFor(CASHCAT, [SYSTEM]), null);
-  });
 });
 
 describe("tokenLabel — the chain, only when nothing local knows it", () => {
@@ -161,7 +150,7 @@ describe("tokenLabel — the chain, only when nothing local knows it", () => {
 describe("receiptFacts — the coin in a row that lost its legs", () => {
   it("nets the receipt over the account AND its vaults", async () => {
     const facts = await receiptFacts(fakeChain({}), "0xtail", [AGENT, VAULT]);
-    assert.deepEqual(facts, { token: MUSE, side: "sell", cashUsdg: 2_131n, blockTime: 1_790_121_077 });
+    assert.deepEqual(facts, { token: MUSE, side: "sell", cashUsdg: 2_131n * 10n ** 12n, blockTime: 1_790_121_077 });
   });
 
   it("netted over the account alone, a vault trade is unreadable — which is why the reconciler lost it", async () => {
@@ -203,7 +192,7 @@ describe("the trade list the owner reads", () => {
     db.prepare("INSERT INTO discovered_pools (address, symbol) VALUES (?, 'CASHCAT')").run(CASHCAT);
     db.prepare(
       "INSERT INTO trades (agent_id, kind, target, sell_token, buy_token, amount_usdg, fill_cash_usdg, fill_side, realized_pnl_usdg, status, basis_source, fill_qty_raw, created_at) VALUES (?, 'swap', ?, ?, ?, 5, 5.025718, 'sell', 0.025718, 'landed', 'receipt', '100', 1790118605)",
-    ).run(AGENT, VAULT, CASHCAT, CASH.USDG);
+    ).run(AGENT, VAULT, CASHCAT, CASH.USDT);
     const [v] = await loadTradeViews(db, AGENT, {});
     assert.match(tradeViewLine(v!, false), /✅ sold CASHCAT for \$5\.03 \(\+\$0\.03\)/);
   });
@@ -230,7 +219,7 @@ describe("review fixes", () => {
     const db = ledger();
     db.prepare(
       "INSERT INTO trades (agent_id, kind, target, sell_token, buy_token, amount_usdg, fill_side, status, created_at) VALUES (?, 'swap', ?, ?, ?, 5, 'buy', 'landed', 100)",
-    ).run(AGENT, VAULT, CASH.USDG, CASHCAT);
+    ).run(AGENT, VAULT, CASH.USDT, CASHCAT);
     for (let i = 0; i < 40; i++) {
       db.prepare("INSERT INTO trades (agent_id, kind, target, amount_usdg, status, reject_rule, created_at) VALUES (?, 'swap', ?, 5, 'rejected', 'per-trade-cap', ?)").run(AGENT, VAULT, 200 + i);
     }
@@ -251,7 +240,7 @@ describe("review fixes", () => {
 
   it("the HTML list escapes '<$0.01'", async () => {
     const db = ledger();
-    db.prepare("INSERT INTO trades (agent_id, kind, target, sell_token, buy_token, amount_usdg, fill_cash_usdg, fill_side, status, created_at) VALUES (?, 'swap', ?, ?, ?, 0.002, 0.002, 'sell', 'landed', 1)").run(AGENT, VAULT, CASHCAT, CASH.USDG);
+    db.prepare("INSERT INTO trades (agent_id, kind, target, sell_token, buy_token, amount_usdg, fill_cash_usdg, fill_side, status, created_at) VALUES (?, 'swap', ?, ?, ?, 0.002, 0.002, 'sell', 'landed', 1)").run(AGENT, VAULT, CASHCAT, CASH.USDT);
     const html = renderTradeList(await loadTradeViews(db, AGENT, {}));
     assert.doesNotMatch(html, /<\$/);
   });

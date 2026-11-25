@@ -42,6 +42,7 @@
  * child's own SQLite and its hash-chained journal keep what they recorded; the
  * receipt here, with its backup reference, is the record of the repair.
  */
+import { bnbChain } from "../../packages/core/src/chain";
 import { createHash } from "node:crypto";
 import { decodeEventLog, decodeFunctionResult, encodeFunctionData, parseAbi, type Hex } from "viem";
 import { CASH_FEEDS, CHAINLINK_ABI, ENTRYPOINT } from "../../packages/core/src/index";
@@ -56,7 +57,7 @@ export const APPLY_FORMAT = "agentcap.gas-repair.apply.v1";
 export const REVERT_FORMAT = "agentcap.gas-repair.revert.v1";
 export const REPAIRS_TABLE = "gas_repairs";
 /** Robinhood Chain mainnet. Receipts from any other chain are not this ledger's. */
-export const CHAIN_ID = 4663;
+export const CHAIN_ID: number = bnbChain.id;
 /** Transactions read per run, at most, unless the operator says otherwise. */
 export const DEFAULT_MAX_RECEIPTS = 500;
 
@@ -129,7 +130,7 @@ export interface OpEvidence {
 
 /** The Chainlink ETH/USD feed over this tool's RPC: one read per round, remembered for the run. */
 export function rpcEthFeed(rpc: RpcCall): EthFeed {
-  const feed = (CASH_FEEDS.ETH_USD as string).toLowerCase();
+  const feed = (CASH_FEEDS.BNB_USD as string).toLowerCase();
   const call = async (data: Hex): Promise<Hex> => (await rpc("eth_call", [{ to: feed, data }, "latest"])) as Hex;
   let decimals: number | null = null;
   const scale = async () => {

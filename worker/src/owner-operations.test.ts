@@ -1,7 +1,7 @@
 /**
  * OWNER OPERATIONS, read off real receipts.
  *
- * The receipts are the public chain's own (Robinhood Chain 4663, read with
+ * The receipts are the public chain's own (Robinhood Chain 56, read with
  * eth_getTransactionReceipt and eth_getBlockByNumber; testdata/
  * owner-operations-receipts.json):
  *
@@ -20,13 +20,15 @@ import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { CASH } from "../../packages/core/src/index";
 import { isRootSuccessOf, ownerOperationOf, ownerOperationRow, ownerOperationsNotice, rootExecutionLogs, type OwnerReceiptLog } from "./owner-operations";
+import { bnbCashTx } from "./testdata/bnb-cash";
 
 type FixtureLog = [address: string, topics: string[], data: string, logIndex: string];
 interface Fixture { tx: string; block: string; blockHash: string; timestamp: number; from: string; to: string; status: string; logs: FixtureLog[] }
-const FX = JSON.parse(readFileSync(new URL("./testdata/owner-operations-receipts.json", import.meta.url), "utf8")) as Record<string, Fixture>;
+const RECORDED = JSON.parse(readFileSync(new URL("./testdata/owner-operations-receipts.json", import.meta.url), "utf8")) as Record<string, Fixture>;
+const FX = Object.fromEntries(Object.entries(RECORDED).map(([name, f]) => [name, Array.isArray(f?.logs) ? bnbCashTx(f) : f])) as Record<string, Fixture>;
 const logsOf = (f: Fixture): OwnerReceiptLog[] => f.logs.map(([address, topics, data, logIndex]) => ({ address, topics, data, logIndex }));
 
-const USDG = String(CASH.USDG).toLowerCase();
+const USDG = String(CASH.USDT).toLowerCase();
 const EP = "0x0000000071727de22e5e9d8baf0edac6f37da032";
 const UOE = "0x49628fd1471006c1482da88028e9ce4dbb080b815c9b0344d39e5a8e6ec1419f";
 const BEFORE = "0xbb47ee3e183a558b1a2ff0874b079f3fc5478b7454eacf2bfc5af2ff5878f972";
@@ -37,7 +39,7 @@ const A9E = "0x9eaa728e989678bb3545dff3bd53d0e9cf19e33a";
 const A0E = "0x88e47214b5a0ca488cdabb4c9c28c3b71441ba78";
 const NVDA = "0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec";
 const read = (name: string, userOpHash: string, account: string, custody: string[] = []) =>
-  ownerOperationOf({ receiptLogs: logsOf(FX[name]!), userOpHash, txHash: FX[name]!.tx, account, custody, usdg: USDG, chainId: 4663 });
+  ownerOperationOf({ receiptLogs: logsOf(FX[name]!), userOpHash, txHash: FX[name]!.tx, account, custody, usdg: USDG, chainId: 56 });
 
 describe("real owner operations", () => {
   it("invalidateNonce (root sequence 0): acknowledged, it moved nothing", () => {
@@ -59,7 +61,7 @@ describe("real owner operations", () => {
     assert.equal(r.disposition, "acknowledged");
     assert.deepEqual(r.covers, [`${FX.vaultSweep!.tx}:13`]);
     assert.equal(r.usdgLegs.length, 1);
-    assert.deepEqual({ ...r.usdgLegs[0] }, { logIndex: 13, from: VAULT_4B, to: A4B, amountRaw: "1162301", kind: "internal", rule: "custody-transfer", answeredBy: "this-record" });
+    assert.deepEqual({ ...r.usdgLegs[0] }, { logIndex: 13, from: VAULT_4B, to: A4B, amountRaw: "1162301000000000000", kind: "internal", rule: "custody-transfer", answeredBy: "this-record" });
   });
 
   it("the same sweep without custody configured reads as the scanner would read it: a capital-in left for the scanner's flow, nothing covered", () => {
@@ -76,7 +78,7 @@ describe("real owner operations", () => {
     assert.ok(r);
     assert.equal(r.disposition, "review");
     assert.deepEqual(r.reasons, ["token-departed"]);
-    assert.deepEqual(r.usdgLegs.map((l) => [l.logIndex, l.kind, l.answeredBy, l.amountRaw]), [[8, "capital-out", "flow", "348368488"]]);
+    assert.deepEqual(r.usdgLegs.map((l) => [l.logIndex, l.kind, l.answeredBy, l.amountRaw]), [[8, "capital-out", "flow", "348368488000000000000"]]);
     assert.deepEqual(r.tokenMoves.map((m) => [m.logIndex, m.token, m.direction, m.amountRaw]), [[9, NVDA, "departed", "12397031985369"]]);
     assert.deepEqual(r.covers, [], "a capital leg is never covered by the record");
     assert.equal(r.gasWei, "7770613603662", "actualGasCost, from the event's own data");
@@ -97,7 +99,7 @@ describe("real owner operations", () => {
     assert.equal(r.disposition, "review");
     assert.deepEqual(r.reasons, ["token-departed"]);
     assert.deepEqual(r.tokenMoves.map((m) => m.token), ["0xff080c8ce2e5feadaca0da81314ae59d232d4afd", "0xd917b029c761d264c6a312bbbcda868658ef86a6", "0xbeeff033f34c046626b8d0a041844c5d1a5409dd"]);
-    assert.deepEqual(r.usdgLegs.map((l) => [l.logIndex, l.kind, l.amountRaw]), [[7, "capital-out", "144818530"]]);
+    assert.deepEqual(r.usdgLegs.map((l) => [l.logIndex, l.kind, l.amountRaw]), [[7, "capital-out", "144818530000000000000"]]);
   });
 
   it("the session key's enable-mode sell (mode 1, vType 2) is not an owner operation: null, so it stays on today's path", () => {
@@ -112,13 +114,13 @@ describe("real owner operations", () => {
   it("a receipt whose logs carry no position is unread (null): an execution cannot be told from its neighbours' without one", () => {
     const logs = logsOf(FX.recoverFunds!).map((l) => ({ ...l, logIndex: undefined }));
     assert.equal(ownerOperationOf({ receiptLogs: logs, userOpHash: "0x04f8241f6d02241469b9c2bc2d2f8cc4cca719eb5c6d54f3a77077c7e41ab3a7", txHash: FX.recoverFunds!.tx,
-      account: A4B, custody: [], usdg: USDG, chainId: 4663 }), null);
+      account: A4B, custody: [], usdg: USDG, chainId: 56 }), null);
   });
 
   it("viem's numeric log positions read the same as the RPC's hex ones", () => {
     const logs = logsOf(FX.recoverFunds!).map((l) => ({ ...l, logIndex: Number(BigInt(l.logIndex as string)) }));
     const r = ownerOperationOf({ receiptLogs: logs, userOpHash: "0x04f8241f6d02241469b9c2bc2d2f8cc4cca719eb5c6d54f3a77077c7e41ab3a7", txHash: FX.recoverFunds!.tx,
-      account: A4B, custody: [VAULT_4B], usdg: USDG, chainId: 4663 });
+      account: A4B, custody: [VAULT_4B], usdg: USDG, chainId: 56 });
     assert.deepEqual(r, read("recoverFunds", "0x04f8241f6d02241469b9c2bc2d2f8cc4cca719eb5c6d54f3a77077c7e41ab3a7", A4B, [VAULT_4B]));
   });
 });
@@ -137,7 +139,7 @@ const before = (i: number): OwnerReceiptLog => ({ address: EP, topics: [BEFORE],
 const transfer = (token: string, from: string, to: string, amount: bigint, i: number): OwnerReceiptLog =>
   ({ address: token, topics: [TR, topic(from), topic(to)], data: `0x${word(amount)}`, logIndex: `0x${i.toString(16)}` });
 const synth = (logs: OwnerReceiptLog[], custody: string[] = []) =>
-  ownerOperationOf({ receiptLogs: logs, userOpHash: OP, txHash: TX, account: ACCOUNT, custody, usdg: USDG, chainId: 4663 });
+  ownerOperationOf({ receiptLogs: logs, userOpHash: OP, txHash: TX, account: ACCOUNT, custody, usdg: USDG, chainId: 56 });
 
 describe("the shapes no fixture carried", () => {
   it("a root-key BUY: the token arrived (review), and its USDG leg is a trade, not capital", () => {
@@ -266,7 +268,7 @@ describe("the log-level proof admission repeats", () => {
 describe("the record and the notice", () => {
   it("the row carries the root proof, the block time and the recording epoch, and a review reason only on a review", () => {
     const r = read("recoverFunds", "0x04f8241f6d02241469b9c2bc2d2f8cc4cca719eb5c6d54f3a77077c7e41ab3a7", A4B, [VAULT_4B])!;
-    const row = ownerOperationRow(r, { agentId: A4B, chainId: 4663, blockNumber: BigInt(FX.recoverFunds!.block), blockTime: FX.recoverFunds!.timestamp, recordedEpoch: 1 });
+    const row = ownerOperationRow(r, { agentId: A4B, chainId: 56, blockNumber: BigInt(FX.recoverFunds!.block), blockTime: FX.recoverFunds!.timestamp, recordedEpoch: 1 });
     assert.equal(row.review_reason, "token-departed");
     assert.equal(row.block_time, 1790947791, "2026-10-02T13:29:51Z, from the chain");
     assert.equal(row.block_number, 78267605);
@@ -274,7 +276,7 @@ describe("the record and the notice", () => {
     assert.equal(row.validator, "root");
     assert.equal(row.covers_logs_json, "[]");
     const ack = ownerOperationRow(read("invalidateNonce", "0x496e7211db25d250d9142105ab5024debcf05519c734d83191145af8eac09ffa", A4B)!,
-      { agentId: A4B, chainId: 4663, blockNumber: 1n, blockTime: 1, recordedEpoch: 1 });
+      { agentId: A4B, chainId: 56, blockNumber: 1n, blockTime: 1, recordedEpoch: 1 });
     assert.equal(ack.review_reason, null);
   });
 

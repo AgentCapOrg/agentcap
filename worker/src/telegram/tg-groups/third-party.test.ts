@@ -107,14 +107,19 @@ describe("the new clauses", () => {
   /** Every lure the quote probes (scratchpad gate-probe.mts, proto-probe.mts) found passing the research gate. */
   it("SEND_FOR: a doubling scam or a send, in English and Spanish", () => {
     hits(SEND_FOR, [
-      "send 1 SOL to get 2 back",
-      "double your sol, send to the dev wallet",
-      "double your sol",
+      "send 1 BNB to get 2 back",
+      "double your bnb, send to the dev wallet",
+      "double your bnb",
       "deposit 100 usdc and receive 200",
-      "transfer 1 sol for 2 back",
+      "transfer 1 bnb for 2 back",
       "2x your bag in an hour",
+      "envia 1 bnb y recibe 2 de vuelta",
+      "envía 0.5 bnb al dev",
+      "manda 2 bnb",
+      "send 1 SOL to get 2 back",
+      "double your sol",
+      "transfer 1 sol for 2 back",
       "envia 1 sol y recibe 2 de vuelta",
-      "envía 0.5 sol al dev",
       "manda 2 sol",
     ]);
     misses(SEND_FOR, [...HARMLESS, "send it", "they will send it higher", "sent the chart to my friends", "doubled since launch"]);
@@ -122,12 +127,15 @@ describe("the new clauses", () => {
 
   it("SEND_FOR: a send of a coin, or a send with something coming back, in small rewordings (review, 2026-10-09)", () => {
     hits(SEND_FOR, [
-      "send 1 sol to the dev wallet and he sends 2 back, legit",
-      "send 0.1 sol to verify and they send 1 sol back",
-      "transfer 1 sol, they return 2 within an hour",
+      "send 1 bnb to the dev wallet and he sends 2 back, legit",
+      "send 0.1 bnb to verify and they send 1 bnb back",
+      "transfer 1 bnb, they return 2 within an hour",
+      "deposit 1 bnb get 2 bnb",
+      "i sent 1 bnb and got 2 back, its real",
+      "give 1 bnb take 2 bnb",
+      "send bnb to the burn address to unlock refund",
       "deposit 1 sol get 2 sol",
-      "i sent 1 sol and got 2 back, its real",
-      "give 1 sol take 2 sol",
+      "send 0.1 sol to verify and they send 1 sol back",
       "send sol to the burn address to unlock refund",
       "send 1 to the dev and get 2 back",
       "sent 2 and they sent 4 back",
@@ -136,7 +144,7 @@ describe("the new clauses", () => {
   });
 
   it("SEND_FOR: more than three words between the send and what comes back (review, 2026-10-09)", () => {
-    hits(SEND_FOR, ["send 1 sol to the dev wallet and get 2 back", "send 2 sol to this wallet, get 4 back instantly", "send any amount of sol to the dev and it comes back doubled", "s3nd 1 sol to get 2 back"]);
+    hits(SEND_FOR, ["send 1 bnb to the dev wallet and get 2 back", "send 2 bnb to this wallet, get 4 back instantly", "send any amount of bnb to the dev and it comes back doubled", "s3nd 1 bnb to get 2 back"]);
     misses(SEND_FOR, ["send it back to ath", "sent it to 10m and it came back down", "sending this, it already doubled", "dev sent the lp to the burn address, never getting it back"]);
   });
 
@@ -252,11 +260,12 @@ describe("the new clauses", () => {
       "use the auton refund bot",
       "search auton refund on telegram",
       "open a support ticket on their discord to get refunded",
+      "admins are giving back bnb",
       "admins are giving back sol",
       "relaunch on pump, same ticker",
       "join the vip group for the next one",
       "read pinned for refund",
-      "i sent 1 sol and got 2 back, its real",
+      "i sent 1 bnb and got 2 back, its real",
     ]);
     misses(POST_RUG_LURE, [...HARMLESS, "rugged, holders got wrecked", "holders still bagholding, no recovery in sight", "dead coin now, volume gone", "it got listed on a cex", "chart is cooked"]);
   });
@@ -286,7 +295,7 @@ describe("the new clauses", () => {
       "devs moved everything to autonlabs io",
       "hxxps autonhub xyz",
     ]);
-    misses(SPELLED_LINK, ["launched on pumpfun, graduated fast", "pump fun graduates are cooked", "auton/sol pair is thin", "50/50 on this one", "24/7 volume", "safety net is gone", "net flows positive", "x is buzzing about it", "polka dot pattern on the logo", "tg/x both quiet", "the dot com bubble", "rides the polkadot narrative", "dot-com era pricing", "the io narrative"]);
+    misses(SPELLED_LINK, ["launched on pumpfun, graduated fast", "pump fun graduates are cooked", "auton/bnb pair is thin", "50/50 on this one", "24/7 volume", "safety net is gone", "net flows positive", "x is buzzing about it", "polka dot pattern on the logo", "tg/x both quiet", "the dot com bubble", "rides the polkadot narrative", "dot-com era pricing", "the io narrative"]);
   });
 
   it("NOT_ENGLISH and the gate's quoteNotEnglish: a quote in another language (review r2)", () => {
@@ -323,7 +332,7 @@ describe("the new clauses", () => {
       "dev's house is the blue one on elm road",
       "the dev's passport says tunde adeyemi born 1998",
     ]);
-    misses(PRIVATE_THIRD, ["on the road to 1b", "the dev is very active in tg", "the dev's github is active, commits daily", "team works hard", "dev called the top", "liquidity lives on raydium", "the number one ai coin on sol"]);
+    misses(PRIVATE_THIRD, ["on the road to 1b", "the dev is very active in tg", "the dev's github is active, commits daily", "team works hard", "dev called the top", "liquidity lives on raydium", "the number one ai coin on bnb"]);
   });
 
   it("PERSON_HARM: a violent or sexual crime, abuse, bribery, a police case or a health status laid on a person (review r2)", () => {
@@ -459,7 +468,7 @@ describe("the new clauses", () => {
 
   it("PRIVATE_THIRD: a name told, a first name, a whatsapp or a profile, a dox, a house on a close (review, 2026-10-09)", () => {
     hits(PRIVATE_THIRD, ["the dev's real name is john smith, lives at 12 baker street london", "the dev lives in lagos and his name is tunde", "his name is tunde, from lagos", "the dev's first name is tunde", "dev's whatsapp is out there", "found his facebook, same guy", "the deployer hangs out at 4 park close", "doxxed the dev"]);
-    misses(PRIVATE_THIRD, ["the number one ai coin on sol", "big wallets are holding", "liquidity lives on raydium"]);
+    misses(PRIVATE_THIRD, ["the number one ai coin on bnb", "big wallets are holding", "liquidity lives on raydium"]);
   });
 
   it("CONTACT_LURE: someone to message, a channel without its @, a pinned link, a claim or portal name (review, 2026-10-09)", () => {

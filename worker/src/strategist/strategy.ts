@@ -7,12 +7,13 @@
  * unvalidated intent.
  */
 
+import { cashNumber } from "../../../packages/core/src/cash";
 import { randomUUID } from "node:crypto";
 import { entryGateFor } from "../entry-gates";
 import { liqDistanceBps, type PerpKey } from "../../../packages/core/src/perps";
 import type { PerpRouteIntent } from "../perps/route";
 import type { TradeIntent } from "../policy";
-import { energyEntriesSpent, entryBrake, type PerpsView, type Snapshot, type Strategy, type Tick } from "../strategies/types";
+import { entryBrake, type PerpsView, type Snapshot, type Strategy, type Tick } from "../strategies/types";
 import type { Why } from "../strategies/reasons";
 import {
   PERP_STOP_FLOOR_PCT,
@@ -55,25 +56,6 @@ export interface LlmStrategistConfig {
   driver: ProposalDriver;
   universe: StrategistUniverse;
   /**
-   * The curve legs available RIGHT NOW, re-read each decision.
-   *
-   * A function rather than a field because `universe` is built once at
-   * strategy construction while a curve leg carries this tick's RESERVES —
-   * the input a slippage floor is derived from. Freezing them at startup
-   * would size every future trade against a curve as it looked when the
-   * worker booted, on a venue whose p99 move over four minutes is 1,546 bps.
-   *
-   * Optional: absent means no curve venue, which is exactly how every
-   * existing caller behaves.
-   */
-  curveLegsNow?: () => {
-    legs: ReadonlyMap<string, import("./proposals").CurveLeg>;
-    tokens: ReadonlyMap<string, `0x${string}`>;
-    slippageBps: number;
-    /** How far one buy may move the curve, bps. Travels with the legs. */
-    maxImpactBps: number;
-  } | null;
-  /**
    * Sell a holding outright once it is this far below what it cost, in bps.
    * 0 = off, and 0 is the default.
    *
@@ -98,17 +80,6 @@ export interface LlmStrategistConfig {
   takeProfitBps?: number;
   /** Minimum ms between model calls — decisions are windows, ticks are not. */
   decisionIntervalMs: number;
-  /**
-   * MAY THIS WINDOW'S MODEL CALL BE PAID FOR? Asked once a window is due and
-   * before it is stamped. False means the window is not taken: no model call,
-   * no stamp, and the next tick asks again — which is cheap, because the
-   * energy allowance it is bound to (index.ts) is a counter, not a model.
-   *
-   * The floor and the ceiling above the window never ask: they are exits.
-   * Absent means always yes (backtests, fixtures, the null driver — registry.ts
-   * forwards it only when there is a real model to pay for).
-   */
-  claimWindow?: () => Promise<boolean>;
   /** Injectable clock for tests. */
   now?: () => number;
   /** Where dropped proposals and reasons get reported (worker event log). */
@@ -259,27 +230,14 @@ export function buildPerpSignals(
 }
 
 function buildSignals(snap: Snapshot, universe: StrategistUniverse, at: Date, stopLossBps = 0, perps?: PerpSignals): Signals {
-  // ── WHAT THE MODEL IS ALLOWED TO NAME ─────────────────────────────────
-  //
-  // BOTH VENUES, and it used to be one. `tradableSymbols` and the price list
-  // were derived from `universe.legs` alone, while curve legs live in a
-  // separate map — so a bonding-curve memecoin was never offered to the model
-  // and its price was filtered out of the prompt. Supplying `curveLegsNow` was
-  // therefore still inert: the converter could finally build a curve trade, and
-  // nothing ever asked for one.
-  //
-  // The two maps stay SEPARATE downstream, deliberately. `proposalsToIntents`
-  // checks `curveLegs` before `legs`, and a curve token placed in `legs` would
-  // be routed to the swap router — an operation against a pool that does not
-  // exist. This union is for what the model may SAY, not for how a trade is
-  // built.
-  const tradable = new Set([...universe.legs.keys(), ...(universe.curveTokens?.keys() ?? [])]);
+  // WHAT THE MODEL IS ALLOWED TO NAME.
+  const tradable = new Set(universe.legs.keys());
   return {
-    cashUsdg: Number(snap.cashUsdg) / 1e6,
-    vaultUsdg: Number(snap.vaultUsdg) / 1e6,
+    cashUsdg: cashNumber(snap.cashUsdg),
+    vaultUsdg: cashNumber(snap.vaultUsdg),
     equityUsdg:
-      Number(snap.cashUsdg + snap.vaultUsdg) / 1e6 +
-      [...snap.holdings.values()].reduce((s, h) => s + Number(h.valueUsdg) / 1e6, 0),
+      cashNumber(snap.cashUsdg + snap.vaultUsdg) +
+      [...snap.holdings.values()].reduce((s, h) => s + cashNumber(h.valueUsdg), 0),
     // WHAT IT IS WORTH, AND WHAT IT COST. The second number is new, and without
     // it the model was being asked to decide whether to sell while structurally
     // unable to tell a winner from a loser.
@@ -292,16 +250,16 @@ function buildSignals(snap: Snapshot, universe: StrategistUniverse, at: Date, st
       const cost = h.costUsdg ?? null;
       return {
         symbol,
-        valueUsdg: round2(Number(h.valueUsdg) / 1e6),
+        valueUsdg: round2(cashNumber(h.valueUsdg)),
         priceStale: h.priceStale,
         ...(cost === null
           ? {}
           : {
-              costUsdg: round2(Number(cost) / 1e6),
+              costUsdg: round2(cashNumber(cost)),
               // Stated rather than left as arithmetic. A stale price makes this
               // a number about a market that closed, and `priceStale` beside it
               // is what says so.
-              pnlUsdg: round2(Number(h.valueUsdg - cost) / 1e6),
+              pnlUsdg: round2(cashNumber(h.valueUsdg - cost)),
             }),
       };
     }),
@@ -315,9 +273,8 @@ function buildSignals(snap: Snapshot, universe: StrategistUniverse, at: Date, st
     tradableSymbols: [...tradable],
     // ── AND WHICH OF THEM THE KEY WILL NOT BUY ───────────────────────────
     //
-    // Asked of the gate the wall's own branch would ask (entry-gates.ts), by
-    // the same routing proposalsToIntents uses: a symbol with a curve leg is a
-    // curve trade, anything else a swap. Told to the model so it does not
+    // Asked of the gate the wall's own branch would ask (entry-gates.ts). Told
+    // to the model so it does not
     // spend an action slot — and a paid window — on a buy the wall refuses
     // with `no-exit`; the buys it proposes anyway are withheld below. Left in
     // `tradableSymbols`, because a holding in one may still be sold.
@@ -326,8 +283,6 @@ function buildSignals(snap: Snapshot, universe: StrategistUniverse, at: Date, st
     // prompt line, and an absent hint gates nothing.
     ...(() => {
       const cannotBuy = [...tradable].filter((symbol) => {
-        const curveToken = universe.curveLegs?.has(symbol) ? universe.curveTokens?.get(symbol) : undefined;
-        if (curveToken) return entryGateFor(snap.entryGates, curveToken, "curve") !== null;
         const token = universe.legs.get(symbol);
         return token !== undefined && entryGateFor(snap.entryGates, token) !== null;
       });
@@ -336,7 +291,7 @@ function buildSignals(snap: Snapshot, universe: StrategistUniverse, at: Date, st
     // Absent when no floor is armed — never 0, which would read as a floor at
     // break-even rather than as no floor at all.
     ...(stopLossBps > 0 ? { stopLossBps } : {}),
-    maxPerActionUsdg: Number(universe.maxPerActionUsdg) / 1e6,
+    maxPerActionUsdg: cashNumber(universe.maxPerActionUsdg),
     utcHour: at.getUTCHours(),
     utcDay: at.getUTCDay(),
     // Only for symbols the model may actually trade. Depth on something outside
@@ -362,74 +317,17 @@ function buildSignals(snap: Snapshot, universe: StrategistUniverse, at: Date, st
 }
 
 /**
- * AT MOST TODAY'S NEW TRADES, IN THE MODEL'S ORDER, COUNTED AFTER VALIDATION.
- *
- * With a PARTIAL allowance left (Snapshot.energy.entriesLeft = 1 or 2 — every
- * low morning starts at 2, and maxActionsPerTick is 4), only the spent case was
- * filtered. Every buy the model proposed was journaled — a public decision row
- * each — and announced to the owner, and index.ts's hard filter then withheld
- * the extras with no row at all: a published buy that never happens.
- *
- * AFTER proposalsToIntents, never before it: a cap on the raw proposals could
- * keep a buy validation then drops (unknown symbol, over the ceiling, short of
- * cash) and withhold the valid one behind it. The extras are removed from the
- * PROPOSALS and validation is run again rather than the output being trimmed,
- * because a withheld buy must not keep what it reserved — the cash later buys
- * are checked against, and the per-tick action slot a later SELL needs. A
- * re-run can admit a buy the first run refused for cash; that one is past the
- * cap too, so it goes the same way, and the loop ends because the list only
- * shrinks. Sells, holds and everything before the cap are untouched.
- *
- * Absent, null or a non-finite figure means NOT LIMITED (energyEntriesSpent's
- * rule), and validation runs exactly once, as it always has.
+ * BOTH HALVES OF A WINDOW, VALIDATED TOGETHER. The window's action slots and the
+ * day's spend are one pot: what the spot proposals use, a perp open cannot.
  */
-export function capEntries(
-  proposals: readonly ProposedAction[],
-  universe: StrategistUniverse,
-  snap: Snapshot,
-): ValidationResult & { kept: readonly ProposedAction[]; withheld: number };
-export function capEntries(
-  proposals: readonly ProposedAction[],
-  universe: StrategistUniverse,
-  snap: Snapshot,
-  perps: PerpEntryInput,
-): ValidationResult & { kept: readonly ProposedAction[]; withheld: number; perp: PerpValidationResult & { kept: readonly PerpProposal[]; withheld: number } };
-export function capEntries(
+export function validateWindow(
   proposals: readonly ProposedAction[],
   universe: StrategistUniverse,
   snap: Snapshot,
   perps?: PerpEntryInput,
-): ValidationResult & { kept: readonly ProposedAction[]; withheld: number; perp?: PerpValidationResult & { kept: readonly PerpProposal[]; withheld: number } } {
-  const left = snap.energy?.entriesLeft;
-  const cap = typeof left === "number" && Number.isFinite(left) ? Math.max(0, Math.floor(left)) : null;
-  let kept = proposals;
-  let withheld = 0;
-  let spot: ValidationResult;
-  for (;;) {
-    const v = proposalsToIntents(kept, universe, snap);
-    // accepted[i] IS the proposal object that produced intents[i], so identity
-    // names exactly the extras and nothing else.
-    const extra = cap === null ? new Set<ProposedAction>() : new Set(v.accepted.filter((a) => a.action === "buy").slice(cap));
-    if (extra.size === 0) {
-      spot = v;
-      break;
-    }
-    kept = kept.filter((a) => !extra.has(a));
-    withheld += extra.size;
-  }
-  if (!perps) return { ...spot, kept, withheld };
-
-  // ── A PERP OPEN IS AN ENTRY TOO ─────────────────────────────────────────
-  //
-  // Counted against the SAME allowance, after the spot buys the model put
-  // first, and by the same rule: validate, then withhold the extras by
-  // identity and validate again, so a withheld open never keeps the collateral
-  // or open-size room a later open is judged against. Keyed on
-  // effect === "open", never on a word: a perp short is not a "buy" and is
-  // still a new position. Reduces and closes are exits and never counted. The
-  // window's action slots are shared with spot: what spot used, opens cannot.
-  const spotBuys = spot.accepted.filter((a) => a.action === "buy").length;
-  const perpCap = cap === null ? null : Math.max(0, cap - spotBuys);
+): ValidationResult & { perp?: PerpValidationResult } {
+  const spot = proposalsToIntents(proposals, universe, snap);
+  if (!perps) return spot;
   const slots = Math.max(0, universe.maxActionsPerTick - spot.intents.length);
   // The day's spend is one pot: what the kept spot buys will spend is not
   // there for a perp open (an open's notional counts against dailyUsdg, rule 6).
@@ -444,18 +342,10 @@ export function capEntries(
     spendHeadroomMicro: spend === null ? null : spend > spotSpend ? spend - spotSpend : 0n,
     maxOpens: perps.caps.maxOpens === undefined ? slots : Math.min(perps.caps.maxOpens, slots),
   };
-  let pKept: readonly PerpProposal[] = perps.proposals;
-  let pWithheld = 0;
-  for (;;) {
-    const v = proposalsToPerpIntents(pKept, perps.view, perps.settings, caps);
-    const extra = perpCap === null ? new Set<PerpProposal>() : new Set(v.accepted.filter((a) => a.effect === "open").slice(perpCap));
-    if (extra.size === 0) return { ...spot, kept, withheld, perp: { ...v, kept: pKept, withheld: pWithheld } };
-    pKept = pKept.filter((a) => !extra.has(a));
-    pWithheld += extra.size;
-  }
+  return { ...spot, perp: proposalsToPerpIntents(perps.proposals, perps.view, perps.settings, caps) };
 }
 
-/** The perp half of a window, for capEntries. */
+/** The perp half of a window, for validateWindow. */
 export interface PerpEntryInput {
   proposals: readonly PerpProposal[];
   view: PerpsView | null | undefined;
@@ -662,20 +552,6 @@ export function makeLlmStrategist(cfg: LlmStrategistConfig): Strategy {
 
       if (lastDecisionAt !== null && t - lastDecisionAt < cfg.decisionIntervalMs) return braked ?? [];
 
-      // ── TODAY'S ENERGY ────────────────────────────────────────────────
-      //
-      // FLAT WITH TODAY'S NEW TRADES USED UP, the model could only answer with
-      // a buy that index.ts would withhold, so it is not asked and not billed —
-      // the breaker's rule above, for the energy allowance. Not stamped, so the
-      // window is taken the first tick after midnight rather than up to a
-      // window later.
-      //
-      // THEN THE PAID CALL IS CLAIMED against the day's AI reviews. Refused,
-      // nothing is stamped and the next tick asks again; the claim is a counter
-      // read, so asking is free. Below the floor and the ceiling on purpose:
-      // those are exits and never wait on an allowance.
-      if (energyEntriesSpent(snap) && flat) return braked ?? [];
-      if (cfg.claimWindow && !(await cfg.claimWindow())) return braked ?? [];
       lastDecisionAt = t;
 
       // ── THE UNIVERSE THIS WINDOW ACTUALLY HAS ───────────────────────
@@ -692,31 +568,12 @@ export function makeLlmStrategist(cfg: LlmStrategistConfig): Strategy {
       //   every window, for the life of the grant. Settings cannot fix it: the
       //   cap is in the signature. `min()` can only ever TIGHTEN, so this needs
       //   no re-signing and cannot raise what anybody may spend.
-      //
-      //   THE CURVE LEGS. `buildSignals` derives `tradableSymbols` and `prices`
-      //   from `universe.legs`, so a curve symbol merged in afterwards was
-      //   never offered to the model at all — the proposal it could not have
-      //   made was then dropped as "not in the tradable universe".
-      //
-      // Merged per window rather than at construction because the reserves are
-      // this tick's; see the curve note on curveLegsNow.
-      const curve = cfg.curveLegsNow?.() ?? null;
       const universeNow: StrategistUniverse = {
         ...cfg.universe,
         maxPerActionUsdg:
           cfg.universe.maxPerActionUsdg < snap.perTradeCapUsdg
             ? cfg.universe.maxPerActionUsdg
             : snap.perTradeCapUsdg,
-        ...(curve
-          ? {
-              curveLegs: curve.legs,
-              curveTokens: curve.tokens,
-              slippageBps: curve.slippageBps,
-              // The same ceiling both swap branches and the chat producer use.
-              // Absent means unchecked, so it travels with the legs or not at all.
-              maxImpactBps: curve.maxImpactBps,
-            }
-          : {}),
       };
 
       // The perp block, sized to the same ceilings the boundary will hold the
@@ -837,43 +694,31 @@ export function makeLlmStrategist(cfg: LlmStrategistConfig): Strategy {
       // drop: a drop row publishes, and a tripped breaker is account state the
       // public feed leaves out. The owner's log says it, below.
       //
-      // AND THE SAME FOR TODAY'S ENERGY: holding, with no new trades left
-      // today, the model was asked because it may want to sell, and a buy it
-      // answered with would only be withheld by index.ts after this journaled
-      // it — a public decision for a trade that could never happen.
-      //
-      // AND WITH SOME LEFT, no more buys than are left (capEntries): the rest
-      // are withheld here, counted in the same note, never journaled.
       //
       // AND, FIRST, ANY BUY OF A SYMBOL THE KEY WILL NOT BUY (`cannotBuy`, from
       // the entry gates): the wall refuses it with `no-exit`, so journaling it
       // would publish a buy that could never happen — the same reason as the
-      // two above. Counted apart, because its note names a different cause.
+      // one above. Counted apart, because its note names a different cause.
       const cannotBuy = new Set(signals.cannotBuy ?? []);
       const locked = actions.filter((a) => a.action === "buy" && cannotBuy.has(a.symbol));
       const buyable = locked.length > 0 ? actions.filter((a) => !locked.includes(a)) : actions;
-      const energySpent = energyEntriesSpent(snap);
-      const allowed = brake || energySpent ? buyable.filter((a) => a.action !== "buy") : buyable;
+      const allowed = brake ? buyable.filter((a) => a.action !== "buy") : buyable;
       // A perp OPEN is a new position whatever its side — keyed on the effect,
       // never on the word "buy". Reduces and closes are exits: never withheld.
-      const allowedPerp = brake || energySpent ? perpActions.filter((a) => a.effect !== "open") : perpActions;
-      const capped: ValidationResult & {
-        kept: readonly ProposedAction[];
-        withheld: number;
-        perp?: PerpValidationResult & { kept: readonly PerpProposal[]; withheld: number };
-      } =
+      const allowedPerp = brake ? perpActions.filter((a) => a.effect !== "open") : perpActions;
+      const checked =
         perpsOffered && perpSettings !== null
-          ? capEntries(allowed, universeNow, snap, {
+          ? validateWindow(allowed, universeNow, snap, {
               proposals: allowedPerp,
               view: perpView,
               settings: perpSettings,
               caps: { perTradeSealedMicro: snap.perTradeCapUsdg, maxPerActionMicro: universeNow.maxPerActionUsdg, spendHeadroomMicro: snap.spendHeadroomUsdg },
             })
-          : capEntries(allowed, universeNow, snap);
-      const perp = capped.perp ?? null;
-      const perpWithheld = perpActions.length - allowedPerp.length + (perp?.withheld ?? 0);
-      const withheld = buyable.length - allowed.length + capped.withheld + perpWithheld;
-      const { intents, accepted, rejected } = capped;
+          : validateWindow(allowed, universeNow, snap);
+      const perp = checked.perp ?? null;
+      const perpWithheld = perpActions.length - allowedPerp.length;
+      const withheld = buyable.length - allowed.length + perpWithheld;
+      const { intents, accepted, rejected } = checked;
       const routeIntents: PerpRouteIntent[] = perp ? perp.intents.map((d) => ({ ...d })) : [];
 
       // Journal the decision BEFORE the intent leaves for the policy wall: every
@@ -944,12 +789,8 @@ export function makeLlmStrategist(cfg: LlmStrategistConfig): Strategy {
         note(
           "ok",
           perpWithheld === 0
-            ? brake
-              ? `strategist: ${withheld} buy proposal(s) withheld — ${braking}; sells still run`
-              : `strategist: ${withheld} buy proposal(s) withheld — today's energy for new trades is used up; sells still run`
-            : brake
-              ? `strategist: ${withheld} new position(s) withheld — ${braking}; sells and perp closes still run`
-              : `strategist: ${withheld} new position(s) withheld — today's energy for new trades is used up; sells and perp closes still run`,
+            ? `strategist: ${withheld} buy proposal(s) withheld — ${braking}; sells still run`
+            : `strategist: ${withheld} new position(s) withheld — ${braking}; sells and perp closes still run`,
         );
       }
       // The symbols are the universe's own — `cannotBuy` is drawn from it —
@@ -982,7 +823,7 @@ export function makeLlmStrategist(cfg: LlmStrategistConfig): Strategy {
         }
       }
       // What was KEPT — a withheld buy is announced only as a count, above.
-      for (const a of capped.kept) {
+      for (const a of allowed) {
         if (a.action !== "hold" && a.reason) {
           note("ok", `strategist: ${a.action} ${a.sizeUsdg} USDG ${a.symbol} — ${a.reason}`);
         }

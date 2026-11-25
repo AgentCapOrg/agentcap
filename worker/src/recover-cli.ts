@@ -13,7 +13,7 @@
  * so the CLI can decide what to do next without scraping prose.
  */
 
-import { chainForId, pimlicoBundlerUrl, robinhoodChain, isGrantPurpose } from "../../packages/core/src/index";
+import { chainForId, pimlicoBundlerUrl, bnbChain, isGrantPurpose } from "../../packages/core/src/index";
 import { resolveConfig } from "./settings";
 import { ownerFromPrivateKey, planRecovery, recoverFunds } from "./recover";
 
@@ -23,7 +23,7 @@ const emit = (obj: unknown) => process.stdout.write(`__RESULT__${JSON.stringify(
 async function main() {
   const mode = process.argv[2];
   const to = process.argv[3] as `0x${string}` | undefined;
-  const chainId = Number(process.argv[4] || robinhoodChain.id);
+  const chainId = Number(process.argv[4] || bnbChain.id);
 
   const ownerKey = process.env.AGENTCAP_RECOVER_OWNER_KEY as `0x${string}` | undefined;
   const expect = (process.env.AGENTCAP_RECOVER_EXPECT || undefined) as `0x${string}` | undefined;
@@ -50,7 +50,7 @@ async function main() {
   // derivation and its sweep list, never another wallet's trading configuration.
   const cfg = resolveConfig();
   const chain = chainForId(chainId);
-  const rpcUrl = chainId === robinhoodChain.id ? cfg.rpcMainnet : cfg.rpcTestnet;
+  const rpcUrl = chainId === bnbChain.id ? cfg.rpcMainnet : cfg.rpcTestnet;
 
   try {
     if (mode === "plan") {
@@ -69,45 +69,15 @@ async function main() {
         // Only claim empty when we actually READ everything. Otherwise say what
         // we could not see — "this account is empty" is how someone concludes
         // their money is gone because an RPC blinked.
-        //
-        // AND NOT WHEN THE CLASS VAULT HOLDS SOMETHING. The vault is a separate
-        // contract holding tokens the ACCOUNT does not, so an owner whose whole
-        // book was class positions used to be told they had nothing by the one
-        // command that exists to get money out.
-        // ACROSS EVERY VAULT. Counting only the primary one is how "this
-        // account is empty" gets printed over a full second vault.
-        const heldInVaults = plan.classVaults.reduce((n, v) => n + v.holdings.length, 0);
         say(
-          heldInVaults
-            ? `  holdings      : none in the account itself — but your class vault${plan.classVaults.length > 1 ? "s hold" : " holds"} ${heldInVaults} token(s), listed below. They are recoverable.`
-            : plan.unreadable.length
-              ? `  holdings      : none found, but ${plan.unreadable.join(", ")} could not be read — that is NOT a zero balance. Check the RPC and rerun.`
-              : "  holdings      : none — this account is empty",
+          plan.unreadable.length
+            ? `  holdings      : none found, but ${plan.unreadable.join(", ")} could not be read — that is NOT a zero balance. Check the RPC and rerun.`
+            : "  holdings      : none — this account is empty",
         );
       } else {
         say("  holdings:");
         for (const b of plan.balances) say(`    • ${b.amount} ${b.symbol}${b.note ? `  (${b.note})` : ""}`);
         if (plan.unreadable.length) say(`  NOT READ      : ${plan.unreadable.join(", ")} — there may be more here than this list shows.`);
-      }
-      // THE CLASS VAULT, SHOWN SEPARATELY because recovering it is a separate
-      // operation: `sweep` moves a token to the account, and only then can the
-      // ordinary transfer reach it. An owner reading this should be able to see
-      // that their coins exist, where they are, and that they can get them out
-      // without anything of ours running.
-      // ONE BLOCK PER VAULT. After v2 an account has two, and a confirmation
-      // that names a strict subset of what the operation moves has shipped here
-      // once already. The version label is what lets an owner tell them apart —
-      // both are "this account's class vault" and only one is the current one.
-      for (const v of plan.classVaults) {
-        const label = v.version === null ? "class vault" : `class vault v${v.version}`;
-        say(`  ${label.padEnd(14)}: ${v.vault}`);
-        if (v.holdings.length === 0) {
-          say(v.note ? `    (nothing found, but ${v.note})` : "    (empty — no class positions)");
-        } else {
-          for (const h of v.holdings) say(`    • ${h.amount} ${h.symbol}`);
-          say("    these sweep to your account first, then out with everything else — two operations, one command");
-          if (v.note) say(`    NOTE: ${v.note}`);
-        }
       }
       emit({
         ok: true,
@@ -116,21 +86,6 @@ async function main() {
         gasWei: plan.gasWei.toString(),
         unreadable: plan.unreadable,
         balances: plan.balances.map((b) => ({ symbol: b.symbol, amount: b.amount, note: b.note })),
-        // classVault/classHoldings/classNote stay, unchanged in meaning, so a
-        // script reading this line keeps working. classVaults is the whole book.
-        classVault: plan.classVault,
-        classNote: plan.classNote,
-        classHoldings: plan.classHoldings.map((h) => ({
-          token: h.token,
-          symbol: h.symbol,
-          amount: h.amount,
-        })),
-        classVaults: plan.classVaults.map((v) => ({
-          vault: v.vault,
-          version: v.version,
-          note: v.note,
-          holdings: v.holdings.map((h) => ({ token: h.token, symbol: h.symbol, amount: h.amount })),
-        })),
       });
       process.exit(0);
     }

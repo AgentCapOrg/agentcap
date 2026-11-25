@@ -324,7 +324,7 @@ export interface TooWideBasket {
    *
    * A callback rather than a formula, and that is the whole point: the maximum
    * has to come from `buildCallPermissions` over the owner's ACTUAL features —
-   * their venues, their adapters, whether a class vault is sealed — because
+   * their venues, whether a Trencher vault is sealed — because
    * every one of those changes the per-token price. A hard-coded token limit
    * would be wrong for everybody who is not the owner it was measured on.
    */
@@ -366,11 +366,8 @@ export interface WallSignableRefusal {
  * ── AND A REFUSAL HAS TO BE ACTIONABLE ────────────────────────────────────
  *
  * "Remove some custom tokens, or turn off a venue you are not using" was true
- * and useless. It named no number, and on chain 4663 the largest removable item
- * — the class vault, 1,361,964 gas, about three tokens' worth — CANNOT be turned
- * off: `sealedClassFactory` falls back to the chain's own factory and the
- * settings field can only override the address, never clear it. So the one lever
- * the sentence pointed at was the one lever the owner did not have.
+ * and useless: it named no number, and could point at a lever the owner did not
+ * have.
  *
  * Given a basket, this now descends through the caller's own builder to find the
  * largest token count that actually fits, and says that. Not a formula and not a

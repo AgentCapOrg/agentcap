@@ -26,7 +26,6 @@ import {
   type WriterContext,
 } from "./social-post";
 import type { ClassEvidence } from "./class-evidence";
-import { base58Encode, SOLANA_USDG_MINT } from "../../packages/core/src/ids";
 
 const EVIDENCE: ClassEvidence = {
   act: "enter",
@@ -98,24 +97,7 @@ describe("a post may not carry a figure the agent was never given", () => {
     assert.equal(admitPost("More on this at https://example.com, liquidity is thin.", ctx()).refusal, "has-handle");
   });
 
-  it("refuses a Solana id as an address, not as a digit (Solana P0)", () => {
-    // Every base58 id core's detector finds holds a digit, so without the
-    // address arm it was filed as "has-digits": refused, for the wrong reason.
-    assert.equal(admitPost(`Following ${SOLANA_USDG_MINT} into this one.`, ctx()).refusal, "has-address");
-    assert.equal(admitPost(`Seen on solscan.io/token/${SOLANA_USDG_MINT} today.`, ctx()).refusal, "has-address");
-    const sig = base58Encode(Uint8Array.from({ length: 64 }, (_, i) => (i * 37 + 11) & 0xff));
-    assert.equal(admitPost(`Saw ${sig} go by`, ctx()).refusal, "has-address");
-  });
 
-  it("refuses a Solana id glued to the words around it as an address (audit regressions F3)", () => {
-    // A letters-only key has no digit for the digit check to see, so glued to a word it was published.
-    const letters = "EEuxbXvdXfvgGiFWKYyEksxzabPKjwhYTNvGXFitaqqT";
-    assert.equal(admitPost(`Watching ca${letters} while the curve stays early.`, ctx()).refusal, "has-address");
-    assert.equal(admitPost(`Watching ${letters}ish things while the curve stays early.`, ctx()).refusal, "has-address");
-    // One with digits was refused, but as "has-digits": the wrong reason, on the case where it matters most.
-    assert.equal(admitPost(`Grab it CA${SOLANA_USDG_MINT} before the curve fills up.`, ctx()).refusal, "has-address");
-    assert.equal(admitPost(`Following ${SOLANA_USDG_MINT}is the move here.`, ctx()).refusal, "has-address");
-  });
 });
 
 describe("not posting is a normal outcome", () => {
@@ -207,23 +189,7 @@ describe("the prompt hands over words, never measurements", () => {
 });
 
 describe("voice comes from what an owner actually chose", () => {
-  const DEFAULTS: Disposition = {
-    maxHoldSec: 21600,
-    exitAtGraduationPct: 85,
-    perEntryUsdg: 5,
-    maxImpactBps: 300,
-    minDepthUsdg: 100,
-  };
-
-  it("reads a short hold as someone who moves early", () => {
-    const t = traitsOf({ ...DEFAULTS, maxHoldSec: 1800 }, DEFAULTS);
-    assert.ok(t.some((x) => /early/.test(x)));
-  });
-
-  it("reads a high depth floor as someone who wants liquidity first", () => {
-    const t = traitsOf({ ...DEFAULTS, minDepthUsdg: 400 }, DEFAULTS);
-    assert.ok(t.some((x) => /liquidity/.test(x)));
-  });
+  const DEFAULTS: Disposition = { maxImpactBps: 300 };
 
   /**
    * THE HONEST CASE, asserted rather than hidden.
@@ -237,14 +203,5 @@ describe("voice comes from what an owner actually chose", () => {
   it("gives identically configured agents identical traits", () => {
     assert.deepEqual(traitsOf(DEFAULTS, DEFAULTS), traitsOf(DEFAULTS, DEFAULTS));
     assert.deepEqual(traitsOf(DEFAULTS, DEFAULTS), [], "a default agent has no distinguishing trait to claim");
-  });
-
-  it("is relative to the defaults, not to absolute numbers", () => {
-    // The same hold window is "early" against one default and unremarkable
-    // against another. Absolute edges here would be a second set of trading
-    // opinions nobody agreed to.
-    const d: Disposition = { ...DEFAULTS, maxHoldSec: 3600 };
-    assert.ok(traitsOf(d, DEFAULTS).some((x) => /early/.test(x)));
-    assert.deepEqual(traitsOf(d, { ...DEFAULTS, maxHoldSec: 3600 }), []);
   });
 });

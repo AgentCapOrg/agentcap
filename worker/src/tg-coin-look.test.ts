@@ -20,8 +20,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it, mock } from "node:test";
 import { setImmediate } from "node:timers/promises";
-import { encodeAbiParameters, type PublicClient } from "viem";
-import { CASH, AGENTCAP_TOKEN, STOCK_TOKENS, UNISWAP } from "../../packages/core/src/index";
+import { type PublicClient } from "viem";
+import { CASH, STOCK_TOKENS, PANCAKESWAP } from "../../packages/core/src/index";
 import type { ShadowInputs, ShadowOutcome } from "./brain-shadow";
 import { makeTrencher, TRENCHER_FAST, type Candidate } from "./strategies/trencher";
 import { takeTick, type Snapshot } from "./strategies/types";
@@ -52,7 +52,7 @@ const gp = (over: Partial<GeckoPool> = {}): GeckoPool => ({
   poolAddress: "0x0000000000000000000000000000000000000011",
   tokenAddress: COIN,
   name: "FROGGY / WETH 1%",
-  dex: "uniswap-v3-robinhood",
+  dex: "pancakeswap-v3-bsc",
   priceUsd: 0.01,
   reserveUsd: 200_000,
   fdvUsd: 1_000_000,
@@ -78,7 +78,6 @@ function readers(over: Partial<CoinLookReaders> = {}, clock = { t: NOW }) {
     tokenPools: async () => { calls.pools++; return [gp()]; },
     getCode: async () => { calls.code++; return "0x6000"; },
     probe: async () => { calls.probe++; return { pons: false, erc20: true }; },
-    curveFor: async () => { calls.curve++; return null; },
     now: () => clock.t,
     ...over,
   };
@@ -200,14 +199,13 @@ describe("public research observations beside the quick look", () => {
 });
 
 describe("the quick look: every kind, cheapest first", () => {
-  it("answers its own money, cash, energy and stocks with no read; holdings only refresh the public index", async () => {
+  it("answers its own money, cash and stocks with no read; holdings only refresh the public index", async () => {
     const { r, calls } = readers({ held: (a) => (a === COIN ? { name: "FROGGY" } : null) });
     const look = lookOf(r);
     assert.deepEqual(await look(ACCOUNT.toUpperCase().replace("0X", "0x")), { kind: "own" });
     assert.deepEqual(await look(VAULT), { kind: "own" });
-    assert.deepEqual(await look(CASH.USDG), { kind: "cash", name: "USDG" });
-    assert.deepEqual(await look(CASH.WETH), { kind: "cash", name: "WETH" });
-    assert.deepEqual(await look(AGENTCAP_TOKEN.address), { kind: "energy" });
+    assert.deepEqual(await look(CASH.USDT), { kind: "cash", name: "USDT" });
+    assert.deepEqual(await look(CASH.WBNB), { kind: "cash", name: "WBNB" });
     const stock = STOCK_TOKENS[0]!;
     assert.deepEqual(await look(stock.address), { kind: "stock", name: stock.symbol }, "a stock goes by its ticker");
     assert.deepEqual(calls, { pools: 0, code: 0, probe: 0, curve: 0 }, "protected addresses never perform market research");
@@ -235,11 +233,10 @@ describe("the quick look: every kind, cheapest first", () => {
     }
   });
 
-  it("venues trencher v1 cannot buy: the curve, v4-only, and no v3 pool at all", async () => {
-    assert.equal((await look1({ tokenPools: async () => [gp({ dex: "pons-v2", poolAddress: null, poolId: V4_ID })] })).kind, "curve");
-    const v4 = await look1({ tokenPools: async () => [gp({ dex: "uniswap-v4-robinhood", poolAddress: null, poolId: V4_ID }), gp({ dex: "pons-v2-dex", poolAddress: null, poolId: V4_ID })] });
+  it("venues trencher v1 cannot buy: v4-only, and no v3 pool at all", async () => {
+    const v4 = await look1({ tokenPools: async () => [gp({ dex: "pancakeswap-v4-bsc", poolAddress: null, poolId: V4_ID }), gp({ dex: "pons-v2-dex", poolAddress: null, poolId: V4_ID })] });
     assert.deepEqual(v4, { kind: "v4-only", name: "FROGGY" });
-    assert.equal((await look1({ tokenPools: async () => [gp({ dex: "uniswap-v2-robinhood" })] })).kind, "no-pool");
+    assert.equal((await look1({ tokenPools: async () => [gp({ dex: "pancakeswap-bsc" })] })).kind, "no-pool");
     // A "v3" row with no pool contract is a v4-style id and does not count as v3.
     assert.equal((await look1({ tokenPools: async () => [gp({ poolAddress: null, poolId: V4_ID })] })).kind, "v4-only");
   });
@@ -257,22 +254,12 @@ describe("the quick look: every kind, cheapest first", () => {
     assert.deepEqual(found.calls, { pools: 1, code: 1, probe: 0, curve: 0 });
   });
 
-  it("no pool known: one probe decides curve, token or not a token", async () => {
+  it("no pool known: one probe decides token or not a token", async () => {
     const none = async () => [] as GeckoPool[];
-    assert.equal((await look1({ tokenPools: none, probe: async () => ({ pons: true, erc20: true }) })).kind, "curve");
     assert.equal((await look1({ tokenPools: none, probe: async () => ({ pons: false, erc20: true }) })).kind, "no-pool");
     assert.equal((await look1({ tokenPools: none, probe: async () => ({ pons: false, erc20: false }) })).kind, "not-token");
     // Pools where the coin is only the QUOTE side are not its pools.
     assert.equal((await look1({ tokenPools: async () => [gp({ tokenAddress: "0x00000000000000000000000000000000000d0222" })] })).kind, "no-pool");
-  });
-
-  it("local curve provenance answers before the multicall probe", async () => {
-    const h = readers({ tokenPools: async () => [], curveFor: async () => ({ curve: "0x1" }) });
-    assert.deepEqual(await lookOf(h.r)(COIN), { kind: "curve" });
-    assert.equal(h.calls.probe, 0);
-    assert.equal(h.calls.code, 1, "only the presence probe");
-    // A ledger that cannot be read is not a verdict: the chain is asked.
-    assert.equal((await look1({ tokenPools: async () => [], curveFor: async () => { throw new Error("db"); } })).kind, "no-pool");
   });
 
   it("UNREADABLE IS NOT ABSENT: every failed read is unknown, never wallet or no-pool", async () => {
@@ -325,19 +312,19 @@ describe("the quick look when the chain cannot be asked: GeckoTerminal's Robinho
   const declined = async (): Promise<string | undefined> => {
     throw new Error("rpc declined by the governor");
   };
-  const PONS_POOL = (over: Partial<GeckoPool> = {}) => gp({ dex: "pons-v2", poolAddress: null, poolId: V4_ID, name: "APPSHARE / WETH", ...over });
+  const PONS_POOL = (over: Partial<GeckoPool> = {}) => gp({ dex: "pancakeswap-v4-bsc", poolAddress: null, poolId: V4_ID, name: "APPSHARE / WETH", ...over });
 
   it("a failed getCode with this coin's pools on the index: a Robinhood Chain coin, classified from those pools", async () => {
     const h = readers({ getCode: declined, tokenPools: async () => { h.calls.pools++; return [PONS_POOL()]; } });
-    assert.deepEqual(await lookOf(h.r)(COIN), { kind: "curve", name: "APPSHARE" }, "a Pons bonding-curve coin");
+    assert.deepEqual(await lookOf(h.r)(COIN), { kind: "v4-only", name: "APPSHARE" }, "a v4-only coin");
     assert.deepEqual(h.calls, { pools: 1, code: 0, probe: 0, curve: 0 });
     for (const [pools, want] of [
-      [[gp({ dex: "uniswap-v4-robinhood", poolAddress: null, poolId: V4_ID })], "v4-only"],
+      [[gp({ dex: "pancakeswap-v4-bsc", poolAddress: null, poolId: V4_ID })], "v4-only"],
       [[gp()], "candidate"],
       [[gp({ volume24hUsd: 50_000 })], "too-quiet"],
       [[gp({ reserveUsd: TRENCHER_FAST.minLiquidityUsd - 1 })], "too-thin"],
       [[gp({ createdAt: NOW_SEC - 60 })], "too-new"],
-      [[gp({ dex: "uniswap-v2-robinhood" })], "no-pool"],
+      [[gp({ dex: "pancakeswap-bsc" })], "no-pool"],
       [[gp({ fdvUsd: null })], "unknown"],
     ] as const) {
       assert.equal((await look1({ getCode: declined, tokenPools: async () => [...pools] })).kind, want, want);
@@ -365,8 +352,8 @@ describe("the quick look when the chain cannot be asked: GeckoTerminal's Robinho
     const clock = { t: NOW };
     const h = readers({ getCode: async () => { h.calls.code++; throw new Error("rate limited"); }, tokenPools: async () => { h.calls.pools++; return [PONS_POOL()]; } }, clock);
     const look = lookOf(h.r);
-    assert.equal((await look(COIN)).kind, "curve");
-    assert.equal((await look(COIN)).kind, "curve");
+    assert.equal((await look(COIN)).kind, "v4-only");
+    assert.equal((await look(COIN)).kind, "v4-only");
     assert.deepEqual(h.calls, { pools: 1, code: 1, probe: 0, curve: 0 }, "the second look is the cache's");
     // Other chains' CAs while the chain is down: each one a probe AND a page, bounded by the full looks.
     const eth = (i: number) => `0x${(0xe7e000 + i).toString(16).padStart(40, "0")}`;
@@ -430,7 +417,7 @@ describe("the quick look when GeckoTerminal's page cannot be read: DexScreener's
       [[dx({ createdAt: NOW_SEC - 60 })], "too-new"],
       [[dx({ dex: "uniswap-robinhood" })], "unknown"],
       [[dx({ dex: "pons-robinhood", poolAddress: null, poolId: V4_ID })], "unknown"],
-      [[dx({ dex: "uniswap-v4-robinhood", poolAddress: null, poolId: V4_ID })], "v4-only"],
+      [[dx({ dex: "pancakeswap-v4-bsc", poolAddress: null, poolId: V4_ID })], "v4-only"],
       [[dx({ fdvUsd: null })], "unknown"],
     ] as const) {
       const d = dexReader([...pools]);
@@ -561,7 +548,7 @@ describe("every answer says which read gave it", () => {
     const h = readers({ held: (a) => (a === COIN ? { name: "FROGGY" } : null) }, clock);
     const look = createCoinLook(h.r);
     assert.equal((await look(ACCOUNT)).source, "free");
-    assert.equal((await look(CASH.USDG)).source, "free");
+    assert.equal((await look(CASH.USDT)).source, "free");
     assert.equal((await look(COIN)).source, "free", "held authority is local; the market snapshot identifies its own source");
     const other = "0x00000000000000000000000000000000000d0222";
     const g = createCoinLook(readers({ tokenPools: async () => [gp({ tokenAddress: other })] }, clock).r);
@@ -613,9 +600,9 @@ describe("the quick look: every read is bounded, so a look always settles", () =
   it(`a getCode that never answers is a failed read after ${COIN_LOOK.readMs / 1000} s: the index stands in`, async () => {
     mock.timers.enable({ apis: ["setTimeout"] });
     try {
-      const h = readers({ getCode: () => never(), tokenPools: async () => [gp({ dex: "pons-v2", poolAddress: null, poolId: V4_ID })] });
+      const h = readers({ getCode: () => never(), tokenPools: async () => [gp({ dex: "pancakeswap-v4-bsc", poolAddress: null, poolId: V4_ID })] });
       const { value, ms } = await settleOn(lookOf(h.r)(COIN), 500);
-      assert.equal(value.kind, "curve");
+      assert.equal(value.kind, "v4-only");
       assert.equal(ms, COIN_LOOK.readMs);
     } finally {
       mock.timers.reset();
@@ -651,22 +638,6 @@ describe("the quick look: every read is bounded, so a look always settles", () =
     }
   });
 
-  it("a ledger lookup that never answers is 'not known here'; a probe that never answers is unknown", async () => {
-    mock.timers.enable({ apis: ["setTimeout"] });
-    try {
-      const ledger = readers({ tokenPools: async () => [], curveFor: () => never() });
-      const a = await settleOn(lookOf(ledger.r)(COIN), 500);
-      assert.equal(a.value.kind, "no-pool", "the multicall still decides");
-      assert.equal(a.ms, COIN_LOOK.readMs);
-      const probe = readers({ tokenPools: async () => [], probe: () => never() });
-      const b = await settleOn(lookOf(probe.r)(COIN), 500);
-      assert.deepEqual(b.value, { kind: "unknown" });
-      assert.equal(b.ms, 2 * COIN_LOOK.readMs, "a multicall and the factory's read");
-    } finally {
-      mock.timers.reset();
-    }
-  });
-
   it("the chain probe: a multicall or a factory read that never answers is a read that failed", async () => {
     mock.timers.enable({ apis: ["setTimeout"] });
     try {
@@ -679,7 +650,7 @@ describe("the quick look: every read is bounded, so a look always settles", () =
       const fee = { success: true, returnData: `0x${(10_000).toString(16).padStart(64, "0")}` };
       const factoryHangs = chainTokenProbe({
         readContract: (q: { functionName: string }) =>
-          q.functionName === "aggregate3" ? Promise.resolve([nope, nope, word(CASH.WETH), word(COIN), fee]) : never(),
+          q.functionName === "aggregate3" ? Promise.resolve([nope, word(CASH.WBNB), word(COIN), fee]) : never(),
       } as unknown as PublicClient);
       const b = await settleOn(factoryHangs("0x0000000000000000000000000000000000000011"), 500);
       assert.equal(b.value?.pool?.canonical, null, "unknown to the look, never 'not that coin's pool'");
@@ -805,28 +776,22 @@ describe("the quick look: cache and allowance", () => {
 });
 
 describe("the chain probe: one multicall, and a failed batch is not an answer", () => {
-  const METADATA = [
-    { type: "address" }, { type: "string" }, { type: "string" },
-    { type: "tuple", components: [{ type: "string" }, { type: "string" }, { type: "string" }, { type: "string" }, { type: "string" }] },
-  ] as const;
-  const meta = encodeAbiParameters(METADATA, [ACCOUNT, "ipfs://logo", "a frog", ["", "", "", "", ""]]);
   const decimals = `0x${(18).toString(16).padStart(64, "0")}` as `0x${string}`;
   const client = (answer: () => unknown) => ({ readContract: async () => answer() }) as unknown as PublicClient;
   const nope = { success: false, returnData: "0x" };
-  /** Pons, decimals, and a token0/token1/fee that all revert: a plain ERC-20's answer. */
-  const batch = (pons: unknown, dec: unknown) => [pons, dec, nope, nope, nope];
+  /** decimals, and a token0/token1/fee that all revert: a plain ERC-20's answer. */
+  const batch = (dec: unknown) => [dec, nope, nope, nope];
 
-  it("reads Pons-ness and ERC-20-ness from one aggregate3", async () => {
+  it("reads ERC-20-ness from one aggregate3", async () => {
     let calls = 0;
-    const probe = chainTokenProbe({ readContract: async () => { calls++; return batch({ success: true, returnData: meta }, { success: true, returnData: decimals }); } } as unknown as PublicClient);
-    assert.deepEqual(await probe(COIN), { pons: true, erc20: true });
+    const probe = chainTokenProbe({ readContract: async () => { calls++; return batch({ success: true, returnData: decimals }); } } as unknown as PublicClient);
+    assert.deepEqual(await probe(COIN), { erc20: true });
     assert.equal(calls, 1);
-    assert.deepEqual(await chainTokenProbe(client(() => batch(nope, { success: true, returnData: decimals })))(COIN), { pons: false, erc20: true });
     // An address with no code answers every sub-call with nothing.
     const empty = { success: true, returnData: "0x" };
-    assert.deepEqual(await chainTokenProbe(client(() => [empty, empty, empty, empty, empty]))(COIN), { pons: false, erc20: false });
+    assert.deepEqual(await chainTokenProbe(client(() => [empty, empty, empty, empty]))(COIN), { erc20: false });
     // decimals() that is not a uint8 is not an ERC-20 answer.
-    assert.deepEqual(await chainTokenProbe(client(() => batch(nope, { success: true, returnData: `0x${"f".repeat(64)}` })))(COIN), { pons: false, erc20: false });
+    assert.deepEqual(await chainTokenProbe(client(() => batch({ success: true, returnData: `0x${"f".repeat(64)}` })))(COIN), { erc20: false });
   });
 
   it("a batch that failed is null — unknown to the look, never 'not a token'", async () => {
@@ -843,19 +808,18 @@ describe("the chain probe: one multicall, and a failed batch is not an answer", 
     const probe = chainTokenProbe({
       readContract: async (q: { address: string; functionName: string; args?: unknown }) => {
         seen.push(q);
-        if (q.functionName === "aggregate3") return [nope, nope, addrWord(CASH.WETH), addrWord(COIN), feeWord];
+        if (q.functionName === "aggregate3") return [nope, addrWord(CASH.WBNB), addrWord(COIN), feeWord];
         return POOL.toUpperCase().replace("0X", "0x");
       },
     } as unknown as PublicClient);
     assert.deepEqual(await probe(POOL), {
-      pons: false,
       erc20: false,
-      pool: { token0: CASH.WETH.toLowerCase(), token1: COIN, canonical: POOL },
+      pool: { token0: CASH.WBNB.toLowerCase(), token1: COIN, canonical: POOL },
     });
     assert.equal(seen.length, 2);
     assert.equal(seen[1]!.functionName, "getPool");
-    assert.equal(seen[1]!.address.toLowerCase(), UNISWAP.v3Factory.toLowerCase(), "the canonical factory, never one the address names");
-    assert.deepEqual(seen[1]!.args, [CASH.WETH.toLowerCase(), COIN, 10_000]);
+    assert.equal(seen[1]!.address.toLowerCase(), PANCAKESWAP.v3Factory.toLowerCase(), "the canonical factory, never one the address names");
+    assert.deepEqual(seen[1]!.args, [CASH.WBNB.toLowerCase(), COIN, 10_000]);
   });
 
   it("the factory read failing is canonical null, and a half pool is no pool with no second read", async () => {
@@ -863,21 +827,21 @@ describe("the chain probe: one multicall, and a failed batch is not an answer", 
     const failing = chainTokenProbe({
       readContract: async (q: { functionName: string }) => {
         reads++;
-        if (q.functionName === "aggregate3") return [nope, nope, addrWord(CASH.WETH), addrWord(COIN), feeWord];
+        if (q.functionName === "aggregate3") return [nope, addrWord(CASH.WBNB), addrWord(COIN), feeWord];
         throw new Error("rpc");
       },
     } as unknown as PublicClient);
     assert.equal((await failing(POOL))?.pool?.canonical, null);
     assert.equal(reads, 2);
     for (const shape of [
-      [nope, nope, addrWord(CASH.WETH), addrWord(COIN), nope],
-      [nope, nope, addrWord(CASH.WETH), nope, feeWord],
-      [nope, nope, { success: true, returnData: `0x${"f".repeat(64)}` }, addrWord(COIN), feeWord],
-      [nope, nope, addrWord(CASH.WETH), addrWord(COIN), { success: true, returnData: `0x${(0x1000000).toString(16).padStart(64, "0")}` }],
+      [nope, addrWord(CASH.WBNB), addrWord(COIN), nope],
+      [nope, addrWord(CASH.WBNB), nope, feeWord],
+      [nope, { success: true, returnData: `0x${"f".repeat(64)}` }, addrWord(COIN), feeWord],
+      [nope, addrWord(CASH.WBNB), addrWord(COIN), { success: true, returnData: `0x${(0x1000000).toString(16).padStart(64, "0")}` }],
     ]) {
       let n = 0;
       const p = chainTokenProbe({ readContract: async () => { n++; return shape; } } as unknown as PublicClient);
-      assert.deepEqual(await p(POOL), { pons: false, erc20: false });
+      assert.deepEqual(await p(POOL), { erc20: false });
       assert.equal(n, 1, "not pool-shaped: the factory is not asked");
     }
   });
@@ -890,8 +854,8 @@ describe("a chart link carries the POOL: the look resolves it to its coin on cha
   const POOL = "0x0000000000000000000000000000000000000011";
   const PAIR = "0x0000000000000000000000000000000000000012";
   const OTHER = "0x00000000000000000000000000000000000d0222";
-  const WETH = CASH.WETH.toLowerCase();
-  const USDG = CASH.USDG.toLowerCase();
+  const WETH = CASH.WBNB.toLowerCase();
+  const USDG = CASH.USDT.toLowerCase();
   type Pool = TokenProbe["pool"];
 
   /** POOL is WETH/COIN (GeckoTerminal's link), PAIR is COIN/USDG (DexScreener's): both canonical. */
@@ -1118,7 +1082,7 @@ describe("a nominated coin's buy", () => {
   const buy = (symbol: string, id: string) => ({ ran: true, result: { ok: true, decision: {
     decision_id: id, agent_id: AGENT, instrument_id: `agentcap:${symbol.toLowerCase()}`, symbol, action: "buy", suggested_delta_usdg: 5e6, gate_verdict: "proceed",
   } } }) as ShadowOutcome;
-  const snap = { cashUsdg: 1000_000_000n, vaultUsdg: 0n, holdings: new Map(), prices: new Map(), pausedTokens: new Set(), staleFeeds: new Set(), sequencerUp: true, spendHeadroomUsdg: 100_000_000n, perTradeCapUsdg: 10_000_000n } as unknown as Snapshot;
+  const snap = { cashUsdg: 1000n * 10n ** 18n, vaultUsdg: 0n, holdings: new Map(), prices: new Map(), pausedTokens: new Set(), staleFeeds: new Set(), sequencerUp: true, spendHeadroomUsdg: 100n * 10n ** 18n, perTradeCapUsdg: 10n * 10n ** 18n } as unknown as Snapshot;
 
   it("still needs the fresh Brain BUY, then the group-entry claim; a refused claim blocks only that entry", async () => {
     let now = NOW;
@@ -1225,7 +1189,7 @@ describe("a nominated coin's buy", () => {
 });
 
 describe("which sale is an exit worth one line", () => {
-  const sale = (over = {}) => ({ kind: "swap", sellToken: COIN, buyToken: CASH.USDG, sellAmountRaw: 500n, ...over });
+  const sale = (over = {}) => ({ kind: "swap", sellToken: COIN, buyToken: CASH.USDT, sellAmountRaw: 500n, ...over });
   it("a mechanical trencher exit always sells the whole position", () => {
     for (const cause of ["stop", "take", "aged", "drain", "unpriceable"]) {
       const e = groupExitOf(sale({ sellAmountRaw: 1n }), { code: "trench-exit", cause }, 500n);
@@ -1241,7 +1205,7 @@ describe("which sale is an exit worth one line", () => {
     assert.equal(groupExitOf(sale(), null, null), null, "an unknown holding is not an empty one");
   });
   it("buys and cash legs are never exits", () => {
-    assert.equal(groupExitOf({ kind: "swap", sellToken: CASH.USDG, buyToken: COIN, sellAmountRaw: 5n }, { code: "trench-exit", cause: "stop" }, 5n), null);
+    assert.equal(groupExitOf({ kind: "swap", sellToken: CASH.USDT, buyToken: COIN, sellAmountRaw: 5n }, { code: "trench-exit", cause: "stop" }, 5n), null);
     assert.equal(groupExitOf({ kind: "transfer" }, { code: "trench-exit" }, 5n), null);
   });
 });
@@ -1253,18 +1217,16 @@ describe("index.ts wires the seams in the order that makes them safe", () => {
   const loopAt = CODE.indexOf("for (const [proposedAt, intent] of proposed.entries()) {");
   const LOOP = CODE.slice(loopAt, CODE.indexOf("\n    }\n", loopAt));
 
-  it("the group-entry claim comes before the energy claim and before any decision row", () => {
+  it("the group-entry claim comes before any decision row", () => {
     const group = LOOP.indexOf("const groupEntry = entry ? tgClaimGroupEntry(intent) : null;");
     const skip = LOOP.indexOf("if (groupEntry?.group && !groupEntry.ok) continue;");
-    const energy = LOOP.indexOf("const energyClaim = entry ? await claimEntry() : null;");
     const decided = LOOP.indexOf("await ensureDecision(");
-    assert.ok(loopAt > 0 && group > 0 && skip > group && energy > skip && decided > energy);
+    assert.ok(loopAt > 0 && group > 0 && skip > group && decided > skip);
   });
 
-  it("the group claim goes back wherever the energy claim does", () => {
-    assert.match(LOOP, /tgSettleGroupEntry\(groupEntry, intent\.decisionId, null\);\n\s+await withholdEntry\(agentId\);\n\s+continue;/);
-    assert.match(LOOP, /await refundEntry\(energyClaim\);\n\s+tgSettleGroupEntry\(groupEntry, intent\.decisionId, null\);\n\s+continue;/);
-    assert.match(LOOP, /if \(!tradeConsumesSnapshot\(facts\?\.status\)\) await refundEntry\(energyClaim\);\n\s+tgSettleGroupEntry\(groupEntry, intent\.decisionId, facts\?\.status\);/);
+  it("the group claim goes back wherever the entry places nothing", () => {
+    assert.equal((LOOP.match(/tgSettleGroupEntry\(groupEntry, intent\.decisionId, null\);\n\s+continue;/g) ?? []).length, 3, "a dropped follow, an unrecorded follow and a failed decision row each hand it back");
+    assert.match(LOOP, /tgSettleGroupEntry\(groupEntry, intent\.decisionId, facts\?\.status\);/);
     assert.match(CODE, /if \(!g \|\| !g\.group \|\| !g\.ok \|\| tradeConsumesSnapshot\(status\)\) return;/, "refunded only when no trade came of it");
   });
 
@@ -1279,7 +1241,7 @@ describe("index.ts wires the seams in the order that makes them safe", () => {
   it("every trencher review is reported after it is persisted, and cannot break the review", () => {
     const at = CODE.indexOf("return runShadow(brainConfig, inputs,");
     // (The flow-lens probe hears the outcome first: a pure check and a field write, neither of which throws.)
-    assert.match(CODE.slice(at, at + 1600), /admit: claimReview,\n\s+\}\)\.then\(outcome => \{ if \(flowLensRefused\(Boolean\(flow\?\.lens\), outcome\)\) flowLensProbe\.invalidate\(\); tgNoteReview\(focus\.token, outcome\); return outcome; \}\); \},/);
+    assert.match(CODE.slice(at, at + 1600), /\}\)\.then\(outcome => \{ if \(flowLensRefused\(Boolean\(flow\?\.lens\), outcome\)\) flowLensProbe\.invalidate\(\); tgNoteReview\(focus\.token, outcome\); return outcome; \}\); \},/);
     const body = CODE.slice(CODE.indexOf("function tgNoteReview("), CODE.indexOf("function tgNoteHeld("));
     assert.match(body, /try \{[\s\S]*\} catch/);
   });

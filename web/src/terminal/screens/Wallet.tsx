@@ -2,7 +2,6 @@
 
 import Link from "../Link";
 import { TRENCHER_FACTORY } from "@/lib/trencher-permission";
-import { verifiedAdapter } from "@/lib/verified-adapter";
 import { assertRevocationFunded, revokeFromBrowser } from "@/lib/revoke-client";
 import { stopAgentForReplacement } from "@/lib/stop-agent";
 import { renewalPerpsRefusal, restorePerpsRefusal } from "@/lib/restore-perps-owner";
@@ -22,15 +21,13 @@ import {
   grantTrencher,
   TRENCHER_VAULT_ABI,
   CASH,
-  grantPonsAdapter,
-  grantPonsClassVault,
   isValidCustomToken,
-  robinhoodChain,
-  robinhoodTestnet,
+  bnbChain,
+  bnbTestnet,
   tokenCoverage,
   TRADEABLE_V2,
   uncoveredBasketSymbols,
-  type CustomToken,  PONS_SELFTRADE_ABI,
+  type CustomToken, 
 } from "@agentcap/core";
 import {
   clearGrant,
@@ -55,7 +52,6 @@ import {
 import { SignOut } from "../SignOut";
 import { fetchAccountForSession } from "../account-session";
 import { conceptTooltip } from "@agentcap/core";
-import { V4PermissionLine } from "../V4PermissionLine";
 import { canStart } from "@/lib/can-start";
 import { usePrivyOwner } from "@/terminal/usePrivyOwner";
 import { RESIGN_ANCHOR, SIGNED_IN_EVENT, SIGNED_IN_RELOAD_KEY, shouldJumpToResign, shouldReloadAfterSignIn } from "@/lib/resign-anchor";
@@ -224,11 +220,11 @@ const sameCaps = (a: GrantCaps, b: GrantCaps) =>
   (Object.keys(a) as (keyof GrantCaps)[]).every((k) => a[k] === b[k]);
 
 const BACKUP_KEY = "agentcap.grant.backedup.v1";
-const TESTNET = robinhoodTestnet.id; // 46630 — the sandbox
+const TESTNET = bnbTestnet.id; // 97 — the sandbox
 
 /** Adapter verification uses the canonical allowlist before signing permissions. */
 
-const MAINNET = robinhoodChain.id; // 4663 — real funds
+const MAINNET = bnbChain.id; // 56 — real funds
 
 /**
  * WHICH CHAIN THE PAGE WAS ASKED TO OPEN ON, from `?chain=`.
@@ -247,7 +243,7 @@ const MAINNET = robinhoodChain.id; // 4663 — real funds
  * IT ONLY PRE-SELECTS. Everything downstream is unchanged: the move is still an
  * explicit ticked checkbox (derived from `chainId !== grant.chainId`), the
  * mainnet acknowledgement is still required, the button still renames itself to
- * "move to Robinhood Chain & re-sign", and the change line still lists the move. A
+ * "move to BNB Chain & re-sign", and the change line still lists the move. A
  * link cannot sign anything; it can only open the form on the right page.
  *
  * Unrecognised values are ignored rather than trusted — this comes from a URL,
@@ -332,7 +328,7 @@ function WalletRow({ w }: { w: SavedWallet }) {
           ? "couldn't read the balance — check your connection"
           : bal === null
             ? "reading the chain…"
-            : `${formatEther(bal.gasWei)} ETH · ${bal.usdg.toFixed(2)} USDG`}
+            : `${formatEther(bal.gasWei)} BNB · ${bal.usdg.toFixed(2)} USDG`}
         {empty && <span className="sw-empty"> — nothing here</span>}
       </div>
       {w.ownerKey ? (
@@ -458,12 +454,6 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
   // listed — the tradable set lives inside the signed session key, so listing a
   // token only takes effect when a grant covering it is signed here.
   const [customTokens, setCustomTokens] = useState<CustomToken[]>([]);
-  // The deployed V4SelfSwap for this install, read from /settings. Sealed into
-  // the wall at signing — which is why it is read here and not at trade time.
-  const [v4Adapter, setV4Adapter] = useState<`0x${string}` | undefined>(undefined);
-  const [ponsAdapter, setPonsAdapter] = useState<`0x${string}` | undefined>(undefined);
-  /** The class-vault FACTORY. Each account’s own vault is derived from it at sign time. */
-  const [classFactory, setClassFactory] = useState<`0x${string}` | undefined>(undefined);
   const [autonomousTrencher, setAutonomousTrencher] = useState(false);
   useEffect(() => { setAutonomousTrencher(!!grantTrencher(grant)); }, [grant]);
   // The basket matters here for the same reason: /settings offers every registry
@@ -619,24 +609,10 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
       .catch(() => { if (active && generation === accountReadGeneration.current) { setServerArmed(null); setSession(null); setGrant(null); setAccountReadFailed(true); } });
     fetch("/api/settings")
       .then((r) => (r.ok ? r.json() : null))
-      .then((v: { values?: { customTokens?: unknown[]; basketSymbols?: string[]; v4AdapterAddress?: string; ponsAdapterAddress?: string; ponsClassVaultFactory?: string }; defaults?: { basketSymbols?: string[] } } | null) => {
+      .then((v: { values?: { customTokens?: unknown[]; basketSymbols?: string[] }; defaults?: { basketSymbols?: string[] } } | null) => {
         const list = (v?.values?.customTokens ?? []).filter(isValidCustomToken);
         setCustomTokens(list as CustomToken[]);
         setBasketSymbols(v?.values?.basketSymbols ?? v?.defaults?.basketSymbols ?? []);
-        const a = v?.values?.v4AdapterAddress;
-        setV4Adapter(typeof a === "string" && /^0x[0-9a-fA-F]{40}$/.test(a) ? (a as `0x${string}`) : undefined);
-        const pa = v?.values?.ponsAdapterAddress;
-        setPonsAdapter(typeof pa === "string" && /^0x[0-9a-fA-F]{40}$/.test(pa) ? (pa as `0x${string}`) : undefined);
-        // THE STATION THAT WAS MISSING. `classFactory` was declared, typed into
-        // this very response shape, threaded into all three signing calls — and
-        // never assigned, so `setClassFactory` appeared exactly once in the
-        // file: its own declaration. Every grant signed here carried
-        // `ponsClassVaultFactory: undefined`, session.ts skipped the whole vault
-        // block, no GRANT_PONS_CLASS marker was minted, and the worker's class
-        // route returned at `if (!vault)` on every tick forever. The feature
-        // was unreachable from the only screen that can reach it.
-        const cf = v?.values?.ponsClassVaultFactory;
-        setClassFactory(typeof cf === "string" && /^0x[0-9a-fA-F]{40}$/.test(cf) ? (cf as `0x${string}`) : undefined);
       })
       .catch(() => {
         setCustomTokens([]);
@@ -880,9 +856,6 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
         onStatus: setStatus,
         chainId,
         extraTokens: customTokens,
-        v4AdapterAddress: v4Adapter,
-        ponsAdapterAddress: await verifiedAdapter(ponsAdapter, chainId, setStatus),
-        ponsClassVaultFactory: classFactory,
         hostedAs: session.hosted ? (session.address ?? undefined) : undefined,
       };
       if (chainId === MAINNET && !privyOwner) {
@@ -963,9 +936,6 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
         onStatus: setStatus,
         chainId: selectedChain,
         extraTokens: customTokens,
-        v4AdapterAddress: v4Adapter,
-        ponsAdapterAddress: await verifiedAdapter(ponsAdapter, selectedChain, setStatus),
-        ponsClassVaultFactory: classFactory,
         hostedAs: session?.hosted ? (session.address ?? undefined) : undefined,
         expectAccount: expectedAccount,
       };
@@ -1158,12 +1128,12 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
       const localGrants = localGrantsSnapshot(wallet);
       const priorTrencher = grantTrencher(grant);
       if (priorTrencher && (!autonomousTrencher || chainId !== grant.chainId || (TRENCHER_FACTORY && TRENCHER_FACTORY.toLowerCase() !== priorTrencher.factory))) {
-        const client = createPublicClient({chain: grant.chainId === MAINNET ? robinhoodChain : robinhoodTestnet, transport: http()});
+        const client = createPublicClient({chain: grant.chainId === MAINNET ? bnbChain : bnbTestnet, transport: http()});
         const code = await client.getCode({address:priorTrencher.vault});
         if (code && code !== "0x") {
           const [held,cash] = await Promise.all([
             client.readContract({address:priorTrencher.vault,abi:TRENCHER_VAULT_ABI,functionName:"tokens"}),
-            client.readContract({address:CASH.USDG,abi:erc20Abi,functionName:"balanceOf",args:[priorTrencher.vault]}),
+            client.readContract({address:CASH.USDT,abi:erc20Abi,functionName:"balanceOf",args:[priorTrencher.vault]}),
           ]);
           if (held.length || cash > 0n) throw new Error("Close or recover your Trencher vault positions and cash before removing or changing this permission. Your current key has not been replaced.");
         }
@@ -1175,14 +1145,11 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
         await assertRevocationFunded({ smartAccount: grant.smartAccount as `0x${string}`, chainId: network });
       }
       // FETCH SETTINGS AT CLICK TIME, not from mount state. This is the exact
-      // button an owner presses right after saving a new token or the adapter
-      // address in /settings — and the mount-time fetch predates that save, so
+      // button an owner presses right after saving a new token in /settings —
+      // and the mount-time fetch predates that save, so
       // re-signing from stale state silently sealed a wall WITHOUT the thing
       // they just added, with nothing failing until the first no-exit reject.
       let freshTokens: CustomToken[];
-      let freshAdapter: `0x${string}` | undefined;
-      let freshPons: `0x${string}` | undefined;
-      let freshClassFactory: `0x${string}` | undefined;
       try {
         const r = await fetch("/api/settings", { cache: "no-store" });
         if (!r.ok) throw new Error("settings unavailable");
@@ -1196,24 +1163,11 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
             (!Array.isArray(v.customTokens) || !v.customTokens.every(isValidCustomToken))) {
           throw new Error("invalid custom tokens");
         }
-        const addressSetting = (value: unknown): `0x${string}` | undefined => {
-          if (value === undefined || value === "") return undefined;
-          if (typeof value !== "string" || !/^0x[0-9a-fA-F]{40}$/.test(value)) {
-            throw new Error("invalid adapter settings");
-          }
-          return value as `0x${string}`;
-        };
         freshTokens = (v.customTokens ?? []) as CustomToken[];
-        freshAdapter = addressSetting(v.v4AdapterAddress);
-        freshPons = addressSetting(v.ponsAdapterAddress);
-        freshClassFactory = addressSetting(v.ponsClassVaultFactory);
         setCustomTokens(freshTokens);
-        setV4Adapter(freshAdapter);
-        setPonsAdapter(freshPons);
-        setClassFactory(freshClassFactory);
       } catch {
         // An unavailable response is not an empty settings record: signing
-        // stale mount state could silently leave out the adapter just saved.
+        // stale mount state could silently leave out the token just saved.
         throw new Error("Could not refresh your trading settings. Retry when settings are available.");
       }
       // The SELECTED chain and the CURRENT caps — not the old grant's. The old
@@ -1226,9 +1180,6 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
         onStatus: setStatus,
         chainId,
         extraTokens: freshTokens,
-        v4AdapterAddress: freshAdapter,
-        ponsAdapterAddress: await verifiedAdapter(freshPons, chainId, setStatus),
-        ponsClassVaultFactory: freshClassFactory,
         trencherFactory: autonomousTrencher && TRENCHER_FACTORY && /^0x[0-9a-fA-F]{40}$/.test(TRENCHER_FACTORY) ? TRENCHER_FACTORY as `0x${string}` : undefined,
         hostedAs: session?.hosted ? (session.address ?? undefined) : undefined,
         /**
@@ -1495,7 +1446,7 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
    */
   const allChanges =
     grant && chainId !== grant.chainId
-      ? [`chain ${grant.chainId === MAINNET ? "Robinhood Chain" : "testnet"} → ${chainId === MAINNET ? "Robinhood Chain" : "testnet"}`, ...capChanges]
+      ? [`chain ${grant.chainId === MAINNET ? "BNB Chain" : "testnet"} → ${chainId === MAINNET ? "BNB Chain" : "testnet"}`, ...capChanges]
       : capChanges;
   const anyChange = allChanges.length > 0;
 
@@ -1660,7 +1611,7 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
           <p>Stopping this service needs no wallet signature and keeps your agent's memory. Sign a fresh permission to restart. Revocation is a separate owner-authorized transaction on {chainLabel(grant.chainId)} that invalidates earlier session keys, including copies. Your account and recovery access stay available.</p>
           <button className="copy-btn" disabled={securityBusy || renewing} onClick={() => void stopOrRevoke(false)}>Stop agent now</button>
           {resignBy ? <>
-            <label className="ack-row" style={{ marginTop: 12 }}><input type="checkbox" checked={revokeAck} disabled={securityBusy || renewing} onChange={e => setRevokeAck(e.target.checked)} /><span>I understand revocation uses ETH for network fees on this network and stops all earlier permissions for this account.</span></label>
+            <label className="ack-row" style={{ marginTop: 12 }}><input type="checkbox" checked={revokeAck} disabled={securityBusy || renewing} onChange={e => setRevokeAck(e.target.checked)} /><span>I understand revocation uses BNB for network fees on this network and stops all earlier permissions for this account.</span></label>
             <button className="grant-btn" disabled={securityBusy || renewing || !revokeAck} onClick={() => void stopOrRevoke(true)}>{securityBusy ? "Checking…" : "Stop & revoke on-chain"}</button>
           </> : <p>Sign in as the owner or restore the recovery key to revoke on-chain. You can still stop the service now.</p>}
           {securityMessage && <p role="status">{securityMessage}</p>}
@@ -1810,16 +1761,16 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
                 className={`chain-card ${!isMainnet ? "selected" : ""}`}
                 onClick={() => setChainId(TESTNET)}
               >
-                <span className="chain-card-title"><GI d="tree" size={16} /> Testnet (46630)</span>
+                <span className="chain-card-title"><GI d="tree" size={16} /> Testnet (97)</span>
                 <span className="chain-card-body">
                   {/* SAID AT THE POINT OF CHOICE, not afterwards in the chat.
-                      The hosted worker trades Robinhood Chain, so a key signed
+                      The hosted worker trades BNB Chain, so a key signed
                       for the sandbox cannot trade at all — and an owner only
                       found that out later, from "funds sent here will sit
                       unused". Practice mode on this service is PAPER TRADING,
                       which is a setting and needs no separate chain. */}
                   {session?.hosted
-                    ? "Not for this service — your agent trades Robinhood Chain, so a key signed here cannot trade at all. For simulated trading, turn Paper on in Settings instead."
+                    ? "Not for this service — your agent trades BNB Chain, so a key signed here cannot trade at all. For simulated trading, turn Paper on in Settings instead."
                     : "Simulated trading at live prices. No real deposits needed."}
                 </span>
               </button>
@@ -1828,9 +1779,9 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
                 className={`chain-card danger ${isMainnet ? "selected" : ""}`}
                 onClick={() => setChainId(MAINNET)}
               >
-                <span className="chain-card-title"><GI d="coin" size={16} /> Robinhood Chain (4663)</span>
+                <span className="chain-card-title"><GI d="coin" size={16} /> BNB Chain (56)</span>
                 <span className="chain-card-body">
-                  The real Robinhood Chain — real funds, real trades. Only when you&apos;re ready.
+                  The real BNB Chain — real funds, real trades. Only when you&apos;re ready.
                 </span>
               </button>
             </div>
@@ -1877,7 +1828,7 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
                       <span className="rk">which holds</span>
                       <span className="rv">
                         {previewFunding
-                          ? `${previewFunding.usdg.toFixed(2)} USDG · ${(Number(previewFunding.gasWei) / 1e18).toFixed(5)} ETH`
+                          ? `${previewFunding.usdg.toFixed(2)} USDG · ${(Number(previewFunding.gasWei) / 1e18).toFixed(5)} BNB`
                           : "…"}
                       </span>
                     </div>
@@ -1960,7 +1911,7 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
             )}
 
             <div className="grant-summary">
-              On {isMainnet ? "Robinhood Chain" : "the testnet"}, this agent can trade
+              On {isMainnet ? "BNB Chain" : "the testnet"}, this agent can trade
               at most <b>{caps.perTradeUsdg} USDG</b> per trade, <b>{caps.dailyUsdg} USDG</b> per day,
               and <b>{caps.maxOpsPerDay}</b> trades per day. It stops itself if it&apos;s down{" "}
               <b>{caps.maxDrawdownPct}%</b>, and this permission runs <b>{caps.expiryDays} days</b>, then you renew it.
@@ -1991,7 +1942,7 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
                 {status ??
                   (createBlocked
                     ? "acknowledge the real-funds warning above first"
-                    : `Create my agent on ${isMainnet ? "Robinhood Chain" : "the testnet"}`)}
+                    : `Create my agent on ${isMainnet ? "BNB Chain" : "the testnet"}`)}
               </button>
             ) : (
               <>
@@ -2015,20 +1966,20 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
                   This signs the limits shown above — <b>{caps.perTradeUsdg} USDG</b> a trade,{" "}
                   <b>{caps.dailyUsdg}</b> a day, for <b>{caps.expiryDays} days</b>. Your old
                   limits lived in the key you lost, so nothing can read them back; set them here
-                  if they mattered. Revocation spends ETH for network fees; it does not move your trading balances.
+                  if they mattered. Revocation spends BNB for network fees; it does not move your trading balances.
                 </p>
                 {preview && <div className="grant-note" data-restore-funding style={{ marginTop: 12 }}>
-                  <b>ETH for revocation fees</b>
+                  <b>BNB for revocation fees</b>
                   <p>Restore revokes earlier permissions on {restoreNetworks.length > 1 ? "both networks below, starting with the current network" : "the network below"} before signing a replacement. Fund this same account address on {restoreNetworks.length > 1 ? "each network" : "this network"}:</p>
                   <code style={{ display: "block", overflowWrap: "anywhere" }}>{preview.smartAccount}</code>
                   <CopyBtn value={preview.smartAccount} label="copy restore funding address" />
                   <ul>{restoreNetworks.map(network => <li key={network}>
-                    <b>{network === MAINNET ? "Robinhood Chain" : "Robinhood Chain testnet"} ({network})</b>: send {network === TESTNET ? "testnet ETH" : "ETH"} for network fees.
+                    <b>{network === MAINNET ? "BNB Chain" : "BNB Chain testnet"} ({network})</b>: send {network === TESTNET ? "testnet BNB" : "BNB"} for network fees.
                   </li>)}</ul>
-                  {restoreNetworks.includes(TESTNET) && <p><a href={FAUCET_URL} target="_blank" rel="noreferrer">Get testnet ETH from the faucet ↗</a>, then send it to the account above on testnet.</p>}
-                  <p>Balances do not move between networks. Revocation needs ETH even when trading gas is sponsored; an empty destination account also needs ETH. If you see AA21 or an insufficient-funds error, fund the named network and retry here.</p>
+                  {restoreNetworks.includes(TESTNET) && <p><a href={FAUCET_URL} target="_blank" rel="noreferrer">Get testnet BNB from the faucet ↗</a>, then send it to the account above on testnet.</p>}
+                  <p>Balances do not move between networks. Revocation needs BNB even when trading gas is sponsored; an empty destination account also needs BNB. If you see AA21 or an insufficient-funds error, fund the named network and retry here.</p>
                 </div>}
-                <label className="ack-row"><input type="checkbox" checked={restoreRevocationAck} disabled={status !== null} onChange={e => setRestoreRevocationAck(e.target.checked)} /><span>I understand restore first stops the service and revokes earlier permissions on {restoreNetworks.map(network => network === MAINNET ? "Robinhood Chain (4663)" : "Robinhood Chain testnet (46630)").join(" and ")}. The account needs ETH for network fees on {restoreNetworks.length > 1 ? "both networks" : "this network"} before a new permission can be signed.</span></label>
+                <label className="ack-row"><input type="checkbox" checked={restoreRevocationAck} disabled={status !== null} onChange={e => setRestoreRevocationAck(e.target.checked)} /><span>I understand restore first stops the service and revokes earlier permissions on {restoreNetworks.map(network => network === MAINNET ? "BNB Chain (56)" : "BNB Chain testnet (97)").join(" and ")}. The account needs BNB for network fees on {restoreNetworks.length > 1 ? "both networks" : "this network"} before a new permission can be signed.</span></label>
                 <button
                   className="grant-btn"
                   onClick={() => void onRestore()}
@@ -2218,21 +2169,21 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
             <p className="grant-sub">
               {grantIsTestnet ? (
                 <>
-                  Send only <b>testnet ETH</b> to this address. Trades here use simulated funds.
+                  Send only <b>testnet BNB</b> to this address. Trades here use simulated funds.
                 </>
               ) : (
                 <>
                   {gasSponsored ? (
                     <>
-                      Send <b>USDG (trading capital)</b> on Robinhood Chain (4663) to the account
-                      address below — the network fee on every trade is covered, so USDG is all it
+                      Send <b>USDT (trading capital)</b> on BNB Chain (56) to the account
+                      address below — the network fee on every trade is covered, so USDT is all it
                       needs to start. <b>Real funds</b> — double-check the address and start with a
                       small test amount first.
                     </>
                   ) : (
                     <>
-                      Send <b>ETH (for gas)</b> and <b>USDG (trading capital)</b> on Robinhood Chain
-                      (4663) to the account address below. <b>Real funds</b> — double-check the
+                      Send <b>BNB (for gas)</b> and <b>USDT (trading capital)</b> on BNB Chain
+                      (56) to the account address below. <b>Real funds</b> — double-check the
                       address and start with a small test amount first.
                     </>
                   )}
@@ -2312,7 +2263,7 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
               <div className="fund-ready mono">
                 {grantIsTestnet ? (
                   <>
-                    Testnet ETH received. {session?.hosted ? "Open your agent to follow paper trades." : <>Run <code>agentcap start</code> to begin paper trading.</>}
+                    Testnet BNB received. {session?.hosted ? "Open your agent to follow paper trades." : <>Run <code>agentcap start</code> to begin paper trading.</>}
                   </>
                 ) : usdgFunded ? (
                   <>
@@ -2324,7 +2275,7 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
                   </>
                 ) : (
                   <>
-                    ETH received. Add <b>USDG</b> for live trading.
+                    BNB received. Add <b>USDG</b> for live trading.
                   </>
                 )}
                 {/*
@@ -2433,38 +2384,6 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
                 <li>
                   <b>Withdrawals</b> — use your recovery key in Profile. Renewing removes any older agent transfer permission.
                 </li>
-                <V4PermissionLine grant={grant} configuredAdapter={v4Adapter} />
-                {/*
-                  TWO VENUES THIS LIST NEVER MENTIONED. The block above says
-                  "capability drift you cannot see is capability drift you
-                  cannot act on", and then showed three lines out of five —
-                  docs/owner-runbook-pons.md even instructs the owner to check
-                  here for the Pons adapter, which was never rendered.
-
-                  The class line matters most: it is the only permission in the
-                  wall that lets an agent buy something nobody named, and it
-                  puts assets in a contract rather than the account. An owner
-                  should not have to read grant.json to find that out.
-                */}
-                <li>
-                  <b>Bonding curves</b> —{" "}
-                  {grantPonsAdapter(grant) ? (
-                    <>sealed to {short(grantPonsAdapter(grant)!)}.</>
-                  ) : (
-                    "not granted."
-                  )}
-                </li>
-                <li>
-                  <b>Class route</b> —{" "}
-                  {grantPonsClassVault(grant) ? (
-                    <span style={{ color: "var(--amber, var(--red))" }}>
-                      this key may buy tokens you never named, held in your vault at{" "}
-                      {short(grantPonsClassVault(grant)!)}. <b>Renew below</b> to remove it.
-                    </span>
-                  ) : (
-                    "not granted."
-                  )}
-                </li>
               </ul>
             </div>
             {/*
@@ -2505,7 +2424,7 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
                 </section>
               ) : <>
               <b>Renew your permission.</b> First, stop the service and revoke earlier permissions on-chain; then sign a replacement with the limits below. Your account address stays the same.
-              <p>Revocation uses ETH for network fees. When moving networks, it runs on both the current and selected networks. Trading stays stopped if revocation or the replacement fails; your recovery access is kept.</p>
+              <p>Revocation uses BNB for network fees. When moving networks, it runs on both the current and selected networks. Trading stays stopped if revocation or the replacement fails; your recovery access is kept.</p>
               <p>The replacement uses today&apos;s permission rules. Review the network, assets, and limits before continuing. The owner key bypasses these limits and must stay private.</p>
               {resignBy ? (
                 <>
@@ -2635,11 +2554,11 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
                             Move this key to <b>the testnet ({TESTNET})</b> — it will stop being
                             able to trade
                             {session?.hosted
-                              ? ", and on this service it cannot be used for anything: your agent trades Robinhood Chain. Turn Paper on in Settings instead."
+                              ? ", and on this service it cannot be used for anything: your agent trades BNB Chain. Turn Paper on in Settings instead."
                               : "."}
                           </>
                         ) : (
-                          <>Move this key to <b>Robinhood Chain ({MAINNET})</b> — the network your agent trades on.</>
+                          <>Move this key to <b>BNB Chain ({MAINNET})</b> — the network your agent trades on.</>
                         )}
                       </span>
                     </label>
@@ -2682,17 +2601,17 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
                     under the checkbox that enables it.
                   */}
                   <div className="grant-note" data-renewal-funding style={{ marginTop: 12 }}>
-                    <b>ETH for revocation fees</b>
+                    <b>BNB for revocation fees</b>
                     <p>Before continuing, fund this same account address on {chainId !== grant.chainId ? "each network below" : "this network"}:</p>
                     <code style={{ display: "block", overflowWrap: "anywhere" }}>{grant.smartAccount}</code>
                     <CopyBtn value={grant.smartAccount} label="copy revocation funding address" />
                     <ul>
                       {[grant.chainId, ...(chainId !== grant.chainId ? [chainId] : [])].map(network => <li key={network}>
-                        <b>{network === MAINNET ? "Robinhood Chain" : "Robinhood Chain testnet"} ({network})</b>: send {network === TESTNET ? "testnet ETH" : "ETH"} for network fees.
+                        <b>{network === MAINNET ? "BNB Chain" : "BNB Chain testnet"} ({network})</b>: send {network === TESTNET ? "testnet BNB" : "BNB"} for network fees.
                       </li>)}
                     </ul>
-                    {(grant.chainId === TESTNET || chainId === TESTNET) && <p><a href={FAUCET_URL} target="_blank" rel="noreferrer">Get testnet ETH from the faucet ↗</a>, then send it to the account above on testnet.</p>}
-                    <p>Balances do not move between networks. Revocation needs ETH even when trading gas is sponsored; an empty account on the destination network also needs ETH. If you see AA21 or an insufficient-funds error, fund the named network and retry here.</p>
+                    {(grant.chainId === TESTNET || chainId === TESTNET) && <p><a href={FAUCET_URL} target="_blank" rel="noreferrer">Get testnet BNB from the faucet ↗</a>, then send it to the account above on testnet.</p>}
+                    <p>Balances do not move between networks. Revocation needs BNB even when trading gas is sponsored; an empty account on the destination network also needs BNB. If you see AA21 or an insufficient-funds error, fund the named network and retry here.</p>
                   </div>
                   <label className="ack-row" style={{ marginTop: 12 }}><input type="checkbox" checked={renewalAck} onChange={e => setRenewalAck(e.target.checked)} /><span>I authorize revoking earlier permissions on-chain before signing the replacement and understand network fees apply.</span></label>
                   <button
@@ -2705,7 +2624,7 @@ export default function GrantPage({ onAccountChanged }: { onAccountChanged?: () 
                       ? "re-signing…"
                       : chainId !== grant.chainId
                         ? chainId === MAINNET
-                          ? "move to Robinhood Chain & re-sign"
+                          ? "move to BNB Chain & re-sign"
                           : "move to the testnet & re-sign"
                         : "revoke earlier permissions & re-sign"}
                   </button>

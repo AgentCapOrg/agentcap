@@ -32,11 +32,11 @@
  */
 import { webChainRead } from "@/lib/chain-read";
 import { NextResponse } from "next/server";
-import { isEnergyReserveToken, isHostedMode } from "@agentcap/core";
+import { isHostedMode } from "@agentcap/core";
 import { getGrantStore } from "@agentcap/grant-store";
 import { getSettingsStore } from "@agentcap/settings-store";
 import { createPublicClient, erc20Abi } from "viem";
-import { robinhoodChain } from "@agentcap/core";
+import { bnbChain } from "@agentcap/core";
 
 import { tenantOf } from "@/lib/auth";
 import { sharedRead } from "@/lib/read-discoveries";
@@ -74,7 +74,7 @@ function sanitizeSymbol(raw: string): string {
 async function identityOf(token: `0x${string}`): Promise<{ symbol: string; decimals: number } | null> {
   const key = token.toLowerCase();
   if (identity.has(key)) return identity.get(key) ?? null;
-  const client = createPublicClient({ chain: robinhoodChain, transport: webChainRead() });
+  const client = createPublicClient({ chain: bnbChain, transport: webChainRead() });
   try {
     const [s, d] = await Promise.all([
       client.readContract({ address: token, abi: erc20Abi, functionName: "symbol" }) as Promise<string>,
@@ -111,8 +111,6 @@ export interface Proposal {
   /** The scout's own line. Conviction is an ordering, never a size or a permission. */
   conviction: number;
   reason: string;
-  /** Still on its launch curve: no pool, so a swap cannot route to it. */
-  onCurve: boolean;
   priceUsd: number | null;
   fdvUsd: number | null;
   volume24hUsd: number | null;
@@ -190,11 +188,7 @@ export async function GET(req: Request) {
   const vetted = payload.rows.filter((r) => r.verdict);
   if (!vetted.length) return answer("nothing-vetted", [], covered.size);
 
-  // NEVER THE ENERGY RESERVE. $AGENTCAP has a real pool and the scout may well
-  // rate it, but approving it would add a token every signer drops from the
-  // sealed extras: a re-sign that covers nothing, proposed again after every
-  // one. The agent buys it only through get-energy.
-  const fresh = vetted.filter((r) => !covered.has(r.token.toLowerCase()) && !isEnergyReserveToken(r.token));
+  const fresh = vetted.filter((r) => !covered.has(r.token.toLowerCase()));
   if (!fresh.length) return answer("all-covered", [], covered.size);
 
   const proposals: Proposal[] = [];
@@ -209,7 +203,6 @@ export async function GET(req: Request) {
       indexLabel: row.name,
       conviction: row.verdict!.conviction,
       reason: row.verdict!.reason,
-      onCurve: row.onCurve,
       priceUsd: row.priceUsd,
       fdvUsd: row.fdvUsd,
       volume24hUsd: row.volume24hUsd,

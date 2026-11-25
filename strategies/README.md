@@ -23,13 +23,12 @@ export default {
 ```
 
 No imports needed — `ctx` injects the verified registry and helpers:
-`ctx.tokenBySymbol.QQQ`, `ctx.CASH.USDG`, `ctx.UNISWAP.swapRouter02`,
-`ctx.RIALTO.routerSnapshot`, `ctx.MORPHO.steakhouseUsdgVault`,
-`ctx.STOCK_TOKENS`, and `ctx.usdg(25)` → `25_000_000n`.
+`ctx.tokenBySymbol.QQQ`, `ctx.CASH.USDT`, `ctx.PANCAKESWAP.smartRouter`,
+`ctx.STOCK_TOKENS`, and `ctx.usdg(25)` → `25n * 10n ** 18n`.
 
 `snapshot` gives you `cashUsdg`, `vaultUsdg`, `holdings` (per-symbol raw
 balance + USDG value + staleness), `prices` (Chainlink, stale-flagged),
-`pausedTokens`, `staleFeeds`, `sequencerUp`. Units: USDG = 6dp bigint,
+`pausedTokens`, `staleFeeds`, `sequencerUp`. Units: USDT = 18dp bigint,
 stock balances = 18dp bigint, prices = 8dp bigint.
 
 `unreadHeld`, when present, is a `Set` of symbols you hold whose balance could
@@ -38,7 +37,7 @@ unknown, not because they were sold: do not treat them as zero. While it is
 non-empty the policy layer refuses every buy, and any sale of those coins.
 
 See [example-dip-buyer.mjs](./example-dip-buyer.mjs) for a fully commented
-walkthrough including sell / vault intents.
+walkthrough including sell intents.
 
 ## What you can rely on
 

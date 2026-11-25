@@ -11,21 +11,15 @@ import { chainRead } from "./rpc-meter";
 import {
   CASH,
   CHAINLINK_ABI,
-  MORPHO,
   STOCK_ABI,
   STOCK_TOKENS,
-  robinhoodChain,
+  bnbChain,
   type PriceQuote,
 } from "../../packages/core/src/index";
 
 const ERC20_READS = parseAbi([
   "function balanceOf(address) view returns (uint256)",
 ]);
-const VAULT_READS = parseAbi([
-  "function balanceOf(address) view returns (uint256)",
-  "function convertToAssets(uint256 shares) view returns (uint256)",
-]);
-
 /**
  * ── POOL READS, PACKED INTO ONE eth_call ─────────────────────────────────────
  *
@@ -59,14 +53,14 @@ const VAULT_READS = parseAbi([
 export const POOL_READ_BATCH = { multicall: { batchSize: 4096, wait: 10 } } as const;
 
 let read = chainRead(undefined);
-let mainnet = createPublicClient({ chain: robinhoodChain, transport: read });
-let pooled = createPublicClient({ chain: robinhoodChain, transport: read, batch: POOL_READ_BATCH });
+let mainnet = createPublicClient({ chain: bnbChain, transport: read });
+let pooled = createPublicClient({ chain: bnbChain, transport: read, batch: POOL_READ_BATCH });
 
 /** Point safety reads at a custom mainnet RPC (settings/env); undefined = chain default. */
 export function setMainnetRpc(url?: string): void {
   read = chainRead(url);
-  mainnet = createPublicClient({ chain: robinhoodChain, transport: read });
-  pooled = createPublicClient({ chain: robinhoodChain, transport: read, batch: POOL_READ_BATCH });
+  mainnet = createPublicClient({ chain: bnbChain, transport: read });
+  pooled = createPublicClient({ chain: bnbChain, transport: read, batch: POOL_READ_BATCH });
 }
 
 /**
@@ -253,10 +247,8 @@ export interface AccountBalances {
   ethWei: bigint;
   /** USDG in wallet (6dp). 0 on chains where USDG isn't deployed. */
   cashUsdg: bigint;
-  /** USDG value of Morpho vault shares (6dp). 0 where the vault isn't deployed. */
-  vaultUsdg: bigint;
   /**
-   * Which balances could NOT be read this call ("cash" | "vault" | "eth").
+   * Which balances could NOT be read this call ("cash" | "eth").
    * Empty means every figure above is an observation.
    *
    * A non-empty list means the corresponding zero is a PLACEHOLDER, not a
@@ -283,8 +275,7 @@ export async function readAccountBalances(
   const results = await client
     .multicall({
       contracts: [
-        { address: CASH.USDG as `0x${string}`, abi: ERC20_READS, functionName: "balanceOf", args: [account] },
-        { address: MORPHO.steakhouseUsdgVault as `0x${string}`, abi: VAULT_READS, functionName: "balanceOf", args: [account] },
+        { address: CASH.USDT as `0x${string}`, abi: ERC20_READS, functionName: "balanceOf", args: [account] },
       ],
     })
     .catch(() => null);
@@ -297,32 +288,7 @@ export async function readAccountBalances(
   if (results?.[0]?.status === "success") cashUsdg = results[0].result as bigint;
   else unread.push("cash");
 
-  let shares = 0n;
-  let sharesKnown = false;
-  if (results?.[1]?.status === "success") {
-    shares = results[1].result as bigint;
-    sharesKnown = true;
-  } else {
-    unread.push("vault");
-  }
-
-  let vaultUsdg = 0n;
-  if (sharesKnown && shares > 0n) {
-    const assets = await client
-      .readContract({
-        address: MORPHO.steakhouseUsdgVault as `0x${string}`,
-        abi: VAULT_READS,
-        functionName: "convertToAssets",
-        args: [shares],
-      })
-      .catch(() => null);
-    // Holding shares we can't convert is the worst case to zero: it silently
-    // erases the whole vault leg from equity.
-    if (assets === null) unread.push("vault");
-    else vaultUsdg = assets as bigint;
-  }
-
-  return { ethWei, cashUsdg, vaultUsdg, unread };
+  return { ethWei, cashUsdg, unread };
 }
 
 /** What a custody contract holds for this account, per token. */
@@ -343,17 +309,11 @@ export interface CustodyBalances {
 /**
  * WHAT THE CLASS VAULT HOLDS.
  *
- * The Morpho vault's sibling, and the differences are the whole story.
- *
- * Morpho: the ACCOUNT holds shares, so discovery starts from `balanceOf(account)`
- * and the work is CONVERSION — `convertToAssets` is a second step that can fail
- * independently of the balance read, which is why `sharesKnown` exists.
- *
- * Here: the account holds NOTHING. Discovery cannot start from it at all, so the
+ * The account holds NOTHING here. Discovery cannot start from it at all, so the
  * caller supplies the candidate list from `class_positions` and this function
- * only asks the chain what is actually there. And there is no conversion — a
- * class token is an ERC-20 with a price problem, not a wrapper, so it is valued
- * by the same pipeline as every other memecoin the book already carries.
+ * only asks the chain what is actually there. There is no conversion — a class
+ * token is an ERC-20 with a price problem, not a wrapper, so it is valued by the
+ * same pipeline as every other memecoin the book already carries.
  *
  * FAILURE IS NEVER A ZERO. A reverted call and a dead RPC are both "we don't
  * know", and the caller's `unread` handling holds the tick rather than writing a

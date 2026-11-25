@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
-import { AGENTCAP_TOKEN } from "@agentcap/core";
 import { setSettingsReaderForTest } from "@/lib/services/settings-view";
 import { SETTING_SPECS } from "../../../../worker/src/telegram/setting-spec";
 import { resetMetricsForTest } from "../observe";
@@ -36,7 +35,7 @@ async function setup(o: { scopes?: string[]; shared?: string[]; settings?: Recor
 test("settings expose the configured name and exactly the editable metadata, never secrets or activation controls", async () => {
   const { read } = await setup({ settings: {
     agentName: "Fresh Robin", strategy: "steady-basket", assetMode: "stocks", basketSymbols: ["TSLA"],
-    slippageBps: 100, classMaxHoldSec: 7200, telegramDigestHour: 8,
+    slippageBps: 100, telegramDigestHour: 8,
     telegramBotToken: "private-bot-token", telegramChatId: "private-chat", openaiApiKey: "private-model-key",
     liveTradingEnabled: true, maxImpactBps: 5000, telegramControlEnabled: true,
   } });
@@ -48,8 +47,8 @@ test("settings expose the configured name and exactly the editable metadata, nev
   const pct = r.settings.find(s => s.key === "slippageBps")!;
   assert.equal(pct.value, 100); assert.equal(pct.unit, "basis_points"); assert.equal(pct.display_value, "1%");
   assert.equal(pct.min, 1); assert.equal(pct.max, 1000); assert.equal(pct.valid_for_proposal, true);
-  const hold = r.settings.find(s => s.key === "classMaxHoldSec")!;
-  assert.equal(hold.value, 7200); assert.equal(hold.unit, "seconds"); assert.match(hold.display_value, /2/);
+  const hour = r.settings.find(s => s.key === "telegramDigestHour")!;
+  assert.equal(hour.value, 8); assert.equal(hour.unit, "integer"); assert.match(hour.display_value, /8/);
   assert.ok(r.settings.find(s => s.key === "strategy")!.options!.includes("trencher"));
   assert.deepEqual(r.settings.find(s => s.key === "assetMode")!.options, ["all", "stocks", "crypto"]);
   assert.ok(r.available_basket_symbols.includes("TSLA"));
@@ -68,11 +67,10 @@ test("unset values stay unknown rather than becoming zero or false", async () =>
 });
 
 test("legitimate dashboard-only values remain visible without becoming valid chat proposals", async () => {
-  const { read } = await setup({ settings: { classMaxPositions: 0, telegramNotifyEveryMin: 0 } });
+  const { read } = await setup({ settings: { llmIntervalMin: 0, telegramNotifyEveryMin: 0 } });
   const r = await read();
-  const max = r.settings.find(s => s.key === "classMaxPositions")!;
-  assert.equal(max.value, 0); assert.equal(max.value_state, "stored"); assert.equal(max.valid_for_proposal, false);
-  assert.equal(max.zero_meaning, "no limit"); assert.equal(max.display_value, "no limit");
+  const interval = r.settings.find(s => s.key === "llmIntervalMin")!;
+  assert.equal(interval.value, 0); assert.equal(interval.value_state, "stored"); assert.equal(interval.valid_for_proposal, false);
   const batch = r.settings.find(s => s.key === "telegramNotifyEveryMin")!;
   assert.equal(batch.valid_for_proposal, true);
   assert.match(batch.display_value, /per trade/);
@@ -88,14 +86,14 @@ test("invalid stored shapes do not become usable configuration", async () => {
   assert.equal(r.settings.find(s => s.key === "strategy")!.valid_for_proposal, false);
 });
 
-test("basket choices include configured tokens while excluding the energy reserve", async () => {
+test("basket choices include configured tokens and refuse a basket naming none of them", async () => {
   const { read } = await setup({ settings: {
-    customTokens: [{ symbol: "MyCoin", address: `0x${"f".repeat(40)}`, decimals: 18 }, { ...AGENTCAP_TOKEN }],
-    basketSymbols: ["AGENTCAP"],
+    customTokens: [{ symbol: "MyCoin", address: `0x${"f".repeat(40)}`, decimals: 18 }],
+    basketSymbols: ["NOTHELD"],
   } });
   const r = await read();
   assert.ok(r.available_basket_symbols.includes("MyCoin"));
-  assert.ok(!r.available_basket_symbols.includes("AGENTCAP"));
+  assert.ok(!r.available_basket_symbols.includes("NOTHELD"));
   assert.equal(r.settings.find(s => s.key === "basketSymbols")!.valid_for_proposal, false);
 });
 

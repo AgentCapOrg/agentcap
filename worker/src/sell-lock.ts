@@ -416,7 +416,6 @@ export interface RouteRef {
   token: Address;
   fee: number;
   path?: { tokens: readonly Address[]; fees: readonly number[] };
-  v4?: unknown;
 }
 
 /**
@@ -493,7 +492,7 @@ export class SellLockGate {
       route: RouteRef;
       holder: Address;
       amount: bigint;
-      venue: { v3Factory: Address; v4PoolManager: Address; quotes: readonly Address[]; fees: readonly number[] };
+      venue: { v3Factory: Address; quotes: readonly Address[]; fees: readonly number[] };
     },
   ): Promise<SellCheck> {
     const refuse = (detail: string): SellCheck => {
@@ -535,15 +534,13 @@ export class SellLockGate {
 
   /**
    * The pool a buy along `route` buys from, which is the pool its coin sells
-   * into: the last hop of a v3 path, the direct pool otherwise, and the v4
-   * singleton for a v4 route (every v4 sale settles into the PoolManager).
+   * into: the last hop of a v3 path, and the direct pool otherwise.
    */
   async routePool(
     client: PublicClient,
     route: RouteRef,
-    venue: { v3Factory: Address; v4PoolManager: Address },
+    venue: { v3Factory: Address },
   ): Promise<{ ok: true; pool: Address } | { ok: false; detail: string }> {
-    if (route.v4) return { ok: true, pool: venue.v4PoolManager };
     let a: Address;
     let fee: number;
     if (route.path) {

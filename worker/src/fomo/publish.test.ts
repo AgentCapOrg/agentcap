@@ -297,7 +297,7 @@ describe("the gate refuses unsafe slots", () => {
     ["link", "details at mosscat.xyz", "link"],
     ["spelled link", "details at mosscat dot com", "link"],
     ["bare domain", "see the docs on mosscat.wtf", "link"],
-    ["base58 address", "mint ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijk holds the supply", "address"],
+    ["long address-like run", "mint ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijk holds the supply", "address"],
     ["digits", "activity rose by most of the day", "ok"],
     ["numeral", "volume up 300 times", "digits"],
     ["spelled figure", "volume reached three million", "figures"],

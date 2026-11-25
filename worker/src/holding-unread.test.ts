@@ -11,7 +11,7 @@
  * the rule is what keeps the fix from being weaker than the bug.
  *
  * Pinned here: every non-exit refused from every kind (a buy, a vault
- * deposit, an energy buy, a strategist's perp open); every exit of anything
+ * a strategist's perp open); every exit of anything
  * else still goes out; the unread coin's own sale refused, exits included;
  * and the rule's registrations, so it is one piece of news and never a post.
  */
@@ -64,7 +64,6 @@ const limits: AgentLimits = {
   expiresAt: NOW + 30 * DAY,
   maxOpsPerDay: 48,
   cashToken: USDG,
-  energy: { router: V2, token: MERRY },
   perp: { proxy: LIGHTER_ROUTE_V1.proxy, apiKeyIndex: LIGHTER_ROUTE_V1.apiKeyIndex, apiPublicKey: PUB },
 };
 
@@ -145,10 +144,7 @@ const blind = (over: Partial<AgentState> = {}): AgentState => ({
 const buy: TradeIntent = { kind: "swap", target: ROUTER, sellToken: USDG, buyToken: AAPL, sellAmountRaw: u(25), notionalUsdg: u(25) };
 const sellAapl: TradeIntent = { kind: "swap", target: ROUTER, sellToken: AAPL, buyToken: USDG, sellAmountRaw: 10n ** 18n, notionalUsdg: u(25) };
 const sellGato: TradeIntent = { kind: "swap", target: ROUTER, sellToken: GATO, buyToken: USDG, sellAmountRaw: 2_842n * 10n ** 18n, notionalUsdg: u(25) };
-const deposit: TradeIntent = { kind: "vault-deposit", target: VAULT, amountUsdg: u(25) };
-const withdraw: TradeIntent = { kind: "vault-withdraw", target: VAULT, amountUsdg: u(25) };
 const transfer: TradeIntent = { kind: "transfer", target: USDG, recipient: HOME, amountUsdg: u(25) };
-const energy: TradeIntent = { kind: "energy-buy", target: V2, sellToken: USDG, buyToken: MERRY, sellAmountRaw: u(10), notionalUsdg: u(10) };
 
 /** A strategist's open, built exactly as the perp route builds one. */
 function perpOpen(): PerpOpenIntent {
@@ -190,7 +186,7 @@ const perpClose: TradeIntent = {
 describe("the fixtures are honest", () => {
   it("with every balance read, a buy here IS the breaker's — so what refuses below is the stand-in, not a broken intent", () => {
     const read = blind({ equityKnown: true, heldUnread: undefined });
-    for (const intent of [buy, deposit, energy, perpOpen()]) {
+    for (const intent of [buy, perpOpen()]) {
       const v = checkPolicy(intent, limits, read);
       assert.equal(!v.ok && v.rule, "drawdown-breaker", `${intent.kind}: ${JSON.stringify(v)}`);
     }
@@ -201,7 +197,7 @@ describe("the fixtures are honest", () => {
     // while equityKnown). Left in, it is what the book-incomplete path did to
     // an unread holding before holding-unread.
     const off = blind({ heldUnread: undefined });
-    for (const intent of [buy, deposit, energy, perpOpen()]) {
+    for (const intent of [buy, perpOpen()]) {
       assert.deepEqual(checkPolicy(intent, limits, off), { ok: true }, intent.kind);
     }
   });
@@ -209,7 +205,7 @@ describe("the fixtures are honest", () => {
 
 describe("KEY REGRESSION: equity unknown, 50% under the peak, one holding unread", () => {
   it("A BUY, A VAULT DEPOSIT, AN ENERGY BUY AND A STRATEGIST'S PERP OPEN are each refused holding-unread — never ok", () => {
-    for (const intent of [buy, deposit, energy, perpOpen()]) {
+    for (const intent of [buy, perpOpen()]) {
       const v = checkPolicy(intent, limits, blind());
       assert.equal(v.ok, false, `${intent.kind} went out with the breaker off`);
       assert.equal(!v.ok && v.rule, "holding-unread", `${intent.kind}: ${JSON.stringify(v)}`);
@@ -223,10 +219,9 @@ describe("KEY REGRESSION: equity unknown, 50% under the peak, one holding unread
     assert.equal(!v.ok && v.rule, "holding-unread");
   });
 
-  it("EXITS OF OTHER COINS STILL GO OUT: a sell into USDG, a transfer, a vault withdrawal, a reduce-only perp close", () => {
+  it("EXITS OF OTHER COINS STILL GO OUT: a sell into USDG, a transfer, a reduce-only perp close", () => {
     assert.deepEqual(checkPolicy(sellAapl, limits, blind()), { ok: true });
     assert.deepEqual(checkPolicy(transfer, limits, blind()), { ok: true });
-    assert.deepEqual(checkPolicy(withdraw, limits, blind()), { ok: true });
     const held = blind({ perp: perpState(new Map([[1, { side: "long", baseAmount: 23n }]])) });
     assert.deepEqual(checkPolicy(perpClose, limits, held), { ok: true });
   });
@@ -266,25 +261,9 @@ describe("KEY REGRESSION: equity unknown, 50% under the peak, one holding unread
 });
 
 describe("soldTokenOf — what a trade sells, and only the sold leg", () => {
-  it("a swap sells its sellToken and a curve trade its assetIn", () => {
-    assert.equal(soldTokenOf(sellGato), GATO);
-    const curve: TradeIntent = {
-      kind: "curve-trade",
-      target: ROUTER,
-      curve: VAULT,
-      assetIn: GATO,
-      assetOut: USDG,
-      amountInRaw: 1n,
-      minAmountOutRaw: 1n,
-      notionalUsdg: 1n,
-    };
-    assert.equal(soldTokenOf(curve), GATO);
-    // A curve exit from a readable coin INTO an unread quote sizes nothing from it.
-    assert.equal(soldTokenOf({ ...curve, assetIn: AAPL, assetOut: GATO } as TradeIntent), AAPL);
-  });
 
-  it("nothing else sells a watched coin: a transfer is USDG, vault and margin moves are USDG, an energy buy spends USDG", () => {
-    for (const intent of [transfer, deposit, withdraw, energy, perpOpen(), perpClose]) assert.equal(soldTokenOf(intent), null, intent.kind);
+  it("nothing else sells a watched coin: a transfer is USDG, vault and margin moves are USDG", () => {
+    for (const intent of [transfer, perpOpen(), perpClose]) assert.equal(soldTokenOf(intent), null, intent.kind);
     assert.equal(soldTokenOf({ kind: "equity-order", ticker: "AAPL", side: "sell", notionalUsdg: u(5) }), null);
     assert.equal(soldTokenOf({ kind: "perp-margin", direction: "withdraw", amountUsdg: u(5) }), null);
   });

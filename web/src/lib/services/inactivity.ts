@@ -105,7 +105,7 @@ export function classifyEvent(message: string): EventKind {
   if (/^(strategist driver failed|desk: the model could not be reached|desk: the model stopped without|desk: ran out of steps|strategist emitted \d+ malformed)/i.test(m)) return "provider_failure";
   if (/^brain refused:/i.test(m)) return "brain_refused";
   if (/^this agent CANNOT START/.test(m)) return "arm_failure";
-  if (/^no ETH in the account/i.test(m)) return "funding_notice";
+  if (/^no (?:ETH|BNB) in the account/i.test(m)) return "funding_notice";
   // index.ts trenchCandidates: the Trencher's feed is empty because a setting says so.
   if (/^trencher is running but (live trenching is off|your asset mode is Stocks only)/i.test(m)) return "consent_notice";
   if (/^policy rejected /i.test(m)) return "policy_notice";
@@ -670,7 +670,7 @@ export function diagnoseInactivity(i: InactivityInputs): Diagnosis {
     const liveRefusals = family("funding");
     const since = liveRefusals.length ? Math.min(...liveRefusals.map((b) => b.first_at)) : null;
     if (blocker === "no-gas" || blocker === "no-cash") {
-      add({ category: "funding", status: liveIntended ? "blocking" : "warning", kind: "unfunded", summary: blocker === "no-gas" ? "The account holds no ETH and its gas is not sponsored, so no operation can reach the chain." : "The account holds no USDG to trade with.", observed, threshold, recorded_at: f?.at ?? beat, since, remedy: railRemedy(blocker) });
+      add({ category: "funding", status: liveIntended ? "blocking" : "warning", kind: "unfunded", summary: blocker === "no-gas" ? "The account holds no BNB and its gas is not sponsored, so no operation can reach the chain." : "The account holds no USDG to trade with.", observed, threshold, recorded_at: f?.at ?? beat, since, remedy: railRemedy(blocker) });
     } else if (!f) {
       add({ category: "funding", status: "unknown", kind: null, summary: "No live-book valuation is on record, so cash and gas are unknown (not zero).", observed, threshold });
     } else if (eth === 0n && sponsored !== true) {
@@ -678,13 +678,13 @@ export function diagnoseInactivity(i: InactivityInputs): Diagnosis {
       // The worker's own verdict is newer than any mark: if it reports every
       // leg available, a zero read here is a warning, not a block.
       const workerSaysLive = row?.mode === "live" && !blocker;
-      add({ category: "funding", status: liveIntended && !unknownSponsor && !workerSaysLive ? "blocking" : "warning", kind: "unfunded", summary: `The last live valuation (${iso(f.at)}) read 0 ETH${unknownSponsor ? ", and whether gas is sponsored is not recorded" : " and gas is not sponsored"}: operations cannot pay their fee.`, observed, threshold, recorded_at: f.at, since, remedy: [rejectRuleRemedy("no-gas")!] });
+      add({ category: "funding", status: liveIntended && !unknownSponsor && !workerSaysLive ? "blocking" : "warning", kind: "unfunded", summary: `The last live valuation (${iso(f.at)}) read 0 BNB${unknownSponsor ? ", and whether gas is sponsored is not recorded" : " and gas is not sponsored"}: operations cannot pay their fee.`, observed, threshold, recorded_at: f.at, since, remedy: [rejectRuleRemedy("no-gas")!] });
     } else if (f.cash_usdg !== null && f.cash_usdg <= 0) {
       add({ category: "funding", status: "warning", kind: "unfunded", summary: `The last live valuation (${iso(f.at)}) read no USDG: it cannot buy, though it can still sell what it holds.`, observed, threshold, recorded_at: f.at, remedy: [rejectRuleRemedy("no-cash")!] });
     } else if (eth === null || f.cash_usdg === null) {
       add({ category: "funding", status: "unknown", kind: null, summary: "Part of the last live valuation was unreadable, so funding is unknown (not zero).", observed, threshold, recorded_at: f.at });
     } else {
-      add({ category: "funding", status: "ok", kind: null, summary: `Funded as of ${iso(f.at)}: ${f.cash_usdg} USDG cash, ${sponsored ? "gas sponsored" : `${eth.toString()} wei of ETH for gas`}.`, observed, threshold, recorded_at: f.at });
+      add({ category: "funding", status: "ok", kind: null, summary: `Funded as of ${iso(f.at)}: ${f.cash_usdg} USDG cash, ${sponsored ? "gas sponsored" : `${eth.toString()} wei of BNB for gas`}.`, observed, threshold, recorded_at: f.at });
     }
   }
 
@@ -705,11 +705,10 @@ export function diagnoseInactivity(i: InactivityInputs): Diagnosis {
       const trencherNotice = i.events.consent_notice;
       const observed = {
         live_trading_enabled: s.liveTradingEnabled, paper_trading_enabled: s.paperTradingEnabled, asset_mode: s.assetMode, strategy: s.strategy,
-        launch_buying_enabled: s.launchBuying.enabled, scout_enabled: s.scoutEnabled, scout_budget_usdg: s.scoutBudgetUsdg,
+        scout_enabled: s.scoutEnabled, scout_budget_usdg: s.scoutBudgetUsdg,
         trencher_live_enabled: s.trencherLiveEnabled,
       };
       const evidence: string[] = [];
-      if (!s.launchBuying.enabled) evidence.push("Launch buying is off, so it does not buy new launches.");
       if (s.scoutEnabled && s.scoutBudgetUsdg !== null && s.scoutBudgetUsdg <= 0) evidence.push("The scout budget is 0, so coins it discovers are never bought.");
       else if (s.scoutEnabled && s.scoutBudgetUsdg === null) evidence.push("No scout budget is set; the default is 0, so coins it discovers are not bought unless the agent's own machine sets one.");
       if (s.assetMode) evidence.push(`Asset mode: ${s.assetMode}.`);

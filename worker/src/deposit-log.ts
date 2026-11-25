@@ -46,12 +46,13 @@
  * `addFlow` returns true on a duplicate — a second booker of the same leg would
  * lower the peak twice (the Shogun double-lowering). One live booker per flow.
  */
+import { CASH_PER_MICRO } from "../../packages/core/src/cash";
 import { decodeEventLog, parseAbi, type Hex } from "viem";
 import { addressTopic, getLogsAdaptive, type RawLog, type ReconcileChain } from "./inflight-reconcile";
 // The one rule that decides whether a USDG movement is the owner's capital or
 // the agent trading. Imported rather than restated so the scanner and the
 // accounting backfill cannot reach different answers about the same transfer.
-import { classifyUsdgMovement, energyReserveTokens, AGENTCAP_TOKEN, type TransferLeg } from "../../packages/core/src/index";
+import { classifyUsdgMovement, type TransferLeg } from "../../packages/core/src/index";
 import type { ReceiptLog } from "./fills";
 // Which logs of a trade's transaction are the owner's own execution (a root
 // operation bundled beside the agent's swap), read off the receipt as the
@@ -95,9 +96,8 @@ export function legsFromReceiptLogs(logs: readonly ReceiptLog[]): TransferLeg[] 
  */
 export function scannerClassifyContext(o: { custodyAddresses?: readonly string[]; chainId?: number }): {
   custodyAddresses: readonly string[] | undefined;
-  reserveTokens: readonly string[];
 } {
-  return { custodyAddresses: o.custodyAddresses, reserveTokens: energyReserveTokens(o.chainId ?? AGENTCAP_TOKEN.chainId) };
+  return { custodyAddresses: o.custodyAddresses };
 }
 
 /** The ERC-20 event. `value` is not indexed, so it is read from `data`. */
@@ -294,7 +294,10 @@ export async function findTransferFlows(opts: {
     // A transfer to itself moves nothing across the boundary. It appears in both
     // scans and would otherwise be booked as a deposit of its own size.
     if (from === to) continue;
-    if (value === 0n) continue;
+    // Under a millionth of a USDT is below what the book can record: booked,
+    // it would be a flow of 0, which the store refuses, and one dust transfer
+    // from anybody would hold the scan for good.
+    if (value < CASH_PER_MICRO) continue;
     // A SECONDARY skip, kept because it is free and sometimes right, but it is
     // no longer what decides the question. See the classification below. With
     // `tradeOpsInTx` the owner's own execution in a trade's bundle is kept for
@@ -441,12 +444,6 @@ export async function findTransferFlows(opts: {
       // as a withdrawal — corrupting the denominator of every P&L figure.
       // See ClassifyInput.custodyAddresses.
       custodyAddresses: context.custodyAddresses,
-      // The energy reserve on this chain. Its purchase classifies `reserve-out`,
-      // which the condition below deliberately does NOT book: the worker is its
-      // one live booker. See the header. Both from scannerClassifyContext, the
-      // one place the scanner's inputs are named (an owner operation's record
-      // leaves a leg to "the scanner's flow" on exactly these).
-      reserveTokens: context.reserveTokens,
     });
 
     // EXACTLY capital-in or capital-out. Never widen this to `reserve-out`:

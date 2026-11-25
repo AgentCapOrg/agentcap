@@ -25,7 +25,7 @@
  * signer, no eth_sendRawTransaction, and no state-changing call it could make.
  */
 import { decodeFunctionResult, encodeFunctionData, type Hex } from "viem";
-import { CASH, CASH_FEEDS, CHAINLINK_ABI, NATIVE_ASSET, STOCK_ABI, STOCK_TOKENS } from "../../packages/core/src/index.ts";
+import { CASH, CASH_DECIMALS, CASH_FEEDS, CHAINLINK_ABI, NATIVE_ASSET, STOCK_ABI, STOCK_TOKENS } from "../../packages/core/src/index.ts";
 import { findRoundAt, MAX_ROUND_LAG_SEC, type FeedRound } from "../../worker/src/gas-backfill.ts";
 import { classifyRpcError, type RpcCall } from "../../worker/src/chain-capital.ts";
 
@@ -156,8 +156,8 @@ export function feedFor(
   asset: string,
 ): { symbol: string; feed: string; tokenDecimals: number; multiplier: "none" | "erc8056" } | null {
   const a = asset.toLowerCase();
-  if (a === NATIVE_ASSET) return { symbol: "ETH", feed: CASH_FEEDS.ETH_USD, tokenDecimals: 18, multiplier: "none" };
-  if (a === CASH.WETH.toLowerCase()) return { symbol: "WETH", feed: CASH_FEEDS.ETH_USD, tokenDecimals: 18, multiplier: "none" };
+  if (a === NATIVE_ASSET) return { symbol: "BNB", feed: CASH_FEEDS.BNB_USD, tokenDecimals: 18, multiplier: "none" };
+  if (a === CASH.WBNB.toLowerCase()) return { symbol: "WBNB", feed: CASH_FEEDS.BNB_USD, tokenDecimals: 18, multiplier: "none" };
   const stock = STOCK_TOKENS.find((t) => t.address.toLowerCase() === a);
   if (!stock || !stock.chainlinkFeed || stock.kind === "memecoin") return null;
   // Chainlink stock feeds quote per ERC-8056 UI share, so the multiplier
@@ -183,7 +183,7 @@ export type V1Valuation =
       boundary: "latest-round" | "successor-published-after";
       /** ERC-8056 multiplier, read at head; null for ETH and WETH. */
       multiplier: { raw: string; readAt: "head" } | null;
-      /** USDG base units (6dp), floored. Never a float. */
+      /** USDT base units (18dp), floored. Never a float. */
       valueUsdgRaw: string;
       why: string;
     }
@@ -250,9 +250,9 @@ export async function valueAtRoundInForce(args: {
     if (m === null) return unavailable("the token's ERC-8056 multiplier could not be read");
     multiplier = m;
   }
-  // amount (tokenDecimals) × multiplier (1e18) × answer (feedDecimals) → USDG (6dp)
+  // amount (tokenDecimals) × multiplier (1e18) × answer (feedDecimals) → USDT base units (18dp)
   const valueUsdgRaw =
-    (amount * multiplier * round.answer * 10n ** 6n) /
+    (amount * multiplier * round.answer * 10n ** BigInt(CASH_DECIMALS)) /
     (10n ** BigInt(source.tokenDecimals) * 10n ** 18n * 10n ** BigInt(round.decimals));
   return {
     basis: "V1",

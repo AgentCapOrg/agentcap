@@ -167,7 +167,7 @@ const USER_ID = /^[A-Za-z0-9_-]{1,64}$/;
 const OPAQUE_ID = /^[A-Za-z0-9_.:-]{1,128}$/;
 const SLUG = /^[a-z][a-z0-9-]{0,23}$/;
 const SYMBOL_MAX = 24;
-const { EVM_ADDRESS, SOLANA_MINT } = IDENTITY_GUARDS;
+const { EVM_ADDRESS } = IDENTITY_GUARDS;
 
 export function emptyMemory(now: number): SubjectMemory {
   return {
@@ -266,7 +266,7 @@ export function sameSubject(a: SubjectQuery, b: SubjectQuery): boolean {
 }
 
 function normAddress(a: string): string {
-  // EVM hex is case-insensitive; a Solana mint is not and keeps its case.
+  // EVM hex is case-insensitive.
   return EVM_ADDRESS.test(a) ? a.toLowerCase() : a;
 }
 
@@ -391,7 +391,7 @@ function storedFromQuery(q: Exclude<SubjectQuery, { kind: "market" }>, existing:
     return t;
   }
   const t: { kind: "token"; address?: string; chain?: string | null; symbol?: string | null } = { kind: "token" };
-  if (q.address && (EVM_ADDRESS.test(q.address) || SOLANA_MINT.test(q.address))) t.address = normAddress(q.address);
+  if (q.address && EVM_ADDRESS.test(q.address)) t.address = normAddress(q.address);
   t.chain = q.chain && SLUG.test(q.chain) ? q.chain : null;
   t.symbol = q.symbol ? cleanSymbol(q.symbol) : null;
   return t;
@@ -606,7 +606,7 @@ function validStored(s: unknown): StoredSubject | null {
       if (s.address !== undefined && s.address !== id.address) return null;
     }
     if (s.address !== undefined) {
-      if (typeof s.address !== "string" || !(EVM_ADDRESS.test(s.address) || SOLANA_MINT.test(s.address))) return null;
+      if (typeof s.address !== "string" || !EVM_ADDRESS.test(s.address)) return null;
       if (EVM_ADDRESS.test(s.address) && s.address !== s.address.toLowerCase()) return null;
       t.address = s.address;
     }

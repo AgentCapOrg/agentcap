@@ -1,15 +1,14 @@
 /**
- * THE ARITHMETIC OF FUNDING AN AGENT FROM ETH OR SOL.
+ * THE ARITHMETIC OF FUNDING AN AGENT FROM ETH.
  *
- * Everything here is integer base units: wei, lamports, and USDG's six
+ * Everything here is integer base units: wei and USDG's six
  * decimals. A float never touches an amount the owner is about to sign for.
  *
  * WHY A RESERVE AT ALL. Two different wallets need fees:
  *
  * - The wallet the owner sends FROM pays the network fee for the transfer
  *   itself. "Max" that empties it leaves the owner unable to make the next
- *   transaction. On Solana, an account drained below its rent-exempt minimum
- *   cannot be left like that at all, so the transfer is rejected outright.
+ *   transaction.
  * - The agent account pays its own fee on every trade, in ETH on Robinhood
  *   Chain. USDG cannot pay it. The largest bucket in the live-blocker census was
  *   `no-gas`: owners who sent USDG exactly as told and no ETH (live-blocker.ts).
@@ -20,18 +19,18 @@
  * "unread", never a Max of 0 and never "this wallet is empty".
  */
 
-/** Where an owner's ETH or SOL starts. Every option routes into USDG on Robinhood Chain. */
-export type SourceId = "eth-robinhood" | "eth-ethereum" | "eth-base" | "eth-arbitrum" | "sol-solana";
+/** Where an owner's ETH starts. Every option routes into USDT on BNB Chain. */
+export type SourceId = "eth-ethereum" | "eth-base" | "eth-arbitrum";
 
 export interface DepositSource {
   id: SourceId;
-  family: "evm" | "solana";
-  /** The chain id Relay uses. Solana's is Relay's own, not an EVM id. */
+  family: "evm";
+  /** The chain id Relay uses. */
   relayChainId: number;
   /** The network, as an owner would say it. */
   network: string;
-  asset: "ETH" | "SOL";
-  decimals: 18 | 9;
+  asset: "ETH";
+  decimals: 18;
   /** Relay's id for the native currency on that chain. */
   currency: string;
   /**
@@ -39,15 +38,12 @@ export interface DepositSource {
    *
    * These were agreed with Milla on 2026-11-19: 0.002 ETH on Ethereum, where
    * one transfer can cost several dollars; 0.0003 ETH on the L2s and Robinhood
-   * Chain; and 0.005 SOL on Solana. The SOL figure covers the rent-exempt
-   * minimum (0.00089088 SOL), a possible token account's rent (0.00203928 SOL),
-   * and the fee plus a priority fee, with room to spare.
+   * Chain;.
    */
   floor: bigint;
   /**
    * The slippage cap we quote at, in basis points. Relay's own default came back
-   * at 2%, so it is always passed rather than left to Relay. 50 bps for ETH and
-   * 100 bps for SOL, as agreed.
+   * at 2%, so it is always passed rather than left to Relay. 50 bps for ETH.
    */
   slippageBps: number;
   /** How many decimals an amount typed for this asset may carry. Max is truncated to it. */
@@ -56,24 +52,18 @@ export interface DepositSource {
 
 const ETH_FLOOR_L1 = 2_000_000_000_000_000n; // 0.002 ETH
 const ETH_FLOOR_L2 = 300_000_000_000_000n; //   0.0003 ETH
-const SOL_FLOOR = 5_000_000n; //                 0.005 SOL
 
 /** Relay's native-currency ids. */
 export const EVM_NATIVE = "0x0000000000000000000000000000000000000000";
-export const SOL_NATIVE = "11111111111111111111111111111111";
-/** Relay's chain id for Solana mainnet. */
-export const RELAY_SOLANA_CHAIN_ID = 792703809;
 
 export const DEPOSIT_SOURCES: Readonly<Record<SourceId, DepositSource>> = Object.freeze({
-  "eth-robinhood": { id: "eth-robinhood", family: "evm", relayChainId: 4663, network: "Robinhood Chain", asset: "ETH", decimals: 18, currency: EVM_NATIVE, floor: ETH_FLOOR_L2, slippageBps: 50, inputDecimals: 6 },
   "eth-ethereum": { id: "eth-ethereum", family: "evm", relayChainId: 1, network: "Ethereum", asset: "ETH", decimals: 18, currency: EVM_NATIVE, floor: ETH_FLOOR_L1, slippageBps: 50, inputDecimals: 6 },
   "eth-base": { id: "eth-base", family: "evm", relayChainId: 8453, network: "Base", asset: "ETH", decimals: 18, currency: EVM_NATIVE, floor: ETH_FLOOR_L2, slippageBps: 50, inputDecimals: 6 },
   "eth-arbitrum": { id: "eth-arbitrum", family: "evm", relayChainId: 42161, network: "Arbitrum", asset: "ETH", decimals: 18, currency: EVM_NATIVE, floor: ETH_FLOOR_L2, slippageBps: 50, inputDecimals: 6 },
-  "sol-solana": { id: "sol-solana", family: "solana", relayChainId: RELAY_SOLANA_CHAIN_ID, network: "Solana", asset: "SOL", decimals: 9, currency: SOL_NATIVE, floor: SOL_FLOOR, slippageBps: 100, inputDecimals: 4 },
 });
 
 /** The ETH sources, in the order the panel offers them. */
-export const ETH_SOURCES: readonly SourceId[] = ["eth-ethereum", "eth-base", "eth-arbitrum", "eth-robinhood"];
+export const ETH_SOURCES: readonly SourceId[] = ["eth-ethereum", "eth-base", "eth-arbitrum"];
 
 /**
  * A decimal the owner typed, as base units, or null when it is not one.
@@ -164,9 +154,7 @@ export function maxSendable(source: DepositSource, balance: bigint | null, reser
  */
 export function reserveLine(source: DepositSource, reserve: bigint, agentGas: bigint | null = 0n): string {
   const amount = (v: bigint) => `${formatAmount(v, source.decimals, source.inputDecimals)} ${source.asset}`;
-  const own = source.family === "solana"
-    ? `Max keeps ${amount(reserve)} so your wallet stays open and can pay its next fee`
-    : `Max keeps ${amount(reserve)} on ${source.network} so this wallet can pay its next fee`;
+  const own = `Max keeps ${amount(reserve)} on ${source.network} so this wallet can pay its next fee`;
   // null: the agent needs gas and Relay has not priced the source asset yet.
   if (agentGas === null) return `${own}, and sets aside about $2 of ${source.asset} for your agent's gas.`;
   return agentGas > 0n ? `${own}, and sets aside ${amount(agentGas)} for your agent's gas.` : `${own}.`;

@@ -217,12 +217,12 @@ export function permissionItems(slug: string, account: string | null, expiresAt:
 }
 
 const FUNDING_TODO: Readonly<Record<string, string>> = {
-  "no-gas": "Send a small amount of ETH to the agent's account on Robinhood Chain; the deposit page shows the address. A few dollars covers many trades.",
-  "no-cash": "Send USDG to the agent's account on Robinhood Chain; the deposit page shows the address.",
+  "no-gas": "Send a small amount of BNB to the agent's account on BNB Chain; the deposit page shows the address. A few dollars covers many trades.",
+  "no-cash": "Send USDG to the agent's account on BNB Chain; the deposit page shows the address.",
 };
 
 const BLOCKER_TITLE: Readonly<Record<string, string>> = {
-  "no-gas": "The agent has no ETH for network fees",
+  "no-gas": "The agent has no BNB for network fees",
   "no-cash": "The agent has no USDG to trade with",
   "dead-policy": "The trading permission cannot reach the chain",
   "wrong-chain": "The trading permission is for another network",

@@ -17,7 +17,7 @@ import { cachedGeckoDetail, geckoRefusal, geckoSource, GECKO_NETWORK, parseGecko
 import type { FeedResult } from "../venues/fleet-feed-cache";
 import type { Bar } from "./ta";
 import { safeFetchUrl } from "../../../packages/core/src/index";
-import { sanitizeMeta } from "../venues/pons-meta";
+import { sanitizeMeta } from "../venues/token-meta";
 
 const MEMO_MS = 60_000;
 const FAIL_MEMO_MS = 5_000;

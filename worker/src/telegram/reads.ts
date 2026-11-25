@@ -5,6 +5,7 @@
  * missing table reads as empty rather than throwing.
  */
 
+import { bnbTestnet } from "../../../packages/core/src/chain";
 import { existsSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { homePaths } from "../home";
@@ -20,9 +21,7 @@ import { rejectRuleLabel, rejectRuleRemedy } from "../thesis-policy";
 // RELATIVE import only — the "@agentcap/core" alias exists solely in dev (see
 // the note in service.ts). isHostedMode decides whether a missing agent id may
 // fall back to the single-tenant guess, or must refuse.
-import { liveBlockerText, priceSourceNote, priceSourceTag, isHostedMode, ENERGY, idFamily, redactSolanaIds } from "../../../packages/core/src/index";
-import type { EnergyStatus } from "../../../packages/core/src/index";
-import { count as countTokens, STILL_RUNS } from "../energy-copy";
+import { liveBlockerText, priceSourceTag, isHostedMode } from "../../../packages/core/src/index";
 import type { AdmissionLevel } from "../worker-admission";
 
 export function openRO(): DatabaseSync | null {
@@ -193,7 +192,6 @@ export interface StatusContext {
   /** The agentcapavatar's user-given name (soul IDENTITY.md). */
   name: string;
   strategy: string;
-  venue: string;
   paused: boolean;
   workerAliveSec: number | null;
   grant: { perTradeUsdg: number; dailyUsdg: number; maxDrawdownPct: number; expiresInDays: number } | null;
@@ -204,13 +202,6 @@ export interface StatusContext {
   telegramMaxActionUsdg: number;
   /** Simulated starting cash for the paper book — quoted in the testnet explainer. */
   paperStartUsdg?: number;
-  /**
-   * The worker's own energy report for this agent, as published on its agents
-   * row this tick (index.ts `energyReport`). null/absent = not said yet, which
-   * prints nothing — never "no energy". Only a report with `gated` true is
-   * spoken: off and observe limit nothing, so there is nothing to tell.
-   */
-  energy?: EnergyStatus | null;
   /** This process's boot admission, supplied by the same state that gates orders. */
   admission?: { level: AdmissionLevel; draining: boolean };
 }
@@ -224,78 +215,23 @@ export function admissionStatusLine(admission: StatusContext["admission"]): stri
   return null;
 }
 
-/**
- * THE ONE ENERGY LINE /status CARRIES, or null for none.
- *
- * Read-only by design: Telegram tells the owner where energy stands and where
- * to fix it, and never buys it. The buy is a money path an owner confirms with
- * the amount in front of them, in the AgentCap app's chat; a bearer link code
- * is not that (design D6).
- *
- * WHAT IT MUST NEVER DO, whichever arm it takes:
- *   - print a count that was not read. A null used/allowed prints "—"; an
- *     unread balance is "our read, not your wallet", never 0 — the number that
- *     sends somebody to buy tokens they may already hold.
- *   - speak for yesterday. A report whose day has already reset (a tick has not
- *     run since 00:00 UTC) is not today's, and "spent" from it would be false.
- *   - point at the agent's account when it is on another network: tokens sent
- *     there would not count, so that arm names the owner's own wallet instead.
- *   - say "selling is never limited". Stop-losses, take-profits and the owner's
- *     own orders are; the agent's own AI reviews, including of its open positions,
- *     are paced (energy-copy.ts STILL_RUNS).
- *
- * Exported for the test; readStatus is the only caller.
- */
-export function energyStatusLine(e: EnergyStatus | null | undefined, nowSec: number): string | null {
-  if (!e || !e.gated) return null;
-  if (nowSec >= e.resetsAt) return null;
-  if (e.level === "full") return "• energy: full ⚡";
-  const n = (v: number | null) => (v === null ? "—" : countTokens(v));
-  // ON ANOTHER NETWORK ONLY THE OWNER'S OWN WALLET COUNTS, in every arm that
-  // could lead to a remedy: the chat model reads this line, and without the
-  // marker it falls back to "/wallet shows my address" — an account whose
-  // $AGENTCAP is never read (ENERGY_WORDS says the same).
-  const ownWallet =
-    e.buy === "not-mainnet"
-      ? `Full strength: ${countTokens(ENERGY.fullTokens)} $AGENTCAP in your own wallet on Robinhood Chain — my account is on another network, so only your own wallet counts`
-      : null;
-  if (e.spent) {
-    const unread =
-      e.level === "unread" ? " I couldn't read the $AGENTCAP balances, so I'm on the reduced allowance (our read, not your wallet)." : "";
-    const where = ownWallet ?? "/wallet shows my address for $AGENTCAP";
-    return (
-      `• energy: spent for today — back at 00:00 UTC. ${STILL_RUNS.charAt(0).toUpperCase()}${STILL_RUNS.slice(1)}; ` +
-      `my own AI reviews, including of my open positions, are paced.${unread} ${where}`
-    );
-  }
-  if (e.level === "unread") {
-    return `• energy: couldn't read the $AGENTCAP balances — on the reduced allowance until I can (our read, not your wallet)${ownWallet ? `. ${ownWallet}` : ""}`;
-  }
-  // LOW, NOT YET SPENT. A meter the worker did not report (no paid reviewer,
-  // or not throttled) is left out, so this never reads "— of — AI reviews".
-  const used: string[] = [];
-  if (e.reviews) used.push(`${n(e.reviews.used)} of ${n(e.reviews.allowed)} AI reviews`);
-  if (e.entries) used.push(`${n(e.entries.used)} of ${n(e.entries.allowed)} new trades`);
-  return `• energy: low — about a tenth of a standard day${used.length ? ` (${used.join(", ")} used today)` : ""}${ownWallet ? `. ${ownWallet}` : ""}`;
-}
-
 export function readStatus(ctx: StatusContext): string {
   const lines: string[] = [];
   lines.push(`🏹 <b>${esc(ctx.name)} — status</b>`);
   const alive = ctx.workerAliveSec !== null && ctx.workerAliveSec < 90;
   lines.push(`• worker: ${alive ? "alive" : "not running"}${ctx.paused ? " · ⏸ paused" : ""}`);
-  lines.push(`• strategy: ${esc(ctx.strategy)} · venue: ${esc(ctx.venue)}`);
+  lines.push(`• strategy: ${esc(ctx.strategy)}`);
   const admission = admissionStatusLine(ctx.admission);
   if (admission) lines.push(`• ${admission}`);
   if (ctx.paper) {
     lines.push(`• mode: 📜 <b>paper</b> — fills simulate at live prices, nothing signs`);
   }
   if (ctx.chainId !== null) {
-    if (ctx.chainId === 46630) {
+    if (ctx.chainId === bnbTestnet.id) {
       // Say the quiet part out loud: people fund testnet, see 0, and think it's
       // broken. It isn't — the token registry is mainnet-only, so on-chain reads
       // there always return 0, and practice never spends those funds anyway.
-      lines.push(`• chain: testnet 46630 — <b>simulated only</b> (no real swaps)`);
+      lines.push(`• chain: testnet 97 — <b>simulated only</b> (no real swaps)`);
       lines.push(
         `• ℹ️ testnet funds you send are <b>not used and not shown</b> — agentcap only knows mainnet ` +
           `token addresses, so a funded balance reads 0 here. It paper-trades a simulated ` +
@@ -314,10 +250,6 @@ export function readStatus(ctx: StatusContext): string {
     lines.push(`• no grant signed — raise the permission wall in the dashboard`);
   }
   lines.push(`• chat trade ceiling: ${ctx.telegramMaxActionUsdg} USDG/action`);
-  // One line, only while the gate enforces. readLlmState strips the tags off
-  // this whole block, so the chat model sees the same sentence the owner does.
-  const energy = energyStatusLine(ctx.energy, Math.floor(Date.now() / 1000));
-  if (energy) lines.push(energy);
 
   const db = openRO();
   if (db) {
@@ -930,14 +862,12 @@ export function readWhyEvidence(agentId?: string | null): { text: string; hasTra
 /**
  * NO ADDRESS REACHES A CHAT MODEL THROUGH EVENT TEXT.
  *
- * Events are written for the owner, and some carry addresses in full: the
- * energy notice names the agent's account and the owner's own holder wallet
- * ("send $AGENTCAP … to my account 0x…"), policy refusals name recipients.
+ * Events are written for the owner, and some carry addresses in full: policy
+ * refusals name recipients.
  * Handed to a model verbatim, those sit in its context, and a model given an
  * address will sooner or later retype it — one wrong character and whatever
  * is sent to it is gone for good (agent-chat.ts has the same rule for the web
- * chat). The owner's private holder wallet would also leave for the LLM
- * provider with every chat message. The model is told to point people to
+ * chat). The model is told to point people to
  * /wallet instead; this makes sure it has nothing else to go on.
  *
  * Every 0x run of 20 or more hex digits is replaced, wherever it starts
@@ -952,22 +882,6 @@ export function readWhyEvidence(agentId?: string | null): { text: string; hasTra
  * underneath. So does /why (why-answer.ts): its evidence reaches the model
  * through here, and the owner gets their own evidence, unredacted, when
  * narration fails, or the receipt's tx line under a narration.
- *
- * A Solana key (base58, 32 bytes, found by core's onchainIdsIn) is an address
- * the same way and is replaced too, inside an explorer link as well, and glued
- * to the words around it ("CA<mint>", "<mint>is": core's glued scan, audit
- * regressions F3). Redaction takes the glued scan because its one cost, an
- * unbroken base58 run of 43 or more characters (a long camelCase hashtag, or a
- * long number glued to a word as in "<digits>tokens") read as an id, is a word
- * shown to a model as "[address]", never text withheld.
- * A Solana signature, standing alone or in a link, is replaced too, by
- * "[signature]", where a 0x tx hash is left: a base58 run that decodes to 64
- * bytes cannot be told apart from two keys written together ("<mint><mint>")
- * or a key with a word glued on ("CA<mint><41 characters>"), and the model
- * needs no signature (the owner's own report keeps it). A glued run the scan
- * reads as a signature is replaced by "[address]", as any glued run is. A
- * base58 key cut short does not decode, so unlike a cut 0x run it is not
- * caught.
  */
 /** An ASCII hex digit. */
 function hexDigit(code: number): boolean {
@@ -995,13 +909,7 @@ export function redactHexRuns(text: string): string {
   return last === 0 ? text : out + text.slice(last);
 }
 export function redactAddresses(text: string): string {
-  // Longest value first (core's redactSolanaIds): a glued run can end in a key that also stands alone.
-  // A whole run that is itself a signature (idFamily: it decodes to 64 bytes) is named as one.
-  // Solana first, on the text as written: redactHexRuns takes "0x" and its hex, so run first on
-  // "0x<hex><key>" it ate the key's leading hex and left a tail too short to decode (review GE,
-  // round 2). The glued scan skips a run that is "0x" then hex alone, so an address is still redactHexRuns's.
-  const solana = redactSolanaIds(text, (hit) => (hit.shape === "hash" && idFamily(hit.value) === "solana" ? "[signature]" : "[address]"));
-  return redactHexRuns(solana);
+  return redactHexRuns(text);
 }
 
 /** Recent event-feed lines (for the LLM's context) — addresses redacted. */

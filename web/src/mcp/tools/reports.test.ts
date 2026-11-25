@@ -31,7 +31,7 @@ process.env.AGENTCAP_PUBLIC_ORIGIN = "https://app.test";
 
 const NOW = 1_800_000_000;
 const DAY = 86_400;
-const USDG = CASH.USDG.toLowerCase();
+const USDG = CASH.USDT.toLowerCase();
 const ROUTER = "0x00000000000000000000000000000000000000f1";
 const TOKEN = "0x00000000000000000000000000000000000c0de1";
 const TOKEN2 = "0x00000000000000000000000000000000000c0de2";
@@ -83,7 +83,7 @@ function decision(raw: DatabaseSync, id: string, o: { agent?: string; at: number
 
 function agentRow(raw: DatabaseSync, account: string, owner: string, mode: string, blocker: string | null): void {
   raw.prepare(`INSERT INTO agents (smart_account, name, owner_address, session_key_address, chain_id, caps, granted_at, expires_at, status, mode, beat_at, live_blocker, epoch)
-    VALUES (?, 'Agent', ?, '0x1', 4663, '{}', 1700000000, 4102444800, 'active', ?, ?, ?, 1)`).run(account, owner, mode, NOW - 30, blocker);
+    VALUES (?, 'Agent', ?, '0x1', 56, '{}', 1700000000, 4102444800, 'active', ?, ?, ?, 1)`).run(account, owner, mode, NOW - 30, blocker);
 }
 
 /**
@@ -100,7 +100,7 @@ function seedA(raw: DatabaseSync): void {
   mark(raw, ACCOUNT_A, "paper", NOW - 80_000, 1000, 1000);
   mark(raw, ACCOUNT_A, "paper", NOW - 1000, 1012, 990);
   mark(raw, ACCOUNT_A, null, NOW - 500, 1, 1);
-  raw.prepare(`INSERT INTO flows (agent_id, direction, amount_usdg, tx_hash, block_number, source, epoch, chain_id, log_index, at) VALUES (?, 'in', 50, '0xdep', 1, 'chain-log', 1, 4663, 0, ?)`).run(ACCOUNT_A, NOW - 50_100);
+  raw.prepare(`INSERT INTO flows (agent_id, direction, amount_usdg, tx_hash, block_number, source, epoch, chain_id, log_index, at) VALUES (?, 'in', 50, '0xdep', 1, 'chain-log', 1, 56, 0, ?)`).run(ACCOUNT_A, NOW - 50_100);
   raw.prepare(`INSERT INTO flows (agent_id, direction, amount_usdg, source, epoch, at) VALUES (?, 'out', 1, 'inferred', 1, ?)`).run(ACCOUNT_A, NOW - 50);
   raw.prepare(`INSERT INTO fee_accruals (agent_id, profit_usdg, fee_usdg, hwm_before_usdg, hwm_after_usdg, epoch, at) VALUES (?, 4, 0.4, 150, 154, 1, ?)`).run(ACCOUNT_A, NOW - 200);
 
@@ -564,9 +564,9 @@ test("create_export portfolio: the latest valuation of each book, holdings of th
   put.run(ACCOUNT_A, "HOLD", TOKEN3, "51", 0.6, 0, 30, NOW - 100);
   put.run(ACCOUNT_A, "STALE", TOKEN2, "9", 2, 1, 18, NOW - 100);
   const basis = d.raw.prepare(`INSERT INTO cost_basis (agent_id, mode, symbol, qty_raw, cost_usdg, updated_at) VALUES (?, ?, ?, ?, ?, ?)`);
-  basis.run(ACCOUNT_A, "live", "HOLD", "51", "20000000", NOW - 200_000);
-  basis.run(ACCOUNT_A, "live", "STALE", "9", "15000000", NOW - 200_000);
-  basis.run(ACCOUNT_A, "paper", "PPR", "10", "5000000", NOW - 1000);
+  basis.run(ACCOUNT_A, "live", "HOLD", "51", "20000000000000000000", NOW - 200_000);
+  basis.run(ACCOUNT_A, "live", "STALE", "9", "15000000000000000000", NOW - 200_000);
+  basis.run(ACCOUNT_A, "paper", "PPR", "10", "5000000000000000000", NOW - 1000);
   const r = data(await run("create_export", { kind: "portfolio", since: "2020-01-01T00:00:00Z" }, a));
   assert.equal(r.window, null);
   assert.ok(r.notes[0].includes("ignored"));

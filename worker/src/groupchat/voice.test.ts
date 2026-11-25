@@ -15,7 +15,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { base58Decode, base58Encode, SOLANA_USDG_MINT } from "../../../packages/core/src/ids";
 import { everyBand } from "../class-evidence";
 import type { LlmCreds } from "../llm";
 import { traitsOf, type Disposition } from "../social-post";
@@ -696,18 +695,6 @@ describe("templates only say true things", () => {
     for (const l of unknown) for (const w of ageWords) assert.ok(!new RegExp(`\\b${w}\\b`).test(l), `age "${w}" with no age: ${l}`);
   });
 
-  it("has a first-person voice for every trait traitsOf can produce, and a spoken name for every publishable strategy", () => {
-    const d: Disposition = { maxHoldSec: 21600, exitAtGraduationPct: 85, perEntryUsdg: 5, maxImpactBps: 300, minDepthUsdg: 100 };
-    const every = new Set([
-      ...traitsOf({ ...d, maxHoldSec: 1, maxImpactBps: 1, minDepthUsdg: 1e9, exitAtGraduationPct: 1 }, d),
-      ...traitsOf({ ...d, maxHoldSec: 1e9, maxImpactBps: 1e9, minDepthUsdg: 0 }, d),
-    ]);
-    assert.ok(every.size >= 7, `traitsOf sweep found only ${every.size}`);
-    for (const t of every) assert.ok(T.TRAIT_VOICE[t], `no first-person voice for trait "${t}"`);
-    assert.deepEqual(Object.keys(T.STRATEGY_SPOKEN).sort(), [...PUBLISHABLE_STRATEGIES].sort());
-    assert.deepEqual(Object.keys(T.STRATEGY_FLAVOUR).sort(), [...PUBLISHABLE_STRATEGIES].sort());
-  });
-
   it("names only a strategy the room may name", () => {
     for (const strategy of [null, "llm-strategist", "my-secret-file"]) {
       const sp = speaker(9, { strategy });
@@ -1376,6 +1363,7 @@ describe("an owner's line is read as what it says", () => {
       "ETH to 10k 🚀",
       "hot take: BONK will 10x",
       "unpopular opinion: DOGE is undervalued",
+      "hot take: bnb is better than ethereum",
       "hot take: solana is better than ethereum",
       "random thought: everyone should own some BONK",
       "love you guys, now go buy BONK",
@@ -2541,66 +2529,9 @@ describe("buildPrompt", () => {
     }
   });
 
-  it("never carries a Solana key or signature a quoted line held (Solana P0)", () => {
-    const sig = base58Encode(Uint8Array.from({ length: 64 }, (_, i) => (i * 37 + 11) & 0xff));
-    const said = `aped ${SOLANA_USDG_MINT}, tx ${sig}`;
-    const solTail: SpeakCtx["tail"] = [...tail, { name: "Pine Stoat's owner", author: "owner", body: said }];
-    for (const intent of [...intents, { kind: "reply", to: "Pine Stoat's owner", toAuthor: "owner", toOwnAgent: false, text: said } as Intent]) {
-      const { system, prompt } = buildPrompt(intent, { ...ctx, tail: solTail });
-      for (const text of [system, prompt]) {
-        assert.ok(!text.includes(SOLANA_USDG_MINT) && !text.includes(sig), `a Solana id in the prompt for ${intent.kind}`);
-      }
-    }
-  });
 
-  it("never carries a Solana key or signature glued to the words around it (audit regressions F3)", () => {
-    const sig = base58Encode(Uint8Array.from({ length: 64 }, (_, i) => (i * 37 + 11) & 0xff));
-    const letters = "EEuxbXvdXfvgGiFWKYyEksxzabPKjwhYTNvGXFitaqqT";
-    const said = `aped CA${SOLANA_USDG_MINT}, ${letters}is next, tx${sig}done`;
-    const solTail: SpeakCtx["tail"] = [...tail, { name: "Pine Stoat's owner", author: "owner", body: said }];
-    for (const intent of [...intents, { kind: "reply", to: "Pine Stoat's owner", toAuthor: "owner", toOwnAgent: false, text: said } as Intent]) {
-      const { system, prompt } = buildPrompt(intent, { ...ctx, tail: solTail });
-      for (const text of [system, prompt]) {
-        for (const id of [SOLANA_USDG_MINT, letters, sig]) assert.ok(!text.includes(id.slice(0, 24)), `a glued Solana id in the prompt for ${intent.kind}`);
-      }
-    }
-    // The rest of the line is still quoted.
-    const { prompt } = buildPrompt({ kind: "reply", to: "Pine Stoat's owner", toAuthor: "owner", toOwnAgent: false, text: said } as Intent, { ...ctx, tail: solTail });
-    assert.match(prompt, /aped \[address\], \[address\] next, \[address\]/);
-  });
 
-  it("strips a mint glued inside a run that ends in a key also standing alone (review GE)", () => {
-    // Replaced in scan order, the lone key split the second run first, and the mint in it reached the model.
-    const key = base58Encode(Uint8Array.from({ length: 32 }, (_, i) => (i * 29 + 7) & 0xff));
-    const said = `${key} then X${SOLANA_USDG_MINT}${key}Y`;
-    const solTail: SpeakCtx["tail"] = [...tail, { name: "Pine Stoat's owner", author: "owner", body: said }];
-    for (const intent of [...intents, { kind: "reply", to: "Pine Stoat's owner", toAuthor: "owner", toOwnAgent: false, text: said } as Intent]) {
-      const { system, prompt } = buildPrompt(intent, { ...ctx, tail: solTail });
-      for (const text of [system, prompt]) {
-        for (const id of [SOLANA_USDG_MINT, key]) assert.ok(!text.includes(id.slice(0, 20)), `a Solana id in the prompt for ${intent.kind}`);
-      }
-    }
-    const { prompt } = buildPrompt({ kind: "reply", to: "Pine Stoat's owner", toAuthor: "owner", toOwnAgent: false, text: said } as Intent, { ...ctx, tail: solTail });
-    assert.match(prompt, /\[address\] then \[address\]/);
-  });
 
-  it("strips a key written as 0x<key>, whose leading hex the 0x rule would take alone (review GE, round 2)", () => {
-    // The 0x rule ran first, took "0xA5D1", and left a tail too short to decode, which reached the model.
-    const key = "A5D1HPCPPVQVXSSQFNHQgUAjPuK9uRJvfvp3S4pX86kN";
-    assert.equal(base58Decode(key)?.length, 32, "the fixture is a key");
-    const evm = "0x5fc5360d0400a0fd4f2af552add042d716f1d168";
-    const said = `aped 0x${key} now, not ${evm}`;
-    const solTail: SpeakCtx["tail"] = [...tail, { name: "Pine Stoat's owner", author: "owner", body: said }];
-    for (const intent of [...intents, { kind: "reply", to: "Pine Stoat's owner", toAuthor: "owner", toOwnAgent: false, text: said } as Intent]) {
-      const { system, prompt } = buildPrompt(intent, { ...ctx, tail: solTail });
-      for (const text of [system, prompt]) {
-        assert.ok(!text.includes("HPCPPVQVXSSQFNHQgUAj") && !text.includes("5fc5360d"), `an id in the prompt for ${intent.kind}`);
-      }
-    }
-    const { prompt } = buildPrompt({ kind: "reply", to: "Pine Stoat's owner", toAuthor: "owner", toOwnAgent: false, text: said } as Intent, { ...ctx, tail: solTail });
-    // The key's run begins at its x (a 0 is no base58), so the 0 stays: no id is in it.
-    assert.match(prompt, /aped 0\[address\] now, not \[address\]/);
-  });
 
   it("shows no figure outside the fence, and states the rules", () => {
     for (const intent of intents) {

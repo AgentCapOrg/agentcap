@@ -401,7 +401,7 @@ test("a Perps-only owner stops every wallet from the desk: one reviewed press, b
   await click("Stop all agents");
   assert.match(ui.container.textContent!, /Stop all agents for this login\?/);
   assert.match(ui.container.textContent!, new RegExp(`Signed in as ${OWNER}`));
-  assert.match(ui.container.textContent!, /Spot, Perps and Solana for this login will stop managing positions/);
+  assert.match(ui.container.textContent!, /Spot and Perps for this login will stop managing positions/);
   assert.equal(writes.length, 0);
   await act(async () => { const button = stopNow()!; button.click(); button.click(); });
   await settle(); assert.equal(writes.length, 1);
@@ -409,7 +409,7 @@ test("a Perps-only owner stops every wallet from the desk: one reviewed press, b
   assert.deepEqual(deletes(), [{ url: "/api/grants", method: "DELETE", body: { purpose: "delete-agent", expectedTenant: OWNER } }]);
   assert.ok(events.includes("clear-spot")); assert.ok(events.includes("clear-perps"));
   // The desk remounted on its account's removal; the answer outlives it.
-  assert.match(ui.container.textContent!, /Stop request accepted for Spot, Perps and Solana/);
+  assert.match(ui.container.textContent!, /Stop request accepted for Spot and Perps/);
   assert.equal(writes.length, 1);
 });
 
@@ -418,7 +418,7 @@ test("the stop needs no paper offering or pilot access, on the Wallet & permissi
   await mount(React.createElement(PerpsWalletView, { offered: false, creating: false, signer }));
   await click("Stop all agents"); await click("Stop all agents now");
   assert.equal(deletes().length, 1); assert.equal(events.includes("offered"), false);
-  assert.match(ui.container.textContent!, /Stop request accepted for Spot, Perps and Solana/);
+  assert.match(ui.container.textContent!, /Stop request accepted for Spot and Perps/);
 });
 
 test("a self-hosted stop names no tenant, and promises no memory deletion", async () => {
@@ -440,7 +440,7 @@ test("a lost stop reply is reported and never retried; the browser copies are ke
 });
 
 test("a partial kill shows the server's sentence and clears nothing", async () => {
-  killReply = () => json({ error: "Kill incomplete: your Robinhood Chain agent is stopped, but your Perps permission was not stopped. Try the kill again.", ownerFacing: true, solana: "stopped", perps: "not-stopped" }, 503);
+  killReply = () => json({ error: "Kill incomplete: your Robinhood Chain agent is stopped, but your Perps permission was not stopped. Try the kill again.", ownerFacing: true, perps: "not-stopped" }, 503);
   await mount(React.createElement(PerpsScreen));
   await click("Stop all agents"); await click("Stop all agents now");
   assert.match(ui.container.textContent!, /Kill incomplete: .*Try the kill again/);
@@ -461,7 +461,7 @@ test("an unreadable Perps wallet never disables the stop: it confirms the login 
   assert.match(ui.container.textContent!, /Perps wallet could not be verified/);
   await click("Stop all agents"); await click("Stop all agents now");
   assert.deepEqual(deletes().map(write => write.body), [{ purpose: "delete-agent", expectedTenant: OWNER }]);
-  assert.match(ui.container.textContent!, /Stop request accepted for Spot, Perps and Solana/);
+  assert.match(ui.container.textContent!, /Stop request accepted for Spot and Perps/);
 });
 
 test("after a stop the killed permission is not offered again, and a new wallet can be made in this browser", async () => {

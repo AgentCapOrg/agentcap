@@ -16,8 +16,8 @@
  *      returned null and the panel told a signed-in owner
  *      "this browser doesn't hold that wallet" about their own agent.
  *
- * Both were found by a human clicking the deployed site with 1,063,408 DOGGOS
- * one dialog away. This test is that click, in jsdom.
+ * Both were found by a human clicking the deployed site with funds one dialog
+ * away. This test is that click, in jsdom.
  *
  * DELIBERATELY ONE FLOW, not a UI testing project. It mounts the real component
  * with Shogun's real hosted shape and drives it to the disclosure. Two seams are
@@ -33,7 +33,6 @@ import { JSDOM } from "jsdom";
 
 const OWNER = "0x8e93bad5a60a266b4283855ceffa0979720aed72";
 const ACCOUNT = "0x05a198A677Fbcd8f5c168d397Fa7ef5eB6D65487";
-const VAULT = "0x3fcdde6e011769ca05f0115f1543290862473216";
 const TOKEN = "0x15e498ff2dbca95e8648a1f025cbbd12c2525461";
 const USDG = "0x5fc5360d0400a0fd4f2af552add042d716f1d168";
 /** The grant a hosted Privy mint writes to localStorage. Key from session.ts. */
@@ -85,7 +84,7 @@ before(() => {
 after(() => dom?.window?.close?.());
 
 describe("a Privy-owned hosted agent can reach its recovery disclosure", () => {
-  it("renders, offers a way in, and discloses the class vault", async () => {
+  it("renders, offers a way in, and discloses what would move", async () => {
     const React = (await import("react")).default;
     const { act } = await import("react");
     // REACT AS A GLOBAL, and only here. `web/tsconfig.json` sets
@@ -109,16 +108,6 @@ describe("a Privy-owned hosted agent can reach its recovery disclosure", () => {
         explorer: "https://explorer.test",
         chainId: 4663,
         balances: [{ symbol: "USDG", address: TOKEN, raw: 20_000_000n, decimals: 6, amount: "20.000000" }],
-        classVault: VAULT,
-        // BOTH assets, as the fixed planner now enumerates them. The vault
-        // holds stranded quote as well as its class token, and the quote asset
-        // appears in no ClassBuy/ClassSell/Swept event — so it reaches this list
-        // only because the candidate set unions the token registry in.
-        classHoldings: [
-          { token: TOKEN, symbol: "DOGGOS", raw: 1n, amount: "1,063,408.141815", decimals: 18 },
-          { token: USDG, symbol: "USDG", raw: 5785344n, amount: "5.785344", decimals: 6 },
-        ],
-        classNote: null,
         gasWei: 1_000_000_000_000_000n,
         // The ETH leg, as the real planner now forecasts it: held minus the
         // engine's own reserve. Without these the panel cannot disclose the
@@ -190,38 +179,19 @@ describe("a Privy-owned hosted agent can reach its recovery disclosure", () => {
     );
 
     // ── the disclosure ────────────────────────────────────────────────────
-    assert.match(text, /1,063,408\.141815/, "the class holding must be disclosed");
-    assert.match(text, /DOGGOS/, "by name");
-    assert.match(text, /Class vault/i, "under a heading that says where it lives");
     assert.match(text, /20\.000000\s*USDG/, "the account's own balance too");
-    assert.match(
-      text,
-      /Held in a separate contract, not in the account/i,
-      "and why it was not already in the balance list",
-    );
-    // THE ETH LEG, on screen. It moves on every recovery and appears in neither
-    // the class list nor the balances, so it is the one thing that could leave
-    // unnamed.
+    // THE ETH LEG, on screen. It moves on every recovery and is not in the
+    // balances, so it is the one thing that could leave unnamed.
     assert.match(text, /Native ETH/i, "the ETH leg must be disclosed");
     assert.match(text, /0.000828820/, "with the amount the engine would actually send");
     assert.match(text, /0.000171180/, "and what stays behind to pay for it");
-    assert.match(text, /5\.785344/, "and the quote stranded in the vault, which no event names");
   });
 
   /**
-   * THE LAST THING READ BEFORE SIGNING.
-   *
-   * The panel body is not the decision — the browser confirmation is, and it
-   * listed the SMART ACCOUNT's balances alone while the operation beneath it
-   * also emptied the class vault. So the dialog that takes the decision named a
-   * strict subset of what it was taking, and the largest holding sat in the
-   * part it omitted.
-   *
-   * The server path already listed both. Two confirmations for one operation
-   * must not disclose different things, and the one that disclosed less was the
-   * one hosted owners actually use.
+   * THE LAST THING READ BEFORE SIGNING. The browser confirmation is the decision,
+   * so it must name what is being moved.
    */
-  it("AND THE CONFIRM DIALOG NAMES THE VAULT ASSETS, not just the account", async () => {
+  it("AND THE CONFIRM DIALOG NAMES THE ASSETS", async () => {
     const asked: string[] = [];
     (dom.window as unknown as { confirm: (m: string) => boolean }).confirm = (m: string) => {
       asked.push(m);
@@ -249,8 +219,7 @@ describe("a Privy-owned hosted agent can reach its recovery disclosure", () => {
 
     assert.equal(asked.length, 1, "exactly one confirmation is asked");
     const msg = asked[0]!;
-    assert.match(msg, /1,063,408\.141815 DOGGOS/, "the class token must be named in the dialog");
-    assert.match(msg, /5\.785344 USDG/, "and the quote stranded in the vault");
+    assert.match(msg, /20\.000000 USDG/, "the balance must be named in the dialog");
     assert.match(msg, /irreversible/i, "and it must still say what kind of act this is");
   });
 });
@@ -276,7 +245,7 @@ it("Perps recovery selects its own saved wallet and URL, and the disabled-Privy 
       wallet: "perps", privyOwner: { account: { address: OWNER }, did: "did:privy:test" },
       planFn: async (w: { smartAccount: string; purpose?: string }) => {
         planned = w;
-        return { smartAccount: w.smartAccount, ownerAddress: OWNER, chainId: 4663, explorer: "https://explorer.test", balances: [], classHoldings: [], classVaults: [], classVault: null, classNote: null, gasWei: 1n, nativeRecoverableWei: 0n, nativeReserveWei: 1n, unreadable: [], needsGas: false };
+        return { smartAccount: w.smartAccount, ownerAddress: OWNER, chainId: 4663, explorer: "https://explorer.test", balances: [], gasWei: 1n, nativeRecoverableWei: 0n, nativeReserveWei: 1n, unreadable: [], needsGas: false };
       },
     } as never)));
     const click = async (pattern: RegExp) => { const button = [...container.querySelectorAll("button")].find(b => pattern.test(b.textContent ?? "")); assert.ok(button); await act(async () => button!.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }))); };

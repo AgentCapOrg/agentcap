@@ -1,14 +1,13 @@
 /**
  * NO ADDRESS REACHES THE TELEGRAM CHAT MODEL THROUGH EVENT TEXT.
  *
- * When an entry is withheld the worker writes the energy notice as a warn
- * event, and it names the agent's account and the owner's own holder wallet in
+ * A warn event can name the agent's account and an owner's own wallet in
  * full. The chat builds its prompt from readLlmState, which appended the last
  * five events whole — so both chat models had both addresses verbatim, and the
  * owner's private wallet went to the LLM provider with every message. The
  * "never type an address" instruction was the only defence.
  *
- * Proven against a REAL sqlite ledger: the notice is the real energyNotice,
+ * Proven against a REAL sqlite ledger: a notice of that shape is written,
  * and every model-facing read of it (readRecentEvents, readLlmState, the
  * recent_activity tool) carries no address, while the owner's /status-side
  * report still can.
@@ -26,8 +25,6 @@ process.env.AGENTCAP_HOSTED = "1";
 const { closeStoreForTest, initStore, addEvent } = await import("../store");
 const { readLlmState, readRecentEvents, readReport, redactAddresses, redactHexRuns } = await import("./reads");
 const { toolByName } = await import("./chat-tools");
-const { energyNotice } = await import("../energy-copy");
-const ids = await import("../../../packages/core/src/ids");
 
 const AGENT = "0x00000000000000000000000000000000000a9e17";
 const ACCOUNT = "0x5aFE00000000000000000000000000000000c0de";
@@ -35,17 +32,7 @@ const HOLDER = "0xb1a5ed00000000000000000000000000000beef5";
 const TX = `0x${"ab".repeat(32)}`;
 const NOW = Math.floor(Date.now() / 1000);
 
-const notice = energyNotice({
-  day: "2026-09-28",
-  account: ACCOUNT,
-  chainId: 4663,
-  holder: HOLDER,
-  holderTokens: 1_000,
-  agentTokens: 0,
-  level: "low",
-  buy: "ready",
-  estimateUsdg: 12.5,
-});
+const notice = `Funds are short. Send them to my account ${ACCOUNT} from your own wallet ${HOLDER}.`;
 
 const statusCtx = {
   agentId: AGENT,
@@ -76,7 +63,7 @@ after(() => {
   rmSync(HOME, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
 });
 
-describe("the energy notice as written", () => {
+describe("an address-naming notice as written", () => {
   it("names both addresses in full — which is why every model-facing read must redact", () => {
     assert.ok(notice.includes(ACCOUNT) && notice.includes(HOLDER), notice);
   });
@@ -85,7 +72,7 @@ describe("the energy notice as written", () => {
 describe("model-facing reads of it", () => {
   it("readRecentEvents keeps the words and drops the addresses", () => {
     const got = readRecentEvents(AGENT, 5);
-    assert.match(got, /Energy spent for/);
+    assert.match(got, /Funds are short/);
     assert.match(got, /to my account \[address\]/);
     assert.match(got, /your own wallet \[address\]/);
     assert.ok(!got.toLowerCase().includes(HOLDER.toLowerCase()) && !got.toLowerCase().includes(ACCOUNT.toLowerCase()));
@@ -113,7 +100,7 @@ describe("model-facing reads of it", () => {
         now: NOW + 60,
       } as never,
     );
-    assert.match(out, /Energy spent for/);
+    assert.match(out, /Funds are short/);
     assert.match(out, /recipient \[address\] is not on the allowlist/);
     assert.ok(!out.toLowerCase().includes(HOLDER.toLowerCase()) && !out.toLowerCase().includes(ACCOUNT.toLowerCase()), out);
     assert.doesNotMatch(out, /0x[0-9a-fA-F]{20,40}(?![0-9a-fA-F])/, "not even the part a length cap leaves");
@@ -145,71 +132,10 @@ describe("redactAddresses", () => {
     }
   });
 
-  it("replaces a Solana key the same way, and a Solana signature as well (Solana P0)", () => {
-    const { SOLANA_USDG_MINT, base58Encode } = ids;
-    const sig = base58Encode(Uint8Array.from({ length: 64 }, (_, i) => (i * 37 + 11) & 0xff));
-    assert.equal(redactAddresses(`send to ${SOLANA_USDG_MINT}.`), "send to [address].");
-    assert.equal(redactAddresses(`see https://solscan.io/account/${SOLANA_USDG_MINT}`), "see https://solscan.io/account/[address]");
-    assert.equal(redactAddresses(`to ${ACCOUNT} and ${SOLANA_USDG_MINT}`), "to [address] and [address]");
-    assert.equal(redactAddresses(`sig ${sig}`), "sig [signature]");
-    assert.equal(redactAddresses("Bought PEPE, the curve looked early."), "Bought PEPE, the curve looked early.");
-  });
 
-  it("replaces a Solana key glued to the words around it, and a glued run that may hold one (audit regressions F3)", () => {
-    const { SOLANA_USDG_MINT, base58Encode } = ids;
-    const sig = base58Encode(Uint8Array.from({ length: 64 }, (_, i) => (i * 37 + 11) & 0xff));
-    assert.equal(redactAddresses(`send to CA${SOLANA_USDG_MINT}.`), "send to [address].");
-    assert.equal(redactAddresses(`${SOLANA_USDG_MINT}is the one`), "[address] the one");
-    assert.equal(redactAddresses("owner caEEuxbXvdXfvgGiFWKYyEksxzabPKjwhYTNvGXFitaqqT, ok"), "owner [address], ok");
-    assert.equal(redactAddresses(`${SOLANA_USDG_MINT}${SOLANA_USDG_MINT}a and ${SOLANA_USDG_MINT}`), "[address] and [address]");
-    assert.equal(redactAddresses(`landed tx${sig}done`), "landed [address]");
-    // A whole signature is named as one, in a link as well.
-    assert.equal(redactAddresses(`sig ${sig}`), "sig [signature]");
-    assert.equal(redactAddresses(`https://solscan.io/tx/${sig}`), "https://solscan.io/tx/[signature]");
-    // Prose, tickers, URLs, hex digests and short hashtags are untouched.
-    const plain = "Bought $BONK at https://agentcap.xyz/t/0123456789abcdef #BuyTheDip, digest e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
-    assert.equal(redactAddresses(plain), plain);
-  });
 
-  it("strips a mint glued inside a run that ends in a key also standing alone (review GE)", () => {
-    const { SOLANA_USDG_MINT: MINT, base58Encode } = ids;
-    // Replaced in scan order, the lone key split the second run first, and the mint in it was left.
-    const key = base58Encode(Uint8Array.from({ length: 32 }, (_, i) => (i * 29 + 7) & 0xff));
-    assert.equal(redactAddresses(`${key} then X${MINT}${key}Y`), "[address] then [address]");
-    assert.equal(redactAddresses(`X${MINT}${key}Y and ${key}`), "[address] and [address]");
-  });
 
-  it("strips a key glued behind an 0x run, whose leading hex ADDRESS_RUN would take alone (review GE, round 2)", () => {
-    // ADDRESS_RUN ran first, took "0x" and 20 hex, and left the key's tail, too short to decode, for the model.
-    const key = "A5D1HPCPPVQVXSSQFNHQgUAjPuK9uRJvfvp3S4pX86kN";
-    assert.equal(ids.base58Decode(key)?.length, 32, "the fixture is a key");
-    const out = redactAddresses(`landed 0x${"ab".repeat(10)}${key} ok`);
-    assert.ok(!out.includes("HPCPPVQVXSSQFNHQgUAj"), out);
-    assert.equal(out, "landed 0[address] ok");
-    assert.equal(redactAddresses(`aped 0x${key} now`), "aped 0[address] now");
-    // An address, a cut one and a tx hash come out as before (a hash as "[hash]", since it can carry an address).
-    assert.equal(redactAddresses(`to ${ACCOUNT}. tx ${TX}`), `to [address]. tx [hash]`);
-    assert.equal(redactAddresses(`cut ${HOLDER.slice(0, 30)}`), "cut [address]");
-  });
 
-  it("replaces a signature-length run standing alone, which can be two keys or a key with a word glued on (review GE)", () => {
-    const { SOLANA_USDG_MINT: MINT, base58Decode } = ids;
-    // Each decodes to 64 bytes, as a signature does, with nothing alphanumeric either side.
-    const runs = [`${MINT}${MINT}`, `${MINT}ToTheMoonAndBackAgainAndAgainForeverAndEver`];
-    const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-    for (let seed = 0; seed < 200; seed++) {
-      const tail = Array.from({ length: 43 }, (_, i) => B58[(seed * 31 + i * 17 + 7) % 58]).join("");
-      runs.push(`CA${MINT}${tail}`.slice(0, 87));
-    }
-    const signatureLength = runs.filter((run) => base58Decode(run)?.length === 64);
-    assert.ok(signatureLength.length >= 100, `${signatureLength.length} of the runs decode to 64 bytes`);
-    assert.ok(signatureLength.includes(runs[0]!) && signatureLength.includes(runs[1]!));
-    for (const run of runs) {
-      const out = redactAddresses(`token ${run} landed`);
-      assert.ok(!out.includes(MINT.slice(0, 20)), out);
-      assert.match(out, /^token \[(signature|address)\] landed$/, out);
-    }
-  });
 
   it("is applied wherever event text is handed to a model — the why narration and the daily journal/digest", () => {
     const service = readFileSync(new URL("./service.ts", import.meta.url), "utf8");

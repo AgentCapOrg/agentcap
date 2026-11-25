@@ -3,7 +3,7 @@
  * (store.ts on an isolated sqlite home), the real feed-file reader over a
  * synthetic `lighter-feed.json`, the real checkPolicy, the real paper
  * executor and the real perp-trend producer. Only index.ts's own plumbing
- * (energy claims, the decision writer, the budget halves) is modelled, each
+ * (the decision writer, the budget halves) is modelled, each
  * with the same shape index.ts gives it.
  *
  * The story, in order, on one account:
@@ -129,7 +129,6 @@ interface Account {
   lane: PerpLane;
   events: { level: string; message: string }[];
   inFlight: { ops: number; spend: bigint };
-  energy: { claimed: number; refunded: number };
   executorsMade: number;
   /** How often the lane read the Lighter feed file — an inactive lane never does. */
   feedReads: number;
@@ -164,7 +163,6 @@ async function account(opts: { cfg?: Partial<PerpLaneConfig>; exec?: ExecMode } 
     id,
     events: [] as { level: string; message: string }[],
     inFlight: { ops: 0, spend: 0n },
-    energy: { claimed: 0, refunded: 0 },
     executorsMade: 0,
     feedReads: 0,
     cfg: config(opts.cfg),
@@ -248,14 +246,6 @@ async function equityOf(a: Account): Promise<{ equity: bigint; basis: bigint; bo
 
 function hooks(a: Account, equityUsdg: bigint) {
   return {
-    claimEntry: async () => {
-      a.energy.claimed += 1;
-      return { ok: true };
-    },
-    refundEntry: async (c: { ok: boolean } | null) => {
-      if (c?.ok) a.energy.refunded += 1;
-    },
-    withholdEntry: async () => {},
     ensureDecision: (i: TradeIntent, s: string, r?: string, k?: { whyCode?: string }) => decide(a.id, i, s, r, k),
     // processIntentReporting → processIntentLocked's perp branch.
     processIntentReporting: (i: TradeIntent) => a.lane.execute(i as PerpOrderIntent, { equityUsdg, equityKnown: true }),
@@ -269,7 +259,7 @@ const TICK = {
   equityKnown: true,
   breakerIdle: true,
   breakerLimitBps: 1_000,
-  energyEntriesLeft: true,
+  
   opsHeadroom: true,
   spendHeadroomMicro: u(500),
   strategistLive: false,
@@ -299,7 +289,7 @@ describe("paper perps, end to end, on one account", () => {
     a = await account();
   });
 
-  it("perp-trend opens a BTC-PERP long WITH its stop, through the route's claim → decision → execute", async () => {
+  it("perp-trend opens a BTC-PERP long WITH its stop, through the route's decision → execute", async () => {
     const start = await equityOf(a);
     assert.equal(start.equity, u(100), "a flat paper book with perps on is a known zero, not a gap");
     await a.lane.runRoute({ ...TICK, equityUsdg: start.equity }, hooks(a, start.equity));
@@ -314,8 +304,6 @@ describe("paper perps, end to end, on one account", () => {
     assert.ok(margin > 0n);
 
     assert.equal((await store.listSubmittedPerpOrders(a.id, "paper")).length, 0, "a paper order resolves on the spot — nothing is left unresolved");
-    assert.equal(a.energy.claimed, 1, "the entry claimed one of today's new trades");
-    assert.equal(a.energy.refunded, 0, "and it became a trade, so nothing went back");
     assert.ok(a.events.some((e) => /opened a 2x long on BTC-PERP/.test(e.message)), JSON.stringify(a.events));
   });
 
@@ -337,7 +325,7 @@ describe("paper perps, end to end, on one account", () => {
     assert.equal(e.equity, u(100) + e.book.unrealizedMicro);
     assert.equal(e.basis, u(100), "the peak basis leaves each open gain out (rule 12)");
     // The paper peak, exactly as the tick ratchets it.
-    const ratchet = tickRatchets(tickPlan("regular"), { incomplete: false, curveMarked: 0 });
+    const ratchet = tickRatchets(tickPlan("regular"), { incomplete: false, });
     let written: number | null = null;
     const peak = await ratchet.paperPeak({ hwmUsdg: 100 }, Number(e.basis) / 1e6, async (b) => {
       written = b.hwmUsdg;

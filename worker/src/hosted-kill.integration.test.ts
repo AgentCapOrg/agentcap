@@ -32,7 +32,7 @@ process.env.AGENTCAP_HOSTED = "1";
 delete process.env.DATABASE_URL;
 process.env.AGENTCAP_STORE_DEK = Buffer.alloc(32, 5).toString("base64");
 
-const { reconcile, childHome, adoptChildForTest, honourPendingKills, setKillConfirmForTest, setSolanaKillForTest } = await import("./orchestrator");
+const { reconcile, childHome, adoptChildForTest, honourPendingKills, setKillConfirmForTest, setPerpsKillForTest } = await import("./orchestrator");
 const { getGrantStore } = await import("./grant-store");
 const { KILL_CLOCK_SLACK_SEC, KILL_REQUEST_PREFIX, killHosted, killRequested, honourKillRequest, writeKillRequest } = await import("./kill-request");
 const { loadArmableGrant, loadGrantFile } = await import("./grant");
@@ -70,12 +70,13 @@ const confirmed: string[] = [];
 setKillConfirmForTest(async (t) => {
   confirmed.push(t);
 });
-/** Every Solana strategy stop the kill asked for; `solanaDown` makes it fail. */
-const solanaStops: string[] = [];
-let solanaDown = false;
-setSolanaKillForTest(async (t) => {
-  solanaStops.push(t);
-  if (solanaDown) throw new Error("solana bindings unavailable");
+/** Every Perps stop the kill asked for; `perpsDown` makes it fail. */
+const perpsStops: string[] = [];
+let perpsDown = false;
+setPerpsKillForTest(async (t) => {
+  perpsStops.push(t);
+  if (perpsDown) throw new Error("perps store unavailable");
+  return false;
 });
 const home = () => childHome(TENANT);
 const grantFile = () => path.join(home(), "grant.json");
@@ -117,8 +118,8 @@ beforeEach(async () => {
   await reconcile();
   rmSync(home(), { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   confirmed.length = 0;
-  solanaStops.length = 0;
-  solanaDown = false;
+  perpsStops.length = 0;
+  perpsDown = false;
 });
 
 describe("a hosted Telegram kill, then a reconcile", () => {
@@ -196,19 +197,17 @@ describe("a hosted Telegram kill, then a reconcile", () => {
     assert.deepEqual(confirmed, [TENANT]);
   });
 
-  it("THE ROBINHOOD GRANT GOES FIRST: a Solana stop that fails keeps no grant stored and sends no ✅; the pass that stops Solana confirms once", async () => {
-    // The separate Solana worker reads only the tenant's binding, so removing
-    // the RH grant alone left autonomous Solana trading on (audit 2026-10-18).
-    // But a Solana fault must not keep the killed RH grant stored either: the
+  it("THE ROBINHOOD GRANT GOES FIRST: a Perps stop that fails keeps no grant stored and sends no ✅; the pass that stops Perps confirms once", async () => {
+    // A Perps fault must not keep the killed RH grant stored either: the
     // request lives in a home a redeploy discards, and lost, the grant re-armed.
     const proc = await armedTenant(grantAt(nowSec() - 3600));
     childKill();
-    solanaDown = true;
+    perpsDown = true;
     await honourPendingKills();
-    assert.equal(await store.get(TENANT), null, "the RH grant is removed although Solana could not be stopped");
-    assert.deepEqual(solanaStops, [TENANT], "Solana is stopped after the grant goes");
+    assert.equal(await store.get(TENANT), null, "the RH grant is removed although Perps could not be stopped");
+    assert.deepEqual(perpsStops, [TENANT], "Perps is stopped after the grant goes");
     assert.equal(killRequested(home()), true, "the request stays pending, so the stop is retried and nothing arms");
-    assert.deepEqual(confirmed, [], "no ✅ while Solana could still trade");
+    assert.deepEqual(confirmed, [], "no ✅ while Perps could still trade");
 
     await reconcile();
     assert.deepEqual(proc.signals.slice(0, 1), ["SIGTERM"], "the RH agent is stood down at once: its grant is gone");
@@ -216,24 +215,24 @@ describe("a hosted Telegram kill, then a reconcile", () => {
     assert.equal(killRequested(home()), true);
     assert.deepEqual(confirmed, []);
 
-    solanaDown = false;
+    perpsDown = false;
     await honourPendingKills();
-    assert.deepEqual(solanaStops.at(-1), TENANT);
-    assert.deepEqual(confirmed, [TENANT], "the pass that stops Solana sends the ✅ the removal owed");
+    assert.deepEqual(perpsStops.at(-1), TENANT);
+    assert.deepEqual(confirmed, [TENANT], "the pass that stops Perps sends the ✅ the removal owed");
     await honourPendingKills();
     await reconcile();
     assert.deepEqual(confirmed, [TENANT], "once");
     assert.equal(await store.get(TENANT), null);
   });
 
-  it("A HOME WHOSE KILL IS NOT CARRIED OUT IS KEPT: the grant is gone, the tenant no longer wanted, and its request still retries the Solana stop", async () => {
+  it("A HOME WHOSE KILL IS NOT CARRIED OUT IS KEPT: the grant is gone, the tenant no longer wanted, and its request still retries the Perps stop", async () => {
     // No running child (a crash), so nothing but the request holds the home:
-    // wiped with it, the Solana stop would never run again.
+    // wiped with it, the Perps stop would never run again.
     await store.put(TENANT, grantAt(nowSec() - 3600));
     mkdirSync(home(), { recursive: true });
     writeFileSync(grantFile(), JSON.stringify(await store.get(TENANT), null, 2));
     childKill();
-    solanaDown = true;
+    perpsDown = true;
     await reconcile();
     assert.equal(await store.get(TENANT), null, "the RH grant is removed on the first pass");
     await reconcile();
@@ -241,11 +240,11 @@ describe("a hosted Telegram kill, then a reconcile", () => {
     assert.equal(killRequested(home()), true, "the removed-agent cleanup keeps the home and its pending request");
     assert.equal(existsSync(grantFile()), false, "and hands it no key");
     assert.deepEqual(confirmed, []);
-    assert.ok(solanaStops.length >= 2, "each pass retries the stop");
+    assert.ok(perpsStops.length >= 2, "each pass retries the stop");
 
-    solanaDown = false;
+    perpsDown = false;
     await reconcile();
-    assert.deepEqual(confirmed, [TENANT], "the pass that stops Solana confirms");
+    assert.deepEqual(confirmed, [TENANT], "the pass that stops Perps confirms");
     assert.equal(existsSync(home()), false, "and the home goes as before");
     await reconcile();
     assert.deepEqual(confirmed, [TENANT]);
@@ -254,7 +253,7 @@ describe("a hosted Telegram kill, then a reconcile", () => {
   it("A PENDING OR UNREADABLE KILL KEEPS ONLY THE HOME AND ITS REQUEST: the revoked key's cached copy and the bot token go on the next pass", async () => {
     const secrets = ["grant.json", "settings.json", "telegram.json"];
     const leftovers = () => secrets.filter((file) => existsSync(path.join(home(), file)));
-    // The Solana stop failing: the RH grant is removed, the kill stays pending.
+    // The Perps stop failing: the RH grant is removed, the kill stays pending.
     await store.put(TENANT, grantAt(nowSec() - 3600));
     mkdirSync(home(), { recursive: true });
     const cached = JSON.stringify(await store.get(TENANT), null, 2);
@@ -262,12 +261,12 @@ describe("a hosted Telegram kill, then a reconcile", () => {
     childKill();
     // The child's settings and Telegram config with the bot token, and the revoked grant's copy raced back.
     for (const file of secrets) writeFileSync(path.join(home(), file), file === "grant.json" ? cached : JSON.stringify({ botToken: "123:secret" }));
-    solanaDown = true;
+    perpsDown = true;
     await reconcile();
     await reconcile();
-    assert.equal(killRequested(home()), true, "the request still retries the Solana stop");
+    assert.equal(killRequested(home()), true, "the request still retries the Perps stop");
     assert.deepEqual(leftovers(), [], "no revoked session key or bot token is kept for it");
-    solanaDown = false;
+    perpsDown = false;
     await reconcile();
     assert.equal(existsSync(home()), false, "carried out, the home goes as before");
     // A kill state that cannot be read never clears by itself: the home is kept, its secrets are not.
@@ -374,7 +373,7 @@ describe("the child does not re-arm", () => {
     const sync = src.slice(src.indexOf("async function syncGrant()"), src.indexOf("if (!grant) {", src.indexOf("async function syncGrant()")));
     assert.match(sync, /const grant = loadArmableGrant\(\);/);
     assert.doesNotMatch(sync, /loadGrantFile\(\)/, "syncGrant must not read the raw file");
-    // The kill dependency runs a self-hosted kill's Solana half first, then robinhoodKill (below it).
+    // The kill dependency runs a self-hosted kill's Perps half first, then robinhoodKill (below it).
     const kill = src.slice(src.indexOf("    kill: async () => {"), src.indexOf("// ARCHIVE FIRST.", src.indexOf("    kill: async () => {")));
     assert.match(kill, /const result = robinhoodKill\(\);[\s\S]*function robinhoodKill\(\): KillResult \{/);
     // Through hostedKillFromChat, which the hold process calls as well, and

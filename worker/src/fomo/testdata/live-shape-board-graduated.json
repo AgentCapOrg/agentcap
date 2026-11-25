@@ -10,9 +10,9 @@
     {
       "rank": 1,
       "image": "https://example.invalid/b/1.png",
-      "token": { "name": "Fake Board Coin", "symbol": "FBC", "address": "FakeBoardMint44444444444444444444444444pump" },
+      "token": { "name": "Fake Board Coin", "symbol": "FBC", "address": "0x9e16e24db14cf03a8369bc7a262f82d38184baec" },
       "holders": 512,
-      "network": 1399811149,
+      "network": 56,
       "priceUsd": 0.00001234,
       "change24h": -12.5,
       "marketCapUsd": 12345,

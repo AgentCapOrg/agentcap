@@ -31,18 +31,6 @@
     },
     {
       "token": {
-        "symbol": "FSOL",
-        "address": "FakeHo1dMint5555555555555555555555555555555",
-        "networkId": 1399811149
-      },
-      "amount": 5,
-      "priceUsd": 20,
-      "valueUsd": 100,
-      "change24h": 0.5,
-      "chain": "solana"
-    },
-    {
-      "token": {
         "symbol": "FBASE",
         "address": "0xBA5E000000000000000000000000000000000BA5",
         "networkId": 8453
@@ -67,9 +55,9 @@
       "chain": "bsc"
     }
   ],
-  "count": 5,
-  "totalValueUsd": 3600,
-  "upstreamRows": 5,
+  "count": 4,
+  "totalValueUsd": 3500,
+  "upstreamRows": 4,
   "truncated": false,
   "complete": true,
   "completeness": "fabricated completeness note",
@@ -99,10 +87,6 @@
     "ethereum": {
       "holdings": 1,
       "valueUsd": 1000
-    },
-    "solana": {
-      "holdings": 1,
-      "valueUsd": 100
     },
     "base": {
       "holdings": 1,

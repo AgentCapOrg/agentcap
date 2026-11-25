@@ -18,7 +18,7 @@ delete process.env.DATABASE_URL;
 const { attestReceiptUnderSupervisor, setPersistentHomeVerifierForTest, setTenantLeaseForTest, setSpawningForTest,
   adoptChildForTest, mirrorRunningLedgerForTest, reconcile, isRetiringExpiredForTest, hasLeaseForTest, setRetirementMirrorForTest } = await import("./orchestrator");
 const { getGrantStore } = await import("./grant-store");
-const grant = { smartAccount: TEST_ACCOUNT, owner: TEST_TENANT, chainId: 4663,
+const grant = { smartAccount: TEST_ACCOUNT, owner: TEST_TENANT, chainId: 56,
   sessionKeyAddress: "0x00000000000000000000000000000000000000d8", serialized: "fixture-permission",
   grantedAt: 1, expiresAt: 9999999999, caps: { perTradeUsdg: 40, dailyUsdg: 100, maxDrawdownPct: 5, expiryDays: 24 },
   demoSessionPrivateKey: `0x${"cd".repeat(32)}`, grantFeatures: ["tradeable-v2"], grantTokens: [] } as unknown as StoredGrant;

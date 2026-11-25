@@ -618,7 +618,7 @@ that coin, so another coin than the room's is left to the desk and the router.
   charged to the room's cap, like any lookup); a ticker on several chains
   asks "Which AUTON do you mean? Fomo lists it on more than one chain; say
   the chain.", and two on the chain asked (or on the one chain they share)
-  says "Fomo lists more than one AUTON on Solana, so I can't tell which one
+  says "Fomo lists more than one AUTON on Base, so I can't tell which one
   you mean."; none says "I couldn't find AUTON on Fomo."
 * **The reads** (`desk/facts.ts`): GeckoTerminal's public index on the fleet
   quota and the desk's one-minute memo: the token's pools, the main pool's
@@ -626,7 +626,7 @@ that coin, so another coin than the room's is left to the desk and the router.
   0 Fomo credits beyond resolution; 2-3 GeckoTerminal requests; at most 4
   reads per room per 10 minutes and 20 per agent per hour (past either:
   "I've looked up enough market data in here for now; ask again in a few
-  minutes."); 10 s in all. A Solana mint is never lowercased.
+  minutes."); 10 s in all.
 * **The main pool**: of the pools with at least $1k of liquidity and some 24h
   volume, the deepest (a stale pool with a stranded reserve and no volume, or
   dust, is never the coin's price). **The high** is the highest hourly close
@@ -637,8 +637,8 @@ that coin, so another coin than the room's is left to the desk and the router.
   collapse.
 * **The lines** (research lines, at most six, no address, no "wallet", no
   "rug", "scam" or "dumped", "fell" never "crashed"): the source and time
-  first ("AUTON on Solana, from GeckoTerminal at 01:15 UTC:"; a ticker the
-  gate refuses, such as RUG or SCAM, is "This coin on Solana, …"), then FDV now
+  first ("AUTON on Base, from GeckoTerminal at 01:15 UTC:"; a ticker the
+  gate refuses, such as RUG or SCAM, is "This coin on Base, …"), then FDV now
   and the highest close with how far below it is, the biggest drop within
   three hourly closes (50% or more), the main pool's liquidity and its 24h
   sellers and buyers; "data" adds holders and the top ten's share with the
@@ -696,9 +696,9 @@ one-liner from a model that was given no data.
   when Fomo cannot (the room's research answers spent, a read past 12 s, a
   budget refusal, research unavailable or failed, nothing sayable), inside
   the same 30 s deadline, with nothing of Fomo's said. Fomo's board covers
-  every chain; one the line names ("what's trending on solana", "on base")
+  every chain; one the line names ("what's trending on ethereum", "on base")
   cuts it to that chain (`chainIn`), and one it leaves out or dismisses
-  ("besides solana", "other than robinhood coins", "solana is dead") cuts it
+  ("besides base", "other than robinhood coins", "base is dead") cuts it
   to none: every chain, with the Robinhood Chain line. A venue word keeps it
   on the desk: "what's trending on robinhood chain", "what's trending in the
   market", even right after a Fomo answer (never a Fomo follow-up), and so
@@ -708,8 +708,8 @@ one-liner from a model that was given no data.
   are people saying about $PONS now") is the coin's theses, never the desk's
   chart, and stays a Fomo follow-up. Personal chat
   ("is she holding up ok?", "what is he doing lol") is never a follow-up
-  about a trader. After a board, a chain alone ("and on solana?", "solana
-  ones?", "on base?") is that board on that chain; the router reads one the
+  about a trader. After a board, a chain alone ("and on ethereum?", "base
+  ones?", "on bsc?") is that board on that chain; the router reads one the
   planner cannot;
 * a bare "do a quick analysis" — bound to the coin it replies
   under, else a desk ask up the reply chain, else what this topic last asked
@@ -956,7 +956,7 @@ past the 15-minute follow-up window, is asked by code about the coin that
 answer was about, never routed.
 
 **A chain** (decision D3, 2026-10-07). Fomo's lists cover every chain; the
-menu's optional `chain` (robinhood, solana, base, ethereum, bsc) cuts a
+menu's optional `chain` (robinhood, base, ethereum, bsc) cuts a
 board, the crowd or small coins to one, and the model is told to put one
 only when they want one chain's coins. Code reads it: the → line's own words
 first (`chainIn`: full names anywhere, short ones only where a chain goes, so
@@ -964,7 +964,7 @@ first (`chainIn`: full names anywhere, short ones only where a chain goes, so
 and "eth price" are not), whatever the model picked; else the model's pick
 only when the asker's own lines it was shown (same sender, never its own
 lines) or their unanswered question name that same chain. Never the line it
-replies to (a board names every row's chain: "ETAC on solana" must not
+replies to (a board names every row's chain: "ETAC on base" must not
 narrow "send it?"), never the persona's offer. That is what makes the live
 23:01-23:03 lines work: "do it" under "i can pull the fomo board for
 robinhood chain coins if you want" and "send it?" both name nothing, and
@@ -1124,12 +1124,12 @@ such a message, so nothing else in the handler answers it either. That covers:
   never a proof: the look still decides;
 * another chain's coin with no `0x` + 40-hex address in it, which is
   recognised only to stay silent about it (a ticker beside it gets no "drop
-  the ca": they did drop one): a Solana or Tron base58 mint (32–44 chars), a
+  the ca": they did drop one): a Tron base58 mint (32–44 chars), a
   TON address (`EQ…`/`UQ…`, 48 chars), a Sui or Aptos coin type
   (`0x…::module::NAME`) (`hasForeignMint`), and a link naming another chain by
   the same host and slug rules whose id is not an EVM address
-  (`hasOtherChainLink`): the all-lowercase Solana pair links DexScreener
-  itself hands out (`dexscreener.com/solana/4hzt…`), TON, Sui and Tron pairs,
+  (`hasOtherChainLink`): the all-lowercase pair links DexScreener
+  itself hands out for non-EVM chains, TON, Sui and Tron pairs,
   and a Uniswap v4 pool id on another chain (`dexscreener.com/base/0x` + 64
   hex). A link counts only when it carries a coin, pair, pool or account id
   (32+ characters with a digit, not a slug of words); another chain's link to
@@ -1861,27 +1861,27 @@ All three are dashboard-only (`DASHBOARD_ONLY.telegramGroups`, aliases
 | "trending" / "$pons" in reply to its own "top traders today, or what's trending?" / "which coin?" | Read in the light of that line: Fomo's trending board / that coin's theses, not a market read or a chart |
 | "what's trending", then "shogun" or "?" ten seconds later while the read runs | A 👀 on the poke; the read lands as the reply to the question. Never dropped as a burst |
 | "i asked a question" / "you didn't answer" / its name, after nothing answered their question in the last 10 minutes | Their question runs again, once, as the reply to it (never a second claim or nomination); with nothing of theirs open: "which question? i might've missed it, ask me again" |
-| "shogun what's trending" (Fomo wired) | Fomo's trending board. Fomo busy, late, refused by its budget, unavailable or failed: the desk's Robinhood Chain market read instead, never Fomo's refusal. "what's trending on robinhood chain", or no Fomo here: the desk. "what's trending on solana / base / eth" that Fomo cannot answer: Fomo's own plain line (its refusal with the reset time, busy, late, "couldn't reach fomo just now"), never the desk's Robinhood Chain read |
+| "shogun what's trending" (Fomo wired) | Fomo's trending board. Fomo busy, late, refused by its budget, unavailable or failed: the desk's Robinhood Chain market read instead, never Fomo's refusal. "what's trending on robinhood chain", or no Fomo here: the desk. "what's trending on base / eth / bsc" that Fomo cannot answer: Fomo's own plain line (its refusal with the reset time, busy, late, "couldn't reach fomo just now"), never the desk's Robinhood Chain read |
 | "do it" / "ok" / "bet" under its own offer ("i can pull the fomo board for robinhood chain coins if you want") | A yes to that offer: the router picks what the offer named and the research answers it. Never "give me a sec" (the gate refuses fake progress), never a tail |
 | "what about robinhood coins on fomo" / "only robinhood ones" (live 23:01) | That chain's slice of the trending board, from the same read: "Trending on Fomo, Robinhood Chain only (2 of the top 100):" with each row's board rank, or "None of the top 100 trending coins on Fomo are on Robinhood Chain right now." No offer to "pull" it |
-| "do it" under that offer, "send it?" after it (live 23:01-23:03) | The Robinhood Chain board: her own earlier line named the chain. A chain only the replied board's rows name ("ETAC on solana") never narrows it |
-| "shogun what's trending on fomo?" with only Solana coins on top | Every chain's board, three rows, and "On Robinhood Chain, the chain I trade: PONS (12th), CACHE (31st)." (or that none of the top 100 is on it) |
+| "do it" under that offer, "send it?" after it (live 23:01-23:03) | The Robinhood Chain board: her own earlier line named the chain. A chain only the replied board's rows name ("ETAC on base") never narrows it |
+| "shogun what's trending on fomo?" with only Base coins on top | Every chain's board, three rows, and "On Robinhood Chain, the chain I trade: PONS (12th), CACHE (31st)." (or that none of the top 100 is on it) |
 | "who's the top trader on robinhood on fomo" | The trader board, plus "Fomo's trader board covers every chain; it can't be narrowed to one." |
 | "who's selling pons on fomo?" (no `$`, not in capitals) | Never the whole feed's sellers: the port leaves it to the router, which names PONS from the line and asks its sellers |
-| "what are people saying about auton on fomo" when Fomo's thesis read comes back empty (live 2026-10-08), then "there has to be thesis." | "Fomo didn't return the theses on AUTON on solana just now (it lists 4,190)." when Fomo answers the page empty while marking it not available or still counting theses (never "no theses", and never a promise to ask again that the room's allowance may refuse: past it, the pushback hears "fomo lookups for this room are used up for now, try again after 17:00 UTC."); the pushback ("there has to be thesis", "check again", "are you sure?", "that's wrong", the whole line), in reply to the answer or right after it, reads again instead of serving the empty copy; under another of its lines it is about that line; a page with theses in it keeps the room's two hours, pushback or not; an empty copy is never reused past 2 min |
-| "what are they saying about anyps5" (live 23:00) | What they argue, never counts: "What traders on Fomo are saying about AnyPS5 on Solana (25 recent theses from 20 traders):", then the group model's checked gist, points for and worries, then "Their claims, not facts; newest 25 of 60." No model, or nothing of its passing: the code digest ("Mostly hype, with no case for or against that I can pick out." when no cue matches) |
+| "what are people saying about auton on fomo" when Fomo's thesis read comes back empty (live 2026-10-08), then "there has to be thesis." | "Fomo didn't return the theses on AUTON on base just now (it lists 4,190)." when Fomo answers the page empty while marking it not available or still counting theses (never "no theses", and never a promise to ask again that the room's allowance may refuse: past it, the pushback hears "fomo lookups for this room are used up for now, try again after 17:00 UTC."); the pushback ("there has to be thesis", "check again", "are you sure?", "that's wrong", the whole line), in reply to the answer or right after it, reads again instead of serving the empty copy; under another of its lines it is about that line; a page with theses in it keeps the room's two hours, pushback or not; an empty copy is never reused past 2 min |
+| "what are they saying about anyps5" (live 23:00) | What they argue, never counts: "What traders on Fomo are saying about AnyPS5 on Base (25 recent theses from 20 traders):", then the group model's checked gist, points for and worries, then "Their claims, not facts; newest 25 of 60." No model, or nothing of its passing: the code digest ("Mostly hype, with no case for or against that I can pick out." when no cue matches) |
 | "tell me what it's about from thesis" right after (live 23:00) | The same worded answer from the same copy: no provider read, no model call |
 | "fetch the thesis for agentcap on fomo" past the room's research allowance (live 23:05) | "fomo lookups for this room are used up for now, try again after 00:00 UTC." The same words for the room's cap and the owner's; never a credit, never "ask me in a direct message" |
-| Live 2026-10-09: Milla's "can you list the last 10" under AUTON's digest | Her DM gets "The newest 10 theses on AUTON on Solana, in their words (not facts):", then up to ten "• kaleo, 5 min ago: “im holding, team is still building”" lines, newest first, each gated as a `quote`, then "Their words, not facts; 5 of these 10 left out; Fomo lists 4,199." The room hears only "sent them to your DMs 🤫" (or another line of that small pool). From the room's kept copy: no provider read, no model call, the slot given back |
+| Live 2026-10-09: Milla's "can you list the last 10" under AUTON's digest | Her DM gets "The newest 10 theses on AUTON on Base, in their words (not facts):", then up to ten "• kaleo, 5 min ago: “im holding, team is still building”" lines, newest first, each gated as a `quote`, then "Their words, not facts; 5 of these 10 left out; Fomo lists 4,199." The room hears only "sent them to your DMs 🤫" (or another line of that small pool). From the room's kept copy: no provider read, no model call, the slot given back |
 | The same ask from anyone else | The digest in the room: no quote, no DM. A stranger's words never land in the group |
 | Her DM fails, or the read left too little time for the DM and the room's line after it | The digest in the room, never a claim that the quotes went |
-| None of the newest ten can be quoted (every one left out) | In the room: "None of the newest 10 theses on AUTON on Solana can be quoted here (10 left out).", then the digest; no DM |
+| None of the newest ten can be quoted (every one left out) | In the room: "None of the newest 10 theses on AUTON on Base can be quoted here (10 left out).", then the digest; no DM |
 | Live 2026-10-09: "show me these thesis, dont summarise" a minute later | The same quotes to her DM, with "From a copy fetched a minute ago." (never "just now" for a copy over a minute old); the room hears that they went |
 | "summarise them" (or "shogun summarise them", "shogun recap them", replying to nothing) after the quotes / "list the last 10" after a board | The digest again, in the room / never quotes |
 | "show me the last 5" under the digest or under "sent them to your DMs", twenty minutes on | Five of the newest to her DM, asked by code from the line (never a model), about the coin that line was about, from the kept copy. Only an explicit ask or a line that is nothing but a count or a list ask is built by code there; "who were the last 3 on the leaderboard?" or "what were kaleo's last 3 trades?" under it goes to the router |
 | "what are kaleo's theses, list them" | "That one is for a direct message, not the group.": a trader's own theses are never quoted |
-| Live 2026-10-09: AUTON's activity on an empty feed | "No matching activity was returned for AUTON on solana in the last 24h." (never "activity were") |
-| "shogun what happened to auton" after AUTON's Fomo answer | "AUTON on Solana, from GeckoTerminal at 01:15 UTC:" / "About $36k now (fully diluted); its highest hourly close on its main pool was about $5.75M, Oct 7 at 05:00 UTC, so it is 99.4% below that." / "The biggest drop: about 95% in three hours from 13:00 UTC on Oct 8." / "Main pool liquidity about $16k; in the last 24h, 1,576 sellers and 1,157 buyers." / "I can't see who sold, why it fell, or whether liquidity was pulled." No Fomo credit (the coin from memory); the measured collapse permit is set |
+| Live 2026-10-09: AUTON's activity on an empty feed | "No matching activity was returned for AUTON on base in the last 24h." (never "activity were") |
+| "shogun what happened to auton" after AUTON's Fomo answer | "AUTON on Base, from GeckoTerminal at 01:15 UTC:" / "About $36k now (fully diluted); its highest hourly close on its main pool was about $5.75M, Oct 7 at 05:00 UTC, so it is 99.4% below that." / "The biggest drop: about 95% in three hours from 13:00 UTC on Oct 8." / "Main pool liquidity about $16k; in the last 24h, 1,576 sellers and 1,157 buyers." / "I can't see who sold, why it fell, or whether liquidity was pulled." No Fomo credit (the coin from memory); the measured collapse permit is set |
 | "why did it rug?" / "did the dev dump?" then | The same facts, ending "The data shows when and how far it fell, not why; …" / with "GeckoTerminal lists its creator as holding about 4.8% of supply now (it doesn't say when that was last updated)." and "I can't see the creator's past sales, only what GeckoTerminal lists now." Never "dumped", "rug" or "scam", never an address |
 | "lmao auton" after a measured collapse | The persona may say "rugged cause it wasn't agentcap 😤"; the next brag ("should've been a agentcap coin") waits; "the dev rugged it" is never said; with no permit (another room, or a coin it holds) "rugged" is never said |
 | A member says "auton rugged lol" about the room's Fomo coin | A room permit for 30 minutes ("did it rug?", "not a rug", "pepe rugged" set none); a facts answer that finds no collapse clears it |
@@ -1903,7 +1903,7 @@ All three are dashboard-only (`DASHBOARD_ONLY.telegramGroups`, aliases
 | A wallet, or an Ethereum / BNB / Base token posted bare (no code on Robinhood Chain) | Silence: one presence probe, no GeckoTerminal read (one, under the full-look allowance, only while the chain cannot be asked), nothing remembered; ready or not, no owner ask |
 | A coin in another chain's link (Etherscan, BscScan, BaseScan, dexscreener.com/ethereum, geckoterminal.com/eth, gmgn.ai/bsc, pump.fun…) | Silence, ready or not, coins on or off: not claimed, looked at or remembered, and not counted in the first 2 |
 | Bonding-curve coin, v4-only, no pool, too thin, too quiet | Casual grounded fade, no Brain spend |
-| Solana mint, TON address, Sui coin type, or another chain's chart link with no `0x` + 40-hex address (DexScreener's lowercase Solana pair links, TON, Sui, a Base v4 pool id) | Silence, addressed or not, ready or not, coins on or off, and nothing else answers the line |
+| Tron mint, TON address, Sui coin type, or another chain's chart link with no `0x` + 40-hex address (DexScreener's lowercase non-EVM pair links, TON, Sui, a Base v4 pool id) | Silence, addressed or not, ready or not, coins on or off, and nothing else answers the line |
 | "$PEPE?" with no CA | "drop the ca" |
 | "buy this now" / "ape 100" | A nomination at most; words never size anything |
 | Bought a coin from the chat, later exits | Maybe one casual "out of that one" line |

@@ -14,12 +14,10 @@ vi.mock("./grantStore", () => ({
   },
 }));
 
-import { GRANT_PERP_LIGHTER, GRANT_PONS_CLASS, GRANT_TRENCHER, LIGHTER_ROUTE_V1, TRADEABLE_V2 } from "@agentcap/core";
+import { GRANT_PERP_LIGHTER, GRANT_TRENCHER, LIGHTER_ROUTE_V1, TRADEABLE_V2 } from "@agentcap/core";
 import { signGrant } from "./signGrant";
 import { accountFromMnemonic } from "./mnemonic";
 import {
-  CLASS_FACTORY,
-  CLASS_VAULT,
   TEST_CAPS,
   signerGrant,
   withStubChain,
@@ -64,7 +62,7 @@ const withPerps = (account: string, apiPublicKey: string = KEY, perp: Record<str
 });
 
 /** The phone's signer over the stub chain, which derives ACCOUNT for any owner. */
-const phoneSigns = (extra: { previousGrant?: unknown; ponsClassVaultFactory?: `0x${string}` } = {}) =>
+const phoneSigns = (extra: { previousGrant?: unknown } = {}) =>
   withStubChain(ACCOUNT, () => signGrant({ mnemonic: MNEMONIC, caps: TEST_CAPS, ...extra }));
 
 /** The dashboard's signer, same owner, same chain. */
@@ -178,21 +176,17 @@ describe("a previous grant for ANOTHER account is ignored", () => {
 });
 
 describe("the phone and the dashboard seal the same markers in the same order", () => {
-  it("given the same decisions, the same grantFeatures, perp block and class vault", async () => {
-    // The dashboard seals the platform class vault by default; the phone only
-    // when told the factory. Tell it, and the two have nothing left to differ on.
-    const phonePlain = (await phoneSigns({ ponsClassVaultFactory: CLASS_FACTORY })).grant;
+  it("given the same decisions, the same grantFeatures, perp block and tokens", async () => {
+    const phonePlain = (await phoneSigns()).grant;
     const webPlain = (await webSigns()).grant;
     expect(features(phonePlain)).toEqual(features(webPlain));
-    expect(phonePlain.ponsClassVaultAddress).toBe(CLASS_VAULT);
-    expect(phonePlain.ponsClassVaultAddress).toBe(webPlain.ponsClassVaultAddress);
     expect(phonePlain.grantTokens).toEqual(webPlain.grantTokens);
     expect(verdict(phonePlain)).toEqual({ ok: true });
 
     // Carried perps: the phone from its stored copy, the dashboard from the
     // server's projection — two sources, one key, one wall.
     phone.stored = withPerps(ACCOUNT);
-    const phonePerps = (await phoneSigns({ ponsClassVaultFactory: CLASS_FACTORY })).grant;
+    const phonePerps = (await phoneSigns()).grant;
     const webPerps = (await webSigns({ previousGrant: withPerps(ACCOUNT) })).grant;
     expect(features(phonePerps)).toEqual(features(webPerps));
     expect(features(phonePerps)).toContain(GRANT_PERP_LIGHTER);
@@ -201,18 +195,15 @@ describe("the phone and the dashboard seal the same markers in the same order", 
   }, SLOW);
 
   it("as onboarding calls it: the dashboard's markers minus those the phone never mints, in the dashboard's order", async () => {
-    // onboarding/grant.tsx passes no class factory, and the phone has no
-    // Trencher option at all. Those markers are absent by design, not drift.
-    const notOnPhone = [GRANT_PONS_CLASS, GRANT_TRENCHER];
+    // The phone has no Trencher option at all, so that marker is absent by
+    // design, not drift.
+    const notOnPhone = [GRANT_TRENCHER];
 
     const phonePlain = features((await phoneSigns()).grant);
     const webPlain = features((await webSigns()).grant);
     expect(phonePlain).toEqual(webPlain.filter((f) => !notOnPhone.includes(f)));
 
-    // With perps the two can legitimately differ by more than that: without
-    // the class permissions the phone's wall may still have room for the energy
-    // buy where the dashboard's does not (perps take their room first, energy
-    // gives way). So the claim is order, over the markers both seal.
+    // With perps, the claim is order, over the markers both seal.
     phone.stored = withPerps(ACCOUNT);
     const phonePerps = features((await phoneSigns()).grant);
     const webPerps = features((await webSigns({ previousGrant: withPerps(ACCOUNT) })).grant);

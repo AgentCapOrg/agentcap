@@ -14,6 +14,9 @@ import { accountingLicence, BOOTSTRAP_SCHEMA_VERSION, classifyAnchor } from "./b
 import { wrapSqlite, type Db } from "./db";
 import { reconstruct, verifyChain } from "./audit";
 
+// 6dp micro figures, scaled to 18dp USDT base units.
+const MICRO = 10n ** 12n;
+
 const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-initial-capital-"));
 process.env.AGENTCAP_HOME = HOME;
 delete process.env.DATABASE_URL;
@@ -30,11 +33,11 @@ const TX = `0x${"e5".repeat(32)}`;
 const topic = (a: string) => `0x${a.slice(2).padStart(64, "0")}`;
 const data = (n: bigint) => `0x${n.toString(16).padStart(64, "0")}`;
 const transfer = (n: bigint, index: number, incoming = true) => ({
-  address: CASH.USDG, transactionHash: TX, blockNumber: "0x64", blockHash: HASH,
+  address: CASH.USDT, transactionHash: TX, blockNumber: "0x64", blockHash: HASH,
   logIndex: `0x${index.toString(16)}`, data: data(n),
   topics: [TRANSFER_TOPIC, topic(incoming ? OWNER : ACCOUNT), topic(incoming ? ACCOUNT : OWNER)],
 });
-const DEPOSIT = transfer(200_000_000n, 1);
+const DEPOSIT = transfer((200_000_000n * MICRO), 1);
 type RpcState = { calls: [string, unknown[]][]; rpc: RpcCall };
 function rpcFixture(o: {
   logs?: ReturnType<typeof transfer>[]; balance?: bigint; head?: bigint;
@@ -53,7 +56,7 @@ function rpcFixture(o: {
       value = logs.filter(l => BigInt(l.blockNumber) >= BigInt(fromBlock) && BigInt(l.blockNumber) <= BigInt(toBlock)
         && topics.every((t, i) => t === null || (Array.isArray(t) ? t.includes(l.topics[i]!) : t === l.topics[i])));
     } else if (method === "eth_getTransactionReceipt") value = { transactionHash: TX, status: "0x1", blockNumber: "0x64", blockHash: HASH, logs };
-    else if (method === "eth_call") value = data(o.balance ?? 200_000_000n);
+    else if (method === "eth_call") value = data(o.balance ?? (200_000_000n * MICRO));
     else throw new Error(`Unexpected RPC ${method}`);
     return o.replace ? o.replace(method, params, value) : value;
   };
@@ -82,7 +85,7 @@ describe("initial funding receipt evidence", () => {
   it("pins history and balance to head minus 64, and proves the unconfirmed tail is empty", async () => {
     const f = rpcFixture();
     const evidence = await read(f.rpc);
-    assert.equal(evidence.cashUsdg6, 200_000_000n);
+    assert.equal(evidence.cashUsdg6, (200_000_000n * MICRO));
     assert.equal(evidence.deposits[0]?.at, 1_700_000_000);
     assert.equal(evidence.blockNumber, 101n);
     assert.equal(evidence.blockHash, HEAD);
@@ -116,12 +119,12 @@ describe("initial funding receipt evidence", () => {
     assert.equal(count("flows"), 1); assert.equal(await peak(), 200);
   });
   for (const [name, recent] of [
-    ["incoming deposit", [transfer(1_000_000n, 2)]],
-    ["withdrawal", [transfer(1_000_000n, 2, false)]],
-    ["out-and-back with unchanged cash", [transfer(1_000_000n, 2, false), transfer(1_000_000n, 3)]],
+    ["incoming deposit", [transfer((1_000_000n * MICRO), 2)]],
+    ["withdrawal", [transfer((1_000_000n * MICRO), 2, false)]],
+    ["out-and-back with unchanged cash", [transfer((1_000_000n * MICRO), 2, false), transfer((1_000_000n * MICRO), 3)]],
   ] as const) it(`holds unconfirmed ${name} even when confirmed cash still matches`, async () => {
     const logs = [DEPOSIT, ...recent.map(log => ({ ...log, blockNumber: "0x66" }))];
-    await assert.rejects(read(rpcFixture({ logs, balance: 200_000_000n }).rpc));
+    await assert.rejects(read(rpcFixture({ logs, balance: (200_000_000n * MICRO) }).rpc));
     assert.equal(count("flows"), 0); assert.equal(await peak(), 0);
   });
   it("holds unreadable or malformed tail evidence without booking confirmed funds", async () => {
@@ -155,12 +158,12 @@ describe("initial funding receipt evidence", () => {
     assert.equal(count("flows"), 0); assert.equal(await peak(), 0);
   });
   it("holds withdrawals and trade proceeds, even when the net reconciles", async () => {
-    await assert.rejects(read(rpcFixture({ logs: [DEPOSIT, transfer(10_000_000n, 2, false)], balance: 190_000_000n }).rpc));
+    await assert.rejects(read(rpcFixture({ logs: [DEPOSIT, transfer((10_000_000n * MICRO), 2, false)], balance: (190_000_000n * MICRO) }).rpc));
     const sale = { ...transfer(1n, 2, false), address: OWNER };
     await assert.rejects(read(rpcFixture({ replace: (m, _p, v) => m === "eth_getTransactionReceipt" ? { ...(v as object), logs: [DEPOSIT, sale] } : v }).rpc));
   });
   it("holds a balance mismatch or unavailable receipt and books no inference", async () => {
-    await assert.rejects(read(rpcFixture({ balance: 201_000_000n }).rpc));
+    await assert.rejects(read(rpcFixture({ balance: (201_000_000n * MICRO) }).rpc));
     await assert.rejects(read(rpcFixture({ replace: (m, _p, v) => { if (m === "eth_getTransactionReceipt") throw new Error("RPC unavailable"); return v; } }).rpc));
     assert.equal(count("flows"), 0);
     assert.equal(await peak(), 0);
@@ -197,10 +200,10 @@ describe("atomic initial capital and restart", () => {
     const licence = accountingLicence(verdict, { hosted: true });
     assert.equal(licence.licence, "resume");
     assert.equal(licence.contributionsKnown, true);
-    assert.equal(licence.highWaterMarkUsdg, 200_000_000n);
+    assert.equal(licence.highWaterMarkUsdg, 200_000_000n, "the anchor travels in micro-USDT");
   });
   it("rolls the whole batch back if its second receipt or peak fails", async () => {
-    const evidence = await read(rpcFixture({ logs: [DEPOSIT, transfer(50_000_000n, 2)], balance: 250_000_000n }).rpc);
+    const evidence = await read(rpcFixture({ logs: [DEPOSIT, transfer((50_000_000n * MICRO), 2)], balance: (250_000_000n * MICRO) }).rpc);
     for (const trigger of [
       "BEFORE INSERT ON flows WHEN NEW.log_index = 2",
       "BEFORE UPDATE OF hwm_usdg ON agents WHEN NEW.hwm_usdg > OLD.hwm_usdg",
@@ -213,6 +216,34 @@ describe("atomic initial capital and restart", () => {
     }
     assert.equal((await store.bookInitialCapital(ACCOUNT, evidence)).kind, "booked");
     assert.equal(count("flows"), 2); assert.equal(await peak(), 250);
+  });
+  it("books 18-decimal receipts under a millionth truncated, never above what arrived, with the exact units kept as text", async () => {
+    // 100.0000006…001, 50.0000006 and one wei of dust. Together they read
+    // 150.000001; receipt by receipt the book keeps 150.000000.
+    const amounts = [100_000_000n * MICRO + 600_000_000_001n, 50_000_000n * MICRO + 600_000_000_000n, 1n];
+    const total = amounts.reduce((n, v) => n + v, 0n);
+    const evidence = await read(rpcFixture({ logs: amounts.map((v, i) => transfer(v, i + 1)), balance: total }).rpc);
+    assert.equal(evidence.cashUsdg6, total, "the reconciliation stays exact");
+    await assert.rejects(read(rpcFixture({ logs: amounts.map((v, i) => transfer(v, i + 1)), balance: total + 1n }).rpc), "one base unit unexplained still holds");
+    mark(150.000001, "live", 1); // the held valuation: the whole balance, truncated once
+    assert.equal((await store.bookInitialCapital(ACCOUNT, { ...evidence, cashUsdg6: total + 1n })).kind, "refused");
+    assert.equal((await store.bookInitialCapital(ACCOUNT, evidence)).kind, "booked");
+    assert.deepEqual(raw.prepare("SELECT amount_usdg, log_index FROM flows ORDER BY log_index").all().map(r => ({ ...r })),
+      [{ amount_usdg: 100, log_index: 1 }, { amount_usdg: 50, log_index: 2 }]);
+    assert.equal(await peak(), 150);
+    assert.equal(await store.getNetContributionsUsdg(ACCOUNT), 150);
+    assert.equal((await store.bookInitialCapital(ACCOUNT, evidence)).kind, "already");
+    assert.equal(count("flows"), 2); assert.equal(await peak(), 150);
+    const journal = await store.readJournal(ACCOUNT, 1);
+    assert.deepEqual(verifyChain(journal), []);
+    assert.equal(reconstruct(journal).netContributionsUsdg, 150);
+    const kept = raw.prepare("SELECT payload_json FROM journal WHERE kind = 'mark'").get() as { payload_json: string };
+    for (const exact of [total, ...amounts]) assert.ok(kept.payload_json.includes(`"${exact}"`), `${exact} kept exactly`);
+  });
+  it("books nothing when every receipt is under a millionth", async () => {
+    const evidence = await read(rpcFixture({ logs: [transfer(999_999_999_999n, 1)], balance: 999_999_999_999n }).rpc);
+    assert.equal((await store.bookInitialCapital(ACCOUNT, evidence)).kind, "refused");
+    assert.equal(count("flows"), 0); assert.equal(count("journal"), 0); assert.equal(await peak(), 0);
   });
   it("retries after a held funded valuation without changing that valuation", async () => {
     mark(200, "live", 1);
@@ -240,7 +271,7 @@ describe("atomic initial capital and restart", () => {
     assert.equal(await peak(), 0);
     raw.exec("DELETE FROM flows; DELETE FROM journal");
     await store.bookInitialCapital(ACCOUNT, e);
-    const changed = { ...e, cashUsdg6: 201_000_000n, deposits: [{ ...e.deposits[0]!, amountUsdg6: 201_000_000n }] };
+    const changed = { ...e, cashUsdg6: (201_000_000n * MICRO), deposits: [{ ...e.deposits[0]!, amountUsdg6: (201_000_000n * MICRO) }] };
     assert.equal((await store.bookInitialCapital(ACCOUNT, changed)).kind, "refused");
     assert.equal(await peak(), 200);
   });
@@ -252,9 +283,9 @@ describe("pre-funding restart receipt eligibility", () => {
     const paper = await store.getPaperBook(ACCOUNT, 1000);
     await store.setPaperBook(ACCOUNT, { ...paper, cashUsdg: 900, hwmUsdg: 1200, shares: { X: { token: OWNER as `0x${string}`, shares: 1 } } });
     assert.equal(await store.addTrade({ agent_id: ACCOUNT, kind: "swap", target: OWNER, status: "paper", amount_usdg: 100,
-      sell_token: CASH.USDG, buy_token: OWNER, fill_side: "buy", fill_symbol: "X", fill_qty_raw: "1000000000000000000",
+      sell_token: CASH.USDT, buy_token: OWNER, fill_side: "buy", fill_symbol: "X", fill_qty_raw: "1000000000000000000",
       fill_cash_usdg: 100, fill_price_usd: 100, basis_source: "paper" }), true);
-    await store.setBasis(ACCOUNT, "paper", "X", { qtyRaw: 1_000_000_000_000_000_000n, costUsdg: 100_000_000n });
+    await store.setBasis(ACCOUNT, "paper", "X", { qtyRaw: 1_000_000_000_000_000_000n, costUsdg: (100_000_000n * MICRO) });
     await store.setTrenchEntry(ACCOUNT, "paper", "X", 10000);
     await store.addEquity(ACCOUNT, { mode: "paper", ethWei: 0n, cashUsdg: 900, vaultUsdg: 0, positionsUsdg: 300,
       equityUsdg: 1200, quarantinedCostUsdg: 0, marks: [] });

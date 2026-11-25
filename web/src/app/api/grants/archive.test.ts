@@ -50,7 +50,7 @@ const archiveOf = (account: string) => path.join(archiveDir(), `${account.toLowe
 const pausedFile = () => path.join(home, "paused");
 /** Not what JSON.stringify would write — so a copy that re-serialized would show. */
 const rawGrant = (account: string, key: string) =>
-  `{\n    "smartAccount": "${account}",\n    "serialized": "0xserialized",\n    "demoOwnerPrivateKey": "${key}",\n    "chainId": 4663\n}\n`;
+  `{\n    "smartAccount": "${account}",\n    "serialized": "0xserialized",\n    "demoOwnerPrivateKey": "${key}",\n    "chainId": 56\n}\n`;
 
 beforeEach(() => {
   if (existsSync(archiveDir())) chmodSync(archiveDir(), 0o700);
@@ -66,7 +66,7 @@ describe("POST /api/grants, self-hosted, replacing a grant", () => {
   it("the outgoing grant is archived byte for byte, 0600, and only then replaced", async () => {
     const outgoing = rawGrant(A, "0xowner-key-A");
     writeFileSync(grantFile(), outgoing);
-    const res = await post({ smartAccount: B, serialized: "0xserialized", demoOwnerPrivateKey: "0xowner-key-B", chainId: 4663 });
+    const res = await post({ smartAccount: B, serialized: "0xserialized", demoOwnerPrivateKey: "0xowner-key-B", chainId: 56 });
     assert.equal(res.status, 200, JSON.stringify(await res.clone().json()));
     assert.equal(readFileSync(archiveOf(A), "utf8"), outgoing, "the copy is the file, not a re-serialization of it");
     if (posix) assert.equal(statSync(archiveOf(A)).mode & 0o777, 0o600);
@@ -82,7 +82,7 @@ describe("POST /api/grants, self-hosted, replacing a grant", () => {
     const error = console.error;
     console.error = (...a: unknown[]) => void logged.push(a.join(" "));
     try {
-      const res = await post({ smartAccount: B, serialized: "0xserialized", chainId: 4663 });
+      const res = await post({ smartAccount: B, serialized: "0xserialized", chainId: 56 });
       assert.equal(res.status, 200);
       assert.match(logged.join("\n"), /the outgoing grant was NOT archived \(the archive could not be written \(EACCES\)\)/);
     } finally {

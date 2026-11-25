@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { SearchHit } from "@/app/api/search/route";
 import { usd } from "@/lib/format";
+import { usdgOrNull } from "@/terminal/account-read";
 
 /**
  * THE BAR ACROSS THE TOP: find something, and see where you stand.
@@ -53,13 +54,13 @@ export function TopBar() {
           fetch("/api/auth/session").then((r) => r.json()),
         ]);
         if (!alive) return;
-        const cash = Number(g?.balances?.cashUsdg ?? 0);
-        const vault = Number(g?.balances?.vaultUsdg ?? 0);
+        // Raw 18-decimal base units on the wire, so never a bare Number().
+        const cash = usdgOrNull(g?.balances?.cashUsdg) ?? 0;
         setMine({
           hasAgent: g?.exists === true,
           signedIn: Boolean(s?.address) || g?.exists === true,
           cash,
-          equity: cash + vault,
+          equity: cash,
         });
       } catch {
         /* the bar simply says less */

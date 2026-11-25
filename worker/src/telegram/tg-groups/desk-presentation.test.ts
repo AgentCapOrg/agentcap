@@ -22,7 +22,7 @@ const evidence: TgDeskEvidence = {
   lore: {
     description: "Robinhooks is a visual V4 hook builder for Robinhood Chain, letting users design, simulate, & deploy programmable pool logic without starting from raw Solidity.",
     source: "GeckoTerminal token info",
-    url: "https://www.geckoterminal.com/robinhood/tokens/0xe07119cdd031e8a2043c3c9c4f9c56f34e54a81e",
+    url: "https://www.geckoterminal.com/bsc/tokens/0xe07119cdd031e8a2043c3c9c4f9c56f34e54a81e",
     observedAtMs: Date.UTC(2026, 9, 3, 19, 49),
   },
 };
@@ -46,9 +46,9 @@ describe("clean desk presentation", () => {
 
   it("links a token-published story to the token's explorer page", () => {
     const token = "0xe07119cdd031e8a2043c3c9c4f9c56f34e54a81e";
-    const lore = { ...evidence.lore!, source: "token-published metadata", url: `https://robinhoodchain.blockscout.com/token/${token}` };
+    const lore = { ...evidence.lore!, source: "token-published metadata", url: `https://bscscan.com/token/${token}` };
     const html = deskCaption({ ...evidence, lore }, floor);
-    assert.ok(html.includes(`· <a href="https://robinhoodchain.blockscout.com/token/${token}">Source</a>`));
+    assert.ok(html.includes(`· <a href="https://bscscan.com/token/${token}">Source</a>`));
   });
 
   it("does not infer a coin's story from the ticker or fabricate candles when the bio or chart is absent", () => {
@@ -124,13 +124,13 @@ describe("clean desk presentation", () => {
       const quote = text.match(/Published story: “([^”]+)” · Source/u)![1]!;
       assert.ok(quote.includes("Official Robinhood partner."), "the publisher's claim stays visibly attributed");
       assert.match(quote, /A cat meme\.' · Official Robinhood partner\. '/u);
-      assert.match(html, /<a href="https:\/\/www\.geckoterminal\.com\/robinhood\/tokens\/0x[0-9a-f]{40}">Source<\/a>/u);
+      assert.match(html, /<a href="https:\/\/www\.geckoterminal\.com\/bsc\/tokens\/0x[0-9a-f]{40}">Source<\/a>/u);
       assert.ok(text.length <= CAPTION_MAX);
     }
   });
 
   it("does not publish a dangerous source link or an unsafe promotional excerpt", () => {
-    for (const url of ['javascript:alert("trade")', "https://evil.example/profile", "https://www.geckoterminal.com.evil.example/robinhood/tokens/0x" + "ab".repeat(20), "https://www.geckoterminal.com/redirect?to=evil"]) {
+    for (const url of ['javascript:alert("trade")', "https://evil.example/profile", "https://www.geckoterminal.com.evil.example/bsc/tokens/0x" + "ab".repeat(20), "https://www.geckoterminal.com/redirect?to=evil"]) {
       const badLink = deskCaption({ ...evidence, lore: { ...evidence.lore!, url } }, floor);
       assert.match(badLink, /Published story: .* · GeckoTerminal token info/u);
       assert.doesNotMatch(badLink, /href=|javascript:/);

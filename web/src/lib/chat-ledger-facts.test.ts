@@ -177,7 +177,7 @@ test("web tape and chat agree on the side of a completed legacy coin pair", asyn
   try {
     for (const sql of ["ALTER TABLE trades ADD COLUMN tx_hash TEXT", "ALTER TABLE trades ADD COLUMN sim_quote_out TEXT", "ALTER TABLE trades ADD COLUMN sim_min_out TEXT", "ALTER TABLE trades ADD COLUMN sim_fee_tier INTEGER", "ALTER TABLE trades ADD COLUMN sim_gas TEXT", "ALTER TABLE decisions ADD COLUMN action TEXT"]) raw.exec(sql);
     add(7, DAY + 200);
-    raw.prepare("UPDATE trades SET fill_side=NULL,sell_token=? WHERE id=7").run(CASH.USDG);
+    raw.prepare("UPDATE trades SET fill_side=NULL,sell_token=? WHERE id=7").run(CASH.USDT);
     const web = await readDeskTrades(db, OWNER, 2, DAY - 1);
     assert.equal(web.find(t => t.id === 7)?.fill_side, "buy");
     const reply = await ledgerChatReply({ message: "what did you buy today?" }, OWNER, NOW, fn => fn(db));

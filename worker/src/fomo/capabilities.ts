@@ -116,7 +116,7 @@ export const DOCUMENTED_CAPABILITIES: readonly CapabilityRecord[] = [
   doc("following", T("following"), "DOCUMENTED", "openapi.json GET /v2/users/{handle}/following: at most 200 names upstream, flat 250 credits; 503 retryable never means not-found"),
   doc("spotlight", T("spotlight"), "DOCUMENTED", "openapi.json GET /v2/users/{handle}/spotlight: the vendor's own pick of best trades and theses, 250 credits"),
   doc("theses", T("theses"), "DOCUMENTED", "openapi.json GET /v2/thesis: recent theses across coins with networkId and equity (no likes); ?chain= filter; 1,250 credits per page"),
-  doc("theses-by-token", T("thesesByToken"), "PARTIAL", "openapi.json GET /v2/thesis/token/{mint}: the network enum is sol|bnb|base|eth|arc with no robinhood value, so a Robinhood token is queried without one and every row's networkId must be checked; 1,250 credits per page"),
+  doc("theses-by-token", T("thesesByToken"), "PARTIAL", "openapi.json GET /v2/thesis/token/{mint}: the network enum is bnb|base|eth|arc with no robinhood value, so a Robinhood token is queried without one and every row's networkId must be checked; 1,250 credits per page"),
   doc("theses-by-user", T("thesesByUser"), "DOCUMENTED", "openapi.json GET /v2/thesis/user/{id}: every thesis by one trader, sort likes|recent, ?chain="),
   doc("theses-by-user-token", T("thesesByUserToken"), "DOCUMENTED", "openapi.json GET /v2/thesis/user/{id}/token/{address}: one trader's theses on one token"),
   doc("trade-detail", T("trade"), "DOCUMENTED", "openapi.json GET /v2/trades/{tradeId}: swaps, transfers, entry/exit, realized PnL, isDev"),

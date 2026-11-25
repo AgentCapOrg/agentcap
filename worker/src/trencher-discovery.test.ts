@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { keccak256, type PublicClient } from "viem";
-import { CASH, UNISWAP, GRANT_TRENCHER, AGENTCAP_TOKEN, type StoredGrant } from "../../packages/core/src/index";
+import { CASH, PANCAKESWAP, GRANT_TRENCHER, type StoredGrant } from "../../packages/core/src/index";
 import { EARLY_VERIFY_MAX, NOMINATED_VERIFY_MAX, discoverTrencherUniverse, regularEntryPools } from "./trencher-discovery";
 import { earlyEntryPools } from "./early-candidates";
 import { emptyGeckoBuckets, type GeckoPool } from "./venues/geckoterminal";
@@ -12,7 +12,7 @@ const factory="0x3333333333333333333333333333333333333333";
 const owner="0x4444444444444444444444444444444444444444";
 const poolAddress="0x5555555555555555555555555555555555555555";
 const grant={smartAccount:owner,grantFeatures:[GRANT_TRENCHER],trencherVaultAddress:vault,trencherFactoryAddress:factory} as unknown as StoredGrant;
-const pool={tokenAddress:token,poolAddress,poolId:poolAddress,priceUsd:0.01,reserveUsd:200_000,fdvUsd:1_000_000,change24hPct:5,change1hPct:1,createdAt:1000,dex:"uniswap-v3-robinhood",name:"COIN / USDG",volume24hUsd:500_000,buyers24h:50,buys24h:100,sells24h:80,
+const pool={tokenAddress:token,poolAddress,poolId:poolAddress,priceUsd:0.01,reserveUsd:200_000,fdvUsd:1_000_000,change24hPct:5,change1hPct:1,createdAt:1000,dex:"pancakeswap-v3-bsc",name:"COIN / USDG",volume24hUsd:500_000,buyers24h:50,buys24h:100,sells24h:80,
   buckets:{...emptyGeckoBuckets(),m5:{volumeUsd:1000,changePct:2,buys:10,sells:8,buyers:9,sellers:8}}} as GeckoPool;
 /**
  * Multicall3 as the chain runs it: every call answered exactly as readContract
@@ -25,7 +25,7 @@ function withMulticall<C extends { readContract: (a: never) => Promise<unknown> 
 }
 function client(over:Record<string,unknown>={}) {
   return withMulticall({getCode:async()=>"0x6000",readContract:async({functionName}: {functionName:string})=>{
-    const values:Record<string,unknown>={cash:CASH.USDG,bridge:CASH.WETH,router:UNISWAP.swapRouter02,poolFactory:UNISWAP.v3Factory,vaultFor:vault,owner,VERSION:1n,tokens:[],token0:CASH.USDG,token1:token,fee:3000,getPool:poolAddress,decimals:6,...over};
+    const values:Record<string,unknown>={cash:CASH.USDT,bridge:CASH.WBNB,router:PANCAKESWAP.smartRouter,poolFactory:PANCAKESWAP.v3Factory,vaultFor:vault,owner,VERSION:1n,tokens:[],token0:CASH.USDT,token1:token,fee:2500,getPool:poolAddress,decimals:6,...over};
     const result=values[functionName]; if (result instanceof Error) throw result;
     if (result===undefined) throw new Error(`Unexpected read ${functionName}`);
     return result;
@@ -42,7 +42,7 @@ test("automatic discovery verifies pool provenance and recovers held tokens with
     {...pool,dex:"uniswap-v4-robinhood",volume24hUsd:900_000}, pool,
   ]);
   assert.equal(competing.qualified.length,1,"unsupported higher-volume pool must not hide the verified V3 route");
-  assert.equal(competing.qualified[0]!.dex,"uniswap-v3-robinhood");
+  assert.equal(competing.qualified[0]!.dex,"pancakeswap-v3-bsc");
   assert.equal((await discoverTrencherUniverse(client({getPool:owner}),grant,[pool])).tokens.length,0);
   assert.equal((await discoverTrencherUniverse(client({token1:owner}),grant,[pool])).tokens.length,0);
   assert.equal((await discoverTrencherUniverse(client(),grant,[{...pool,dex:"uniswap-v4-robinhood"}])).tokens.length,0);
@@ -54,27 +54,14 @@ test("automatic discovery verifies pool provenance and recovers held tokens with
   process.env.TRENCHER_FACTORY_CODE_HASH=keccak256("0x6001");
   await assert.rejects(discoverTrencherUniverse(client(),grant,[pool]),/bytecode/);
 });
-test("the energy reserve is never a trencher candidate, and held tokens are not narrowed", async (t) => {
-  // $AGENTCAP is held as energy — never watched, bought or sold as a coin. A
-  // Uniswap v3 AGENTCAP pool does not exist today, but discovery must not
-  // depend on that staying true.
+test("held tokens are not narrowed by the screens a new candidate has to pass", async (t) => {
   const prior = process.env.TRENCHER_FACTORY_CODE_HASH;
   process.env.TRENCHER_FACTORY_CODE_HASH = keccak256("0x6000");
   t.after(() => { if (prior === undefined) delete process.env.TRENCHER_FACTORY_CODE_HASH; else process.env.TRENCHER_FACTORY_CODE_HASH = prior; });
-  const agentcap = AGENTCAP_TOKEN.address;
-  const reservePool = { ...pool, tokenAddress: agentcap, name: "AGENTCAP / USDG" } as GeckoPool;
-  const shouted = { ...reservePool, tokenAddress: `0x${agentcap.slice(2).toUpperCase()}` } as GeckoPool;
-  for (const p of [reservePool, shouted]) {
-    const result = await discoverTrencherUniverse(client({ token1: agentcap }), grant, [p]);
-    assert.equal(result.qualified.length, 0, "a qualifying AGENTCAP pool is excluded");
-    assert.equal(result.tokens.length, 0);
-  }
-  // An ordinary pool beside it still qualifies.
-  const both = await discoverTrencherUniverse(client(), grant, [reservePool, pool]);
-  assert.deepEqual(both.qualified.map((q) => q.tokenAddress), [token]);
   // What the vault already holds is read as it is: `held` is never filtered,
   // because a held-token read must never be narrowed into an empty book.
-  const held = await discoverTrencherUniverse(client({ tokens: [token] }), grant, [reservePool]);
+  const held = await discoverTrencherUniverse(client({ tokens: [token] }), grant, [{ ...pool, dex: "uniswap-v4-robinhood" }]);
+  assert.equal(held.qualified.length, 0);
   assert.deepEqual(held.held, [token]);
   assert.deepEqual(held.tokens.map((x) => x.address), [token]);
 });
@@ -111,12 +98,12 @@ function chain(canonical: ReadonlySet<string>, reads: string[]) {
       getCode: async () => "0x6000",
       readContract: async ({ address, functionName, args }: { address: string; functionName: string; args?: readonly unknown[] }) => {
         const a = address.toLowerCase();
-        const values: Record<string, unknown> = { cash: CASH.USDG, bridge: CASH.WETH, router: UNISWAP.swapRouter02, poolFactory: UNISWAP.v3Factory, vaultFor: vault, owner, VERSION: 1n, tokens: [], decimals: 6 };
+        const values: Record<string, unknown> = { cash: CASH.USDT, bridge: CASH.WBNB, router: PANCAKESWAP.smartRouter, poolFactory: PANCAKESWAP.v3Factory, vaultFor: vault, owner, VERSION: 1n, tokens: [], decimals: 6 };
         if (pools.has(a)) {
           reads.push(a);
-          if (functionName === "token0") return CASH.USDG;
+          if (functionName === "token0") return CASH.USDT;
           if (functionName === "token1") return pools.get(a);
-          if (functionName === "fee") return 3000;
+          if (functionName === "fee") return 2500;
         }
         if (functionName === "getPool") {
           const token = String(args?.[1] ?? "").toLowerCase();
@@ -202,24 +189,21 @@ test("a nominated pool that fails the canonical factory check is dropped, whoeve
   assert.equal(result.qualified.length, 20);
 });
 
-test("a nominated pool still has to pass highVolumePools, the v3 venue and the energy exclusion", async (t) => {
+test("a nominated pool still has to pass highVolumePools and the v3 venue", async (t) => {
   const prior = process.env.TRENCHER_FACTORY_CODE_HASH;
   process.env.TRENCHER_FACTORY_CODE_HASH = keccak256("0x6000");
   t.after(() => { if (prior === undefined) delete process.env.TRENCHER_FACTORY_CODE_HASH; else process.env.TRENCHER_FACTORY_CODE_HASH = prior; });
   const tape = ranked(22);
   const quiet = { ...tape[21]!, volume24hUsd: 99_999 } as GeckoPool; // under TRENCH_VOLUME_MIN
   const v4 = { ...tape[20]!, dex: "uniswap-v4-robinhood" } as GeckoPool;
-  // Busy enough for highVolumePools, below every top-slice pool: only the
-  // energy exclusion can keep it out.
-  const reserve = { ...pool, tokenAddress: AGENTCAP_TOKEN.address, poolAddress: `0x${"c".repeat(40)}`, poolId: `0x${"c".repeat(40)}`, volume24hUsd: 200_000 } as GeckoPool;
-  const all = [...tape.slice(0, 20), v4, quiet, reserve];
+  const all = [...tape.slice(0, 20), v4, quiet];
   const reads: string[] = [];
   const c = chain(new Set(all.map(p => p.tokenAddress.toLowerCase())), reads);
   all.forEach(p => c.register(p));
   const result = await discoverTrencherUniverse(c.client, grant, all, {
-    nominated: new Set([quiet.tokenAddress, v4.tokenAddress, reserve.tokenAddress.toLowerCase()]),
+    nominated: new Set([quiet.tokenAddress, v4.tokenAddress]),
   });
-  for (const p of [quiet, v4, reserve]) {
+  for (const p of [quiet, v4]) {
     assert.ok(!result.qualified.some(q => q.tokenAddress.toLowerCase() === p.tokenAddress.toLowerCase()), p.name);
     assert.ok(!reads.includes(p.poolAddress!.toLowerCase()), "never even read on chain");
   }
@@ -282,7 +266,7 @@ test("an early coin below the volume screen and beyond the slice is verified by 
   assert.equal(reads.filter(r => r === top.poolAddress!.toLowerCase()).length, 3, "token0, token1, fee once");
 });
 
-test("an early coin still needs the canonical factory, the v3 route, two-sided flow and never the energy reserve", async (t) => {
+test("an early coin still needs the canonical factory, the v3 route and two-sided flow", async (t) => {
   const prior = process.env.TRENCHER_FACTORY_CODE_HASH;
   process.env.TRENCHER_FACTORY_CODE_HASH = keccak256("0x6000");
   t.after(() => { if (prior === undefined) delete process.env.TRENCHER_FACTORY_CODE_HASH; else process.env.TRENCHER_FACTORY_CODE_HASH = prior; });
@@ -291,16 +275,15 @@ test("an early coin still needs the canonical factory, the v3 route, two-sided f
   const lookalike = mk(1);
   const v4 = mk(2, { dex: "uniswap-v4-robinhood" });
   const oneSided = mk(3, { sells24h: 0 });
-  const reserve = mk(4, { tokenAddress: AGENTCAP_TOKEN.address });
-  const all = [lookalike, v4, oneSided, reserve];
+  const all = [lookalike, v4, oneSided];
   const reads: string[] = [];
-  const c = chain(new Set([v4, oneSided, reserve].map(p => p.tokenAddress.toLowerCase())), reads); // the factory does not know `lookalike`
+  const c = chain(new Set([v4, oneSided].map(p => p.tokenAddress.toLowerCase())), reads); // the factory does not know `lookalike`
   all.forEach(p => c.register(p));
   const result = await discoverTrencherUniverse(c.client, grant, all, { early: all.map(p => p.tokenAddress) });
   assert.equal(result.qualified.length, 0);
   assert.equal(result.tokens.length, 0, "nothing becomes a known Trencher asset without verification");
   assert.ok(reads.includes(lookalike.poolAddress!.toLowerCase()), "read, and refused: an offer is not provenance");
-  for (const p of [v4, oneSided, reserve]) assert.ok(!reads.includes(p.poolAddress!.toLowerCase()), `${p.poolId} never read on chain`);
+  for (const p of [v4, oneSided]) assert.ok(!reads.includes(p.poolAddress!.toLowerCase()), `${p.poolId} never read on chain`);
   assert.deepEqual(result.early.unverified, [lookalike.tokenAddress]);
 });
 

@@ -10,9 +10,8 @@
  * store.ts setAgentPerps) and, hosted, the ledger mirror carries it up. This
  * reads it back for GET /api/grants?wallet=perps.
  *
- * A SECOND ANSWER COMPUTED HERE WOULD EVENTUALLY DISAGREE WITH THE FIRST — the
- * agent-energy.ts reasoning, and more so: the web never reads an account's
- * positions itself.
+ * A SECOND ANSWER COMPUTED HERE WOULD EVENTUALLY DISAGREE WITH THE FIRST: the
+ * web never reads an account's positions itself.
  *
  * NULL IS "NOT SAID", NEVER "NOTHING" (rule 11). No row, no column, a value
  * that is not exactly the v1 shape, a read that throws — all of them are null
@@ -132,7 +131,7 @@ export async function readAgentPerpsRead(
 
 /**
  * The report, or null (= not said or unreadable) — the shape GET
- * /api/grants?wallet=perps carries, the agent-energy.ts precedent.
+ * /api/grants?wallet=perps carries.
  */
 export async function readAgentPerps(
   account: string | null | undefined,

@@ -204,7 +204,7 @@ it("the repair entry point refuses an account scope naming an id that is not 0x,
   const db = { prepare: forbidden, exec: forbidden, tx: forbidden } as unknown as Db;
   process.env.AGENTCAP_ACCOUNTING_HOLD_TENANTS = TENANT;
   // Alone, it was dropped and the scope read as every account; beside a 0x one, the commit ran short of it.
-  for (const scope of ["sol:2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH", `${ACCOUNT},2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH`]) {
+  for (const scope of ["agent:2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH", `${ACCOUNT},2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH`]) {
     for (const mode of ["dry-run", "commit"]) {
       output.length = 0;
       process.env.AGENTCAP_REPAIR = mode;

@@ -19,7 +19,7 @@ import {
 } from "@/lib/deposit-math";
 import {
   RELAY_ACTIVITY_URL,
-  ROBINHOOD_CHAIN_ID,
+  DEPOSIT_CHAIN_ID,
   etaText,
   relayDeepLink,
   requestRelayPrice,
@@ -32,10 +32,9 @@ import { usd as formatUsd } from "@/lib/format";
 import { QrCode } from "./QrCode";
 
 /**
- * THREE WAYS IN, ONE ADDRESS. The Add money panel's body:
- * - send USDG on Robinhood Chain straight to the agent account
- * - convert ETH, from Robinhood Chain itself, Ethereum, Base or Arbitrum
- * - convert SOL from Solana
+ * TWO WAYS IN, ONE ADDRESS. The Add money panel's body:
+ * - send USDT on BNB Chain straight to the agent account
+ * - convert ETH, from Ethereum, Base or Arbitrum
  *
  * Every way ends as USDG at the same agent account.
  *
@@ -49,11 +48,10 @@ import { QrCode } from "./QrCode";
  * already land on, with the copy button they expect.
  */
 
-type Way = "usdg" | "eth" | "sol";
+type Way = "usdg" | "eth";
 const WAYS: readonly { id: Way; label: string }[] = [
-  { id: "usdg", label: "Send USDG" },
+  { id: "usdg", label: "Send USDT" },
   { id: "eth", label: "From ETH" },
-  { id: "sol", label: "From SOL" },
 ];
 
 export interface DepositWaysProps {
@@ -73,11 +71,11 @@ export interface DepositWaysProps {
 export function DepositWays({ agent, chainId, balances, gasSponsored, ownerAddress, fetchImpl, now = Date.now }: DepositWaysProps) {
   const [way, setWay] = useState<Way>("usdg");
   const [watch, setWatch] = useWatch(agent, now);
-  const network = chainId === ROBINHOOD_CHAIN_ID ? "Robinhood Chain" : `chain ${chainId}`;
+  const network = chainId === DEPOSIT_CHAIN_ID ? "BNB Chain" : `chain ${chainId}`;
   // Conversions price into USDG on Robinhood Chain mainnet. On any other
   // network they would deliver to an address that is not this agent, so they
   // are not offered at all.
-  const converts = chainId === ROBINHOOD_CHAIN_ID;
+  const converts = chainId === DEPOSIT_CHAIN_ID;
   const agentUsdg = balanceOf(balances?.cashUsdg);
   const startWatch = (quote: DepositQuote) => setWatch({
     baseline: agentUsdg,
@@ -116,10 +114,6 @@ export function DepositWays({ agent, chainId, balances, gasSponsored, ownerAddre
           <Convert key="eth" sources={ETH_SOURCES} agent={agent} balances={balances} gasSponsored={gasSponsored}
             defaultFrom={ownerAddress ?? ""} fetchImpl={fetchImpl} onLeave={startWatch} />
         )}
-        {way === "sol" && converts && (
-          <Convert key="sol" sources={["sol-solana"]} agent={agent} balances={balances} gasSponsored={gasSponsored}
-            defaultFrom="" fetchImpl={fetchImpl} onLeave={startWatch} />
-        )}
       </div>
       {watch && <ArrivalNote watch={watch} current={agentUsdg} now={now} onDone={() => setWatch(null)} />}
     </>
@@ -146,10 +140,10 @@ function SendUsdg({ agent, network }: { agent: string; network: string }) {
         {error && <p role="alert">{error}</p>}
         <dl className="fund-breakdown deposit-facts">
           <div><dt>Network</dt><dd>{network}</dd></div>
-          <div><dt>Token</dt><dd>USDG <span className="deposit-quiet">{CASH.USDG}</span></dd></div>
+          <div><dt>Token</dt><dd>USDT <span className="deposit-quiet">{CASH.USDT}</span></dd></div>
         </dl>
       </div>
-      <p className="fund-chain-warning"><strong>Send USDG on {network}, and only there.</strong> This address on any other network is not your agent: funds sent there are stuck, and no re-sign moves them back. Your balance updates after the transfer is recorded.</p>
+      <p className="fund-chain-warning"><strong>Send USDT on {network}, and only there.</strong> This address on any other network is not your agent: funds sent there are stuck, and no re-sign moves them back. Your balance updates after the transfer is recorded.</p>
     </>
   );
 }
@@ -290,7 +284,7 @@ function Convert({ sources, agent, balances, gasSponsored, defaultFrom, fetchImp
         <input
           value={fromText}
           onChange={(e) => setFromText(e.target.value)}
-          placeholder={source.family === "evm" ? "0x…" : "Your Solana address"}
+          placeholder="0x…"
           autoComplete="off"
           spellCheck={false}
           inputMode="text"
@@ -353,7 +347,7 @@ function Convert({ sources, agent, balances, gasSponsored, defaultFrom, fetchImp
 
 function balanceLine(source: DepositSource, from: string, fromValid: boolean, read: BalanceRead | null): string {
   if (from === "") return "Add the wallet you're sending from to use Max.";
-  if (!fromValid) return source.family === "evm" ? "That isn't an Ethereum-style address (0x and 40 characters)." : "That isn't a Solana address.";
+  if (!fromValid) return "That isn't an Ethereum-style address (0x and 40 characters).";
   if (!read || !read.done) return "Reading this wallet's balance…";
   if (read.value === null) return `Couldn't read this wallet's ${source.asset} on ${source.network}, so Max is off. Type an amount instead.`;
   return `This wallet holds ${formatAmount(read.value, source.decimals, source.inputDecimals)} ${source.asset} on ${source.network}.`;
@@ -377,8 +371,8 @@ function QuoteCard({ quote, source }: { quote: DepositQuote; source: DepositSour
   return (
     <dl className="fund-breakdown deposit-quote" aria-label="Relay's price">
       <div><dt>You send</dt><dd>{formatAmount(quote.amountIn, source.decimals, source.inputDecimals)} {source.asset} on {source.network}{sent && ` (about ${sent})`}</dd></div>
-      <div><dt>Your agent gets</dt><dd>about {usdgText(quote.expectedOut)} USDG</dd></div>
-      <div><dt>At least</dt><dd>{usdgText(quote.minOut)} USDG, or Relay refunds you</dd></div>
+      <div><dt>Your agent gets</dt><dd>about {usdgText(quote.expectedOut)} USDT</dd></div>
+      <div><dt>At least</dt><dd>{usdgText(quote.minOut)} USDT, or Relay refunds you</dd></div>
       <div><dt>Route</dt><dd>{quote.route}</dd></div>
       <div><dt>Fees</dt><dd>{quote.fees.length === 0 ? "none quoted" : quote.fees.map((f) => {
         const dollars = usd(f.usd);
@@ -405,14 +399,11 @@ function AgentGasLine({ source, quote, agent, balances, gasSponsored }: {
   if (gas.kind === "ok" || gas.kind === "sponsored") return null;
   const topup = amountForUsd(source, quote.amountIn, quote.amountInUsd);
   const why = gas.kind === "empty"
-    ? "Your agent has no ETH, and every trade pays a network fee in ETH."
-    : "We couldn't read your agent's ETH just now. If it has none, it can't pay for a trade.";
-  if (source.relayChainId === ROBINHOOD_CHAIN_ID) {
-    return <p className="fund-blocker deposit-gas" role="status">{why} Also send about {topup === null ? "$2 of ETH" : `${formatAmount(topup, source.decimals, source.inputDecimals)} ETH (about $2)`} straight to the same address on Robinhood Chain.</p>;
-  }
+    ? "Your agent has no BNB, and every trade pays a network fee in BNB."
+    : "We couldn't read your agent's BNB just now. If it has none, it can't pay for a trade.";
   return (
     <p className="fund-blocker deposit-gas" role="status">
-      {why} Add about $2 of ETH for its fees as a second, small transfer{topup === null ? "." : <>: <a href={relayDeepLink(source, topup, agent, "ETH")} target="_blank" rel="noopener noreferrer">{formatAmount(topup, source.decimals, source.inputDecimals)} {source.asset} → ETH on Relay</a>.</>}
+      {why} Add about $2 of BNB for its fees as a second, small transfer{topup === null ? "." : <>: <a href={relayDeepLink(source, topup, agent, "gas")} target="_blank" rel="noopener noreferrer">{formatAmount(topup, source.decimals, source.inputDecimals)} {source.asset} → BNB on Relay</a>.</>}
     </p>
   );
 }
@@ -439,14 +430,14 @@ function ArrivalNote({ watch, current, now, onDone }: { watch: ArrivalWatch; cur
 }
 
 export function arrivalText(arrival: Arrival, watch: ArrivalWatch): string {
-  const min = `${usdgText(watch.minOut)} USDG`;
+  const min = `${usdgText(watch.minOut)} USDT`;
   switch (arrival.kind) {
-    case "arrived": return `Arrived: ${usdgText(arrival.rise)} USDG reached your agent.`;
-    case "partial": return `Some USDG arrived (${usdgText(arrival.rise)}), less than the ${min} minimum. Your agent may have traded in the same minute, or this is a different transfer. Check your request on Relay.`;
+    case "arrived": return `Arrived: ${usdgText(arrival.rise)} USDT reached your agent.`;
+    case "partial": return `Some USDT arrived (${usdgText(arrival.rise)}), less than the ${min} minimum. Your agent may have traded in the same minute, or this is a different transfer. Check your request on Relay.`;
     case "waiting": return `Watching for at least ${min} to reach your agent. Relay usually delivers within a minute of signing, and this balance refreshes on its own.`;
     case "late": return `Nothing has arrived after 15 minutes. If you signed on Relay, open your request there: a fill that doesn't complete is refunded to the wallet you sent from.`;
     case "unread": return `We couldn't read your agent's balance just now. That's our read failing, not your deposit. Still watching for ${min}.`;
-    case "no-baseline": return `We couldn't read your agent's balance before you left, so we can't tell when this deposit lands.${arrival.current === null ? "" : ` Its balance now: ${usdgText(arrival.current)} USDG.`} Check your request on Relay.`;
+    case "no-baseline": return `We couldn't read your agent's balance before you left, so we can't tell when this deposit lands.${arrival.current === null ? "" : ` Its balance now: ${usdgText(arrival.current)} USDT.`} Check your request on Relay.`;
   }
 }
 

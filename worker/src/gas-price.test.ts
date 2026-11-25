@@ -3,7 +3,8 @@ import { describe, it } from "node:test";
 import { gasCostUsdg, priceGas, wethPriceToken } from "./gas-price";
 
 const usd8 = (v: number) => BigInt(Math.round(v * 1e8));
-const usdg = (v: number) => BigInt(Math.round(v * 1e6));
+// Cash is 18dp USDT, floored to a millionth.
+const usdg = (v: number) => BigInt(Math.round(v * 1e6)) * 10n ** 12n;
 
 describe("gasCostUsdg", () => {
   it("converts a real gas figure at a real ETH price", () => {

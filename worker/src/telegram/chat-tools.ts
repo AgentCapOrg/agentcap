@@ -18,6 +18,7 @@
  * model's context.
  */
 
+import { bnbChain } from "../../../packages/core/src/chain";
 import type { DatabaseSync, SQLInputValue } from "node:sqlite";
 import type { PublicClient } from "viem";
 
@@ -30,7 +31,6 @@ import {
   STOCK_TOKENS,
   isEvidencedFlow,
   conceptsFor,
-  grantPonsClassVault,
   liveBlockerText,
   renderConcepts,
   type StoredGrant,
@@ -42,14 +42,13 @@ import { readResearch } from "../research-files";
 import type { ResolvedConfig } from "../settings";
 import { rejectRuleLabel, rejectRuleRemedy } from "../thesis-policy";
 import { labelText, shortAddr, tokenLabel, tokenLabelSync } from "../token-label";
-import { readTokenMeta, sanitizeMeta, type TokenMeta } from "../venues/pons-meta";
+import { readTokenMeta, sanitizeMeta, type TokenMeta } from "../venues/token-meta";
 import { carriedDecisionsFrom, carriedHistory, historyFileKey, overlayHistory } from "./history-overlay";
 import { accountSeries, bookOf, periodChange, type PeriodChange } from "../period-pnl";
 import { heldSqlSync, isHeld } from "../held-marks";
-import { admissionStatusLine, agentEpoch, energyStatusLine, openRO, readPositions, redactAddresses, resolveAgent, type StatusContext } from "./reads";
+import { admissionStatusLine, agentEpoch, openRO, readPositions, redactAddresses, resolveAgent, type StatusContext } from "./reads";
 import { settingsListText, strategySettingsSummary } from "./settings-chat";
 import { settleFor, signNeed, type SignNeed } from "./sign-prompt";
-import { isActiveClassState, isQuoteTokenRow } from "../class-active";
 import { dollars, when } from "./trade-rows";
 import { currentTradeEpochSync, readOnlyFactsDb, readTradeFacts, type ChatTradeFact } from "../chat-trades";
 import { distinctTrades } from "../distinct-trades";
@@ -250,7 +249,7 @@ async function withLedgerAsync(ctx: ToolContext, fn: (db: DatabaseSync, who: str
 const NO_AGENT = "No agent is set up yet, so there is nothing on record.";
 
 /** The cash token, lowercased: the leg of a trade that is not the coin. */
-const USDG_L = CASH.USDG.toLowerCase();
+const USDG_L = CASH.USDT.toLowerCase();
 
 /** One number — the column `t` of the first row — or null. Never throws. */
 function scalar(db: DatabaseSync, sql: string, ...args: SQLInputValue[]): number | null {
@@ -345,12 +344,6 @@ const agentStatus: ChatTool = {
               : "Mode: live trading is OFF, so no real orders are placed.",
         );
         lines.push(ctx.paused ? "The owner's PAUSE button is ON — I place no new trades until they resume." : "The pause button is off.");
-        // TODAY'S ENERGY, when the gate enforces — the same line /status shows,
-        // from the worker's own report. It paces what I start on my own — my
-        // AI reviews too, including of my open positions; it never limits
-        // stop-losses, take-profits or the owner's own orders.
-        const energy = energyStatusLine(s.energy, ctx.now);
-        if (energy) lines.push(`Energy: ${energy.replace(/^• energy: /, "")}.`);
         const alive = s.workerAliveSec !== null && s.workerAliveSec < 90;
         if (!alive) lines.push("My trading loop has not checked in for a while — I may be restarting.");
 
@@ -364,13 +357,6 @@ const agentStatus: ChatTool = {
         // A just-signed grant's blocker still describes the OLD grant — don't hand it to the model.
         const justSigned = settledNeed(blocker, ctx) === "just-signed";
         if (blocker && !justSigned) lines.push(`Not trading for real because: ${liveBlockerText(blocker as never) || blocker}.`);
-
-        // "Trading is paused." at the end of a launch-scan line means LAUNCH
-        // BUYING IS OFF — not the pause button. Said here so it is never
-        // mistaken for one again.
-        if (!(ctx.cfg.classSnipeEnabled && ctx.cfg.classPerEntryUsdg > 0)) {
-          lines.push("Buying brand-new launchpad coins is switched off in settings (my launch scanner may still report what it sees — that is not the pause button).");
-        }
 
         const need = settledNeed(blocker, ctx);
         if (need === "just-signed") lines.push("The owner just signed a new trading permission; I'm still switching over to it.");
@@ -798,7 +784,7 @@ const pnlBreakdown: ChatTool = {
 const positions: ChatTool = {
   spec: {
     name: "positions",
-    description: "What I'm holding right now, what each is worth, and launchpad coins I hold with what they cost. Use for 'what do you hold', 'what's in my bag', 'how's X doing'.",
+    description: "What I'm holding right now and what each is worth. Use for 'what do you hold', 'what's in my bag', 'how's X doing'.",
     schema: { type: "object", properties: {}, required: [] },
   },
   async run(_input, ctx) {
@@ -807,30 +793,7 @@ const positions: ChatTool = {
       ctx,
       async (db, who) => {
         const extra: string[] = [];
-        try {
-          // "Held" is the shared definition (class-active.ts): open OR recovered,
-          // and never the vault's own cash row.
-          const rows = db
-            .prepare(
-              "SELECT token, quote_token, state, cost_usdg, first_seen FROM class_positions WHERE agent_id = ? AND state IN ('open','recovered') ORDER BY first_seen DESC LIMIT 8",
-            )
-            .all(who) as { token: string; quote_token: string | null; state: string; cost_usdg: string | number | null; first_seen: number }[];
-          for (const r of rows) {
-            if (!isActiveClassState(r.state) || isQuoteTokenRow({ token: r.token, quoteToken: r.quote_token, state: r.state })) continue;
-            const l = await tokenLabel(db, who, r.token, { customTokens: ctx.cfg.customTokens, own: ctx.book, client: ctx.client });
-            // cost_usdg is stored as a raw 6-decimal INTEGER STRING, not dollars.
-            let cost: number | null = null;
-            try {
-              if (r.cost_usdg !== null && r.state !== "recovered") cost = Number(BigInt(r.cost_usdg)) / 1e6;
-            } catch {
-              cost = null;
-            }
-            extra.push(`  ${labelText(l)} — bought ${when(r.first_seen)}${cost !== null ? ` for ${dollars(cost)}` : " (cost unknown)"}`);
-          }
-        } catch {
-          /* no class positions */
-        }
-        return cap([base, extra.length ? `Launchpad coins held:\n${extra.join("\n")}` : ""].filter(Boolean).join("\n"));
+        return cap(base);
       },
       base,
     );
@@ -839,7 +802,6 @@ const positions: ChatTool = {
 
 /** A log line, labelled so the model cannot misread it. */
 function eventLabel(message: string): string {
-  if (/Trading is paused\.\s*$/.test(message)) return "launch scan (launch buying is switched off — NOT the pause button)";
   if (/^Telegram: (paused|resumed)/.test(message)) return "owner pause button";
   if (/breaker TRIPPED/i.test(message)) return "loss breaker";
   if (/^(NOT trading for real|Paper mode|Live trading is off|trading for real)/.test(message)) return "trading mode";
@@ -1034,14 +996,14 @@ const tokenReport: ChatTool = {
         }
         const a = found[0]!.address;
         const l = await tokenLabel(db, who, a, { customTokens: ctx.cfg.customTokens, own: ctx.book, client: ctx.client });
-        const lines: string[] = [`${labelText(l)} — ${a}${l.trusted ? "" : " (a launchpad coin — it chose its own name)"}`];
+        const lines: string[] = [`${labelText(l)} — ${a}${l.trusted ? "" : " (it chose its own name)"}`];
 
         try {
           const p = db
-            .prepare("SELECT first_seen, liquidity_usd, fdv_usd, curve, quote_token FROM discovered_pools WHERE address = ?")
-            .get(a) as { first_seen: number; liquidity_usd: number | null; fdv_usd: number | null; curve: string | null } | undefined;
+            .prepare("SELECT first_seen, liquidity_usd, fdv_usd FROM discovered_pools WHERE address = ?")
+            .get(a) as { first_seen: number; liquidity_usd: number | null; fdv_usd: number | null } | undefined;
           if (p) {
-            lines.push(`First spotted ${when(p.first_seen)}${p.curve ? " on the launchpad" : ""}.`);
+            lines.push(`First spotted ${when(p.first_seen)}.`);
             if (p.liquidity_usd) lines.push(`Money in its pool when spotted: about ${dollars(p.liquidity_usd)}.`);
             if (p.fdv_usd) lines.push(`Total value (FDV) when spotted: about ${dollars(p.fdv_usd)}.`);
           }
@@ -1112,66 +1074,6 @@ const tokenReport: ChatTool = {
   },
 };
 
-/**
- * WHAT STILL STANDS BETWEEN THIS OWNER AND A LAUNCHPAD BUY, in the words and
- * places of the Settings page. Empty when nothing this can see is in the way.
- *
- * The switch is the one gate an owner knows about, and the one the agent
- * pointed at. The others are each enough on their own to make a switched-on
- * route buy nothing, with nothing said (inspect-tenant.ts lists the same
- * gates for operators; quarantine.ts `scoutAllows` is the scout pair). The
- * owner who asked had $50 per launch coin and scout's per-token cap at its
- * default $25: ticking the switch would have changed nothing they could see.
- *
- * AND THE KEY, NOT ONLY ITS CONTENTS. A class vault sealed into a key that has
- * run out buys nothing (syncGrant retires an expired grant and the worker is
- * left unarmed), and neither does a key the worker has refused (`blocker`, the
- * agent row's live_blocker, the same one agent_status reads) or an agent on
- * the pause button. Without these, "nothing I can see is stopping it" could
- * be said of an agent that cannot trade at all.
- */
-export function launchpadStillNeeded(
-  c: Pick<
-    ResolvedConfig,
-    | "classSnipeEnabled"
-    | "classPerEntryUsdg"
-    | "liveTradingEnabled"
-    | "assetMode"
-    | "discoveryEnabled"
-    | "scoutEnabled"
-    | "scoutBudgetUsdg"
-    | "scoutPerTokenUsdg"
-  >,
-  grant: StoredGrant | null,
-  live: {
-    now: number;
-    paused?: boolean;
-    /** The agent row's live_blocker; null while a just-signed key settles (settledNeed). */
-    blocker?: string | null;
-  },
-): string[] {
-  const usd = (n: number) => `$${n.toFixed(2)}`;
-  const entry = c.classPerEntryUsdg;
-  const need: string[] = [];
-  if (!c.classSnipeEnabled) need.push(`the "launchpad buying (class route)" tick is off`);
-  if (!(entry > 0)) need.push("its per-entry amount is $0");
-  if (!c.liveTradingEnabled) need.push("live trading is off, and practice mode can't buy launch coins (Settings → Trading mode)");
-  if (c.assetMode === "stocks") need.push("asset mode is stocks only (Settings → What it trades)");
-  if (c.discoveryEnabled === false) need.push(`"watch for new pairs" is off, so no new launch is found (same section)`);
-  if (!c.scoutEnabled) need.push("scout mode is off (same section)");
-  if (!(c.scoutBudgetUsdg > 0)) need.push("the scout budget is $0 (same section)");
-  else if (entry > 0 && c.scoutBudgetUsdg < entry) need.push(`the scout budget ${usd(c.scoutBudgetUsdg)} is less than one buy of ${usd(entry)} (same section)`);
-  if (entry > 0 && c.scoutPerTokenUsdg < entry) need.push(`scout "max per token" ${usd(c.scoutPerTokenUsdg)} is less than one buy of ${usd(entry)}, so every buy is refused (same section)`);
-  if (!grantPonsClassVault(grant)) need.push(`the signed key has no launchpad vault: a "Class vault factory contract" under Advanced settings → Connections, then re-sign`);
-  else if (grant && grant.expiresAt <= live.now) need.push("the signed trading key has run out, so nothing is bought until it is re-signed");
-  // "live-not-enabled" is the live-trading line above, said once.
-  if (live.blocker && live.blocker !== "live-not-enabled") {
-    need.push(`I can't trade for real right now: ${liveBlockerText(live.blocker as never) || live.blocker}`);
-  }
-  if (live.paused) need.push("the pause button is on");
-  return need;
-}
-
 const settingsTool: ChatTool = {
   spec: {
     name: "settings",
@@ -1180,47 +1082,13 @@ const settingsTool: ChatTool = {
   },
   async run(_input, ctx) {
     const c = ctx.cfg;
-    // WHERE, NOT JUST "DASHBOARD ONLY". Without the place, an owner asked
-    // where launchpad buying was and the agent made one up ("near the real
-    // money switch"). These are the names and sections the web page shows.
-    //
-    // FIRST, NOT AFTER THE LIST. cap() keeps the head of this; the list is
-    // long, and these lines are the ones the owner was told to go and find.
-    const live = { now: ctx.now, paused: ctx.paused };
-    let missing = launchpadStillNeeded(c, ctx.grant, live);
+    // WHERE, NOT JUST "DASHBOARD ONLY": the names and sections the web page shows.
     const admission = admissionStatusLine(ctx.status.admission);
-    if (admission) missing.unshift(admission);
-    // THE LEDGER ONLY TO BACK "NOTHING IS STOPPING IT". The worker's refusal
-    // (live_blocker) is on the agent row, and reading it opens the ledger,
-    // which this tool otherwise never does (answer-session.integration.test.ts
-    // "opens nothing"). It can only overturn that one claim, so it is read only
-    // when about to make it; a list that already names a gap stays ledger-free.
-    if (!missing.length) {
-      const blocker = withLedger(
-        ctx,
-        (db, who) => {
-          try {
-            const r = db.prepare("SELECT live_blocker FROM agents WHERE smart_account = ?").get(who) as { live_blocker: string | null } | undefined;
-            return r?.live_blocker?.trim() || null;
-          } catch {
-            return null;
-          }
-        },
-        null as string | null,
-        false,
-      );
-      // A just-signed key's blocker still describes the OLD key (settledNeed).
-      if (blocker && settledNeed(blocker, ctx) !== "just-signed") missing = launchpadStillNeeded(c, ctx.grant, { ...live, blocker });
-    }
     const extra = [
       ...(admission ? [admission] : []),
       ...(c.strategy === "trencher" ? [strategySettingsSummary(c as unknown as Record<string, unknown>)] : []),
       `live trading (real money): ${c.liveTradingEnabled ? "on" : "off"} — dashboard only: Settings → Trading mode → "live trading"`,
       `practice mode: ${c.paperTradingEnabled ? "on" : "off"}`,
-      `launchpad buying: ${c.classSnipeEnabled && c.classPerEntryUsdg > 0 ? "on" : "off"} — dashboard only: Settings → Custom tokens & discovery (a section that starts closed) → "launchpad buying (class route)", with the scout settings just above it`,
-      missing.length
-        ? `launchpad buying still needs, before it buys anything: ${missing.join("; ")}`
-        : "launchpad buying: nothing I can see is stopping it",
       `memecoin strategy with real money: ${c.trencherLiveEnabled ? "on" : "off"} — dashboard only: Settings → What it trades → Trencher mode → "let trencher trade for real"`,
     ];
     return cap(`${extra.join("\n")}\n${strip(settingsListText(c as unknown as Record<string, unknown>, { includeStrategySummary: false }))}`);
@@ -1355,7 +1223,7 @@ const msOf = (t: number): number => (t > 0 && t < 1e12 ? t * 1000 : t);
  * the book know nothing else. Owner audience only; null when there is nothing.
  */
 export function localResearchLines(token: Pick<TokenIdentity, "address" | "chain"> | null | undefined, nowMs: number): string | null {
-  if (!token || token.chain?.namespace !== "eip155" || token.chain.networkId !== 4663 || !/^0x[0-9a-fA-F]{40}$/.test(token.address)) return null;
+  if (!token || token.chain?.namespace !== "eip155" || token.chain.networkId !== bnbChain.id || !/^0x[0-9a-fA-F]{40}$/.test(token.address)) return null;
   const address = token.address.toLowerCase();
   const lines: string[] = [];
   try {

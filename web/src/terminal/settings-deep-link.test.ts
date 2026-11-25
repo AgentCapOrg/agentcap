@@ -7,11 +7,10 @@ import React, { act } from "react";
 import { LLM_PROVIDERS, SETTINGS_DEFAULTS } from "@agentcap/core";
 import type { SettingsView } from "@/app/api/settings/route";
 
-// A LINK TO ONE SETTING HAS TO LAND ON IT. The Telegram agent answers "turn on
-// launchpad buying" with an Open Settings button to /settings#launchpad-buying,
-// and the strip links to /settings#telegram. Both controls sit inside groups
-// that start closed, so before this the link reached a page that seemed not to
-// have the setting at all ("I don't see launchpad setting anywhere?").
+// A LINK TO ONE SETTING HAS TO LAND ON IT. The app links to anchors such as
+// /settings#trencher-mode and /settings#telegram. Both controls sit inside groups
+// that start closed, so without this the link reaches a page that seems not to
+// have the setting at all.
 
 const OWNER = `0x${"a".repeat(40)}`;
 let testDom: typeof import("./test-dom").testDom;
@@ -34,10 +33,8 @@ before(async () => {
     if (parent?.filename === settingsPath) {
       if (id === "next/link") return ({ children, ...props }: React.ComponentProps<"a">) => React.createElement("a", props, children);
       if (id === "../SetupChecklist") return () => null;
-      if (id === "../HolderLink") return { HolderLink: () => null };
       if (id === "../XPosting") return { XPosting: () => null };
       if (id === "../AgentImageField") return { AgentImageField: () => null };
-      if (id === "../tier") return { loadTier: async () => null };
     }
     return load.call(this, id, parent, isMain);
   });
@@ -56,7 +53,7 @@ function view(): SettingsView {
   const secret = { set: false, hint: null };
   return {
     bundlerApiKey: secret, groqApiKey: secret, anthropicApiKey: secret,
-    llmApiKey: secret, rialtoApiKey: secret, telegramBotToken: secret,
+    llmApiKey: secret, telegramBotToken: secret,
     telegramTranscribeKey: secret, virtualsApiKey: secret, bitqueryApiKey: secret,
     agentcapToken: secret,
     values: { strategy: "steady-basket", liveTradingEnabled: false, customTokens: [] },
@@ -105,7 +102,7 @@ async function mount(links: React.ReactNode = null) {
 }
 
 function settingLinks() {
-  return React.createElement("nav", null, ...["telegram", "trencher-mode", "launchpad-buying"].map(id =>
+  return React.createElement("nav", null, ...["telegram", "trencher-mode", "agent-settings"].map(id =>
     React.createElement(Link, { key: id, id: `jump-${id}`, href: `/settings#${id}` }, id)));
 }
 
@@ -140,7 +137,7 @@ describe("a link to one setting opens the group it sits in", () => {
   it("follows the real in-place Link on an already mounted Settings screen", async () => {
     await mount(settingLinks());
     const scrolled: string[] = [];
-    for (const id of ["telegram", "trencher-mode", "launchpad-buying"]) {
+    for (const id of ["telegram", "trencher-mode", "agent-settings"]) {
       ui.container.querySelector<HTMLElement>(`#${id}`)!.scrollIntoView = () => { scrolled.push(id); };
     }
     const telegram = groupOf("telegram");
@@ -157,9 +154,9 @@ describe("a link to one setting opens the group it sits in", () => {
     assert.equal(telegram.open, true);
     assert.equal(ui.dom.window.history.length, entries, "the same anchor does not add duplicate Back entries");
     await follow("trencher-mode");
-    await follow("launchpad-buying");
-    assert.equal(groupOf("launchpad-buying").open, true);
-    assert.deepEqual(scrolled, ["telegram", "telegram", "trencher-mode", "launchpad-buying"]);
+    await follow("agent-settings");
+    assert.equal(groupOf("agent-settings").open, true);
+    assert.deepEqual(scrolled, ["telegram", "telegram", "trencher-mode", "agent-settings"]);
   });
 
   it("Back and Forward restore and reveal the previously selected setting", async () => {
@@ -207,22 +204,15 @@ describe("a link to one setting opens the group it sits in", () => {
     assert.equal(ui.dom.window.history.length, entries + 1, "the current screen remains a no-op");
   });
 
-  it("lands on launchpad buying, under the name the agent uses for it", async () => {
-    await arriveWith("#launchpad-buying");
+  it("lands on a setting inside a collapsed group", async () => {
+    await arriveWith("#telegram-groups");
     await mount();
-    const group = groupOf("launchpad-buying");
-    assert.equal(group.open, true, "Custom tokens & discovery is opened for the link");
-    assert.match(group.querySelector("summary")?.textContent ?? "", /Custom tokens & discovery/);
-    const block = ui.container.querySelector("#launchpad-buying")!;
-    assert.match(block.textContent ?? "", /launchpad buying/i);
-    const label = [...group.querySelectorAll(".mm-label")].find((el) => /launchpad buying/i.test(el.textContent ?? ""));
-    assert.ok(label, "the switch itself is labelled launchpad buying");
-    assert.equal(label.closest("label")?.querySelector("input")?.type, "checkbox");
+    assert.equal(groupOf("telegram-groups").open, true, "the group is opened for the link");
   });
 
   it("leaves every group closed when the page is opened without a link to a setting", async () => {
     await mount();
-    assert.equal(groupOf("launchpad-buying").open, false);
+    assert.equal(groupOf("telegram-groups").open, false);
     const telegram = ui.container.querySelector<HTMLDetailsElement>("details#telegram");
     assert.ok(telegram);
     assert.equal(telegram.open, false);
@@ -247,6 +237,6 @@ describe("a link to one setting opens the group it sits in", () => {
       ui.dom.window.location.hash = "#no-such-setting";
       ui.dom.window.dispatchEvent(new ui.dom.window.HashChangeEvent("hashchange"));
     });
-    assert.equal(groupOf("launchpad-buying").open, false);
+    assert.equal(groupOf("telegram-groups").open, false);
   });
 });

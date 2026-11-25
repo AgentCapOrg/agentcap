@@ -128,7 +128,7 @@ function readsOf(testFile: string): string[] {
 const KNOWN_DEBT: Record<string, string[]> = {
   "app/(app)/t/[token]/honesty.test.ts": ["components/TokenFacts.tsx", "components/EntryTimeline.tsx"],
   "app/(app)/captions.test.ts": ["components/PriceLine.tsx"],
-  "app/api/discoveries/honesty.test.ts": ["components/TokenCards.tsx", "app/(app)/tokens/TokensClient.tsx"],
+  "app/api/discoveries/honesty.test.ts": ["components/TokenCards.tsx"],
   "components/equity-line-gate.test.ts": ["components/EquityLine.tsx"],
   "lib/rail-notices.test.ts": ["app/(app)/you/YouClient.tsx"],
   "lib/clear-grant.test.ts": ["components/KillSwitch.tsx"],

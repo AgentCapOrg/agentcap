@@ -9,6 +9,8 @@ const account = `0x${"1".repeat(40)}` as Hex;
 const router = `0x${"2".repeat(40)}` as Hex;
 const token = `0x${"3".repeat(40)}` as Hex;
 const usdgToken = `0x${"4".repeat(40)}` as Hex;
+// Fixture cash is in micro-USDT; the receipt carries 18dp base units.
+const MICRO = 10n ** 12n;
 const transfer = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef" as Hex;
 const hex = (v: bigint) => `0x${v.toString(16)}` as Hex;
 function fixture(fills: { qty: bigint; cash: bigint; sell?: boolean }[], heldRaw: bigint) {
@@ -18,7 +20,7 @@ function fixture(fills: { qty: bigint; cash: bigint; sell?: boolean }[], heldRaw
     const tx = `0x${(i+1).toString(16).padStart(64,"0")}` as Hex;
     const asset = { address: token, topics: [transfer, addressTopic(f.sell ? account : router), addressTopic(f.sell ? router : account)], data: hex(f.qty) };
     logs.push({ ...asset, transactionHash: tx, blockNumber: hex(BigInt(i+1)), logIndex: "0x0" });
-    receipts.set(tx, [asset, { address: usdgToken, topics: [transfer, addressTopic(f.sell ? router : account), addressTopic(f.sell ? account : router)], data: hex(f.cash) }]);
+    receipts.set(tx, [asset, { address: usdgToken, topics: [transfer, addressTopic(f.sell ? router : account), addressTopic(f.sell ? account : router)], data: hex(f.cash * MICRO) }]);
   });
   const chain: ReconcileChain = {
     getBlockNumber: async () => 100n,
@@ -30,7 +32,7 @@ function fixture(fills: { qty: bigint; cash: bigint; sell?: boolean }[], heldRaw
 it("recovers weighted basis from multiple buys and a partial sale in chain order", async () => {
   const { opts } = fixture([{ qty: 10n, cash: 100n }, { qty: 10n, cash: 200n }, { qty: 5n, cash: 90n, sell: true }], 15n);
   const result = await recoverReceiptBasis(opts);
-  assert.deepEqual(result?.basis, { qtyRaw: 15n, costUsdg: 225n });
+  assert.deepEqual(result?.basis, { qtyRaw: 15n, costUsdg: 225n * MICRO });
   assert.equal(result?.transactions.length, 3);
 });
 it("refuses missing opening inventory, mismatched closing inventory, and unavailable receipts", async () => {
@@ -52,13 +54,13 @@ it("recovers closed-position sale P&L only after proving the closing inventory",
   const {opts}=fixture([{qty:10n,cash:100n},{qty:10n,cash:80n,sell:true}],0n);
   assert.equal(await recoverReceiptBasis(opts),null);
   const result=await recoverReceiptBasis({...opts,allowClosed:true});
-  assert.equal(result?.realized[0]?.pnl,-20n);
+  assert.equal(result?.realized[0]?.pnl,-20n * MICRO);
   assert.equal(await recoverReceiptBasis({...opts,heldRaw:1n,allowClosed:true}),null);
 });
 it("deduplicates transfers within a transaction and refuses unknown ordering", async () => {
   const f = fixture([{ qty: 10n, cash: 100n }], 10n);
   f.logs.push({ ...f.logs[0]! });
-  assert.deepEqual((await recoverReceiptBasis(f.opts))?.basis, { qtyRaw: 10n, costUsdg: 100n });
+  assert.deepEqual((await recoverReceiptBasis(f.opts))?.basis, { qtyRaw: 10n, costUsdg: 100n * MICRO });
   delete f.logs[0]!.blockNumber;
   assert.equal(await recoverReceiptBasis(f.opts), null);
 });
@@ -83,7 +85,7 @@ it("a purchase the owner's own key signed, paid in USDG in the same receipt, is 
     f.receipts.set(tx, [{ address: EP, topics: [BEFORE], data: "0x" }, ...legs,
       { address: EP, topics: [UOE, `0x${"77".repeat(32)}` as Hex, addressTopic(account), addressTopic(`0x${"0".repeat(40)}`)], data: `0x${word(ROOT_NONCE)}${word(1n)}${word(1n)}${word(1n)}` }]);
   }
-  assert.deepEqual((await recoverReceiptBasis(f.opts))?.basis, { qtyRaw: 10n, costUsdg: 100n });
+  assert.deepEqual((await recoverReceiptBasis(f.opts))?.basis, { qtyRaw: 10n, costUsdg: 100n * MICRO });
 });
 it("a hanging recovery cannot consume the next trading decision's deadline", async () => {
   const f = fixture([{ qty: 10n, cash: 100n }], 10n);

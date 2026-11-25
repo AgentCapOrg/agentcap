@@ -64,7 +64,7 @@ export const GRANT_PERP_LIGHTER = "perp-lighter-v1";
  *                    466324 and none under 304.
  *   usdg             Lighter asset 3's l1_address (/api/v1/assetDetails) and
  *                    tokenToAssetIndex(USDG) = 3 on the proxy; equal to
- *                    CASH.USDG in tokens.ts (perps.test.ts pins it).
+ *                    CASH.USDT in tokens.ts (perps.test.ts pins it).
  *   assetIndex 3     tokenToAssetIndex(USDG) eth_call; the quote/collateral
  *                    asset, not converted to USDC on this instance.
  *   routePerps 0     RH deposit docs (0 perps, 1 spot) and a decoded live

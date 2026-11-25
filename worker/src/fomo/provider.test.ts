@@ -56,9 +56,9 @@ const TRADE = "a323b5ca-c769-4b07-a422-833c4cafbe1f";
 const POS = "094dd0b3-22ff-41ba-b676-f093c8293f01";
 const PONS_RAW = "0x39DBED3A00000000000000000000000000000C0D";
 const PONS = PONS_RAW.toLowerCase();
-const MINT = "Fu2oZoGxFtCDp29NKA4A89xcn255khq9xbxG7Mmtpump";
+const MINT = "0xc66101b7bbddc5e8738608b393c2eac96bbfef6a";
 const EVM_WALLET = "0x7b4d16237683fe1765e727eadf99c6f02adf0b59";
-const SOL_WALLET = "5AhfPStn66hRYoNNDfJHSDgCH7fBbwMQZUECRrhTo62F";
+const BSC_WALLET = "0xc0e37d37e34c0062e8e2adbc8b9db0fa2a93be9f";
 
 type Rec = Record<string, unknown>;
 type Call = () => Promise<ProviderResult<unknown>>;
@@ -295,17 +295,17 @@ describe("parameter validation and clamping", () => {
     assert.equal(pathOf(sent[0]), `/v2/users/${KALEO}/positions`);
   });
 
-  it("token addresses: EVM lowercased, Solana mint case preserved, anything else refused", async () => {
+  it("token addresses: EVM lowercased, BSC mint case preserved, anything else refused", async () => {
     const { client, sent } = harness(() => json({ windows: {} }));
     assert.equal(failed(await client.tokenStats("0xabc")).failure, "bad-request");
     assert.equal(failed(await client.tokenStats(MINT.slice(0, 20))).failure, "bad-request");
     assert.equal(failed(await client.tokenStats(PONS, { networkId: -1 })).failure, "bad-request");
     assert.equal(sent.length, 0);
     await client.tokenStats(PONS_RAW);
-    await client.tokenStats(MINT, { networkId: 1399811149 });
+    await client.tokenStats(MINT, { networkId: 56 });
     assert.equal(pathOf(sent[0]), `/v2/token/${PONS}/stats`);
     assert.equal(pathOf(sent[1]), `/v2/token/${MINT}/stats`);
-    assert.equal(query(sent[1]!).get("networkId"), "1399811149");
+    assert.equal(query(sent[1]!).get("networkId"), "56");
   });
 
   it("limits are clamped to each route's documented maximum", async () => {
@@ -634,7 +634,7 @@ describe("leaderboard → RankingRow", () => {
     assert.equal(kaleo!.holdingsCount, 4);
     assert.deepEqual(kaleo!.topTokenHints, ["0x7fe995", "0x51fb76"]);
     const text = JSON.stringify(page);
-    assert.ok(!text.includes(EVM_WALLET) && !text.includes(SOL_WALLET), "wallets are never surfaced");
+    assert.ok(!text.includes(EVM_WALLET) && !text.includes(BSC_WALLET), "wallets are never surfaced");
   });
 
   it("drops and counts rows it cannot attribute, and ignores fields it does not know", async () => {
@@ -693,7 +693,7 @@ describe("trader profile", () => {
 });
 
 describe("positions → PositionRow", () => {
-  it("carries cursor and coverage, preserves a Solana mint, and keeps a received position's null entry", async () => {
+  it("carries cursor and coverage, preserves a BSC mint, and keeps a received position's null entry", async () => {
     const { client, sent } = harness(serveFixture("positions"));
     const page = ok(await client.positions(STAR, { status: "closed", cursor: "start", limit: 25 }));
     const q = query(sent[0]!);
@@ -710,8 +710,8 @@ describe("positions → PositionRow", () => {
     assert.equal(pons!.source, "captured");
     assert.equal(pons!.amount, 1500);
 
-    assert.equal(received!.token?.address, MINT, "base58 is case-sensitive");
-    assert.equal(received!.token?.chain.namespace, "solana");
+    assert.equal(received!.token?.address, MINT);
+    assert.equal(received!.token?.chain.namespace, "eip155");
     assert.equal(received!.avgEntryPrice, null, "never bought: null is the truth, not a gap");
     assert.equal(received!.boughtAmount, 0);
     assert.equal(received!.transferredInAmount, 5000);
@@ -747,7 +747,7 @@ describe("swaps → FillRow", () => {
     assert.equal(query(sent[0]!).get("tokenAddress"), PONS);
     assert.equal(page.nextCursor, "sw-0002");
     assert.equal(page.moreAvailable, true);
-    const [rh, sol] = page.rows;
+    const [rh, bnb] = page.rows;
     assert.equal(rh!.swapId, "sw-0001");
     assert.equal(rh!.chain.networkId, 4663);
     assert.equal(rh!.tokenOut.token?.address, PONS);
@@ -758,7 +758,7 @@ describe("swaps → FillRow", () => {
     assert.equal(rh!.tradeIdOut, TRADE);
     assert.equal(rh!.tradeIdIn, null);
     assert.equal(rh!.at, Date.parse("2026-09-20T10:00:00Z"));
-    assert.equal(sol!.tokenIn.token?.address, MINT);
+    assert.equal(bnb!.tokenIn.token?.address, MINT);
   });
 
   it("an EVM-shaped cash leg is never assumed to be on the row's chain, so it never passes as a Robinhood token", async () => {
@@ -766,8 +766,8 @@ describe("swaps → FillRow", () => {
     const RH_TOKEN = "0xaa00000000000000000000000000000000000a0a";
     const row = (over: Rec): Rec => ({
       swapId: "sw-x",
-      chainId: 4663,
-      chain: "robinhood",
+      chainId: 56,
+      chain: "bsc",
       tokenIn: { address: USDC_ETH, amount: 300, usd: 300 },
       tokenOut: { address: RH_TOKEN, amount: 120, usd: 294 },
       tradeIdIn: null,
@@ -778,7 +778,7 @@ describe("swaps → FillRow", () => {
     const read = async (...rows: Rec[]) => ok(await harness(() => json({ swaps: rows })).client.swaps(STAR)).rows;
 
     const [buy] = await read(row({}));
-    assert.equal(buy!.tokenOut.token?.key, `eip155:4663:${RH_TOKEN}`, "the bought token is the row's own");
+    assert.equal(buy!.tokenOut.token?.key, `eip155:56:${RH_TOKEN}`, "the bought token is the row's own");
     assert.ok(isRobinhoodToken(buy!.tokenOut.token));
     assert.equal(buy!.tokenIn.token?.key, `eip155:?:${USDC_ETH}`);
     assert.ok(!isRobinhoodToken(buy!.tokenIn.token), "a cash leg from another chain is never a Robinhood token");
@@ -789,23 +789,23 @@ describe("swaps → FillRow", () => {
     assert.ok(isRobinhoodToken(sell!.tokenIn.token));
     assert.ok(!isRobinhoodToken(sell!.tokenOut.token));
 
-    // A leg that names its own chain is placed there: on Ethereum, it is a cross-chain fill; on Robinhood, it is Robinhood's.
+    // A leg that names its own chain is placed there: on Ethereum, it is a cross-chain fill; on BNB Chain, it is ours.
     const [said] = await read(row({ tokenIn: { address: USDC_ETH, amount: 300, chainId: 1 } }));
     assert.equal(said!.tokenIn.token?.key, `eip155:1:${USDC_ETH}`);
     assert.equal(said!.crossChain, true);
-    const [home] = await read(row({ tokenIn: { address: USDC_ETH, amount: 300, chain: "robinhood" } }));
+    const [home] = await read(row({ tokenIn: { address: USDC_ETH, amount: 300, chainId: 56, chain: "bsc" } }));
     assert.ok(isRobinhoodToken(home!.tokenIn.token), "the leg says so");
     assert.equal(home!.crossChain, false);
 
     // No position id: two EVM legs cannot tell which is the row's own, so neither is placed on its chain...
     const [blind] = await read(row({ tradeIdOut: null }));
     assert.ok(!isRobinhoodToken(blind!.tokenIn.token) && !isRobinhoodToken(blind!.tokenOut.token));
-    // ...and not even when the other leg is a Solana mint: on an EVM row, shape alone never
+    // ...and not even when the other leg is a BSC mint: on an EVM row, shape alone never
     // proves which EVM leg is the row's own (it could be another EVM network's token), so a
     // malformed row with no position id never yields a Robinhood token. Live fills carry an id.
     const [shaped] = await read(row({ tradeIdOut: null, tokenIn: { address: MINT, amount: 300 } }));
     assert.ok(!isRobinhoodToken(shaped!.tokenOut.token));
-    assert.equal(shaped!.tokenIn.token?.chain.namespace, "solana");
+    assert.equal(shaped!.tokenIn.token?.chain.namespace, "eip155");
   });
 
   it("a fill with no readable leg is dropped and counted", async () => {
@@ -822,7 +822,7 @@ describe("balances → HoldingsSnapshot", () => {
     const s = ok(await client.balances(STAR, { chain: "robinhood" }));
     assert.equal(query(sent[0]!).get("chain"), "robinhood");
     assert.equal(s.chainFilterRequested, "robinhood");
-    assert.equal(s.chainFilterHonoured, false, "a Solana row came back on a Robinhood request");
+    assert.equal(s.chainFilterHonoured, false, "a BSC row came back on a Robinhood request");
     assert.equal(s.trader.userId, STAR);
   });
 
@@ -943,7 +943,7 @@ describe("REST alerts → TraderEvent", () => {
     assert.ok(!rows.some((e) => e.positionRealizedPnlUsdCumulative === sum));
   });
 
-  it("theses, perps, listings, transfers and Solana rows keep what they are", async () => {
+  it("theses, perps, listings, transfers and BSC rows keep what they are", async () => {
     const rows = (await page()).rows;
     assert.equal(byId(rows, "e0000000-0000-4000-8000-000000000006").kind, "thesis");
     const perp = byId(rows, "e0000000-0000-4000-8000-000000000007");
@@ -954,9 +954,9 @@ describe("REST alerts → TraderEvent", () => {
     assert.notEqual(transfer.kind, "buy");
     assert.equal(transfer.kind, "other", "a transfer with no stated direction is not guessed");
     assert.equal(transfer.transferId, "tr-0001");
-    const sol = byId(rows, "e0000000-0000-4000-8000-000000000009");
-    assert.equal(sol.token?.address, MINT);
-    assert.equal(sol.token?.chain.networkId, 1399811149);
+    const bnb = byId(rows, "e0000000-0000-4000-8000-000000000009");
+    assert.equal(bnb.token?.address, MINT);
+    assert.equal(bnb.token?.chain.networkId, 56);
     assert.equal(byId(rows, "e0000000-0000-4000-8000-00000000000a").kind, "listing");
   });
 
@@ -964,7 +964,7 @@ describe("REST alerts → TraderEvent", () => {
     const { client } = harness(serveFixture("alerts"));
     const p = ok(await client.alerts({ chain: "robinhood" }, "rest-lookup"));
     assert.equal(p.chainFilterRequested, "robinhood");
-    assert.equal(p.chainFilterHonoured, false, "the Solana buy shows the filter was not applied");
+    assert.equal(p.chainFilterHonoured, false, "the BSC buy shows the filter was not applied");
   });
 });
 
@@ -1084,7 +1084,7 @@ describe("alertFrameToEvent (REST rows and /ws/alerts frames)", () => {
 
 describe("tradeFrameToEvent (/ws/trades)", () => {
   const frames = () => fixture("ws-trades-frames").frames as Rec[];
-  const resolve = (wallet: string) => (wallet === EVM_WALLET ? FRANK : wallet === SOL_WALLET ? KALEO : null);
+  const resolve = (wallet: string) => (wallet === EVM_WALLET ? FRANK : wallet === BSC_WALLET ? KALEO : null);
 
   it("relay and db confirmations are provider-verified; the fill is the execution itself", () => {
     const [relay, db] = frames();
@@ -1114,7 +1114,7 @@ describe("tradeFrameToEvent (/ws/trades)", () => {
     assert.equal(e.verification, "provider-reported", "verification is a claim about a fill; a non-trade frame cannot carry it");
   });
 
-  it("a shape-rule-only frame stays provider-reported, and a Solana mint keeps its case", () => {
+  it("a shape-rule-only frame stays provider-reported, and a BSC mint keeps its case", () => {
     const code = tradeFrameToEvent(frames()[2], NOW, resolve) as TraderEvent;
     assert.equal(code.verification, "provider-reported");
     assert.equal(code.token?.address, MINT);
@@ -1167,8 +1167,8 @@ describe("theses → Thesis", () => {
     const { client } = harness(
       serveFixture("theses-token", (b) => {
         const row = (b.theses as Rec[])[2]!;
-        row.networkId = 1399811149;
-        row.chain = "solana";
+        row.networkId = 56;
+        row.chain = "bsc";
         row.token = { symbol: "FU2O", address: MINT };
       }),
     );
@@ -1189,14 +1189,14 @@ describe("theses → Thesis", () => {
   it("drops malformed and chain-incompatible explicit addresses instead of turning them into unplaced evidence", async () => {
     const { client } = harness(serveFixture("theses-token", (b) => {
       const rows = b.theses as Rec[];
-      for (const [i, address] of ["", "bad-address", MINT, 123].entries()) {
+      for (const [i, address] of ["", "bad-address", 123].entries()) {
         rows.push({ ...rows[0], id: `bad-${i}`, token: { symbol: "OTHER", address } });
       }
       rows.push({ ...rows[0], id: "missing-address", token: { symbol: "PONS" } });
     }));
     const p = ok(await client.thesesByToken(PONS, { network: "robinhood" }));
     assert.equal(p.rows.length, 4);
-    assert.equal(p.dropped, 4);
+    assert.equal(p.dropped, 3);
     assert.equal(p.partial, true);
     assert.ok(p.rows.every((r) => r.token?.key === `eip155:4663:${PONS}`));
     assert.ok(p.rows.some((r) => r.id === "missing-address"), "the token endpoint can omit the requested address");
@@ -1262,8 +1262,7 @@ describe("theses → Thesis", () => {
 
   it("network and address must agree; arc is passed through", async () => {
     const { client, sent } = harness(serveFixture("theses-token"));
-    assert.equal(failed(await client.thesesByToken(PONS, { network: "sol" })).failure, "bad-request");
-    assert.equal(failed(await client.thesesByToken(MINT, { network: "base" })).failure, "bad-request");
+    assert.equal(failed(await client.thesesByToken("not-an-address", { network: "base" })).failure, "bad-request");
     assert.equal(sent.length, 0);
     await client.thesesByToken(PONS, { network: "arc", pages: 50 });
     assert.equal(query(sent[0]!).get("network"), "arc");
@@ -1272,8 +1271,8 @@ describe("theses → Thesis", () => {
 
   it("the global feed carries equity and checks its chain filter", async () => {
     const { client, sent } = harness(serveFixture("theses-global"));
-    const p = ok(await client.theses({ chain: "solana", sort: "equity" }));
-    assert.equal(query(sent[0]!).get("chain"), "solana");
+    const p = ok(await client.theses({ chain: "bsc", sort: "equity" }));
+    assert.equal(query(sent[0]!).get("chain"), "bsc");
     assert.equal(p.chainFilterHonoured, false);
     assert.equal(p.rows[0]!.authorEquityUsd, 40000);
     assert.equal(p.rows[0]!.likes, null, "this feed carries no likes: unknown, not zero");
@@ -1565,10 +1564,10 @@ describe("live shapes: account, rankings, search and tokens", () => {
       [
         [`eip155:4663:${FAKE}`, 2400.5, 500.25],
         [`eip155:1:${FAKE}`, 300, -20],
-        ["solana:1399811149:FakeCoinMint1111111111111111111111111pump", 80, 0],
+        ["eip155:56:0xe59b28a6f3fa7c14ad0c1a99c38cdf87a7f1bb7d", 80, 0],
       ],
     );
-    assert.equal(page.topTokensDropped, 1, "a mint on an EVM network cannot be placed, and is counted");
+    assert.equal(page.topTokensDropped, 1, "a malformed address cannot be placed, and is counted");
     // The per-token P&L has no window: it is never carried under a name that reads as the board's.
     for (const t of a!.topTokens ?? []) assert.ok(!("pnlUsd" in t), "a holding's P&L is unwindowed, not the 7d figure");
     // `verified` is the profile badge; the wallet proof is separate.
@@ -1619,7 +1618,7 @@ describe("live shapes: account, rankings, search and tokens", () => {
     const r = await client.tokenBoard("graduated", 5);
     const p = ok(r);
     assert.equal(p.rows.length, 2);
-    assert.equal(p.rows[0]!.token?.key, "solana:1399811149:FakeBoardMint44444444444444444444444444pump");
+    assert.equal(p.rows[0]!.token?.key, "eip155:56:0x9e16e24db14cf03a8369bc7a262f82d38184baec");
     assert.equal(p.rows[1]!.token?.key, `eip155:4663:${FAKE}`);
     assert.equal(p.rows[0]!.change24hPct, -12.5);
     assert.equal(p.rows[0]!.priceUsd, 0.00001234);
@@ -1719,12 +1718,12 @@ describe("live shapes: the app feed (REST rows and /ws/alerts frames)", () => {
   it("stream frames: every chain keeps its own identity; perps carry text-derived detail and no token", () => {
     const evs = frames().map((f) => alertFrameToEvent(f, NOW, "stream"));
     assert.equal(evs[0], null, "the welcome frame is not an event");
-    const [, restCopy, bnb, eth, sol, open, close, thesis] = evs;
+    const [, restCopy, bnb, eth, bnb2, open, close, thesis] = evs;
     assert.equal(bnb?.token?.key, "eip155:56:0xbb00000000000000000000000000000000000b0b");
     assert.equal(bnb?.token?.chain.slug, "bsc");
     assert.equal(eth?.token?.key, "eip155:1:0xee00000000000000000000000000000000000e0e");
     assert.equal(eth?.token?.chain.slug, "eth");
-    assert.equal(sol?.token?.key, "solana:1399811149:FakeCoinMint1111111111111111111111111pump", "a mint keeps its case");
+    assert.equal(bnb2?.token?.chain.slug, "bsc");
     assert.equal(open?.kind, "perp");
     assert.equal(open?.token, null);
     assert.equal(open?.tokenLabel.symbol, "FPERP");
@@ -1790,7 +1789,7 @@ describe("live shapes: the app feed (REST rows and /ws/alerts frames)", () => {
       b.filters = { ...(b.filters as Rec), chain };
     };
     assert.equal((await page(only(null))).chainFilterHonoured, false, "an echo with no chain: the filter was not applied");
-    assert.equal((await page(only("solana"))).chainFilterHonoured, false, "an echo naming another chain");
+    assert.equal((await page(only("bsc"))).chainFilterHonoured, false, "an echo naming another chain");
     assert.equal((await page(only("robinhood"))).chainFilterHonoured, null, "an echo naming ours proves nothing");
     assert.equal((await page((b) => { b.alerts = [perp]; delete b.filters; })).chainFilterHonoured, null);
     // The echo never overrides what the rows say.
@@ -1805,7 +1804,7 @@ describe("live shapes: holdings, fills and theses", () => {
   it("balances: an unpriced coin is unknown, not worthless; dust stays dust; excluded totals are stated, never added", async () => {
     const { client } = harness(serveFixture("live-shape-balances"));
     const s = ok(await client.balances(USER));
-    assert.equal(s.rows.length, 5);
+    assert.equal(s.rows.length, 4);
     assert.equal(s.dropped, 0);
     const bySym = new Map(s.rows.map((r) => [r.label.symbol, r]));
     const unpriced = bySym.get("FBASE")!;
@@ -1819,8 +1818,8 @@ describe("live shapes: holdings, fills and theses", () => {
     assert.equal(dust.includedInTotal, true);
     assert.equal(s.unpricedRows, 1);
     assert.equal(s.excludedRows, 1);
-    assert.equal(s.totalValueUsdFloor, 3600);
-    assert.equal(s.providerTotalValueUsd, 3600, "our floor and the vendor's own sum agree");
+    assert.equal(s.totalValueUsdFloor, 3500);
+    assert.equal(s.providerTotalValueUsd, 3500, "our floor and the vendor's own sum agree");
     assert.deepEqual(s.excluded, { otherEquityUsd: 40.25, livePerpPnlUsd: -7.5, perpPositions: 0, nativeEvmRows: 0 });
     assert.equal(s.complete, true);
     assert.equal(s.truncated, false);
@@ -1828,7 +1827,6 @@ describe("live shapes: holdings, fills and theses", () => {
     assert.equal(bySym.get("FETH")!.token?.chain.slug, "eth");
     assert.equal(unpriced.token?.chain.slug, "base");
     assert.equal(dust.token?.key, "eip155:56:0xbb00000000000000000000000000000000000b0b");
-    assert.equal(bySym.get("FSOL")!.token?.address, "FakeHo1dMint5555555555555555555555555555555");
   });
 
   it("balances: an answer keyed to another trader is not about ours", async () => {
@@ -1846,23 +1844,22 @@ describe("live shapes: holdings, fills and theses", () => {
   it("swaps: a cash leg on another chain is placed by its own shape, and the window is not the history", async () => {
     const { client } = harness(serveFixture("live-shape-swaps"));
     const p = ok(await client.swaps(USER, { limit: 10 }));
-    assert.equal(p.rows.length, 3);
+    assert.equal(p.rows.length, 2);
     assert.equal(p.dropped, 0);
-    const [sol, rh, bsc] = p.rows;
-    assert.equal(sol!.crossChain, false);
+    const [rh, bsc] = p.rows;
     assert.equal(rh!.chain.networkId, 4663);
     assert.equal(rh!.tokenOut.token?.key, "eip155:4663:0xaa00000000000000000000000000000000000a0a");
-    assert.equal(rh!.tokenIn.token?.key, "solana:?:FakeCashMint2222222222222222222222222222Usd", "readable, never executable");
+    assert.equal(rh!.tokenIn.token?.key, "eip155:?:0x54b815dc9398709bdab214a45d32200a93ed3b6e", "readable, never executable");
     assert.equal(rh!.tokenIn.usd, 300);
-    assert.equal(rh!.crossChain, true);
+    assert.equal(rh!.crossChain, null, "an unplaced leg: unknown, not claimed");
     assert.equal(bsc!.tokenIn.token?.key, "eip155:56:0xbb00000000000000000000000000000000000b0b");
-    assert.equal(bsc!.tokenOut.token?.chain.namespace, "solana");
+    assert.equal(bsc!.tokenOut.token?.chain.namespace, "eip155");
     assert.equal(bsc!.tradeIdIn, "7a7a7a7a-1111-4222-8333-000000000003");
     assert.equal(bsc!.tradeIdOut, null);
     assert.equal(p.complete, false);
     assert.equal(p.partial, false);
     assert.equal(p.sourceCapped, false);
-    assert.equal(p.providerCount, 3);
+    assert.equal(p.providerCount, 2);
     assert.equal(p.moreAvailable, true, "a cursor handed back means more may exist");
     assert.equal(p.nextCursor, "5a5a5a5a-1111-4222-8333-000000000003");
     // The documented flag still wins when sent.

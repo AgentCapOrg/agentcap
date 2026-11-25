@@ -15,7 +15,7 @@ import { REPORTS_TOOLS } from "./reports";
 import { PORTFOLIO_TOOLS } from "./portfolio";
 
 const NOW = 1_800_000_000;
-const USDG = CASH.USDG.toLowerCase();
+const USDG = CASH.USDT.toLowerCase();
 const ROUTER = "0x00000000000000000000000000000000000000f1";
 const TOKEN = "0x00000000000000000000000000000000000c0de1";
 // A second spelling of the same account, as a redeploy can write it.

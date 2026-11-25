@@ -37,22 +37,20 @@ export { collapseOf };
 /** GeckoTerminal's network ids for the chains a room's coin may be on. */
 export const FACTS_NETWORK_IDS: Readonly<Record<FactsNetwork, string>> = {
   robinhood: GECKO_NETWORK,
-  solana: "solana",
   base: "base",
   ethereum: "eth",
   bsc: "bsc",
 };
 
 const EVM_ADDRESS = /^0x[0-9a-fA-F]{40}$/;
-const SOLANA_MINT = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 
-/** Whether `address` can be a token on `network`. A Solana mint is case-sensitive and is never lowercased. */
+/** Whether `address` can be a token on `network`. */
 export function factsAddressOk(network: unknown, address: unknown): boolean {
   if (typeof network !== "string" || !Object.hasOwn(FACTS_NETWORK_IDS, network) || typeof address !== "string") return false;
-  return network === "solana" ? SOLANA_MINT.test(address) : EVM_ADDRESS.test(address);
+  return EVM_ADDRESS.test(address);
 }
 
-const sameAddress = (network: FactsNetwork, a: string, b: string): boolean => (network === "solana" ? a === b : a.toLowerCase() === b.toLowerCase());
+const sameAddress = (a: string, b: string): boolean => a.toLowerCase() === b.toLowerCase();
 
 /** Index ids are "<network>_<address>": split at the first "_", the prefix checked. */
 function idAddress(id: unknown, net: string): string | null {
@@ -106,11 +104,11 @@ export function parseFactsPools(body: unknown, network: FactsNetwork, address: s
       const r = row as { id?: unknown; attributes?: Record<string, unknown>; relationships?: Record<string, { data?: { id?: unknown } }> };
       const a = r.attributes ?? {};
       const poolAddress = (typeof a.address === "string" ? a.address : null) ?? idAddress(r.id, net);
-      if (!poolAddress || !(network === "solana" ? SOLANA_MINT.test(poolAddress) : /^0x(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64})$/.test(poolAddress))) continue;
+      if (!poolAddress || !/^0x(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64})$/.test(poolAddress)) continue;
       const base = idAddress(r.relationships?.base_token?.data?.id, net);
       const quote = idAddress(r.relationships?.quote_token?.data?.id, net);
-      const isBase = base !== null && sameAddress(network, base, address);
-      const isQuote = quote !== null && sameAddress(network, quote, address);
+      const isBase = base !== null && sameAddress(base, address);
+      const isQuote = quote !== null && sameAddress(quote, address);
       if (!isBase && !isQuote) continue;
       const priceUsd = pos(isBase ? a.base_token_price_usd : a.quote_token_price_usd);
       if (priceUsd === null) continue;
@@ -190,7 +188,7 @@ export function parseFactsInfo(body: unknown, network: FactsNetwork, address: st
   try {
     const d = (body as { data?: { id?: unknown; attributes?: Record<string, unknown> } } | null)?.data;
     const id = idAddress(d?.id, FACTS_NETWORK_IDS[network]);
-    if (!d || !id || !sameAddress(network, id, address) || !d.attributes) return null;
+    if (!d || !id || !sameAddress(id, address) || !d.attributes) return null;
     const a = d.attributes;
     const h = a.holders as { count?: unknown; distribution_percentage?: Record<string, unknown>; last_updated?: unknown } | undefined;
     const c = count(h?.count);
@@ -303,8 +301,7 @@ export function createCoinFactsReader(o: { fetchJson?: FactsFetch; now?: () => n
       if (!limiter.take(q.chatId)) return { ok: false, why: "busy" };
       const network = q.network;
       const net = FACTS_NETWORK_IDS[network];
-      // A Solana mint is never lowercased, in a route or a memo key.
-      const addr = network === "solana" ? q.address : q.address.toLowerCase();
+      const addr = q.address.toLowerCase();
       const budget = Math.max(1, Math.min(FACTS_TIMEOUT_MS, Number.isFinite(q.timeoutMs) ? q.timeoutMs : FACTS_TIMEOUT_MS));
       const until = now() + budget;
       const left = (): number => until - now();

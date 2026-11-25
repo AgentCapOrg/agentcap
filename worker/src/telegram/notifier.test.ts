@@ -407,7 +407,7 @@ test("NOR IS THE MARKET — the UBIK line an owner was sent", () => {
   const first = tradeLine(row, null, true, { label: "UBIK", side: "buy" });
   assert.doesNotMatch(first, /the wall/, "not the owner's wall");
   assert.match(first, /^🚫 a buy of UBIK didn't go out — no route to trade it\. Nothing was spent\./);
-  assert.match(first, /If it trades only on Uniswap v4 and your key doesn't carry the v4 adapter yet, save the V4SelfSwap adapter in \/settings and re-sign at \/grant/);
+  assert.match(first, /No PancakeSwap v3 pool could quote it, and no setting adds another swap route/);
   assert.match(first, /10\.00 USDG stayed home \(no-route\)$/);
   assert.doesNotMatch(tradeLine(row, null, false, { label: "UBIK", side: "buy" }), /\/grant/, "repeats carry no instruction");
 

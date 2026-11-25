@@ -28,7 +28,7 @@
 import { safeFetchUrl } from "../../../packages/core/src/index";
 import { FINDINGS_MAX, type FoundAddress, type FoundRepo, type FoundWhere, type SiteFindings } from "../../../packages/core/src/site-scan";
 import { readBoundedJson } from "../bounded-read";
-import { sanitizeMeta } from "./pons-meta";
+import { sanitizeMeta } from "./token-meta";
 
 export interface PageRead {
   status: number;
@@ -135,9 +135,9 @@ export function scanOf(v: unknown): PageScan | null {
   const r = v as Record<string, unknown>;
   const f = (r.findings ?? {}) as Record<string, unknown>;
   const l = (r.loaded ?? {}) as Record<string, unknown>;
-  const addr = (x: unknown, chain: "evm" | "solana"): FoundAddress[] => (Array.isArray(x) ? x : []).slice(0, FINDINGS_MAX).flatMap((a): FoundAddress[] => {
+  const addr = (x: unknown, chain: "evm"): FoundAddress[] => (Array.isArray(x) ? x : []).slice(0, FINDINGS_MAX).flatMap((a): FoundAddress[] => {
     const o = (a ?? {}) as Record<string, unknown>;
-    const ok = typeof o.address === "string" && (chain === "evm" ? /^0x[0-9a-fA-F]{40}$/.test(o.address) : /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(o.address));
+    const ok = typeof o.address === "string" && /^0x[0-9a-fA-F]{40}$/.test(o.address);
     return ok ? [{ address: o.address as string, chain, where: wheres(o.where) }] : [];
   });
   const repos = (Array.isArray(f.github) ? f.github : []).slice(0, FINDINGS_MAX).flatMap((g): FoundRepo[] => {
@@ -153,7 +153,7 @@ export function scanOf(v: unknown): PageScan | null {
     links: (Array.isArray(r.links) ? r.links : []).slice(0, 40).flatMap((x) => { const o = (x ?? {}) as Record<string, unknown>; return typeof o.href === "string" ? [{ text: typeof o.text === "string" ? o.text.slice(0, 80) : "", href: o.href.slice(0, 300) }] : []; }),
     finalUrl: typeof r.finalUrl === "string" ? r.finalUrl.slice(0, 300) : "",
     allText: typeof r.allText === "string" ? r.allText.slice(0, 40_000) : "",
-    findings: { evm: addr(f.evm, "evm"), solana: addr(f.solana, "solana"), github: repos, x: strs(f.x, FINDINGS_MAX, 15), telegram: f.telegram === true, discord: f.discord === true, docs: f.docs === true },
+    findings: { evm: addr(f.evm, "evm"), github: repos, x: strs(f.x, FINDINGS_MAX, 15), telegram: f.telegram === true, discord: f.discord === true, docs: f.docs === true },
     loaded: { scripts: n(l.scripts), scriptBytes: n(l.scriptBytes), ownCalls: n(l.ownCalls), callHosts: strs(l.callHosts, 12, 253) },
   };
 }

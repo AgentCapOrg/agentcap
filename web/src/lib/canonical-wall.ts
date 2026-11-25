@@ -20,18 +20,9 @@
  * riding beside a rule can differ without changing those bytes, and does not
  * matter; a recipient pin, a cap, a target or an extra permission does.
  *
- * THE ENERGY BUY HAS A MARKER AND NO SEALED ADDRESS, on purpose. GRANT_ENERGY
- * ("energy-buy-v1") names the frozen ENERGY_ROUTE_V1 forever, so the marker plus
- * the account IS the permission: `grantWallOptions` turns it into
- * `energyBuy: true` and the rebuild below reproduces the router permission and
- * the router's place in the USDG approve byte for byte. A marker over a wall
- * without it, or the permission without the marker, fails that comparison like
- * any other disagreement. The one thing the rebuild cannot see is the CHAIN, so
- * that is refused explicitly: the route exists only on Robinhood Chain mainnet.
- *
  * PERPETUALS HAVE A MARKER AND A SEALED KEY. GRANT_PERP_LIGHTER
- * ("perp-lighter-v1") names the frozen LIGHTER_ROUTE_V1 the way GRANT_ENERGY
- * names its route, but the wall also pins ONE API public key into
+ * ("perp-lighter-v1") names the frozen LIGHTER_ROUTE_V1,
+ * but the wall also pins ONE API public key into
  * `changePubKey`, so the marker alone is not the permission: the grant's `perp`
  * block carries the key, and the rebuild takes both (through `grantWallOptions`
  * → `grantPerp`, the reader the worker trusts). A block whose key is not
@@ -41,22 +32,21 @@
  * the byte comparison like any other disagreement.
  *
  * WHAT THE CANONICAL WALL NEVER CARRIES, whatever the grant declares: a USDG
- * `transfer` (no signer registers a withdrawal address), the Rialto target and
- * the v4 Permit2/UniversalRouter pair (both hard-off in every signer). Their
- * markers — `transfer`, `rialto`, `v4`, and the retired `multihop` — are
- * refused outright rather than rebuilt, because each one opens a route in the
- * worker's mirror that the rebuilt wall would not contain.
+ * `transfer` (no signer registers a withdrawal address). Its marker, the
+ * retired `multihop`, and any marker this build does not know — including the
+ * removed `rialto`, `v4`, `v4-adapter`, `pons-adapter`, `pons-class` and
+ * `energy-buy-v1` — are refused outright rather than rebuilt, because the wall
+ * would not contain what they claim. The sealed address fields those routes
+ * carried are refused too.
  *
  * A PERPS WALLET'S GRANT IS REBUILT AS THE PERPS WALL. Its signed `purpose`
  * reaches `grantWallOptions`, which sets `perpsOnly` from it and from nothing
  * else, so a Perps grant is compared against the wall a Perps wallet may hold:
- * no Spot spender, token, adapter, vault or route at all. A Perps grant sealed
+ * no Spot spender, token, vault or route at all. A Perps grant sealed
  * over the Spot wall at the Perps address fails the byte comparison. And in
  * this build that wall is EMPTY (decision D5): paper Perps needs no on-chain
  * authority, so a Perps grant that declares a marker, a token, a sealed
- * address, a perp block or an energy buy is refused by name before the
- * rebuild. The energy buy most of all: the Perps account is a mainnet account,
- * and a paper product must not hold a key that can spend its real USDG.
+ * address or a perp block is refused by name before the rebuild.
  *
  * Shared by partner enrollment (web/src/lib/partner-enrollment.ts, where it
  * started) and hosted POST /api/grants. One implementation, because two would
@@ -70,20 +60,14 @@ import { getActionSelector } from "@zerodev/sdk";
 import {
   buildWallPolicies,
   grantWallOptions,
-  GRANT_PONS_ADAPTER,
-  GRANT_PONS_CLASS,
   GRANT_TRENCHER,
-  GRANT_V4_ADAPTER,
-  GRANT_ENERGY,
   GRANT_SCOPED_SPENDERS,
-  ENERGY_ROUTE_V1,
   GRANT_PERP_LIGHTER,
   LIGHTER_ROUTE_V1,
   validatePerpPubKey,
   TRADEABLE_V2,
-  isEnergyReserveToken,
   isGrantPurpose,
-  robinhoodChain,
+  bnbChain,
   type StoredGrant,
 } from "@agentcap/core";
 
@@ -95,14 +79,8 @@ const ZERO = "0x0000000000000000000000000000000000000000";
  *
  * web/src/lib/session.ts prepareGrantCore (which the dashboard, the iOS engine
  * and sdk/browser.ts all sign through) and mobile/src/crypto/signGrant.ts mint
- * these and only these. `v4` is in neither list's reachable output — both pin
- * `allowUniswapV4 = false` — and `transfer`, `rialto` and `multihop` are no
- * longer minted by anything.
- *
- * GRANT_ENERGY is minted only on 4663 and only when the wall still fits
- * (`energyBuyFits`), from the same boolean that built the permission. It is
- * listed here in the SAME change that lets a signer mint it: a signer shipped
- * ahead of this list would have every new hosted grant refused.
+ * these and only these. `transfer` and `multihop` are no longer minted by
+ * anything.
  *
  * GRANT_PERP_LIGHTER is listed in the same change that lets a signer mint it
  * (4663 only, when the wall still fits per `perpFits`, from the one value that
@@ -116,11 +94,7 @@ const ZERO = "0x0000000000000000000000000000000000000000";
  */
 export const CANONICAL_GRANT_FEATURES: readonly string[] = [
   TRADEABLE_V2,
-  GRANT_V4_ADAPTER,
-  GRANT_PONS_ADAPTER,
-  GRANT_PONS_CLASS,
   GRANT_TRENCHER,
-  GRANT_ENERGY,
   // A shape version, not a capability: grantWallOptions rebuilds a scoped wall
   // from it, so the comparison below checks the wall that was actually signed.
   // Listed in the same change that lets both signers mint it.
@@ -131,12 +105,20 @@ export const CANONICAL_GRANT_FEATURES: readonly string[] = [
 /** The perp block's fields — PUBLIC key, index, route, and at most the hosted sealed blob. */
 const PERP_FIELDS = ["route", "apiKeyIndex", "apiPublicKey", "apiKeySealed"] as const;
 
+/**
+ * Sealed address fields of removed routes. No wall here backs any of them, so a
+ * grant carrying one is refused by name rather than stored beside a wall that
+ * cannot honour it.
+ */
+const REMOVED_SEALED_FIELDS = [
+  "v4AdapterAddress",
+  "ponsAdapterAddress",
+  "ponsClassVaultAddress",
+  "ponsClassVaultFactoryAddress",
+] as const;
+
 /** A sealed address field, and the marker that must travel with it. */
 const SEALED: readonly (readonly [keyof StoredGrant, string])[] = [
-  ["v4AdapterAddress", GRANT_V4_ADAPTER],
-  ["ponsAdapterAddress", GRANT_PONS_ADAPTER],
-  ["ponsClassVaultAddress", GRANT_PONS_CLASS],
-  ["ponsClassVaultFactoryAddress", GRANT_PONS_CLASS],
   ["trencherVaultAddress", GRANT_TRENCHER],
   ["trencherFactoryAddress", GRANT_TRENCHER],
 ];
@@ -304,32 +286,6 @@ function verify(grant: Record<string, unknown>): void {
   if (tokens !== undefined && (!Array.isArray(tokens) || tokens.length > 50 || tokens.some((a) => typeof a !== "string" || !ADDRESS.test(a)))) {
     refuse(400, "invalid_grant", "Invalid granted token addresses");
   }
-  // $AGENTCAP SEALED AS A TRADED TOKEN IS A SIGNER FROM BEFORE ENERGY. Every
-  // current signer drops the reserve from the sealed extras (core wall.ts
-  // usableExtraTokens), so `grantTokens` never names it; an iOS build or a tab
-  // loaded before energy shipped still seals it, with an uncapped approve that
-  // lets the key SELL the owner's energy. The rebuild below would refuse that
-  // too — as "does not implement the advertised limits", which tells the owner
-  // nothing they can act on while their grant runs out. So it is refused FIRST,
-  // by name, with the way out. Refused rather than accepted: the energy
-  // permission's safety case is that nothing in the wall can spend the reserve.
-  //
-  // THE WAY OUT IS A FRESH CLIENT, AND ONLY THAT. GET /api/settings no longer
-  // serves the reserve as a custom token (energy-reserve.ts), so any client
-  // that reads it now seals a wall without it; what still reaches here is a tab
-  // loaded before the deploy or an app build from before energy. "Remove it
-  // from your custom tokens" sent that owner to a list no screen shows any
-  // more — reloading (or updating) is what works.
-  // No trailing period: POST /api/grants appends its own sentence.
-  if ((tokens as string[] | undefined)?.some((a) => isEnergyReserveToken(a))) {
-    refuse(
-      400,
-      "invalid_wall",
-      "This page or app version is out of date: it seals $AGENTCAP as a token your agent trades, but $AGENTCAP is " +
-        "now its energy, which the agent's key may only buy. Reload the page (or update the app) and sign again",
-    );
-  }
-
   // THE MARKERS ARE AN ALLOWLIST, NOT A DENYLIST. A marker the worker reads
   // and the rebuild below does not model is a route the mirror would open over
   // a wall that lacks it — or, for `transfer` dated before the allowlist, one
@@ -346,9 +302,8 @@ function verify(grant: Record<string, unknown>): void {
   // permission (core wall.ts perpsOnly with no perp block and no energy buy),
   // so a Perps grant names no marker, no token, no sealed address and no perp
   // block. Each of those is either a Spot permission a Perps key must never
-  // hold, or a venue or energy permission this build does not offer: the
-  // energy buy above all, which would let a paper wallet's key spend the real
-  // USDG its mainnet account holds. Refused BY NAME rather than left to the
+  // hold, or a venue permission this build does not offer. Refused BY NAME
+  // rather than left to the
   // byte comparison below: the rebuild drops every Spot option for a Perps
   // wall, so a Perps grant declaring Spot markers over an empty wall would
   // pass it, storing metadata the worker's mirror reads (limitsFromGrant) for
@@ -357,7 +312,7 @@ function verify(grant: Record<string, unknown>): void {
   // and marker are admitted here, in the same change that lets a signer seal them.
   const perpsWallet = grant.purpose === "perps";
   if (perpsWallet) {
-    if (grant.chainId !== robinhoodChain.id) {
+    if (grant.chainId !== bnbChain.id) {
       refuse(400, "invalid_grant", "A Perps wallet exists only on Robinhood Chain mainnet");
     }
     if (
@@ -365,13 +320,14 @@ function verify(grant: Record<string, unknown>): void {
       features.length > 0 ||
       (Array.isArray(tokens) && tokens.length > 0) ||
       SEALED.some(([field]) => grant[field] !== undefined) ||
+      REMOVED_SEALED_FIELDS.some((field) => grant[field] !== undefined) ||
       grant.perp !== undefined ||
       grant.perpRecovery !== undefined
     ) {
       refuse(
         400,
         "invalid_wall",
-        "A Perps wallet's permission carries nothing in this build: no Spot permission, no energy buy and no perpetuals key",
+        "A Perps wallet's permission carries nothing in this build: no Spot permission and no perpetuals key",
       );
     }
   }
@@ -383,26 +339,20 @@ function verify(grant: Record<string, unknown>): void {
     const named = unknown.slice(0, 5).map((f) => JSON.stringify(f)?.slice(0, 40) ?? String(f)).join(", ");
     refuse(400, "invalid_grant", `The permission declares features the AgentCap wall does not grant: ${named}`);
   }
+  // A SEALED ADDRESS FOR A REMOVED ROUTE is metadata no wall here backs.
+  // Refused by name, so it is never stored beside a wall that cannot honour it.
+  if (REMOVED_SEALED_FIELDS.some((field) => grant[field] !== undefined)) {
+    refuse(400, "invalid_grant", "Permission adapter metadata does not match its feature markers");
+  }
   for (const [field, marker] of SEALED) {
     if (grant[field] !== undefined) address(grant[field], field);
     if ((grant[field] !== undefined) !== (features as string[]).includes(marker)) {
       refuse(400, "invalid_grant", "Permission adapter metadata does not match its feature markers");
     }
   }
-  // THE ENERGY ROUTE IS MAINNET ADDRESSES, and the rebuild below cannot tell
-  // which chain a grant is for. On any other chain the router is codeless, a
-  // CALL to it succeeds with empty returndata, and an energy buy would "land"
-  // having bought nothing. No signer mints it there (energyBuyFits) and the
-  // worker would not honour it (grantEnergyRoute) — refused here as well, so a
-  // hand-built grant cannot store a claim the chain could never back.
-  if ((features as string[]).includes(GRANT_ENERGY) && grant.chainId !== ENERGY_ROUTE_V1.chainId) {
-    refuse(400, "invalid_grant", "The energy buy exists only on Robinhood Chain mainnet");
-  }
-
   // ── PERPETUALS: THE MARKER, THE CHAIN AND THE SEALED KEY, BY NAME ──────────
   //
-  // Checked BEFORE the rebuild, for the reason the energy gate above is: the
-  // rebuild reads the block through `grantPerp`, which answers "no perps" for
+  // Checked BEFORE the rebuild: the rebuild reads the block through `grantPerp`, which answers "no perps" for
   // any malformed block — so a grant with a marker and a broken block would
   // rebuild WITHOUT perps and fail as "does not implement the limits", telling
   // nobody which field was wrong. And one thing the byte comparison could never
@@ -472,15 +422,6 @@ function verify(grant: Record<string, unknown>): void {
         chainId: typeof grant.chainId === "number" ? grant.chainId : undefined,
         perp: grant.perp,
       }),
-      // Already implied by the marker allowlist above, and stated anyway: the
-      // canonical wall has neither, so a rebuild must never be talked into
-      // either by a marker a future edit forgot to refuse.
-      allowRialto: false,
-      allowUniswapV4: false,
-      v4AdapterAddress: grant.v4AdapterAddress as Address | undefined,
-      ponsAdapterAddress: grant.ponsAdapterAddress as Address | undefined,
-      ponsClassVaultAddress: grant.ponsClassVaultAddress as string | undefined,
-      ponsClassVaultFactoryAddress: grant.ponsClassVaultFactoryAddress as string | undefined,
       trencherVaultAddress: grant.trencherVaultAddress as string | undefined,
       trencherFactoryAddress: grant.trencherFactoryAddress as string | undefined,
     }).policies;

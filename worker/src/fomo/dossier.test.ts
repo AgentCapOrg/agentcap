@@ -16,7 +16,7 @@ import {
   type DossierClaimDetail,
   type ThesisCoverageInput,
 } from "./dossier";
-import { robinhoodChain, tokenIdentity } from "./identity";
+import { bnbChain, tokenIdentity } from "./identity";
 import type { Thesis, ThesisComment, TokenStats, TraderEvent } from "./types";
 
 const NOW = 1_790_000_000_000;
@@ -24,8 +24,8 @@ const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
 const EVM = "0x" + "ab".repeat(20);
 const OTHER = "0x" + "cd".repeat(20);
-const TOKEN = tokenIdentity(robinhoodChain(), EVM)!;
-const OTHER_TOKEN = tokenIdentity(robinhoodChain(), OTHER)!;
+const TOKEN = tokenIdentity(bnbChain(), EVM)!;
+const OTHER_TOKEN = tokenIdentity(bnbChain(), OTHER)!;
 
 function author(userId: string, handle: string = userId) {
   return { userId, handle, displayName: null, verified: null };
@@ -314,6 +314,7 @@ describe("redactExecutables (C29): no third-party link or mention survives into 
     ["docs at docs.example.co.uk/x", "docs at [link]"],
     ["visit pons-claim。xyz", "visit [link]"],
     ["send to " + "0x" + "ab".repeat(20), "send to [address]"],
+    ["mint 0xf0f571fa2e7ec7b5470df5574dd1fc2db2929528 here", "mint [address] here"],
     ["mint 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU here", "mint [address] here"],
     // Ordinary prose stays as written.
     ["Up 3.5x since launch, e.g. strong buyers. Target 0.05 by Friday.", "Up 3.5x since launch, e.g. strong buyers. Target 0.05 by Friday."],

@@ -1,19 +1,17 @@
 /**
- * ONE PARSER FOR THE FLEET'S TENANT AND AGENT IDS (Solana integration, phase 0).
+ * ONE PARSER FOR THE FLEET'S TENANT AND AGENT IDS.
  *
  * Every fleet id has been a Robinhood Chain address, 0x and 40 hex. Each path
  * that read one (the rollout, the accounting hold, the new-tenant record, the
  * resume variables, the homes on the volume, the operator one-shots) checked
- * that shape itself and passed over anything else without a word. Solana agent
- * ids (`sol:<owner pubkey>`, docs/solana-integration.md) will not have it. A
- * kill or a hold that passed over one would leave it unnoticed, and a scope
+ * that shape itself and passed over anything else without a word. A kill or a
+ * hold that passed over a malformed id would leave it unnoticed, and a scope
  * list that dropped one could widen to the whole fleet.
  *
  * So each of those paths asks this, and has three answers to handle:
  *
  *   evm          the id, lowercased: the only kind this build acts for.
- *   unsupported  any other id, kept exactly as written (Solana ids are
- *                case-sensitive). The caller says so loudly and fails closed:
+ *   unsupported  any other id, kept exactly as written. The caller says so loudly and fails closed:
  *                a kill, drain or hold treats it as must-stop, and admission
  *                refuses it.
  *   null         not an id at all: not a string, or empty.
@@ -32,7 +30,7 @@ export type FleetId =
 export function parseFleetId(raw: unknown): FleetId | null {
   if (typeof raw !== "string" || raw.length === 0) return null;
   // canonicalId trims; a fleet id with whitespace in it is not one.
-  const id = raw.trim() === raw ? canonicalId(CHAINS.robinhood, "account", raw) : null;
+  const id = raw.trim() === raw ? canonicalId(CHAINS.bnb, "account", raw) : null;
   return id ? { kind: "evm", id: id as `0x${string}` } : { kind: "unsupported", raw };
 }
 
@@ -44,14 +42,11 @@ export function evmFleetId(raw: unknown): `0x${string}` | null {
 
 /**
  * An unsupported id as a log names it: quoted (so a stray newline or control
- * character cannot forge a line), cut to 80 characters, and called a Solana id
- * when it is one, bare or as `sol:<pubkey>`.
+ * character cannot forge a line), and cut to 80 characters.
  */
 export function unsupportedFleetIdLabel(raw: string): string {
-  const body = raw.startsWith("sol:") ? raw.slice(4) : raw;
-  const solana = body.trim() === body && canonicalId(CHAINS.solana, "account", body) !== null;
   const shown = JSON.stringify(raw.length > 80 ? `${raw.slice(0, 80)}…` : raw);
-  return solana ? `Solana id ${shown}` : `id ${shown}`;
+  return `id ${shown}`;
 }
 
 /**

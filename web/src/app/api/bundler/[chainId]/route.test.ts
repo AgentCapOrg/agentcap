@@ -43,7 +43,7 @@ afterEach(() => {
   else process.env.AGENTCAP_GLOAM_WITHDRAWALS_ENABLED = previousGloam;
 });
 
-const ticket = (account: Address = ACCOUNT, chainId = 4663) => mintTicket({ smartAccount: account, chainId, classVaults: [] });
+const ticket = (account: Address = ACCOUNT, chainId = 4663) => mintTicket({ smartAccount: account, chainId });
 async function request(method: string, callData: Hex, opts: {
   wallet?: "spot" | "perps"; sender?: string; cookie?: string | null; entryPoint?: string; op?: Record<string, unknown>; chainId?: number;
 } = {}) {
@@ -162,7 +162,7 @@ describe("owner Gloam withdrawal through the real relay handler", () => {
   it("keeps Gloam withdrawals scoped to Spot even with a valid Perps ticket", async () => {
     process.env.AGENTCAP_GLOAM_WITHDRAWALS_ENABLED = "1";
     const cd = await fixtureGloamBatch();
-    const perps = mintTicket({ smartAccount: ACCOUNT, chainId: 4663, classVaults: [], purpose: "perps" });
+    const perps = mintTicket({ smartAccount: ACCOUNT, chainId: 4663, purpose: "perps" });
     for (const method of methods) {
       for (const opts of [
         { wallet: "perps" as const, cookie: perps },
@@ -190,7 +190,7 @@ describe("owner Gloam withdrawal through the real relay handler", () => {
 });
 
 it("the relay binds purpose: legacy Spot and Perps tickets cannot cross wallets, even paper-off", async () => {
-  const perps = mintTicket({ smartAccount: ACCOUNT, chainId: 4663, classVaults: [], purpose: "perps" });
+  const perps = mintTicket({ smartAccount: ACCOUNT, chainId: 4663, purpose: "perps" });
   for (const opts of [{ wallet: "perps" as const, cookie: ticket() }, { wallet: "spot" as const, cookie: perps }, { cookie: perps }]) {
     const response = await request(methods[0]!, DATA, opts); assert.equal(response.status, 401); assert.match((await response.json()).error, /different wallet/);
   }

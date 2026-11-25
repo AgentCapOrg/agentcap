@@ -136,7 +136,7 @@ const TICKER = /^[A-Z0-9][A-Z0-9_-]{0,19}$/;
  * chainFromUserText, after "on"): ethereum is "eth" there. Anything else
  * names no chain, and the list is asked for across every chain.
  */
-const CHAIN_WORDS: Readonly<Record<TgFomoChain, string>> = { robinhood: "robinhood", solana: "solana", base: "base", ethereum: "eth", bsc: "bsc" };
+const CHAIN_WORDS: Readonly<Record<TgFomoChain, string>> = { robinhood: "robinhood", base: "base", ethereum: "eth", bsc: "bsc" };
 const onChain = (c: unknown): string => (typeof c === "string" && Object.hasOwn(CHAIN_WORDS, c) ? ` on ${CHAIN_WORDS[c as TgFomoChain]}` : "");
 
 /** A leaderboard row in the planner's own rank words (intent.ts ROW_RANK). */
@@ -240,7 +240,7 @@ function quoteCount(v: unknown): number | null {
 }
 
 /** A token's chain slug as tg-groups names chains; anything else names none. */
-const SLUG_CHAINS: Readonly<Record<string, TgFomoChain>> = { robinhood: "robinhood", solana: "solana", base: "base", eth: "ethereum", ethereum: "ethereum", bsc: "bsc" };
+const SLUG_CHAINS: Readonly<Record<string, TgFomoChain>> = { robinhood: "robinhood", base: "base", eth: "ethereum", ethereum: "ethereum", bsc: "bsc" };
 export function tgChainOf(slug: unknown): TgFomoChain | undefined {
   return typeof slug === "string" && Object.hasOwn(SLUG_CHAINS, slug) ? SLUG_CHAINS[slug] : undefined;
 }
@@ -282,7 +282,7 @@ export function looseCoin(text: string, plan: FomoQuestionPlan): boolean {
   const m = LOOSE_SUBJECT.exec(typeof text === "string" ? text.normalize("NFKC") : "");
   const word = m?.[1]?.toLowerCase() ?? "";
   if (!word || NOT_A_COIN.has(word) || /^\d+$/.test(word)) return false;
-  // A chain word is the planner's ("buying solana coins" is a chain's slice).
+  // A chain word is the planner's ("buying base coins" is a chain's slice).
   if (chainFromUserText(word) !== null) return false;
   // The remembered coin, when that is the word ("who's selling pons" right
   // after PONS): the planner has it right. Any other remembered coin is the
@@ -389,7 +389,7 @@ const MOVES_ROWS = 3;
 
 function chainWords(t: TokenIdentity | null): string {
   const slug = t?.chain.slug ?? "";
-  return slug === "robinhood" ? "Robinhood Chain" : slug ? slug : "an unnamed chain";
+  return slug === "bsc" ? "BNB Chain" : slug === "robinhood" ? "Robinhood Chain" : slug ? slug : "an unnamed chain";
 }
 
 interface MoveCoin {
@@ -675,7 +675,7 @@ const foldedHandle = (handle: string): string =>
   handle.normalize("NFKC").toLowerCase().replace(/[013457]/g, (d) => HANDLE_LEET[d] ?? d).replace(/[^\p{L}]+/gu, "");
 /** What a handle read as one word may never hold anywhere in it: staff, AgentCap, Fomo, a lure, a crime, harm. */
 const IMPERSONATES_FOLDED =
-  /fomo|merrym[ae]n|telegram|support|admin|official|staff|helpdesk|customer(?:care|service)|refund|recover|verified|moderator|airdrop|giveaway|kill(?:your|ur|the|them|him|her)|kys|hangthe|rapist|scam|^buy|^sell|sendsol|sendeth|doubleyour/u;
+  /fomo|merrym[ae]n|telegram|support|admin|official|staff|helpdesk|customer(?:care|service)|refund|recover|verified|moderator|airdrop|giveaway|kill(?:your|ur|the|them|him|her)|kys|hangthe|rapist|scam|^buy|^sell|sendsol|sendbnb|sendeth|doubleyour/u;
 /** The lines code says around the quotes, or the agent of the room cited ("the agent in this group said…"; review r2): a thesis that echoes one is dressing as the answer itself. */
 const QUOTE_FRAME = /\bfrom a copy fetched\b|\btheir words,? not facts\b|\bthe newest \d+ theses\b|\b\d+ of these \d+ left out\b|\bthe\s+(?:agent|bot|ai)\s+(?:in|of)\s+(?:this|the)\s+(?:group|chat|room)\b/i;
 
@@ -683,7 +683,7 @@ const QUOTE_FRAME = /\bfrom a copy fetched\b|\btheir words,? not facts\b|\bthe n
  * WHETHER A QUOTE'S AUTHOR MAY BE NAMED: a handle the room may hear
  * (sayableTraderHandle) that, with its underscores, dots, dashes, case and
  * digit joins spaced out ("airdrop_bot" is "airdrop bot", "AirdropBot" is
- * "Airdrop Bot", "send_1_sol" is "send 1 sol"), impersonates no one and
+ * "Airdrop Bot", "send_1_bnb" is "send 1 bnb"), impersonates no one and
  * passes the gate as a quote's author: never a lure, a slur or a threat
  * wearing a handle (review, 2026-10-09).
  */
@@ -793,7 +793,7 @@ function priceShort(n: number): string {
   return `$${n >= 1 ? trimZeros(n.toFixed(2)) : Number(n.toPrecision(3)).toString()}`;
 }
 const pct1 = (n: number): string => `${trimZeros(n.toFixed(1))}%`;
-const FACTS_CHAINS: Readonly<Record<FactsNetwork, string>> = { robinhood: "Robinhood Chain", solana: "Solana", base: "Base", ethereum: "Ethereum", bsc: "BSC" };
+const FACTS_CHAINS: Readonly<Record<FactsNetwork, string>> = { robinhood: "Robinhood Chain", base: "Base", ethereum: "Ethereum", bsc: "BSC" };
 
 /**
  * A COIN'S FACTS AS A ROOM HEARS THEM, written by code from what was measured

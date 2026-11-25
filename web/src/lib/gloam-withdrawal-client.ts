@@ -6,7 +6,7 @@ import { formatUserOperation, formatUserOperationRequest, type RpcUserOperation,
 import { createKernelAccount, createKernelAccountClient } from "@zerodev/sdk";
 import { getEntryPoint, KERNEL_V3_3 } from "@zerodev/sdk/constants";
 import { signerToEcdsaValidator } from "@zerodev/ecdsa-validator";
-import { assertDerivedAccount, robinhoodChain } from "@agentcap/core";
+import { assertDerivedAccount, bnbChain } from "@agentcap/core";
 import { userOpGasConfig } from "../../../worker/src/gas";
 import { getRecoveryTicket, relayUrl, type BrowserWallet } from "./recover-client";
 import { GLOAM_WITHDRAWAL_CHAIN_ID, GLOAM_WITHDRAWAL_POOL, GLOAM_WITHDRAWAL_USDG } from "./gloam-withdrawal-contracts";
@@ -41,7 +41,7 @@ async function ownerClient(w: BrowserWallet) {
   if (w.chainId !== GLOAM_WITHDRAWAL_CHAIN_ID) throw new Error("Gloam withdrawals support USDG on Robinhood mainnet only.");
   const signer = w.ownerKey ? privateKeyToAccount(w.ownerKey) : w.ownerAccount;
   if (!signer) throw new Error("Sign in with this agent's owner wallet to approve a withdrawal.");
-  const chain = robinhoodChain;
+  const chain = bnbChain;
   const publicClient = createPublicClient({ chain, cacheTime: 0, transport: http(undefined, { timeout: 15_000 }) });
   const entryPoint = getEntryPoint("0.7");
   const sudo = await signerToEcdsaValidator(publicClient, { signer, entryPoint, kernelVersion: KERNEL_V3_3 });

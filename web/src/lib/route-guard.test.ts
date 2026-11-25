@@ -34,7 +34,7 @@ describe("walletNotSupported", () => {
   });
 
   it("perps, an unreadable value, or two wallets are refused 400 wallet-not-supported, never stored", async () => {
-    for (const q of ["?wallet=perps", "?wallet=", "?wallet=Perps", "?wallet=solana", "?wallet=spot&wallet=perps", "?wallet=spot&wallet=spot", "?Wallet=perps", "?WALLET=perps", "?wallet=spot&Wallet=perps"]) {
+    for (const q of ["?wallet=perps", "?wallet=", "?wallet=Perps", "?wallet=other", "?wallet=spot&wallet=perps", "?wallet=spot&wallet=spot", "?Wallet=perps", "?WALLET=perps", "?wallet=spot&Wallet=perps"]) {
       const refused = walletNotSupported(at(q));
       assert.ok(refused, q);
       assert.equal(refused.status, 400, q);
@@ -390,7 +390,7 @@ function startsWithRefusal(fn: Handler): boolean {
 const BEFORE_WALLET_READ: Readonly<Record<string, ReadonlySet<string>>> = {
   "grants/route.ts POST": new Set([
     "readGrantBody", "NextResponse.json", "tooLarge", "JSON.parse", "isAddr", "duplicateWallPermissions",
-    "isRobinhoodChainId", "JSON.stringify", "JSON.stringify(grant.chainId).slice", "Array.isArray", "grant.grantFeatures.some",
+    "isBnbChainId", "JSON.stringify", "JSON.stringify(grant.chainId).slice", "Array.isArray", "grant.grantFeatures.some",
   ]),
 };
 

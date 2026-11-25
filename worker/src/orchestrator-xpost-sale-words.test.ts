@@ -12,7 +12,7 @@ import { SALE_PARTS, SALE_SHORT_LINES, saleLines } from "./xpost/sale-words";
 const counted = (text: string) => text.replace(/\{coin\}|\bsold\b/g, "").toLowerCase().replace(/[^a-z\s]/g, " ").split(/\s+/).filter((w) => w.length > 2 && similarity(w, w) > 0);
 const admit = (line: string, coin: string, recentOwn: string[] = [], recentFleet: string[] = []) =>
   admitXPost(line, { kind: "sell", agentName: "Alan Al Dale", mode: "live", coins: [coin], recentOwn, recentFleet, recentOpeners: recentOwn.slice(0, 8), house: true }, admitAgentLine);
-const TOKEN = { address: `0x${"ab".repeat(20)}`, chainId: 4663, txHash: `0x${"cd".repeat(32)}` };
+const TOKEN = { address: `0x${"ab".repeat(20)}`, chainId: 56, txHash: `0x${"cd".repeat(32)}` };
 const suffix = publicTokenSuffix(TOKEN, true)!;
 const whole = (line: string, gainPct: number) => {
   const said = appendSaleOutcome(line, "profit", gainPct, { seed: line, suffix });

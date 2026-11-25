@@ -2,14 +2,14 @@
 import type { Db } from "./db";
 import { distinctTrades } from "./distinct-trades";
 import { OP_KEY, readEvidencedSells } from "./trade-evidence";
-import { CASH, onchainIdIn, STOCK_TOKENS } from "../../packages/core/src/index";
+import { CASH, STOCK_TOKENS } from "../../packages/core/src/index";
 
 /** Execution metadata only; a proposed decision action never supplies a side. */
 export function inferredTradeSide(row:{fill_side?:unknown;buy_token?:unknown;sell_token?:unknown}):"buy"|"sell"|null {
   if(row.fill_side==="buy"||row.fill_side==="sell")return row.fill_side;
   const bought=typeof row.buy_token==="string"?row.buy_token.trim().toLowerCase():"";
   const sold=typeof row.sell_token==="string"?row.sell_token.trim().toLowerCase():"";
-  const cash=CASH.USDG.toLowerCase();
+  const cash=CASH.USDT.toLowerCase();
   if(bought&&sold&&sold===cash&&bought!==cash)return "buy";
   if(bought&&sold&&bought===cash&&sold!==cash)return "sell";
   if(STOCK_TOKENS.some(t=>t.address.toLowerCase()===bought))return "buy";
@@ -53,13 +53,13 @@ export interface TradeFactsOptions {
 }
 export interface TradeFacts { trades: ChatTradeFact[]; complete: boolean }
 const finite = (v: unknown): number | null => typeof v === "number" && Number.isFinite(v) ? v : null;
-// A name is never an address: 0x, or a Solana key or signature (core's onchainIdIn).
+// A name is never an address: 0x.
 // A display name with a whole 0x address inside it ("PEPE 0x…") is refused too.
 function label(v: unknown): string | null {
-  return typeof v === "string" && /^[A-Za-z0-9$._-]{1,32}$/.test(v.trim()) && !/^0x/i.test(v.trim()) && !onchainIdIn(v) && !/^T[0-9A-F]{11}$/i.test(v.trim()) ? v.trim() : null;
+  return typeof v === "string" && /^[A-Za-z0-9$._-]{1,32}$/.test(v.trim()) && !/^0x/i.test(v.trim()) && !/^T[0-9A-F]{11}$/i.test(v.trim()) ? v.trim() : null;
 }
 function display(v: unknown): string | null {
-  return typeof v === "string" && v.trim().length > 0 && v.trim().length <= 64 && !/[\u0000-\u001f\u007f]/.test(v) && !/^0x/i.test(v.trim()) && !onchainIdIn(v) ? v.trim() : null;
+  return typeof v === "string" && v.trim().length > 0 && v.trim().length <= 64 && !/[\u0000-\u001f\u007f]/.test(v) && !/^0x/i.test(v.trim()) && !/0x[0-9a-f]{40}/i.test(v) ? v.trim() : null;
 }
 
 /** Throws on an unreadable tape; an unavailable history must never become "no trades". */
@@ -74,7 +74,7 @@ export async function readTradeFacts(db: Db, opts: TradeFactsOptions): Promise<T
   if(opts.side){
     const marks=STOCK_TOKENS.map(()=>"?").join(",");
     where.push(`CASE WHEN t.fill_side IN ('buy','sell') THEN t.fill_side WHEN LOWER(t.sell_token) = ? AND LOWER(t.buy_token) <> ? AND t.buy_token <> '' THEN 'buy' WHEN LOWER(t.buy_token) = ? AND LOWER(t.sell_token) <> ? AND t.sell_token <> '' THEN 'sell' WHEN LOWER(t.buy_token) IN (${marks}) THEN 'buy' WHEN LOWER(t.sell_token) IN (${marks}) THEN 'sell' ELSE NULL END = ?`);
-    args.push(CASH.USDG.toLowerCase(),CASH.USDG.toLowerCase(),CASH.USDG.toLowerCase(),CASH.USDG.toLowerCase(),...STOCK_TOKENS.map(t=>t.address.toLowerCase()),...STOCK_TOKENS.map(t=>t.address.toLowerCase()),opts.side);
+    args.push(CASH.USDT.toLowerCase(),CASH.USDT.toLowerCase(),CASH.USDT.toLowerCase(),CASH.USDT.toLowerCase(),...STOCK_TOKENS.map(t=>t.address.toLowerCase()),...STOCK_TOKENS.map(t=>t.address.toLowerCase()),opts.side);
   }
   if (opts.id !== undefined) { where.push("t.id = ?"); args.push(opts.id); }
   if (opts.token) {

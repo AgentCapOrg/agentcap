@@ -147,10 +147,10 @@ fun accountControlsOf(signedIn: String?, hosted: Boolean?, canOfferSignIn: Boole
  */
 fun stopArmedNote(signedIn: String?): String =
   if (signedIn != null) {
-    "Tap again to stop Spot, Perps and Solana for this login. This removes their server trading permissions " +
+    "Tap again to stop Spot and Perps for this login. This removes their server trading permissions " +
       "and deletes agent memory, which re-signing does not bring back. It does not close positions, withdraw assets or revoke permissions on-chain."
   } else {
-    "Tap again to stop Spot, Perps and Solana on this server. This halts the workers; it does not close positions or withdraw assets."
+    "Tap again to stop Spot and Perps on this server. This halts the workers; it does not close positions or withdraw assets."
   }
 
 /** A Spot-only grant read cannot confirm a login-wide stop. In particular,
@@ -163,13 +163,13 @@ suspend fun stopAllAgents(api: AgentCapApi, owner: String?, isCurrent: () -> Boo
   if (!isCurrent()) return changed
   return when (result) {
     is ApiResult.Ok -> if (((result.value as? JsonObject)?.get("ok") as? JsonPrimitive)?.booleanOrNull == true) {
-      "Stop request accepted for Spot, Perps and Solana. Existing assets remain in their accounts."
+      "Stop request accepted for Spot and Perps. Existing assets remain in their accounts."
     } else {
-      "The stop response could not be confirmed. Check Spot, Perps and Solana in the web app before trying again."
+      "The stop response could not be confirmed. Check Spot and Perps in the web app before trying again."
     }
     is ApiResult.Refused -> if (result.status == 401) "Sign in first. Nothing was stopped." else result.message
     is ApiResult.Unreachable -> "Could not confirm whether all agents stopped — ${result.said.trimEnd('.')}. " +
-      "The request was not retried. Check Spot, Perps and Solana in the web app before trying again."
+      "The request was not retried. Check Spot and Perps in the web app before trying again."
   }
 }
 

@@ -415,7 +415,7 @@ function defangOf(lower: string): string {
 interface Readings {
   /** NFC, one line: what the clauses call "shown". */
   shown: string;
-  /** Case kept, for the shapes where case matters (ALL-CAPS, base58 keys). */
+  /** Case kept, for the shapes where case matters (ALL-CAPS, encoded keys). */
   cased: string[];
   /** Lowercased, folded, letters joined: what every vocabulary clause reads. */
   low: string[];
@@ -719,7 +719,7 @@ function hasMnemonicRun(t: string): boolean {
 /**
  * On-chain identifiers: 0x plus six hex or more (so a posted CA is never
  * echoed), the brokerage rail's rh: id, an address shown in chunks, and an
- * unprefixed run a base58 or bech32 address makes.
+ * unprefixed run an encoded or bech32 address makes.
  */
 const ADDRESS_SHAPES: readonly RegExp[] = [/0x[0-9a-f]{6,}/i, /\brh:[a-z0-9-]/i, /0\s*x(?:[\s._:,-]?[0-9a-f]){20,}/i];
 
@@ -763,23 +763,23 @@ function hasChunkedRun(t: string): boolean {
 
 /**
  * AN ADDRESS SPREAD OVER A QUOTE, for the `quote` kind only (review r2,
- * 2026-10-09): every token of the row that could be a piece of a base58
+ * 2026-10-09): every token of the row that could be a piece of an encoded
  * address is counted, however the pieces are split (by 2, 3 or 4, as words,
  * or with ";", "~", "+", an emoji or "and" between them), and a row with 16
  * such characters or more is refused. 16, not 26: an address split in half
  * over two quotes is two rows of 22, and each is refused (quotes.ts also adds
  * them up over the quotes it says). A token counts when it is two characters
- * or more, in the base58 alphabet only (no 0, O, I or l), not shaped like a
+ * or more, in the encoded alphabet only (no 0, O, I or l), not shaped like a
  * word ("Strong", "GeckoTerminal", "AI", "gm") or a figure ("36k", "24h",
  * "3rd"), and mixes a digit and a letter or both cases: "zkEVM", "ai16z" and
  * "Web3" count, and a row of such jargon stays under 16.
  */
 const PLAIN_TOKEN = /^[A-Z]?[a-z]+(?:[A-Z][a-z]+)*$|^[A-Z]+$|^[a-z]+$|^\d+$/;
 const FIGURE_TOKEN = /^\d+(?:k|m|b|bn|x|h|d|w|mo|y|min|s|st|nd|rd|th|am|pm)$/i;
-const NOT_BASE58 = /[^1-9A-HJ-NP-Za-km-z]/;
+const NOT_ENCODED = /[^1-9A-HJ-NP-Za-km-z]/;
 function encodedPiecesOf(t: string): string[] {
   return t.split(/[^A-Za-z0-9]+/).filter((tok) =>
-    tok.length >= 2 && !NOT_BASE58.test(tok) && !PLAIN_TOKEN.test(tok) && !FIGURE_TOKEN.test(tok) &&
+    tok.length >= 2 && !NOT_ENCODED.test(tok) && !PLAIN_TOKEN.test(tok) && !FIGURE_TOKEN.test(tok) &&
     ((/[0-9]/.test(tok) && /[A-Za-z]/.test(tok)) || (/[a-z]/.test(tok) && /[A-Z]/.test(tok))));
 }
 const encodedCharsOf = (t: string): number => encodedPiecesOf(t).reduce((n, p) => n + p.length, 0);
@@ -849,7 +849,7 @@ const NUM_WORD =
   "twenty|thirty|forty|fourty|fifty|sixty|seventy|eighty|ninety|ninty|hundreds?|thousands?|[a-z]*illions?|hundo|hunnid|hunnit|mil|mill|dozen|couple|few|half|a)";
 /** What a figure is money in: currencies, crypto units, slang for amounts, percents and multipliers. */
 const MONEY_UNIT =
-  "(?:usd[a-z]?|usdg|usdc|usdt|dai|eth|weth|btc|wbtc|sol|sats?|gwei|wei|dollars?|dollas?|bucks?|cents?|quid|euros?|pounds?|grand|bands|racks?|stacks?|mil|mill|milly|mils|" +
+  "(?:usd[a-z]?|usdg|usdc|usdt|dai|eth|weth|btc|wbtc|sol|bnb|sats?|gwei|wei|dollars?|dollas?|bucks?|cents?|quid|euros?|pounds?|grand|bands|racks?|stacks?|mil|mill|milly|mils|" +
   "percent|pct|per\\s*cent|bps|basis\\s+points?|x|baggers?)";
 /**
  * Currencies a group in another language names beside a digit ("50 dólares",
@@ -882,7 +882,7 @@ const MONEY: readonly RegExp[] = [
   // A price below one: "it's at 0.0004", "0,05". Two fraction digits or
   // more, so "0.5 seconds" stays speech; never a slice of "10.05" or "1.0.04".
   /(?<![\p{N}.,])0[.,]\p{N}{2,}/u,
-  /\b(?:usd[a-z]?|usdg|usdc|usdt|eth|weth|btc|sol)\s*\p{N}/iu,
+  /\b(?:usd[a-z]?|usdg|usdc|usdt|eth|weth|btc|sol|bnb)\s*\p{N}/iu,
   /(?<![\p{L}\p{N}])[x×]\s?\p{N}/iu,
   // A gap before the unit: glued, "a" + "x" is an axe. The glued multipliers ("tenx") are the next shape.
   new RegExp(`\\b${NUM_WORD}(?:[\\s-]+(?:${NUM_WORD}|and))*[\\s-]+${MONEY_UNIT}\\b`, "i"),
@@ -936,7 +936,7 @@ const QUANTITY = U(
   ),
 );
 
-/** A money unit as a whole word, letters on neither side: "sol" in "Sol", not in "Solace"; "x" alone, not in "Max". */
+/** A money unit as a whole word, letters on neither side: "bnb" in "Bnb", not in "Bnbs"; "x" alone, not in "Max". */
 const UNIT_WORD = new RegExp(`(?<![\\p{L}])(?:${MONEY_UNIT}|${FOREIGN_UNIT})(?![\\p{L}])`, "iu");
 /** A name that reads as a figure is never stripped before the figure clauses: "Up 400x", "Ten", "Agent 47". */
 const FIGURE_NAME = /(?<![\p{L}\p{N}])\p{N}[\p{N}.,]*\s*(?:[x%kmb]|percent|pct)(?![\p{L}\p{N}])|[$+]\s*\p{N}/iu;
@@ -1729,7 +1729,7 @@ function strings(list: unknown): string[] {
  * talks to Grant about nothing operational. A name that reads as a figure
  * itself ("Up 400x", "Ten", "Agent 47", "$100 Gang") is never taken out, so a
  * line that says it is judged as if it said the figure; nor is one that holds
- * a money unit ("Sol", "Bucks"), so the unit is still there beside a digit.
+ * a money unit ("Bnb", "Bucks"), so the unit is still there beside a digit.
  *
  * Every other clause reads the line with its names in. A display name is
  * chosen by whoever holds it, so a stranger who names himself "buy now",
@@ -1745,9 +1745,9 @@ function nameStripper(agentName: string, names: readonly string[]): RegExp | nul
       const low = v.toLowerCase();
       if (low.length < 2 || !/\p{L}/u.test(low)) continue;
       if (QUANTITY.test(low) || FIGURE_NAME.test(low) || STANDALONE_NUMBER.test(low) || MONEY.some((re) => re.test(low))) continue;
-      // A name holding a money unit as a word of its own ("Sol", "Bucks",
+      // A name holding a money unit as a word of its own ("Bnb", "Bucks",
       // "Rand Paul", a coin called "USDC") stays in: taken out, it would take
-      // the unit with it and leave "3 sol" reading as a harmless "3".
+      // the unit with it and leave "3 bnb" reading as a harmless "3".
       if (UNIT_WORD.test(low)) continue;
       out.add(low);
     }

@@ -94,7 +94,7 @@ describe("a public view needs market reasoning, not an idle notice", () => {
 describe("how often it is written", () => {
   // Executed through idle-notice.ts, which decides what the tick's idle block
   // writes. These were source greps over index.ts; they pinned the same rules.
-  const underOne: Why = { code: "under-one-buy", cashRaw: 1_000_000n, needRaw: 5_000_000n, vaultRaw: 0n };
+  const underOne: Why = { code: "under-one-buy", cashRaw: 1_000_000n, needRaw: 5_000_000n };
 
   it("ONCE PER CHANGE, NOT ONCE PER TICK — the view and the event together", () => {
     // renderWhy is deterministic, so an unchanged reason would write an

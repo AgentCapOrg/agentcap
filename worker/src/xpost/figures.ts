@@ -64,7 +64,7 @@ import { answerWord } from "./words";
 export const FIGURES_MAX = 6;
 /** Coins one trending section shows, Fomo's tickers, CoinGecko's trending tickers. */
 export const POOLS_MAX = 3;
-/** The big coins one market overview shows, each by its day's change: bitcoin, ether, solana. */
+/** The big coins one market overview shows, each by its day's change: bitcoin, ether, bnb. */
 export const MAJORS_MAX = 3;
 export const CROWD_MAX = 2;
 export const TRENDING_MAX = 3;
@@ -380,7 +380,7 @@ export function rankOf(v: unknown): string | null {
 export type FiguresSection =
   /** A coin by name or ticker, from CoinGecko's markets: "BTC #1, ~$97k, mcap …". */
   | { kind: "major"; symbol: string; rank?: number | null; priceUsd?: number | null; marketCapUsd?: number | null; volume24hUsd?: number | null; change24hPct?: number | null; change7dPct?: number | null }
-  /** The big coins' day, from CoinGecko's markets: "24h: BTC +1.2%, ETH -0.8%, SOL +3.1%" (the market overview). */
+  /** The big coins' day, from CoinGecko's markets: "24h: BTC +1.2%, ETH -0.8%, BNB +3.1%" (the market overview). */
   | { kind: "majors"; coins: { symbol: string; change24hPct?: number | null }[] }
   /** Robinhood Chain coins trending on GeckoTerminal that cleared the fleet's floors. */
   | { kind: "pools"; coins: { symbol: string; change24hPct?: number | null; volume24hUsd?: number | null }[] }

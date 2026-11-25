@@ -104,7 +104,7 @@ disposes. Execution is the existing intent → policy → executor path.
 |---|---|---|
 | Contract types | none | `worker/src/fomo/types.ts` (data meaning, envelopes, statuses), `worker/src/fomo/contract.ts` (service, broker, IPC wire format, child file) |
 | Provider | templates `research/hey.ts`, `venues/bitquery.ts` | `worker/src/fomo/provider.ts`. The only code that names the host. GET allowlist, one Bearer header, bounded reads, the provider's documented retry policy, credit headers, key scrubbing, runtime normalisers. `capabilities.ts` holds the capability report. |
-| Identity | lowercased 0x address on chain 4663 | `worker/src/fomo/identity.ts`: (namespace, network id as returned, address). EVM lowercased per network; Solana mints keep case. Never routed through `chainForId`. |
+| Identity | lowercased 0x address on chain 4663 | `worker/src/fomo/identity.ts`: (namespace, network id as returned, address). EVM lowercased per network. Never routed through `chainForId`. |
 | Event identity | none | `worker/src/fomo/events.ts`: provider event id, then fill id, then tx hash + log index, then an explicitly ambiguous fingerprint |
 | Persistence | `Db` seam (`worker/src/db.ts`) | `worker/src/fomo/store.ts`: 29 `fomo_*` tables under advisory lock `1_297_692_140`. Hosted: shared Postgres. Self-hosted: `fomo.sqlite` (`fomo/local-db.ts`), shared by worker and dashboard. |
 | Research service | none | `worker/src/fomo/service.ts` and `tools.ts`: one dispatcher, 9 registered read tools plus 4 owner-only mutations (watch, unwatch, tail, untail) |
@@ -1054,7 +1054,7 @@ Surface limits:
   reading as the trader above's (rule 5). Lines pass the group gate as
   `research` (every clause but money), with money in short form ($151.4k) and four rows a
   board. Boards cover every chain by default (Milla, 2026-10-07); asked for one ("robinhood
-  coins", "on base", "solana ones") the board is cut to that chain from the same read, at
+  coins", "on base", "ethereum ones") the board is cut to that chain from the same read, at
   no extra cost, under an honest header: "Trending on Fomo, Robinhood Chain only (2 of the
   top 100):" with each row's board rank, "None of the top 30 trending coins on Fomo are on
   Robinhood Chain right now." (with how many rows could not be placed on a chain), or "The
@@ -1205,7 +1205,7 @@ every open Trencher position's cost instead, which errs toward refusing. So:
   watches, the owner's own research state or watch list, a trader's own theses, anything
   from her DM.
 - **Chains.** Boards cover every chain by default and are cut to one on request ("robinhood
-  coins", "on base", "solana ones"); an unfiltered board in a room ends with where Robinhood
+  coins", "on base", "ethereum ones"); an unfiltered board in a room ends with where Robinhood
   Chain stands, honestly when none of the top rows are on it.
 - **Budget.** The default caps stay as they are. The three cap variables (Operations) are
   read identically by the orchestrator and the web process; rooms reuse copies longer, a

@@ -232,7 +232,7 @@ it("a pre-incident live tenant: refused without approval; previewed, batch-appro
     assert.deepEqual(financial(t.account).trades, before.trades, "and still no trade copied twice or rewritten");
   } finally { book.close(); }
   // The rolling caps read the trailing day from Postgres: nothing in it.
-  assert.deepEqual(await readBudgetSeed(shared, t.account, String(CASH.USDG), nowSec()), []);
+  assert.deepEqual(await readBudgetSeed(shared, t.account, String(CASH.USDT), nowSec()), []);
   await getGrantStore("spot").remove(t.tenant); await reconcile();
 });
 
@@ -257,7 +257,7 @@ it("an RPC failure keeps the tenant held and retries; chain activity Postgres la
   const q = await preview(u.tenant);
   await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `${u.tenant}:${q.entries[0]!.digest}` });
   const topic = (x: string) => `0x${x.slice(2).padStart(64, "0")}`;
-  chainLogs = [{ address: String(CASH.USDG), topics: ["0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef", topic(addr(0xfeed)), topic(u.account)], tx: "0xunbooked", index: 1,
+  chainLogs = [{ address: String(CASH.USDT), topics: ["0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef", topic(addr(0xfeed)), topic(u.account)], tx: "0xunbooked", index: 1,
     data: `0x${(7_250_000n).toString(16).padStart(64, "0")}` }];
   const said: string[] = [];
   const realLog = console.log;
@@ -292,7 +292,7 @@ const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a
 const topicOf = (x: string) => `0x${x.slice(2).padStart(64, "0")}`;
 /** A USDG deposit into `account` that Postgres does not hold, landed at `block`. */
 const unbookedDeposit = (account: string, block: bigint, tx: string) =>
-  ({ address: String(CASH.USDG), topics: [TRANSFER_TOPIC, topicOf(addr(0xfeed)), topicOf(account)], tx, index: 0, block });
+  ({ address: String(CASH.USDT), topics: [TRANSFER_TOPIC, topicOf(addr(0xfeed)), topicOf(account)], tx, index: 0, block });
 const cursorsOf = (tenant: string) => rows("SELECT table_name, last_id, last_stamp, updated_at FROM mirror_state WHERE tenant = ? ORDER BY table_name", tenant);
 
 it("activity landing after the chain read and before the registration refuses: the chain is read again, from that read's head to the head now", async () => {
@@ -379,7 +379,7 @@ const bookingRpc = async (method: string, params: unknown[]): Promise<unknown> =
     const logs = chainLogs.filter((l) => l.tx === params[0]);
     if (!logs.length) return null;
     const block = logs[0]!.block ?? HEAD - 100n;
-    return { status: "0x1", blockNumber: `0x${block.toString(16)}`, blockHash: blockOf(block).hash, from: addr(0xfeed), to: String(CASH.USDG), logs: logs.map(logOf) };
+    return { status: "0x1", blockNumber: `0x${block.toString(16)}`, blockHash: blockOf(block).hash, from: addr(0xfeed), to: String(CASH.USDT), logs: logs.map(logOf) };
   }
   throw new Error(`unexpected ${method}`);
 };
@@ -390,7 +390,7 @@ it("a tenant refused for a deposit Postgres lacks is booked by the chain-gap too
   const p = await preview(t.tenant);
   await runResumeAdmissionControlsForTest({ AGENTCAP_RESUME_APPROVE: `${t.tenant}:${p.entries[0]!.digest}` });
   const depositTx = `0x${"de".repeat(32)}`;
-  chainLogs = [{ address: String(CASH.USDG), topics: [TRANSFER_TOPIC, topicOf(addr(0xfeed)), topicOf(t.account)], tx: depositTx, index: 3, block: HEAD - 1_000n,
+  chainLogs = [{ address: String(CASH.USDT), topics: [TRANSFER_TOPIC, topicOf(addr(0xfeed)), topicOf(t.account)], tx: depositTx, index: 3, block: HEAD - 1_000n,
     data: `0x${(6_000_000n).toString(16).padStart(64, "0")}` }];
   try {
     await reconcile(); await settle();
@@ -441,7 +441,7 @@ it("a paper tenant held on a chain refusal no admission has answered: the lane l
   // A paper book that holds nothing: the automatic lane's safe case, but for what the chain shows.
   for (const table of ["positions", "cost_basis", "position_floors"]) raw.prepare(`DELETE FROM ${table} WHERE agent_id = ?`).run(t.account);
   const depositTx = `0x${"d7".repeat(32)}`;
-  chainLogs = [{ address: String(CASH.USDG), topics: [TRANSFER_TOPIC, topicOf(addr(0xfeed)), topicOf(t.account)], tx: depositTx, index: 2, block: HEAD - 1_000n,
+  chainLogs = [{ address: String(CASH.USDT), topics: [TRANSFER_TOPIC, topicOf(addr(0xfeed)), topicOf(t.account)], tx: depositTx, index: 2, block: HEAD - 1_000n,
     data: `0x${(9_000_000n).toString(16).padStart(64, "0")}` }];
   const named = `USDG in 9.000000 in tx ${depositTx} log 2 at block ${HEAD - 1_000n}`;
   let chainOpens = 0;
@@ -622,7 +622,7 @@ for (const recorded of ["as this build records it", "as an earlier build left it
     raw.prepare("UPDATE mirror_state SET updated_at = ?, last_stamp = ? WHERE tenant = ?").run(nowSec() - 2 * 3600, nowSec() - 3 * 3600, t.tenant);
     // A 9 USDG deposit twenty hours ago, older than every cursor, that Postgres lacks.
     const depositBlock = HEAD - 20n * 3600n * 10n, depositTx = `0x${"5e".repeat(32)}`;
-    chainLogs = [{ address: String(CASH.USDG), topics: [TRANSFER_TOPIC, topicOf(addr(0xfeed)), topicOf(t.account)], tx: depositTx, index: 4, block: depositBlock,
+    chainLogs = [{ address: String(CASH.USDT), topics: [TRANSFER_TOPIC, topicOf(addr(0xfeed)), topicOf(t.account)], tx: depositTx, index: 4, block: depositBlock,
       data: `0x${(9_000_000n).toString(16).padStart(64, "0")}` }];
     const named = `USDG in 9.000000 in tx ${depositTx} log 4 at block ${depositBlock}`;
     const depositAt = nowSec() - 20 * 3600;
@@ -716,7 +716,7 @@ it("every decision of a held tenant changes its digest: refused on the chain whi
   const t = await preIncident({ live: false });
   for (const table of ["positions", "cost_basis", "position_floors"]) raw.prepare(`DELETE FROM ${table} WHERE agent_id = ?`).run(t.account);
   const depositTx = `0x${"c4".repeat(32)}`;
-  chainLogs = [{ address: String(CASH.USDG), topics: [TRANSFER_TOPIC, topicOf(addr(0xfeed)), topicOf(t.account)], tx: depositTx, index: 1, block: HEAD - 2_000n,
+  chainLogs = [{ address: String(CASH.USDT), topics: [TRANSFER_TOPIC, topicOf(addr(0xfeed)), topicOf(t.account)], tx: depositTx, index: 1, block: HEAD - 2_000n,
     data: `0x${(3_000_000n).toString(16).padStart(64, "0")}` }];
   let chainOpens = 0;
   setResumeChainForTest(() => { chainOpens += 1; return chain; });

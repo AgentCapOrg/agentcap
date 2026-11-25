@@ -31,7 +31,7 @@ function Cell({ label, children }: { label: string; children: React.ReactNode })
 }
 
 export function StatStrip({ market }: { market: TokenMarket }) {
-  // Unreadable is checked BEFORE absent — the order the launchpad panel is
+  // Unreadable is checked BEFORE absent — the order the discovery panel is
   // already pinned to. Four dashes in a monospace grid read as four zeros, so a
   // refused read gets a sentence rather than a strip.
   if (market.read === "unread") {
@@ -65,10 +65,7 @@ export function StatStrip({ market }: { market: TokenMarket }) {
         <Cell label="FDV">{compactUsd(coin.fdvUsd)}</Cell>
         <Cell label="24h vol">{compactUsd(coin.buckets.h24.volumeUsd)}</Cell>
         <Cell label="Depth">
-          {/* A coin on its bonding curve reports a reserve that is mostly the
-              VIRTUAL SEED — about $4,100 it does not hold — so it is never
-              shown here as money you could sell into. */}
-          {coin.onCurve ? <span className="soft">pre-graduation</span> : compactUsd(coin.reserveUsd)}
+          {compactUsd(coin.reserveUsd)}
         </Cell>
       </dl>
     );

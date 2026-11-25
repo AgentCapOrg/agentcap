@@ -4,7 +4,7 @@
  *
  * ROBINHOOD CHAIN COINS ONLY. People post coins from every chain. A CA in a
  * link that names another chain (Etherscan, BscScan, dexscreener.com/ethereum,
- * gmgn.ai/bsc…), a Solana mint, and an address the look does not show is a
+ * gmgn.ai/bsc…), a foreign-chain mint, and an address the look does not show is a
  * Robinhood Chain coin (`wallet`, `not-token`, `unknown`: an Ethereum token
  * has no code here, so it reads as a wallet) get silence: no line, no
  * reaction, no owner ask, no DM, no nomination, and no memo anything could
@@ -350,10 +350,10 @@ export interface CoinPostInfo {
   otherChain?: string[];
   /**
    * Another chain's coin with no 0x + 40-hex address is in the line
-   * (hasForeignMint || hasOtherChainLink): a Solana or Tron mint, a TON
+   * (hasForeignMint || hasOtherChainLink): a Tron mint, a TON
    * address, a Sui or Aptos coin type, or another chain's chart, explorer or
    * launchpad link whose id is not an EVM address (DexScreener's lowercase
-   * Solana pair links, TON and Sui pairs, a v4 pool id).
+   * Tron pair links, TON and Sui pairs, a v4 pool id).
    */
   foreignMint: boolean;
   /** extractCashtags output. */
@@ -671,7 +671,7 @@ export class CoinFlow {
   /**
    * One line of an approved room. "handled" means the coin flow owns the
    * message and the handler should not also answer it: it carried a CA
-   * (whatever happened to it: another chain's, a replay, silence), a Solana
+   * (whatever happened to it: another chain's, a replay, silence), a foreign
    * mint (always silence), or a ticker the flow answered with "drop the ca".
    * Owning another chain's coin is how it stays unanswered: the chatter path
    * would otherwise talk about it. A ticker the flow said nothing to is
@@ -1032,8 +1032,8 @@ export class CoinFlow {
 
   private async noCa(chatId: number, line: TgLine, m: CoinPostInfo): Promise<{ owned: "handled" | "none"; end: CoinPostEnd }> {
     const none = { owned: "none" as const, end: { acted: false } };
-    // ANOTHER CHAIN'S COIN with no EVM address (a Solana mint, a TON
-    // address, a DexScreener Solana pair link…). Owned, so the chatter path
+    // ANOTHER CHAIN'S COIN with no EVM address (a Tron address, a TON
+    // address, a DexScreener Tron pair link…). Owned, so the chatter path
     // does not talk about it either, and nothing is said: coins on or off,
     // fresh or stale. Not "drop the ca" for a ticker beside it: they did drop one.
     if (m.foreignMint === true) return { owned: "handled", end: { acted: false, quiet: "coin-not-here" } };

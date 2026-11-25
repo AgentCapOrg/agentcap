@@ -43,10 +43,6 @@ const FIELDS = [
   "Strategist decision interval",
   "LLM max per action",
   "Pimlico API key",
-  "Pons curve adapter contract",
-  "Class vault factory contract",
-  "Rialto integrator key",
-  "Rialto key header",
   "Virtuals API key",
   "base URL",
   "bitquery api key",
@@ -64,12 +60,11 @@ const FIELDS = [
   "decimals",
   "files root",
   "gap budget",
-  "idle cash floor",
   "mainnet RPC override",
   "max per token (USDG)",
   "max slippage",
   "max spot-vs-average gap (bps)",
-  "merry circle token",
+  "AgentCap gateway token",
   "minimum pool depth (USD)",
   "model",
   "Agent name",
@@ -77,13 +72,11 @@ const FIELDS = [
   "scout budget (USDG)",
   "step budget",
   "Strategy",
-  "swap venue",
   "symbol",
   "testnet RPC override",
   "Market check interval",
   "trade pings — how often",
   "transcription key (voice)",
-  "v4 adapter contract",
 ];
 
 describe("every control survives the restyle", () => {
@@ -102,7 +95,7 @@ describe("every control survives the restyle", () => {
    * `tickSeconds`, `buyPerTickUsdg` and `llmIntervalMin` all still bind to an
    * input. A label may become plainer; a control may not vanish.
    */
-  it("keeps all 45 field labels", () => {
+  it("keeps all 40 field labels", () => {
     // MEASURED AGAINST THE CATALOGUE, because that is where the labels live
     // now. The census is unchanged — these forty-five fields must still be on
     // the page — but the component names a key and the English sits in en.ts,
@@ -181,7 +174,8 @@ describe("every control survives the restyle", () => {
     // answering Fomo questions (defaults ON, so the control is what makes OFF
     // reachable), the trader cohort, and acting on research. Dashboard-only;
     // the chat refuses all three (DASHBOARD_ONLY.fomo).
-    assert.equal(count(/type="checkbox"/g), 25, "checkboxes");
+    // One fewer since the launchpad (class route) switch was removed.
+    assert.equal(count(/type="checkbox"/g), 24, "checkboxes");
     // 13 since "take profit" — the only exit steady-basket has. It was added to
     // core and read by the worker while being absent from the settings route's
     // field list AND from this screen, so it was unreachable from the app and
@@ -197,11 +191,12 @@ describe("every control survives the restyle", () => {
     //
     // 22, not 14, because the eight fields that were ALREADY plain text with an
     // `inputMode` were on the same broken path and now share the handler.
-    assert.equal(count(/setNum\("/g), 22, "numeric settings");
+    // Four fewer since the class route's numeric settings were removed.
+    assert.equal(count(/setNum\("/g), 17, "numeric settings");
     // And every one of them shows its own refusal, rather than relying on a
     // save-time error for a field the reader has already scrolled past.
-    assert.equal(count(/aria-invalid=/g), 22, "numeric settings marking themselves invalid");
-    assert.equal(count(/type="password"/g), 8, "password inputs");
+    assert.equal(count(/aria-invalid=/g), 17, "numeric settings marking themselves invalid");
+    assert.equal(count(/type="password"/g), 7, "password inputs");
     // 13 since the class vault factory. The number moved for the reason this
     // census exists to allow — a control was ADDED, deliberately — and the
     // check below pins that it is bound, because an address field nobody can
@@ -215,7 +210,8 @@ describe("every control survives the restyle", () => {
     // `<html lang>` static: Firefox picks a number input's decimal separator
     // from the page language, so translating the UI would have changed which
     // strings these fields accept.
-    assert.equal(count(/type="text"/g), 27, "text inputs");
+    // Three fewer with the removed curve adapter, vault factory and class hold-time fields.
+    assert.equal(count(/type="text"/g), 21, "text inputs");
     assert.equal(count(/type="url"/g), 3, "url inputs");
     // 6 since ASSET MODE — All assets / Stocks only / Crypto only. Several
     // owners asked for it at once ("there should be an option mode for stocks
@@ -223,10 +219,10 @@ describe("every control survives the restyle", () => {
     // over what is watched: a class switched off stays priced and sellable.
     // 7 since how chatty it is in Telegram groups (quiet / normal / chatty),
     // the third Telegram groups control beside the two switches above.
-    assert.equal(count(/<select/g), 9, "selects");
+    assert.equal(count(/<select/g), 8, "selects");
   });
 
-  it("sends exactly the 32 fields save() guards", () => {
+  it("sends exactly the 31 fields save() guards", () => {
     // Every guard is "the user did not touch this, so do not overwrite it".
     // One dropped guard silently resets a setting to whatever the form had.
     //
@@ -257,7 +253,7 @@ describe("every control survives the restyle", () => {
     // 29 since the three Fomo research permissions (docs/fomo.md). One of them
     // (fomoDataAccess) defaults ON, so unguarded it would silently switch an
     // owner's lookups off by visiting the page.
-    assert.equal((code.match(/if \(\w+ !== null\) body\.\w+ = \w+;/g) ?? []).length, 32);
+    assert.equal((code.match(/if \(\w+ !== null\) body\.\w+ = \w+;/g) ?? []).length, 31);
   });
 });
 
@@ -367,7 +363,7 @@ describe("nothing is left behind after a save", () => {
     assert.ok(refetch > 0 && saved > refetch && resetEnd > saved, "saved values must be read back before clearing the draft");
     const reset = save.slice(saved, resetEnd);
     const guarded = [...save.slice(0, saved).matchAll(/if \((\w+) !== null\) body\.\w+ = \1;/g)].map((m) => m[1]!);
-    assert.equal(guarded.length, 32, "every guard has the `if (x !== null) body.key = x;` shape");
+    assert.equal(guarded.length, 31, "every guard has the `if (x !== null) body.key = x;` shape");
     const left = guarded.filter((name) => !reset.includes(`set${name[0]!.toUpperCase()}${name.slice(1)}(null)`));
     assert.deepEqual(left, [], "sent by save() but not reset after it");
   });

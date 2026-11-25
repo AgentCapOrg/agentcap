@@ -70,7 +70,7 @@ test("Postgres: original receipt attestation, durable interruptions and actual t
     assert.ok(lease); assert.equal(lease.backend, "postgres"); assert.equal(lease.healthy(), true);
     const f = await receiptFixture(shared, lease);
     const competitor = new PgTenantLeaseManager(async () => freshClient());
-    await shared.prepare("INSERT INTO agents(smart_account,owner_address,session_key_address,chain_id,caps,granted_at,expires_at,mode,hwm_usdg) VALUES(?,?,?,4663,'{}',1,9999999999,'live',77)").run(OTHER, OTHER, OTHER);
+    await shared.prepare("INSERT INTO agents(smart_account,owner_address,session_key_address,chain_id,caps,granted_at,expires_at,mode,hwm_usdg) VALUES(?,?,?,56,'{}',1,9999999999,'live',77)").run(OTHER, OTHER, OTHER);
     await shared.prepare("INSERT INTO flows(agent_id,direction,amount_usdg,source) VALUES(?,'in',77,'inferred')").run(OTHER);
     return { ...f, connect, wrap, main, competitor, lease, application,
       async close() {
@@ -212,7 +212,7 @@ test("Postgres: original receipt attestation, durable interruptions and actual t
       const preserved = `${f.file}.preserved`, before = readFileSync(f.file);
       renameSync(f.file, preserved);
       try {
-        const restore = { tenant: TEST_TENANT, smartAccount: TEST_ACCOUNT.toLowerCase(), chainId: 4663, home: f.options.home,
+        const restore = { tenant: TEST_TENANT, smartAccount: TEST_ACCOUNT.toLowerCase(), chainId: 56, home: f.options.home,
           volume: f.options.volume, shared: f.shared, lease: f.lease, dek: Buffer.alloc(32, 8) };
         await assert.rejects(restoreLedgerImport(restore), /attestation is unfinished/);
         await assert.rejects(registerLedgerSource(restore), /attestation is unfinished/);

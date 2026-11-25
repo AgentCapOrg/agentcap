@@ -26,18 +26,21 @@ import { makeLlmStrategist, type StrategistDecision } from "./strategy";
 import { publishesIdle } from "../strategies/reasons";
 import { drawdownOf, type Snapshot, type Tick } from "../strategies/types";
 
+// 6dp micro figures, scaled to 18dp USDT base units.
+const MICRO = 10n ** 12n;
+
 const TSLA = "0x0000000000000000000000000000000000000001" as const;
 const NVDA = "0x0000000000000000000000000000000000000002" as const;
 const USDG = "0x00000000000000000000000000000000000000dd" as const;
 const ROUTER = "0x00000000000000000000000000000000000000ff" as const;
 
 /** 12.5% below the peak against a 10% limit: tripped, by the wall's own arithmetic. */
-const TRIPPED = drawdownOf({ peakUsdg: 1_000_000_000n, equityUsdg: 875_000_000n, equityKnown: true, maxDrawdownBps: 1_000 });
-const CLEAR = drawdownOf({ peakUsdg: 1_000_000_000n, equityUsdg: 980_000_000n, equityKnown: true, maxDrawdownBps: 1_000 });
+const TRIPPED = drawdownOf({ peakUsdg: (1_000_000_000n * MICRO), equityUsdg: (875_000_000n * MICRO), equityKnown: true, maxDrawdownBps: 1_000 });
+const CLEAR = drawdownOf({ peakUsdg: (1_000_000_000n * MICRO), equityUsdg: (980_000_000n * MICRO), equityKnown: true, maxDrawdownBps: 1_000 });
 
 const limits: AgentLimits = {
-  perTradeUsdg: 10_000_000n,
-  dailyUsdg: 1_000_000_000n,
+  perTradeUsdg: (10_000_000n * MICRO),
+  dailyUsdg: (1_000_000_000n * MICRO),
   maxOpsPerDay: 100,
   allowedTargets: [ROUTER],
   allowedAssets: [USDG, TSLA, NVDA],
@@ -49,7 +52,7 @@ const limits: AgentLimits = {
 const walled = (equityUsdg: bigint): AgentState => ({
   spentTodayUsdg: 0n,
   opsToday: 0,
-  highWaterMarkUsdg: 1_000_000_000n,
+  highWaterMarkUsdg: (1_000_000_000n * MICRO),
   equityUsdg,
   nowSec: 1_800_000_000,
 });
@@ -76,27 +79,27 @@ const holding = () =>
       {
         token: TSLA,
         rawBalance: 5_000_000_000_000_000_000n,
-        valueUsdg: 9_000_000n,
+        valueUsdg: (9_000_000n * MICRO),
         priceStale: false,
-        costUsdg: 10_000_000n,
+        costUsdg: (10_000_000n * MICRO),
       },
     ],
   ]);
 
 const snap = (over: Partial<Snapshot> = {}): Snapshot => ({
-  cashUsdg: 100_000_000n,
+  cashUsdg: (100_000_000n * MICRO),
   vaultUsdg: 0n,
   ethWei: 10n ** 16n,
   holdings: new Map(),
   prices: new Map([
-    ["TSLA", { price8: 180_00000000n, stale: false }],
-    ["NVDA", { price8: 120_00000000n, stale: false }],
+    ["TSLA", { price8: (180_00000000n * MICRO), stale: false }],
+    ["NVDA", { price8: (120_00000000n * MICRO), stale: false }],
   ]) as unknown as Snapshot["prices"],
   pausedTokens: new Set(),
   staleFeeds: new Set(),
   sequencerUp: true,
-  spendHeadroomUsdg: 1_000_000_000n,
-  perTradeCapUsdg: 10_000_000n,
+  spendHeadroomUsdg: (1_000_000_000n * MICRO),
+  perTradeCapUsdg: (10_000_000n * MICRO),
   ...over,
 });
 
@@ -110,7 +113,7 @@ const build = (
       legs: new Map([["TSLA", TSLA], ["NVDA", NVDA]]),
       swapRouter: ROUTER,
       usdg: USDG,
-      maxPerActionUsdg: 10_000_000n,
+      maxPerActionUsdg: (10_000_000n * MICRO),
       maxActionsPerTick: 4,
     },
     stopLossBps: over.stopLossBps ?? 0,
@@ -161,7 +164,7 @@ describe("holding and tripped: sells only", () => {
     assert.ok(out.kind === "swap" && out.sellToken === TSLA, "a sell of what is held");
     assert.equal(t.idle, undefined, "a tick that sells is not idle");
     // The wall agrees: what went out passes at this drawdown.
-    const exit = checkPolicy(t.intents[0]!, limits, walled(875_000_000n));
+    const exit = checkPolicy(t.intents[0]!, limits, walled((875_000_000n * MICRO)));
     assert.equal(exit.ok, true, JSON.stringify(exit));
     // The withheld buy is not journaled — a drop row publishes, and a tripped
     // breaker is account state the public feed leaves out — but the owner's
@@ -183,7 +186,7 @@ describe("holding and tripped: sells only", () => {
     const spy = driverSaying([BUY]);
     const open = await tickOf(build(spy.driver), snap({ holdings: holding(), drawdown: CLEAR }));
     assert.equal(open.intents.length, 1, "with the breaker clear the same answer is a buy");
-    const verdict = checkPolicy(open.intents[0]!, limits, walled(875_000_000n));
+    const verdict = checkPolicy(open.intents[0]!, limits, walled((875_000_000n * MICRO)));
     assert.equal(verdict.ok, false);
     assert.equal(verdict.ok ? null : verdict.rule, "drawdown-breaker");
   });
@@ -202,7 +205,7 @@ describe("holding and tripped: sells only", () => {
 describe("exits never wait on the breaker", () => {
   it("THE STOP FLOOR STILL FIRES, and no model is asked", async () => {
     const spy = driverSaying([BUY]);
-    const losing = new Map([["TSLA", { ...holding().get("TSLA")!, valueUsdg: 7_000_000n }]]);
+    const losing = new Map([["TSLA", { ...holding().get("TSLA")!, valueUsdg: (7_000_000n * MICRO) }]]);
     const t = await tickOf(build(spy.driver, { stopLossBps: 2_000 }), snap({ holdings: losing, drawdown: TRIPPED }));
     assert.equal(t.intents.length, 1);
     assert.equal(t.why[0]?.code, "stop-floor");

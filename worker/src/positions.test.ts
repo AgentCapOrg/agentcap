@@ -1,16 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { PublicClient } from "viem";
-import {
-  UI_MULTIPLIER_ONE,
-  curveMarkedSymbols,
-  mayRatchetHwm,
-  positionValueUsdg,
-  readPositions,
-  valuationMultiplierFor,
-  type Position,
-} from "./positions";
+import { UI_MULTIPLIER_ONE, positionValueUsdg, readPositions, valuationMultiplierFor, type Position } from "./positions";
 import type { PriceQuote, StockToken } from "../../packages/core/src/index";
+
+// Position values are 18dp USDT base units.
+const MICRO = 10n ** 12n;
 
 const ONE = 10n ** 18n; // 1.0 in both raw-balance (18dp) and multiplier terms
 const usd = (v: number) => BigInt(Math.round(v * 1e8)); // Chainlink 8dp
@@ -19,25 +14,25 @@ describe("positionValueUsdg (ERC-8056)", () => {
   it("values a whole share at multiplier 1.0", () => {
     // 1 AAPL raw × 1.0 × $250 = 250 USDG (6dp)
     const v = positionValueUsdg({ rawBalance: ONE, uiMultiplier: ONE, price8: usd(250) });
-    assert.equal(v, 250_000_000n);
+    assert.equal(v, 250_000_000n * MICRO);
   });
 
   it("values fractional holdings", () => {
     // 0.5 shares × 1.0 × $100 = 50 USDG
     const v = positionValueUsdg({ rawBalance: ONE / 2n, uiMultiplier: ONE, price8: usd(100) });
-    assert.equal(v, 50_000_000n);
+    assert.equal(v, 50_000_000n * MICRO);
   });
 
   it("a 2-for-1 split is NOT a crash: multiplier doubles, price halves, value unchanged", () => {
     const before = positionValueUsdg({ rawBalance: ONE, uiMultiplier: ONE, price8: usd(500) });
     const after = positionValueUsdg({ rawBalance: ONE, uiMultiplier: 2n * ONE, price8: usd(250) });
     assert.equal(before, after);
-    assert.equal(after, 500_000_000n);
+    assert.equal(after, 500_000_000n * MICRO);
   });
 
   it("ignoring the multiplier WOULD have looked like a 50% crash (the bug this prevents)", () => {
     const naiveAfterSplit = positionValueUsdg({ rawBalance: ONE, uiMultiplier: ONE, price8: usd(250) });
-    assert.equal(naiveAfterSplit, 250_000_000n); // half of the true 500
+    assert.equal(naiveAfterSplit, 250_000_000n * MICRO); // half of the true 500
   });
 
   it("a 10% stock dividend scales value by the multiplier", () => {
@@ -46,7 +41,7 @@ describe("positionValueUsdg (ERC-8056)", () => {
       uiMultiplier: (11n * ONE) / 10n,
       price8: usd(100),
     });
-    assert.equal(v, 110_000_000n);
+    assert.equal(v, 110_000_000n * MICRO);
   });
 
   it("zero balance is zero value", () => {
@@ -57,7 +52,7 @@ describe("positionValueUsdg (ERC-8056)", () => {
     const raw = 34_209_200_024_468_519n; // ~0.0342 in 18dp
     const v = positionValueUsdg({ rawBalance: raw, uiMultiplier: ONE, price8: usd(575.31) });
     // 0.034209200024468519 × 575.31 = 19.680894866… → floors to 19.680894 USDG
-    assert.equal(v, 19_680_894n);
+    assert.equal(v, 19_680_894n * MICRO);
   });
 });
 
@@ -76,7 +71,7 @@ describe("positionValueUsdg — decimals are not always 18", () => {
       price8: usd(2),
       decimals: 6,
     });
-    assert.equal(v, 2_000_000n);
+    assert.equal(v, 2_000_000n * MICRO);
   });
 
   it("values a 9dp token correctly", () => {
@@ -86,12 +81,12 @@ describe("positionValueUsdg — decimals are not always 18", () => {
       price8: usd(0.5),
       decimals: 9,
     });
-    assert.equal(v, 500_000n); // $0.50
+    assert.equal(v, 500_000n * MICRO); // $0.50
   });
 
   it("values a 0dp token correctly — no fractional units at all", () => {
     const v = positionValueUsdg({ rawBalance: 3n, uiMultiplier: ONE, price8: usd(7), decimals: 0 });
-    assert.equal(v, 21_000_000n);
+    assert.equal(v, 21_000_000n * MICRO);
   });
 
   it("assuming 18 for a 6dp holding would have wiped it out (the bug this prevents)", () => {
@@ -103,7 +98,7 @@ describe("positionValueUsdg — decimals are not always 18", () => {
     const implicit = positionValueUsdg({ rawBalance: ONE, uiMultiplier: ONE, price8: usd(250) });
     const explicit = positionValueUsdg({ rawBalance: ONE, uiMultiplier: ONE, price8: usd(250), decimals: 18 });
     assert.equal(implicit, explicit);
-    assert.equal(implicit, 250_000_000n);
+    assert.equal(implicit, 250_000_000n * MICRO);
   });
 });
 
@@ -391,15 +386,15 @@ describe("readPositions — memecoins are not ERC-8056", () => {
       prices,
     );
     assert.deepEqual(r.positions.map((p) => p.symbol), ["AAPL", "CATE"]);
-    assert.equal(r.positions[0]?.valueUsdg, 200_000_000n);
-    assert.equal(r.positions[1]?.valueUsdg, 6_000_000n, "3 CATE × $2");
+    assert.equal(r.positions[0]?.valueUsdg, 200_000_000n * MICRO);
+    assert.equal(r.positions[1]?.valueUsdg, 6_000_000n * MICRO, "3 CATE × $2");
   });
 
   it("values a 6dp memecoin off its own decimals, not 18", async () => {
     const prices = new Map([["SIXDP", px(2)]]);
     // 5 whole tokens at 6dp
     const r = await readPositions(client([good(5_000_000n)]), ACCT, [SIXDP], prices);
-    assert.equal(r.positions[0]?.valueUsdg, 10_000_000n, "$10, not $0");
+    assert.equal(r.positions[0]?.valueUsdg, 10_000_000n * MICRO, "$10, not $0");
     assert.equal(r.positions[0]?.decimals, 6);
   });
 
@@ -429,7 +424,7 @@ describe("readPositions — a pool price is per raw token, so the multiplier mus
   it("applies the multiplier to a Chainlink price", () => {
     // 100 raw × 2.0 shares/raw × $10/share = $2,000
     const r = positionValueUsdg({ rawBalance: 100n * ONE, uiMultiplier: SPLIT, price8: usd(10) });
-    assert.equal(r, 2_000_000_000n);
+    assert.equal(r, 2_000_000_000n * MICRO);
   });
 
   it("does NOT apply it to a pool price — the pool already repriced the raw token", async () => {
@@ -443,7 +438,7 @@ describe("readPositions — a pool price is per raw token, so the multiplier mus
     );
     assert.equal(
       r.positions[0]?.valueUsdg,
-      2_000_000_000n,
+      2_000_000_000n * MICRO,
       "double-counting the split would report $4,000 — a peak that never happened",
     );
   });
@@ -475,50 +470,7 @@ describe("valuationMultiplierFor — the unit each price source implies", () => 
       uiMultiplier: valuationMultiplierFor("broker", SPLIT), // SPLIT=2.0 must be ignored
       price8: usd(250), // post-split per-share price
     });
-    assert.equal(value, 250_000_000n, "$250, not the double-counted $500");
-  });
-});
-
-/**
- * No curve mark may set a high-water mark.
- *
- * This rule regressed the first time it was written: the guard was applied to
- * the fee and the database write but not to the in-memory peak the drawdown
- * BREAKER divides by. A curve spike then a revert therefore halted every
- * non-exit intent on a drawdown that never happened, for the rest of the
- * process — and because the inflated peak was never persisted, nothing but a
- * restart cleared it. Naming the rule is what makes it testable.
- */
-describe("mayRatchetHwm", () => {
-  const pos = (symbol: string, source: PriceQuote["source"]): Position => ({
-    symbol,
-    token: `0x${"1".repeat(40)}`,
-    rawBalance: 10n ** 18n,
-    uiMultiplier: UI_MULTIPLIER_ONE,
-    decimals: 18,
-    price8: 100_000_000n,
-    priceStale: false,
-    priceSource: source,
-    valueUsdg: 1_000_000n,
-  });
-
-  it("allows a book with no curve marks in it", () => {
-    assert.equal(mayRatchetHwm([]), true);
-    assert.equal(mayRatchetHwm([pos("NVDA", "chainlink"), pos("CATE", "pool")]), true);
-  });
-
-  it("refuses as soon as ONE holding is valued off a curve", () => {
-    // Not proportional and not per-position: equity is a single total, so one
-    // unoracled mark inside it makes the whole figure unfit to set a peak.
-    assert.equal(mayRatchetHwm([pos("NVDA", "chainlink"), pos("PONSY", "curve")]), false);
-  });
-
-  it("names which holdings caused it, for the log", () => {
-    assert.deepEqual(curveMarkedSymbols([pos("A", "pool"), pos("B", "curve"), pos("C", "curve")]), ["B", "C"]);
-  });
-
-  it("treats a broker price as ordinary — it has a venue behind it", () => {
-    assert.equal(mayRatchetHwm([pos("AAPL", "broker")]), true);
+    assert.equal(value, 250_000_000n * MICRO, "$250, not the double-counted $500");
   });
 });
 
@@ -539,12 +491,12 @@ describe("mayRatchetHwm", () => {
 describe("readPositions — a refused request is the whole read", async () => {
   const { createPublicClient, custom, decodeFunctionData, encodeFunctionResult, erc20Abi, multicall3Abi, HttpRequestError, TimeoutError } =
     await import("viem");
-  const { robinhoodChain } = await import("../../packages/core/src/chain");
+  const { bnbChain } = await import("../../packages/core/src/chain");
   const { multicallRequestFailed } = await import("./positions");
   const GATO: StockToken = { ...feedless("GATO", "0x436b01e41314d4b010edd24cf7c997a7d111c0ab"), kind: "memecoin" };
   const PEPE: StockToken = { ...feedless("PEPE", "0x5555555555555555555555555555555555555555"), kind: "memecoin" };
   const throwing = (e: unknown) =>
-    createPublicClient({ chain: robinhoodChain, transport: custom({ async request() { throw e; } }) }) as unknown as PublicClient;
+    createPublicClient({ chain: bnbChain, transport: custom({ async request() { throw e; } }) }) as unknown as PublicClient;
   const rpcError = (code: number, message: string) => Object.assign(new Error(message), { code });
 
   for (const [name, error] of [
@@ -569,7 +521,7 @@ describe("readPositions — a refused request is the whole read", async () => {
 
   it("a token whose own call reverts, or has no code, is that token's gap, and the rest is read", async () => {
     const answered = createPublicClient({
-      chain: robinhoodChain,
+      chain: bnbChain,
       transport: custom({
         async request({ method, params }: { method: string; params: unknown }) {
           if (method !== "eth_call") throw new Error(method);

@@ -1,5 +1,4 @@
 /** Select public comments conservatively. Pure: no model, credentials, trading state or I/O. */
-import { onchainIdIn } from "../../../packages/core/src/ids";
 import type { XReply } from "./client";
 import { checkAsk, checkAskText, checkTargetOf, type CheckFrom, type CheckTarget } from "./check";
 
@@ -127,19 +126,7 @@ export type ReplyCandidate =
   | { ok: false; reason: string };
 
 const LINK_OR_SECRET = /https?:|www\.|\b[a-z0-9-]+\.(?:com|net|org|io|dev|app|xyz|gg|co|me|ai)\b|0x[a-f0-9]{8,}|\b(?:sk-|gsk_|api[ _-]?key|seed phrase|private key|password|secret)\b/i;
-/**
- * LINK_OR_SECRET, or a Solana key or signature (core's onchainIdIn): base58 has
- * no 0x for the hex arm to see. The glued scan (audit regressions F3): a tag or
- * a comment carrying "CA<mint>" or "<key>is" is refused before any model reads
- * it, as one with a bare id is; the reply is checked again at send
- * (public-wallet.ts). The scan's one cost elsewhere, an unbroken base58 run of
- * 43 or more characters such as a long camelCase hashtag, hardly reaches here:
- * both paths refuse "#" as unsafe-text first, and the comment path any digit.
- * A long number glued to a word ("<digits>tokens") can reach a tag, and may
- * cost it: the tag is refused, as fail closed as any refusal here.
- */
-const GLUED = { glued: true } as const;
-const linkOrSecret = (text: string): boolean => LINK_OR_SECRET.test(text) || onchainIdIn(text, GLUED);
+const linkOrSecret = (text: string): boolean => LINK_OR_SECRET.test(text);
 const ABUSE_OR_SENSITIVE = /\b(?:fuck\w*|shit\w*|bitch\w*|idiot\w*|moron\w*|retard\w*|kill\w*|suicid\w*|rape\w*|porn\w*|sex\w*|nude\w*|terror\w*|nazi\w*|racis\w*|politic\w*|election\w*|president\w*|democrat\w*|republican\w*|religio\w*|christian\w*|muslim\w*|jew\w*|medical\w*|diagnos\w*|cancer|medication\w*|depress\w*)\b/i;
 /**
  * DISTRESS, HOWEVER IT IS PUT (red-team review, 2026-10-12): "i lost my life
@@ -195,8 +182,8 @@ const STAKES = new RegExp(
  * own: "i'm about to lose my home, should i buy btc to save it?", "i'm
  * homeless, should i buy doge?", "should i sell my house and go all in on
  * btc?", "should i cash out my life insurance for btc?", "should i max out my
- * card for sol?", "should i sell my car to buy eth?", "should i use my
- * inheritance to buy sol?", "should i sell my wedding ring to buy btc?",
+ * card for bnb?", "should i sell my car to buy eth?", "should i use my
+ * inheritance to buy bnb?", "should i sell my wedding ring to buy btc?",
  * "should i bet my house on eth?" and "should i put everything i own into
  * eth?" each got code's joking decline at once. A tag to an active agent that
  * speaks of a home or a house, being homeless, a car, an inheritance,
@@ -226,7 +213,7 @@ const LIFE_STAKES = new RegExp(
  */
 const MARKET_ADVICE = new RegExp(
   String.raw`\$[a-z]|\b(?:buy\w*|bought|sell\w*|sold|ape|apes|aped|aping|hold|holds|holding|hodl\w*|trade|trades|trading|invest\w*|coins?|tokens?|crypto\w*|markets?|charts?|prices?` +
-    String.raw`|pump\w*|dump\w*|moon\w*|bags?|entry|entries|exit|exits|targets?|bull\w*|bear\w*|gems?|memecoins?|alts?|altcoins?|eth|btc|sol|bitcoin|ether|ethereum|solana|defi|dip|dips|ath` +
+    String.raw`|pump\w*|dump\w*|moon\w*|bags?|entry|entries|exit|exits|targets?|bull\w*|bear\w*|gems?|memecoins?|alts?|altcoins?|eth|btc|sol|bitcoin|ether|ethereum|solana|bnb|defi|dip|dips|ath` +
     String.raw`|leverage|long|short|positions?|portfolio|profits?|gains?|liquidity|ticker|contract|ca|rug\w*|undervalued|overvalued|\d+\s*x|ten\s*x|hundred\s*x` +
     String.raw`|(?:go|goes|going|gonna|headed|heading)\s+(?:up|down|higher|lower)|to\s+zero|(?:what'?s|whats|what\s+is)\s+(?:hot|trending|moving|pumping))\b`,
   "i",
@@ -587,7 +574,7 @@ const OWN_BUYING_ASK = new RegExp(
  * 1ed46625, 2026-10-12). From the account that bought ZAPX, "is binance
  * listing zapx tomorrow? should i buy before?", "are the zapx devs about to
  * dump? should i sell?", "zapx is a scam right? should i sell?" and "is the
- * sec about to approve the sol etf? should i buy?" each got code's decline:
+ * sec about to approve the bnb etf? should i buy?" each got code's decline:
  * a line about the asking, under a claim or a rumour code never judged, which
  * reads as the house knowing about the listing or the dump. An advice tag is
  * declined only when it is one plain question: after at most two greeting

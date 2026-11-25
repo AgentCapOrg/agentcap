@@ -56,7 +56,6 @@ const STALENESS_RESERVE = 150;
 const STALE_AFTER_MS = 6 * 3_600_000;
 
 const ADDRESS_HEX = /0x[0-9a-fA-F]{6,}/;
-const BASE58_RUN = /[1-9A-HJ-NP-Za-km-z]{32,}/;
 const VENDOR = /fomo/i;
 
 const ATTRIBUTION =
@@ -172,7 +171,7 @@ function hasUsableContent(d: CoinDossier): boolean {
 
 /** Anything address-shaped or vendor-named anywhere withholds the WHOLE lens. */
 function leaks(text: string): boolean {
-  return VENDOR.test(text) || ADDRESS_HEX.test(text) || BASE58_RUN.test(text);
+  return VENDOR.test(text) || ADDRESS_HEX.test(text);
 }
 
 /**

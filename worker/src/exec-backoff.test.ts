@@ -34,11 +34,8 @@ const EXTRA_STOCK = "0x00000000000000000000000000000000000000a2" as const;
 const COIN = "0x00000000000000000000000000000000000000b1" as const;
 const OTHER_COIN = "0x00000000000000000000000000000000000000b2" as const;
 const ROUTER = "0x00000000000000000000000000000000000000d1" as const;
-const ADAPTER = "0x00000000000000000000000000000000000000d2" as const;
-const VAULT = "0x00000000000000000000000000000000000000E1" as const;
-const CURVE = "0x00000000000000000000000000000000000000f1" as const;
 
-const LIMITS: BackoffLimits = { cashToken: USDG, quoteAssets: [USDG, STOCK], ponsClassVault: VAULT };
+const LIMITS: BackoffLimits = { cashToken: USDG, quoteAssets: [USDG, STOCK] };
 const MIN = 60_000;
 const T0 = 1_760_000_000_000;
 
@@ -48,10 +45,6 @@ const buy = (token: `0x${string}` = COIN): TradeIntent => ({
 const sell = (token: `0x${string}` = COIN): TradeIntent => ({
   kind: "swap", target: ROUTER, sellToken: token, buyToken: USDG, sellAmountRaw: 10n ** 18n, notionalUsdg: 5_000_000n,
 });
-const curve = (assetIn: `0x${string}`, assetOut: `0x${string}`, target: `0x${string}` = VAULT): TradeIntent => ({
-  kind: "curve-trade", target, curve: CURVE, assetIn, assetOut, amountInRaw: 1n, minAmountOutRaw: 1n, notionalUsdg: 5_000_000n,
-});
-
 /** A backoff whose `[backoff]` lines are kept rather than printed. */
 function backoff() {
   const lines: string[] = [];
@@ -175,20 +168,13 @@ describe("THE SCHEDULE", () => {
 });
 
 describe("AN EXIT IS NEVER BLOCKED", () => {
-  // Every shape of the way out, including the one the breaker's own test gets
-  // wrong: a curve sale into an owner-added stock token on a legacy grant,
-  // which isExitIntent reads as an entry (energy.ts sellsHeldLeg).
+  // Every shape of the way out.
   const exits: [string, TradeIntent][] = [
     ["a swap into cash", sell()],
     // A basket agent's stop-loss. A stock token is ON the quote side, so the
     // quote-side test alone would hold it: only isExitIntent keeps it moving.
     ["a stock sale into cash", sell(STOCK)],
-    ["a stock-in curve sale into cash", curve(STOCK, USDG)],
-    ["a curve sale into cash", curve(COIN, USDG)],
-    ["a curve sale into a built-in quote", curve(COIN, STOCK)],
-    ["a curve sale into an extra quote on a legacy grant", curve(COIN, EXTRA_STOCK)],
     ["a transfer home", { kind: "transfer", target: USDG, recipient: ROUTER, amountUsdg: 1n }],
-    ["a vault withdrawal", { kind: "vault-withdraw", target: ROUTER, amountUsdg: 1n }],
   ];
 
   for (const [name, intent] of exits) {
@@ -198,26 +184,15 @@ describe("AN EXIT IS NEVER BLOCKED", () => {
       assert.equal(b.note(intent, LIMITS, "gas-absurd", T0), null);
       assert.deepEqual(lines, []);
       // Every hold that could conceivably match it is in force: the reverse
-      // pair, the vault route, and the coin's own buy.
+      // pair and the coin's own buy.
       b.note(buy(COIN), LIMITS, "gas-absurd", T0);
-      b.note(curve(USDG, COIN), LIMITS, "gas-absurd", T0);
-      b.note(curve(STOCK, OTHER_COIN), LIMITS, "enable-too-wide", T0);
+      b.note(buy(OTHER_COIN), LIMITS, "enable-too-wide", T0);
       assert.equal(b.held(intent, LIMITS, T0 + MIN), null);
     });
   }
 
   it("and the buys beside them are", () => {
     assert.equal(backsOff(buy(), LIMITS), true);
-    assert.equal(backsOff(curve(USDG, COIN), LIMITS), true);
-    assert.equal(backsOff(curve(STOCK, COIN), LIMITS), true);
-    // A buy this misses is merely not held — today's behaviour.
-    assert.equal(backsOff(curve(EXTRA_STOCK, COIN), LIMITS), false);
-    assert.equal(backsOff({ kind: "vault-deposit", target: ROUTER, amountUsdg: 1n }, LIMITS), false);
-    assert.equal(
-      backsOff({ kind: "energy-buy", target: ROUTER, sellToken: USDG, buyToken: COIN, sellAmountRaw: 1n, notionalUsdg: 1n }, LIMITS),
-      false,
-      "the owner's energy buy is its own route",
-    );
   });
 
   it("a swap ROTATING one built-in into another is held, as the breaker blocks it: it is not a way out", () => {
@@ -307,54 +282,15 @@ describe("AN ORDER IS ANSWERED BY ITS OWN REFUSAL, NEVER BY ANOTHER'S HOLD", () 
   });
 });
 
-describe("A VAULT ROUTE-WIDE KEY", () => {
-  it("`gas-absurd` on the sealed vault holds every class entry, not just its coin", () => {
-    const { b, lines } = backoff();
-    const h = b.note(curve(USDG, COIN), LIMITS, "gas-absurd", T0)!;
-    assert.equal(h.key, `curve-trade@${VAULT.toLowerCase()}`);
-    assert.equal(b.held(curve(USDG, OTHER_COIN), LIMITS, T0 + MIN)?.rule, "gas-absurd");
-    assert.equal(b.held(curve(STOCK, OTHER_COIN), LIMITS, T0 + MIN)?.rule, "gas-absurd");
-    assert.match(lines[0]!, /holding curve-trade@0x0+e1 for 5m after gas-absurd/);
-  });
-
-  it("is the vault's alone: the adapter route keeps its per-coin key", () => {
-    const { b } = backoff();
-    const h = b.note(curve(USDG, COIN, ADAPTER), LIMITS, "gas-absurd", T0)!;
-    assert.equal(h.key, `curve-trade:${USDG}->${COIN}`);
-    assert.equal(b.held(curve(USDG, OTHER_COIN, ADAPTER), LIMITS, T0 + MIN), null);
-    assert.equal(b.held(curve(USDG, OTHER_COIN), LIMITS, T0 + MIN), null, "nor does it reach the vault");
-  });
-
-  it("and only `gas-absurd` writes it: any other refusal on the vault is about its coin", () => {
-    const { b } = backoff();
-    b.note(curve(USDG, COIN), LIMITS, "gas-unreadable", T0);
-    assert.equal(b.held(curve(USDG, OTHER_COIN), LIMITS, T0 + MIN), null);
-    assert.equal(b.held(curve(USDG, COIN), LIMITS, T0 + MIN)?.rule, "gas-unreadable");
-  });
-
-  it("a coin held on both keys answers with the hold that ends last", () => {
-    const { b } = backoff();
-    b.note(curve(USDG, COIN), LIMITS, "enable-too-wide", T0); // pair, 30m
-    b.note(curve(USDG, OTHER_COIN), LIMITS, "gas-absurd", T0); // route, 5m
-    assert.equal(b.held(curve(USDG, COIN), LIMITS, T0 + MIN)?.untilMs, T0 + 30 * MIN);
-  });
-
-  it("with no vault sealed there is no route to hold", () => {
-    const { b } = backoff();
-    const { ponsClassVault: _, ...noVault } = LIMITS;
-    assert.equal(b.note(curve(USDG, COIN), noVault, "gas-absurd", T0)!.key, `curve-trade:${USDG}->${COIN}`);
-  });
-});
-
 describe("CLEAR ON INSTALL SUCCESS", () => {
   it("drops every `enable-too-wide` hold, and only those", () => {
     const { b, lines } = backoff();
     b.note(buy(COIN), LIMITS, "enable-too-wide", T0);
-    b.note(curve(USDG, OTHER_COIN), LIMITS, "enable-too-wide", T0);
+    b.note(buy(`0x${"c".repeat(40)}`), LIMITS, "enable-too-wide", T0);
     b.note(buy(OTHER_COIN), LIMITS, "gas-absurd", T0);
     assert.equal(b.clearRule("enable-too-wide", "key installed"), 2);
     assert.equal(b.held(buy(COIN), LIMITS, T0 + MIN), null);
-    assert.equal(b.held(curve(USDG, OTHER_COIN), LIMITS, T0 + MIN), null);
+    assert.equal(b.held(buy(`0x${"c".repeat(40)}`), LIMITS, T0 + MIN), null);
     assert.equal(b.held(buy(OTHER_COIN), LIMITS, T0 + MIN)?.rule, "gas-absurd");
     assert.equal(lines.at(-1), "[backoff] cleared 2 enable-too-wide holds: key installed");
     // Its strikes went with it: a fresh refusal is the first again.
@@ -419,11 +355,12 @@ describe("CLEAR ON INSTALL SUCCESS", () => {
 describe("CLEAR ON ARM", () => {
   it("drops every hold, whatever its rule, and says how many", () => {
     const { b, lines } = backoff();
+    const THIRD = `0x${"c".repeat(40)}` as const;
     b.note(buy(COIN), LIMITS, "gas-absurd", T0);
-    b.note(curve(USDG, OTHER_COIN), LIMITS, "gas-absurd", T0);
+    b.note(buy(THIRD), LIMITS, "gas-absurd", T0);
     b.note(buy(OTHER_COIN), LIMITS, "enable-too-wide", T0);
     assert.equal(b.clear("armed"), 3);
-    for (const i of [buy(COIN), curve(USDG, COIN), buy(OTHER_COIN)]) assert.equal(b.held(i, LIMITS, T0 + MIN), null);
+    for (const i of [buy(COIN), buy(THIRD), buy(OTHER_COIN)]) assert.equal(b.held(i, LIMITS, T0 + MIN), null);
     assert.equal(lines.at(-1), "[backoff] cleared 3 holds: armed");
     assert.equal(b.clear("armed"), 0);
     assert.equal(lines.length, 4, "an empty clear is not a change");
@@ -468,18 +405,8 @@ describe("WHERE THE WORKER ASKS", () => {
     const skip = loop.indexOf(SKIP);
     assert.ok(entry > 0 && skip > entry, "asked of the entry test's answer, never of an exit");
     assert.ok(skip < loop.indexOf("tgClaimGroupEntry(intent)"), "before the group claim");
-    assert.ok(skip < loop.indexOf("await claimEntry()"), "before the energy claim");
+    assert.ok(skip < loop.indexOf("fomoChild.gateEntry(intent)"), "before the follow claim");
     assert.ok(skip < loop.indexOf("await ensureDecision("), "before any decision row");
-  });
-
-  it("THE CLASS ENTRIES the same, and THE CLASS EXITS never ask", () => {
-    const at = CODE.indexOf("const entries: Tick = await classGate.entries(async () => await proposeClassEntries());");
-    const loop = CODE.slice(at, CODE.indexOf("\n    }\n", at));
-    const skip = loop.indexOf(SKIP);
-    assert.ok(skip > loop.indexOf("const entry = countsAsEntry("));
-    assert.ok(skip < loop.indexOf("await claimEntry()") && skip < loop.indexOf("await ensureDecision("));
-    const exits = CODE.slice(CODE.indexOf("const exits = await proposeClassExits();"), at);
-    assert.doesNotMatch(exits, /execBackoff/);
   });
 
   it("processIntentLocked books a held intent `rejected` under the held rule — never a silent return", () => {
@@ -516,36 +443,24 @@ describe("WHERE THE WORKER ASKS", () => {
     assert.match(CODE, /suppressedIntents\.clear\(\);\n(?:\s*entryGateRows\.clear\(\);\n)?\s*execBackoff\.clear\("armed"\);/);
   });
 
-  it("ONLY THE TICK'S OWN ENTRIES are marked holdable, each just before it runs", () => {
-    // Exactly the two entry branches: the strategy loop's and the class route's.
-    assert.equal((CODE.match(/tickEntries\.add\(/g) ?? []).length, 2);
-    for (const loopStart of [
-      "for (const [proposedAt, intent] of proposed.entries()) {",
-      "const entries: Tick = await classGate.entries(async () => await proposeClassEntries());",
-    ]) {
-      const at = CODE.indexOf(loopStart);
-      const loop = CODE.slice(at, CODE.indexOf("\n    }\n", at));
-      assert.match(
-        loop,
-        /if \(entry\) \{\s*tickEntries\.add\(intent\);\s*const facts = await processIntentReporting\(intent, equityUsdg, !bookIncomplete\);/,
-        loopStart,
-      );
-    }
+  it("ONLY THE TICK'S OWN ENTRIES are marked holdable, just before they run", () => {
+    // Exactly one entry branch: the strategy loop's.
+    assert.equal((CODE.match(/tickEntries\.add\(/g) ?? []).length, 1);
+    const at = CODE.indexOf("for (const [proposedAt, intent] of proposed.entries()) {");
+    const loop = CODE.slice(at, CODE.indexOf("\n    }\n", at));
+    assert.match(loop, /if \(entry\) \{\s*tickEntries\.add\(intent\);\s*const facts = await processIntentReporting\(intent, equityUsdg, !bookIncomplete\);/);
   });
 
   it("OWNER AND BRAIN ORDERS ARE EXEMPT: neither order path marks its intent holdable", () => {
-    // The Brain's orders go through submitChatTrade like the owner's, so these
-    // two bodies are every order path there is.
-    for (const name of ["submitChatTrade", "submitChatCurveTrade"]) {
+    // The Brain's orders go through submitChatTrade like the owner's.
+    for (const name of ["submitChatTrade", "submitChatTransfer"]) {
       assert.doesNotMatch(body(name), /tickEntries/, name);
     }
   });
 
-  it("BOTH ORDER PATHS say when to ask again after their OWN refusal started a hold", () => {
+  it("THE ORDER PATH says when to ask again after its OWN refusal started a hold", () => {
     const swap = body("submitChatTrade");
     assert.match(swap, /\.\.\.sayTradeOutcome\(outcome, side, named, usdgAmount, sold \?\? usdgAmount\), \.\.\.orderHeldReply\(intent, outcome\),/);
-    const curveOrder = body("submitChatCurveTrade");
-    assert.match(curveOrder, /\.\.\.sayTradeOutcome\(outcome, side, symbol, usdgAmount, actual\), \.\.\.orderHeldReply\(intent, outcome\),/);
     const reply = body("orderHeldReply");
     assert.match(reply, /outcome\?\.status !== "rejected"\) return \{\};/);
     // The hold THIS order's refusal wrote — never whatever hold its pair carries.

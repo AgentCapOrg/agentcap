@@ -2,13 +2,13 @@
  * `cost_basis.cost_usdg` AS A DOLLAR FIGURE — the units are not the ones the
  * name suggests.
  *
- * The column is a decimal string of the worker's `bigint` cost in MICRO-USDG,
+ * The column is a decimal string of the worker's `bigint` cost in USDT BASE UNITS (18dp),
  * because that is the unit the whole basis arithmetic is done in and a text
  * column is the only lossless way to carry a bigint through SQLite and Postgres
  * alike. Every other money column a page reads — `value_usdg`, `equity_usdg`,
  * `amount_usdg` — is a REAL in whole USDG.
  *
- * So `Number(row.cost_usdg)` is off by a factor of a million, and it reads as a
+ * So `Number(row.cost_usdg)` is off by a factor of 10^18, and it reads as a
  * position that cost $8,332,500 and is now worth $8.32: every holding down
  * 99.99%, on the public agent page and the token page, forever. It is the same
  * failure venues/pons-price.ts records against itself — "carrying the 8dp number
@@ -20,15 +20,20 @@
  * price is unknown; zero would say it was free, and the return computed from it
  * would be infinite rather than absent.
  */
+import { cashNumber } from "../../../packages/core/src/cash";
 export function basisUsdg(raw: unknown): number | null {
   if (raw === null || raw === undefined) return null;
-  const micro = Number(raw);
-  if (!Number.isFinite(micro) || micro <= 0) return null;
-  return micro / 1e6;
+  let units: bigint;
+  try {
+    units = BigInt(String(raw).trim());
+  } catch {
+    return null;
+  }
+  return units > 0n ? cashNumber(units) : null;
 }
 
 /*
- * NO IMPORTS, ON PURPOSE.
+ * ONLY THE CASH SCALE IMPORTED, ON PURPOSE.
  *
  * This began inside `lib/ledger.ts`, which opens a database and therefore
  * cannot be reached from a browser bundle or from a plain test runner — so the

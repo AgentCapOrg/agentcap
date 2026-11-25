@@ -908,7 +908,7 @@ describe("answering", () => {
     const a = msg("@pinebot what's your take on eth today?");
     groups.onMessage(a);
     clock += 4 * SEC;
-    const b = msg("@pinebot thoughts on sol?", { fromId: BOB, fromFirstName: "Bob" });
+    const b = msg("@pinebot thoughts on bnb?", { fromId: BOB, fromFirstName: "Bob" });
     groups.onMessage(b);
     await groups.drain();
     assert.deepEqual(tg.sends(CHAT).map(replyOf), [a.messageId, b.messageId]);
@@ -921,7 +921,7 @@ describe("answering", () => {
       c = msg("@pinebot and btc?", { fromId: BOB, fromFirstName: "Bob" });
       groups.onMessage(c);
     };
-    const d = msg("@pinebot and what about sol?");
+    const d = msg("@pinebot and what about bnb?");
     await said(d);
     assert.ok(c, "Bob's line landed mid-typing");
     assert.deepEqual(tg.sends(CHAT).slice(2).map(replyOf), [d.messageId, (c as TgMessage | null)?.messageId]);

@@ -61,8 +61,6 @@ const ALIASES: Readonly<Record<string, readonly string[]>> = Object.freeze({
   buyPerTickUsdg: ["buy size", "buy amount", "per buy", "each buy", "trade size"],
   llmMaxActionUsdg: ["ai size", "ai trade size", "max ai trade"],
   telegramMaxActionUsdg: ["cap", "chat cap", "chat limit", "chat trade limit"],
-  classPerEntryUsdg: ["launch size", "memecoin size", "per coin", "entry size"],
-  idleFloorUsdg: ["idle floor", "reserve", "cash reserve", "keep aside"],
   takeProfitBps: ["take profit", "tp", "profit target"],
   strategistStopLossBps: ["stop loss", "sl", "stoploss"],
   slippageBps: ["slippage"],
@@ -78,17 +76,10 @@ const ALIASES: Readonly<Record<string, readonly string[]>> = Object.freeze({
   telegramNotifyEveryMin: ["batching", "summary interval", "quiet mode", "trade pings", "trade messages", "pings", "messages"],
   telegramDigestHour: ["report hour", "digest hour", "daily report"],
   discoveryEnabled: ["discovery", "scanning", "new coin scanning"],
-  classMaxHoldSec: ["max hold", "hold time"],
-  classMaxPositions: ["max positions", "max coins"],
-  classExitAtGraduationPct: ["graduation exit", "exit at graduation"],
   strategy: ["playbook"],
   // Posting on X is dashboard-only (DASHBOARD_ONLY.xPosting): these words
   // reach the refusal and its Settings button, never a change.
   xPosting: ["post on x", "posting on x", "x posting", "posts on x", "post on twitter", "twitter", "tweets", "tweeting", "x account", "x settings"],
-  // Launchpad buying is dashboard-only (DASHBOARD_ONLY.launchSniping). The
-  // agent calls it "launchpad buying" and the web page called it "class
-  // route", so an owner may use either, or what the iOS app called it.
-  launchSniping: ["launchpad buying", "launchpad sniping", "launch buying", "launch sniping", "launchpad", "class route", "class sniping", "classSnipeEnabled"],
   // Telegram groups are dashboard-only (DASHBOARD_ONLY.telegramGroups). "group
   // chats" is how owners say it even though the product never does — the
   // public web room owns that name — so it has to reach the refusal too. The
@@ -134,7 +125,6 @@ export function resolveSettingName(phrase: string): string | null {
  * link points into). One missing here still gets the button, to the page top.
  */
 const DASHBOARD_ANCHORS: Readonly<Record<string, string>> = Object.freeze({
-  launchSniping: "launchpad-buying",
   memecoinLive: "trencher-mode",
   telegram: "telegram",
   telegramGroups: "telegram-groups",
@@ -161,7 +151,7 @@ function extraNote(spec: SettingSpec, value: unknown, ctx: ProposalContext): str
   if (spec.key === "telegramMaxActionUsdg" && ctx.signedPerTradeUsdg !== undefined && typeof value === "number" && value > ctx.signedPerTradeUsdg) {
     return `\nNote: your signed per-trade limit is $${ctx.signedPerTradeUsdg.toFixed(2)}, so a chat trade still won't go above that.`;
   }
-  if ((spec.key === "buyPerTickUsdg" || spec.key === "llmMaxActionUsdg" || spec.key === "classPerEntryUsdg") &&
+  if ((spec.key === "buyPerTickUsdg" || spec.key === "llmMaxActionUsdg") &&
       ctx.signedPerTradeUsdg !== undefined && typeof value === "number" && value > ctx.signedPerTradeUsdg) {
     return `\nNote: your signed per-trade limit is $${ctx.signedPerTradeUsdg.toFixed(2)}, so trades will still stop there until you sign a higher one.`;
   }

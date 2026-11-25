@@ -26,7 +26,7 @@ import { signerGrant } from "@/lib/canonical-wall-fixture";
 
 const ORIGIN = "https://app.agentcap.xyz";
 const SMART = "0x00000000000000000000000000000000000000a1" as const;
-const CHAIN = 4663;
+const CHAIN = 56;
 const OWNERSHIP_UNREADABLE = "couldn't check this account's ownership — please try again";
 
 const saved = Object.fromEntries(

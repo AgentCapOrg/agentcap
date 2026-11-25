@@ -18,25 +18,23 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { renderWhy, type Why } from "./reasons";
 
+// 6dp micro figures, scaled to 18dp USDT base units.
+const MICRO = 10n ** 12n;
+
 type Every = { [K in Why["code"]]: Extract<Why, { code: K }>[] };
 
 /** Distinctive raw amounts, so a leak is found by its own digits. */
-const A = 4_400_000n; // 4.40
-const B = 5_170_000n; // 5.17
-const C = 61_230_000n; // 61.23
-const BIG = 1_234_567_890n; // 1,234.56
+const A = (4_400_000n * MICRO); // 4.40
+const B = (5_170_000n * MICRO); // 5.17
+const C = (61_230_000n * MICRO); // 61.23
+const BIG = (1_234_567_890n * MICRO); // 1,234.56
 
 const EVERY: Every = {
   "dca-leg": [{ code: "dca-leg", symbol: "NVDA", usdgRaw: A, weightBps: 3_333, legs: 3 }],
-  park: [
-    { code: "park", usdgRaw: A, floorRaw: C, clamped: false },
-    { code: "park", usdgRaw: BIG, floorRaw: C, clamped: true },
-  ],
-  unpark: [{ code: "unpark", usdgRaw: A, needRaw: B }],
   "all-legs-stale": [{ code: "all-legs-stale", legs: 3, paused: 1 }],
   "under-one-buy": [
-    { code: "under-one-buy", cashRaw: A, needRaw: B, vaultRaw: C },
-    { code: "under-one-buy", cashRaw: A, needRaw: B, vaultRaw: 0n },
+    { code: "under-one-buy", cashRaw: A, needRaw: B },
+    { code: "under-one-buy", cashRaw: A, needRaw: B },
   ],
   "budget-spent": [{ code: "budget-spent", capRaw: B }],
   "ops-spent": [{ code: "ops-spent" }],
@@ -120,7 +118,7 @@ const EVERY: Every = {
   ],
   "perp-market-not-covered": [{ code: "perp-market-not-covered", market: "TSLA-PERP" }],
   "perp-too-volatile": [{ code: "perp-too-volatile", market: "SOL-PERP", stopPct: 6.5, maxStopPct: 5 }],
-  "perp-below-min": [{ code: "perp-below-min", market: "BTC-PERP", minRaw: 16_620_000n, capRaw: B }],
+  "perp-below-min": [{ code: "perp-below-min", market: "BTC-PERP", minRaw: 16_620_000n, capRaw: 100_000_000n }],
   "perp-cooldown": (["strategy", "stop", "risk", "forced"] as const).map((after) => ({
     code: "perp-cooldown" as const,
     market: "ETH-PERP" as const,
@@ -145,8 +143,8 @@ function figuresOf(w: Why): string[] {
   return Object.values(w)
     .filter((v): v is bigint => typeof v === "bigint" && v !== 0n)
     .map((raw) => {
-      const whole = raw / 1_000_000n;
-      const cents = (raw % 1_000_000n) / 10_000n;
+      const whole = raw / (1_000_000n * MICRO);
+      const cents = (raw % (1_000_000n * MICRO)) / (10_000n * MICRO);
       return `${whole.toLocaleString("en-US")}.${cents.toString().padStart(2, "0")}`;
     });
 }
@@ -180,8 +178,8 @@ describe("the public register names no figure of the book", () => {
   it("the OWNER keeps every figure — the register only changes who reads it", () => {
     for (const w of ALL) {
       const own = renderWhy(w, "owner");
-      for (const f of figuresOf(w).filter((f) => !(w.code === "unpark" && f === "5.17") && !(w.code === "class-enter" && f === "61.23"))) {
-        // unpark's need and class-enter's depth were never in either sentence.
+      for (const f of figuresOf(w).filter((f) => !(w.code === "class-enter" && f === "61.23"))) {
+        // class-enter's depth was never in either sentence.
         assert.ok(own.includes(f), `${w.code}: the owner lost ${f}: "${own}"`);
       }
       assert.equal(renderWhy(w), own, "the default register is still the owner's");

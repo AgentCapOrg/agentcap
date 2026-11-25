@@ -43,7 +43,6 @@ import {
 import { useShellClocks } from "./live-clocks";
 
 import { Agent } from "./screens/Agent";
-import { Alpha } from "./screens/Alpha";
 import { terminalWallet } from "./perps-navigation";
 import { TradingModeToggle } from "./TradingModeToggle";
 import { useTradingModeTransition } from "./use-trading-mode-transition";
@@ -69,7 +68,6 @@ import { CreateAgent } from "./screens/CreateAgent";
 import Settings from "./screens/Settings";
 import Wallet from "./screens/Wallet";
 import dynamic from "next/dynamic";
-import "./SolanaNavigation.css";
 
 import { Profile } from "./screens/Profile";
 import { glanceOfHow, thesisOfHow, type ProfileAgent } from "./profile-view";
@@ -109,7 +107,6 @@ import "./deposit.css";
 import "./ledger.css";
 
 const PerpsWorkspace = dynamic(() => import("./PerpsWorkspace").then(module => module.PerpsWorkspace), { ssr: false, loading: () => <p role="status">Loading Perps…</p> });
-const SolanaScreen = dynamic(() => import("./SolanaScreen").then((module) => module.SolanaScreen));
 
 const desktopSnapshot = () => window.matchMedia("(min-width: 1100px)").matches;
 function subscribeDesktop(onChange: () => void) {
@@ -118,7 +115,7 @@ function subscribeDesktop(onChange: () => void) {
   return () => media.removeEventListener("change", onChange);
 }
 
-export function App({ solana = false, perps = false }: { solana?: boolean; perps?: boolean }) {
+export function App({ perps = false }: { perps?: boolean }) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const modeSceneRef = useRef<HTMLDivElement>(null);
   /**
@@ -126,7 +123,7 @@ export function App({ solana = false, perps = false }: { solana?: boolean; perps
    *
    * Each read runs on its own clock and applies its answer the moment it
    * arrives (live-clocks.ts); `live` is derived from all of them, so the feed
-   * no longer waits for the launchpad sweep to be drawn, and no read's answer
+   * no longer waits for the discovery sweep to be drawn, and no read's answer
    * overwrites another's.
    */
   const [sources, setSources] = useState<LiveSources>(seedSources);
@@ -135,7 +132,7 @@ export function App({ solana = false, perps = false }: { solana?: boolean; perps
   const searchParams = useSearchParams();
   const selectedWallet = terminalWallet(pathname, searchParams?.toString() ?? "");
   const isolatedWallet = selectedWallet !== "spot";
-  const requestedScreen = useMemo(()=>screenForPath(pathname, solana, perps),[pathname, solana, perps]);
+  const requestedScreen = useMemo(()=>screenForPath(pathname, perps),[pathname, perps]);
   // In place, never a round trip — see navigate.ts.
   const setScreen = (next: Screen) => goTo(pathForScreen(next));
   const [account, setAccount] = useState<AccountState|null>(null);
@@ -201,7 +198,7 @@ export function App({ solana = false, perps = false }: { solana?: boolean; perps
   if (!money) underMoney.current = requestedScreen;
   const screen: Screen = isolatedWallet && requestedScreen.kind === "tab" ? { kind: "perps" } : desktop && money ? (underMoney.current ?? desktopDetail) : requestedScreen;
   const perpsDesk = selectedWallet === "perps" && screen.kind === "perps";
-  const modeOffered = perps && screen.kind !== "solana" && selectedWallet !== "invalid";
+  const modeOffered = perps && selectedWallet !== "invalid";
   const modeTransition = useTradingModeTransition({
     identity: `${epoch}:${account?.session.hosted ?? "unknown"}:${account?.session.address?.toLowerCase() ?? "signed-out"}`,
     route: `${pathname}${searchParams?.size ? `?${searchParams}` : ""}`,
@@ -262,7 +259,7 @@ export function App({ solana = false, perps = false }: { solana?: boolean; perps
    * EVERY READ ON ITS OWN CLOCK — see live-clocks.ts and refresh-loop.ts.
    *
    * This was one pass a minute over quotes, six reads in a Promise.all and the
-   * account, and nothing rendered until the slowest — the launchpad sweep, at
+   * account, and nothing rendered until the slowest — the discovery sweep, at
    * 10-12s cold — had come back. Now the feed reads every ten seconds while
    * the tab is visible (a minute while hidden, so the title can count what
    * arrived), the market and its quotes every thirty, the board every minute,
@@ -423,10 +420,10 @@ export function App({ solana = false, perps = false }: { solana?: boolean; perps
     setScreen({ kind: "tab", tab: next });
   };
   // FROM THE URL, not from the click history. `tab` is only ever written by
-  // goTab, so a cold load of /alpha left the bar highlighting Home until the
-  // user clicked something.
+  // goTab, so a cold load of another tab's URL left the bar highlighting Home
+  // until the user clicked something.
   const activeTab = screen.kind === "tab" ? screen.tab : requestedScreen.kind === "tab" ? requestedScreen.tab : tab;
-  // Explore's views all light Explore in the bar; Research (alpha) included.
+  // Explore's views all light Explore in the bar.
   // The account's own screens (wardrobe, settings, wallet, limits, money) are
   // part of Me, and creating an agent starts from Home — so no screen falls
   // back to whatever tab happened to be clicked last.
@@ -434,7 +431,7 @@ export function App({ solana = false, perps = false }: { solana?: boolean; perps
   const barTab: Tab | null = exploreView ? "feed"
     : ["wardrobe", "settings", "grant", "limits", "deposit", "withdraw"].includes(screen.kind) ? "you"
     : screen.kind === "create" ? "home"
-    : screen.kind === "perps" || screen.kind === "solana" ? null
+    : screen.kind === "perps" ? null
     : activeTab;
   /**
    * WHERE BACK AND CLOSE GO: the last place the reader was browsing, not the
@@ -655,7 +652,7 @@ export function App({ solana = false, perps = false }: { solana?: boolean; perps
           header and the desktop rail — and with them a second `AccountEntry`,
           which polls and fetches like the visible one. Display:none hides a
           component; it does not stop it running. */}
-      {desktop && <DesktopHeader tradingMode={tradingMode} active={barTab ?? undefined} hasAgent={!!mine} stoppedAgent={stoppedAgent} checking={ownerChecking} hideBalances={screen.kind === "solana" || isolatedWallet} wallet={selectedWallet === "perps" ? "perps" : "spot"} mine={displayMine} onScreen={openScreen} onTab={goTab} />}
+      {desktop && <DesktopHeader tradingMode={tradingMode} active={barTab ?? undefined} hasAgent={!!mine} stoppedAgent={stoppedAgent} checking={ownerChecking} hideBalances={isolatedWallet} wallet={selectedWallet === "perps" ? "perps" : "spot"} mine={displayMine} onScreen={openScreen} onTab={goTab} />}
       {desktop && perpsDesk ? null : desktop && isolatedWallet ? <aside className="desktop-sidebar"><nav className="perps-desk" aria-label="Perps workspace"><h2>Perps wallet</h2><p><a href="/perps">Trading desk</a></p><p><a href="/settings?wallet=perps">Settings</a></p><p><a href="/grant?wallet=perps">Permission</a></p><p><a href="/withdraw?wallet=perps">Withdraw &amp; recover</a></p><p><a href="/home">Return to Spot</a></p></nav></aside> : desktop && (
         <DesktopSidebar
           reads={live.reads}
@@ -682,7 +679,6 @@ export function App({ solana = false, perps = false }: { solana?: boolean; perps
             visitor, signed in or not. It takes no props on purpose: it reads
             nothing of the account, and nothing here reads it. */}
         <ServiceNotice />
-        {solana && <nav aria-label="Trading networks" className="solana-network-nav"><a href="/home" aria-current={screen.kind !== "solana" ? "page" : undefined}>Robinhood Chain</a><a href="/solana" aria-current={screen.kind === "solana" ? "page" : undefined}>Solana</a></nav>}
         {!desktop && tradingMode && <div className="mobile-mode-bar"><span>Robinhood Chain</span>{tradingMode}</div>}
         {/* THE ONE PROMPT THAT FIRES BEFORE THE FIRST REFUSAL, rather than
             after it. Every other re-sign surface answers a question the
@@ -691,7 +687,7 @@ export function App({ solana = false, perps = false }: { solana?: boolean; perps
             it is true on every screen, and handed `exists` straight from the
             server so it cannot flash for an owner whose account is still
             loading. It navigates to the one signing control; it never signs. */}
-        {!isolatedWallet && !recovery && screen.kind !== "solana" && <ResignPrompt
+        {!isolatedWallet && !recovery && <ResignPrompt
           exists={account ? account.status.exists : null}
           grantedAt={account?.status.grant?.grantedAt ?? null}
           tenant={account?.session.hosted ? account.session.address : null}
@@ -703,11 +699,10 @@ export function App({ solana = false, perps = false }: { solana?: boolean; perps
           if (desktop && next.kind === "tab") setChatDocked(next.tab === "agent" && mine !== null);
           openScreen(next);
         }} onExplore={section => { if (desktop) setSidebarSection(section); }} onQuestion={()=>{setChatDraft(current => current || "Explain my strategy and trading limits. Am I using paper or live trading?");goTab("agent");}}/>}
-        {!isolatedWallet && !mine && !desktop && screen.kind !== "create" && screen.kind !== "groupchat" && screen.kind !== "solana" && screen.kind !== "wardrobe" && !(screen.kind === "tab" && screen.tab === "home" && account?.status.exists !== true) && !(screen.kind === "tab" && screen.tab === "you" && stoppedAgent) && <AccountEntry account={account} accountFailed={accountFailed} portfolio={portfolioRead} retrying={accountBusy} onRefresh={refreshAccount} onSignedIn={invalidateOwnerView} stoppedAgent={stoppedAgent} stoppedBook={stoppedBook} checking={ownerChecking}/>}
+        {!isolatedWallet && !mine && !desktop && screen.kind !== "create" && screen.kind !== "groupchat" && screen.kind !== "wardrobe" && !(screen.kind === "tab" && screen.tab === "home" && account?.status.exists !== true) && !(screen.kind === "tab" && screen.tab === "you" && stoppedAgent) && <AccountEntry account={account} accountFailed={accountFailed} portfolio={portfolioRead} retrying={accountBusy} onRefresh={refreshAccount} onSignedIn={invalidateOwnerView} stoppedAgent={stoppedAgent} stoppedBook={stoppedBook} checking={ownerChecking}/>}
         {selectedWallet === "invalid" && <section className="perps-desk"><h1>Unknown wallet selection</h1><p>No wallet controls were opened.</p><a href="/home">Return to Spot</a></section>}
         {selectedWallet === "perps" && <PerpsWorkspace key={`${epoch}:${screen.kind}`} screen={screen.kind} offered={perps}/>}
         {!isolatedWallet && screen.kind === "grant" && <p><a href="/withdraw?wallet=perps">Perps withdrawal &amp; recovery</a></p>}
-        {screen.kind === "solana" && <SolanaScreen key={epoch} onSignedIn={invalidateOwnerView}/>}
         {!isolatedWallet && screen.kind === "create" && <CreateAgent account={account} accountFailed={accountFailed} retrying={accountBusy} onRefresh={refreshAccount} onSignedIn={invalidateOwnerView} onBack={()=>goTab("home")} onDone={()=>{refreshAccount();goTab("agent");}} onFund={grant=>{setAccount(current=>current?{...current,status:{...current.status,exists:true,grant}}:current);openScreen({kind:"deposit"});}}/>}
         {!isolatedWallet && screen.kind === "settings" && <Settings onFund={()=>openScreen({kind:"deposit"})} slug={mine?.slug ?? null} onSaved={chat.refreshSettings} agentDown={agentDown}/>}
         {!isolatedWallet && screen.kind === "grant" && <Wallet key={epoch} onAccountChanged={refreshAccount}/>}
@@ -795,13 +790,8 @@ export function App({ solana = false, perps = false }: { solana?: boolean; perps
             onSettings={() => openScreen({ kind: "settings" })}
             liveBlocker={account?.status.liveBlocker}
             staleBlocker={blockerPredatesGrant}
-            energy={recovery ? null : account?.status.energy}
             account={account?.status.grant?.smartAccount ?? null}
-            chainId={account?.status.grant?.chainId ?? null}
           />
-        )}
-        {screen.kind === "tab" && screen.tab === "alpha" && (
-          <Alpha onToken={(id) => openScreen({ kind: "token", id })} />
         )}
         {screen.kind === "tab" && screen.tab === "you" && (
           <You
@@ -860,7 +850,7 @@ export function App({ solana = false, perps = false }: { solana?: boolean; perps
             fact about the address rather than a fact about the request. */}
         {screen.kind === "token" && !token && (() => {
           // WHICH READ WOULD HAVE HAD IT. Every listed equity comes from the
-          // registry seed and /api/market; every coin comes from the launchpad
+          // registry seed and /api/market; every coin comes from the discovery
           // sweep. So an unreachable index means the coins are simply absent
           // from the list, and "check the address" would be publishing OUR
           // outage as a fact about the instrument. The three arms are ordered
@@ -978,7 +968,7 @@ export function App({ solana = false, perps = false }: { solana?: boolean; perps
           : <Wardrobe id={mine?.slug ?? DRAFT} seed={mine?.slug ?? DRAFT} name={mine?.name ?? "your agentcapavatar"} />)}
         {screen.kind === "groupchat" && <GroupChat mySlug={mine?.slug ?? null} onProfile={(slug) => openScreen({ kind: "profile", slug })} onToken={(id) => openScreen({ kind: "token", id })} />}
       </div>
-      {desktop && perpsDesk ? null : desktop && isolatedWallet ? <aside className="desktop-portfolio"><section className="hosted-entry"><h2>Your Perps wallet</h2><p>Balances and permissions belong to this separate account. Your public profile stays with Spot.</p><a href="/withdraw?wallet=perps">Withdraw &amp; recover</a></section></aside> : desktop && screen.kind === "solana" ? <aside className="desktop-portfolio"><section className="hosted-entry"><h2>Solana account</h2><p>Solana balances, permissions and trading limits are shown in this workspace.</p><p>Use the network selector to return to Robinhood Chain.</p></section></aside> : desktop && money ? (
+      {desktop && perpsDesk ? null : desktop && isolatedWallet ? <aside className="desktop-portfolio"><section className="hosted-entry"><h2>Your Perps wallet</h2><p>Balances and permissions belong to this separate account. Your public profile stays with Spot.</p><a href="/withdraw?wallet=perps">Withdraw &amp; recover</a></section></aside> : desktop && money ? (
         <aside
           className="desktop-money-panel"
           aria-label={money === "withdraw" ? "Withdraw funds" : "Add funds"}
@@ -1053,9 +1043,7 @@ export function App({ solana = false, perps = false }: { solana?: boolean; perps
             onSettings={() => openScreen({ kind: "settings" })}
             liveBlocker={account?.status.liveBlocker}
             staleBlocker={blockerPredatesGrant}
-            energy={recovery ? null : account?.status.energy}
             account={account?.status.grant?.smartAccount ?? null}
-            chainId={account?.status.grant?.chainId ?? null}
           />
         </ChatDock>
       )}

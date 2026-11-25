@@ -12,7 +12,7 @@ import {
   type PositionRationale,
 } from "./lifecycle";
 import { TRENCHER_DEFAULTS, TRENCHER_FAST } from "../strategies/trencher";
-import { robinhoodChain, tokenIdentity } from "./identity";
+import { bnbChain, tokenIdentity } from "./identity";
 import type { CoinDossier, DossierClaim } from "./types";
 
 const NOW = 1_800_000_000_000;
@@ -118,7 +118,7 @@ describe("reviewHeldPosition", () => {
 
 // ─── dossier strength ──────────────────────────────────────────────────────
 
-const TOKEN = tokenIdentity(robinhoodChain(), "0x1111111111111111111111111111111111111111")!;
+const TOKEN = tokenIdentity(bnbChain(), "0x1111111111111111111111111111111111111111")!;
 const claim = (over: Partial<DossierClaim>): DossierClaim => ({
   claimKey: "k",
   stance: "supporting",

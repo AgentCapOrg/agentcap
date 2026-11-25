@@ -93,7 +93,6 @@ orch.setSpawnForTest((_c: string, _a: readonly string[], o: SpawnOptions) => {
 });
 orch.setLeaseAcquireForTest(async (t) => acquireTenantLease(t));
 orch.setKillConfirmForTest(async () => {});
-orch.setSolanaKillForTest(async () => {});
 orch.setPaperRestoreForTest(async () => ({ ok: true, line: null }));
 orch.setPerpsFeedStartForTest(() => ({ stop: () => {} }));
 const said: string[] = [];

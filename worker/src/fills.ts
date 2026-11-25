@@ -20,6 +20,8 @@
  * survived a green test suite.
  */
 
+import { cashNumber } from "../../packages/core/src/cash";
+
 /** ERC-20 `Transfer(address indexed from, address indexed to, uint256 value)`. */
 const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 
@@ -150,10 +152,10 @@ export function fillFromDeltas(opts: {
     return null;
   }
 
-  // Stock tokens are 18dp, USDG is 6dp — the same convention bookFill uses.
+  // Stock tokens are 18dp; cash is in base units — the same convention bookFill uses.
   const decimals = opts.decimals ?? 18;
   if (!Number.isInteger(decimals) || decimals < 0 || decimals > 36) return null;
-  const priceUsd = Number(cashUsdg) / 1e6 / (Number(qtyRaw) / 10 ** decimals);
+  const priceUsd = cashNumber(cashUsdg) / (Number(qtyRaw) / 10 ** decimals);
   return { side, symbol: opts.symbol, qtyRaw, cashUsdg, priceUsd };
 }
 

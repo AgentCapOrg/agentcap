@@ -20,7 +20,7 @@ function fixture() {
   const add = (token: string, label: string | null, o: { account?: string; status?: string; kind?: string; sell?: boolean; cash?: string } = {}) => {
     ++at;
     insert.run(at, o.account ?? "owner", o.kind ?? "swap", o.status ?? "landed",
-      o.sell ? o.cash ?? CASH.USDG : token, o.sell ? token : o.cash ?? CASH.USDG, label, at);
+      o.sell ? o.cash ?? CASH.USDT : token, o.sell ? token : o.cash ?? CASH.USDT, label, at);
   };
   return { raw, db: wrapSqlite(raw), add };
 }
@@ -45,8 +45,8 @@ describe("saved position display labels", () => {
       assert.deepEqual(await readPositionLabels(db, "owner", "live", [stock.address, SWARM]), expected);
       raw.exec("ALTER TABLE trades ADD COLUMN fill_symbol TEXT");
       assert.deepEqual(await readPositionLabels(db, "owner", "live", [stock.address, SWARM]), expected);
-      assert.deepEqual(await readPositionLabels(db, "owner", "live", [CASH.USDG, CASH.WETH]),
-        new Map([[CASH.USDG.toLowerCase(), "USDG"], [CASH.WETH.toLowerCase(), "WETH"]]));
+      assert.deepEqual(await readPositionLabels(db, "owner", "live", [CASH.USDT, CASH.WBNB]),
+        new Map([[CASH.USDT.toLowerCase(), "USDG"], [CASH.WBNB.toLowerCase(), "WETH"]]));
     } finally { raw.close(); }
   });
 
@@ -82,7 +82,7 @@ describe("saved position display labels", () => {
     const { raw, db, add } = fixture();
     try {
       add(SWARM, "Old");
-      add(SWARM.toUpperCase().replace("0X", "0x"), "SWARM", { cash: CASH.USDG.toUpperCase() });
+      add(SWARM.toUpperCase().replace("0X", "0x"), "SWARM", { cash: CASH.USDT.toUpperCase() });
       add(SWARM, "<script>");
       assert.deepEqual(await readPositionLabels(db, "owner", "live", [SWARM.toUpperCase(), SWARM]), new Map([[SWARM, "SWARM"]]));
     } finally { raw.close(); }

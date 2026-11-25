@@ -25,7 +25,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const BASE_HEAD = '4346e3d023c32d50fda6673f56a981f10df3a349';
 const ACCOUNT = /^0x[0-9a-f]{40}$/i;
 const ZERO = '0x0000000000000000000000000000000000000000';
-export const CHAIN_ID = 4663;
+export const CHAIN_ID = 56;
 /** Only blocks this deep are read, as in the receipt gas preview. */
 export const CONFIRMATIONS = 64n;
 
@@ -33,7 +33,7 @@ export const HELP = `In-kind capital preview — PREVIEW ONLY. There is no apply
 
 node --import tsx scripts/in-kind-preview/preview.mjs --account 0xFULL_ACCOUNT [--account 0xFULL_ACCOUNT] [--from-block N] --output /absolute/new-preview.json
 
-Required environment: DATABASE_URL. Optional: AGENTCAP_IN_KIND_RPC (defaults to public Robinhood mainnet).
+Required environment: DATABASE_URL. Optional: AGENTCAP_IN_KIND_RPC (defaults to public BNB Chain mainnet).
 Requires Node 22.13+, the repository dependencies, and the external runtime pg driver. 1-32 full account addresses; prefixes are refused.
 The output is created once with owner-only file permissions (0600). Existing files are never overwritten.
 Provenance is read from each UserOperation's nonce, never from whether a trades row exists.
@@ -106,7 +106,7 @@ export async function buildPreview({ snapshot, accounts, rpc, deps, target, sour
   accounts = validateScope(accounts);
   const { scanner, value, custody, core } = deps;
   const chainId = Number(BigInt(await rpc('eth_chainId', [])));
-  if (chainId !== CHAIN_ID) throw new Error('rpc-is-not-robinhood-mainnet');
+  if (chainId !== CHAIN_ID) throw new Error('rpc-is-not-bnb-mainnet');
   const head = BigInt(await rpc('eth_blockNumber', []));
   const confirmedTo = head - CONFIRMATIONS;
   if (confirmedTo < fromBlock) throw new Error('invalid-arguments');
@@ -115,13 +115,12 @@ export async function buildPreview({ snapshot, accounts, rpc, deps, target, sour
   const bound = scope.filter(s => s.state === 'bound');
   const scanned = bound.length ? await scanner.scanAssetMovements(rpc, {
     accounts: bound.map(s => ({ account: s.account, custody: s.custody, owners: s.owners.map(o => o.address) })),
-    usdgToken: core.CASH.USDG,
+    usdgToken: core.CASH.USDT,
     fromBlock,
     toBlock: confirmedTo,
-    reserveTokens: core.energyReserveTokens(CHAIN_ID),
     // Venues are a weak signal and only ever make a verdict MORE ambiguous:
     // WETH (a wrap is not a deposit) and the zero address (a mint or a burn).
-    protocolAddresses: [core.CASH.WETH, ZERO],
+    protocolAddresses: [core.CASH.WBNB, ZERO],
     systemAddresses: [...Object.values(core.ENTRYPOINT), ...Object.values(core.INFRA)],
     knownAccounts: bound.map(s => s.account),
     includeReviewTimestamps: true,
@@ -263,7 +262,7 @@ export async function main(args = process.argv.slice(2), env = process.env) {
     // session stays open across the slow public chain reads below.
     await client.end();
     connected = false;
-    const rpc = deps.value.createReadOnlyRpc(env.AGENTCAP_IN_KIND_RPC || 'https://rpc.mainnet.chain.robinhood.com');
+    const rpc = deps.value.createReadOnlyRpc(env.AGENTCAP_IN_KIND_RPC || 'https://bsc-dataseed.bnbchain.org');
     const preview = await buildPreview({ snapshot, accounts: options.accounts, rpc, deps, target, source, fromBlock: options.fromBlock });
     await savePreview(options.output, preview);
     process.stdout.write(plainSummary(preview));
@@ -280,7 +279,7 @@ if (invokedDirectly()) {
     // runner-owned fixed codes are printed.
     const allowed = new Set(['invalid-arguments', 'database-url-required', 'invalid-database-url',
       'scope-exceeds-preview-mark-bound', 'scope-exceeds-preview-trade-bound', 'read-only-snapshot-not-established',
-      'rpc-is-not-robinhood-mainnet', 'postgres-read-driver-unavailable']);
+      'rpc-is-not-bnb-mainnet', 'postgres-read-driver-unavailable']);
     const code = allowed.has(error?.message) ? error.message : 'preview-failed-no-writes-performed';
     process.stderr.write(`${code}. Use --help for invocation.\n`); process.exitCode = 1;
   });

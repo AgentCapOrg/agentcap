@@ -104,8 +104,8 @@ var STRATEGIES = [
  ["steady-basket","Steady Basket","Buy a little of your selected stocks on a schedule."],
  ["weekend-gap","Weekend Gap","Buy selected tokenised stocks while the underlying market is closed, then sell when it reopens."],
  ["llm-strategist","AI Strategist","An AI-guided strategy that evaluates market conditions."],
- ["even-keel","Even Keel · holders","Keep the stocks in your basket evenly weighted. Runs only while you hold $AGENTCAP; opens nothing new until then."],
- ["dip-hunter","Dip Hunter · holders","Look for pullbacks in the stocks you follow. Runs only while you hold $AGENTCAP; opens nothing new until then."]
+ ["even-keel","Even Keel","Keep the stocks in your basket evenly weighted."],
+ ["dip-hunter","Dip Hunter","Look for pullbacks in the stocks you follow."]
 ];
 function canHome(name) {
  var c = setup && obj(setup.connection);

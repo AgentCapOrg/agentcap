@@ -28,7 +28,7 @@ const { homePaths } = await import("../home");
 const SHOGUN = "0x05a198a677fbcd8f5c168d397fa7ef5eb6d65487";
 const OTHER = "0x0000000000000000000000000000000000000b0b";
 const CASHCAT = "0x020bfc650a365f8bb26819deaabf3e21291018b4";
-const USDG = CASH.USDG;
+const USDG = CASH.USDT;
 const NOW = Date.parse("2026-10-01T12:00:00Z") / 1000;
 
 function ctx(agentId: string | null) {
@@ -89,11 +89,8 @@ describe("the lookups answer with names, and truthfully", () => {
     assert.doesNotMatch(out, /swap 5\.00 USDG/);
   });
 
-  it("agent_status never calls launch buying being off 'paused'", async () => {
-    const out = await run("agent_status");
-    assert.match(out, /pause button is off/);
-    assert.match(out, /launchpad coins is switched off in settings/);
-    assert.match(out, /not the pause button/);
+  it("agent_status says the pause button is off", async () => {
+    assert.match(await run("agent_status"), /pause button is off/);
   });
 
   for (const [level, expected] of [
@@ -129,11 +126,6 @@ describe("the lookups answer with names, and truthfully", () => {
     assert.doesNotMatch(readStatus((ctx(SHOGUN) as ToolContext).status), /Service .*hold|Service restart/);
   });
 
-  it("recent_activity labels the launch-scan line so it can't be misread", async () => {
-    const out = await run("recent_activity");
-    assert.match(out, /launch buying is switched off — NOT the pause button/);
-  });
-
   it("decisions carry the reason, by coin name", async () => {
     const out = await run("decisions", { coin: "CASHCAT" });
     assert.match(out, /SHOGUN_REASON/);
@@ -161,45 +153,25 @@ describe("the lookups answer with names, and truthfully", () => {
   });
 });
 
-describe("the settings tool reads the worker's refusal before saying nothing stops launchpad buying", () => {
-  // Review: a key the worker has refused buys nothing, whatever the settings
-  // say; the agent row's live_blocker is where that refusal is recorded.
-  const ready = {
-    customTokens: [], tickSeconds: 15, paperTradingEnabled: false, trencherLiveEnabled: false,
-    classSnipeEnabled: true, classPerEntryUsdg: 5, liveTradingEnabled: true, assetMode: "all",
-    discoveryEnabled: true, scoutEnabled: true, scoutBudgetUsdg: 15, scoutPerTokenUsdg: 25,
-  };
-  const sealed = { grantFeatures: ["pons-class"], ponsClassVaultAddress: `0x${"c1".repeat(20)}`, grantedAt: NOW - 86_400, expiresAt: NOW + 30 * 86_400 };
-  const settings = () => toolByName("settings")!.run({}, { ...(ctx(SHOGUN) as object), cfg: ready, grant: sealed } as never);
+describe("agent_status reads the worker's refusal", () => {
+  // A key the worker has refused buys nothing, whatever the settings say; the
+  // agent row's live_blocker is where that refusal is recorded.
+  const sealed = { grantFeatures: [], grantedAt: NOW - 86_400, expiresAt: NOW + 30 * 86_400 };
+  const status = (grant: object) => toolByName("agent_status")!.run({}, { ...(ctx(SHOGUN) as object), grant } as never);
   const setBlocker = (b: string | null) => {
     const db = new DatabaseSync(homePaths.db());
     db.prepare("UPDATE agents SET live_blocker = ? WHERE smart_account = ?").run(b, SHOGUN);
     db.close();
   };
 
-  it("names the refusal instead of 'nothing is stopping it'", async () => {
+  it("names the refusal", async () => {
     setBlocker("dead-policy");
     try {
-      const out = await settings();
-      assert.doesNotMatch(out, /nothing I can see is stopping it/);
-      assert.match(out, /still needs, before it buys anything: I can't trade for real right now: this trading key was signed before a fix/);
+      assert.match(await status(sealed), /Not trading for real because: this trading key was signed before a fix/);
     } finally {
       setBlocker(null);
     }
-  });
-
-  it("and says nothing is stopping it when the row has no refusal", async () => {
-    assert.match(await settings(), /launchpad buying: nothing I can see is stopping it/);
-  });
-
-  it("but not about a refusal that describes the key the owner just replaced (settle window)", async () => {
-    setBlocker("dead-policy");
-    try {
-      const out = await toolByName("settings")!.run({}, { ...(ctx(SHOGUN) as object), cfg: ready, grant: { ...sealed, grantedAt: NOW - 5 } } as never);
-      assert.match(out, /nothing I can see is stopping it/);
-    } finally {
-      setBlocker(null);
-    }
+    assert.doesNotMatch(await status(sealed), /Not trading for real because/);
   });
 });
 
@@ -219,7 +191,6 @@ describe("one owner never sees another's ledger", () => {
 
 describe("review fixes on a real ledger", () => {
   const CAROL = "0x000000000000000000000000000000000000ca01";
-  const LAUNCH = "0x39dbed3a2bd333467115de45665cc57f813c4571";
 
   it("pnl_breakdown never counts a deposit twice — money before the opening mark is already in it", async () => {
     // Opening mark at T, a $100 deposit BEFORE it (already inside the mark),
@@ -239,18 +210,6 @@ describe("review fixes on a real ledger", () => {
     assert.match(out, /\+\$1\.00/);
     assert.doesNotMatch(out, /money put in/, "a deposit before the mark is already inside it");
     assert.match(out, /the change is all trading and price moves/);
-  });
-
-  it("positions shows held launch coins, recovered ones included, with the cost read from its 6-decimal text", async () => {
-    const db = new DatabaseSync(homePaths.db());
-    db.prepare("INSERT INTO class_positions (agent_id, token, symbol, state, cost_usdg, first_seen) VALUES (?, ?, 'x', 'open', '5000000', ?)").run(SHOGUN, LAUNCH, NOW - 100);
-    db.prepare("INSERT INTO class_positions (agent_id, token, symbol, state, cost_usdg, first_seen) VALUES (?, ?, 'y', 'recovered', NULL, ?)").run(SHOGUN, CASHCAT, NOW - 50);
-    db.prepare("INSERT INTO class_positions (agent_id, token, symbol, state, first_seen) VALUES (?, ?, 'cash', 'open', ?)").run(SHOGUN, USDG.toLowerCase(), NOW - 10);
-    db.close();
-    const out = await run("positions");
-    assert.match(out, /for \$5\.00/, "the raw '5000000' is five dollars, not an unknown amount");
-    assert.match(out, /CASHCAT — bought .* \(cost unknown\)/, "a recovered position is held, cost unknown");
-    assert.doesNotMatch(out, /USDG — bought/, "the vault's own cash row is not a coin");
   });
 });
 

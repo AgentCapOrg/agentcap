@@ -613,21 +613,21 @@ it("UNDER FLEET_HALT THE DRAIN COPIES NOTHING: no ledger batch, no memory row, a
 });
 
 it("A TENANT WHOSE ID IS NOT 0x IS STOPPED LIKE ANY OTHER AND NEVER COPIED, and a kill pending in such a home is said, not passed over (fleet-id.ts)", async () => {
-  // A Solana agent id over a real key (32 bytes of zero: all ones, so no case for a disk to fold).
-  const tenant = "sol:11111111111111111111111111111111" as `0x${string}`, account = address(0xf12), released = { n: 0 };
+  // A non-0x agent id (32 bytes of zero: all ones, so no case for a disk to fold).
+  const tenant = "agent:11111111111111111111111111111111" as `0x${string}`, account = address(0xf12), released = { n: 0 };
   const proc = new FakeProc(81_091);
   watched = [proc];
   adoptChildForTest(tenant, account, proc, lease(tenant, released));
-  // A home a Solana build made, with its owner's /kill waiting in it.
-  const home = path.join(fleet, "children", "sol:2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH");
+  // A home another build made, with its owner's /kill waiting in it.
+  const home = path.join(fleet, "children", "agent:2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH");
   mkdirSync(home, { recursive: true });
   writeKillRequest(home, grant(account), nowSec());
   try {
     await drainFleetForTest("SIGTERM", { budgetMs: 15_000, limits: LIMITS, exit });
 
     assert.deepEqual(proc.signals, ["SIGTERM"], "signalled like every process: must-stop");
-    assert.ok(said.some((l) => /\[alert\] Solana id "sol:1{32}": not a Robinhood Chain tenant — no final pass; its home is left as it is/.test(l)), said.join("\n"));
-    assert.ok(said.some((l) => /\[alert\] fleet: children\/Solana id "sol:2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH" holds a pending Telegram kill/.test(l)),
+    assert.ok(said.some((l) => /\[alert\] id "agent:1{32}": not a Robinhood Chain tenant — no final pass; its home is left as it is/.test(l)), said.join("\n"));
+    assert.ok(said.some((l) => /\[alert\] fleet: children\/id "agent:2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH" holds a pending Telegram kill/.test(l)),
       "the pending-kills step says the kill it cannot carry out");
     assert.deepEqual(receipt().finalPass, { homes: 1, saved: 0, retained: 0, skipped: 1, outOfTime: 0 });
     assert.equal(receipt().clean, false, "a home given no final pass is never a clean stop");

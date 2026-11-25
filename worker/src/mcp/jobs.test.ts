@@ -518,7 +518,6 @@ describe("runMcpJobsPass", () => {
     assert.match(res.assumptions.fills, /no depth/i);
     assert.match(res.assumptions.budgets, /calendar day/i);
     assert.match(res.assumptions.budgets, /rolling 24 hours/i);
-    assert.equal(res.assumptions.vault_apy_bps, 0);
     assert.ok(res.limitations.some((l) => /memecoin/i.test(l)));
     assert.ok(res.limitations.some((l) => /random walk/i.test(l)));
   });
@@ -685,7 +684,8 @@ describe("runMcpJobsPass", () => {
 test("runBacktest counts filled notional as turnover: buy spend plus sell gross", async () => {
   const token = STOCK_TOKENS.find((t) => t.symbol === "NVDA")!.address;
   const router = "0x0000000000000000000000000000000000000001" as const;
-  const usdg = CASH.USDG as `0x${string}`;
+  const MICRO = 10n ** 12n; // micro-USDT to 18dp cash base units
+  const usdg = CASH.USDT as `0x${string}`;
   let step = 0;
   const bars: Bar[] = [10, 15, 20].map((px, i) => ({ tSec: T + i * 86_400, prices: new Map([["NVDA", BigInt(px * 1e8)]]) }));
   const r = await runBacktest({
@@ -693,7 +693,7 @@ test("runBacktest counts filled notional as turnover: buy spend plus sell gross"
       name: "stub",
       tick(snap) {
         step += 1;
-        if (step === 1) return [{ kind: "swap", target: router, sellToken: usdg, buyToken: token, sellAmountRaw: 100_000_000n, notionalUsdg: 100_000_000n }];
+        if (step === 1) return [{ kind: "swap", target: router, sellToken: usdg, buyToken: token, sellAmountRaw: 100_000_000n * MICRO, notionalUsdg: 100_000_000n * MICRO }];
         if (step === 3) {
           const held = snap.holdings.get("NVDA")!;
           return [{ kind: "swap", target: router, sellToken: token, buyToken: usdg, sellAmountRaw: held.rawBalance, notionalUsdg: held.valueUsdg }];
@@ -702,23 +702,23 @@ test("runBacktest counts filled notional as turnover: buy spend plus sell gross"
       },
     },
     legs: new Map([["NVDA", token]]),
-    initialCashUsdg: 1_000_000_000n,
+    initialCashUsdg: 1_000_000_000n * MICRO,
     executionCostBps: 30,
     limits: {
-      perTradeUsdg: 500_000_000n, dailyUsdg: 500_000_000n, allowedTargets: [router], allowedAssets: [usdg, token],
+      perTradeUsdg: 500_000_000n * MICRO, dailyUsdg: 500_000_000n * MICRO, allowedTargets: [router], allowedAssets: [usdg, token],
       maxOpsPerDay: 10, maxDrawdownBps: 10_000, expiresAt: T + 30 * 86_400,
     },
   }, bars);
   // Bought 100 USDG at $10 less 30 bps = 9.97 shares; sold them at $20 = 199.40 gross.
   assert.equal(r.swapFills, 2);
-  assert.equal(r.turnoverUsdg, 100_000_000n + 199_400_000n);
+  assert.equal(r.turnoverUsdg, 100_000_000n * MICRO + 199_400_000n * MICRO);
   assert.equal(r.executed, 2);
   // The sell happened on the FINAL bar: the result must include it and its
   // cost. Cash 900 + 199.40 less 30 bps = 1098.8018 USDG — not the pre-fill
   // mark of 900 + 9.97 x $20 = 1099.40.
-  assert.equal(r.finalEquityUsdg, 1_098_801_800n);
-  assert.equal(r.pnlUsdg, 98_801_800n);
-  assert.equal(r.equitySeries[r.equitySeries.length - 1]!.equityUsdg, 1_098_801_800n, "the terminal point is the closing value");
+  assert.equal(r.finalEquityUsdg, 1_098_801_800n * MICRO);
+  assert.equal(r.pnlUsdg, 98_801_800n * MICRO);
+  assert.equal(r.equitySeries[r.equitySeries.length - 1]!.equityUsdg, 1_098_801_800n * MICRO, "the terminal point is the closing value");
   assert.equal(r.equitySeries.length, bars.length, "one point per bar; the last is revalued, not duplicated");
   // The drawdown sees the close: peak 1099.40 (the last pre-fill mark), close 1098.8018.
   assert.ok(r.maxDrawdownBps >= 5, `drawdown ${r.maxDrawdownBps} includes the final bar's cost`);

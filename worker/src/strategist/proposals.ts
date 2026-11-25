@@ -9,6 +9,7 @@
  * touch money; only validated structure does.
  */
 
+import { usdgUnits } from "../../../packages/core/src/wall";
 import {
   baseForNotional,
   isPerpKey,
@@ -21,14 +22,6 @@ import { buildExitDraft, buildOpenDraft, clampReduce, type PerpIntentDraft } fro
 import type { TradeIntent } from "../policy";
 import type { ResolvedConfig } from "../settings";
 import type { PerpsView, Snapshot } from "../strategies/types";
-import {
-  curveBuyOut,
-  curveSellOut,
-  curveMinOut,
-  curveGraduated,
-  type CurveReserves,
-  curveBuyImpactBps,
-} from "../venues/pons-price";
 
 export interface ProposedAction {
   action: "buy" | "sell" | "hold";
@@ -39,31 +32,6 @@ export interface ProposedAction {
   reason: string;
 }
 
-/**
- * Where a symbol trades when it trades on a bonding curve.
- *
- * WHY THE UNIVERSE CARRIES A QUOTE. This file is pure and synchronous on
- * purpose — the boundary a model's words cross has no I/O, so nothing it says
- * can make a network call. But a curve trade needs a `minAmountOutRaw`, and
- * deriving one needs the curve's reserves. So the RESERVES ride here, read once
- * per tick by the caller, and the arithmetic (curveBuyOut / curveMinOut) stays
- * pure and happens below.
- *
- * That also fixes the thing the intent type asks for by name: the quote that
- * sizes the trade and the floor the chain enforces come from ONE reading of a
- * curve the repo's own prose says can move 1,546 bps at p99 over four minutes.
- */
-export interface CurveLeg {
-  /** The bonding curve. An argument the wall cannot pin — see wall.ts. */
-  curve: `0x${string}`;
-  /** What the curve is quoted in. `0x000…0` means native ETH, which is unreachable. */
-  quoteToken: `0x${string}`;
-  /** The PonsSelfTrade adapter sealed into THIS grant — never from settings. */
-  adapter: `0x${string}`;
-  /** Reserves as of this tick, for the quote. */
-  reserves: CurveReserves;
-}
-
 export interface StrategistUniverse {
   /** symbol → token for every tradable leg. Anything else is rejected. */
   legs: ReadonlyMap<string, `0x${string}`>;
@@ -71,29 +39,7 @@ export interface StrategistUniverse {
   usdg: `0x${string}`;
   /** Hard per-proposal ceiling (6dp) — independent of, and beneath, grant caps. */
   maxPerActionUsdg: bigint;
-  /**
-   * How far a single BUY may move a bonding curve, in bps.
-   *
-   * Optional so every existing caller and fixture is unchanged, and absent
-   * means unchecked — which is exactly what the autonomous curve path was
-   * before this, and why the one caller that can produce a curve trade passes
-   * it explicitly.
-   */
-  maxImpactBps?: number;
   maxActionsPerTick: number;
-  /**
-   * symbol → its bonding curve, for tokens that trade on one.
-   *
-   * Optional so every existing caller and fixture keeps working unchanged: a
-   * universe without curve legs behaves exactly as it did, which is what makes
-   * this additive rather than a rewrite of the boundary.
-   */
-  curveLegs?: ReadonlyMap<string, CurveLeg>;
-  /** symbol → token address for curve legs. Kept beside `legs`, not merged into
-   *  it, because `legs` means “has a pool” to every other arm in this file. */
-  curveTokens?: ReadonlyMap<string, `0x${string}`>;
-  /** Slippage tolerance for a derived curve floor, bps. Defaults to 100. */
-  slippageBps?: number;
 }
 
 export interface ValidationResult {
@@ -106,7 +52,8 @@ export interface ValidationResult {
   rejected: string[];
 }
 
-const usdg6 = (v: number) => BigInt(Math.round(v * 1e6));
+// Spot cash in base units. usdgMicroOf below is the perps lane's, in micro.
+const usdg6 = usdgUnits;
 
 /**
  * Validate a model's proposals against the universe and the live snapshot,
@@ -145,18 +92,10 @@ export function proposalsToIntents(
     }
     const size = usdg6(p.sizeUsdg);
 
-    // ── THE CEILING, ABOVE BOTH VENUES ────────────────────────────────────
+    // ── THE CEILING ────────────────────────────────────
     //
-    // This used to sit below the curve branch's `continue`, so it applied to
-    // pool swaps and to nothing else. A curve trade — the least priceable asset
-    // class on this chain — was the one venue with no per-action ceiling at all.
-    // Nothing exercised that, because no production caller has ever supplied
-    // curve legs; the moment one does, the gap becomes an unbounded proposal
-    // size into exactly the assets that are hardest to value.
-    //
-    // Venue-agnostic by construction now: it reads `size`, computed once above,
-    // and it is the last thing between a number the model chose and a number
-    // that reaches the wall.
+    // It reads `size`, computed once above, and it is the last thing between a
+    // number the model chose and a number that reaches the wall.
     // A SELL IS NOT SPENDING, so the ceiling does not bound it.
     //
     // THE SAME MIRROR ERROR, ONE LAYER UP. policy.ts fixed this at the wall:
@@ -174,133 +113,6 @@ export function proposalsToIntents(
     // is what its own name says. Buys are untouched.
     if (p.action !== "sell" && size > universe.maxPerActionUsdg) {
       rejected.push(`#${i} ${p.symbol}: ${p.sizeUsdg} USDG exceeds strategist ceiling`);
-      continue;
-    }
-
-    // ── the curve venue ───────────────────────────────────────────────────
-    //
-    // THE STAGE THAT MAKES THE AGENT ABLE TO PROPOSE ONE AT ALL. Every arm below
-    // constructs `kind: "swap"` against a single `swapRouter`, so no matter what
-    // else shipped, the strategist could never emit a curve trade — while
-    // memecoin-scout already tells the model that coins launch on the Pons
-    // launchpad. The model could name a curve coin and this boundary would
-    // always answer "not in the tradable universe".
-    //
-    // Checked BEFORE the pool legs, because a token that trades on a curve has
-    // no pool: routing it to the swap router builds an operation against a pool
-    // that does not exist.
-    const curveLeg = universe.curveLegs?.get(p.symbol);
-    if (curveLeg) {
-      const token = universe.curveTokens?.get(p.symbol);
-      if (!token) {
-        rejected.push(`#${i} ${p.symbol}: curve leg with no token address`);
-        continue;
-      }
-      if (snap.pausedTokens.has(token.toLowerCase())) {
-        rejected.push(`#${i} ${p.symbol}: token is paused`);
-        continue;
-      }
-      // NATIVE-QUOTED CURVES ARE UNREACHABLE, and saying so beats a revert. The
-      // adapter is non-payable and every wall permission carries valueLimit 0.
-      if (/^0x0{40}$/i.test(curveLeg.quoteToken)) {
-        rejected.push(`#${i} ${p.symbol}: curve is quoted in native ETH, which this adapter cannot trade`);
-        continue;
-      }
-      if (curveGraduated(curveLeg.reserves)) {
-        rejected.push(`#${i} ${p.symbol}: curve has graduated — its market is a pool now`);
-        continue;
-      }
-
-      const isBuy = p.action === "buy";
-      let amountInRaw: bigint;
-      let assetIn: `0x${string}`;
-      let assetOut: `0x${string}`;
-      if (isBuy) {
-        // Only a USDG-quoted curve is one hop from the agent's cash. Anything
-        // else needs a hop through the quote asset first, which is not built.
-        if (curveLeg.quoteToken.toLowerCase() !== universe.usdg.toLowerCase()) {
-          rejected.push(`#${i} ${p.symbol}: curve is not quoted in USDG, so buying it needs a hop I don't do yet`);
-          continue;
-        }
-        if (size > cashLeft) {
-          rejected.push(`#${i} ${p.symbol}: buy ${p.sizeUsdg} USDG exceeds available cash`);
-          continue;
-        }
-        assetIn = universe.usdg;
-        assetOut = token;
-        amountInRaw = size;
-      } else {
-        const held = snap.holdings.get(p.symbol);
-        if (!held || held.rawBalance === 0n) {
-          rejected.push(`#${i} ${p.symbol}: nothing held to sell`);
-          continue;
-        }
-        assetIn = token;
-        assetOut = curveLeg.quoteToken;
-        // Proportional where the holding has a value, whole where it does not.
-        // A curve token the guard refuses to price has valueUsdg 0, and the
-        // right answer there is to sell all of it rather than nothing.
-        amountInRaw =
-          held.valueUsdg > 0n && size < held.valueUsdg
-            ? (held.rawBalance * size) / held.valueUsdg
-            : held.rawBalance;
-      }
-      if (amountInRaw <= 0n) {
-        rejected.push(`#${i} ${p.symbol}: size rounds to zero`);
-        continue;
-      }
-
-      // ── IMPACT, ON THE THINNEST VENUE ON THE CHAIN ────────────────────
-      //
-      // Both swap branches call judgeImpact, and the owner-typed chat producer
-      // checks curveBuyImpactBps against the same ceiling. The AUTONOMOUS curve
-      // path had neither — which cost nothing while no production caller
-      // supplied curve legs, and became the gap the moment one did.
-      //
-      // Checked in the producer, like the chat path, because this is where the
-      // reserves are: the executor holds only an intent and would have to read
-      // them again, and curve-prices.ts is explicit that two reads of one tick
-      // are two different markets.
-      //
-      // Buys only. Impact on the way OUT is a cost of leaving, and refusing an
-      // exit because leaving is expensive is how an agent locks itself into the
-      // position it most needs to close.
-      if (isBuy && universe.maxImpactBps !== undefined) {
-        const impact = curveBuyImpactBps(curveLeg.reserves, amountInRaw);
-        if (impact !== null && impact > universe.maxImpactBps) {
-          rejected.push(
-            `#${i} ${p.symbol}: this size moves the curve ${(impact / 100).toFixed(1)}%, ` +
-              `over the ${(universe.maxImpactBps / 100).toFixed(1)}% ceiling`,
-          );
-          continue;
-        }
-      }
-
-      const quoted = isBuy
-        ? curveBuyOut(curveLeg.reserves, amountInRaw)
-        : curveSellOut(curveLeg.reserves, amountInRaw);
-      if (quoted === null) {
-        rejected.push(`#${i} ${p.symbol}: the curve's reserves don't support a trade this size`);
-        continue;
-      }
-      const minAmountOutRaw = curveMinOut(quoted, universe.slippageBps ?? 100);
-      if (minAmountOutRaw === null || minAmountOutRaw <= 0n) {
-        rejected.push(`#${i} ${p.symbol}: no slippage floor could be derived — refusing to size it blind`);
-        continue;
-      }
-
-      if (isBuy) cashLeft -= size;
-      intents.push({
-        kind: "curve-trade",
-        target: curveLeg.adapter,
-        curve: curveLeg.curve,
-        assetIn,
-        assetOut,
-        amountInRaw,
-        minAmountOutRaw,
-        notionalUsdg: isBuy ? size : quoted,
-      });
-      accepted.push(p);
       continue;
     }
 

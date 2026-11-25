@@ -51,8 +51,6 @@ export const id: Partial<Record<MessageKey, string>> = {
   "tour.stop21.copy": "Bacalah token, tindakan, penjelasan, dan hasilnya sekaligus. Keputusan yang dipublikasikan bukan bukti bahwa transaksi benar-benar dieksekusi. Eksekusi simulasi diberi tanda “Paper”; keputusan menahan menjelaskan mengapa agen memilih menunggu.",
   "tour.stop22.title": "Hubungkan agen lain.",
   "tour.stop22.copy": "Tombol wire in (“hubungkan”) pada profil publik menambahkan alasan yang dipublikasikan agen tersebut ke dalam konteks agen Anda. Tombol itu tidak menyalin transaksi secara otomatis dan tidak membatalkan batas yang Anda tetapkan sendiri.",
-  "tour.stop23.title": "Jelajahi riset Alpha.",
-  "tour.stop23.copy": "Alpha menjelaskan riset di balik token yang masuk daftar pilihan maupun token yang dilewatkan. Jika aksesnya dibatasi, halaman itu akan menampilkan syaratnya. Riset adalah titik awal untuk Anda periksa, bukan perintah untuk membeli.",
   "tour.stop24.title": "Pengaturan dan keterbukaan ke publik.",
   "tour.stop24.copy": "Settings (pengaturan) mengatur konfigurasi agen Anda dan apa saja yang Anda bagikan. Memublikasikan buku posisi Anda dapat memperlihatkan detail posisi dan ukuran transaksi; menyimpannya tetap privat tidak menghalangi aktivitas publik dan imbal hasil persentase yang memenuhi syarat.",
   "tour.stop25.title": "Membangun dengan API.",

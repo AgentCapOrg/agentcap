@@ -5,8 +5,7 @@ import { walletUrl } from "./wallet-param";
  * Explicitly discard the server permission and agent memory; preserve browser recovery keys.
  *
  * A KILL NAMES NO WALLET, and that is the point of it: DELETE /api/grants with
- * no `?wallet=` stops every wallet the login has (Spot, the Perps half, and
- * Solana), and the route refuses a kill that names one (killNamesWallet). So
+ * no `?wallet=` stops every wallet the login has (Spot and the Perps half), and the route refuses a kill that names one (killNamesWallet). So
  * there is no wallet argument here to get wrong.
  */
 export async function deleteAgent(expectedTenant?: string | null): Promise<void> {

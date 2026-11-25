@@ -1,5 +1,5 @@
 import type { Hex } from "viem";
-import { applyFill, type BasisRow, ZERO_BASIS } from "./basis";
+import { applyFill, bookedCashUsdg, type BasisRow, ZERO_BASIS } from "./basis";
 import { acquiredLegOf, addressTopic, getLogsAdaptive, type ReconcileChain } from "./inflight-reconcile";
 import { boundedRead } from "./optional-read-deadline";
 
@@ -58,7 +58,8 @@ async function replayReceiptBasis(opts: {
     const fill = await acquiredLegOf(opts.chain, tx as Hex, opts.account, opts.usdgToken);
     // Transfers, ambiguous routes, and unavailable receipts leave cost unknown.
     if (!fill || fill.token.toLowerCase() !== opts.token.toLowerCase() || fill.cashUsdg <= 0n) return null;
-    const next = applyFill(basis, fill);
+    // Booked as the live path books it (basis.ts bookedCashUsdg).
+    const next = applyFill(basis, { ...fill, cashUsdg: bookedCashUsdg(fill.side, fill.cashUsdg) });
     if (next.basisUnknown) return null;
     if (fill.side === "sell") realized.push({tx,pnl:next.realizedUsdg});
     basis = next.basis;

@@ -9,10 +9,10 @@ const ACCOUNT = "0x00000000000000000000000000000000000000a1";
 /** A ready-to-trade install. Each test spoils exactly one thing. */
 function ready(over: Partial<PreflightInput> = {}): PreflightInput {
   return {
-    settings: { bundlerApiKey: "pim_x", basketSymbols: ["QQQ"], buyPerTickUsdg: 50, idleFloorUsdg: 10_000 },
+    settings: { bundlerApiKey: "pim_x", basketSymbols: ["QQQ"], buyPerTickUsdg: 50,  },
     grant: {
       smartAccount: ACCOUNT,
-      chainId: 4663,
+      chainId: 56,
       expiresAt: NOW + 10 * 86_400,
       grantFeatures: ["transfer", "tradeable-v2", "multihop"],
     } as never,
@@ -53,7 +53,7 @@ describe("preflight — the things that stop a trade", () => {
   });
 
   it("a TESTNET grant is a blocker — doctor prints the chain id inside an ok()", () => {
-    const input = ready({ grant: { ...ready().grant!, chainId: 46630 } as never });
+    const input = ready({ grant: { ...ready().grant!, chainId: 97 } as never });
     const chain = preflight(input).find((c) => c.id === "chain")!;
     assert.equal(chain.level, "blocker");
     assert.match(chain.detail!, /cannot trade/i);
@@ -64,7 +64,7 @@ describe("preflight — the things that stop a trade", () => {
     // code seals TODAY, and every one of them is deployed — so a grant carrying
     // the removed rate-limit policy passed preflight green while being unable to
     // land a single UserOperation. Measured 2026-08-30: RATE_LIMIT_POLICY_CONTRACT
-    // has zero bytes on 4663 AND 46630.
+    // has zero bytes on 56 AND 97.
     //
     // Both facts are asserted together on purpose: the contracts check must stay
     // `ok` here, because that is exactly the shape that fooled the command.
@@ -124,7 +124,7 @@ describe("preflight — the things that make a trade pointless", () => {
   it("warns when a leg is below the gas floor, with the number", () => {
     // The default shape: 25 per tick over 3 symbols is 8.33 a leg.
     const input = ready({
-      settings: { bundlerApiKey: "k", basketSymbols: ["QQQ", "NVDA", "TSLA"], buyPerTickUsdg: 25, idleFloorUsdg: 10_000 },
+      settings: { bundlerApiKey: "k", basketSymbols: ["QQQ", "NVDA", "TSLA"], buyPerTickUsdg: 25,  },
     });
     const leg = preflight(input).find((c) => c.id === "leg-size")!;
     assert.equal(leg.level, "warn");
@@ -135,21 +135,6 @@ describe("preflight — the things that make a trade pointless", () => {
   it("is happy once a leg clears the floor", () => {
     const leg = preflight(ready()).find((c) => c.id === "leg-size")!;
     assert.equal(leg.level, "ok");
-  });
-
-  it("warns that idle cash is swept to the vault on the first tick", () => {
-    // Default idleFloorUsdg of 50 against a 500 deposit: ~400 leaves at once,
-    // and a vault deposit counts against the DAILY spend cap.
-    const input = ready({
-      settings: { bundlerApiKey: "k", basketSymbols: ["QQQ"], buyPerTickUsdg: 50, idleFloorUsdg: 50 },
-    });
-    const sweep = preflight(input).find((c) => c.id === "idle-sweep")!;
-    assert.equal(sweep.level, "warn");
-    assert.match(sweep.detail!, /daily spend cap/);
-  });
-
-  it("says nothing about the sweep when the floor is above the deposit", () => {
-    assert.equal(preflight(ready()).find((c) => c.id === "idle-sweep"), undefined);
   });
 
   it("warns that a legacy grant is narrow, and names what re-signing adds", () => {
@@ -249,7 +234,7 @@ describe("the tick rate is checked against the daily cap", () => {
   const grantWith = (dailyUsdg: number) =>
     ({
       smartAccount: "0x0000000000000000000000000000000000000001",
-      chainId: 4663,
+      chainId: 56,
       expiresAt: NOW + 10 * 86_400,
       caps: { perTradeUsdg: 10, dailyUsdg, expiryDays: 14, maxDrawdownPct: 15, maxOpsPerDay: 24 },
       grantFeatures: [],

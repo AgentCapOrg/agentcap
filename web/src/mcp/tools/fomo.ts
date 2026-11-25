@@ -76,14 +76,14 @@ const SERVED_FROM = Object.keys({ live: true, cache: true, "stale-cache": true, 
 // ── inputs: the registry's JSON Schema, in zod ─────────────────────────────
 
 const TOKEN = refuseControls(z.string().min(1).max(64))
-  .regex(/^(0x[0-9a-fA-F]{40}|[1-9A-HJ-NP-Za-km-z]{32,44}|\$?[A-Za-z0-9][A-Za-z0-9_-]{0,19})$/, "a contract address, a Solana mint or a ticker")
-  .describe("Contract address, Solana mint, or ticker (e.g. PONS).");
+  .regex(/^(0x[0-9a-fA-F]{40}|\$?[A-Za-z0-9][A-Za-z0-9_-]{0,19})$/, "a contract address or a ticker")
+  .describe("Contract address or ticker (e.g. CAKE).");
 const TRADER = refuseControls(z.string().min(1).max(64))
   .regex(/^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|@?[A-Za-z0-9_]{1,30})$/, "a Fomo user id (UUID) or a handle")
   .describe("Fomo user id (UUID) or handle, with or without @.");
 const CHAIN = refuseControls(z.string().min(1).max(24))
   .regex(/^[a-z][a-z0-9-]{0,23}$/, "a lowercase chain slug")
-  .describe("Chain slug, e.g. robinhood, solana, base.");
+  .describe("Chain slug, e.g. robinhood, base.");
 const WINDOW = z.enum(TOOL_WINDOWS).describe("Time window.");
 const SIDE = z.enum(["buy", "sell"]);
 const FRESHNESS = z.enum(FRESHNESS_MODES as unknown as [string, ...string[]])

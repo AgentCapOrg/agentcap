@@ -7,7 +7,7 @@
  * owner differs from the Perps wallet's, or one it cannot check against an
  * unreadable Perps wallet. The Wallet screen's restore and its renewal both
  * send that POST last: their stop has already removed the running Spot grant
- * (and, self-hosted, stopped the Solana strategy) and their on-chain
+ * and their on-chain
  * revocation has been paid for. Refused only then, the owner was left with a
  * stopped Spot agent, nothing armed and a re-arm refused the same way. So each
  * asks here first, of the server's own view of the Perps wallet (GET

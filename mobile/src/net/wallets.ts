@@ -10,15 +10,12 @@ import type { HandoffOutcome } from "./handoffMessage";
  * `https://phantom.app/ul/v1/<method>` (connect, signMessage, signTransaction…)
  * and the session-less `swap` / `fungible` / `browse` methods. **None of them
  * opens a send screen with a recipient and amount filled in**; there is no
- * `/ul/v1/send`, `/transfer` or `/pay`. Three plausible-looking alternatives are
+ * `/ul/v1/send`, `/transfer` or `/pay`. Plausible-looking alternatives are
  * all dead ends here, and each was checked rather than assumed:
  *
  *   • EIP-681 (`ethereum:0xTOKEN@4663/transfer?address=…`) is the standard EVM
- *     payment URI and Phantom does not implement it — its deeplink docs cover
- *     Solana only. On iOS an unhandled `ethereum:` link doesn't even offer a
+ *     payment URI and Phantom does not implement it. On iOS an unhandled `ethereum:` link doesn't even offer a
  *     chooser, it dead-ends on "Safari cannot open the page".
- *   • Solana Pay (`solana:`) does prefill, but it is Solana-only and Robinhood
- *     Chain is an EVM L2 — wrong rail entirely.
  *   • Connecting Phantom as a signer (WalletConnect / EIP-1193) can't work
  *     either: Phantom's own Robinhood Chain FAQ says "dApp connectivity is not
  *     currently available" on this chain.

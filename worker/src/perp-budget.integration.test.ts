@@ -60,7 +60,7 @@ describe("refreshBudget is the one reader of the settled halves", () => {
     const body = INDEX.slice(at, INDEX.indexOf("\n  };", at));
     // Main's shape: both halves read once, then replaced together (holdAtCaps
     // only ever raises them to the caps while the restored day is missing).
-    assert.match(body, /spentUsdg: usdg\(await getSpentTodayUsdg\(agentId, rail, CASH\.USDG as string\)\),/);
+    assert.match(body, /spentUsdg: usdg\(await getSpentTodayUsdg\(agentId, rail, CASH\.USDT as string\)\),/);
     assert.match(body, /ops: await getOpsToday\(agentId, rail\),/);
     assert.match(body, /\(\{ spentUsdg: settledSpentUsdg, ops: settledOps \} = holdAtCaps\(read, active\?\.limits, held\)\);/);
     assert.doesNotMatch(body, /\+=/, "a settled half that accumulates counts every refresh again");

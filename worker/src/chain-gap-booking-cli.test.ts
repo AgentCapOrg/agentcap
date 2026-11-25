@@ -36,7 +36,7 @@ after(() => { for (const h of handles) h.close(); rmSync(dir, { recursive: true,
 
 const TENANT = "0x0e1ca00202df6e686ac2317e10ed8ee8ae5e320d";
 const ACCOUNT = `0x${"ac".repeat(20)}`;
-const USDG = String(CASH.USDG).toLowerCase();
+const USDG = String(CASH.USDT).toLowerCase();
 const TR = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 const DATABASE_URL = "postgres://operator:s3cret@db.internal.example:6543/railway";
 const BLOCK = 80_000_000n, HEAD = BLOCK + 500_000n, DEPOSIT_AT = 1_791_000_000;

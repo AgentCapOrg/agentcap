@@ -1,9 +1,10 @@
 /** Owner-signed embedded enrollment. No browser session or Privy identity is invented. */
+import { bnbChain, bnbTestnet } from "@agentcap/core";
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { recoverMessageAddress, type Address, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import {
-  accountsMatch, carriesOwnerKey, GRANT_ENERGY, GRANT_PONS_CLASS, GRANT_SCOPED_SPENDERS, officialCoinTokens, PONS_CLASS_VAULT_FACTORY,
+  accountsMatch, carriesOwnerKey, GRANT_SCOPED_SPENDERS, officialCoinTokens,
   STOCK_TOKENS, TRADEABLE_V2, usableExtraTokens, type Derivation, type AgentCapSettings, type StoredGrant,
 } from "@agentcap/core";
 import { checkCanonicalWall } from "./canonical-wall";
@@ -23,27 +24,17 @@ const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
 const KEY = /^0x[0-9a-fA-F]{64}$/;
 const HASH = /^0x[0-9a-fA-F]{64}$/;
 const ZERO = "0x0000000000000000000000000000000000000000";
-const CHAINS = new Set([4663, 46630]);
+const CHAINS = new Set<number>([bnbChain.id, bnbTestnet.id]);
 const SYMBOLS = new Set(STOCK_TOKENS.map(t => t.symbol));
 const CONSENT_SCOPES = new Set(["read:agents", "chat:agents"]);
 /**
  * WHAT A PARTNER'S PAGE MAY SEAL: exactly what the SDK's prepareAgentCapAvatar mints
  * from owner, caps and chain alone. A partner grant is built by a third party's
  * code, and the owner approves a permission whose addresses they cannot read.
- * The canonical wall only proves the permission matches the grant's OWN declared
- * routes, and the worker trades through whatever adapter the grant sealed
- * (grantV4Adapter/grantPonsAdapter), so an accepted `ponsAdapterAddress` would
- * route this owner's trades through a contract the partner chose. Adapter routes
- * stay a first-party choice: the owner's own dashboard can still seal them.
- *
- * The class vault is the one sealed address the SDK mints by default, from the
- * platform's own factory. It is accepted only from THAT factory, and only as the
- * vault the factory answers for this account (checked on chain at activation):
- * the wall would otherwise pin, and custody deposit into, a "vault" the partner
- * named beside the real factory's address.
+ * So no sealed address is accepted at all: the field allowlist in validGrant
+ * names none, and only these markers and the listed coins get through.
  */
-const PARTNER_FEATURES = new Set([TRADEABLE_V2, GRANT_ENERGY, GRANT_SCOPED_SPENDERS, GRANT_PONS_CLASS]);
-const PARTNER_SEALED_ROUTES = ["v4AdapterAddress", "ponsAdapterAddress"] as const;
+const PARTNER_FEATURES = new Set([TRADEABLE_V2, GRANT_SCOPED_SPENDERS]);
 const fail = (status: number, code: string, message: string): never => { throw new PartnerError(status, code, message); };
 
 export interface PartnerActivation {
@@ -62,8 +53,6 @@ export interface PartnerEnrollmentDependencies {
   now: () => number;
   secret: () => string;
   derive: (owner: Address, chainId: number) => Promise<Derivation>;
-  /** The vault the class factory answers for this account (`vaultFor`), read from the chain. */
-  classVault: (factory: Address, smartAccount: Address, chainId: number) => Promise<Address>;
   recover: (args: { message: string; signature: Hex }) => Promise<Address>;
 }
 
@@ -78,7 +67,7 @@ function asAddress(value: unknown, label: string): Address {
   return value.toLowerCase() as Address;
 }
 function chainId(value: unknown): number {
-  if (typeof value !== "number" || !CHAINS.has(value)) return fail(400, "unsupported_chain", "Only Robinhood Chain and its testnet are supported");
+  if (typeof value !== "number" || !CHAINS.has(value)) return fail(400, "unsupported_chain", "Only BNB Chain and its testnet are supported");
   return value;
 }
 function safeSettings(value: unknown): PartnerEnrollmentSettings {
@@ -135,7 +124,7 @@ function validGrant(input: unknown, now: number): StoredGrant {
   const body = object(input, "grant");
   if ("demoOwnerPrivateKey" in body || carriesOwnerKey(body)) return fail(422, "owner_key_forbidden", "Owner private keys must stay in the owner's wallet");
   if (body.purpose === "perps" || body.perp !== undefined) return fail(422, "perps_owner_review_required", "Perps permissions require the connected owner's Privy-bound browser review on the Perps desk");
-  onlyFields(body, ["smartAccount", "owner", "sessionKeyAddress", "serialized", "caps", "grantedAt", "expiresAt", "chainId", "grantFeatures", "grantTokens", "v4AdapterAddress", "ponsAdapterAddress", "ponsClassVaultAddress", "ponsClassVaultFactoryAddress", "binding", "demoSessionPrivateKey"]);
+  onlyFields(body, ["smartAccount", "owner", "sessionKeyAddress", "serialized", "caps", "grantedAt", "expiresAt", "chainId", "grantFeatures", "grantTokens", "binding", "demoSessionPrivateKey"]);
   const owner = asAddress(body.owner, "owner");
   const smartAccount = asAddress(body.smartAccount, "smartAccount");
   const sessionKeyAddress = asAddress(body.sessionKeyAddress, "sessionKeyAddress");
@@ -161,16 +150,8 @@ function validGrant(input: unknown, now: number): StoredGrant {
   if (typeof body.serialized !== "string" || body.serialized.length < 20 || body.serialized.length > 240_000 || !/^[A-Za-z0-9+/]+={0,2}$/.test(body.serialized)) return fail(400, "invalid_grant", "Invalid serialized permission or permission too large for embedded activation");
   // Before the wall, which would accept these when the permission matches them.
   const unsupported = "Partner enrollment seals only the platform's own routes and listed coins; prepare the grant with prepareAgentCapAvatar's owner, caps and chainId";
-  if (PARTNER_SEALED_ROUTES.some(field => body[field] !== undefined)) return fail(422, "unsupported_permission", unsupported);
   if (body.grantFeatures !== undefined && (!Array.isArray(body.grantFeatures) || body.grantFeatures.some(f => !PARTNER_FEATURES.has(f)))) {
     return fail(422, "unsupported_permission", unsupported);
-  }
-  if (body.ponsClassVaultAddress !== undefined || body.ponsClassVaultFactoryAddress !== undefined) {
-    const platform = PONS_CLASS_VAULT_FACTORY[Number(body.chainId)];
-    if (!platform || typeof body.ponsClassVaultFactoryAddress !== "string" || body.ponsClassVaultFactoryAddress.toLowerCase() !== platform.toLowerCase() ||
-        typeof body.ponsClassVaultAddress !== "string" || !ADDRESS.test(body.ponsClassVaultAddress)) {
-      return fail(422, "unsupported_permission", unsupported);
-    }
   }
   if (body.grantTokens !== undefined) {
     const listed = new Set(usableExtraTokens(officialCoinTokens(Number(body.chainId))).map(t => t.address.toLowerCase()));
@@ -200,10 +181,6 @@ export function createPartnerEnrollmentService(overrides: Partial<PartnerEnrollm
   const settings = async () => overrides.settings ?? (await import("../../../worker/src/settings-store")).getSettingsStore("spot");
   const identities = async () => overrides.identities ?? (await import("../../../worker/src/identity-store")).getIdentityStore();
   const derive = overrides.derive ?? (async (owner, chain) => (await import("./derive-account")).deriveKernelAccountAddress(owner, chain, "spot"));
-  const classVault = overrides.classVault ?? (async (factory: Address, account: Address, chain: number) => {
-    const [{ createPublicClient }, { chainForId, resolveClassVault }, { webChainRead }] = await Promise.all([import("viem"), import("@agentcap/core"), import("./chain-read")]);
-    return resolveClassVault(createPublicClient({ chain: chainForId(chain), transport: webChainRead() }), factory, account);
-  });
 
   return {
     async challenge(principal: PartnerPrincipal, connection: PartnerConnection, input: unknown) {
@@ -246,15 +223,6 @@ export function createPartnerEnrollmentService(overrides: Partial<PartnerEnrollm
       catch { return fail(503, "derivation_unavailable", "The account derivation could not be verified; retry when the chain is available"); }
       if (!derived.ok) return fail(503, "derivation_unavailable", derived.why);
       if (!accountsMatch(derived, grant.smartAccount).ok) return fail(403, "account_mismatch", "The agent wallet does not derive from this owner");
-      // validGrant already pinned the factory to the platform's; this pins the
-      // vault to the one that factory gives this account. Before the nonce, so
-      // an unreadable chain leaves the signature usable for a retry.
-      if (grant.ponsClassVaultAddress) {
-        let vault: Address;
-        try { vault = await classVault(grant.ponsClassVaultFactoryAddress as Address, grant.smartAccount, grant.chainId); }
-        catch { return fail(503, "class_vault_unavailable", "The class vault could not be confirmed on chain; retry when the chain is available"); }
-        if (vault.toLowerCase() !== grant.ponsClassVaultAddress.toLowerCase()) return fail(422, "unsupported_permission", "The sealed class vault is not the platform factory's vault for this account");
-      }
       // Wait for this owner's enrollment lock BEFORE spending the signature. It
       // was spent first, so a concurrent activation lost it to enrollment_busy
       // and the owner had to sign again; now contention leaves the nonce unused

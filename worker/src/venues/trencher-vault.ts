@@ -1,6 +1,6 @@
 import { decodeFunctionData, encodeFunctionData, erc20Abi, keccak256, type Address, type PublicClient } from "viem";
 import type { FenceCall, FenceVerdict } from "../final-fence";
-import { CASH, UNISWAP, TRENCHER_FACTORY_ABI, TRENCHER_VAULT_ABI, grantTrencher, type StoredGrant } from "../../../packages/core/src/index";
+import { CASH, PANCAKESWAP, TRENCHER_FACTORY_ABI, TRENCHER_VAULT_ABI, TRENCHER_PER_BUY_UNITS, grantTrencher, type StoredGrant } from "../../../packages/core/src/index";
 import type { Quote } from "./uniswap";
 
 /** This permission cannot be inferred from settings or from a successful quote. */
@@ -15,8 +15,8 @@ export async function verifyTrencherCustody(client: PublicClient, grant: StoredG
     client.readContract({address:scope.factory,abi:TRENCHER_FACTORY_ABI,functionName:"vaultFor",args:[grant.smartAccount]}),
     client.getCode({address:scope.factory}),
   ]);
-  if (!code || code === "0x" || cash.toLowerCase() !== CASH.USDG.toLowerCase() || bridge.toLowerCase() !== CASH.WETH.toLowerCase() ||
-      router.toLowerCase() !== UNISWAP.swapRouter02.toLowerCase() || poolFactory.toLowerCase() !== UNISWAP.v3Factory.toLowerCase() || predicted.toLowerCase() !== scope.vault) {
+  if (!code || code === "0x" || cash.toLowerCase() !== CASH.USDT.toLowerCase() || bridge.toLowerCase() !== CASH.WBNB.toLowerCase() ||
+      router.toLowerCase() !== PANCAKESWAP.smartRouter.toLowerCase() || poolFactory.toLowerCase() !== PANCAKESWAP.v3Factory.toLowerCase() || predicted.toLowerCase() !== scope.vault) {
     throw new Error("Trencher factory does not match the sealed account and configured venue");
   }
   if (keccak256(code).toLowerCase() !== trustedHash.toLowerCase()) throw new Error("Trencher factory bytecode does not match the verified deployment");
@@ -37,19 +37,18 @@ export function buildTrencherCalls(args: {
 }) {
   const scope = grantTrencher(args.grant);
   if (!scope) throw new Error("Missing signed autonomous permission");
-  if (args.quote.v4) throw new Error("Trencher vault v1 supports verified v3 pools only");
   if (args.amountIn <= 0n || args.minOut <= 0n || args.deadline <= 0n) throw new Error("Invalid order bounds");
-  if (args.side === "buy" && args.amountIn > 5_000_000n) throw new Error("Trencher entry exceeds 5 USDG");
+  if (args.side === "buy" && args.amountIn > TRENCHER_PER_BUY_UNITS) throw new Error("Trencher entry exceeds 5 USDG");
   let fee1 = args.quote.fee; let fee2 = 0;
   if (args.quote.path) {
     const {tokens,fees} = args.quote.path;
-    const expected = args.side === "buy" ? [CASH.USDG,CASH.WETH,args.token] : [args.token,CASH.WETH,CASH.USDG];
+    const expected = args.side === "buy" ? [CASH.USDT,CASH.WBNB,args.token] : [args.token,CASH.WBNB,CASH.USDT];
     if (tokens.length !== 3 || fees.length !== 2 || tokens.some((t,i)=>t.toLowerCase() !== expected[i]!.toLowerCase())) throw new Error("Unsealed bridge path");
     [fee1,fee2] = args.side === "buy" ? [fees[0]!,fees[1]!] : [fees[1]!,fees[0]!];
   }
   const calls: {to:Address;data:`0x${string}`;value:bigint}[] = [];
   if (!args.deployed) calls.push({to:scope.factory,value:0n,data:encodeFunctionData({abi:TRENCHER_FACTORY_ABI,functionName:"deploy",args:[args.grant.smartAccount]})});
-  if (args.side === "buy") calls.push({to:CASH.USDG,value:0n,data:encodeFunctionData({abi:erc20Abi,functionName:"approve",args:[scope.vault,args.amountIn]})});
+  if (args.side === "buy") calls.push({to:CASH.USDT,value:0n,data:encodeFunctionData({abi:erc20Abi,functionName:"approve",args:[scope.vault,args.amountIn]})});
   calls.push({to:scope.vault,value:0n,data:encodeFunctionData({abi:TRENCHER_VAULT_ABI,functionName:args.side,args:[args.token,fee1,fee2,args.amountIn,args.minOut,args.deadline]})});
   return calls;
 }
@@ -73,7 +72,7 @@ export function checkTrencherCalls(calls: readonly FenceCall[], expected: {
     if (expected.side==="buy") {
       const c=calls[i++]!;
       const d=decodeFunctionData({abi:erc20Abi,data:c.data});
-      if (!same(c.to,CASH.USDG)||d.functionName!=="approve"||!same(d.args[0],scope.vault)||d.args[1]!==expected.amountIn) return no("Cash approval changed");
+      if (!same(c.to,CASH.USDT)||d.functionName!=="approve"||!same(d.args[0],scope.vault)||d.args[1]!==expected.amountIn) return no("Cash approval changed");
     }
     const c=calls[i]!;
     const d=decodeFunctionData({abi:TRENCHER_VAULT_ABI,data:c.data});

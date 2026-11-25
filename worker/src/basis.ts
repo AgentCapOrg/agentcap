@@ -10,7 +10,7 @@
  *
  * UNITS (the part that must never drift):
  *   qtyRaw   — 18dp RAW token units, exactly what transfer() moves
- *   costUsdg — 6dp USDG, the total paid for the currently-held qtyRaw
+ *   costUsdg — cash base units (18dp USDT), the total paid for the currently-held qtyRaw
  *
  * Basis is per RAW unit, which makes it SPLIT-INVARIANT for free: ERC-8056
  * corporate actions change uiMultiplier(), never rawBalance, so a 2-for-1 split
@@ -26,11 +26,13 @@
  * holds EXACTLY for any sequence of fills (see basis.test.ts).
  */
 
+import { cashFromMicro, cashToMicro, cashToMicroUp } from "../../packages/core/src/cash";
+
 /** The running basis for one symbol. */
 export interface BasisRow {
   /** 18dp raw units currently held. */
   qtyRaw: bigint;
-  /** 6dp USDG total cost of exactly those qtyRaw units. */
+  /** Cash base units: total cost of exactly those qtyRaw units. */
   costUsdg: bigint;
 }
 
@@ -65,6 +67,17 @@ export interface FillResult {
 }
 
 export const ZERO_BASIS: BasisRow = { qtyRaw: 0n, costUsdg: 0n };
+
+/**
+ * A fill's cash leg AS IT IS BOOKED: a whole number of micro-USDT, which is all
+ * the REAL column fill_cash_usdg keeps. What goes into the basis must be what a
+ * replay reads back from that column, or no replay reproduces the cost. A buy
+ * rounds up and a sell down, so cost is never understated and proceeds never
+ * overstated.
+ */
+export function bookedCashUsdg(side: Fill["side"], cashUsdg: bigint): bigint {
+  return cashFromMicro(side === "buy" ? cashToMicroUp(cashUsdg) : cashToMicro(cashUsdg));
+}
 
 /**
  * Apply one fill to a basis row. Pure: no clock, no db, no rounding modes.

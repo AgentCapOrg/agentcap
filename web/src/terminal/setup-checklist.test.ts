@@ -20,23 +20,23 @@ const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " "
 
 describe("which setup step an account is on", () => {
   it("an unread balance is not an empty one", () => {
-    assert.equal(setupStep({ exists: true, balances: { ethWei: null, cashUsdg: null, vaultUsdg: null } }, false), "unread");
+    assert.equal(setupStep({ exists: true, balances: { ethWei: null, cashUsdg: null } }, false), "unread");
     assert.equal(setupStep({ exists: true }, false), "unread", "a status with no balances said nothing about them");
     assert.equal(
-      setupStep({ exists: true, gasSponsored: true, balances: { ethWei: "0", cashUsdg: null, vaultUsdg: "0" } }, false),
+      setupStep({ exists: true, gasSponsored: true, balances: { ethWei: "0", cashUsdg: null } }, false),
       "unread",
       "sponsored, the cash leg decides — and it was not read",
     );
   });
 
   it("a measured zero still asks for funds", () => {
-    assert.equal(setupStep({ exists: true, balances: { ethWei: "0", cashUsdg: "0", vaultUsdg: "0" } }, false), "fund");
-    assert.equal(setupStep({ exists: true, gasSponsored: true, balances: { ethWei: "0", cashUsdg: "0", vaultUsdg: "0" } }, false), "fund");
+    assert.equal(setupStep({ exists: true, balances: { ethWei: "0", cashUsdg: "0" } }, false), "fund");
+    assert.equal(setupStep({ exists: true, gasSponsored: true, balances: { ethWei: "0", cashUsdg: "0" } }, false), "fund");
   });
 
   it("gas, sponsored capital or paper mean there is nothing left to do", () => {
     assert.equal(setupStep({ exists: true, balances: { ethWei: "5" } }, false), "done");
-    assert.equal(setupStep({ exists: true, gasSponsored: true, balances: { ethWei: "0", cashUsdg: "5", vaultUsdg: null } }, false), "done");
+    assert.equal(setupStep({ exists: true, gasSponsored: true, balances: { ethWei: "0", cashUsdg: "5" } }, false), "done");
     assert.equal(setupStep({ exists: true, balances: { ethWei: null } }, true), "done");
     assert.equal(setupStep({ exists: false }, false), "create");
   });
@@ -49,13 +49,13 @@ describe("what the checklist draws", () => {
   };
 
   it("no Add funds for a balance nobody read — it says it could not read it", async () => {
-    const html = await draw({ exists: true, balances: { ethWei: null, cashUsdg: null, vaultUsdg: null } });
+    const html = await draw({ exists: true, balances: { ethWei: null, cashUsdg: null } });
     assert.doesNotMatch(html, /Add funds/);
     assert.match(html, /couldn.t read your balance/i);
   });
 
   it("Add funds for a balance read as zero", async () => {
-    const html = await draw({ exists: true, balances: { ethWei: "0", cashUsdg: "0", vaultUsdg: "0" } });
+    const html = await draw({ exists: true, balances: { ethWei: "0", cashUsdg: "0" } });
     assert.match(html, /Add funds/);
   });
 

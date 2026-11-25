@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { EnergyStatus } from "@agentcap/core";
 import type { FleetRecoveryView } from "../../../worker/src/fleet-recovery";
 import type { LlmCreds } from "../../../worker/src/llm";
 import { agentReplyResponse, generateAgentReply, type AgentChatOptions } from "./agent-chat";
@@ -13,29 +12,25 @@ const credentials = (): LlmCreds => ({ provider: "test", transport: "openai", ba
 const stale = { name: "Example Robin", workerStatus: "LIVE", liveBlocker: "dead-policy", stopped: false,
   liveTradingEnabled: true, paperTradingEnabled: true, equity: 120, cashUsd: 95, vaultUsd: 10,
   positions: [{ symbol: "EXAMPLE", valueUsd: 15 }], stopLossBps: 2500, takeProfitBps: 5000 };
-const energy: EnergyStatus = { v: 1, gated: true, mode: "enforce", level: "low", agentTokens: 0, holderTokens: 0,
-  needTokens: 100_000, day: "2026-10-04", resetsAt: 1_791_158_400, at: recovery.checkedAt,
-  reviews: { used: 3, allowed: 3 }, entries: { used: 2, allowed: 2 }, spent: true, buy: "resign", estimateUsdg: 25 };
 async function ask(state: unknown = stale, extra: Partial<AgentChatOptions> = {}) {
   let seen!: { system: string; prompt: string };
   const out = await generateAgentReply({ message: "I renewed, why are you quiet? Am I trading live?", state: JSON.stringify(state) },
-    { credentials, complete: async (_creds, req) => { seen = req; return "I'm paused for recovery."; }, recovery, energy, ...extra });
+    { credentials, complete: async (_creds, req) => { seen = req; return "I'm paused for recovery."; }, recovery, ...extra });
   assert.equal(out.reply, "I'm paused for recovery.");
   return seen;
 }
 const stateOf = (prompt: string) => JSON.parse(prompt.split("STATE:\n")[1]!.split("\n\n")[0]!) as Record<string, unknown>;
 
-test("authenticated recovery overrides a stale live flag, expired blocker and energy remedy", async () => {
+test("authenticated recovery overrides a stale live flag and expired blocker", async () => {
   const { system, prompt } = await ask();
   const state = stateOf(prompt);
   assert.equal(state.workerStatus, "Trading paused for recovery");
   assert.equal(state.liveBlocker, null);
   assert.equal(state.liveTradingEnabled, null);
   assert.equal(state.stopped, true);
-  assert.doesNotMatch(prompt, /ENERGY \(/, "a source-held energy row cannot be a current worker report");
   assert.match(system, /AUTHENTICATED RECOVERY OVERRIDES/);
-  assert.match(system, /expired permission, low\/spent energy/);
-  assert.match(system, /Never say that funding, buying energy, re-signing or enabling Live trading clears recovery/);
+  assert.match(system, /or expired permission cannot override it/);
+  assert.match(system, /Never say that funding, re-signing or enabling Live trading clears recovery/);
   assert.match(system, /Never claim trades, reviews, stop-losses or take-profits continue during recovery/);
 });
 
@@ -54,7 +49,7 @@ test("old browser balances and holdings become qualified saved records, not curr
 });
 
 test("client recovery and polluted internal metadata cannot establish or enlarge the server report", async () => {
-  const unheld = await ask({ ...stale, recovery }, { recovery: null, energy: null });
+  const unheld = await ask({ ...stale, recovery }, { recovery: null });
   assert.equal(stateOf(unheld.prompt).recovery, undefined);
   assert.doesNotMatch(unheld.system, /AUTHENTICATED RECOVERY OVERRIDES/);
   assert.doesNotMatch(unheld.prompt, /RECOVERY \(/);
@@ -85,10 +80,9 @@ test("streamed chat uses the same authoritative hold and keeps the Withdraw scre
   let prompt = "";
   const reply = 'You can open Withdraw to check the owner controls.\n<<CMD open-withdraw {}>>';
   const response = await agentReplyResponse({ message: "withdraw", state: JSON.stringify(stale) }, { stream: true }, {
-    recovery, credentials, energy, stream: async (_creds, req, onText) => { prompt = req.prompt; onText(reply); return reply; } });
+    recovery, credentials, stream: async (_creds, req, onText) => { prompt = req.prompt; onText(reply); return reply; } });
   const out = await readReplyStream(response.body!, () => {});
   assert.match(prompt, /RECOVERY \(authenticated server report — authoritative\)/);
-  assert.doesNotMatch(prompt, /ENERGY \(/);
   assert.deepEqual(out.command, { id: "open-withdraw", args: {} });
 });
 
@@ -100,7 +94,7 @@ test("configured completion failures, timeouts and empty refusals return recover
   ];
   for (const complete of failures) {
     const response = await agentReplyResponse({ message: "why are you quiet?", state: JSON.stringify(stale) }, { stream: false },
-      { credentials, complete, recovery, energy });
+      { credentials, complete, recovery });
     const out = await response.json() as { reply: string | null; why?: string; command?: unknown };
     assert.equal(response.status, 200);
     assert.match(out.reply!, /trading is paused for recovery/);
@@ -119,7 +113,7 @@ test("configured streaming failures and empty refusals finish with qualified rec
   ];
   for (const stream of failures) {
     const response = await agentReplyResponse({ message: "why are you quiet?", state: JSON.stringify(stale) }, { stream: true },
-      { credentials, stream, recovery, energy });
+      { credentials, stream, recovery });
     const out = await readReplyStream(response.body!, () => {});
     assert.match(out.reply!, /trading is paused for recovery/);
     assert.match(out.reply!, /can't confirm the current portfolio/);
@@ -135,7 +129,7 @@ test("cancelled JSON and streamed requests retain failure handling rather than c
     cancellation.abort();
     const fail = async () => { throw new DOMException("owner left", "AbortError"); };
     const response = await agentReplyResponse({ message: "why are you quiet?", state: JSON.stringify(stale) },
-      { stream, signal: cancellation.signal }, { credentials, complete: fail, stream: fail, recovery, energy });
+      { stream, signal: cancellation.signal }, { credentials, complete: fail, stream: fail, recovery });
     const out = stream ? await readReplyStream(response.body!, () => {}) : await response.json() as { reply: string | null; why?: string };
     assert.equal(out.reply, null);
     assert.equal(out.why, "llm-error");

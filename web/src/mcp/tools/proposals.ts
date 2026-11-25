@@ -10,8 +10,7 @@
  * web/src/lib/services/proposals.ts.
  */
 import * as z from "zod";
-import { STOCK_TOKENS, RISK_PROFILES, sellableAssets, normalizeAgentName, AGENT_NAME_RE, isEnergyReserveToken } from "@agentcap/core";
-import { ENERGY_RESERVE_WHY } from "@/lib/energy-reserve";
+import { STOCK_TOKENS, RISK_PROFILES, sellableAssets, normalizeAgentName, AGENT_NAME_RE } from "@agentcap/core";
 import { settingsReader, type SettingsView } from "@/lib/services/settings-view";
 import { quoteTrade, type TradeQuote } from "@/lib/services/trade-quote";
 import { randomBytes } from "node:crypto";
@@ -80,10 +79,6 @@ function translate(e: unknown): never {
  */
 export function addressableSymbol(token: string, settings: SettingsView | null, chainId: number, o: { officialCoinsEnabled?: boolean } = {}): { symbol: string } | { why: string } {
   const t = token.toLowerCase();
-  // FIRST, whatever the settings say: every answer below ends in "add it / re-sign",
-  // and for the energy reserve no signature ever covers it. A trade proposal can
-  // neither buy nor sell it; that happens only in the AgentCap app chat.
-  if (isEnergyReserveToken(t)) return { why: `${ENERGY_RESERVE_WHY} A trade proposal cannot buy or sell it.` };
   const watch = watchSetFor(settings, chainId);
   const officialOff = o.officialCoinsEnabled === false;
   const watched = officialOff ? watch.tokens.filter((w) => w.origin !== "official") : watch.tokens;
@@ -98,7 +93,7 @@ export function addressableSymbol(token: string, settings: SettingsView | null, 
       // check_token_eligibility's wording (services/eligibility.ts, watched_by_agent).
       return { why: "It is a registry stock token, but not in the agent's basket, so the worker does not watch it and cannot trade it. The owner can add it to the basket in Settings." };
     }
-    return { why: "This token is not one of the agent's tokens: the worker only trades the tokens it watches (basket stock tokens, official coins and tokens the owner added in Settings). The owner can add it by address in AgentCap Settings first; the agent may still trade launchpad coins on its own." };
+    return { why: "This token is not one of the agent's tokens: the worker only trades the tokens it watches (basket stock tokens, official coins and tokens the owner added in Settings). The owner can add it by address in AgentCap Settings first." };
   }
   const symbol = mine.symbol;
   if (!/^[A-Z0-9]{1,12}$/.test(symbol)) {
@@ -156,7 +151,7 @@ const QUOTE_OUT = z.object({
   price_impact_bps: z.number().nullable(),
   impact_verdict: z.object({ ok: z.boolean(), rule: z.string().nullable(), detail: z.string().nullable(), cap_bps: z.number() }),
   route: z.object({ venue: z.string(), fee_tier_bps: z.number().nullable(), hops: z.array(z.string()) }).nullable(),
-  routes_considered: z.object({ direct_v3: z.boolean(), via_weth: z.boolean(), v4: z.boolean(), hooked_v4_pools: z.boolean(), launchpad_curve: z.boolean() }),
+  routes_considered: z.object({ direct_v3: z.boolean(), via_weth: z.boolean() }),
   gas: z.object({ units_estimate: z.string().nullable(), swap_leg_units: z.string().nullable(), expected_usdg: z.number().nullable(), note: z.string() }),
   agentcap_trade_fee: z.object({ bps: z.number(), usdg: z.number(), note: z.string() }),
   block_number: z.string().nullable(),
@@ -253,7 +248,7 @@ const proposeTrade = defineTool({
     if (!agent.account || !agent.orderAgentId) throw new McpError("conflict", "This agent has no signed trading permission yet, so it cannot trade.");
     if (agent.expiresAt !== null && now >= agent.expiresAt) throw new McpError("conflict", "The agent's trading permission has expired. The owner must re-sign it in AgentCap before any trade.");
     const settings = await settingsReader().settingsFor(ctx.principal.tenant);
-    const addressable = await orderSymbol(ctx.principal.tenant, args.token, settings, agent.chainId ?? 4663);
+    const addressable = await orderSymbol(ctx.principal.tenant, args.token, settings, agent.chainId ?? 56);
     if ("why" in addressable) throw new McpError("unsupported", addressable.why);
     const sellable = sellableAssets({ grantFeatures: agent.features, grantTokens: agent.grantTokens });
     if (!sellable.has(args.token.toLowerCase())) {
@@ -280,7 +275,7 @@ const proposeTrade = defineTool({
       agent_slug: agent.slug,
       account: agent.account,
       order_agent_id: agent.orderAgentId,
-      chain_id: agent.chainId ?? 4663,
+      chain_id: agent.chainId ?? 56,
       side: args.side,
       token: args.token.toLowerCase(),
       symbol: addressable.symbol,

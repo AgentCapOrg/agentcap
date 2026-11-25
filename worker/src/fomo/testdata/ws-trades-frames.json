@@ -51,15 +51,15 @@
     },
     {
       "type": "trade",
-      "chain": "solana",
-      "chainId": 1399811149,
+      "chain": "bsc",
+      "chainId": 56,
       "side": "buy",
       "trader": {
-        "wallet": "5AhfPStn66hRYoNNDfJHSDgCH7fBbwMQZUECRrhTo62F",
+        "wallet": "0xc0e37d37e34c0062e8e2adbc8b9db0fa2a93be9f",
         "handle": null
       },
       "token": {
-        "address": "Fu2oZoGxFtCDp29NKA4A89xcn255khq9xbxG7Mmtpump",
+        "address": "0xc66101b7bbddc5e8738608b393c2eac96bbfef6a",
         "symbol": "FU2O",
         "mcap": 89000
       },

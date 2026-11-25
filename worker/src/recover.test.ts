@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 import { classifyBalance, nativeSweep, sweepList } from "./recover";
-import { CASH, AGENTCAP_TOKEN, MORPHO, STOCK_TOKENS, robinhoodChain, robinhoodTestnet } from "../../packages/core/src/index";
+import { CASH, AGENTCAP_TOKEN, STOCK_TOKENS, bnbChain, bnbTestnet } from "../../packages/core/src/index";
 
 /**
  * The escape hatch, which had no tests at all.
@@ -12,67 +12,29 @@ import { CASH, AGENTCAP_TOKEN, MORPHO, STOCK_TOKENS, robinhoodChain, robinhoodTe
  * out to be a smart account their wallet cannot see. It swept a token list
  * frozen at ship time, which meant it stranded two whole categories of money:
  * every token the owner added themselves (including every quarantined scout
- * buy), and the Morpho vault position — which is where the idle-cash sweep puts
- * most of the float on the FIRST tick. An agent doing exactly what it is
- * designed to do was reported by recovery as an empty account.
+ * buy), among them. An agent doing exactly what it is designed to do must not be
+ * reported by recovery as an empty account.
  */
 
 const addr = (n: string) => `0x${n.repeat(40).slice(0, 40)}` as const;
-const MAINNET = robinhoodChain.id;
-const TESTNET = robinhoodTestnet.id;
+const MAINNET = bnbChain.id;
+const TESTNET = bnbTestnet.id;
 
-test("the builtin floor includes the vault — a fully-parked agent is not an empty one", () => {
-  const list = sweepList(MAINNET);
+test("the builtin floor is cash and every stock", () => {
+  const list = sweepList();
   const targets = list.map((t) => t.address.toLowerCase());
-  assert.ok(targets.includes(CASH.USDG.toLowerCase()), "cash");
-  assert.ok(
-    targets.includes(MORPHO.steakhouseUsdgVault.toLowerCase()),
-    "the vault — steady-basket parks idle cash there on the first tick, so for most of a run this " +
-      "IS the account. Leaving it out made recovery report 'empty' for a wallet that was fully invested.",
-  );
+  assert.ok(targets.includes(CASH.USDT.toLowerCase()), "cash");
   for (const t of STOCK_TOKENS) {
     assert.ok(targets.includes(t.address.toLowerCase()), `${t.symbol} must be sweepable`);
   }
 });
 
-test("the energy reserve is swept where it is deployed — it is on no list the owner configures", () => {
-  // $AGENTCAP is kept out of every watch set and every token list on purpose,
-  // so recovery cannot rely on one to find it.
-  const row = sweepList(MAINNET).find((t) => t.address.toLowerCase() === AGENTCAP_TOKEN.address.toLowerCase());
-  assert.ok(row, "AGENTCAP must be swept by the escape hatch");
-  assert.equal(row!.decimals, 18);
-  assert.equal(row!.symbol, "AGENTCAP");
-});
 
-test("TESTNET: no reserve row, so an owner's own testnet AGENTCAP is swept under its own name", () => {
-  // The mainnet address has no code on 46630. A row for it read `absent` and
-  // took the name, so the owner's token called AGENTCAP was dropped as a
-  // collision and they were told nothing was left while it sat in the account.
-  const mine = { symbol: "AGENTCAP", address: addr("3"), decimals: 18 };
-  const list = sweepList(TESTNET, [mine]);
-  assert.ok(!list.some((t) => t.address.toLowerCase() === AGENTCAP_TOKEN.address.toLowerCase()), "no codeless reserve row");
-  const found = list.find((t) => t.address.toLowerCase() === mine.address);
-  assert.ok(found, "the owner's token reaches the sweep");
-  assert.equal(found.symbol, "AGENTCAP");
-});
 
-test("MAINNET: a token merely CALLED AGENTCAP at another address is swept too, labelled by its address", () => {
-  // DELIBERATE CHANGE: builtins used to win on SYMBOL, which stranded this
-  // token on the one path meant to rescue it. Same address is the same token
-  // (skipped, already swept); same name elsewhere is a different token.
-  const mine = { symbol: "AGENTCAP", address: addr("3"), decimals: 9 };
-  const list = sweepList(MAINNET, [mine, { symbol: "ALIAS", address: AGENTCAP_TOKEN.address, decimals: 18 }]);
-  const found = list.find((t) => t.address.toLowerCase() === mine.address);
-  assert.ok(found, "swept");
-  assert.equal(found.decimals, 9);
-  assert.equal(found.symbol, "AGENTCAP (0x3333…3333)");
-  assert.equal(list.filter((t) => t.address.toLowerCase() === AGENTCAP_TOKEN.address.toLowerCase()).length, 1, "the reserve itself once");
-  assert.equal(list.filter((t) => t.symbol === "AGENTCAP").length, 1, "and it alone carries the bare name");
-});
 
 test("owner-added tokens are swept — that is the whole defect", () => {
   const mine = { symbol: "WIF", address: addr("a"), decimals: 9 };
-  const list = sweepList(MAINNET, [mine]);
+  const list = sweepList([mine]);
   const found = list.find((t) => t.address.toLowerCase() === mine.address.toLowerCase());
   assert.ok(found, "an owner-added token must reach the sweep");
   assert.equal(found.decimals, 9, "at ITS decimals, not a guessed 18 — the amount is shown to the owner");
@@ -81,7 +43,7 @@ test("owner-added tokens are swept — that is the whole defect", () => {
 test("malformed entries are dropped rather than trusted", () => {
   // settings.json is read off disk by one caller, so the shape is re-checked
   // here. A bad address in an atomic sweep fails the whole recovery.
-  const list = sweepList(MAINNET, [
+  const list = sweepList([
     { symbol: "OK", address: addr("b"), decimals: 18 },
     { symbol: "BAD", address: "0xnothex", decimals: 18 },
     { symbol: "WORSE", address: addr("c"), decimals: 999 },
@@ -92,7 +54,7 @@ test("malformed entries are dropped rather than trusted", () => {
     null,
     "not even an object",
   ]);
-  const extras = list.slice(sweepList(MAINNET).length);
+  const extras = list.slice(sweepList().length);
   // An EMPTY SYMBOL IS NOT MALFORMED. It is what the browser and the phone
   // send for every grantTokens address, because an address is all a grant
   // carries — and this pin used to drop it, which is how every owner-added
@@ -108,22 +70,22 @@ test("malformed entries are dropped rather than trusted", () => {
 
 test("an address-only token is labelled by its address, with its decimals left to the chain", () => {
   const meme = "0x15e498ff2dbca95e8648a1f025cbbd12c2525461";
-  const [t] = sweepList(MAINNET, [{ address: meme, symbol: "" }]).slice(sweepList(MAINNET).length);
+  const [t] = sweepList([{ address: meme, symbol: "" }]).slice(sweepList().length);
   assert.ok(t, "an address-only entry must reach the sweep");
   assert.equal(t.symbol, "0x15e4…5461", "labelled by address — never by a name the token picks for itself");
   assert.equal(t.decimalsUnknown, true, "its decimals are a placeholder planRecovery must replace");
   // A named entry is not flagged: its decimals were typed in and validated.
-  const [named] = sweepList(MAINNET, [{ symbol: "WIF", address: addr("a"), decimals: 9 }]).slice(sweepList(MAINNET).length);
+  const [named] = sweepList([{ symbol: "WIF", address: addr("a"), decimals: 9 }]).slice(sweepList().length);
   assert.equal(named!.decimalsUnknown, undefined);
 });
 
 test("an address-only entry can neither shadow a builtin nor lose a label collision", () => {
-  const baseline = sweepList(MAINNET).length;
+  const baseline = sweepList().length;
   // Two addresses sharing their first six and last four characters.
   const a = "0x1234aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabcd";
   const b = "0x1234bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbabcd";
-  const list = sweepList(MAINNET, [
-    { address: CASH.USDG, symbol: "" }, // a builtin's address: the builtin wins
+  const list = sweepList([
+    { address: CASH.USDT, symbol: "" }, // a builtin's address: the builtin wins
     { address: a, symbol: "" },
     { address: b, symbol: "" },
     { address: a.toUpperCase().replace("0X", "0x"), symbol: "" }, // the same token again
@@ -142,8 +104,8 @@ test("a builtin cannot be shadowed — an address collision is dropped, a name c
   // the token — which stranded it. Neither: it is swept, and its label says
   // which address it is.
   const aapl = STOCK_TOKENS.find((t) => t.symbol === "AAPL") ?? STOCK_TOKENS[0]!;
-  const baseline = sweepList(MAINNET).length;
-  const list = sweepList(MAINNET, [
+  const baseline = sweepList().length;
+  const list = sweepList([
     { symbol: aapl.symbol, address: addr("e"), decimals: 18 }, // symbol collision
     { symbol: "ALIAS", address: aapl.address, decimals: 18 }, // address collision
   ]);
@@ -159,12 +121,12 @@ test("a builtin cannot be shadowed — an address collision is dropped, a name c
 test("the owner's own same-named tokens are all swept, each under a distinct label", () => {
   const x1 = `0x1111${"0".repeat(32)}1111`;
   const x2 = `0x1111${"a".repeat(32)}1111`; // the same short form as x1
-  const list = sweepList(MAINNET, [
+  const list = sweepList([
     { symbol: "PEPE", address: addr("2"), decimals: 18 },
     { symbol: "pepe", address: x1, decimals: 18 },
     { symbol: "PEPE", address: x2, decimals: 18 },
   ]);
-  const extras = list.slice(sweepList(MAINNET).length);
+  const extras = list.slice(sweepList().length);
   assert.deepEqual(extras.map((t) => t.symbol), ["PEPE", "pepe (0x1111…1111)", `PEPE (${x2})`]);
   const labels = list.map((t) => t.symbol.toUpperCase());
   assert.equal(new Set(labels).size, labels.length, "distinct even when the short forms coincide");
@@ -172,7 +134,7 @@ test("the owner's own same-named tokens are all swept, each under a distinct lab
 
 test("duplicates among the owner's own entries collapse", () => {
   const t = { symbol: "DUPE", address: addr("f"), decimals: 6 };
-  const list = sweepList(MAINNET, [t, { ...t }, { symbol: "OTHER", address: t.address, decimals: 6 }]);
+  const list = sweepList([t, { ...t }, { symbol: "OTHER", address: t.address, decimals: 6 }]);
   assert.equal(list.filter((x) => x.address.toLowerCase() === t.address.toLowerCase()).length, 1);
 });
 
@@ -184,14 +146,14 @@ test("the list is capped, because the sweep is ONE atomic operation", () => {
     address: `0x${i.toString(16).padStart(40, "0")}`,
     decimals: 18,
   }));
-  const list = sweepList(MAINNET, many);
-  assert.ok(list.length <= sweepList(MAINNET).length + 50, `capped, got ${list.length}`);
-  assert.ok(list.length > sweepList(MAINNET).length, "…but not to zero");
+  const list = sweepList(many);
+  assert.ok(list.length <= sweepList().length + 50, `capped, got ${list.length}`);
+  assert.ok(list.length > sweepList().length, "…but not to zero");
 });
 
 test("no token list behaves exactly like an empty one", () => {
-  assert.deepEqual(sweepList(MAINNET), sweepList(MAINNET, []));
-  assert.deepEqual(sweepList(TESTNET), sweepList(TESTNET, []));
+  assert.deepEqual(sweepList(), sweepList([]));
+  assert.deepEqual(sweepList(), sweepList([]));
 });
 
 test("a balance that reads is a balance", async () => {

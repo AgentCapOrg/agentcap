@@ -23,17 +23,6 @@ interface Balance {
   symbol: string;
   amount: string;
 }
-/**
- * A holding in the account's class vault — a SEPARATE contract, so it appears
- * in no `Balance`. `token` rather than `symbol` is the key because a class
- * token's symbol is frequently unreadable and falls back to a short address,
- * which is not unique.
- */
-interface ClassHolding {
-  token: string;
-  symbol: string;
-  amount: string;
-}
 interface Ctx {
   hasStoredKey: boolean;
   hasBundler: boolean;
@@ -42,22 +31,6 @@ interface Ctx {
   smartAccount?: string;
   ownerAddress?: string;
   balances?: Balance[];
-  /** The class vault's contents, and the vault itself. Absent is not empty. */
-  classHoldings?: ClassHolding[];
-  classVault?: string | null;
-  /**
-   * EVERY vault, because after v2 an account has two.
-   *
-   * `classVault`/`classHoldings` above stay, meaning the PRIMARY one, so every
-   * existing render keeps working. This is what lets the confirmation name a
-   * balance sitting in the other one instead of quietly omitting it.
-   */
-  classVaults?: {
-    vault: string;
-    version: 1 | 2 | null;
-    note: string | null;
-    holdings: ClassHolding[];
-  }[];
   /** Labels whose balance could not be READ. Never conflate with "not held". */
   unreadable?: string[];
   error?: string;
@@ -72,22 +45,6 @@ interface PlanRes {
   explorer: string;
   chainId: number;
   balances: Balance[];
-  /** The class vault's contents, and the vault itself. Absent is not empty. */
-  classHoldings?: ClassHolding[];
-  classVault?: string | null;
-  /**
-   * EVERY vault, because after v2 an account has two.
-   *
-   * `classVault`/`classHoldings` above stay, meaning the PRIMARY one, so every
-   * existing render keeps working. This is what lets the confirmation name a
-   * balance sitting in the other one instead of quietly omitting it.
-   */
-  classVaults?: {
-    vault: string;
-    version: 1 | 2 | null;
-    note: string | null;
-    holdings: ClassHolding[];
-  }[];
   /** The ETH leg: what would move, and what stays to pay for the move. */
   nativeRecoverableWei?: string;
   nativeReserveWei?: string;
@@ -112,8 +69,8 @@ interface SweepRes {
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 
 const isKey = (v: string) => /^0x[0-9a-fA-F]{64}$/.test(v.trim());
-const MAINNET = 4663;
-const TESTNET = 46630;
+const MAINNET = 56;
+const TESTNET = 97;
 
 /**
  * @param initialOwnerKey The key this browser ALREADY holds, when it holds one.
@@ -269,25 +226,8 @@ export function RecoverPanelView({
         // panel renders exactly that shape — so pass it through rather than
         // rebuilding it and losing `note` along the way.
         balances: b.balances,
-        // THE CLASS BOOK, WHICH THIS DROPPED ON THE FLOOR.
-        //
-        // Restating a type is how you lose the parts of it you were not
-        // thinking about — the note above `BrowserPlan` says exactly that about
-        // `unreadable`, and then this object literal did it again to the class
-        // vault. `as unknown as PlanRes` is why the compiler never said so.
-        //
-        // The consequence was silent and total: the engine reported the vault,
-        // the disclosure knew how to render it, and the browser path threw the
-        // data away in between — so a Privy owner recovering 1,063,408 DOGGOS
-        // would have confirmed a sweep whose screen said "20.000000 USDG".
-        classHoldings: b.classHoldings,
-        classVault: b.classVault,
-        // AND THE WHOLE BOOK. Carrying only the primary vault here is the same
-        // defect the comment above describes, one version later.
-        classVaults: b.classVaults,
-        // THE ETH LEG. It moves on every recovery and was in neither
-        // classHoldings nor balances, so the confirmation listed the tokens and
-        // silently omitted it.
+        // THE ETH LEG. It moves on every recovery and is not in `balances`, so
+        // a confirmation built from that list alone would silently omit it.
         nativeRecoverableWei: String(b.nativeRecoverableWei),
         nativeReserveWei: String(b.nativeReserveWei),
         // Same reason `unreadable` exists at all: absence and ignorance are
@@ -317,61 +257,17 @@ export function RecoverPanelView({
       setError("this browser doesn't hold that wallet.");
       return;
     }
-    /**
-     * THE CLASS VAULT GOES IN THE CONFIRMATION, because it goes in the sweep.
-     *
-     * This listed `balances` alone — the SMART ACCOUNT's tokens — while the
-     * operation beneath it also empties the class vault, whose contents are
-     * usually the largest thing an owner is moving. The panel body shows them
-     * under "Held in a separate contract"; the dialog that actually takes the
-     * decision did not, so the last thing anyone read before signing named a
-     * strict subset of what they were signing for.
-     *
-     * The server path (`sweep`, below) already lists both. Two confirmations
-     * for one operation must not disclose different things, and the one that
-     * disclosed less was the one hosted owners actually use.
-     *
-     * Class holdings come FIRST, matching the server path and the order of
-     * operations: the vault is emptied into the account, then everything moves.
-     */
-    const list =
-      [
-        ...classHoldings.map((h) => `${h.amount} ${h.symbol}`),
-        ...balances.map((b) => `${b.amount} ${b.symbol}`),
-      ].join(", ") || "the balance";
-    // SAID BEFORE THE PRESS, not discovered after. One approval covers one
-    // vault, so a balance in the other is real, visible on this screen, and not
-    // moving this time — and a confirmation that stayed silent about that would
-    // be the "names less than it moves" defect inverted.
-    const alsoHeld = otherVaults
-      .flatMap((v) => v.holdings.map((h) => `${h.amount} ${h.symbol}`))
-      .join(", ");
+    const list = balances.map((b) => `${b.amount} ${b.symbol}`).join(", ") || "the balance";
     if (
       !window.confirm(
-        `Sweep ${list} to ${normalizeAddr(to)}?\n\nThis is real and irreversible. The account keeps a little ETH to pay for gas.` +
-          (alsoHeld
-            ? `\n\nNOT in this sweep: ${alsoHeld}, held in another of your class vaults. Run this again afterwards to move it.`
-            : ""),
+        `Sweep ${list} to ${normalizeAddr(to)}?\n\nThis is real and irreversible. The account keeps a little ETH to pay for gas.`,
       )
     ) {
       return;
     }
     setBusy("sweeping");
     try {
-      // WHAT WAS DISCLOSED IS WHAT IS ATTEMPTED. The engine re-plans
-      // internally; handing it the class leg from the plan the owner just
-      // approved is what stops the two diverging. Identity only — the engine
-      // re-reads the vault balance before signing — and its failure is fatal
-      // rather than a skipped line, so the account sweep cannot proceed
-      // without the holding the confirmation named.
-      const approvedClass =
-        classVault && classHoldings.length > 0
-          ? {
-              vault: classVault as `0x${string}`,
-              tokens: classHoldings.map((h) => h.token as `0x${string}`),
-            }
-          : undefined;
-      const r = await sweepFromBrowser(w, normalizeAddr(to) as `0x${string}`, approvedClass);
+      const r = await sweepFromBrowser(w, normalizeAddr(to) as `0x${string}`);
       setResult(r as unknown as SweepRes);
     } catch (e) {
       setError(redact(e, w.ownerKey));
@@ -407,29 +303,6 @@ export function RecoverPanelView({
 
   // Balances/addresses come from the pasted-key plan if present, else the GET ctx.
   const balances = plan?.balances ?? ctx?.balances ?? [];
-  // MONEY THE ACCOUNT DOES NOT HOLD. A class position sits in a separate
-  // PonsClassVault contract, so it is in no `balances` entry — and this panel
-  // never mentioned the vault at all. The engine has always swept it
-  // (recover.ts:591-638); the screen simply did not say so, which on a
-  // withdrawal confirmation is the difference between consent and a surprise.
-  const classHoldings = plan?.classHoldings ?? ctx?.classHoldings ?? [];
-  const classVault = plan?.classVault ?? ctx?.classVault ?? null;
-  /**
-   * Every vault, falling back to the primary one for a server that predates it.
-   *
-   * ONE APPROVAL COVERS ONE VAULT, deliberately: `recoverFunds` sends one
-   * operation per vault because the batch is atomic, and the approved intent is
-   * what pins that operation's identity. So a second vault holding something is
-   * DISCLOSED and then needs its own run, which the confirmation says out loud
-   * — the alternative is a screen that names money this press will not move.
-   */
-  const classVaults =
-    plan?.classVaults ??
-    ctx?.classVaults ??
-    (classVault ? [{ vault: classVault, version: null, note: null, holdings: classHoldings }] : []);
-  const otherVaults = classVaults.filter(
-    (v) => v.holdings.length > 0 && v.vault.toLowerCase() !== (classVault ?? "").toLowerCase(),
-  );
   const smartAccount = plan?.smartAccount ?? ctx?.smartAccount;
   const explorer = plan?.explorer ?? ctx?.explorer;
   const activeChain = plan?.chainId ?? ctx?.chainId ?? chainId;
@@ -465,9 +338,8 @@ export function RecoverPanelView({
     return { recoverable: fmt(wei), reserve: fmt(BigInt(plan?.nativeReserveWei ?? "0")) };
   })();
 
-  // A vault holding is something to recover, so it cannot be "empty" either.
-  const empty = known && balances.length === 0 && classHoldings.length === 0 && unreadable.length === 0;
-  const blind = known && balances.length === 0 && classHoldings.length === 0 && unreadable.length > 0;
+  const empty = known && balances.length === 0 && unreadable.length === 0;
+  const blind = known && balances.length === 0 && unreadable.length > 0;
 
   async function sweep() {
     setError(null);
@@ -475,21 +347,13 @@ export function RecoverPanelView({
       setError("enter a valid destination address (0x + 40 hex).");
       return;
     }
-    // GROUPED BY CUSTODY, not flattened. The vault is emptied by a first
-    // operation and the account by a second; one comma-separated list cannot
-    // show an owner that a whole contract is being drained.
     const lines: string[] = [];
-    if (classHoldings.length) {
-      lines.push("CLASS VAULT" + (classVault ? ` ${classVault}` : ""));
-      for (const h of classHoldings) lines.push(`  ${h.amount} ${h.symbol}`);
-      lines.push("");
-    }
     if (balances.length) {
       lines.push(`SMART ACCOUNT ${smartAccount ?? ""}`.trimEnd());
       for (const b of balances) lines.push(`  ${b.amount} ${b.symbol}`);
       lines.push("");
     }
-    // NATIVE ETH, which moves on every recovery and was in neither list above.
+    // NATIVE ETH, which moves on every recovery and is not in the list above.
     // Derived from the engine's own `nativeSweep`, not recomputed here — so the
     // number the owner agrees to and the number the sweep sends come from one
     // rule. "approximately" because the gas price is read again at execution.
@@ -502,10 +366,6 @@ export function RecoverPanelView({
       );
     }
     lines.push("DESTINATION", `  ${normalizeAddr(to)}`);
-    const list =
-      [...classHoldings.map((h) => `${h.amount} ${h.symbol}`), ...balances.map((b) => `${b.amount} ${b.symbol}`)].join(
-        ", ",
-      ) || "the balance";
     if (
       !window.confirm(
         `Sweep:\n\n${lines.join("\n")}\n\nThis is real and irreversible. The account keeps a little ETH to pay for gas.`,
@@ -624,10 +484,10 @@ export function RecoverPanelView({
             <>
               <div className="recover-chain">
                 <label>
-                  <input type="radio" checked={chainId === MAINNET} onChange={() => setChainId(MAINNET)} /> mainnet · 4663
+                  <input type="radio" checked={chainId === MAINNET} onChange={() => setChainId(MAINNET)} /> mainnet · 56
                 </label>
                 <label>
-                  <input type="radio" checked={chainId === TESTNET} onChange={() => setChainId(TESTNET)} /> testnet · 46630
+                  <input type="radio" checked={chainId === TESTNET} onChange={() => setChainId(TESTNET)} /> testnet · 97
                 </label>
               </div>
               <button className="recover-btn" onClick={() => void (clientSide ? checkInBrowser() : checkPasted())} disabled={busy !== null}>
@@ -665,30 +525,6 @@ export function RecoverPanelView({
                 </p>
               ) : (
                 <>
-                  {classHoldings.length > 0 && (
-                    <>
-                      <p className="recover-sub">
-                        <strong>Class vault</strong>
-                        {classVault ? <> · <span className="mono">{short(classVault)}</span></> : null}
-                      </p>
-                      <div className="recover-holdings mono">
-                        {classHoldings.map((h) => (
-                          <span key={h.token} className="recover-hold">
-                            {h.amount} {h.symbol}
-                          </span>
-                        ))}
-                      </div>
-                      <p className="recover-sub">
-                        Held in a separate contract, not in the account. Recovery empties it into the
-                        account first, then moves everything in a second operation.
-                      </p>
-                    </>
-                  )}
-                  {balances.length > 0 && classHoldings.length > 0 && (
-                    <p className="recover-sub">
-                      <strong>Smart account</strong>
-                    </p>
-                  )}
                   <div className="recover-holdings mono">
                     {balances.map((b) => (
                       <span key={b.symbol} className="recover-hold">

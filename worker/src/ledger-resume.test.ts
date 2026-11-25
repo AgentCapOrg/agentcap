@@ -105,7 +105,7 @@ describe("the operator variables", () => {
     const key = "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH", d = "a".repeat(64);
     const notEvm = /entry 2 names a tenant that is not a complete Robinhood Chain address .*resumes no other chain's; refusing to start/;
     const silent = (e: Error) => { assert.ok(!e.message.includes(key.slice(0, 8)), e.message); return true; };
-    for (const tenant of [`sol:${key}`, key]) {
+    for (const tenant of [`agent:${key}`, key]) {
       assert.throws(() => parseResumePreview(`${addr(1)},${tenant}`), (e: Error) => notEvm.test(e.message) && silent(e));
       assert.throws(() => parseResumeApprovals(`${addr(1)}:${d},${tenant}:${d}`), (e: Error) => notEvm.test(e.message) && silent(e));
       assert.throws(() => parseResumeRevokes(`run:${d},${tenant}:${d}`), (e: Error) => notEvm.test(e.message) && silent(e));
@@ -113,7 +113,7 @@ describe("the operator variables", () => {
     // A mistyped address is refused the same way; a shape that is not tenant:digest at all keeps its own words.
     assert.throws(() => parseResumeApprovals(`${addr(1)}:${d},0x12:${d}`), notEvm);
     assert.throws(() => parseResumeApprovals(`${addr(1)}:${d},:${d}`), /entry 2 is not 0x<tenant>:<evidence digest>/);
-    assert.throws(() => parseResumeRevokes(`${addr(1)}:${d},sol:${key}`), /entry 2 is not 0x<tenant>:<evidence digest>/);
+    assert.throws(() => parseResumeRevokes(`${addr(1)}:${d},agent:${key}`), /entry 2 is not 0x<tenant>:<evidence digest>/);
   });
 });
 
@@ -382,8 +382,8 @@ describe("the chain read", () => {
       async getLogs(a) {
         const all = [
           { address: EP, topics: [OP, opHash, topic(ACC), topic(addr(0x7777))], data: `0x${word(1n)}${word(1n)}${word(5n)}${word(6n)}`, transactionHash: tx, blockNumber: "0x1e8480", logIndex: "0xd" },
-          { address: USDG, topics: [TR, topic(addr(0x2ca2)), topic(ACC)], data: `0x${word(4_965_021n)}`, transactionHash: tx, blockNumber: "0x1e8480", logIndex: "0xb" },
-          { address: USDG, topics: [TR, topic(ACC), topic(addr(0xfeed))], data: `0x${word(5_000_000n)}`, transactionHash: depTx, blockNumber: "0x1e8481", logIndex: "0x0" },
+          { address: USDG, topics: [TR, topic(addr(0x2ca2)), topic(ACC)], data: `0x${word(4_965_021_000_000_000_000n)}`, transactionHash: tx, blockNumber: "0x1e8480", logIndex: "0xb" },
+          { address: USDG, topics: [TR, topic(ACC), topic(addr(0xfeed))], data: `0x${word(5_000_000_000_000_000_000n)}`, transactionHash: depTx, blockNumber: "0x1e8481", logIndex: "0x0" },
         ];
         return all.filter((l) => l.address.toLowerCase() === a.address.toLowerCase() && a.topics.every((t, i) => t === null || String(t).toLowerCase() === l.topics[i]!.toLowerCase()))
           .map(({ address: _a, ...l }) => l as never);
@@ -393,9 +393,9 @@ describe("the chain read", () => {
     assert.equal(r.status, "missing");
     const m = r as Extract<typeof r, { status: "missing" }>;
     assert.deepEqual(m.found, [
-      { kind: "transfer", txHash: tx, block: "2000000", logIndex: 11, direction: "in", amountRaw: "4965021", counterparty: addr(0x2ca2) },
+      { kind: "transfer", txHash: tx, block: "2000000", logIndex: 11, direction: "in", amountRaw: "4965021000000000000", counterparty: addr(0x2ca2) },
       { kind: "operation", userOpHash: opHash, txHash: tx, block: "2000000", logIndex: 13, success: true },
-      { kind: "transfer", txHash: depTx, block: "2000001", logIndex: 0, direction: "out", amountRaw: "5000000", counterparty: addr(0xfeed) },
+      { kind: "transfer", txHash: depTx, block: "2000001", logIndex: 0, direction: "out", amountRaw: "5000000000000000000", counterparty: addr(0xfeed) },
     ]);
     assert.equal(m.head, "2000000"); assert.ok(Number(m.fromBlock) < 2_000_000);
     assert.equal(describeChainFacts(m.found),
@@ -412,7 +412,18 @@ describe("the chain read", () => {
     assert.equal(describeChainFact({ kind: "transfer", txHash: tx, block: "9", logIndex: 1, direction: "in", amountRaw: null, counterparty: null }), `USDG in amount unread in tx ${tx} log 1 at block 9`);
     const self = { topics: [TR, topic(ACC), topic(ACC)] as `0x${string}`[], data: `0x${word(1n)}` as `0x${string}`, transactionHash: tx as `0x${string}`, logIndex: "0x2" as `0x${string}` };
     assert.deepEqual(chainFactsPostgresLacks({ account: ACC, opLogs: [], outLogs: [self], inLogs: [self], known }).map((f) => (f as { direction: string }).direction), ["self"]);
-    assert.equal(usdg6("0"), "0.000000"); assert.equal(usdg6("1234567"), "1.234567"); assert.equal(usdg6("-5"), "-0.000005");
+    // Incoming dust, under a millionth of a USDT, is not a gap. One millionth
+    // is, and so are dust going OUT and an incoming amount that was not read.
+    const leg = (from: string, to: string, data: string) => ({ ...self, topics: [TR, topic(from), topic(to)] as `0x${string}`[], data: data as `0x${string}` });
+    const OTHER = "0x00000000000000000000000000000000000000aa";
+    const lacks = (inLogs: ReturnType<typeof leg>[], outLogs: ReturnType<typeof leg>[] = []) =>
+      chainFactsPostgresLacks({ account: ACC, opLogs: [], outLogs, inLogs, known }).length;
+    assert.equal(lacks([leg(OTHER, ACC, `0x${word(1n)}`)]), 0);
+    assert.equal(lacks([leg(OTHER, ACC, `0x${word(999_999_999_999n)}`)]), 0);
+    assert.equal(lacks([leg(OTHER, ACC, `0x${word(1_000_000_000_000n)}`)]), 1);
+    assert.equal(lacks([], [leg(ACC, OTHER, `0x${word(1n)}`)]), 1);
+    assert.equal(lacks([leg(OTHER, ACC, "0x")]), 1);
+    assert.equal(usdg6("0"), "0.000000"); assert.equal(usdg6("1234567000000000000"), "1.234567"); assert.equal(usdg6("-5000000000000"), "-0.000005");
   });
   it("a refusal's reason is never longer than the 500 characters it is stored in, and keeps its count of the facts that did not fit", () => {
     // The widest facts there are: full hashes, the largest amount a 32-byte
@@ -683,7 +694,7 @@ describe("a tenant held on a chain refusal: its window and its digest", () => {
           VALUES (?, ?, ?, 4663, ?, ?, '{}', 'r', ?, ?, ?, ?)`).run(id, tenant, account, owner, id.repeat(64).slice(0, 64), state, at, at, reason);
       if (o.approvals === "other-refusal") insert("1", "refused", 1_000, "the evidence changed since the preview");
       if (o.approvals === "answered-chain") {
-        insert("1", "refused", 1_000, chainRefusal([{ kind: "transfer", txHash: `0x${"de".repeat(32)}`, block: "7", logIndex: 1, direction: "in", amountRaw: "5000000", counterparty: addr(0xfeed) }]));
+        insert("1", "refused", 1_000, chainRefusal([{ kind: "transfer", txHash: `0x${"de".repeat(32)}`, block: "7", logIndex: 1, direction: "in", amountRaw: "5000000000000000000", counterparty: addr(0xfeed) }]));
         insert("2", "applied", 2_000, null);
         insert("3", "refused", 3_000, "the evidence changed since the preview");
       }
@@ -704,7 +715,7 @@ describe("the last refusal, for the preview line", () => {
     const insert = (id: string, digest: string, state: string, at: number, reason: string | null) => f.raw.prepare(`INSERT INTO ledger_resume_approvals
         (approval_id, tenant, smart_account, chain_id, owner, evidence_digest, evidence_json, preview_run, state, created_at_ms, updated_at_ms, reason)
         VALUES (?, ?, ?, 4663, ?, ?, '{}', 'r', ?, ?, ?, ?)`).run(id, f.tenant, f.account, f.owner, digest, state, at, at, reason);
-    const reason = chainRefusal([{ kind: "transfer", txHash: "0x" + "dd".repeat(32), block: "12", logIndex: 0, direction: "in", amountRaw: "5000000", counterparty: addr(9) }]);
+    const reason = chainRefusal([{ kind: "transfer", txHash: "0x" + "dd".repeat(32), block: "12", logIndex: 0, direction: "in", amountRaw: "5000000000000000000", counterparty: addr(9) }]);
     insert("a1", "a".repeat(64), "refused", 1_000, reason);
     assert.deepEqual(await readLastRefusal(f.shared, f.tenant.toUpperCase().replace("0X", "0x")),
       { evidence: `${"a".repeat(12)}…`, reason, atMs: 1_000 });

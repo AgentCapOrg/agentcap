@@ -10,8 +10,7 @@
  *
  *   - refuses a non-object, and any key the tool does not declare (a `tenant`
  *     key is simply an unknown key, refused like any other);
- *   - accepts each value only in one closed shape: an EVM address, a Solana
- *     mint, an UPPERCASE ticker, a provider user id, a plain handle, a chain
+ *   - accepts each value only in one closed shape: an EVM address, an UPPERCASE ticker, a provider user id, a plain handle, a chain
  *     slug identity.ts knows, an enum member, a bounded integer;
  *   - refuses control characters, and with them anything URL-, host- or
  *     path-shaped, because no declared shape admits `:`, `/` or `.`;
@@ -55,7 +54,7 @@ import type {
 
 // ── Shapes ────────────────────────────────────────────────────────────────
 
-const { EVM_ADDRESS, SOLANA_MINT } = IDENTITY_GUARDS;
+const { EVM_ADDRESS } = IDENTITY_GUARDS;
 const UUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 /** A Fomo handle as intent.ts emits it: no dots, so a host name can never pass as one. */
 const HANDLE = /^[A-Za-z0-9_]{1,30}$/;
@@ -679,13 +678,12 @@ function str(v: unknown, name: string, max: number): Field<string> {
   return okv(t);
 }
 
-/** A coin: an address (EVM lowercased, mint case kept) or a ticker (UPPERCASED, `$` dropped). */
+/** A coin: an address (EVM, lowercased) or a ticker (UPPERCASED, `$` dropped). */
 export function parseTokenRef(v: unknown): TokenRef | null {
   const s = str(v, "token", 64);
   if (!s.ok) return null;
   const t = s.value;
   if (EVM_ADDRESS.test(t)) return { kind: "address", value: t.toLowerCase() };
-  if (SOLANA_MINT.test(t)) return { kind: "address", value: t };
   const sym = t.replace(/^\$/, "");
   if (SYMBOL.test(sym)) return { kind: "symbol", value: sym.toUpperCase() };
   return null;
@@ -818,8 +816,8 @@ const S = {
   token: {
     type: "string",
     maxLength: 64,
-    pattern: "^(0x[0-9a-fA-F]{40}|[1-9A-HJ-NP-Za-km-z]{32,44}|\\$?[A-Za-z0-9][A-Za-z0-9_-]{0,19})$",
-    description: "Contract address, Solana mint, or ticker (e.g. PONS).",
+    pattern: "^(0x[0-9a-fA-F]{40}|\\$?[A-Za-z0-9][A-Za-z0-9_-]{0,19})$",
+    description: "Contract address or ticker (e.g. PONS).",
   },
   trader: {
     type: "string",
@@ -827,7 +825,7 @@ const S = {
     pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|@?[A-Za-z0-9_]{1,30})$",
     description: "Fomo user id (UUID) or handle without @.",
   },
-  chain: { type: "string", maxLength: 24, pattern: "^[a-z][a-z0-9-]{0,23}$", description: "Chain slug, e.g. robinhood, solana, base." },
+  chain: { type: "string", maxLength: 24, pattern: "^[a-z][a-z0-9-]{0,23}$", description: "Chain slug, e.g. robinhood, bsc, base." },
   window: { type: "string", enum: [...TOOL_WINDOWS] },
   rankingWindow: { type: "string", enum: [...RANKING_WINDOWS] },
   side: { type: "string", enum: ["buy", "sell"] },
@@ -850,7 +848,7 @@ function schema(properties: Record<string, unknown>, required: string[] = []): R
 export const FOMO_TOOL_DEFS: { [K in FomoToolName]: FomoToolDef<ToolArgs[K]> } = {
   fomo_resolve_subject: {
     description:
-      "Resolve a coin (contract address, Solana mint or ticker) or a Fomo trader (handle or user id) to one exact identity. " +
+      "Resolve a coin (contract address or ticker) or a Fomo trader (handle or user id) to one exact identity. " +
       "When a ticker or address exists on several chains it returns the candidates instead of choosing.",
     schema: schema(
       {

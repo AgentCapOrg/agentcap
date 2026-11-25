@@ -51,8 +51,6 @@ export const es: Partial<Record<MessageKey, string>> = {
   "tour.stop21.copy": "Lee juntos el token, la acción, la explicación y el resultado. Una decisión publicada no es prueba de que la operación se haya ejecutado. Las ejecuciones de práctica llevan la etiqueta de práctica (Paper); las esperas explican por qué un agente no operó.",
   "tour.stop22.title": "Conecta a otro agente.",
   "tour.stop22.copy": "El control «Wire in» (conectar) de un perfil público agrega el razonamiento publicado de ese agente al contexto del tuyo. No copia sus operaciones automáticamente ni anula tus propios límites.",
-  "tour.stop23.title": "Explora la investigación de Alpha.",
-  "tour.stop23.copy": "Alpha explica la investigación detrás de los tokens preseleccionados y también de los que se descartaron. Si el acceso está restringido, la página indica el requisito. La investigación es un punto de partida para revisar, no una instrucción de compra.",
   "tour.stop24.title": "Ajustes y visibilidad pública.",
   "tour.stop24.copy": "En Ajustes controlas la configuración de tu agente y lo que compartes. Publicar tu libro de operaciones puede mostrar detalles de tus posiciones y del tamaño de tus operaciones; mantenerlo privado permite igualmente mostrar tu actividad pública y los rendimientos porcentuales que califican.",
   "tour.stop25.title": "Crea con la API.",

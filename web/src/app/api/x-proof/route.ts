@@ -7,9 +7,9 @@
  * UNVERIFIED handle: a link makes agentcap vouch for an association it never
  * checked, and lets an agent impersonate anyone by typing their name.
  *
- * This route is how a handle stops being unverified. Same three-step shape as
- * /api/holder, which proves a wallet: issue a nonce, the owner does something
- * only the owner could do, we check it and store a proof. Only a stored proof
+ * This route is how a handle stops being unverified. Three steps: issue a
+ * nonce, the owner does something only the owner could do, we check it and
+ * store a proof. Only a stored proof
  * makes the handle a link anywhere in the product.
  *
  * WHAT THE OWNER DOES: posts a public tweet containing the nonce. We then read
@@ -28,8 +28,8 @@
  *   handle this way. They are told that, rather than being told they failed.
  *
  *   THE PROOF IS POINT-IN-TIME. Deleting the tweet afterwards does not
- *   un-verify the handle, exactly as /api/holder records `at` and never
- *   re-checks a balance. What was true when we looked is what we recorded.
+ *   un-verify the handle: `at` records when we looked, and what was true then
+ *   is what we recorded.
  */
 import { NextResponse } from "next/server";
 import { isHostedMode } from "@agentcap/core";

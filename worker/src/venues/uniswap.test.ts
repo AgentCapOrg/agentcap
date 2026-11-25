@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { decodeFunctionData } from "viem";
-import { UNISWAP, UNISWAP_SWAP_ROUTER_ABI } from "../../../packages/core/src/index";
+import { PANCAKESWAP, UNISWAP_SWAP_ROUTER_ABI } from "../../../packages/core/src/index";
 import { buildSwapCall, minOutWithSlippage, pickBestQuote, type Quote } from "./uniswap";
 
 const USDG = "0x3333333333333333333333333333333333333333" as const;
@@ -58,7 +58,7 @@ describe("buildSwapCall", () => {
       amountIn: 25_000_000n,
       minAmountOut: 9_900n,
     });
-    assert.equal(call.to, UNISWAP.swapRouter02);
+    assert.equal(call.to, PANCAKESWAP.smartRouter);
     assert.equal(call.value, 0n);
 
     const decoded = decodeFunctionData({ abi: UNISWAP_SWAP_ROUTER_ABI, data: call.data });

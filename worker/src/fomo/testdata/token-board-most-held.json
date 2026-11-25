@@ -11,12 +11,12 @@
       "rank": 1,
       "image": null,
       "token": {
-        "name": "Wrapped SOL",
-        "symbol": "SOL",
-        "address": "So11111111111111111111111111111111111111112"
+        "name": "Wrapped BNB",
+        "symbol": "BNB",
+        "address": "0xd77cf5c8a1c79d6b78408a3f545dea88441790fb"
       },
       "holders": null,
-      "network": "solana",
+      "network": "bsc",
       "priceUsd": 150,
       "change24h": 1.1,
       "marketCapUsd": 70000000000,

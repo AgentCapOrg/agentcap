@@ -35,9 +35,7 @@ const cfg = (over: Partial<SteadyBasketConfig> = {}): SteadyBasketConfig => ({
     { symbol: "TSLA", token: TSLA, weightBps: 3333 },
   ],
   buyPerTickUsdg: 25_000_000n,
-  idleFloorUsdg: 50_000_000n,
   swapRouter: ROUTER,
-  vault: VAULT,
   usdg: USDG,
   ...over,
 });
@@ -80,15 +78,6 @@ describe("a stale weekend is reported, not just endured", () => {
     assert.equal(t.intents.some(i => i.kind === "swap"), false);
   });
 
-  it("and when the vault can cover it, it says the problem clears itself", () => {
-    // Cash short WITH a vault balance is the unpark tick — a different remedy
-    // again, and one the agent performs on its own. Telling that owner to add
-    // funds would be wrong.
-    const t = steadyBasketTick(cfg(), snap({ cashUsdg: 1_000_000n, vaultUsdg: 50_000_000n }));
-    assert.equal(t.idle, undefined, "a tick that DID something is not idle");
-    assert.equal(t.intents[0]?.kind, "vault-withdraw");
-  });
-
   it("no legs configured is not a silence this reports", () => {
     // An empty basket is a different fact and the basket screen already states
     // it. Reporting "you have 1.00 USDG and a buy costs 25.00" about a strategy
@@ -105,16 +94,6 @@ describe("a stale weekend is reported, not just endured", () => {
     assert.ok(t.idle);
     assert.equal(t.idle!.code === "all-legs-stale" && t.idle!.paused, 1);
     assert.match(renderWhy(t.idle!), /paused/);
-  });
-
-  it("still reports while it sweeps cash to the vault", () => {
-    // Over a weekend the sweep is the ONLY thing a basket agent does, and its
-    // owner is still owed the sentence about why nothing was bought. An earlier
-    // shape keyed on "produced no intents at all" and went silent in exactly
-    // the case that matters.
-    const t = steadyBasketTick(cfg(), snap({ cashUsdg: 500_000_000n, staleFeeds: new Set(["QQQ", "NVDA", "TSLA"]) }));
-    assert.ok(t.intents.some((i) => i.kind === "vault-deposit"), "idle cash is still parked");
-    assert.ok(t.idle, "and the silence about buying is still explained");
   });
 
   it("the worker reports it once per CHANGE, not once per tick", () => {

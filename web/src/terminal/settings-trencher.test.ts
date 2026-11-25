@@ -36,10 +36,8 @@ before(async () => {
       if (id === "next/link") return ({ children, ...props }: React.ComponentProps<"a">) => React.createElement("a", props, children);
       // These independent account panels are outside this form's save path.
       if (id === "../SetupChecklist") return () => null;
-      if (id === "../HolderLink") return { HolderLink: () => null };
       if (id === "../XPosting") return { XPosting: () => null };
       if (id === "../AgentImageField") return { AgentImageField: () => null };
-      if (id === "../tier") return { loadTier: async () => null };
     }
     return load.call(this, id, parent, isMain);
   });
@@ -57,7 +55,7 @@ function fixture(): SettingsView {
   const secret = { set: false, hint: null };
   return {
     bundlerApiKey: secret, groqApiKey: secret, anthropicApiKey: secret,
-    llmApiKey: secret, rialtoApiKey: secret, telegramBotToken: secret,
+    llmApiKey: secret, telegramBotToken: secret,
     telegramTranscribeKey: secret, virtualsApiKey: secret, bitqueryApiKey: secret,
     agentcapToken: secret,
     values: {

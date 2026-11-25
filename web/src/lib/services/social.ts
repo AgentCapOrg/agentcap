@@ -31,7 +31,7 @@
  * Read-only on the ledger and no MCP imports; the only write is the follow
  * store's own.
  */
-import { chainForId } from "@agentcap/core";
+import { bnbChain, chainForId } from "@agentcap/core";
 import type { Db } from "../../../../worker/src/db";
 import { admitOwnerLine } from "../../../../worker/src/groupchat/policy";
 import {
@@ -453,7 +453,7 @@ function base(input: ShareInput, kind: "trade" | "period"): Omit<ShareSummary, "
   const chain = chainForId(input.scope.chainId);
   const warnings: string[] = [];
   if (input.publicBook === null) warnings.push("Your public-book setting could not be read, so the summary treats the book as private and leaves dollar figures out.");
-  if (chain.id !== 4663) warnings.push(`These trades are on ${chain.name}: test funds, not real money.`);
+  if (chain.id !== bnbChain.id) warnings.push(`These trades are on ${chain.name}: test funds, not real money.`);
   return {
     kind,
     requestedTradeId: input.tradeId !== undefined ? String(input.tradeId) : null,
@@ -462,7 +462,7 @@ function base(input: ShareInput, kind: "trade" | "period"): Omit<ShareSummary, "
     until: input.now,
     chainId: chain.id,
     chainName: chain.name,
-    realMoney: chain.id === 4663,
+    realMoney: chain.id === bnbChain.id,
     publicBook: input.publicBook === true,
     settingRead: input.publicBook !== null,
     warnings,

@@ -42,6 +42,7 @@
  * never nominated, never written anywhere a trading decision reads, never
  * traded.
  */
+import { bnbChain } from "../../packages/core/src/chain";
 import type { Db } from "./db";
 import type { AgentFacts } from "./groupchat/facts";
 import type { CoinFacts, CoinFactsReader } from "./coin-facts-types";
@@ -50,7 +51,7 @@ import { createCoinFactsReader, FactsLimiter } from "./desk/facts";
 import { resolveByName } from "./desk/evidence";
 import { searchPools } from "./desk/gecko";
 import { DISCOVERY_SCREEN, fetchGeckoPoolsResult, geckoSource, screenPools, type GeckoFetch, type GeckoPool } from "./venues/geckoterminal";
-import { CASH, instrumentClassOf, onchainIdIn, STOCK_TOKENS } from "../../packages/core/src/index";
+import { CASH, instrumentClassOf, STOCK_TOKENS } from "../../packages/core/src/index";
 import type { FomoBroker } from "./fomo/contract";
 import type { TokenActivityData, TokenThesesData } from "./fomo/tools";
 import type { FomoEnvelope } from "./fomo/types";
@@ -75,7 +76,7 @@ import { coinQuery, LISTINGS_MAX, MAJORS_MAX_RANK, pickMajor, readChainListings,
 const MIN = 60_000;
 const HOUR = 60 * MIN;
 const DAY = 24 * HOUR;
-const CHAIN_ID = 4663;
+const CHAIN_ID = bnbChain.id;
 
 // ── the intent ──────────────────────────────────────────────────────────────
 
@@ -96,7 +97,7 @@ export type TagIntent =
   | { kind: "coin"; ticker: string | null; address: string | null; many?: true }
   /**
    * A coin asked about by name or ticker in one of the allowlist's plain
-   * shapes ("how's eth doing?", "thoughts on doge?", "$SOL today?": majorAsk),
+   * shapes ("how's eth doing?", "thoughts on doge?", "$BNB today?": majorAsk),
    * read on CoinGecko's list first (2026-10-12). `query` is the name or
    * ticker, already a safe search (coinQuery). `fallback`: what the tag is if
    * that coin is no major — a $ticker goes on as a coin of the chain; a word
@@ -115,7 +116,7 @@ export type TagIntent =
   /**
    * "How's the market?" on the allowlist's plain shapes (marketAsk, the
    * owner's decision of 2026-10-12): an overview of the big coins' day on
-   * CoinGecko (bitcoin, ether, solana) and what is moving on Robinhood Chain.
+   * CoinGecko (bitcoin, ether, bnb) and what is moving on Robinhood Chain.
    * Never drafted: its words and its figures are code's (xpost/market.ts
    * marketAnswers, xpost/figures.ts).
    */
@@ -349,10 +350,10 @@ export function exactAsk(text: unknown): boolean {
  * style). Only a whole tag in plain words that is one of these shapes, after
  * at most two greeting words, before at most one "today" or the like:
  *
- *   $SOL today?                      a cashtag alone
+ *   $BNB today?                      a cashtag alone
  *   how's eth doing? / looking?      how is <coin> doing
  *   thoughts on doge?                (any) thoughts on <coin>
- *   what do you think of solana?     what do you think of / about <coin>
+ *   what do you think of bnb?     what do you think of / about <coin>
  *   what's up with bitcoin?          what's up / happening / going on with <coin>
  *   what about / tell me about <coin>, is <coin> up / down, <coin> price / update / stats,
  *   where's <coin> at / trading
@@ -624,29 +625,18 @@ export function unshowableName(text: unknown): boolean {
  * coin at all (no $ticker, no contract, no word that might be a coin's name:
  * xpost/words.ts nameLikeWords, the same for every name), or names only the
  * big coins and generic market words code knows (DECLINE_NAMES: bitcoin,
- * ether, solana, crypto, alts). Anything else is answered by nothing, as
+ * ether, bnb, crypto, alts). Anything else is answered by nothing, as
  * before the decline. Fail closed: "should i sell before christmas?" costs
  * one decline. Exported for tests.
  */
-const DECLINE_NAMES: ReadonlySet<string> = new Set(("bitcoin btc ethereum eth ether solana sol crypto cryptos alts altcoin altcoins memes memecoins " +
+const DECLINE_NAMES: ReadonlySet<string> = new Set(("bitcoin btc ethereum eth ether bnb solana sol crypto cryptos alts altcoin altcoins memes memecoins " +
   // and the words advice itself is asked in that the everyday list does not hold
   "invest invests investing investment investments investor target targets accumulate accumulating loading loaded stacking hodling bounce rally crash").split(" "));
 export function declinable(text: unknown, address: string | null = null): boolean {
   if (typeof text !== "string" || address !== null) return false;
   const t = text.normalize("NFKC");
-  // A contract names a coin: 0x hex, or a Solana key or signature (core's onchainIdIn).
-  // THE DEFAULT SCAN IS ENOUGH HERE, not the glued one the public backstops use
-  // (audit regressions F3). A key glued to a word ("CA<mint>", "<key>is") splits
-  // at its digits into runs of letters, and a run of three or more that is no
-  // everyday word is read by nameLikeWords below as a coin's name DECLINE_NAMES
-  // does not hold, so the answer is false and nothing goes up. A glued key with
-  // no letter run read as a coin's name can be declined: the system program
-  // written "CA111…1" (which the glued scan does not read either: filler and hex
-  // alone are never an id glued to anything) or "111…1now" (which it does). It
-  // names no coin, and that is harmless, because a decline is code's own line,
-  // which never quotes the tag, and the reply is checked again at send
-  // (xpost/public-wallet.ts). The test pins the glued forms, these included.
-  if (/0x[0-9a-f]{6,}/i.test(t) || onchainIdIn(t)) return false;
+  // A contract names a coin: 0x hex.
+  if (/0x[0-9a-f]{6,}/i.test(t)) return false;
   // Every $ and what follows it up to a space, whatever it holds ("$PEPE2", "$SANDY_HOOK"), and every word that might be a name.
   const tags = [...t.matchAll(/\$([^\s$]*)/g)].map((m) => m[1]!.toLowerCase().replace(/[.,!?;:'"’)]+$/u, ""));
   return [...tags, ...nameLikeWords(t)].every((n) => DECLINE_NAMES.has(n));
@@ -1126,7 +1116,7 @@ export interface ResearchBundle {
   /**
    * THE NAMES COINGECKO LISTS THE FIGURES' COINS UNDER (red-team review of
    * daaae961, 2026-10-12): each chain coin the line shows (in the pools or as
-   * Fomo's most bought) and a major, but never bitcoin, ether or solana,
+   * Fomo's most bought) and a major, but never bitcoin, ether or bnb,
    * which are the same for every asker. Never shown to anyone: read only
    * against who is asking (orchestrator-xpost.ts authorShows), as the
    * tickers are, because "@chimpplanet · Chimp Planet | stealth launch" was
@@ -1406,7 +1396,7 @@ export function majorReadOf(m: Pick<CoinMarket, "rank" | "marketCapUsd" | "volum
  * figures line shows them. A row under any other symbol is no read of it.
  */
 export const MARKET_MAJORS: readonly { id: string; symbol: string }[] = Object.freeze([
-  { id: "bitcoin", symbol: "btc" }, { id: "ethereum", symbol: "eth" }, { id: "solana", symbol: "sol" },
+  { id: "bitcoin", symbol: "btc" }, { id: "ethereum", symbol: "eth" }, { id: "binancecoin", symbol: "bnb" },
 ]);
 
 /** Coins one "what's hot" answer shows from the chain's index. */
@@ -1459,7 +1449,7 @@ const COPY_ROOTS: readonly string[] = ("PEPE DOGE SHIB BONK FLOKI BRETT POPCAT P
  * as a chain coin trending, which reads as bitcoin, ether or a dollar moving
  * eighty percent. A ticker that starts or ends with one of these is never shown.
  */
-const RESERVED_ROOTS: readonly string[] = ("BTC XBT BITCOIN SATOSHI ETH ETHER ETHEREUM WETH WBTC SOL SOLANA USD USDT USDC USDG").split(" ");
+const RESERVED_ROOTS: readonly string[] = ("BTC XBT BITCOIN SATOSHI ETH ETHER ETHEREUM WETH WBTC BNB SOL SOLANA USD USDT USDC USDG").split(" ");
 
 /**
  * THE CHAIN'S OWN STOCK TOKENS, BY NAME AS WELL AS BY ADDRESS (red-team
@@ -1674,7 +1664,7 @@ export interface HotCoin { token: string; ticker: string; pool: GeckoPool }
  * Whatever fails is silently left out.
  */
 export function hotScreen(pools: readonly GeckoPool[]): HotCoin[] {
-  const cash = new Set([CASH.USDG, CASH.WETH].map((a) => a.toLowerCase()));
+  const cash = new Set([CASH.USDT, CASH.WBNB].map((a) => a.toLowerCase()));
   const out: HotCoin[] = [];
   for (const p of screenPools(pools, DISCOVERY_SCREEN).kept) {
     const token = p.tokenAddress.toLowerCase();
@@ -1747,7 +1737,7 @@ function ownMoney(mode: AgentFacts["mode"], paper: boolean): boolean {
 function ownPostProse(body: string): string {
   // The trusted lines code appends: the older " CA (chain): 0x…" / " Wallet (…)"
   // suffixes, and since 2026-10-13 a blank line then the tx link and the bare CA.
-  const text = String(body ?? "").replace(/(?:\n\nhttps:\/\/robinhoodchain\.blockscout\.com\/tx\/0x[0-9a-fA-F]{64})?\n\n0x[0-9a-fA-F]{40}$/, "");
+  const text = String(body ?? "").replace(/(?:\n\nhttps:\/\/bscscan\.com\/tx\/0x[0-9a-fA-F]{64})?\n\n0x[0-9a-fA-F]{40}$/, "");
   return withoutReplyOptOut(text.split(/ (?:CA|Wallet) \(/)[0] ?? "").replace(/\s+/g, " ").trim();
 }
 
@@ -2122,7 +2112,7 @@ export function createXResearch(d: XResearchDeps = {}): XResearch {
         notes.push("major");
         return { kind: "major", facts, read: majorReadOf(m), figures: [{ kind: "major", symbol: m.symbol, rank: m.rank, priceUsd: m.priceUsd, marketCapUsd: m.marketCapUsd,
           volume24hUsd: m.volume24hUsd, change24hPct: m.change24hPct, change7dPct: m.change7dPct }],
-          // Its name, read against who is asking, but for bitcoin, ether and solana (ResearchBundle.shownNames).
+          // Its name, read against who is asking, but for bitcoin, ether and bnb (ResearchBundle.shownNames).
           names: MARKET_MAJORS.some((x) => x.id === m.id) || typeof m.name !== "string" ? [] : [m.name] };
       };
       /** A public x-answer read of Fomo, keyed by this X account (its hourly cap). */

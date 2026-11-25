@@ -7,17 +7,7 @@
     "build": "hardhat compile",
     "test": "hardhat test",
     "typecheck:scripts": "tsc --noEmit -p tsconfig.scripts.json",
-    "deploy:pons:testnet": "node --import tsx node_modules/hardhat/internal/cli/cli.js run scripts/deploy-ponsselftrade.ts --network robinhoodTestnet",
-    "deploy:pons:mainnet": "node --import tsx node_modules/hardhat/internal/cli/cli.js run scripts/deploy-ponsselftrade.ts --network robinhood",
-    "deploy:classfactory:testnet": "node --import tsx node_modules/hardhat/internal/cli/cli.js run scripts/deploy-ponsclassvaultfactory.ts --network robinhoodTestnet",
-    "deploy:classfactory:mainnet": "node --import tsx node_modules/hardhat/internal/cli/cli.js run scripts/deploy-ponsclassvaultfactory.ts --network robinhood",
-    "deploy:classfactoryv2:testnet": "node --import tsx node_modules/hardhat/internal/cli/cli.js run scripts/deploy-ponsclassvaultfactoryv2.ts --network robinhoodTestnet",
-    "deploy:classfactoryv2:mainnet": "node --import tsx node_modules/hardhat/internal/cli/cli.js run scripts/deploy-ponsclassvaultfactoryv2.ts --network robinhood",
-    "deploy:trenchervault:for-owner": "node --import tsx node_modules/hardhat/internal/cli/cli.js run scripts/deploy-trencher-vault-for-owner.ts --network robinhood",
-    "prepare:v4:testnet": "node --import tsx node_modules/hardhat/internal/cli/cli.js run scripts/prepare-v4selfswap.ts --network robinhoodTestnet",
-    "prepare:v4:mainnet": "node --import tsx node_modules/hardhat/internal/cli/cli.js run scripts/prepare-v4selfswap.ts --network robinhood",
-    "deploy:v4:testnet": "node --import tsx node_modules/hardhat/internal/cli/cli.js run scripts/deploy-v4selfswap.ts --network robinhoodTestnet",
-    "deploy:v4:mainnet": "node --import tsx node_modules/hardhat/internal/cli/cli.js run scripts/deploy-v4selfswap.ts --network robinhood"
+    "deploy:trenchervault:for-owner": "node --import tsx node_modules/hardhat/internal/cli/cli.js run scripts/deploy-trencher-vault-for-owner.ts --network bsc"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-viem": "^2.0.0",

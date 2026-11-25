@@ -44,7 +44,7 @@ describe("every orchestrator one-shot is counted from the commit that adds it", 
     "runOrchestrator",
     "runRecoveryReportOnly", // AGENTCAP_FLEET_RECOVERY_REPORT_ONLY: a recovery mode, not an action
     "runAccountingReconstructionAtStartup", // runs runReconstructionDryRunIfAsked, which is held here
-    "runHolderClaimsBackfill", "startHistoryRepair", // every boot or pass, on no variable
+    "startHistoryRepair", // every boot or pass, on no variable
     "runBuilderPass", "runNewsPass", "startGroupChatPass", "startXPostPass", // every pass, standing features
     "startFleetHeartbeat", // every pass, halted or not, on no variable: the fleet_heartbeat row (fleet-heartbeat.ts)
     "startFomoPass", // every pass, a standing feature behind its own opt-in (AGENTCAP_FOMO_ENABLED, docs/fomo.md): research only, it places no order
@@ -55,7 +55,7 @@ describe("every orchestrator one-shot is counted from the commit that adds it", 
   ]);
 
   it("finds them where they are", () => {
-    assert.ok(oneShots.length >= 17, `found only ${oneShots.length} one-shot functions — has the pattern changed?`);
+    assert.ok(oneShots.length >= 13, `found only ${oneShots.length} one-shot functions — has the pattern changed?`);
   });
 
   it("each names, in its own body, only counted one-shots and listed standing configuration", () => {

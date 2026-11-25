@@ -5,7 +5,7 @@ import { join } from "node:path";
 import test, { after } from "node:test";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { getActionSelector } from "@zerodev/sdk";
-import { buildWallPolicies, derivationOf, PONS_CLASS_VAULT_FACTORY, type AgentCapSettings, type StoredGrant } from "@agentcap/core";
+import { buildWallPolicies, derivationOf, type AgentCapSettings, type StoredGrant } from "@agentcap/core";
 import { partnerGrantDigest } from "../../../packages/core/src/partner-enrollment";
 import { createPartnerEnrollmentService, PARTNER_ENROLLMENT_TTL_MS, type PartnerEnrollmentDependencies } from "./partner-enrollment";
 import { FilePartnerStore, PartnerStoreError, type PartnerConnection } from "./partner-store";
@@ -36,7 +36,7 @@ async function fixture(overrides: Partial<PartnerEnrollmentDependencies> = {}) {
   const wall = buildWallPolicies({ caps, smartAccount: ACCOUNT, now: seconds });
   const grant: StoredGrant = {
     owner: owner.address, smartAccount: ACCOUNT, sessionKeyAddress: privateKeyToAccount(sessionKey).address,
-    demoSessionPrivateKey: sessionKey, caps, grantedAt: seconds, expiresAt: wall.expiresAt, chainId: 4663,
+    demoSessionPrivateKey: sessionKey, caps, grantedAt: seconds, expiresAt: wall.expiresAt, chainId: 56,
     grantFeatures: ["tradeable-v2"],
     serialized: encode({
       privateKey: sessionKey, accountParams: { accountAddress: ACCOUNT, initCode: "0x1234" },
@@ -53,7 +53,6 @@ async function fixture(overrides: Partial<PartnerEnrollmentDependencies> = {}) {
     store, now: () => now, secret: () => SECRET,
     recover: async args => (await import("viem")).recoverMessageAddress(args),
     derive: async () => derivationOf(ACCOUNT),
-    classVault: async () => { throw new Error("this grant seals no class vault"); },
     grants: {
       get: async tenant => savedGrants.get(tenant) ?? null,
       tenantForAccount: async account => [...savedGrants].find(([, g]) => g.smartAccount.toLowerCase() === account.toLowerCase())?.[0] as `0x${string}` ?? null,
@@ -278,19 +277,17 @@ test("a partner cannot seal its own adapter, vault, route or token, even inside 
   const consume = f.store.consumeNonce.bind(f.store);
   f.store.consumeNonce = async (...args) => { spent++; return consume(...args); };
   const FOREIGN = "0x00000000000000000000000000000000badbad01" as const;
-  // A permission that genuinely implements what the grant declares, so the
-  // canonical wall alone accepts it; the worker would then trade through FOREIGN.
-  const sealed = (extra: Partial<StoredGrant>, wallOptions: Parameters<typeof buildWallPolicies>[0] extends infer O ? Partial<O> : never) => {
-    const wall = buildWallPolicies({ caps: f.grant.caps, smartAccount: ACCOUNT, now: f.grant.grantedAt, ...wallOptions });
-    const params = decode(f.grant);
-    params.permissionParams = { policies: wall.policies.map(policy => ({ policyParams: policy.policyParams })) };
-    return { ...f.grant, ...extra, serialized: encode(params) } as StoredGrant;
-  };
-  const pons = sealed({ grantFeatures: ["tradeable-v2", "pons-adapter"], ponsAdapterAddress: FOREIGN }, { ponsAdapterAddress: FOREIGN });
-  assert.deepEqual(checkCanonicalWall(pons as unknown as Record<string, unknown>), { ok: true }, "the wall check alone would accept this grant");
+  // A removed route's sealed address is not a field this door knows at all, and
+  // the canonical wall refuses it by name as well.
+  for (const field of ["ponsAdapterAddress", "ponsClassVaultAddress", "ponsClassVaultFactoryAddress"]) {
+    const stale = { ...f.grant, [field]: FOREIGN } as StoredGrant;
+    assert.equal(checkCanonicalWall(stale as unknown as Record<string, unknown>).ok, false, field);
+    await assert.rejects(f.service.activate(principal, f.connection, await f.activationFor(stale)), errorCode("bad_request"));
+  }
   const refused = [
-    pons,
-    sealed({ grantFeatures: ["tradeable-v2", "v4-adapter"], v4AdapterAddress: FOREIGN }, { v4AdapterAddress: FOREIGN }),
+    { ...f.grant, grantFeatures: ["tradeable-v2", "pons-adapter"] },
+    { ...f.grant, grantFeatures: ["tradeable-v2", "pons-class"] },
+    { ...f.grant, grantFeatures: ["tradeable-v2", "energy-buy-v1"] },
     { ...f.grant, grantFeatures: ["tradeable-v2", "v4"] },
     { ...f.grant, grantFeatures: ["tradeable-v2", "rialto"] },
     { ...f.grant, grantFeatures: "tradeable-v2" as unknown as string[] },
@@ -304,39 +301,6 @@ test("a partner cannot seal its own adapter, vault, route or token, even inside 
   // What prepareAgentCapAvatar mints from owner, caps and chain alone still activates.
   const plain = await f.service.activate(principal, f.connection, await f.activationFor({ ...f.grant, grantTokens: [] }));
   assert.equal(plain.connection.status, "linked");
-});
-
-test("a class vault is accepted only from the platform factory, as the vault it answers for this account", async () => {
-  const PLATFORM = (PONS_CLASS_VAULT_FACTORY[4663] ?? "").toLowerCase() as `0x${string}`;
-  const VAULT = "0x00000000000000000000000000000000000c1a55" as const;
-  const FOREIGN = "0x00000000000000000000000000000000badbad01" as const;
-  let answer: () => Promise<`0x${string}`> = async () => VAULT;
-  const reads: string[] = [];
-  const f = await fixture({ classVault: async (factory, account) => { reads.push(`${factory}:${account}`); return answer(); } });
-  let spent = 0;
-  const consume = f.store.consumeNonce.bind(f.store);
-  f.store.consumeNonce = async (...args) => { spent++; return consume(...args); };
-  const classGrant = (vault: `0x${string}`, factory: `0x${string}`) => {
-    const wall = buildWallPolicies({ caps: f.grant.caps, smartAccount: ACCOUNT, now: f.grant.grantedAt, ponsClassVaultAddress: vault, ponsClassVaultFactoryAddress: factory });
-    const params = decode(f.grant);
-    params.permissionParams = { policies: wall.policies.map(policy => ({ policyParams: policy.policyParams })) };
-    return { ...f.grant, grantFeatures: ["tradeable-v2", "pons-class"], ponsClassVaultAddress: vault, ponsClassVaultFactoryAddress: factory, serialized: encode(params) } as StoredGrant;
-  };
-  // Another factory: refused without a chain read.
-  await assert.rejects(f.service.activate(principal, f.connection, await f.activationFor(classGrant(VAULT, FOREIGN))), errorCode("unsupported_permission"));
-  assert.equal(reads.length, 0);
-  // The platform factory beside a vault it does not answer for this account.
-  await assert.rejects(f.service.activate(principal, f.connection, await f.activationFor(classGrant(FOREIGN, PLATFORM))), errorCode("unsupported_permission"));
-  // An unreadable chain is retryable: the same signed authorization works once it answers.
-  answer = async () => { throw new Error("rpc down"); };
-  const retry = await f.activationFor(classGrant(VAULT, PLATFORM));
-  await assert.rejects(f.service.activate(principal, f.connection, retry), errorCode("class_vault_unavailable"));
-  assert.equal(spent, 0, "no refusal above spent the single-use nonce");
-  assert.equal(f.events.length, 0);
-  answer = async () => VAULT;
-  const linked = await f.service.activate(principal, f.connection, retry);
-  assert.equal(linked.connection.status, "linked");
-  assert.equal([...f.savedGrants.values()][0]?.ponsClassVaultAddress, VAULT);
 });
 
 test("invalid caps and a mismatch between serialized expiry and metadata cannot arm a worker", async () => {

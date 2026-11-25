@@ -23,7 +23,7 @@ const NOTICE = "Say stop to opt out.";
 describe("tickers: A-Z, two to ten letters, nothing else", () => {
   it("a clean symbol is upper-cased and kept", () => {
     assert.equal(cleanTicker("btc"), "BTC");
-    assert.equal(cleanTicker("SOL"), "SOL");
+    assert.equal(cleanTicker("BNB"), "BNB");
     assert.equal(cleanTicker("ABCDEFGHIJ"), "ABCDEFGHIJ");
   });
 
@@ -94,7 +94,7 @@ describe("tickers: A-Z, two to ten letters, nothing else", () => {
       "HH", "SS", "ASS", "ROBNHOOD", "CLAUDE", "GROKCOIN", "OPENAI", "CHATGPT", "MELANIA", "ELON"]) {
       assert.equal(cleanTicker(bad), null, bad);
     }
-    for (const ok of ["PEPE", "CHUMP", "FROGGY", "WOJAK", "BTC", "ETH", "SOL", "TAO", "BONK", "WIF", "DOGE", "LINK", "AAVE", "NEAR", "BASS", "GALA"]) {
+    for (const ok of ["PEPE", "CHUMP", "FROGGY", "WOJAK", "BTC", "ETH", "BNB", "TAO", "BONK", "WIF", "DOGE", "LINK", "AAVE", "NEAR", "BASS", "GALA"]) {
       assert.equal(cleanTicker(ok), ok, ok);
     }
   });
@@ -175,8 +175,8 @@ describe("the line, rendered from typed data", () => {
   });
 
   it("a major under a thousand dollars shows no price", () => {
-    assert.equal(renderFiguresLine([{ kind: "major", symbol: "sol", rank: 5, priceUsd: 185.2, marketCapUsd: 88e9, volume24hUsd: 4.1e9, change24hPct: -2.1, change7dPct: 6 }]),
-      "SOL #5, mcap ~$88B, vol ~$4.1B, 24h -2.1%, 7d +6%.");
+    assert.equal(renderFiguresLine([{ kind: "major", symbol: "bnb", rank: 5, priceUsd: 185.2, marketCapUsd: 88e9, volume24hUsd: 4.1e9, change24hPct: -2.1, change7dPct: 6 }]),
+      "BNB #5, mcap ~$88B, vol ~$4.1B, 24h -2.1%, 7d +6%.");
   });
 
   it("what's hot: three coins of the chain, fomo's most bought, the global trending list", () => {
@@ -360,23 +360,23 @@ describe("the names no line of the house's answers under (2026-10-12)", () => {
 
 describe("how's the market: the big coins' day beside the chain's movers (2026-10-12)", () => {
   const MARKET: FiguresSpec = [
-    { kind: "majors", coins: [{ symbol: "btc", change24hPct: 1.234 }, { symbol: "eth", change24hPct: -0.84 }, { symbol: "sol", change24hPct: 3.08 }] },
+    { kind: "majors", coins: [{ symbol: "btc", change24hPct: 1.234 }, { symbol: "eth", change24hPct: -0.84 }, { symbol: "bnb", change24hPct: 3.08 }] },
     { kind: "pools", coins: [{ symbol: "ABC", change24hPct: 42.07 }, { symbol: "DEF", change24hPct: -8.3 }, { symbol: "GHI", change24hPct: 5 }] },
     { kind: "crowd", symbols: ["DEF"] },
   ];
   it("renders in its own grammar, each big coin by its day's change only, within the handful of figures", () => {
     const line = renderFiguresLine(MARKET)!;
-    assert.equal(line, "24h: BTC +1.2%, ETH -0.8%, SOL +3.1%; trending: ABC 24h +42.1%, DEF 24h -8.3%, GHI 24h +5%; fomo: most bought DEF.");
+    assert.equal(line, "24h: BTC +1.2%, ETH -0.8%, BNB +3.1%; trending: ABC 24h +42.1%, DEF 24h -8.3%, GHI 24h +5%; fomo: most bought DEF.");
     assert.ok(admitFiguresLine(line));
     assert.match(line, FIGURES_LINE);
-    assert.deepEqual(figuresTickers(line), ["BTC", "ETH", "SOL", "ABC", "DEF", "GHI", "DEF"]);
+    assert.deepEqual(figuresTickers(line), ["BTC", "ETH", "BNB", "ABC", "DEF", "GHI", "DEF"]);
     assert.ok((line.match(/[+-]\d/g) ?? []).length <= FIGURES_MAX);
   });
   it("a big coin with no change, a dirty ticker or one past three is left out, never shown bare; none at all is no section", () => {
-    assert.equal(renderFiguresLine([{ kind: "majors", coins: [{ symbol: "btc", change24hPct: null }, { symbol: "e.th", change24hPct: 1 }, { symbol: "sol", change24hPct: -2 },
-      { symbol: "bnb", change24hPct: 1 }, { symbol: "xrp", change24hPct: 1 }, { symbol: "ada", change24hPct: 1 }] }]), "24h: SOL -2%, BNB +1%, XRP +1%.");
+    assert.equal(renderFiguresLine([{ kind: "majors", coins: [{ symbol: "btc", change24hPct: null }, { symbol: "e.th", change24hPct: 1 }, { symbol: "doge", change24hPct: -2 },
+      { symbol: "bnb", change24hPct: 1 }, { symbol: "xrp", change24hPct: 1 }, { symbol: "ada", change24hPct: 1 }] }]), "24h: DOGE -2%, BNB +1%, XRP +1%.");
     assert.equal(renderFiguresLine([{ kind: "majors", coins: [{ symbol: "btc" }, { symbol: "pump", change24hPct: 9 }] }]), null);
-    for (const bad of ["24h: BTC.", "24h: BTC +1.2%, ETH -0.8%, SOL +3.1%, BNB +1%.", "24h: BTC ~$97k.", "24h: BTC +1.2% buy."]) {
+    for (const bad of ["24h: BTC.", "24h: BTC +1.2%, ETH -0.8%, DOGE +3.1%, BNB +1%.", "24h: BTC ~$97k.", "24h: BTC +1.2% buy."]) {
       assert.equal(admitFiguresLine(bad), false, bad);
     }
   });
@@ -389,10 +389,10 @@ describe("how's the market: the big coins' day beside the chain's movers (2026-1
     }
     assert.deepEqual(seen, [
       renderFiguresLine(MARKET),
-      "24h: BTC +1.2%, ETH -0.8%, SOL +3.1%; trending: ABC 24h +42.1%, DEF 24h -8.3%; fomo: most bought DEF.",
-      "24h: BTC +1.2%, ETH -0.8%, SOL +3.1%; trending: ABC 24h +42.1%, DEF 24h -8.3%.",
-      "24h: BTC +1.2%, ETH -0.8%, SOL +3.1%; trending: ABC 24h +42.1%.",
-      "24h: BTC +1.2%, ETH -0.8%, SOL +3.1%.",
+      "24h: BTC +1.2%, ETH -0.8%, BNB +3.1%; trending: ABC 24h +42.1%, DEF 24h -8.3%; fomo: most bought DEF.",
+      "24h: BTC +1.2%, ETH -0.8%, BNB +3.1%; trending: ABC 24h +42.1%, DEF 24h -8.3%.",
+      "24h: BTC +1.2%, ETH -0.8%, BNB +3.1%; trending: ABC 24h +42.1%.",
+      "24h: BTC +1.2%, ETH -0.8%, BNB +3.1%.",
       "24h: BTC +1.2%, ETH -0.8%.",
       "24h: BTC +1.2%.",
       null,
@@ -454,19 +454,19 @@ describe("a tragedy, terror, a faith's holy names, a drug or a notorious person 
 
 describe("no cashtag in the line: X refuses an API post with more than one (2026-10-13)", () => {
   // docs.x.com: "Posts created via the API are limited to a maximum of 1
-  // cashtag (e.g. $TICKER) per post." A market answer with $BTC, $ETH and $SOL
+  // cashtag (e.g. $TICKER) per post." A market answer with $BTC, $ETH and $BNB
   // in its line was refused by X with a 403 and never posted.
   const CASHTAG = /(?<![\w$])\$[A-Za-z]/;
   it("every section renders its tickers bare, and its money as ~$ figures only", () => {
     const line = renderFiguresLine([
-      { kind: "majors", coins: [{ symbol: "btc", change24hPct: 1.2 }, { symbol: "eth", change24hPct: -0.8 }, { symbol: "sol", change24hPct: 3.1 }] },
+      { kind: "majors", coins: [{ symbol: "btc", change24hPct: 1.2 }, { symbol: "eth", change24hPct: -0.8 }, { symbol: "bnb", change24hPct: 3.1 }] },
       { kind: "pools", coins: [{ symbol: "ABC", change24hPct: 42.1, volume24hUsd: 1_200_000 }] },
       { kind: "crowd", symbols: ["ABC"] },
     ]);
     assert.ok(line);
     assert.doesNotMatch(line!, CASHTAG);
     assert.equal(renderFiguresLine(BTC), "BTC #1, ~$97k, mcap ~$1.9T, vol ~$41B, 24h +1.2%, 7d -3.4%.");
-    for (const t of ["BTC", "ETH", "SOL", "ABC"]) assert.ok(figuresTickers(line).includes(t), t);
+    for (const t of ["BTC", "ETH", "BNB", "ABC"]) assert.ok(figuresTickers(line).includes(t), t);
     assert.ok(figuresTickers(line).every((t) => /^[A-Z]{2,10}$/.test(t)), "only bare tickers, never a unit or a lower-case word");
   });
   it("the grammar refuses a ticker written as a cashtag", () => {
@@ -480,8 +480,8 @@ describe("no source named in the line (the owner's teammate, 2026-10-13)", () =>
   it("each section as the teammate wrote it: a major, the big coins' day, the chain's trending, the global list, the hour's flow", () => {
     assert.equal(renderFiguresLine([{ kind: "major", symbol: "eth", rank: 2, priceUsd: 3_412, marketCapUsd: 411e9, volume24hUsd: 18e9, change24hPct: 1.2, change7dPct: -3.4 }]),
       "ETH #2, ~$3.4k, mcap ~$411B, vol ~$18B, 24h +1.2%, 7d -3.4%.");
-    assert.equal(renderFiguresLine([{ kind: "majors", coins: [{ symbol: "btc", change24hPct: 1.2 }, { symbol: "eth", change24hPct: -0.8 }, { symbol: "sol", change24hPct: 3.1 }] }]),
-      "24h: BTC +1.2%, ETH -0.8%, SOL +3.1%.");
+    assert.equal(renderFiguresLine([{ kind: "majors", coins: [{ symbol: "btc", change24hPct: 1.2 }, { symbol: "eth", change24hPct: -0.8 }, { symbol: "bnb", change24hPct: 3.1 }] }]),
+      "24h: BTC +1.2%, ETH -0.8%, BNB +3.1%.");
     assert.equal(renderFiguresLine([{ kind: "pools", coins: [{ symbol: "abc", change24hPct: 42.1, volume24hUsd: 1.2e6 }] }]), "trending: ABC 24h +42.1% vol ~$1.2M.");
     assert.equal(renderFiguresLine([{ kind: "trending", symbols: ["aa", "bb"] }]), "hot: AA, BB.");
     assert.equal(renderFiguresLine([{ kind: "flow", buyUsd: 12_300, sellUsd: 8_100 }]), "1h buys ~$12k, sells ~$8.1k.");

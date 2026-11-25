@@ -3,7 +3,7 @@
  *
  * THE REFUSAL THAT DOMINATED THE TAPE. A basket leg, a trencher candidate or a
  * model's pick can name a token the signed key cannot sell back. checkPolicy
- * refuses that buy with `no-exit` (or, on the curve venue, `asset-allowlist`)
+ * refuses that buy with `no-exit`
  * and it is right to: the position could be opened and never closed. But the
  * strategy that proposed it read nothing that said so, so it proposed the same
  * buy on the next tick, and the next — a rejected row a tick, per leg, for the
@@ -42,12 +42,6 @@ import { isExitIntent, type AgentLimits, type TradeIntent } from "./policy";
 export type EntryGateRule = "asset-allowlist" | "no-exit";
 
 /**
- * Which branch of checkPolicy the buy goes through. They read different lists,
- * so the same token can be gated on one venue and not on the other.
- */
-export type EntryVenue = "swap" | "curve";
-
-/**
  * The snapshot hint: the two lists checkPolicy reads, lowercased once.
  *
  * `sellable` NULL MEANS THE RULE CANNOT RUN — a fixture or backtest with no
@@ -74,29 +68,23 @@ export function entryGatesOf(limits: Pick<AgentLimits, "allowedAssets" | "sellab
 }
 
 /**
- * Would the wall refuse a BUY of `token` on this venue — and with which rule?
- * Null means no gate here says so (the wall may still refuse for another reason).
+ * Would the wall refuse a BUY of `token` — and with which rule? Null means no
+ * gate here says so (the wall may still refuse for another reason).
  *
  * Absent or null `gates` means NOT READ, and gates nothing — the same rule every
  * other snapshot hint follows: a strategy that went quiet on an unread hint
  * would be inventing a refusal nobody made.
  *
- *   swap  — checkPolicy's swap branch: `asset-allowlist` when the token is not
- *           in allowedAssets, then `no-exit` when the key cannot sell it. In
- *           that order, because that is the order the wall asks.
- *   curve — the curve-trade branch for a NON-CLASS trade: both legs must be in
- *           sellableAssets, and a miss is `asset-allowlist`. allowedAssets is
- *           not consulted there, so it is not consulted here — gating on it
- *           would be stricter than the wall.
+ * As checkPolicy's swap branch: `asset-allowlist` when the token is not in
+ * allowedAssets, then `no-exit` when the key cannot sell it. In that order,
+ * because that is the order the wall asks.
  */
 export function entryGateFor(
   gates: EntryGates | null | undefined,
   token: string,
-  venue: EntryVenue = "swap",
 ): EntryGateRule | null {
   if (!gates) return null;
   const t = lc(token);
-  if (venue === "curve") return gates.sellable !== null && !gates.sellable.has(t) ? "asset-allowlist" : null;
   if (!gates.allowed.has(t)) return "asset-allowlist";
   if (gates.sellable !== null && !gates.sellable.has(t)) return "no-exit";
   return null;
@@ -117,36 +105,26 @@ export function lockedLegs(gates: EntryGates | null | undefined, legs: readonly 
 }
 
 /**
- * The gate for a whole intent: which token it is ENTERING, on which venue, and
- * the rule the wall would refuse it with. The venue travels with the answer
- * because the same rule on the two venues is two different refusals: a swap's
- * `asset-allowlist` says the coin is not watched, a curve's says it is not in
- * the signed grant, and each has its own remedy.
+ * The gate for a whole intent: which token it is ENTERING and the rule the wall
+ * would refuse it with.
  *
  * Null for everything a gate must not touch:
  *
- *   an exit         — isExitIntent, the breaker's own test. Never gated.
+ *   an exit          — isExitIntent, the breaker's own test. Never gated.
  *   trencher custody — the autonomous rail is judged against the vault's
- *                     chain-verified assets, not these lists (policy.ts).
- *   a class trade   — the class vault may leave the class token itself
- *                     un-enumerated by design; the anchor leg is USDG.
- *   anything else   — vault movements, transfers, equity orders, the energy
- *                     buy: none of them is judged by these two rules.
+ *                      chain-verified assets, not these lists (policy.ts).
+ *   anything else    — transfers, equity orders: neither of these two rules
+ *                      judges them.
  */
 export function intentEntryGate(
   intent: TradeIntent,
   limits: AgentLimits,
-): { token: string; venue: EntryVenue; rule: EntryGateRule } | null {
+): { token: string; rule: EntryGateRule } | null {
   if (isExitIntent(intent, limits)) return null;
   if (intent.kind === "swap") {
     if (intent.custody === "trencher") return null;
-    const rule = entryGateFor(entryGatesOf(limits), intent.buyToken, "swap");
-    return rule ? { token: lc(intent.buyToken), venue: "swap", rule } : null;
-  }
-  if (intent.kind === "curve-trade") {
-    if (limits.ponsClassVault !== undefined && lc(intent.target) === lc(limits.ponsClassVault)) return null;
-    const rule = entryGateFor(entryGatesOf(limits), intent.assetOut, "curve");
-    return rule ? { token: lc(intent.assetOut), venue: "curve", rule } : null;
+    const rule = entryGateFor(entryGatesOf(limits), intent.buyToken);
+    return rule ? { token: lc(intent.buyToken), rule } : null;
   }
   return null;
 }
@@ -159,7 +137,7 @@ export function intentEntryGate(
  * with a buy the wall is certain to refuse, and without this they are refused
  * once a tick for the life of the arm.
  *
- * ONE REJECTED ROW PER (VENUE, TOKEN, RULE) PER ARM, THEN WITHHELD. Until
+ * ONE REJECTED ROW PER (TOKEN, RULE) PER ARM, THEN WITHHELD. Until
  * the wall has written it, the buy is let through on purpose, so the wall
  * writes its own refusal — the row, the rule and the owner's notice — and the
  * tape says why that coin is never bought. Every repeat after that is
@@ -167,15 +145,9 @@ export function intentEntryGate(
  * on the tape, nothing reserved. Withholding a repeat cannot make anything
  * replayable, because nothing was ever sent.
  *
- * The venue is part of the key, not decoration: a swap refused for not being
- * watched and a curve buy of the same coin refused for not being in the grant
- * share a rule name and nothing else. Keyed without it, whichever came first
- * spent the row and the other's remedy ("re-sign at /grant") never reached
- * the wall to be said.
- *
  * THE ROW IS SPENT WHEN THE WALL WRITES IT, NOT WHEN THE INTENT IS LET GO.
- * Between this check and checkPolicy sit three more doors — the Telegram
- * group-entry claim, today's energy, ensureDecision — and any of them can
+ * Between this check and checkPolicy sit more doors — the Telegram
+ * group-entry claim and ensureDecision — and either can
  * stop the first gated buy with no row written. A latch that counted the row
  * as spent on letting go would then withhold every repeat for the rest of the
  * arm, and the refusal the comment above promises would never be on the tape.
@@ -206,7 +178,7 @@ export function entryGateLatch(): EntryGateLatch {
   const rowed = new Set<string>();
   const keyOf = (intent: TradeIntent, limits: AgentLimits) => {
     const gate = intentEntryGate(intent, limits);
-    return gate ? { key: `${gate.venue}|${gate.token}|${gate.rule}`, rule: gate.rule } : null;
+    return gate ? { key: `${gate.token}|${gate.rule}`, rule: gate.rule } : null;
   };
   return {
     withhold(intent, limits) {

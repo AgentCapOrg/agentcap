@@ -271,7 +271,7 @@ export function signMessage(
  */
 export function signUrl(base: string, reason: SignReason): string {
   const root = `${base.replace(/\/+$/, "")}/grant`;
-  return reason === "wrong-chain" ? `${root}?chain=4663#resign` : `${root}#resign`;
+  return reason === "wrong-chain" ? `${root}?chain=56#resign` : `${root}#resign`;
 }
 
 export function signKeyboard(url: string): InlineKeyboard {

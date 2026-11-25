@@ -87,8 +87,6 @@ export function publicFactRequest(text: string, names: readonly string[] = []): 
   // Public help can explain the route without reading a person's account.
   // Specific remedies precede generic site/history questions and market asks;
   // they never assert that a reported blocker is present or has been fixed.
-  if (/\b(?:v4\s*(?:adapter|permission)|v4selfswap)\b/iu.test(s)
-    || /\buniswap\s*v4\b/iu.test(s) && /\b(?:grant\w*|permission|adapter|wallet|settings?|renew\w*|re[ -]?sign|trad\w*|use|enable|connect\w*)\b/iu.test(s)) return { kind: "site", topic: "v4" };
   if (/\b(?:drawdown\s*(?:breaker|limit)|breaker\s*(?:tripped|trips|triggered|limit)|high[ -]water\s*mark)\b/iu.test(s)) return { kind: "site", topic: "drawdown" };
   if (/\b(?:sign[ -]?up|register|create\s+(?:(?:my|an?|the|new)\s+)?(?:agent|agentcapavatar)|get\s+started|start\s+using\s+agentcap|join\s+agentcap)\b/iu.test(s)
     || OWN_AGENT.test(s)) return { kind: "site", topic: "onboarding" };
@@ -309,7 +307,6 @@ export function publicFactLine(fact: TgPublicFact): string | null {
         funding: "open Add funds on the web and copy the agent account shown there. send only the supported funds on that account's displayed network. check the recorded balance and agent status afterward; a deposit alone doesn't enable live trading or renew permission.",
         withdrawals: "open Withdraw from Profile on the web and use the owner recovery/signing flow shown for your wallet. stopping an agent doesn't withdraw funds or confirm revocation. never paste a recovery key into chat; account recovery requires your owner access.",
         modes: "paper trading uses simulated money that can't be withdrawn. Settings → Trading mode controls real orders; funding alone isn't proof of live execution. live trading needs signed permission and readiness checks. switching to paper doesn't sell real positions.",
-        v4: "for Uniswap v4, save a deployed V4SelfSwap adapter for the correct network in Settings, then review and renew permission in Wallet. the adapter must pass deployment checks. saving its address alone doesn't grant access; check Trading permissions afterward.",
         readiness: "open your agent's status on the web or ask /status in your linked DM. idle or blocked can mean missing cash, gas, live consent, permission or another check. use the reported reason; a group chart read doesn't establish that your account can trade.",
         drawdown: "the drawdown breaker pauses new buys at the signed limit; this rule still permits sell attempts. renewing the same limit doesn't clear it. check your recorded peak and equity in private; if they look wrong, ask for an accounting check rather than bypassing it.",
         privacy: "group replies use public market evidence and public trade summaries. balances, trade sizes, wallet controls and detailed account reasons belong in your linked DM or signed-in web account. a group message can't authorize a wallet change or trade.",

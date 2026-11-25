@@ -78,8 +78,8 @@ const PROVIDER_BUDGET = { bucket: "market-provider", perMinute: 10, perHour: 120
 const DEFINITIONS = "discoverable = a discovery source lists it; priceable = AgentCap would trust a price for it; executable = a particular agent could buy it (check_token_eligibility).";
 
 function mainnetOnly(chainId: number): void {
-  if (chainId !== 4663) {
-    throw new McpError("unsupported", "Market data covers Robinhood Chain mainnet (4663) only; the market index and the stock registry do not cover testnet.");
+  if (chainId !== 56) {
+    throw new McpError("unsupported", "Market data covers BNB Chain mainnet (56) only; the market index and the stock registry do not cover testnet.");
   }
 }
 
@@ -230,7 +230,7 @@ const getTokenTool = defineTool({
     flags: flagsOut,
     index: z.object({ read: z.enum(["found", "absent", "unread"]), observed_at: z.string().nullable(), truncated: z.boolean() }),
     price: fact.extend({ observed_at: z.string().nullable(), updated_at: z.string().nullable().describe("Chainlink round time, stock tokens only") }),
-    liquidity_usd: fact.extend({ on_curve: z.boolean().nullable(), note: z.string().nullable() }),
+    liquidity_usd: fact.extend({ note: z.string().nullable() }),
     volume_24h_usd: fact,
     holders: fact,
     fdv_usd: fact,
@@ -249,8 +249,6 @@ const getTokenTool = defineTool({
     pool: z.object({
       pool_id: z.string(),
       venue: z.string(),
-      on_curve: z.boolean(),
-      graduated: z.boolean(),
       label: z.string().nullable().describe("The pool's own label (untrusted)"),
       note: z.string(),
     }).nullable(),
@@ -258,7 +256,6 @@ const getTokenTool = defineTool({
       has_feed: z.boolean(),
       paused: z.boolean().nullable(),
       ui_multiplier: z.number().nullable(),
-      rialto_liquid: z.boolean().nullable(),
       read: z.enum(["found", "unread"]),
     }).nullable(),
     discoverable: verdict,
@@ -368,7 +365,7 @@ const getCandlesTool = defineTool({
         ...kept,
         quote_symbol: untrusted(v.quote_symbol, 16),
         notes: [
-          "volume_display_only is the index's per-bar quote volume. The candle reader itself marks it as not a figure to publish: on bonding-curve pools it has measured several times the pool's real volume. Use it for shape only.",
+          "volume_display_only is the index's per-bar quote volume. The candle reader itself marks it as not a figure to publish: on some pools it has measured several times the pool's real volume. Use it for shape only.",
           "The newest bar is still forming when last_bar_partial is true.",
         ],
         served_at: at(ctx),
@@ -444,8 +441,6 @@ const poolItemOut = z.object({
   kind: kindOut,
   venue: z.string(),
   pool_id: z.string(),
-  on_curve: z.boolean(),
-  graduated: z.boolean(),
   price_usd: z.number().nullable(),
   reserve_usd: z.number().nullable(),
   fdv_usd: z.number().nullable(),
@@ -458,23 +453,6 @@ const poolItemOut = z.object({
   screen: z.object({ passed: z.boolean(), reasons: z.array(z.string()) }),
   scout_verdict: z.object({ conviction: z.number(), reason: z.string().nullable() }).nullable()
     .describe("The display scout's model-written line (untrusted); null when it passed or could not look"),
-  flags: flagsOut,
-  caveats: z.array(z.string()),
-});
-const launchItemOut = z.object({
-  origin: z.literal("launchpad"),
-  rank: z.number(),
-  address: z.string(),
-  symbol: z.string().nullable(),
-  name: z.string().nullable(),
-  kind: kindOut,
-  curve: z.string(),
-  trades: z.number(),
-  traders: z.number(),
-  age_s: z.number().nullable(),
-  progress_bps: z.number().nullable().describe("Progress toward graduation, net of the virtual seed"),
-  description: z.string().nullable().describe("The launcher's own words (untrusted)"),
-  published_socials: z.boolean().nullable(),
   flags: flagsOut,
   caveats: z.array(z.string()),
 });
@@ -507,8 +485,6 @@ function discoverOut(it: DiscoverItem, rank: number) {
         venue: it.venue.slice(0, 64),
         scout_verdict: it.scout_verdict ? { conviction: it.scout_verdict.conviction, reason: untrusted(it.scout_verdict.reason, 300) } : null,
       };
-    case "launchpad":
-      return { ...it, rank, symbol: untrusted(it.symbol, 32), name: untrusted(it.name, 80), description: untrusted(it.description, 300) };
     case "registry":
       return { ...it, rank };
   }
@@ -517,17 +493,17 @@ function discoverOut(it: DiscoverItem, rank: number) {
 const discoverTokensTool = defineTool({
   name: "discover_tokens",
   title: "Discover tokens",
-  description: "What is trading on Robinhood Chain, from the same screened discovery data the AgentCap dashboard shows. trending: pools clearing the display screen ($25k reserve, $50k 24h volume, 100 buyers) in the coins panel's order; high_volume: the same pools by 24h volume; new: launchpad coins from the last ~15 minutes that people are trading; established: the curated stock-token registry with Chainlink prices. Each item carries its screening facts and caveats. A listing is not a recommendation or a permission to trade.",
+  description: "What is trading on Robinhood Chain, from the same screened discovery data the AgentCap dashboard shows. trending: pools clearing the display screen ($25k reserve, $50k 24h volume, 100 buyers) in the coins panel's order; high_volume: the same pools by 24h volume; established: the curated stock-token registry with Chainlink prices. Each item carries its screening facts and caveats. A listing is not a recommendation or a permission to trade.",
   capability: "market.read",
   input: z.object({
-    list: z.enum(["trending", "new", "high_volume", "established"]),
+    list: z.enum(["trending", "high_volume", "established"]),
     limit: LIMIT_ARG(50, 20),
     cursor: CURSOR_ARG,
   }).strict(),
   output: z.object({
-    list: z.enum(["trending", "new", "high_volume", "established"]),
+    list: z.enum(["trending", "high_volume", "established"]),
     ranking: z.string(),
-    items: z.array(z.discriminatedUnion("origin", [poolItemOut, launchItemOut, registryItemOut])),
+    items: z.array(z.discriminatedUnion("origin", [poolItemOut, registryItemOut])),
     total: z.number(),
     next_cursor: z.string().nullable(),
     observed_at: z.string().nullable(),
@@ -566,7 +542,7 @@ const discoverTokensTool = defineTool({
 const checkTokenEligibilityTool = defineTool({
   name: "check_token_eligibility",
   title: "Could my agent trade this token?",
-  description: "Whether THIS agent could buy a token and, if not, exactly why: the signed permission's sell coverage, whether the agent watches it, the asset mode, the price guards and scout budget, a halted stock token, symbol collisions among its tokens, the launch (class) route's prerequisites, the Trencher vault route's prerequisites (only the fast Trencher uses that route; it skips the allowlist and no-exit checks, and whether a coin qualifies for it depends on the worker's own discovery), and whether discovery lists it. Returns discoverable, priceable and executable, each yes/no/unknown with reasons, plus every check. It never places or simulates a trade.",
+  description: "Whether THIS agent could buy a token and, if not, exactly why: the signed permission's sell coverage, whether the agent watches it, the asset mode, the price guards and scout budget, a halted stock token, symbol collisions among its tokens, the Trencher vault route's prerequisites (only the fast Trencher uses that route; it skips the allowlist and no-exit checks, and whether a coin qualifies for it depends on the worker's own discovery), and whether discovery lists it. Returns discoverable, priceable and executable, each yes/no/unknown with reasons, plus every check. It never places or simulates a trade.",
   capability: "agents.read",
   input: z.object({ agent: AGENT_ARG, address: ADDRESS_ARG }).strict(),
   output: z.object({
@@ -596,8 +572,6 @@ const checkTokenEligibilityTool = defineTool({
       price_floors_source: z.literal("defaults"),
       scout_enabled: z.boolean(),
       scout_budget_usdg: z.number().nullable(),
-      launch_buying_enabled: z.boolean(),
-      class_min_depth_usdg: z.number(),
       grant_tradable_set: z.enum(["wide", "legacy", "none"]),
       grant_extra_tokens: z.number(),
     }),
@@ -619,7 +593,7 @@ const checkTokenEligibilityTool = defineTool({
     // Every market read here describes mainnet. For an agent on another chain
     // those would be the wrong chain's facts (a mainnet pool, a mainnet halt
     // flag), so only identity is used and the market checks say unknown.
-    const facts = a.chainId === null || a.chainId === 4663
+    const facts = a.chainId === null || a.chainId === 56
       ? await readTokenFacts(address, { readers: marketReaders(), customTokens: custom, stockMarket: true })
       : localTokenFacts(address, custom);
     const input = {
@@ -659,12 +633,12 @@ const watchItemOut = z.object({
 });
 
 function watchOut(r: WatchlistRow, custom: readonly OwnerToken[]) {
-  const identity = r.chain_id === 4663 ? trustedIdentity(r.address, custom) : null;
+  const identity = r.chain_id === 56 ? trustedIdentity(r.address, custom) : null;
   return {
     address: r.address,
     chain_id: r.chain_id,
     symbol: identity?.symbol ?? untrusted(r.symbol, 32),
-    kind: r.chain_id === 4663 ? tokenKind(r.address, !!identity) : "unknown" as const,
+    kind: r.chain_id === 56 ? tokenKind(r.address, !!identity) : "unknown" as const,
     label: untrusted(r.label, 64),
     note: untrusted(r.note, 500),
     added_at: r.added_at,

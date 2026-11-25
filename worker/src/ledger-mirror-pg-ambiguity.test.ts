@@ -230,7 +230,6 @@ describe("the mirror under Postgres's scoping rule", () => {
     const r = await mirrorTenant({ tenant: "0xten", child: seedChild(false), shared: pgScoped(mem(DEST)) });
     assert.equal(JSON.stringify(r.failed ?? {}), "{}", "the fixture itself must mirror cleanly");
     assert.equal(r.copied.positions, 1, "the ordinary position copies");
-    assert.equal(r.copied.energy_days, 1, "and the energy counters' merge ran under the rule");
     assert.equal(r.copied.class_positions, 0, "and there is no class row yet");
   });
 
@@ -314,16 +313,6 @@ describe("the rule itself, so the guard cannot rot", () => {
     );
     // No ON CONFLICT at all, like `positions`.
     assert.equal(ambiguousColumn("INSERT INTO positions (agent_id) VALUES (?)"), null);
-  });
-
-  it("THE ENERGY MERGE, which lives beside its table rather than in this file, is unambiguous too", () => {
-    const src = readFileSync(new URL("./energy-days.ts", import.meta.url), "utf8");
-    const stmts = src.match(/INSERT\s+INTO[\s\S]*?`/gi) ?? [];
-    assert.ok(stmts.length >= 4, `expected the claim, notice, read and merge upserts, found ${stmts.length}`);
-    for (const s of stmts) {
-      const bad = ambiguousColumn(s);
-      assert.equal(bad, null, `unqualified existing-row column \`${bad}\` in: ${s.slice(0, 90)}…`);
-    }
   });
 
   it("EVERY upsert the mirror actually sends is unambiguous", () => {

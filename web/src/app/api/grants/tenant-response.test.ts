@@ -21,8 +21,6 @@ const removed: string[] = [];
 const replacements: unknown[][] = [];
 let replacementState: "stopped" | "absent" | "changed" = "stopped";
 let replacementError = false;
-const solanaStopped: string[] = [];
-let solanaDown = false;
 let removeDown = false;
 /** Every tenant whose Perps wallet a kill asked about: none of these owners has one. */
 const perpsAsked: string[] = [];
@@ -58,11 +56,6 @@ before(async () => {
   const settings = createRequire(import.meta.url)("../../../../../worker/src/settings-store.ts") as typeof import("../../../../../worker/src/settings-store");
   settings.resetSettingsStoreForTest();
   mock.method(settings.getSettingsStore("perps") as InstanceType<typeof settings.PgSettingsStore>, "disablePerpsForKill", async () => "none" as const);
-  const solana = await import("@/lib/solana-binding-store");
-  mock.method(solana.getSolanaBindingStore(), "disableForKill", async (tenant: string) => {
-    if (solanaDown) throw new Error("database unavailable");
-    solanaStopped.push(tenant); return true;
-  });
   ({ GET, DELETE } = await import("./route"));
 });
 
@@ -74,7 +67,7 @@ after(() => {
   }
   rmSync(home, { recursive: true, force: true });
 });
-beforeEach(() => { asked.length = 0; removed.length = 0; replacements.length = 0; replacementState = "stopped"; replacementError = false; solanaStopped.length = 0; solanaDown = false; removeDown = false; perpsAsked.length = 0; });
+beforeEach(() => { asked.length = 0; removed.length = 0; replacements.length = 0; replacementState = "stopped"; replacementError = false; removeDown = false; perpsAsked.length = 0; });
 
 it("binds an empty hosted grant response to the tenant authenticated by the cookie", async () => {
   for (const tenant of [A, B]) {
@@ -105,34 +98,18 @@ it("a stop cannot remove a different tenant after a login switches", async () =>
   }
   assert.equal((await DELETE(request(B))).status, 200);
   assert.deepEqual(removed, [B]);
-  assert.deepEqual(solanaStopped, [B], "kill all agents stops the same tenant's Solana strategy");
   assert.deepEqual(perpsAsked, [B], "and reaches the same tenant's Perps wallet, and no other");
 });
 
-it("kill all agents stops the Solana strategy even when the Robinhood grant cannot be removed", async () => {
+it("kill all agents reaches the Perps wallet even when the Robinhood grant cannot be removed", async () => {
   const request = new Request(`${ORIGIN}/api/grants`, {
     method: "DELETE", headers: { cookie: `${auth.SESSION_COOKIE}=${auth.mintSession(A)}`, "content-type": "application/json" },
     body: JSON.stringify({ expectedTenant: A, purpose: "delete-agent" }),
   });
   removeDown = true;
   await assert.rejects(DELETE(request), /database unavailable/, "the Robinhood failure is still an error");
-  assert.deepEqual(removed, []); assert.deepEqual(solanaStopped, [A], "but the Solana strategy is off");
+  assert.deepEqual(removed, []);
   assert.deepEqual(perpsAsked, [A], "and the Perps wallet is reached too");
-});
-
-it("kill all agents is reported incomplete, never done, while the Solana strategy could not be stopped", async () => {
-  const request = () => new Request(`${ORIGIN}/api/grants`, {
-    method: "DELETE", headers: { cookie: `${auth.SESSION_COOKIE}=${auth.mintSession(A)}`, "content-type": "application/json" },
-    body: JSON.stringify({ expectedTenant: A, purpose: "delete-agent" }),
-  });
-  solanaDown = true;
-  const failed = await DELETE(request());
-  assert.equal(failed.status, 503);
-  const body = await failed.json() as { error: string; ownerFacing: boolean; ok?: boolean };
-  assert.match(body.error, /Kill incomplete/); assert.equal(body.ownerFacing, true); assert.equal(body.ok, undefined);
-  solanaDown = false;
-  assert.equal((await DELETE(request())).status, 200, "the retry finishes it");
-  assert.deepEqual(removed, [A, A]); assert.deepEqual(solanaStopped, [A]);
 });
 
 const replacementRequest = (body: unknown, tenant: string | null = A) => new Request(`${ORIGIN}/api/grants`, {
@@ -154,7 +131,7 @@ it("an oversized stop body is refused with 413 before it is parsed, and nothing 
   const response = await DELETE(replacementRequest(big));
   assert.equal(response.status, 413);
   assert.match(((await response.json()) as { error: string }).error, /too large\. Nothing was deleted/);
-  assert.deepEqual(removed, []); assert.deepEqual(replacements, []); assert.deepEqual(solanaStopped, []); assert.deepEqual(perpsAsked, []);
+  assert.deepEqual(removed, []); assert.deepEqual(replacements, []); assert.deepEqual(perpsAsked, []);
   // Just under the limit is an ordinary stop.
   const fits = { expectedTenant: A, purpose: "delete-agent", pad: "" };
   fits.pad = "x".repeat(8 * 1024 - JSON.stringify(fits).length);

@@ -1,4 +1,6 @@
 /** Amend the evidence of one original inferred deposit. Never create, replace or rebase a book. */
+import { bnbChain } from "../../packages/core/src/chain";
+import { CASH_PER_MICRO, cashNumber } from "../../packages/core/src/cash";
 import { createHash } from "node:crypto";
 import { closeSync, constants, fsyncSync, lstatSync, openSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
@@ -85,7 +87,7 @@ export interface ReceiptAttestationReport {
 
 export function authority(o: ReceiptAttestationOptions): void {
   const tenant = o.tenant.toLowerCase();
-  if (!ADDRESS.test(tenant) || !ADDRESS.test(o.smartAccount.toLowerCase()) || o.chainId !== 4663) refuse("unsupported scope");
+  if (!ADDRESS.test(tenant) || !ADDRESS.test(o.smartAccount.toLowerCase()) || o.chainId !== bnbChain.id) refuse("unsupported scope");
   if (o.lease.tenant.toLowerCase() !== tenant || o.lease.backend !== "postgres" || !o.lease.healthy()) refuse("tenant lease is not held");
   if (!accountingTenantHeld(tenant)) refuse("tenant is not explicitly held by the operator");
   o.assertQuiescent();
@@ -225,7 +227,7 @@ async function chainEvidence(o: ReceiptAttestationOptions, local: Snapshot, shar
   const deposit = capital.deposits[0]!;
   const receipt = evidence.find(x => x.method === "eth_getTransactionReceipt" && String(x.params[0]).toLowerCase() === deposit.txHash.toLowerCase())?.result as { blockHash?: unknown; logs?: Array<{ logIndex: string; topics: string[]; address: string }> } | undefined;
   const log = receipt?.logs?.find(x => Number(BigInt(x.logIndex)) === deposit.logIndex);
-  if (!receipt || typeof receipt.blockHash !== "string" || !log || log.address.toLowerCase() !== CASH.USDG.toLowerCase()) refuse("receipt evidence disappeared");
+  if (!receipt || typeof receipt.blockHash !== "string" || !log || log.address.toLowerCase() !== CASH.USDT.toLowerCase()) refuse("receipt evidence disappeared");
   const observed = evidence.find(x => x.method === "eth_blockNumber")?.result;
   if (typeof observed !== "string" || !/^0x[0-9a-f]+$/i.test(observed)) refuse("observed head evidence disappeared");
   const headTag = `0x${BigInt(observed).toString(16)}`;
@@ -301,7 +303,7 @@ export async function attestOriginalReceipt(o: ReceiptAttestationOptions): Promi
     for (const flow of [local.snap.flow, shared.flow]) {
       if (flow.source !== "inferred" || flow.tx_hash !== null || flow.block_number !== null || flow.log_index !== null
           || (flow.chain_id !== null && safeInteger(flow.chain_id) !== o.chainId)
-          || Number(flow.amount_usdg) * 1_000_000 !== Number(receipt.amountUsdg6)) refuse("sole inferred flow does not equal the complete receipt");
+          || BigInt(receipt.amountUsdg6) % CASH_PER_MICRO !== 0n || Number(flow.amount_usdg) !== cashNumber(BigInt(receipt.amountUsdg6))) refuse("sole inferred flow does not equal the complete receipt");
     }
     if (!same({ ...local.snap.flow, id: 0, agent_id: o.smartAccount.toLowerCase() }, { ...shared.flow, id: 0, agent_id: o.smartAccount.toLowerCase() })) refuse("original and mirrored flow differ");
     if ([local.snap.agent, shared.agent].some(agent => String(agent.owner_address).toLowerCase() !== identity.grant.owner)) refuse("original owner differs from the stored permission");
@@ -312,7 +314,7 @@ export async function attestOriginalReceipt(o: ReceiptAttestationOptions): Promi
   }
   const digest = approvalDigest(plan);
   const report = (state: ReceiptAttestationReport["state"]): ReceiptAttestationReport => ({ state, approvalDigest: digest,
-    tenant: plan.tenant, account: plan.account, amountUsdg: Number(plan.receipt.amountUsdg6) / 1_000_000,
+    tenant: plan.tenant, account: plan.account, amountUsdg: cashNumber(BigInt(plan.receipt.amountUsdg6)),
     localFlowId: safeInteger(plan.local.flow.id), sharedFlowId: safeInteger(plan.shared.flow.id), receipt: plan.receipt,
     ...(plan.ownerProof ? { ownerProofSummary: { operationCount: plan.ownerProof.operations.length,
       custody: plan.ownerProof.custody, proofDigest: hash(plan.ownerProof) } } : {}) });

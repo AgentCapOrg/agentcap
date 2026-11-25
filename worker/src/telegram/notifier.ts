@@ -35,13 +35,6 @@ import { dashboardBase, readReport, redactAddresses, type StatusContext } from "
 import { readResearch } from "../research-files";
 import { loadGrantFile } from "../grant";
 import { settleFor, signDecision, signMessage, signNeed } from "./sign-prompt";
-import {
-  ENERGY_ALERT_RETRY_SEC,
-  energyAlert,
-  energyAlertDue,
-  recordEnergyAlert,
-  type EnergyAlertInputs,
-} from "./energy-alert";
 import { bookAddresses } from "../custody";
 import { mainnetClient } from "../snapshot";
 import { distinctTrades } from "../distinct-trades";
@@ -49,13 +42,7 @@ import { labelText, nonCashLeg, sideOf, tokenLabel } from "../token-label";
 import { ENERGY_BUY_KIND, ENERGY_LABEL, KEY_INSTALL_KIND, dollars, isEnergyRow } from "./trade-rows";
 import { tokenTagOf, type RefusalRepeat, type StateRef, type Watcher } from "./state";
 
-/**
- * The energy fields (`energy`, `energyAccount`, `energyChainId`,
- * `energyHolder`) come from energy-alert.ts: the worker's own report this tick
- * and the addresses the alert may print, all from the grant and settings —
- * never from a model. See energy-alert.ts for when it speaks.
- */
-export interface AlertInputs extends EnergyAlertInputs {
+export interface AlertInputs {
   /** Grant expiry (unix) or null when not armed. */
   grantExpiresAt: number | null;
   /**
@@ -663,7 +650,7 @@ export function startNotifier(deps: NotifierDeps): NotifierHandle {
    * logged rather than dropped. These are the ones the agent starts: trade
    * receipts, digests, alerts, reminders, watchers, the daily report, all to
    * the owner's chat. A bot the owner blocked, or a chat that is gone, failed
-   * every one of them without a line anywhere, and the sign and energy
+   * every one of them without a line anywhere, and the sign
    * prompts, which did look at the answer, said nothing about it either.
    */
   const tally = deps.tally ?? makeChatTally(telegramLog, now);
@@ -673,8 +660,6 @@ export function startNotifier(deps: NotifierDeps): NotifierHandle {
     return r;
   };
   let latestPrices: Map<string, number> = new Map();
-  /** A refused energy alert, and when it may be tried again (energy-alert.ts). In memory: a restart just tries now. */
-  let energyRetry: { key: string; at: number } | null = null;
   const conditionRetry = new Map<string, number>();
 
   const pass = async (): Promise<void> => {
@@ -1028,29 +1013,6 @@ export function startNotifier(deps: NotifierDeps): NotifierHandle {
         "low-gas",
         `⛽ native gas is low. If you're signing live trades, send a little <b>ETH</b> to the smart account or they stop landing — ETH is gas, USDG is capital. (In paper mode nothing signs, so gas doesn't matter; on testnet gas is the only thing worth sending.)`,
       );
-    }
-
-    // ── TODAY'S ENERGY IS SPENT — ONCE PER UTC DAY, READ-ONLY ──────────────
-    //
-    // Not through fire(): its six-hour cooldown would say it again the same
-    // afternoon. Everything that decides is in energy-alert.ts; this only
-    // sends and records. No buy button and no parked action — the buy is the
-    // app chat's, where the owner confirms the amount (design D6).
-    {
-      const alert = energyAlert(inputs, dashboardBase(), now());
-      if (alert && energyAlertDue(alert.key, deps.stateRef.get().firedAlerts, energyRetry, now())) {
-        const sent = await sendMessage({ token }, chatId, alert.text, alert.keyboard ? { keyboard: alert.keyboard } : {});
-        if (sent.ok) {
-          // THE KEY ONLY, NEVER THE MESSAGE — it carries the owner's addresses.
-          console.log(`[notify] energy alert sent — ${alert.key}`);
-          energyRetry = null;
-          // RE-READ AFTER THE SEND, for the same reason as fire().
-          const fresh = deps.stateRef.get();
-          deps.stateRef.set({ ...fresh, firedAlerts: recordEnergyAlert(fresh.firedAlerts, alert.key, now()) });
-        } else {
-          energyRetry = { key: alert.key, at: now() + ENERGY_ALERT_RETRY_SEC };
-        }
-      }
     }
 
     // ── relationship milestones (fire once, ever) ───────────────────────────

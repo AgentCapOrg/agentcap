@@ -341,7 +341,7 @@ async function fetchCandles(
   // back as a 400 enumerating the allowed values, which is a far better
   // failure than a plausible chart of the wrong asset.
   const route =
-    `/networks/robinhood/pools/${poolId}/ohlcv/${timeframe}` +
+    `/networks/bsc/pools/${poolId}/ohlcv/${timeframe}` +
     `?aggregate=${aggregate}&limit=${LIMIT}&currency=usd&token=${token}`;
   const source = geckoSource();
   if (source.id !== "coingecko-pro" || !proPacingSet()) return candleReadOf(await requestCandles(source, route, token, window, READ_BUDGET_MS));

@@ -249,7 +249,7 @@ export function unknownWordIn(text: unknown, ownName = ""): boolean {
  * answer.
  */
 const MARKET_MENTION: ReadonlySet<string> = new Set(("crypto cryptos chain chains onchain blockchain blockchains market markets marketcap mcap " +
-  "bitcoin btc eth ether ethereum sol solana alt alts altcoin altcoins altseason defi nft nfts web memecoin memecoins bull bulls bear bears " +
+  "bitcoin btc eth ether ethereum sol solana bnb alt alts altcoin altcoins altseason defi nft nfts web memecoin memecoins bull bulls bear bears " +
   "bullish bearish rally rallies pump pumps pumping dump dumps dumping moon mooning dip dips ath cycle cycles price prices").split(" "));
 export function marketTalkIn(text: unknown): boolean {
   if (typeof text !== "string") return false;

@@ -52,7 +52,7 @@ describe("stageOf: the owner's wall, the market, or the house's own execution", 
 
   it("no ETH, no signer, a venue it cannot build for, and every failure before submit are execution", () => {
     for (const rule of [
-      "no-gas", "no-executor", "router-migrated", "no-rialto-key", "no-curve-adapter",
+      "no-gas", "no-executor", "no-curve-adapter",
       // index.ts writes exactly this: the words, then up to 80 of the error's.
       "couldn't submit: bundler: AA21 didn't pay prefund",
       "couldn't submit: HTTP request failed. Status: 502",
@@ -132,8 +132,6 @@ describe("stageOf: every refusal its producers write is placed on purpose", () =
       "no-executor": "exec",
       "no-gas": "exec",
       "not-recorded": "exec",
-      "router-migrated": "exec",
-      "no-rialto-key": "exec",
       "no-curve-adapter": "exec",
       "class-side-ambiguous": "exec",
       "class-legs-unconfirmed": "exec",

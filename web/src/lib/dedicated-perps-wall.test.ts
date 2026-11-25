@@ -3,7 +3,7 @@
  * (perps slice 5b, decision D5).
  *
  * A paper Perps wallet's permission is EMPTY: core WallOptions.perpsOnly with
- * no perp block and no energy buy, `purpose: "perps"`, chain 4663, no marker,
+ * no perp block and no energy buy, `purpose: "perps"`, chain 56, no marker,
  * no token and no sealed address. POST /api/grants rebuilds exactly that wall
  * from the grant (canonical-wall.ts) and refuses anything else, so a signer
  * that sealed one permission more, or minted one marker more, would make a
@@ -23,13 +23,13 @@ import { decodeFunctionData, parseAbi, type Hex, type LocalAccount } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 // FIRST, before ./session: the fixture pins the Trencher factory's trusted
 // bytecode hash in the environment, which trencher-permission.ts reads once.
-import { CLASS_FACTORY, TEST_CAPS, TRENCHER_FACTORY, derivingChain, signerGrant, withStubChain } from "./canonical-wall-fixture";
+import { TEST_CAPS, TRENCHER_FACTORY, derivingChain, signerGrant, withStubChain } from "./canonical-wall-fixture";
 import {
   GRANT_PERP_LIGHTER,
   LIGHTER_ROUTE_V1,
   buildCallPermissions,
   grantWallOptions,
-  robinhoodTestnet,
+  bnbTestnet,
 } from "@agentcap/core";
 import { checkCanonicalWall } from "./canonical-wall";
 import { deriveKernelAccountAddress } from "./derive-account";
@@ -37,7 +37,6 @@ import { deriveKernelAccountAddress } from "./derive-account";
 const ACCOUNT = "0x00000000000000000000000000000000000a11ce" as const;
 const KEY = `0x${"1a".repeat(40)}` as `0x${string}`;
 const EXTRA = { symbol: "CATE", address: "0x0000000000000000000000000000000000ca7e00" as const, decimals: 18 };
-const V4_ADAPTER = "0xe0ce6bd81a472f021a9e85392a8008b8786f9218" as const;
 
 const verdict = (g: unknown) => checkCanonicalWall(g as Record<string, unknown>);
 const decoded = (g: { serialized: string }) =>
@@ -72,10 +71,10 @@ describe("the paper Perps grant the real signer mints", () => {
     const { grant } = await signerGrant({ account: ACCOUNT, purpose: "perps" });
     assert.deepEqual(verdict(grant), { ok: true });
     assert.equal(grant.purpose, "perps");
-    assert.equal(grant.chainId, 4663);
-    assert.deepEqual(grant.grantFeatures, [], "no Spot marker, no scoped-spenders shape, no energy buy, no perps key");
+    assert.equal(grant.chainId, 56);
+    assert.deepEqual(grant.grantFeatures, [], "no Spot marker, no scoped-spenders shape, no perps key");
     assert.deepEqual(grant.grantTokens, []);
-    for (const field of ["v4AdapterAddress", "ponsAdapterAddress", "ponsClassVaultAddress", "ponsClassVaultFactoryAddress", "trencherVaultAddress", "trencherFactoryAddress", "perp", "perpRecovery", "binding", "demoOwnerPrivateKey"] as const) {
+    for (const field of ["trencherVaultAddress", "trencherFactoryAddress", "perp", "perpRecovery", "binding", "demoOwnerPrivateKey"] as const) {
       assert.equal(grant[field], undefined, field);
     }
     // THE PIN: the call policy the owner signed permits nothing, and the
@@ -97,14 +96,6 @@ describe("the paper Perps grant the real signer mints", () => {
     }
   });
 
-  it("never seals the energy buy, though an empty mainnet wall has room for it (D5)", async () => {
-    // Premise: the same chain and caps give a Spot wall the energy buy.
-    const { grant: spot } = await signerGrant({ account: ACCOUNT });
-    assert.ok(spot.grantFeatures?.includes("energy-buy-v1"));
-    const { grant } = await signerGrant({ account: ACCOUNT, purpose: "perps" });
-    assert.ok(!grant.grantFeatures?.includes("energy-buy-v1"));
-  });
-
   it("the same owner signs Spot at Kernel index 0 and Perps at index 1: the index reaches the SDK's factory call", async () => {
     const owner = privateKeyToAccount(`0x${"31".repeat(32)}`);
     const { grant: spot } = await signerGrant({ account: ACCOUNT, owner });
@@ -119,7 +110,7 @@ describe("the paper Perps grant the real signer mints", () => {
 });
 
 describe("a Perps signature refuses what a Perps wallet cannot hold, before the owner signs anything", () => {
-  const perpsSign = async (extra: Record<string, unknown>, chainId = 4663) => {
+  const perpsSign = async (extra: Record<string, unknown>, chainId = 56) => {
     const { owner, signatures } = countingOwner();
     const { prepareAgentGrant } = await import("./session");
     await withStubChain(ACCOUNT, () =>
@@ -134,9 +125,6 @@ describe("a Perps signature refuses what a Perps wallet cannot hold, before the 
   it("every Spot opt-in, by name rather than quietly dropped", async () => {
     for (const extra of [
       { extraTokens: [EXTRA] },
-      { v4AdapterAddress: V4_ADAPTER },
-      { ponsAdapterAddress: `0x${"5".repeat(40)}` },
-      { ponsClassVaultFactory: CLASS_FACTORY },
       { trencherFactory: TRENCHER_FACTORY },
     ]) await perpsSign(extra);
   });
@@ -144,21 +132,29 @@ describe("a Perps signature refuses what a Perps wallet cannot hold, before the 
   it("any Lighter key in this build: a new one, a drop, a recovery, or one carried from a previous Perps grant", async () => {
     for (const extra of [{ perp: { apiPublicKey: KEY } }, { perpDrop: true, venueFlat: true }, { recovery: { v: 1 } }]) await perpsSign(extra);
     const previous = {
-      purpose: "perps", smartAccount: ACCOUNT, chainId: 4663, grantFeatures: [GRANT_PERP_LIGHTER],
+      purpose: "perps", smartAccount: ACCOUNT, chainId: LIGHTER_ROUTE_V1.chainId, grantFeatures: [GRANT_PERP_LIGHTER],
       perp: { route: GRANT_PERP_LIGHTER, apiKeyIndex: LIGHTER_ROUTE_V1.apiKeyIndex, apiPublicKey: KEY },
     };
-    await perpsSign({ previousGrant: previous });
+    // A carried key was sealed on Lighter's chain, so on BNB Chain it is the
+    // chain refusal that stops it, still before any signature.
+    const { owner, signatures } = countingOwner();
+    const { prepareAgentGrant, PerpSigningRefusal } = await import("./session");
+    await withStubChain(ACCOUNT, () => assert.rejects(
+      prepareAgentGrant(owner, { purpose: "perps", caps: TEST_CAPS, onStatus: () => {}, chainId: 56, previousGrant: previous }),
+      (e: unknown) => e instanceof PerpSigningRefusal && e.code === "perp-off-mainnet" && /has not been replaced/.test(e.message),
+    ));
+    assert.equal(signatures(), 0);
   });
 
-  it("any network but Robinhood Chain mainnet", async () => {
-    await perpsSign({}, robinhoodTestnet.id);
+  it("any network but BNB Chain mainnet", async () => {
+    await perpsSign({}, bnbTestnet.id);
   });
 
   it("and a wallet this build does not know signs nothing, never as Spot", async () => {
     const { owner, signatures } = countingOwner();
     const { prepareAgentGrant } = await import("./session");
     await withStubChain(ACCOUNT, () =>
-      assert.rejects(prepareAgentGrant(owner, { purpose: "solana" as never, caps: TEST_CAPS, onStatus: () => {}, chainId: 4663 }), /Nothing was signed/),
+      assert.rejects(prepareAgentGrant(owner, { purpose: "other" as never, caps: TEST_CAPS, onStatus: () => {}, chainId: 56 }), /Nothing was signed/),
     );
     assert.equal(signatures(), 0);
   });
@@ -174,14 +170,14 @@ describe("the Perps account is the one the server will derive (derive-account.ts
       const { preflightAgentGrant } = await import("./session");
       const { owner, signatures } = countingOwner();
       const at = async (wallet: "spot" | "perps") => {
-        const d = await deriveKernelAccountAddress(owner.address, 4663, wallet);
+        const d = await deriveKernelAccountAddress(owner.address, 56, wallet);
         assert.ok(d.ok);
         return d.address as `0x${string}`;
       };
       const spot = await at("spot");
       const perps = await at("perps");
       assert.notEqual(spot, perps);
-      const options = { caps: TEST_CAPS, onStatus: () => {}, chainId: 4663 };
+      const options = { caps: TEST_CAPS, onStatus: () => {}, chainId: 56 };
       await preflightAgentGrant(owner, { ...options, purpose: "perps", expectAccount: perps });
       await assert.rejects(
         preflightAgentGrant(owner, { ...options, purpose: "perps", expectAccount: spot }),

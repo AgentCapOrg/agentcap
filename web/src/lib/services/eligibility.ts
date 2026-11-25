@@ -1,12 +1,11 @@
 /**
  * Could THIS agent buy THIS token — and if not, why not?
  *
- * The answer is spread across five modules and two processes: what the signed
+ * The answer is spread across several modules and two processes: what the signed
  * permission can sell (core grant.ts sellableAssets), what the worker watches
  * (worker strategies/registry.ts watchTokensFor), the owner's asset mode
  * (core tokens.ts assetModeAllows), the price guards (worker pool-price.ts and
- * quarantine.ts scoutAllows), the class route's prerequisites (worker
- * class-entry-gate.ts), and the Trencher route's (worker index.ts
+ * quarantine.ts scoutAllows), and the Trencher route's (worker index.ts
  * trenchCandidates, whose fast arm alone builds a vault-custodied buy, and
  * policy.ts custody "trencher", which skips the asset allowlist and the no-exit
  * rule for that buy only). This asks each of
@@ -29,7 +28,6 @@
 import {
   CASH,
   DEFAULT_BASKET_SYMBOLS,
-  GRANT_PONS_CLASS,
   GRANT_TRENCHER,
   LEGACY_TRADEABLE_SYMBOLS,
   SETTINGS_DEFAULTS,
@@ -37,15 +35,12 @@ import {
   TRADEABLE_SYMBOLS,
   TRADEABLE_V2,
   assetModeAllows,
-  isEnergyReserveToken,
   officialCoinsFor,
   sellableAssets,
   shortAddress,
   type AssetMode,
 } from "@agentcap/core";
-import { ENERGY_RESERVE_WHY } from "../energy-reserve";
 import type { Db } from "../../../../worker/src/db";
-import { classRouteLooks } from "../../../../worker/src/class-entry-gate";
 import { readAgentRow } from "./agent-status";
 import type { SettingsView } from "./settings-view";
 import {
@@ -88,7 +83,6 @@ export type CheckName =
   | "scout_budget"
   | "trading_not_paused"
   | "symbol_collision"
-  | "class_route"
   | "trencher_route"
   | "discovery_lists_it";
 
@@ -123,15 +117,13 @@ export interface EligibilityView {
     price_floors_source: "defaults";
     scout_enabled: boolean;
     scout_budget_usdg: number | null;
-    launch_buying_enabled: boolean;
-    class_min_depth_usdg: number;
     grant_tradable_set: "wide" | "legacy" | "none";
     grant_extra_tokens: number;
   };
   notes: string[];
 }
 
-const USDG = (CASH.USDG as string).toLowerCase();
+const USDG = (CASH.USDT as string).toLowerCase();
 
 interface WatchToken {
   symbol: string;
@@ -149,11 +141,6 @@ interface WatchToken {
  * entry whose symbol or address is already taken is DROPPED, registry symbols
  * winning. That module drags in the strategy runtime, so its rule is restated
  * here rather than imported.
- *
- * THE ENERGY RESERVE IS NEVER WATCHED (registry.ts takes its address before any
- * list is read). An official coin at that address is skipped, as the worker
- * skips it; an owner token at it is reported as dropped, with the reason, so
- * nothing downstream tells the owner to add it again or re-sign for it.
  */
 export function watchSetFor(settings: SettingsView | null, chainId: number): {
   tokens: WatchToken[];
@@ -173,7 +160,6 @@ export function watchSetFor(settings: SettingsView | null, chainId: number): {
   const takenAddresses = new Set(tokens.map((t) => t.address));
   const dropped: Array<WatchToken & { why: string }> = [];
   for (const c of officialCoinsFor(chainId)) {
-    if (isEnergyReserveToken(c.address)) continue;
     if (takenSymbols.has(c.symbol.toUpperCase()) || takenAddresses.has(c.address.toLowerCase())) continue;
     takenSymbols.add(c.symbol.toUpperCase());
     takenAddresses.add(c.address.toLowerCase());
@@ -181,10 +167,6 @@ export function watchSetFor(settings: SettingsView | null, chainId: number): {
   }
   for (const c of custom) {
     const entry = { symbol: c.symbol, address: c.address, origin: "custom" as const };
-    if (isEnergyReserveToken(c.address)) {
-      dropped.push({ ...entry, why: ENERGY_RESERVE_WHY });
-      continue;
-    }
     if (takenSymbols.has(c.symbol.toUpperCase())) {
       dropped.push({ ...entry, why: "The owner added it under a symbol a registry stock token or another watched token already uses, and the worker drops the later entry so a real ticker cannot be taken over." });
       continue;
@@ -216,8 +198,8 @@ export function judgeEligibility(o: {
   now: number;
 }): EligibilityView {
   const a = o.address.toLowerCase();
-  const chainId = o.agent.chainId ?? 4663;
-  const mainnet = chainId === 4663;
+  const chainId = o.agent.chainId ?? 56;
+  const mainnet = chainId === 56;
   const custom: OwnerToken[] = ownerTokens(o.settings?.customTokens);
   const facts = o.facts;
   const stock = facts.stock;
@@ -229,8 +211,6 @@ export function judgeEligibility(o: {
 
   const assetMode: AssetMode = o.settings?.assetMode ?? SETTINGS_DEFAULTS.assetMode;
   const scoutOn = o.settings?.scoutEnabled === true && (o.settings?.scoutBudgetUsdg ?? 0) > 0;
-  const launchOn = o.settings?.launchBuying.enabled === true;
-  const classMinDepth = o.settings?.launchBuying.minDepthUsdg ?? SETTINGS_DEFAULTS.classMinDepthUsdg;
   const watch = watchSetFor(o.settings, chainId);
   const grant = o.agent.account ? { grantFeatures: [...o.agent.features], grantTokens: [...o.agent.grantTokens] } : null;
   const wide = o.agent.features.includes(TRADEABLE_V2);
@@ -252,14 +232,8 @@ export function judgeEligibility(o: {
 
   // ── NEVER ENTER A POSITION THE KEY CANNOT EXIT (worker policy.ts `no-exit`) ──
   const sellable = sellableAssets(grant);
-  // The energy reserve is never a position, so "can this key sell it" is the
-  // wrong question — and every answer below it ends in "re-sign", which no
-  // signature can satisfy for this token.
-  const reserve = isEnergyReserveToken(a);
   if (!grant) {
     add("grant_can_sell", "fail", "Without a signed permission no token can be approved for a sale.");
-  } else if (reserve) {
-    add("grant_can_sell", "not_applicable", `No signature covers it, and none needs to. ${ENERGY_RESERVE_WHY}`);
   } else if (sellable.has(a)) {
     const builtin = a === USDG || (stock && (wide ? (TRADEABLE_SYMBOLS as readonly string[]) : (LEGACY_TRADEABLE_SYMBOLS as readonly string[])).includes(stock.symbol));
     add("grant_can_sell", "pass", builtin
@@ -278,7 +252,6 @@ export function judgeEligibility(o: {
   const watched = watch.tokens.find((t) => t.address === a) ?? null;
   const droppedSelf = watch.dropped.find((t) => t.address === a) ?? null;
   if (a === USDG) add("watched_by_agent", "not_applicable", "USDG is the agents' cash: it is what they buy with.");
-  else if (reserve) add("watched_by_agent", "fail", `The worker never watches it, and adding it in Settings does not change that. ${ENERGY_RESERVE_WHY}`);
   else if (watched) add("watched_by_agent", "pass", watched.origin === "basket" ? "It is a stock token in the agent's basket, so the worker watches it." : watched.origin === "official" ? "It is an official coin the worker watches." : "It is one of the owner's own tokens, so the worker watches it.");
   else if (droppedSelf) add("watched_by_agent", "fail", `The owner added it, but the worker does not watch it. ${droppedSelf.why}`);
   else if (stock) add("watched_by_agent", "fail", "It is a registry stock token, but not in the agent's basket, so the worker does not watch it and cannot trade it. The owner can add it to the basket in Settings.");
@@ -311,39 +284,10 @@ export function judgeEligibility(o: {
   // ── symbol collision among the agent's configured tokens ──
   const key = symbol ? guardKey(symbol) : "";
   const clashes = key ? watch.tokens.filter((t) => t.address !== a && guardKey(t.symbol) === key) : [];
-  if (reserve) add("symbol_collision", "not_applicable", "Owner orders never name the agent's energy, so its symbol decides nothing.");
-  else if (!key) add("symbol_collision", "not_applicable", "No symbol is known for this token.");
+  if (!key) add("symbol_collision", "not_applicable", "No symbol is known for this token.");
   else if (droppedSelf) add("symbol_collision", "fail", "Its symbol collides with a token the worker already watches, which is why the worker drops it.");
   else if (clashes.length) add("symbol_collision", "fail", `Another token the agent watches shares this token's symbol (${clashes.slice(0, 3).map((t) => shortAddress(t.address)).join(", ")}). Owner orders name a token by symbol and the worker takes the first match, so an order by symbol could fill the other token.`);
   else add("symbol_collision", "pass", "No other token the agent watches shares this symbol.");
-
-  // ── the class route (worker class-entry-gate.ts classRouteLooks + launch buying) ──
-  if (reserve) {
-    add("class_route", "not_applicable", "No strategy route ever buys the agent's energy.");
-  } else if (stock || a === USDG || kind === "established") {
-    add("class_route", "not_applicable", "The class route buys launchpad coins only.");
-  } else {
-    const vaultSealed = o.agent.features.includes(GRANT_PONS_CLASS);
-    const looks = o.mode === "unknown" ? null : classRouteLooks({ paper: o.mode === "paper", assetMode, vault: vaultSealed ? "sealed" : null });
-    const fails: string[] = [];
-    if (o.mode === "paper") fails.push("the agent is on paper, which cannot simulate a class fill");
-    if (assetMode === "stocks") fails.push("the asset mode is stocks only");
-    if (!vaultSealed) fails.push("the signed permission carries no class vault (pons-class)");
-    if (!launchOn) fails.push("launch buying is off or sized at zero");
-    // A class buy is unpriceable BY CONSTRUCTION (worker class-side.ts
-    // scoutFlagsFor: isClassBuy ⇒ buyUnpriceable), so policy.ts runs
-    // scoutAllows on every one: with scout mode off or a zero budget the wall
-    // refuses the class buy just as it refuses any other unpriceable buy.
-    if (!scoutOn) fails.push("scout mode is off or its budget is 0, and every class buy is charged to the scout budget");
-    if (facts.row && !facts.row.onCurve) fails.push("the index lists it off a bonding curve, and the class route trades curves only");
-    if (fails.length || looks === false) {
-      add("class_route", "fail", `The class route cannot buy it: ${fails.join("; ")}.`);
-    } else if (looks === null) {
-      add("class_route", "unknown", "Whether the agent is on paper could not be read, and paper cannot use the class route.");
-    } else {
-      add("class_route", "unknown", `Its prerequisites are met. Whether this coin qualifies depends on reads only the worker makes: a USDG-quoted curve that has not graduated, with at least ${classMinDepth} USDG of real depth, found in its factory-filtered launch feed; the buy must also fit the scout budget and its per-token cap. The permission's class marker is visible here; its sealed vault address is not.`);
-    }
-  }
 
   // ── the Trencher route (worker index.ts trenchCandidates; policy.ts custody "trencher") ──
   // A buy the Trencher makes into its sealed vault is not judged against the
@@ -367,9 +311,7 @@ export function judgeEligibility(o: {
     const priceOk = checkNamed("price_guard").result !== "fail" || checkNamed("scout_budget").result === "pass";
     const fastSetting = o.settings?.trencherFastEnabled ?? null;
     const liveTrenching = o.settings?.trencherLiveEnabled === true;
-    if (reserve) {
-      add("trencher_route", "not_applicable", "No strategy route ever buys the agent's energy.");
-    } else if (stock || a === USDG) {
+    if (stock || a === USDG) {
       add("trencher_route", "not_applicable", "The Trencher route buys discovered coins only.");
     } else if (!vaultSealed) {
       add("trencher_route", "not_applicable", "The signed permission carries no Trencher vault (trencher-vault-v1), so there is no Trencher route.");
@@ -413,8 +355,6 @@ export function judgeEligibility(o: {
   // the scout budget.
   const priced = price.result === "pass" || scout.result === "pass";
   const routeA: "yes" | "no" | "unknown" = routeFails.length ? "no" : priced ? "yes" : price.result === "fail" ? "no" : "unknown";
-  const classCheck = by("class_route");
-  const routeB: "no" | "unknown" = classCheck.result === "unknown" ? "unknown" : "no";
   // The Trencher route: null when the agent has none.
   const trencherCheck = by("trencher_route");
   const routeC: "no" | "unknown" | null = trencherCheck.result === "unknown" ? "unknown" : trencherCheck.result === "fail" ? "no" : null;
@@ -423,13 +363,11 @@ export function judgeEligibility(o: {
   const caveat = "Caps (per trade, per day, operation count), the drawdown breaker, price impact and the on-chain wall are still judged by the worker at trade time.";
   if (a === USDG) {
     executable = { state: "no", reasons: ["USDG is the agents' cash: it is what they buy with, not something they buy."] };
-  } else if (reserve) {
-    executable = { state: "no", reasons: [ENERGY_RESERVE_WHY] };
   } else if (hard.length) {
     executable = { state: "no", reasons: hard.map((c) => c.detail) };
-  } else if (routeA === "no" && routeB === "no" && routeC !== "unknown") {
+  } else if (routeA === "no" && routeC !== "unknown") {
     // No route could reach it, so an unread halt flag or expiry changes nothing.
-    const blockers = [...routeFails, ...(priced ? [] : [price, scout]), ...(classCheck.result === "fail" ? [classCheck] : []), ...(routeC === "no" ? [trencherCheck] : [])];
+    const blockers = [...routeFails, ...(priced ? [] : [price, scout]), ...(routeC === "no" ? [trencherCheck] : [])];
     executable = { state: "no", reasons: blockers.map((c) => c.detail) };
   } else if (routeA === "yes" && !hardUnknown.length) {
     executable = {
@@ -446,7 +384,7 @@ export function judgeEligibility(o: {
     // live, those refusals are exactly why.
     const open = [
       ...hardUnknown, ...(routeC === "unknown" ? [trencherCheck] : []), ...(routeA === "no" && !trencherPrereqsMet ? routeFails : []),
-      ...(routeA === "unknown" ? [price, scout] : []), ...(routeB === "unknown" ? [classCheck] : []),
+      ...(routeA === "unknown" ? [price, scout] : []),
     ];
     executable = { state: "unknown", reasons: [...open.map((c) => c.detail), caveat] };
   }
@@ -501,8 +439,6 @@ export function judgeEligibility(o: {
       price_floors_source: "defaults",
       scout_enabled: o.settings?.scoutEnabled === true,
       scout_budget_usdg: o.settings?.scoutBudgetUsdg ?? null,
-      launch_buying_enabled: launchOn,
-      class_min_depth_usdg: classMinDepth,
       grant_tradable_set: !grant ? "none" : wide ? "wide" : "legacy",
       grant_extra_tokens: grant ? o.agent.grantTokens.length : 0,
     },

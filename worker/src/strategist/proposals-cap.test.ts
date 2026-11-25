@@ -32,6 +32,9 @@ import type { ProposalDriver } from "./driver";
 import type { StrategistUniverse } from "./proposals";
 import { takeTick, type Snapshot, type Strategy } from "../strategies/types";
 
+// 6dp micro figures, scaled to 18dp USDT base units.
+const MICRO = 10n ** 12n;
+
 const ROUTER = "0x1111111111111111111111111111111111111111" as const;
 const USDG = "0x3333333333333333333333333333333333333333" as const;
 const AAPL = "0x4444444444444444444444444444444444444444" as const;
@@ -44,7 +47,7 @@ function universe(over: Partial<StrategistUniverse> = {}): StrategistUniverse {
     swapRouter: ROUTER,
     usdg: USDG,
     /** The SETTING — llmMaxActionUsdg's default, in 6dp micro-USDG. */
-    maxPerActionUsdg: 50_000_000n,
+    maxPerActionUsdg: (50_000_000n * MICRO),
     maxActionsPerTick: 4,
     ...over,
   };
@@ -52,16 +55,16 @@ function universe(over: Partial<StrategistUniverse> = {}): StrategistUniverse {
 
 function snap(over: Partial<Snapshot> = {}): Snapshot {
   return {
-    cashUsdg: 1_000_000_000n,
+    cashUsdg: (1_000_000_000n * MICRO),
     vaultUsdg: 0n,
     holdings: new Map(),
-    prices: new Map([["AAPL", { price8: 100_00000000n, stale: false, source: "chainlink" as const }]]),
+    prices: new Map([["AAPL", { price8: (100_00000000n * MICRO), stale: false, source: "chainlink" as const }]]),
     pausedTokens: new Set(),
     staleFeeds: new Set(),
     sequencerUp: true,
     spendHeadroomUsdg: 1_000_000_000_000n,
     /** The SIGNATURE — the default minted preset, 10 USDG in micro. */
-    perTradeCapUsdg: 10_000_000n,
+    perTradeCapUsdg: (10_000_000n * MICRO),
     ...over,
   };
 }
@@ -120,7 +123,7 @@ describe("the strategist ceiling is the tighter of the setting and the signature
     // it ignored.
     const driver = driverProposing(50);
     const s = makeLlmStrategist({ driver, universe: universe(), decisionIntervalMs: 0, now: () => 1 });
-    await run(s, snap({ perTradeCapUsdg: 500_000_000n }));
+    await run(s, snap({ perTradeCapUsdg: (500_000_000n * MICRO) }));
     assert.equal(driver.sawCeiling, 50, "the setting still binds when the grant is looser");
   });
 
@@ -132,8 +135,8 @@ describe("the strategist ceiling is the tighter of the setting and the signature
     // a factor of a million, which is the shape of bug that reads as "the
     // strategist stopped proposing anything".
     const driver = driverProposing(1);
-    const s = makeLlmStrategist({ driver, universe: universe({ maxPerActionUsdg: 50_000_000n }), decisionIntervalMs: 0, now: () => 1 });
-    await run(s, snap({ perTradeCapUsdg: 10_000_000n }));
+    const s = makeLlmStrategist({ driver, universe: universe({ maxPerActionUsdg: (50_000_000n * MICRO) }), decisionIntervalMs: 0, now: () => 1 });
+    await run(s, snap({ perTradeCapUsdg: (10_000_000n * MICRO) }));
     // 10_000_000 micro compared against 50_000_000 micro, reported as 10 whole.
     assert.equal(driver.sawCeiling, 10);
   });

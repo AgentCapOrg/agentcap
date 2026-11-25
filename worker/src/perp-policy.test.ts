@@ -23,7 +23,7 @@ import {
   worstPriceForTaker,
   type PerpMarketSpec,
 } from "../../packages/core/src/perps";
-import { countsAsEntry } from "./energy";
+import { countsAsEntry } from "./worker-admission";
 import {
   checkPolicy,
   isExitIntent,
@@ -234,22 +234,10 @@ describe("exit and entry predicates for every kind", () => {
       { i: { kind: "swap", target: ROUTER, sellToken: TSLA, buyToken: USDG, sellAmountRaw: 1n, notionalUsdg: 1n }, exit: true, entry: false },
       { i: { kind: "swap", target: ROUTER, sellToken: USDG, buyToken: TSLA, sellAmountRaw: 1n, notionalUsdg: 1n }, exit: false, entry: true },
     ],
-    "vault-deposit": [{ i: { kind: "vault-deposit", target: VAULT, amountUsdg: 1n }, exit: false, entry: false }],
-    "vault-withdraw": [{ i: { kind: "vault-withdraw", target: VAULT, amountUsdg: 1n }, exit: true, entry: false }],
     transfer: [{ i: { kind: "transfer", target: USDG, recipient: EVIL, amountUsdg: 1n }, exit: true, entry: false }],
     "equity-order": [
       { i: { kind: "equity-order", ticker: "TSLA", side: "sell", notionalUsdg: 1n }, exit: true, entry: false },
       { i: { kind: "equity-order", ticker: "TSLA", side: "buy", notionalUsdg: 1n }, exit: false, entry: true },
-    ],
-    "curve-trade": [
-      {
-        i: { kind: "curve-trade", target: ROUTER, curve: EVIL, assetIn: TSLA, assetOut: USDG, amountInRaw: 1n, minAmountOutRaw: 0n, notionalUsdg: 1n },
-        exit: true,
-        entry: false,
-      },
-    ],
-    "energy-buy": [
-      { i: { kind: "energy-buy", target: ROUTER, sellToken: USDG, buyToken: TSLA, sellAmountRaw: 1n, notionalUsdg: 1n }, exit: false, entry: true },
     ],
     "perp-order": [
       { i: open("long"), exit: false, entry: true },
@@ -584,6 +572,5 @@ describe("the shared rails did not move for anything else", () => {
     const buy: TradeIntent = { kind: "swap", target: ROUTER, sellToken: USDG, buyToken: TSLA, sellAmountRaw: u(5), notionalUsdg: u(5) };
     assert.equal(ask(buy), "ok");
     assert.equal(ask({ ...buy, target: LIGHTER_ROUTE_V1.proxy }), "target-allowlist");
-    assert.equal(ask({ kind: "vault-deposit", target: LIGHTER_ROUTE_V1.proxy, amountUsdg: u(5) }), "target-allowlist");
   });
 });

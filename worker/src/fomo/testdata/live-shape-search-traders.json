@@ -15,10 +15,9 @@
       "userId": "aaaaaaaa-1111-4222-8333-444444444444",
       "twitter": null,
       "wallets": {
-        "solana": "FakeWa11et3333333333333333333333333333333",
         "evm": "0x1234567890abcdef1234567890abcdef12345678",
         "verified": true,
-        "evidence": { "solana": "onchain-holdings", "evm": "onchain-holdings" }
+        "evidence": { "evm": "onchain-holdings" }
       },
       "holdings": 7,
       "verified": false,
@@ -37,7 +36,7 @@
       "displayName": "Alpha Two",
       "avatar": "https://example.invalid/avatars/c.png",
       "userId": "cccccccc-1111-4222-8333-444444444444",
-      "wallets": { "solana": null, "evm": null, "status": "resolving" },
+      "wallets": { "evm": null, "status": "resolving" },
       "source": "directory"
     },
     {
@@ -46,7 +45,7 @@
       "displayName": "Alpha Three",
       "avatar": null,
       "userId": "dddddddd-1111-4222-8333-444444444444",
-      "wallets": { "solana": null, "evm": null, "status": "resolving" },
+      "wallets": { "evm": null, "status": "resolving" },
       "source": "directory"
     }
   ]

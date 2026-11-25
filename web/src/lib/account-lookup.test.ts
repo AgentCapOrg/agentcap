@@ -40,11 +40,9 @@ const lookup = (o: Partial<Lookup> = {}): Lookup => ({
   ...o,
 });
 
-const withOwner = (r: Reading, classHoldings: Lookup["asOwner"] extends null ? never : never[] = []) => ({
+const withOwner = (r: Reading) => ({
   derived: DERIVED as `0x${string}`,
   reading: r,
-  classVault: null,
-  classHoldings,
 });
 
 describe("hasValue separates held from not held", () => {
@@ -61,22 +59,6 @@ describe("hasValue separates held from not held", () => {
 describe("the verdict names which address this is", () => {
   it("calls it an owner when the DERIVED account holds something", () => {
     const l = lookup({ asOwner: withOwner(reading({ holdings: held() })) });
-    assert.equal(verdictOf(l).kind, "owner");
-  });
-
-  it("counts a class vault holding as the owner having something", () => {
-    // The vault is a separate contract the ACCOUNT does not hold, and it is
-    // where a launchpad position actually sits. Ignoring it would tell an owner
-    // whose whole book is class positions that their account is empty — which
-    // is the exact failure `recoverFunds` was patched for.
-    const l = lookup({
-      asOwner: {
-        derived: DERIVED,
-        reading: reading(),
-        classVault: "0x3fcdde6e011769ca05f0115f1543290862473216",
-        classHoldings: held(),
-      },
-    });
     assert.equal(verdictOf(l).kind, "owner");
   });
 

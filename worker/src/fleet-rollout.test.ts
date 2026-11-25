@@ -437,16 +437,16 @@ describe("AGENTCAP_ROLLOUT_NEW_TENANTS: genuinely new tenants, under an explicit
 });
 
 describe("a tenant whose id is not 0x and 40 hex (fleet-id.ts)", () => {
-  // A real Solana key, as a Solana agent id: case-sensitive, never folded.
+  // A case-sensitive id that is not 0x: case-sensitive, never folded.
   const KEY = "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH";
-  const SOL = `sol:${KEY}`;
+  const FOREIGN = `agent:${KEY}`;
   const withNew = (rollout: string) => env(rollout, { [ROLLOUT_NEW_TENANTS_ENV]: "trade" });
 
   it("is held under every scope, `all` and unset included, where it used to come back as trade", () => {
     for (const value of ["all", "none", `${A}:trade`, undefined]) {
-      assert.equal(rolloutLevel(SOL, env(value)), "held", String(value));
-      assert.equal(rolloutHeld(SOL, env(value)), true);
-      assert.equal(childAdmissionLevel(SOL, env(value)), "observe", "were it ever spawned, the most restrictive level");
+      assert.equal(rolloutLevel(FOREIGN, env(value)), "held", String(value));
+      assert.equal(rolloutHeld(FOREIGN, env(value)), true);
+      assert.equal(childAdmissionLevel(FOREIGN, env(value)), "observe", "were it ever spawned, the most restrictive level");
     }
     // And every other id this build cannot run, whatever its case or spacing.
     for (const other of [KEY, "rh:ABC-123", "0x123", ` ${A}`, `${A}\n`]) assert.equal(rolloutLevel(other, env("all")), "held", JSON.stringify(other));
@@ -458,16 +458,16 @@ describe("a tenant whose id is not 0x and 40 hex (fleet-id.ts)", () => {
   it("is never admitted by the new-tenant route, recorded or not", () => {
     const e = withNew(`${A}:trade`);
     assert.equal(newTenantRouteOpen(C, e), true, "the route is open for an unnamed 0x tenant");
-    assert.equal(newTenantRouteOpen(SOL, e), false);
-    assert.equal(rolloutLevel(SOL, e, new Set([SOL, SOL.toLowerCase()])), "held", "a record for it admits nothing");
+    assert.equal(newTenantRouteOpen(FOREIGN, e), false);
+    assert.equal(rolloutLevel(FOREIGN, e, new Set([FOREIGN, FOREIGN.toLowerCase()])), "held", "a record for it admits nothing");
   });
 
   it("is counted held, never at a level", () => {
-    assert.deepEqual(rolloutCounts([A, SOL], env("all")), { trade: 1, "exits-only": 0, observe: 0, held: 1, expired: 0, absent: 0 });
+    assert.deepEqual(rolloutCounts([A, FOREIGN], env("all")), { trade: 1, "exits-only": 0, observe: 0, held: 1, expired: 0, absent: 0 });
   });
 
   it("named in the list refuses boot, by position and in so many words, never echoing it", () => {
-    for (const entry of [`${SOL}:trade`, `${KEY}:observe`, "rh:ABC:exits-only"]) {
+    for (const entry of [`${FOREIGN}:trade`, `${KEY}:observe`, "rh:ABC:exits-only"]) {
       assert.throws(() => fleetRollout(env(`${A}:trade,${entry}`)), (e: Error) => {
         assert.match(e.message, /^AGENTCAP_FLEET_ROLLOUT entry 2 names a tenant that is not a complete Robinhood Chain address .*refusing to start rather than guess/);
         assert.ok(!e.message.includes(KEY.slice(0, 8)) && !e.message.includes("rh:"), "the entry is not echoed");

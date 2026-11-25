@@ -11,14 +11,14 @@ final class AgentCapUITests: XCTestCase {
             XCTAssertTrue(stop.waitForExistence(timeout: 8)); stop.tap()
             let confirm = app.sheets["Stop all agents for this login?"].buttons["Stop all agents"]
             XCTAssertTrue(confirm.waitForExistence(timeout: 5))
-            XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Spot, Perps and Solana for this login will stop")).firstMatch.exists)
+            XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Spot and Perps for this login will stop")).firstMatch.exists)
             capture(app, "Login-wide stop \(spotState)")
             // Compact sheets have Cancel; current iOS may use a popover that
             // dismisses by tapping outside. Neither may submit the DELETE.
             if app.buttons["Cancel"].exists { app.buttons["Cancel"].tap() }
             else { app.otherElements["PopoverDismissRegion"].coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.8)).tap() }
             stop.tap(); confirm.tap()
-            XCTAssertTrue(app.staticTexts["Stop request accepted for Spot, Perps and Solana. Existing assets remain in their accounts."].waitForExistence(timeout: 8))
+            XCTAssertTrue(app.staticTexts["Stop request accepted for Spot and Perps. Existing assets remain in their accounts."].waitForExistence(timeout: 8))
             app.terminate()
         }
     }

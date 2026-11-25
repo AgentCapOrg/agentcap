@@ -111,7 +111,7 @@ test("current grant custody is included in the stable proof; any receipt Transfe
   const f = await fixture(), vault = "0x00000000000000000000000000000000000000c1";
   try {
     await f.shared.prepare("UPDATE grants SET grant_json=?,row_version=2").run(JSON.stringify({ smartAccount: TEST_ACCOUNT, owner: TEST_TENANT,
-      chainId: 4663, grantFeatures: [GRANT_TRENCHER], trencherVaultAddress: vault, trencherFactoryAddress: "0x00000000000000000000000000000000000000c2" }));
+      chainId: 56, grantFeatures: [GRANT_TRENCHER], trencherVaultAddress: vault, trencherFactoryAddress: "0x00000000000000000000000000000000000000c2" }));
     const preview = await attestOriginalReceipt(f.options);
     await assert.rejects(attestOriginalReceipt({ ...f.options, mode: "commit", approvedDigest: preview.approvalDigest,
       checkpoint(at) { if (at === "audit") throw new Error("inspect proof"); } }), /inspect proof/);
@@ -129,7 +129,7 @@ test("a custody capability with missing or malformed addresses cannot hide its b
   const f = await fixture();
   try {
     for (const extra of [{}, { trencherVaultAddress: "not-an-address", trencherFactoryAddress: "0x00000000000000000000000000000000000000c2" }]) {
-      await f.shared.prepare("UPDATE grants SET grant_json=?").run(JSON.stringify({ smartAccount: TEST_ACCOUNT, owner: TEST_TENANT, chainId: 4663, grantFeatures: [GRANT_TRENCHER], ...extra }));
+      await f.shared.prepare("UPDATE grants SET grant_json=?").run(JSON.stringify({ smartAccount: TEST_ACCOUNT, owner: TEST_TENANT, chainId: 56, grantFeatures: [GRANT_TRENCHER], ...extra }));
       await refuses(f);
     }
   } finally { f.close(); }
@@ -199,7 +199,7 @@ for (const [name, data] of [
   const f = await fixture(); try { calldata(f, data as Hex); await refuses(f); } finally { f.close(); }
 });
 
-for (const token of [CASH.USDG, "0x00000000000000000000000000000000000000b1"]) test(`refuses book Transfer outside the owner segment (${token === CASH.USDG ? "USDG" : "another token"})`, async () => {
+for (const token of [CASH.USDT, "0x00000000000000000000000000000000000000b1"]) test(`refuses book Transfer outside the owner segment (${token === CASH.USDT ? "USDG" : "another token"})`, async () => {
   const f = await fixture();
   try {
     firstReceipt(f).logs.push({ ...firstReceipt(f).logs[0]!, address: token, topics: [TRANSFER_TOPIC,
@@ -240,7 +240,7 @@ test("legacy v1 empty-owner pending plan resumes with its original digest and a 
       checkpoint(at) { if (at === "audit") throw new Error("interrupted"); } }), /interrupted/);
     const old = (await readReceiptAttestation(f.shared, TEST_TENANT))!, plan = JSON.parse(String(old.plan_json));
     assert.equal(plan.ownerProof, undefined); assert.equal(plan.local.ownerOperations, undefined);
-    const ownerScan = plan.evidence.findIndex((r: { method: string; params: [{ address?: string }] }) => r.method === "eth_getLogs" && r.params[0]?.address?.toLowerCase() !== CASH.USDG.toLowerCase());
+    const ownerScan = plan.evidence.findIndex((r: { method: string; params: [{ address?: string }] }) => r.method === "eth_getLogs" && r.params[0]?.address?.toLowerCase() !== CASH.USDT.toLowerCase());
     assert.ok(ownerScan >= 0); plan.evidence = plan.evidence.slice(0, ownerScan);
     const legacy = canonicalJson(plan), hash = createHash("sha256").update(legacy).digest("hex");
     await f.shared.prepare("UPDATE ledger_receipt_attestations SET plan_json=?,plan_hash=?").run(legacy, hash);

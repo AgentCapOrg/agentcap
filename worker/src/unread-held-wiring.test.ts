@@ -99,11 +99,10 @@ describe("an unread held coin makes the book incomplete, and leaves it whole", (
 });
 
 describe("an order for the unread coin is refused before it is sized", () => {
-  it("submitChatTrade asks unreadHoldingOrder before the kept row is read and before a curve is tried", () => {
+  it("submitChatTrade asks unreadHoldingOrder before the kept row is read", () => {
     const start = once("async function submitChatTrade(");
     const ask = once("const unreadSale = unreadHoldingOrder(side, named, heldUnreadNow.symbols);");
     assert.ok(ask > start);
-    assert.ok(ask < CODE.indexOf("if (await curveFor(token)) return submitChatCurveTrade(", start));
     assert.ok(ask < CODE.indexOf("readPositionRaw(active.agentId, named, usdg)", start));
     // energy-buy-wiring.test.ts looks for this literal.
     assert.ok(CODE.indexOf("tickBook.judge(side)", start) < ask);

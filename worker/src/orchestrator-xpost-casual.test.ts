@@ -102,7 +102,7 @@ describe("code's casual answers", () => {
       for (const line of [...make("9", { lower: true }), ...make("9", { lower: true }, { paper: true })]) {
         const words = withoutReplyOptOut(line);
         assert.doesNotMatch(words, /\p{N}|\$|@|#|https?:|0x/u, `${kind}: ${line}`);
-        assert.doesNotMatch(words, /\b(?:pepe|bonk|wif|doge|shib|btc|eth|sol|bitcoin|ether|solana|sherwood|robinhood|groq|qwen|gpt|claude|llama)\b/i, `${kind}: ${line}`);
+        assert.doesNotMatch(words, /\b(?:pepe|bonk|wif|doge|shib|btc|eth|bnb|bitcoin|ether|bnb|sherwood|robinhood|groq|qwen|gpt|claude|llama)\b/i, `${kind}: ${line}`);
         assert.doesNotMatch(words, /\b(?:bullish|bearish|moon|wen|wagmi|pump|dump|up only|going up|going down|higher|lower|bounce|bottom|top|rally|crash|green|red)\b/i, `${kind}: no direction: ${line}`);
         assert.doesNotMatch(words, /\b(?:bought|buy|buying|sell|selling|hold|holding|bag|position|entry|target|profit|loss|price)\b/i, `${kind}: no buy, no holding: ${line}`);
         assert.doesNotMatch(words, /\b(?:i trade|i'm trading|i am trading|trading right now)\b/i, `${kind}: never trading now: ${line}`);

@@ -27,7 +27,7 @@ afterEach(() => {
 type Setup = {
   phase: string; summary: string;
   connection: { id: string; can_read_agents: boolean; can_create_draft: boolean; can_propose_settings: boolean; shared_agent_count: number; available_tools: string[] };
-  agent: null | { id: string; account: string | null; mode: string; worker_fresh: boolean | null; energy: null | { fresh: boolean; entry_allowance_exhausted: boolean | null } };
+  agent: null | { id: string; account: string | null; mode: string; worker_fresh: boolean | null };
   next_steps: Array<{ action: string; label: string; detail: string; url: string | null; tool: string | null }>;
   links: Record<string, string>;
   runtime: { hosted: boolean; keep_chat_open: boolean; explanation: string };
@@ -51,11 +51,10 @@ async function setup(o: {
     assert.equal(r.isError, undefined, r.content[0]?.text);
     return r.structuredContent as unknown as Setup;
   };
-  const seed = async (o: { beat?: number | null; mode?: string; status?: string; blocker?: string | null; energy?: unknown } = {}) => {
-    await d.db.prepare(`INSERT INTO agents(smart_account,owner_address,session_key_address,chain_id,caps,granted_at,expires_at,status,mode,beat_at,live_blocker,energy)
-      VALUES(?,?,?,4663,'{}',1700000000,4102444800,?,?,?,?,?)`).run(
+  const seed = async (o: { beat?: number | null; mode?: string; status?: string; blocker?: string | null } = {}) => {
+    await d.db.prepare(`INSERT INTO agents(smart_account,owner_address,session_key_address,chain_id,caps,granted_at,expires_at,status,mode,beat_at,live_blocker)
+      VALUES(?,?,?,56,'{}',1700000000,4102444800,?,?,?,?)`).run(
       ACCOUNT_A, OWNER_A, OWNER_A, o.status ?? "armed", o.mode ?? "live", o.beat === undefined ? NOW - 20 : o.beat, o.blocker ?? null,
-      o.energy === undefined ? null : JSON.stringify(o.energy),
     );
   };
   return { d, principal, read, call, seed };
@@ -139,7 +138,7 @@ test("a failed or malformed grant projection cannot offer wallet creation", asyn
   const { call, d } = await setup();
   const directory: AgentDirectory = { async agentsFor() { await readGrantProjection(d.db, OWNER_A); return []; } };
   setSettingsReaderForTest({ settingsFor: async () => { throw new Error("settings must not be read after projection failure"); } });
-  await d.db.prepare("INSERT INTO grants VALUES (?,4663,'invalid-json','not-read',1)").run(OWNER_A);
+  await d.db.prepare("INSERT INTO grants VALUES (?,56,'invalid-json','not-read',1)").run(OWNER_A);
   let result = await call({}, { directory });
   assert.equal(result.isError, true);
   assert.equal(result.structuredContent, undefined);
@@ -196,9 +195,9 @@ test("a fresh heartbeat from an old permission or different chain does not confi
   assert.equal((await read()).phase, "awaiting_worker", "old granted_at even when the heartbeat is newer than the grant");
   await d.db.prepare("UPDATE agents SET granted_at=?, expires_at=4102444801").run(NOW - 100);
   assert.equal((await read()).phase, "awaiting_worker", "different permission expiry");
-  await d.db.prepare("UPDATE agents SET expires_at=4102444800, chain_id=46630").run();
+  await d.db.prepare("UPDATE agents SET expires_at=4102444800, chain_id=97").run();
   assert.equal((await read()).phase, "awaiting_worker", "different chain");
-  await d.db.prepare("UPDATE agents SET chain_id=4663").run();
+  await d.db.prepare("UPDATE agents SET chain_id=56").run();
   assert.equal((await read()).phase, "live");
 });
 
@@ -236,11 +235,11 @@ test("known funding, permission and infrastructure blockers have distinct remedi
   await seed({ mode: "paper", blocker: "no-gas" });
   let r = await read();
   assert.equal(r.next_steps[0]?.url, "https://app.test/deposit");
-  assert.match(r.next_steps[0]!.label, /ETH/);
+  assert.match(r.next_steps[0]!.label, /BNB/);
   await d.db.prepare("UPDATE agents SET live_blocker='wrong-chain'").run();
   r = await read();
   assert.equal(r.next_steps[0]?.action, "review_permission");
-  assert.match(r.next_steps[0]!.detail, /Robinhood Chain/);
+  assert.match(r.next_steps[0]!.detail, /BNB Chain/);
   await d.db.prepare("UPDATE agents SET live_blocker='no-executor'").run();
   r = await read();
   assert.equal(r.next_steps[0]?.action, "check_blocker");
@@ -251,7 +250,7 @@ test("recovery holds override old LIVE and even expiry without recommending a re
   const { seed, read, d } = await setup({ agent: { expiresAt: NOW - 1 } });
   await seed();
   await d.db.exec(FLEET_RECOVERY_SCHEMA);
-  await d.db.prepare("INSERT INTO fleet_recovery_health VALUES(?,?,4663,1,'source-continuity',?,?)").run(OWNER_A, ACCOUNT_A, NOW - 60, NOW);
+  await d.db.prepare("INSERT INTO fleet_recovery_health VALUES(?,?,56,1,'source-continuity',?,?)").run(OWNER_A, ACCOUNT_A, NOW - 60, NOW);
   const r = await read();
   assert.equal(r.phase, "recovery_hold");
   assert.deepEqual(r.next_steps.map(s => s.action), ["review_recovery"]);
@@ -261,27 +260,10 @@ test("an unreadable recovery report is an error, not a healthy setup", async () 
   const { seed, call, d } = await setup();
   await seed();
   await d.db.exec(FLEET_RECOVERY_SCHEMA);
-  await d.db.prepare("INSERT INTO fleet_recovery_health VALUES(?,?,4663,1,'unknown-cause',?,?)").run(OWNER_A, ACCOUNT_A, NOW - 60, NOW);
+  await d.db.prepare("INSERT INTO fleet_recovery_health VALUES(?,?,56,1,'unknown-cause',?,?)").run(OWNER_A, ACCOUNT_A, NOW - 60, NOW);
   const r = await call();
   assert.equal(r.isError, true);
   assert.equal(r.structuredContent, undefined);
-});
-
-test("only a current enforced energy report marks the new-entry allowance exhausted", async () => {
-  const { seed, read, d } = await setup();
-  const energy = { v: 1, gated: true, mode: "enforce", level: "low", agentTokens: 0, holderTokens: null,
-    holderCounted: false, needTokens: 1000, day: new Date(NOW * 1000).toISOString().slice(0, 10), resetsAt: NOW + 3600,
-    reviews: null, entries: { used: 2, allowed: 2 }, spent: true, buy: "ready", estimateUsdg: null, at: NOW - 20 };
-  await seed({ energy });
-  assert.equal((await read()).phase, "energy_limited");
-  await d.db.prepare("UPDATE agents SET energy=?").run(JSON.stringify({ ...energy, at: NOW - 3600 }));
-  let r = await read();
-  assert.equal(r.phase, "live");
-  assert.equal(r.agent?.energy?.entry_allowance_exhausted, null);
-  await d.db.prepare("UPDATE agents SET energy=?").run(JSON.stringify({ ...energy, gated: false, mode: "observe" }));
-  r = await read();
-  assert.equal(r.phase, "live");
-  assert.equal(r.agent?.energy?.entry_allowance_exhausted, false);
 });
 
 test("directory connections get read-only setup without proposal capabilities", async () => {

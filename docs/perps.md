@@ -156,7 +156,7 @@ Perps workers, and nothing live:
   the markets it last read, because its positions still need prices to close
   at their stops; one never read keeps the feed as it was.
 - *The kill and the pause.* A kill from the owner's bot, or one sitting in a
-  Perps worker's home, is the owner's whole kill (both wallets, Solana, paper
+  Perps worker's home, is the owner's whole kill (both wallets, paper
   off), and every worker it revokes is stood down before the ✅. `/pause` is the
   login's: the Spot home's pause is mirrored into the Perps home. A kill in the
   owner's recovery journal, not yet carried out, holds the Perps worker: it does
@@ -298,8 +298,8 @@ and `/create?for=perps` are PR 3.
   Spot renewal ask the Perps wallet's owner first (`restore-perps-owner.ts`,
   from `GET /api/grants?wallet=perps`) and refuse another owner key, or a
   Perps wallet they cannot read, before their stop, revocation or signature;
-  self-hosted that stop used to remove the running Spot `grant.json` and stop
-  the Solana strategy before the POST was refused. The restore asks with the
+  self-hosted that stop used to remove the running Spot `grant.json`
+  before the POST was refused. The restore asks with the
   key it restores, whichever account that is. The renewal asks right after its
   account read, before its Trencher read and fee check (each tells the owner
   to do something first), with the key it re-signs with, and only when that
@@ -747,7 +747,7 @@ nanite-switch PR, funding in its own PR after slice 5, and three stacked PRs.
 | Freeze a self-hosted running worker's protective loop when Perps turns off? | It takes no new orders or resets, but continues managing existing paper positions | PR 1 review |
 | Keep the not-reported-book 409, or change what counts as shared ledger history? | Keep the 409 so a queued command cannot prevent the worker's first start | PR 1 review |
 | May a practice reset lift the Close-all entries halt? | A later owner reset lifts it; there is no Resume command in this slice | PR 1 review |
-| D20: move kill copy naming every wallet into PR 1 or leave it in PR 3? | It did not land with PR 3. Added November 1: "Stop all agents" on the Perps desk and Wallet & permission page names Spot, Perps and Solana, as the phones do since #373 | PR 3 at the latest |
+| D20: move kill copy naming every wallet into PR 1 or leave it in PR 3? | It did not land with PR 3. Added November 1: "Stop all agents" on the Perps desk and Wallet & permission page names Spot and Perps, as the phones do since #373 | PR 3 at the latest |
 
 The plan's eighth item is technical cleanup: query-parameter casing, the
 client-import guard and the D17 test-port list. This continuation addresses
@@ -859,7 +859,7 @@ are recorded beside the constants in `packages/core/src/perps.ts`.
    regions, that the venue publishes the account's positions, and what the
    wall does not bound (rule 4). The operator may only *restrict*:
    `AGENTCAP_PERPS=off|paper|live` (**unset is off, hosted and self-hosted**,
-   as `AGENTCAP_SOLANA` is; an operator sets `paper` or `live` explicitly),
+   an operator sets `paper` or `live` explicitly),
    `AGENTCAP_PERPS_LIVE_TENANTS` (hosted allowlist of Perps wallets), and
    `AGENTCAP_HALT_PERP_ENTRIES=1` (entries off, exits and protection on). These
    limit trading, never a kill: every kill reaches the Perps wallet whatever
@@ -1071,18 +1071,18 @@ are recorded beside the constants in `packages/core/src/perps.ts`.
     with the Lighter key only, and never remove a stop from an open position.**
 
     *The Perps half of the kill* (`worker/src/perps-kill.ts`, on main from slice
-    2) is called beside the Solana half of every kill path: "Kill all agents"
+    2) is called on every kill path: "Kill all agents"
     (`DELETE /api/grants`, `delete-agent`, hosted and self-hosted, which the
     phone apps' Stop sends too), the orchestrator's `honourKill` for a hosted
     Telegram /kill or a recorded one, the self-hosted Telegram /kill, and
     `agentcap kill` (through `perps-kill-cli.ts`). Start over
     (`/api/grants/discard`) calls it too, because owners are told it is the
     kill switch (the MCP control list, the hosted Telegram kill's fallback); it
-    still does not stop Solana, which it never did. A self-hosted Spot
+    still does not stop anything else. A self-hosted Spot
     permission replacement does not: neither wallet's renewal touches the
     other wallet. Hosted it is a stop by
     tenant; self-hosted it stops every local Perps wallet, and Telegram gets a
-    three-way answer (stopped, none, not stopped). Its guarantees are Solana's:
+    three-way answer (stopped, none, not stopped). Its guarantee:
     a half that fails is reported incomplete, never done, and the kill stays
     pending; a retry is safe; an owner with no Perps wallet costs the kill a
     read-only look, so it takes no lock and writes no schema, and its answer is
@@ -1633,8 +1633,7 @@ The concrete internal-pilot policy and unresolved deployment evidence live in
 - **Mainnet checks and controlled live rollout (the plan's Phase 4)** follow
   that implementation. Complete `docs/perps-mainnet-checklist.md`, including
   funding, protected orders, withdrawal, kill and recovery drills, before
-  enabling real-money owners. Hosted live also requires Solana's live
-  guardrails and the unresolved custody/operating decisions below. Admission
+  enabling real-money owners. Hosted live also requires the unresolved custody/operating decisions below. Admission
   remains explicit through `AGENTCAP_PERPS_LIVE_TENANTS`.
 - **General availability** additionally requires isolation of hosted workers
   by OS user, a fleet request budget if the venue limits by IP, and replay
@@ -1650,9 +1649,6 @@ The concrete internal-pilot policy and unresolved deployment evidence live in
   owner-key recover path for the venue exists.
 - Any future turnover fee on perps (v1 charges none; the performance fee applies
   through rule 12).
-- Whether Start over (`/api/grants/discard`) should stop the Solana strategy
-  too. It revokes the Perps grant, because owners are told it is the kill
-  switch, but it never stopped Solana.
 - Whether the Perps desk gets a stop of its own that leaves the Spot wallet
   running (slice 5). The kill stops every wallet, so such a stop would be a
   new control with its own name.
@@ -1697,7 +1693,7 @@ The concrete internal-pilot policy and unresolved deployment evidence live in
   the Spot agent's: a Perps worker runs no bot. A Perps-only owner's kill paths
   are the web and the phones until then.
 - Start over (`/api/grants/discard`) revokes both wallets' grants and resets
-  the Spot paper book, but does not stop the Solana strategy. "Kill all agents"
+  the Spot paper book. "Kill all agents"
   is the control that stops everything.
 
 ## Slice 5 PR 1 test inventory (D17)

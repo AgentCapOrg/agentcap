@@ -131,8 +131,7 @@ export const THESIS_MAX = 400;
 const SYSTEM = `You are the trader on a small desk, working one account on Robinhood Chain.
 
 Tokenized equities here trade 24/7 while the underlying markets close nights and weekends, so a
-Chainlink price going stale is the market being shut — expected, not an error. Idle cash earns
-vault yield on its own; you do not manage the vault.
+Chainlink price going stale is the market being shut — expected, not an error.
 
 HOW YOU WORK. You are not answering a quiz. Look into things before you decide: pull the depth on
 a name you are sizing, check what you already paid for something before you add to it or cut it,

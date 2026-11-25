@@ -28,7 +28,7 @@
  */
 
 import { parseAbi, type PublicClient } from "viem";
-import { UNISWAP } from "../../../packages/core/src/index";
+import { PANCAKESWAP, CASH_DECIMALS, cashNumber } from "../../../packages/core/src/index";
 import { FEE_TIERS } from "./uniswap";
 
 const FACTORY_ABI = parseAbi([
@@ -36,7 +36,7 @@ const FACTORY_ABI = parseAbi([
 ]);
 
 const POOL_ABI = parseAbi([
-  "function slot0() view returns (uint160 sqrtPriceX96, int24 tick, uint16 observationIndex, uint16 observationCardinality, uint16 observationCardinalityNext, uint8 feeProtocol, bool unlocked)",
+  "function slot0() view returns (uint160 sqrtPriceX96, int24 tick, uint16 observationIndex, uint16 observationCardinality, uint16 observationCardinalityNext, uint32 feeProtocol, bool unlocked)",
   "function observe(uint32[] secondsAgos) view returns (int56[] tickCumulatives, uint160[] secondsPerLiquidityCumulativeX128)",
   "function token0() view returns (address)",
   "function liquidity() view returns (uint128)",
@@ -266,7 +266,7 @@ export function poolPriceUsable(
     return {
       ok: false,
       kind: "too-thin",
-      reason: `pool too thin: $${(Number(p.liquidityUsdg) / 1e6).toFixed(0)} at the current price < $${Number(guard.minLiquidityUsdg) / 1e6} floor`,
+      reason: `pool too thin: $${cashNumber(p.liquidityUsdg).toFixed(0)} at the current price < $${cashNumber(guard.minLiquidityUsdg)} floor`,
     };
   }
   if (p.divergenceBps > guard.maxDivergenceBps) {
@@ -373,7 +373,7 @@ async function liveCashPools(
     FEE_TIERS.map(async (fee) => {
       try {
         const pool = (await client.readContract({
-          address: UNISWAP.v3Factory as `0x${string}`,
+          address: PANCAKESWAP.v3Factory as `0x${string}`,
           abi: FACTORY_ABI,
           functionName: "getPool",
           args: [args.token, args.cash, fee],
@@ -498,13 +498,14 @@ async function readPoolAt(
   }
 }
 
-/** Raw cash units at `cashDecimals` → USD at 6dp, given USD per whole cash unit.
+/** Raw units at `cashDecimals` → USD in cash base units (18dp, floored to a millionth), given USD per whole unit.
  *  Exported so the v4 price path scales depth the SAME way — the comment at the
  *  weth-route call site exists because doing this by hand lands 1e12 out. */
 export function cashRawToUsdg(rawCash: bigint, cashDecimals: number, cashPriceUsd8: bigint): bigint {
   if (rawCash <= 0n || cashPriceUsd8 <= 0n) return 0n;
-  // raw / 10^cashDecimals × price8 / 1e8 × 1e6  →  divide by 10^(cashDecimals + 2)
-  return (rawCash * cashPriceUsd8) / 10n ** BigInt(cashDecimals + 2);
+  // raw / 10^cashDecimals × price8 / 1e8 × 10^CASH_DECIMALS, via micro
+  const micro = (rawCash * cashPriceUsd8) / 10n ** BigInt(cashDecimals + 2);
+  return micro * 10n ** BigInt(CASH_DECIMALS - 6);
 }
 
 export interface RoutedPrice {

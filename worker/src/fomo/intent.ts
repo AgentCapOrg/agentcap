@@ -177,7 +177,7 @@ export const RESEARCH_DEPTHS = ["quick", "standard", "deep"] as const;
 const MAX_TEXT = 600;
 const MAX_LIMIT = 50;
 const FOLLOW_UP_MAX_WORDS = 12;
-const { EVM_ADDRESS, SOLANA_MINT } = IDENTITY_GUARDS;
+const { EVM_ADDRESS } = IDENTITY_GUARDS;
 const UUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 const HANDLE = /^[A-Za-z0-9_]{1,30}$/;
 const SYMBOL = /^[A-Za-z0-9][A-Za-z0-9_-]{0,19}$/;
@@ -768,7 +768,7 @@ const LIMIT = /\b(?:top|first|last|latest) (\d{1,3})\b(?! ?(?:h|d|hr|hrs|hours?|
 
 // ── Subject extraction ───────────────────────────────────────────────────
 
-/** Uppercase words that are not coins. ETH, SOL and BTC are coins and are not here. */
+/** Uppercase words that are not coins. ETH, BNB and BTC are coins and are not here. */
 const NOT_TICKERS = new Set([
   "FOMO", "USD", "USDG", "USDC", "USDT", "I", "AI", "API", "PNL", "OK", "ATH", "ATL", "TA", "TP", "SL", "EMA", "SMA",
   "RSI", "ATR", "MACD", "VWAP", "UTC", "PC", "CEO", "DM", "DMS", "FYI", "LOL", "LMAO", "IMO", "IMHO", "TBH", "NFT",
@@ -779,7 +779,7 @@ const NOT_TICKERS = new Set([
   "WHO", "WHAT", "WHY", "HOW", "WHEN", "WHERE", "WHICH", "NOW", "ALL", "ANY", "BUY", "SELL", "HOLD", "TOP", "NEW",
   "HOT", "CHECK", "SHOW", "TELL", "GIVE", "PLEASE", "THIS", "THAT", "IT", "IS", "ARE", "ON", "IN", "OF", "TO", "FOR",
   "ME", "MY", "WE", "OUR", "YOU", "YOUR", "HE", "SHE", "THEY", "TRADER", "TRADERS", "THESIS", "THESES", "COIN",
-  "COINS", "TOKEN", "TOKENS", "SOLANA", "ROBINHOOD", "HOOD", "BASE", "ARC", "TWITTER", "DOWN", "UP", "PNL", "P",
+  "COINS", "TOKEN", "TOKENS", "ROBINHOOD", "HOOD", "BASE", "ARC", "TWITTER", "DOWN", "UP", "PNL", "P",
   "L", "X", "AT", "BY", "IF", "SO", "DO", "BE", "GO", "AN", "AS", "AM", "RT", "PR", "QA", "UI", "UX", "DEV", "DEVS",
   // Machine words a PC watcher names ("watch CPU", "monitor RAM"): never a coin to watch.
   "CPU", "GPU", "RAM", "SSD", "HDD", "PID", "OS",
@@ -871,9 +871,9 @@ const CHAIN_LIST = /\b(?:coins|tokens|memecoins|memes|tickers|plays|gems|launche
 
 /**
  * A cue, in the few words before a chain word, that the line leaves that chain
- * out ("besides solana", "other than robinhood coins", "but not on robinhood",
- * "isn't on sol"): a list can be cut to one chain or left on all of them, never
- * cut to the one it excludes. "over" only as "over solana", never "over on it".
+ * out ("besides base", "other than robinhood coins", "but not on robinhood",
+ * "isn't on bsc"): a list can be cut to one chain or left on all of them, never
+ * cut to the one it excludes. "over" only as "over base", never "over on it".
  */
 const CHAIN_EXCLUSION_CUE = /\b(?:not|without|besides|except|excluding|other than|outside|apart from|instead of|sick of|tired of|done with|over(?! (?:on|in|at|there|here)\b))\b/;
 
@@ -903,7 +903,7 @@ function extract(ws: readonly Word[], self: SelfRef): Extracted {
     if (!dup) traders.push(t);
   };
 
-  // Chain hints first, so "on sol" is a chain and not the SOL coin.
+  // Chain hints first, so "on bsc" is a chain and not the BSC coin.
   for (let i = 0; i < ws.length; i++) {
     const w = ws[i]!;
     const prev = ws[i - 1]?.canon;
@@ -911,7 +911,7 @@ function extract(ws: readonly Word[], self: SelfRef): Extracted {
     const next = ws[i + 1]?.canon;
     const slug = chainSlug(w.canon);
     if (!slug) continue;
-    // "Theses on SOL" asks about the coin; "on sol", "on solana", "on SOL chain" name the chain.
+    // "Theses on BSC" asks about the coin; "on bsc", "on BSC chain" name the chain.
     const shoutedTicker = /^[A-Z0-9]{2,6}$/.test(w.bare) && !NOT_TICKERS.has(w.bare) && !shouting;
     if (shoutedTicker && next !== "chain" && next !== "network") continue;
     // A chain the line leaves out is neither a chain hint nor a coin.
@@ -938,12 +938,6 @@ function extract(ws: readonly Word[], self: SelfRef): Extracted {
     const b = w.bare.replace(/'s$/i, "");
     if (EVM_ADDRESS.test(b)) {
       addToken({ kind: "token", address: b.toLowerCase() });
-      consumed.add(i);
-      continue;
-    }
-    if (SOLANA_MINT.test(b) && (/\d/.test(b) || (/[a-z]/.test(b) && /[A-Z]/.test(b)))) {
-      // Base58 is case-sensitive: the mint is kept exactly as typed.
-      addToken({ kind: "token", address: b });
       consumed.add(i);
       continue;
     }
@@ -1068,7 +1062,7 @@ const TIME_WORDS = new Set([
 
 /**
  * A word the question itself may need, whoever is named after it: the
- * platform ("on fomo"), a chain ("on sol"), a time ("this morning") or
+ * platform ("on fomo"), a chain ("on bsc"), a time ("this morning") or
  * planner vocabulary. Never dropped as the agent's name.
  */
 function plannerWord(w: string): boolean {
@@ -1082,7 +1076,7 @@ function plannerWord(w: string): boolean {
  * on $PONS?"), or the full name after a pause at the end ("trending on fomo,
  * robin?"). A bare name inside the question is content, never a vocative:
  * an agent called Pepe is asked "what are people saying about pepe" about
- * the coin. Names are owner-chosen or generated ("Morning Wren", "Sol"), so a
+ * the coin. Names are owner-chosen or generated ("Morning Wren", "Wren"), so a
  * name word the question may need (plannerWord) is never dropped on its own.
  */
 function withoutSelf(ws: readonly Word[], self: SelfRef): { ws: Word[]; selfPossessive: boolean } {
@@ -1573,7 +1567,7 @@ export function classifyFomoQuestion(text: string, ctx: FomoQuestionContext): Fo
       const chain = chainFromUserText(slug);
       for (const t of ex.tokens) {
         if (!t.address || !chain) continue;
-        const fits = EVM_ADDRESS.test(t.address) ? chain.namespace === "eip155" : chain.namespace === "solana";
+        const fits = EVM_ADDRESS.test(t.address) && chain.namespace === "eip155";
         if (!fits) return ask(`That address can't be on ${titleCase(slug)}. Which chain is it on?`);
       }
     }
@@ -1616,7 +1610,7 @@ export function classifyFomoQuestion(text: string, ctx: FomoQuestionContext): Fo
         const slug = ex.chains[0]!;
         const chain = chainFromUserText(slug);
         if (onlyMem.address && chain) {
-          const fits = EVM_ADDRESS.test(onlyMem.address) ? chain.namespace === "eip155" : chain.namespace === "solana";
+          const fits = EVM_ADDRESS.test(onlyMem.address) && chain.namespace === "eip155";
           if (!fits) return ask(`That address can't be on ${titleCase(slug)}. Which chain is it on?`);
         }
         chained = { ...onlyMem, chain: slug };
@@ -1786,7 +1780,7 @@ interface CallOptions {
 function tokenRef(q: SubjectQuery | undefined): Record<string, unknown> | null {
   if (!q || q.kind !== "token") return null;
   const out: Record<string, unknown> = {};
-  if (q.address && (EVM_ADDRESS.test(q.address) || SOLANA_MINT.test(q.address))) out.token = q.address;
+  if (q.address && EVM_ADDRESS.test(q.address)) out.token = q.address;
   else if (q.symbol && SYMBOL.test(q.symbol)) out.token = q.symbol.toUpperCase();
   else return null;
   if (q.chain && SLUG.test(q.chain)) out.chain = q.chain;
@@ -1884,7 +1878,7 @@ export function sanitizePlanArgs(args: Record<string, unknown>): Record<string, 
         if (typeof v === "string" && (UUID.test(v) || HANDLE.test(v))) out[key] = v;
         break;
       case "token":
-        if (typeof v === "string" && (EVM_ADDRESS.test(v) || SOLANA_MINT.test(v) || SYMBOL.test(v))) out[key] = v;
+        if (typeof v === "string" && (EVM_ADDRESS.test(v) || SYMBOL.test(v))) out[key] = v;
         break;
       case "chain":
         if (typeof v === "string" && SLUG.test(v)) out[key] = v;

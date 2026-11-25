@@ -6,10 +6,9 @@
  * Replaced by Supabase (encrypted, per-user) once persistence lands.
  *
  * TWO WALLETS PER LOGIN (`?wallet=spot|perps`, absent is Spot; perps slice 5b).
- * POST makes or renews the wallet it names, and only while AGENTCAP_PERPS is
- * paper for a Perps one; GET answers for the wallet it names, whatever
- * AGENTCAP_PERPS says, so an owner can always see a Perps wallet they hold;
- * DELETE's kill names no wallet and stops every one.
+ * POST makes or renews the Spot wallet only: a Perps one is always refused on
+ * BNB Chain. GET answers for the wallet it names, so an owner can always see a
+ * Perps record they hold; DELETE's kill names no wallet and stops every one.
  */
 
 import { webChainRead } from "@/lib/chain-read";
@@ -27,11 +26,9 @@ import {
   derivationUnreachable,
   duplicateWallPermissions,
   isHostedMode,
-  isRobinhoodChainId,
+  isBnbChainId,
   publicGrantView,
-  robinhoodChain,
   type Derivation,
-  type EnergyStatus,
   type PerpsReport,
   type PublicGrantView,
   type StoredGrant,
@@ -43,9 +40,8 @@ import { requestOrigin, tenantOf, verifyGrantBinding } from "@/lib/auth";
 import { checkCanonicalWall, type WallVerdict } from "@/lib/canonical-wall";
 import { privyTokenOf, verifyPrivyToken } from "@/lib/privy";
 import { withReadDb } from "@/lib/ledger";
-import { readAgentEnergy } from "@/lib/agent-energy";
 import { readAgentPerps } from "@/lib/agent-perps";
-import { perpsCreationAllowed, perpsWalletRefused } from "@/lib/perps-enabled";
+import { perpsWalletRefused } from "@/lib/perps-enabled";
 import { NO_STORE_HEADERS, walletUnknown } from "@/lib/route-guard";
 import { assertIndependentWallets, getGrantStore, GrantReplacementConflict, GrantWalletConflict } from "@agentcap/grant-store";
 import { getIdentityStore } from "@agentcap/identity-store";
@@ -53,7 +49,6 @@ import { getSettingsStore } from "@agentcap/settings-store";
 import { ledgerHasAgent, mintAndNameAgent } from "@/lib/first-name";
 import { deriveKernelAccountAddress } from "@/lib/derive-account";
 import { archiveCurrentGrant, GrantArchiveError, removeSelfHostedGrant } from "@/lib/grant-archive";
-import { stopLocalSolanaForKill, stopSolanaForKill } from "../../../../../worker/src/solana-kill";
 import { perpsHalf, stopLocalPerpsForKill, stopLocalPerpsGrantForRenewal, stopPerpsForKill, type PerpsHalf } from "../../../../../worker/src/perps-kill";
 import { readWalletParam, WALLET_PARAM } from "@/lib/wallet-param";
 import { readFleetRecoveryView, type FleetRecoveryView } from "../../../../../worker/src/fleet-recovery";
@@ -197,24 +192,11 @@ export interface AgentStatus {
    * `workerAliveAt` are what separate those.
    */
   liveBlocker?: string | null;
-  /**
-   * THIS AGENT'S ENERGY — how much it may start on its own today, and why.
-   *
-   * REPORTED BY THE WORKER, never computed here: the process that throttles is
-   * the only one that knows its own counters and whether it could read the
-   * $AGENTCAP balances it throttles on (packages/core/src/energy.ts).
-   *
-   * NULL IS "NOT SAID YET", NEVER ZERO. No report, an old ledger without the
-   * column, or a value that is not the v1 shape are all null, and a screen
-   * renders that as "I can't see my energy" — never as an empty allowance, and
-   * never as a balance of 0 that sends somebody to buy what they already hold.
-   */
-  energy?: EnergyStatus | null;
 }
 
 /**
  * GET /api/grants?wallet=perps: the Perps wallet's status, the Spot answer's
- * shape with three differences.
+ * shape with two differences.
  *
  * - `grant` is core's publicGrantView, an ALLOWLIST of addresses, caps, times,
  *   markers and public keys: never the session key, the owner key, the
@@ -223,9 +205,8 @@ export interface AgentStatus {
  *   the binding, and changes with its own client.
  * - `perps` is the worker's report of the Perps book (lib/agent-perps.ts),
  *   null when not said or unreadable, never an empty book.
- * - no `energy`: a Perps wallet buys none (its paper wall is empty, D5).
  */
-export interface PerpsWalletStatus extends Omit<AgentStatus, "grant" | "energy"> {
+export interface PerpsWalletStatus extends Omit<AgentStatus, "grant"> {
   grant?: PublicGrantView;
   perps?: PerpsReport | null;
 }
@@ -279,16 +260,16 @@ export async function POST(req: Request) {
   //
   // Nothing checked chainId before, and what reads it downstream (chainForId,
   // the derivation, the balance reads) turns any id but the testnet into
-  // mainnet: a grant naming chain 1, a Solana grant or one with no chainId at
-  // all was accepted and read as Robinhood Chain. Every grant our signers make
-  // carries 4663 or 46630 (chain.id), so this refuses only what they never
+  // mainnet: a grant naming chain 1 or one with no chainId at
+  // all was accepted and read as BNB mainnet. Every grant our signers make
+  // carries 56 or 97 (chain.id), so this refuses only what they never
   // send. For every mode, before the hosted checks read the id, and pure, so
   // it burns no nonce.
-  if (!isRobinhoodChainId(grant.chainId)) {
+  if (!isBnbChainId(grant.chainId)) {
     const named = grant.chainId === undefined ? "names no chain" : `is for chain ${JSON.stringify(grant.chainId).slice(0, 64)}`;
     return NextResponse.json(
       {
-        error: `this grant ${named}, and AgentCap only runs on Robinhood Chain (4663) and its testnet (46630). Nothing was saved.`,
+        error: `this grant ${named}, and AgentCap only runs on BNB Chain (56) and its testnet (97). Nothing was saved.`,
         code: "unsupported_chain",
       },
       { status: 400 },
@@ -320,36 +301,13 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
-  // A PERPS WALLET IS MADE OR RENEWED ONLY WHERE PAPER PERPS ARE ON (decision
-  // D1): AGENTCAP_PERPS=paper, read through the one parser the worker and the
-  // orchestrator use (perps-enabled.ts), so the web never makes a wallet the
-  // deployment's workers would refuse to run. Anything else — unset, off, a
-  // typo, and `live`, which this build reads as off — refuses creation AND
-  // renewal here, every mode, before anything is read or stored; DELETE
-  // refuses a renewal's first step (its permission-replacement stop) the same
-  // way, so a renewal that cannot finish never starts. An owner who
-  // already holds one still sees it (GET) and stops it (every kill); a gate
-  // that switches a capability off never stands between an owner and that.
-  if (wallet === "perps" && !perpsCreationAllowed()) return perpsWalletNotOffered("Nothing was saved.");
-  if (wallet === "perps") {
-    const refused = await perpsPaperAdmissionRefusal(req, isHostedMode());
-    if (refused) return refused;
-  }
-  // ROBINHOOD CHAIN MAINNET ONLY. The Perps wallet exists for Lighter, which
-  // has no test network, and the testnet chain id would derive (and later be
-  // killed and recovered) somewhere no Perps worker ever runs. Pure, before
-  // anything is read; the canonical wall says it again for every door.
-  if (wallet === "perps" && grant.chainId !== robinhoodChain.id) {
-    return NextResponse.json(
-      {
-        error: `A Perps wallet exists only on Robinhood Chain (${robinhoodChain.id}), and this grant is for chain ${JSON.stringify(grant.chainId)}. Nothing was saved.`,
-        code: "perps-chain",
-        ownerFacing: true,
-      },
-      { status: 400 },
-    );
-  }
-
+  // NO PERPS WALLET IS MADE OR RENEWED ON BNB CHAIN. Perps are Lighter, a
+  // Robinhood Chain deployment, and there is none here: whatever AGENTCAP_PERPS
+  // says, a Perps grant is refused, every mode, before anything is read or
+  // stored. DELETE refuses a renewal's first step (its permission-replacement
+  // stop) the same way, so a renewal that cannot finish never starts. A record
+  // that already exists is still shown (GET) and stopped (every kill).
+  if (wallet === "perps" && !perpsWalletMayBeMade()) return perpsWalletNotOffered("Nothing was saved.");
   // PERPETUALS ARE NOT TAKEN BY THIS SERVER YET (perps slice 1). The signers can
   // carry a Lighter key and the canonical wall can rebuild one, but nothing here
   // can mint, seal, hold or stand down a key, so a grant naming one is refused
@@ -462,8 +420,8 @@ export async function POST(req: Request) {
     // `transfer` marker dated before the withdrawal allowlist is read as a
     // free-form-recipient transfer (grantHasTransfer), and `grantTokens` and
     // the sealed adapters say what it may sell and call. A tenant could post a
-    // hand-built permission carrying a USDG `transfer`, the Rialto target or
-    // the v4 UniversalRouter, and it was stored as-is. The site's terms say the
+    // hand-built permission carrying a USDG `transfer` or an extra router
+    // target, and it was stored as-is. The site's terms say the
     // session key has no transfer permission; this is what makes that true of
     // everything this route accepts, not only of what our signers produce.
     //
@@ -913,13 +871,12 @@ export async function DELETE(req: Request) {
     if (body?.purpose === "permission-replacement") {
       // A PERPS RENEWAL IS REFUSED WHOLE, ITS FIRST STEP INCLUDED (decision D1).
       // A permission replacement exists only to be followed by the new grant's
-      // POST, and while AGENTCAP_PERPS is not paper that POST is refused
-      // (perpsCreationAllowed, above). Accepting the stop anyway would leave a
-      // stopped Perps wallet nobody can renew until perps is back on: a refused
-      // request that changed persistent state. So it is refused here, before
-      // the store is asked anything. The kill (delete-agent, below) is not a
-      // renewal and stays reachable whatever the lever says.
-      if (wallet === "perps" && !perpsCreationAllowed()) return perpsRenewalNotOffered();
+      // POST, which is refused above. Accepting the stop anyway would leave a
+      // stopped Perps wallet nobody can renew: a refused request that changed
+      // persistent state. So it is refused here, before the store is asked
+      // anything. The kill (delete-agent, below) is not a renewal and stays
+      // reachable.
+      if (wallet === "perps" && !perpsWalletMayBeMade()) return perpsRenewalNotOffered();
       if (wallet === "perps") {
         const refused = await perpsPaperAdmissionRefusal(req, isHostedMode());
         if (refused) return refused;
@@ -944,15 +901,13 @@ export async function DELETE(req: Request) {
       return stop();
     }
     if (walletNamed) return killNamesWallet();
-    // The Solana strategy and the Perps wallet are stopped whatever happens to the Robinhood
-    // grant: a store that throws here still leaves the owner's autonomous Solana trading off and
-    // their Perps grant revoked. Neither half waits on the other.
+    // The Perps wallet is stopped whatever happens to the Robinhood
+    // grant: a store that throws here still leaves their Perps grant revoked.
     let removal: unknown = null;
     try { await getGrantStore("spot").remove(tenant); } catch (e) { removal = e ?? new Error("grant removal failed"); }
-    const solana = await solanaStopped(() => stopSolanaForKill(tenant));
     const perps = await perpsHalf(() => stopPerpsForKill(tenant));
     if (removal !== null) throw removal;
-    return killed(solana, perps);
+    return killed(perps);
   }
   // A SELF-HOSTED RENEWAL STOPS THE WALLET IT NAMES, NOT THE OTHER ONE. Every
   // self-hosted DELETE has always removed grant.json, renewals too (the new grant
@@ -972,37 +927,43 @@ export async function DELETE(req: Request) {
   } catch { /* a kill */ }
   if (walletNamed && !renewal) return killNamesWallet();
   // As hosted: the stop that begins a Perps renewal is refused with the renewal
-  // while perps is not paper, before grant.json is archived or removed.
+  // here, before grant.json is archived or removed.
   if (renewal && wallet === "perps") {
-    if (!perpsCreationAllowed()) return perpsRenewalNotOffered();
+    if (!perpsWalletMayBeMade()) return perpsRenewalNotOffered();
     const refused = await perpsPaperAdmissionRefusal(req, false); if (refused) return refused;
     if (!isAddr(replacement?.expectedAccount) || !isAddr(replacement?.expectedSession)) return NextResponse.json({ error: "The permission being replaced could not be identified. Reload your wallet and try again." }, { status: 400 });
     return selfHostedPerpsRenewalStop(replacement.expectedAccount, replacement.expectedSession);
   }
   // The kill switch destroys the session key, NOT the wallet — archived first.
   // The web's Start over removes it the same way, from /api/grants/discard.
-  // The local Solana strategy and the local Perps wallet are stopped first, whatever happens to
+  // The local Perps wallet is stopped first, whatever happens to
   // the Robinhood grant: an archive it cannot write keeps grant.json (and pauses trading
-  // instead), and must never leave autonomous Solana trading or a Perps grant behind a
-  // "paused" answer.
-  const solana = await solanaStopped(() => stopLocalSolanaForKill());
+  // instead), and must never leave a Perps grant behind a "paused" answer.
   const perps: PerpsHalf = renewal ? { state: "none" } : await perpsHalf(() => stopLocalPerpsForKill());
   try {
     await removeSelfHostedGrant("spot");
   } catch (e) {
     if (e instanceof GrantArchiveError) {
-      return NextResponse.json({ error: `${e.message}${solana ? " Your Solana strategy was stopped." : " Your Solana strategy could not be stopped either: try the kill again."}${perpsAfterKeptGrant(perps)}`,
-        paused: e.paused, solana: solana ? "stopped" : "not-stopped", ...(perps.state === "none" ? {} : { perps: perps.state }) }, { status: 409 });
+      return NextResponse.json({ error: `${e.message}${perpsAfterKeptGrant(perps)}`,
+        paused: e.paused, ...(perps.state === "none" ? {} : { perps: perps.state }) }, { status: 409 });
     }
     throw e;
   }
-  return killed(solana, perps);
+  return killed(perps);
 }
 
 /**
- * No Perps wallet is made or renewed on this server: AGENTCAP_PERPS is not
- * paper (perpsCreationAllowed). One that exists is still shown (GET) and
- * stopped by every kill; only a renewal, its first step included, is refused.
+ * No Perps wallet may be made or renewed on BNB Chain, whatever AGENTCAP_PERPS
+ * says: Lighter is not deployed there. A function rather than a constant so the
+ * Perps paths below still type-check until they are deleted.
+ */
+function perpsWalletMayBeMade(): boolean {
+  return false;
+}
+/**
+ * No Perps wallet is made or renewed (perpsWalletMayBeMade). One that exists is
+ * still shown (GET) and stopped by every kill; only a renewal, its first step
+ * included, is refused.
  *
  * THE SHARED REFUSAL (perps-enabled.ts perpsWalletRefused), as `walletUnknown`
  * is route-guard.ts's: this route kept copies of its own, which answered the
@@ -1022,7 +983,7 @@ function perpsRenewalNotOffered(): NextResponse {
 /**
  * A self-hosted Perps renewal's first step, as hosted's stopForReplacement of the
  * Perps grant: the Perps home's grant.json archived, then removed. Nothing of the
- * Spot wallet's, or Solana's, is touched. The new Perps grant is posted straight
+ * Spot wallet's is touched. The new Perps grant is posted straight
  * after (POST ?wallet=perps), which archives nothing more: this already kept it.
  */
 async function selfHostedPerpsRenewalStop(expectedAccount: string, expectedSession: string): Promise<NextResponse> {
@@ -1043,14 +1004,6 @@ function killNamesWallet(): NextResponse {
   );
 }
 
-/**
- * "Kill all agents" stops autonomous Solana trading too: the strategy is turned
- * off with a revision bump that fences any admission already in flight. True
- * when it is off (or there was none), false when it could not be stopped.
- */
-async function solanaStopped(stop: () => Promise<unknown>): Promise<boolean> {
-  try { await stop(); return true; } catch { return false; }
-}
 /** What the Perps half did, said after a Robinhood grant the kill had to keep. */
 function perpsAfterKeptGrant(perps: PerpsHalf): string {
   if (perps.state === "stopped") return " Your Perps wallet's grant was revoked.";
@@ -1066,17 +1019,13 @@ function perpsLeft(perps: PerpsHalf): string {
     : "your Perps wallet's grant could not be revoked yet";
 }
 /**
- * A kill that could not stop the Solana strategy or revoke the Perps grant is reported
- * incomplete, never as done. A retry is safe. An owner with neither sees exactly what
- * they always saw.
+ * A kill that could not revoke the Perps grant is reported
+ * incomplete, never as done. A retry is safe.
  */
-function killed(solana: boolean, perps: PerpsHalf): NextResponse {
-  const perpsDown = perps.state === "not-stopped";
-  if (!solana || perpsDown) {
-    const what = !solana && perpsDown ? `your Solana strategy could not be stopped and ${perpsLeft(perps)}`
-      : !solana ? "your Solana strategy could not be stopped yet" : perpsLeft(perps);
-    return NextResponse.json({ error: `Kill incomplete: your Robinhood Chain agent is stopped, but ${what}.${perps.why ? ` ${perps.why}` : ""} Try the kill again.`,
-      ownerFacing: true, solana: solana ? "stopped" : "not-stopped", ...(perps.state === "none" ? {} : { perps: perps.state }) }, { status: 503 });
+function killed(perps: PerpsHalf): NextResponse {
+  if (perps.state === "not-stopped") {
+    return NextResponse.json({ error: `Kill incomplete: your Robinhood Chain agent is stopped, but ${perpsLeft(perps)}.${perps.why ? ` ${perps.why}` : ""} Try the kill again.`,
+      ownerFacing: true, perps: perps.state }, { status: 503 });
   }
   return NextResponse.json(perps.state === "stopped" ? { ok: true, perps: "stopped" } : { ok: true });
 }
@@ -1287,14 +1236,6 @@ export async function GET(req: Request) {
     }
   }
 
-  // ENERGY IS READ ON ITS OWN, OUTSIDE THE BRANCH ABOVE. That branch runs only
-  // when there is no heartbeat file, and self-hosted there always is one — so a
-  // column read inside it would never reach a self-hosted owner at all. The
-  // report is the child's own and lives only on the agents row, on both
-  // deployments. Best effort: an unreadable report is null, never an error.
-  // A Perps wallet has no energy to report: its wall carries no energy buy (D5).
-  const energy = wallet === "spot" ? await readAgentEnergy(grant.smartAccount) : null;
-
   // AFTER BOTH HEARTBEAT SOURCES, so it judges whichever one answered: the
   // file self-hosted, the mirrored row hosted. See terminal/worker-stale.ts.
   // Never heard from is null whatever the tick, so that costs no settings read.
@@ -1330,7 +1271,6 @@ export async function GET(req: Request) {
     mode,
     gasSponsored,
     liveBlocker,
-    energy,
     ...(hostedTenant ? { recovery } : {}),
   };
   if (wallet === "spot") return statusResponse(status);
@@ -1345,9 +1285,10 @@ export async function GET(req: Request) {
   // stops needing the binding.
   //
   // THE BOOK AS ITS WORKER REPORTED IT (agent-perps.ts), from the Perps
-  // account's own row, read outside the heartbeat branch for energy's reason.
+  // account's own row, read outside the heartbeat branch above, which runs
+  // only when there is no heartbeat file.
   // Null is "not said or unreadable", never an empty book. Paper fields only:
   // nothing in this build reads a venue, a key, a stand-down or a recovery.
-  const { grant: _denylisted, energy: _noEnergy, ...shared } = status;
+  const { grant: _denylisted, ...shared } = status;
   return statusResponse({ ...shared, grant: publicGrantView(grant), perps: await readAgentPerps(grant.smartAccount) });
 }

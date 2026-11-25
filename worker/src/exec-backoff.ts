@@ -7,9 +7,7 @@
  * `SponsorRefused`, the refusals our own checks make before anything is signed.
  * They are re-proposed every tick: live, 2026-10-03, agent 0xbba115 was
  * refused `enable-too-wide` every tick through several re-signs (the key
- * install that fixes it is tried at most once per half hour), and the
- * class-vault route is refused `gas-absurd` on every entry it proposes (its
- * 3M ceiling is kept on purpose, so the route stays effectively off). Each
+ * install that fixes it is tried at most once per half hour). Each
  * attempt is two bundler estimates, a decision row and a rejected row saying
  * what the previous sixty said.
  *
@@ -144,8 +142,8 @@ export function holdMsFor(rule: string, strikes: number): number | null {
   return BACKOFF_SCHEDULE_MIN[at]! * 60_000;
 }
 
-/** The three limits a hold reads: the exit test's two, and the class vault the grant sealed. */
-export type BackoffLimits = Pick<AgentLimits, "cashToken" | "quoteAssets" | "ponsClassVault">;
+/** The limits a hold reads: the exit test's cash token, and the quote side. */
+export type BackoffLimits = Pick<AgentLimits, "cashToken" | "quoteAssets">;
 
 const lc = (a: string) => a.toLowerCase();
 
@@ -179,33 +177,19 @@ const lc = (a: string) => a.toLowerCase();
  * checks, and the energy buy is the owner's own click on its own route.
  */
 export function backsOff(intent: TradeIntent, limits: BackoffLimits): boolean {
-  if (intent.kind !== "swap" && intent.kind !== "curve-trade") return false;
+  if (intent.kind !== "swap") return false;
   if (isExitIntent(intent, limits)) return false;
-  const spends = lc(intent.kind === "swap" ? intent.sellToken : intent.assetIn);
+  const spends = lc(intent.sellToken);
   const quoteSide = [...(limits.cashToken !== undefined ? [limits.cashToken] : []), ...(limits.quoteAssets ?? [])].map(lc);
   return quoteSide.includes(spends);
 }
 
 /**
- * The keys one intent is held under: its token pair, exactly as
- * suppressedIntents keys it (one derivation — see revert.ts suppressionLegs),
- * and, for a curve trade into the class vault the grant sealed, the ROUTE.
- *
- * WHY THE VAULT GETS A ROUTE-WIDE KEY. `gas-absurd` there is not about the
- * token: every class entry is a vault call the same 3M ceiling refuses, so
- * holding one pair at a time would re-learn the same refusal once for every
- * launch the route proposes, and launches arrive by the hundred an hour.
- * Keyed on (kind, target) instead, the first refusal holds the route. Only `gas-absurd` writes it (ExecBackoff.note); any other
- * rule on the vault is still about its pair.
+ * The key one intent is held under: its token pair, exactly as
+ * suppressedIntents keys it (one derivation — see revert.ts suppressionLegs).
  */
-function keysOf(intent: TradeIntent, limits: BackoffLimits): { pair: string; route: string | null } {
-  const pair = suppressionKey(intent.kind, ...suppressionLegs(intent));
-  const vault = limits.ponsClassVault;
-  const route =
-    intent.kind === "curve-trade" && vault !== undefined && lc(intent.target) === lc(vault)
-      ? `${intent.kind}@${lc(vault)}`
-      : null;
-  return { pair, route };
+function keyOf(intent: TradeIntent): string {
+  return suppressionKey(intent.kind, ...suppressionLegs(intent));
 }
 
 export interface Hold {
@@ -248,8 +232,7 @@ export class ExecBackoff {
   note(intent: TradeIntent, limits: BackoffLimits, rule: string, nowMs: number): Hold | null {
     if (!backsOff(intent, limits)) return null;
     this.forget(nowMs);
-    const { pair, route } = keysOf(intent, limits);
-    const key = rule === "gas-absurd" && route !== null ? route : pair;
+    const key = keyOf(intent);
     const escalates = !NOT_ESCALATED.has(rule);
     const strikes = (this.holds.get(key)?.strikes ?? 0) + (escalates ? 1 : 0);
     const ms = holdMsFor(rule, strikes);
@@ -275,21 +258,11 @@ export class ExecBackoff {
     }
   }
 
-  /**
-   * Is `intent` held right now? The hold that ends LAST when both its pair and
-   * its route are held, so "retry after" is never sooner than the truth. Null
-   * for anything `backsOff` refuses — an exit is never held, whatever is
-   * recorded.
-   */
+  /** Is `intent` held right now? Null for anything `backsOff` refuses — an exit is never held, whatever is recorded. */
   held(intent: TradeIntent, limits: BackoffLimits, nowMs: number): Hold | null {
     if (!backsOff(intent, limits)) return null;
-    const { pair, route } = keysOf(intent, limits);
-    let found: Hold | null = null;
-    for (const key of route !== null ? [route, pair] : [pair]) {
-      const h = this.holds.get(key);
-      if (h && h.untilMs > nowMs && (found === null || h.untilMs > found.untilMs)) found = h;
-    }
-    return found;
+    const h = this.holds.get(keyOf(intent));
+    return h && h.untilMs > nowMs ? h : null;
   }
 
   /**

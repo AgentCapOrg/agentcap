@@ -57,7 +57,7 @@ import { findInSources } from "../../../packages/core/src/site-scan";
 /** A site, or a coin by contract (and the site to read for it, when the post gave one). */
 export type CheckTarget =
   | { kind: "site"; url: string }
-  | { kind: "coin"; address: string; chain: "evm" | "solana"; site: string | null };
+  | { kind: "coin"; address: string; chain: "evm"; site: string | null };
 
 /** Where the target was found: the tag's own words or links, the post it replies to or quotes, or that post's author's profile link. */
 export type CheckFrom = "tag" | "parent" | "quote" | "profile";
@@ -114,14 +114,11 @@ export function checkAsk(raw: unknown, own = ""): boolean {
 const NOT_A_SITE = /(?:^|\.)(?:x\.com|twitter\.com|t\.co|t\.me|telegram\.me|telegram\.org|discord\.gg|discord\.com|youtube\.com|youtu\.be|instagram\.com|tiktok\.com|facebook\.com|fb\.com|linkedin\.com|reddit\.com|linktr\.ee|medium\.com|substack\.com|google\.com|apple\.com|dexscreener\.com|geckoterminal\.com|coingecko\.com|coinmarketcap\.com|dextools\.io|birdeye\.so|solscan\.io|etherscan\.io|basescan\.org|bscscan\.com|blockscout\.com|gmgn\.ai|pump\.fun|axiom\.trade|bullx\.io|photon-sol\.tinyastro\.io|jup\.ag|raydium\.io|uniswap\.org|app\.uniswap\.org|opensea\.io|giphy\.com|imgur\.com|tenor\.com|agentcap\.xyz|agentcap\.app)$/i;
 
 /** A link that names a coin by its contract: a launchpad's or an explorer's page for one token. */
-const COIN_LINK: readonly { re: RegExp; chain: "evm" | "solana" }[] = [
-  { re: /^https?:\/\/(?:www\.)?pump\.fun\/(?:coin\/)?([1-9A-HJ-NP-Za-km-z]{32,44})(?:[/?#]|$)/i, chain: "solana" },
-  { re: /^https?:\/\/(?:www\.)?(?:solscan\.io|birdeye\.so)\/token\/([1-9A-HJ-NP-Za-km-z]{32,44})(?:[/?#]|$)/i, chain: "solana" },
-  { re: /^https?:\/\/(?:www\.)?gmgn\.ai\/sol\/token\/([1-9A-HJ-NP-Za-km-z]{32,44})(?:[/?#]|$)/i, chain: "solana" },
+const COIN_LINK: readonly { re: RegExp; chain: "evm" }[] = [
   { re: /^https?:\/\/(?:www\.)?(?:etherscan\.io|basescan\.org|bscscan\.com|[a-z0-9-]+\.blockscout\.com)\/(?:token|address)\/(0x[0-9a-fA-F]{40})(?:[/?#]|$)/i, chain: "evm" },
 ];
 
-function coinOfLink(url: string): { address: string; chain: "evm" | "solana" } | null {
+function coinOfLink(url: string): { address: string; chain: "evm" } | null {
   for (const { re, chain } of COIN_LINK) {
     const m = re.exec(url);
     if (m) return { address: m[1]!, chain };
@@ -142,16 +139,16 @@ export function siteLink(raw: unknown): string | null {
   return u.toString();
 }
 
-/** The distinct contracts written in a post's words: EVM by forty hex, Solana by the site scanner's own rules. */
-function addressesIn(text: string): { address: string; chain: "evm" | "solana" }[] {
+/** The distinct contracts written in a post's words: EVM by forty hex. */
+function addressesIn(text: string): { address: string; chain: "evm" }[] {
   const f = findInSources([{ where: "text", text: String(text ?? "") }]);
-  return [...f.evm, ...f.solana].map((a) => ({ address: a.address, chain: a.chain }));
+  return f.evm.map((a) => ({ address: a.address, chain: a.chain }));
 }
 
 /** One post's own target: one contract (with its one site, if any), else one site. Two contracts, or nothing: none. */
 function targetIn(text: string, links: readonly string[]): CheckTarget | null {
   const coins = [...addressesIn(text), ...links.map(coinOfLink).filter((c): c is NonNullable<typeof c> => c !== null)];
-  const distinct = coins.filter((c, i) => coins.findIndex((d) => (d.chain === "evm" ? d.address.toLowerCase() === c.address.toLowerCase() : d.address === c.address)) === i);
+  const distinct = coins.filter((c, i) => coins.findIndex((d) => d.address.toLowerCase() === c.address.toLowerCase()) === i);
   const sites = [...new Set(links.map(siteLink).filter((s): s is string => s !== null).map((s) => s))];
   // Two sites on different hosts: the first, as the post put it first; two contracts: no telling which is meant.
   if (distinct.length > 1) return null;
@@ -179,7 +176,7 @@ export function checkTargetOf(reply: XReply, o: { ownId?: string; ownPosts?: Rea
     // A contract in the tag, with no site of its own: the site of the post it sits under, if that post names the same contract.
     if (own.kind === "coin" && own.site === null) {
       const same = contexts.map((c) => targetIn(c.text, c.links)).find((t) => t?.kind === "coin" && t.site !== null
-        && (t.chain === "evm" ? t.address.toLowerCase() === own.address.toLowerCase() : t.address === own.address));
+        && t.address.toLowerCase() === own.address.toLowerCase());
       if (same && same.kind === "coin") return { target: { ...own, site: same.site }, from: "tag" };
     }
     return { target: own, from: "tag" };

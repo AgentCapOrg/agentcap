@@ -49,36 +49,18 @@ describe("readAccountBalances — an unknown is never a zero", () => {
       ACCT,
     );
     assert.equal(b.cashUsdg, usdg(250));
-    assert.equal(b.vaultUsdg, 0n);
     assert.equal(b.ethWei, 5n);
     assert.deepEqual(b.unread, []);
   });
 
-  it("a totally failed multicall reports BOTH balances unread, not zero", async () => {
+  it("a totally failed multicall reports the cash unread, not zero", async () => {
     const b = await readAccountBalances(client({ eth: 1n, multi: "throw" }), ACCT);
-    assert.deepEqual(b.unread, ["cash", "vault"]);
-  });
-
-  it("a reverted cash call is unread even though the vault answered", async () => {
-    const b = await readAccountBalances(client({ multi: [bad(), good(0n)] }), ACCT);
     assert.deepEqual(b.unread, ["cash"]);
   });
 
-  it("holding shares we cannot convert marks the vault unread — the worst zero of the three", async () => {
-    // Shares read fine, so the old code took the convertToAssets catch(() => 0n)
-    // and silently erased the entire vault leg from equity.
-    const b = await readAccountBalances(
-      client({ multi: [good(usdg(10)), good(999n)], convert: "throw" }),
-      ACCT,
-    );
-    assert.equal(b.cashUsdg, usdg(10));
-    assert.deepEqual(b.unread, ["vault"]);
-  });
-
-  it("zero shares needs no conversion and is a real answer, not a gap", async () => {
-    const b = await readAccountBalances(client({ multi: [good(usdg(10)), good(0n)] }), ACCT);
-    assert.equal(b.vaultUsdg, 0n);
-    assert.deepEqual(b.unread, []);
+  it("a reverted cash call is unread even though the batch answered", async () => {
+    const b = await readAccountBalances(client({ multi: [bad(), good(0n)] }), ACCT);
+    assert.deepEqual(b.unread, ["cash"]);
   });
 
   it("a failed ETH read is reported too — gas is spent from it", async () => {

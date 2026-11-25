@@ -24,6 +24,8 @@
  * Nothing here reads a secret or a ledger row. A job's inputs are its validated
  * params and public price history; its output is a simulation that says so.
  */
+import { usdgUnits } from "../../../packages/core/src/wall";
+import { cashNumber } from "../../../packages/core/src/cash";
 import { createHash, randomBytes } from "node:crypto";
 import type { Db } from "../db";
 import type { Bar, BacktestConfig, BacktestResult } from "../backtest";
@@ -32,7 +34,6 @@ import type { Strategy } from "../strategies/types";
 // The two leaf modules, not the core index: the web tier imports this file for
 // the queue functions and has no use for the rest of core's graph here.
 import { CASH, STOCK_TOKENS } from "../../../packages/core/src/tokens";
-import { MORPHO } from "../../../packages/core/src/protocols";
 
 // ── limits ──────────────────────────────────────────────────────────────────
 
@@ -90,7 +91,6 @@ const JOBS_LOCK_NS = 1_297_692_103;
 export interface BacktestVariant {
   label: string;
   buy_per_tick_usdg?: number;
-  idle_floor_usdg?: number;
   gap_enter_budget_usdg?: number;
   per_trade_usdg?: number;
   daily_usdg?: number;
@@ -110,7 +110,7 @@ export interface BacktestParams {
 }
 
 const PARAM_KEYS = new Set(["strategy", "symbols", "data", "days", "initial_usdg", "seed", "variants"]);
-const VARIANT_USDG_KEYS = ["buy_per_tick_usdg", "idle_floor_usdg", "gap_enter_budget_usdg", "per_trade_usdg", "daily_usdg"] as const;
+const VARIANT_USDG_KEYS = ["buy_per_tick_usdg", "gap_enter_budget_usdg", "per_trade_usdg", "daily_usdg"] as const;
 const VARIANT_KEYS = new Set(["label", ...VARIANT_USDG_KEYS, "max_drawdown_pct", "execution_cost_bps"]);
 export const VARIANT_LABEL_RE = /^[A-Za-z0-9][A-Za-z0-9 _.-]{0,39}$/;
 const DEFAULT_SEED = 42;
@@ -222,7 +222,6 @@ export function resolveVariant(p: BacktestParams, v: BacktestVariant) {
   const i = p.initial_usdg;
   return {
     buy_per_tick_usdg: v.buy_per_tick_usdg ?? cents(i * 0.025),
-    idle_floor_usdg: v.idle_floor_usdg ?? cents(i * 0.05),
     gap_enter_budget_usdg: v.gap_enter_budget_usdg ?? cents(i * 0.1),
     per_trade_usdg: v.per_trade_usdg ?? cents(i * 0.5),
     daily_usdg: v.daily_usdg ?? cents(i * 0.5),
@@ -619,7 +618,7 @@ export interface VariantResult {
   pnl_usdg: number;
   return_pct: number;
   max_drawdown_bps: number;
-  /** Intents the policy wall passed: swaps and vault moves. */
+  /** Intents the policy wall passed. */
   executed_operations: number;
   /** Swaps that actually filled (a passed intent can still find no price or no cash). */
   swap_fills: number;
@@ -640,8 +639,6 @@ export interface BacktestJobResult {
     execution_cost_bps: string;
     fills: string;
     budgets: string;
-    vault_apy_bps: number;
-    vault_apy_note: string;
     limits: string;
     defaults: string;
   };
@@ -654,8 +651,8 @@ export interface BacktestJobResult {
   compute_ms: number;
 }
 
-const usdgNum = (raw: bigint) => round(Number(raw) / 1e6, 2);
-const usdg6 = (v: number) => BigInt(Math.round(v * 1e6));
+const usdgNum = (raw: bigint) => round(cashNumber(raw), 2);
+const usdg6 = usdgUnits;
 
 /** Evenly spaced points, always keeping the first and the last. */
 export function downsample<T>(xs: readonly T[], max: number): T[] {
@@ -701,10 +698,8 @@ function assumptions(): BacktestJobResult["assumptions"] {
     execution_cost_bps: "Per variant (settings.execution_cost_bps, default 30): a flat cost taken from every fill's notional.",
     fills: "At the bar's price, with no depth, queue, price impact or MEV: size never moves the price.",
     budgets: "The daily spend and operation budgets reset at each calendar day (UTC); a live agent's budget is a rolling 24 hours.",
-    vault_apy_bps: 0,
-    vault_apy_note: "Cash steady-basket parks in the savings vault earns nothing here: there is no vault rate history to replay.",
     limits: "Per-trade, daily and drawdown limits come from each variant's settings; at most 500 operations a day; the permission never expires inside the run.",
-    defaults: "Unset settings take `agentcap strategy backtest`'s defaults scaled to initial_usdg: buy per tick 2.5%, idle floor 5%, gap budget 10%, per trade 50%, daily 50%, drawdown 20%, cost 30 bps.",
+    defaults: "Unset settings take `agentcap strategy backtest`'s defaults scaled to initial_usdg: buy per tick 2.5%, gap budget 10%, per trade 50%, daily 50%, drawdown 20%, cost 30 bps.",
   };
 }
 
@@ -813,7 +808,7 @@ export function resetMcpJobsForTest(): void {
 
 /**
  * The `readFeed` the orchestrator hands the pass: readFeedHistory over ONE
- * client for the life of the process, built on robinhoodChain. The chain
+ * client for the life of the process, built on bnbChain. The chain
  * definition is not decoration — the 400-round walk is a multicall, and a
  * bare-transport client (what the orchestrator builds elsewhere) knows no
  * Multicall3 address, so every read would fail and every oracle job would end
@@ -822,12 +817,12 @@ export function resetMcpJobsForTest(): void {
 export function oracleFeedReader(rpcUrl?: string): (feed: `0x${string}`) => Promise<FeedHistory> {
   let reader: Promise<(feed: `0x${string}`) => Promise<FeedHistory>> | null = null;
   const build = async () => {
-    const [{ createPublicClient, http }, { robinhoodChain }, { readFeedHistory }] = await Promise.all([
+    const [{ createPublicClient, http }, { bnbChain }, { readFeedHistory }] = await Promise.all([
       import(/* webpackIgnore: true */ "viem"),
       import(/* webpackIgnore: true */ "../../../packages/core/src/chain"),
       import(/* webpackIgnore: true */ "../read-feed-history"),
     ]);
-    const client = createPublicClient({ chain: robinhoodChain, transport: http(rpcUrl) });
+    const client = createPublicClient({ chain: bnbChain, transport: http(rpcUrl) });
     return (feed: `0x${string}`) => readFeedHistory(feed, client);
   };
   return async (feed) => {
@@ -943,7 +938,6 @@ async function runClaimed(db: Db, job: ClaimedJob, deps: RunDeps, budget: Budget
         usdg6,
         basketSymbols: p.symbols,
         buyPerTickUsdg: settings.buy_per_tick_usdg,
-        idleFloorUsdg: settings.idle_floor_usdg,
         gapEnterBudgetUsdg: settings.gap_enter_budget_usdg,
         llm: { creds: null, intervalMin: 60, maxActionUsdg: 0 },
       });
@@ -967,12 +961,11 @@ async function runClaimed(db: Db, job: ClaimedJob, deps: RunDeps, budget: Budget
         legs,
         initialCashUsdg: usdg6(p.initial_usdg),
         executionCostBps: settings.execution_cost_bps,
-        vaultApyBps: 0,
         limits: {
           perTradeUsdg: usdg6(settings.per_trade_usdg),
           dailyUsdg: usdg6(settings.daily_usdg),
-          allowedTargets: [SIM_ROUTER, MORPHO.steakhouseUsdgVault as `0x${string}`],
-          allowedAssets: [CASH.USDG as `0x${string}`, ...legs.values()],
+          allowedTargets: [SIM_ROUTER],
+          allowedAssets: [CASH.USDT as `0x${string}`, ...legs.values()],
           maxOpsPerDay: 500,
           maxDrawdownBps: Math.round(settings.max_drawdown_pct * 100),
           expiresAt: lastT + 2 * DAY,
@@ -980,7 +973,7 @@ async function runClaimed(db: Db, job: ClaimedJob, deps: RunDeps, budget: Budget
       };
       const r = await runBacktest(cfg, bars);
       const vr = variantResult(p, v.label, settings, r, JOB_LIMITS.equityPoints);
-      // Swaps, not operations: a run of vault deposits alone passed the policy but traded nothing.
+      // Swaps, not operations: only a swap fill is a trade.
       if (vr.swap_fills === 0) warnings.push(`${v.label} filled no swaps over the window.`);
       variants.push(vr);
       await report(0.1 + (0.9 * (i + 1)) / p.variants.length - (i + 1 === p.variants.length ? 0.001 : 0));

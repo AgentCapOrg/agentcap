@@ -39,14 +39,20 @@
  */
 
 import type { PerpKey } from "../../../packages/core/src/perps";
+import { CASH_CENT, CASH_UNIT, cashFromMicro } from "../../../packages/core/src/cash";
 
-/** USDG is 6dp. Two decimals is what every other surface shows. */
+/** Spot cash in 18dp base units. Two decimals is what every other surface shows. */
 function usdg(raw: bigint): string {
   const neg = raw < 0n;
   const v = neg ? -raw : raw;
-  const whole = v / 1_000_000n;
-  const cents = (v % 1_000_000n) / 10_000n;
+  const whole = v / CASH_UNIT;
+  const cents = (v % CASH_UNIT) / CASH_CENT;
   return `${neg ? "-" : ""}${whole.toLocaleString("en-US")}.${cents.toString().padStart(2, "0")}`;
+}
+
+/** A perp figure, which stays in 6dp micro units. */
+function perpUsdg(micro: bigint): string {
+  return usdg(cashFromMicro(micro));
 }
 
 /**
@@ -96,10 +102,6 @@ function perpLev(l: number): string {
 export type Why =
   /** A scheduled basket buy — one leg of the standing order. */
   | { code: "dca-leg"; symbol: string; usdgRaw: bigint; weightBps: number; legs: number }
-  /** Idle cash above the floor going to the vault. `clamped` when the day's budget cut it. */
-  | { code: "park"; usdgRaw: bigint; floorRaw: bigint; clamped: boolean }
-  /** Pulling cash back because a buy could not be funded. */
-  | { code: "unpark"; usdgRaw: bigint; needRaw: bigint }
   /**
    * NOTHING TO BUY, and it is the feeds, not the market.
    *
@@ -135,7 +137,7 @@ export type Why =
    *
    * Counts only, so it publishes by the same rule as everything else here.
    */
-  | { code: "under-one-buy"; cashRaw: bigint; needRaw: bigint; vaultRaw: bigint }
+  | { code: "under-one-buy"; cashRaw: bigint; needRaw: bigint }
   /**
    * TODAY'S BUYING BUDGET IS GONE, which is not the same as being out of money.
    *
@@ -532,21 +534,6 @@ export function renderWhy(w: Why, audience: WhyAudience = "owner"): string {
         ? `the schedule says buy — ${usdg(w.usdgRaw)} USDG into ${w.symbol}, ` +
             `its ${pctWhole(w.weightBps)}% of a ${w.legs}-leg basket`
         : `the schedule says buy — cash into ${w.symbol}, its ${pctWhole(w.weightBps)}% of a ${w.legs}-leg basket`;
-    case "park":
-      // The figure is the amount being parked. In the clamped case that is
-      // LESS than what is idle above the floor, so the old sentence — "X idle
-      // above the floor, parking what the budget allows" — stated the parked
-      // amount as if it were the idle amount. Said the right way round.
-      if (!own) {
-        return w.clamped
-          ? `parking some of the cash idle above the floor — what today's budget still allows`
-          : `cash idle above the floor — parking it in the vault until the next buy`;
-      }
-      return w.clamped
-        ? `parking ${usdg(w.usdgRaw)} USDG of the cash idle above the ${usdg(w.floorRaw)} floor — ` +
-            `what today's budget still allows`
-        : `${usdg(w.usdgRaw)} USDG idle above the ${usdg(w.floorRaw)} floor — ` +
-            `parking it in the vault until the next buy`;
     case "all-legs-stale":
       return (
         `nothing bought — ${w.legs === 1 ? "the price feed for the only leg is" : `all ${w.legs} legs' price feeds are`} ` +
@@ -619,11 +606,7 @@ export function renderWhy(w: Why, audience: WhyAudience = "owner"): string {
         (own
           ? `nothing bought — ${usdg(w.cashRaw)} USDG on hand and one buy costs ${usdg(w.needRaw)}`
           : `nothing bought — the cash on hand is short of one buy`) +
-        (w.vaultRaw > 0n
-          ? own
-            ? `. There is ${usdg(w.vaultRaw)} USDG in the vault I can pull back, so this should clear itself`
-            : `. There is cash in the vault I can pull back, so this should clear itself`
-          : `, and the vault is empty` + (audience === "owner" ? `. Add funds or lower the size per trade` : ``))
+        (audience === "owner" ? `. Add funds or lower the size per trade` : ``)
       );
     case "stop-floor":
       return (
@@ -665,11 +648,6 @@ export function renderWhy(w: Why, audience: WhyAudience = "owner"): string {
         `all ${w.legs} equity feeds are shut, so ` +
         (own ? `putting ${usdg(w.usdgRaw)} USDG into ${w.symbol}` : `buying ${w.symbol}`) +
         ` — a coin I hold a signed permission for, on a market that does not close`
-      );
-    case "unpark":
-      return (
-        `cash is under one tick's buy — pulling ${own ? `${usdg(w.usdgRaw)} USDG` : `some`} back from the vault ` +
-        `so the next tick can trade`
       );
     case "gap-enter":
       return (
@@ -828,8 +806,8 @@ export function renderWhy(w: Why, audience: WhyAudience = "owner"): string {
       );
     case "perp-below-min":
       return own
-        ? `no ${w.market} perp opened — Lighter's smallest order there is ${usdg(w.minRaw)} USDG and the signed caps allow ` +
-            `${usdg(w.capRaw)}. Raise the per-trade cap at /grant, or pick another market`
+        ? `no ${w.market} perp opened — Lighter's smallest order there is ${perpUsdg(w.minRaw)} USDG and the signed caps allow ` +
+            `${perpUsdg(w.capRaw)}. Raise the per-trade cap at /grant, or pick another market`
         : `no ${w.market} perp opened — the venue's smallest order there is above what the signed caps allow`;
     case "perp-cooldown": {
       const after =

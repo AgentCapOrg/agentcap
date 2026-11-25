@@ -60,7 +60,6 @@
  * PURE. No database, no fetch, no environment. It takes a row and returns a
  * post or null, so the whole policy is testable as a table.
  */
-import { onchainIdIn } from "../../packages/core/src/ids";
 
 /** A joined decision + its outcome, exactly as the route selects it. */
 export interface ThesisRow {
@@ -732,20 +731,9 @@ export function markFigures(d: string): string {
  *
  * `rh:` is included because the brokerage rail's agent id embeds an account
  * number, and a reason that quoted one would publish it.
- *
- * A Solana key or signature has no 0x, so `addressy` also asks core's
- * detector, which finds base58 ids and Solana explorer links. Its glued scan
- * (audit regressions F3), as X and social takes use it: a model post ending
- * "CA<mint>" or "<mint>is" names the mint as surely as one with a space
- * before it. The cost is a run of 43 or more base58 characters with no break
- * (a long camelCase hashtag, "commit<sha>", a long number glued to a word as
- * in "<digits>tokens"), which may read as an id glued to its neighbours: the
- * post is withheld, which is the failure this gate is allowed. Prose, tickers,
- * URLs and short hashtags never do.
  */
 const ADDRESSY = /\b(?:0x[0-9a-fA-F]{6,}|rh:[A-Za-z0-9-]{1,64})\b/;
-const GLUED = { glued: true } as const;
-const addressy = (s: string): boolean => ADDRESSY.test(s) || onchainIdIn(s, GLUED);
+const addressy = (s: string): boolean => ADDRESSY.test(s);
 
 /** Matches the `/why` truncation point, so no surface cuts one mid-word. */
 /**
@@ -1291,11 +1279,10 @@ export function rejectRuleRemedy(rule: string | null | undefined): string | null
       return "No action needed: your agent installs its new permissions on their own first, and the trade goes as an ordinary one on a later tick. If this keeps repeating, re-sign at /grant with fewer custom tokens or capabilities — renewal revokes old permissions on-chain and requires network fees.";
     case "no-cash":
       return "Send USDG to the agent's account.";
-    // Most often a coin whose only market is a Uniswap v4 pool, on a key that
-    // does not carry the v4 adapter. Conditional, because a coin with no pool
-    // anywhere gets the same slug and no setting fixes that.
+    // A fact about where the coin trades, not about the permission signed: the
+    // one swap route is PancakeSwap v3, and no setting adds another.
     case "no-route":
-      return "If it trades only on Uniswap v4 and your key doesn't carry the v4 adapter yet, save the V4SelfSwap adapter in /settings and re-sign at /grant so your agent can reach it.";
+      return "No PancakeSwap v3 pool could quote it, and no setting adds another swap route.";
     case "no-gas":
       return "Send a little ETH to the agent's account — every operation pays a fee before it reaches the chain.";
     // The network holds the whole fee limit up front and returns what is not

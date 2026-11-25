@@ -23,7 +23,7 @@
  *
  * THE ORDER, EVERY TICK, after the strategy loop and the class route: exits
  * first, then at most ONE entry. The lane takes each through countsAsEntry →
- * energy claim → ensureDecision(intent, source, …) → processIntentReporting
+ * ensureDecision(intent, source, …) → processIntentReporting
  * → refund when nothing was placed, the class-route shape.
  *
  * WHAT THIS DOES NOT CONTAIN. protect.ts — stops, liquidation distance, funding
@@ -178,7 +178,7 @@ export function runPerpRoute(input: PerpRouteInput): PerpRouteResult {
     if (!s.perpsEnabled) return "perpetuals are off in Settings";
     if (view.opensBlocked !== null) return `opens are blocked (${view.opensBlocked})`;
     if (!ctx.breakerIdle) return "the drawdown breaker is tripped";
-    if (!ctx.energyEntriesLeft) return "today's energy for new positions is used up";
+    if (ctx.entriesLeft === false) return "today's new positions are used up";
     if (!ctx.opsHeadroom) return "today's operation count is used up";
     if (!(view.headroom.opensLeftToday > 0)) return "no perp opens are left today";
     return null;

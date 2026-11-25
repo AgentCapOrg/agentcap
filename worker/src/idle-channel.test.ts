@@ -20,14 +20,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { classRouteLooks, idleAndClassGate } from "./class-entry-gate";
 import { breakerResetLine, IdleChannel, MODE_EMPTIED_REMEDY, RESTATE_AFTER_MS, withEarlier, type ShownNotice } from "./idle-notice";
 import { makeLlmStrategist } from "./strategist/strategy";
 import { evenKeelTick } from "./strategies/even-keel";
 import { renderWhy, type Why } from "./strategies/reasons";
 import { steadyBasketTick, type SteadyBasketConfig } from "./strategies/steady-basket";
 import { makeTrencher, TRENCHER_DEFAULTS } from "./strategies/trencher";
-import { drawdownOf, takeTick, type Snapshot } from "./strategies/types";
+import { drawdownOf, entryBrake, takeTick, type Snapshot } from "./strategies/types";
 import { weekendGapTick } from "./strategies/weekend-gap";
 import { publicationSourceFor } from "./thesis-policy";
 
@@ -48,26 +47,24 @@ const basket: SteadyBasketConfig = {
     { symbol: "NVDA", token: NVDA, weightBps: 5000 },
   ],
   buyPerTickUsdg: 25_000_000n,
-  idleFloorUsdg: 50_000_000n,
   swapRouter: ROUTER,
-  vault: VAULT,
   usdg: USDG,
 };
 
 const snap = (over: Partial<Snapshot> = {}): Snapshot => ({
-  cashUsdg: 900_000_000n,
+  cashUsdg: 900n * 10n ** 18n,
   vaultUsdg: 0n,
   holdings: new Map(),
   prices: new Map(),
   pausedTokens: new Set(),
   staleFeeds: new Set(),
   sequencerUp: true,
-  spendHeadroomUsdg: 1_000_000_000_000n,
-  perTradeCapUsdg: 1_000_000_000_000n,
+  spendHeadroomUsdg: 1_000_000n * 10n ** 18n,
+  perTradeCapUsdg: 1_000_000n * 10n ** 18n,
   ...over,
 });
 
-const underOne: Why = { code: "under-one-buy", cashRaw: 1_000_000n, needRaw: 5_000_000n, vaultRaw: 0n };
+const underOne: Why = { code: "under-one-buy", cashRaw: 1_000_000n, needRaw: 5_000_000n };
 const breaker: Why = { code: "breaker-tripped", limitBps: 1_000 };
 
 type Ev = { agentId: string; level: string; message: string; atMs: number; id: number };
@@ -244,7 +241,7 @@ describe("the owner's notice stays current while the breaker is tripped", () => 
     let clock = 0;
     const strategist = makeLlmStrategist({
       driver: { name: "stub", propose: async () => ({ actions: [{ action: "buy", symbol: "NVDA", sizeUsdg: 5, reason: "dip" }] }) } as never,
-      universe: { legs: new Map([["NVDA", NVDA]]), swapRouter: ROUTER, usdg: USDG, maxPerActionUsdg: 10_000_000n, maxActionsPerTick: 4 },
+      universe: { legs: new Map([["NVDA", NVDA]]), swapRouter: ROUTER, usdg: USDG, maxPerActionUsdg: 10n * 10n ** 18n, maxActionsPerTick: 4 },
       decisionIntervalMs: 30 * 60_000,
       now: () => clock,
       onNote: (level, message) => d.write(level, message),
@@ -370,7 +367,7 @@ describe("when the breaker resets, the owner's notice says buying resumed", () =
     let clock = 0;
     const strategist = makeLlmStrategist({
       driver: { name: "stub", propose: async () => ({ actions: [{ action: "buy", symbol: "NVDA", sizeUsdg: 5, reason: "dip" }] }) } as never,
-      universe: { legs: new Map([["NVDA", NVDA]]), swapRouter: ROUTER, usdg: USDG, maxPerActionUsdg: 10_000_000n, maxActionsPerTick: 4 },
+      universe: { legs: new Map([["NVDA", NVDA]]), swapRouter: ROUTER, usdg: USDG, maxPerActionUsdg: 10n * 10n ** 18n, maxActionsPerTick: 4 },
       decisionIntervalMs: 30 * 60_000,
       now: () => clock,
       onNote: (level, message) => d.write(level, message),
@@ -537,7 +534,7 @@ describe("when the breaker resets, the owner's notice says buying resumed", () =
 
 /**
  * R4WK-1. The reset line says "buying resumes" — and nothing took it down when
- * the breaker tripped again on a tick that gave no reason. The class gate gives
+ * the breaker tripped again on a tick that gave no reason. The idle write gives
  * the breaker's reason only when something would have bought, and two builtins
  * go quiet while tripped: even-keel invested and in band, weekend-gap while it
  * holds. So the desk said buying resumes for the whole of the second trip,
@@ -547,7 +544,11 @@ describe("when the breaker resets, the owner's notice says buying resumed", () =
  */
 describe("a measured trip is told, whatever reason the tick gives", () => {
   const sentence = renderWhy(breaker);
-  const paper = classRouteLooks({ paper: true, assetMode: "all", vault: VAULT });
+  /** The tick's idle write as main() makes it: a measured brake outranks a reason. */
+  const tellTick = (ch: IdleChannel, strategyName: string, snap: Pick<Snapshot, "drawdown" | "unreadHeld">, idle: Why | null | undefined) => {
+    const brake = entryBrake(snap);
+    return ch.tell({ agentId: AGENT, strategyName, idle: brake === undefined ? idle : idle ? brake : undefined, modeEmptied: null, drawdown: snap.drawdown });
+  };
   const hold = (q: bigint, n: bigint) =>
     new Map([
       ["QQQ", { token: QQQ, rawBalance: 10n ** 18n, valueUsdg: q, costUsdg: q, priceStale: false }],
@@ -571,7 +572,7 @@ describe("a measured trip is told, whatever reason the tick gives", () => {
     const run = async (holdings: never, drawdown: Snapshot["drawdown"], stale = false) => {
       const s = snap({ cashUsdg: 100_000_000n, holdings, drawdown, staleFeeds: new Set(stale ? ["QQQ", "NVDA"] : []) });
       const t = takeTick(evenKeelTick(keel, s));
-      await idleAndClassGate({ channel: ch, agentId: AGENT, strategyName: "even-keel", snap: s, routeLooks: paper, idle: t.idle, modeEmptied: null });
+      await tellTick(ch, "even-keel", s, t.idle);
       d.advance(TICK_MS);
       return t;
     };
@@ -598,7 +599,7 @@ describe("a measured trip is told, whatever reason the tick gives", () => {
     const run = async (over: Partial<Snapshot>) => {
       const s = snap({ cashUsdg: 100_000_000n, staleFeeds: new Set(["QQQ"]), ...over });
       const t = takeTick(weekendGapTick(gap, s));
-      await idleAndClassGate({ channel: ch, agentId: AGENT, strategyName: "weekend-gap", snap: s, routeLooks: paper, idle: t.idle, modeEmptied: null });
+      await tellTick(ch, "weekend-gap", s, t.idle);
       d.advance(TICK_MS);
       return t;
     };

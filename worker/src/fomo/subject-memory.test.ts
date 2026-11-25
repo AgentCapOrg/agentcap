@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { chainFromProvider, robinhoodChain, tokenIdentity } from "./identity";
+import { chainFromProvider, bnbChain, tokenIdentity } from "./identity";
 import { classifyFomoQuestion, type FomoQuestionPlan } from "./intent";
 import {
   applyPlan,
@@ -27,7 +27,7 @@ const USER = "3f2a9c1e-5b6d-4e7f-8a9b-0c1d2e3f4a5b";
 function resolvedMemory(over: Partial<SubjectMemory> = {}): SubjectMemory {
   return {
     ...emptyMemory(NOW - 60_000),
-    subjects: [{ kind: "token", tokenKey: `eip155:4663:${A}`, address: A, chain: "robinhood", symbol: "PEPE" }],
+    subjects: [{ kind: "token", tokenKey: `eip155:56:${A}`, address: A, chain: "bsc", symbol: "PEPE" }],
     lastIntent: "token-theses",
     dossierRevision: { dossierId: "dos-a", revision: 4 },
     lastRequestId: "req-1",
@@ -44,7 +44,7 @@ function plan(text: string, memory: SubjectMemory | null, now = NOW): FomoQuesti
 
 const rhToken = (address: string, symbol: string | null): ResolvedSubject => ({
   kind: "token",
-  token: tokenIdentity(robinhoodChain(), address)!,
+  token: tokenIdentity(bnbChain(), address)!,
   label: { symbol, name: null },
 });
 
@@ -64,7 +64,7 @@ describe("freshness of memory", () => {
   it("a stale memory names no subject", () => {
     const stale = resolvedMemory({ updatedAt: NOW - MEMORY_TTL_MS - 1 });
     assert.deepEqual(rememberedSubjects(stale, "token", NOW), []);
-    assert.deepEqual(rememberedSubjects(resolvedMemory(), "token", NOW), [{ kind: "token", address: A, chain: "robinhood", symbol: "PEPE" }]);
+    assert.deepEqual(rememberedSubjects(resolvedMemory(), "token", NOW), [{ kind: "token", address: A, chain: "bsc", symbol: "PEPE" }]);
   });
 });
 
@@ -84,7 +84,7 @@ describe("applyPlan (before the lookup)", () => {
     const before = resolvedMemory();
     const p = plan("what about the sellers?", before);
     const { memory, resolved } = applyPlan(before, p, NOW);
-    assert.deepEqual(resolved, [{ kind: "token", address: A, chain: "robinhood", symbol: "PEPE" }]);
+    assert.deepEqual(resolved, [{ kind: "token", address: A, chain: "bsc", symbol: "PEPE" }]);
     assert.deepEqual(memory.subjects, before.subjects, "the resolved key survives");
     assert.deepEqual(memory.dossierRevision, before.dossierRevision);
     assert.equal(memory.lastIntent, "token-sellers");
@@ -163,10 +163,10 @@ describe("applyPlan (before the lookup)", () => {
   // C11: a chain stated for a still-unplaced coin is kept on it; a placed coin keeps its own.
   for (const [text, before, want] of [
     ["the one on base", { kind: "token", symbol: "PEPE", chain: null }, { kind: "token", symbol: "PEPE", chain: "base" }],
-    ["on solana", { kind: "token", symbol: "PEPE", chain: null }, { kind: "token", symbol: "PEPE", chain: "solana" }],
+    ["on bsc", { kind: "token", symbol: "PEPE", chain: null }, { kind: "token", symbol: "PEPE", chain: "bsc" }],
     ["theses on $PEPE on base", { kind: "token", symbol: "PEPE", chain: null }, { kind: "token", symbol: "PEPE", chain: "base" }],
     ["on base", { kind: "token", address: A, chain: null }, { kind: "token", address: A, chain: "base" }],
-    [`theses on ${A} on robinhood`, { kind: "token", tokenKey: `eip155:4663:${A}`, address: A, chain: "robinhood", symbol: "PEPE" }, { kind: "token", tokenKey: `eip155:4663:${A}`, address: A, chain: "robinhood", symbol: "PEPE" }],
+    [`theses on ${A} on bsc`, { kind: "token", tokenKey: `eip155:56:${A}`, address: A, chain: "bsc", symbol: "PEPE" }, { kind: "token", tokenKey: `eip155:56:${A}`, address: A, chain: "bsc", symbol: "PEPE" }],
   ] as const) {
     it(`C11: ${JSON.stringify(text)} after ${JSON.stringify(before)} remembers ${JSON.stringify(want)}`, () => {
       const prior: SubjectMemory = { ...emptyMemory(NOW - 60_000), subjects: [{ ...before }], lastIntent: "token-theses", lastRequestId: "req-1", turn: 2 };
@@ -207,7 +207,7 @@ describe("applyPlan (before the lookup)", () => {
   it("returns exactly the subjects the planner built its calls from", () => {
     const memory = resolvedMemory({
       subjects: [
-        { kind: "token", tokenKey: `eip155:4663:${A}`, address: A, chain: "robinhood", symbol: "PEPE" },
+        { kind: "token", tokenKey: `eip155:56:${A}`, address: A, chain: "bsc", symbol: "PEPE" },
         { kind: "trader", userId: USER, handle: "CryptoKaleo" },
       ],
     });
@@ -226,7 +226,7 @@ describe("applyResult (after the lookup)", () => {
   it("stores the resolved identity: key, address, chain and label", () => {
     const step = applyPlan(null, plan("theses on $PEPE", null), NOW);
     const m = applyResult(step.memory, { subjects: [rhToken(A, "PEPE")], requestId: "req-9" }, NOW + 5);
-    assert.deepEqual(m.subjects, [{ kind: "token", tokenKey: `eip155:4663:${A}`, address: A, chain: "robinhood", symbol: "PEPE" }]);
+    assert.deepEqual(m.subjects, [{ kind: "token", tokenKey: `eip155:56:${A}`, address: A, chain: "bsc", symbol: "PEPE" }]);
     assert.equal(m.lastRequestId, "req-9");
     assert.equal(m.updatedAt, NOW + 5);
   });
@@ -240,7 +240,7 @@ describe("applyResult (after the lookup)", () => {
   });
 
   it("keeps kinds the lookup did not resolve", () => {
-    const before = resolvedMemory({ subjects: [{ kind: "token", tokenKey: `eip155:4663:${A}`, address: A, chain: "robinhood", symbol: "PEPE" }] });
+    const before = resolvedMemory({ subjects: [{ kind: "token", tokenKey: `eip155:56:${A}`, address: A, chain: "bsc", symbol: "PEPE" }] });
     const m = applyResult(before, {
       subjects: [{ kind: "trader", trader: { userId: USER, handle: "laifu", displayName: null, verified: null } }],
       requestId: "req-3",
@@ -258,8 +258,8 @@ describe("applyResult (after the lookup)", () => {
   });
 
   it("keeps the same hex on two networks as two coins", () => {
-    const solanaish = chainFromProvider(undefined, "base");
-    const onBase = tokenIdentity(solanaish, A)!;
+    const otherEvm = chainFromProvider(undefined, "base");
+    const onBase = tokenIdentity(otherEvm, A)!;
     const m = applyResult(resolvedMemory(), { subjects: [{ kind: "token", token: onBase, label: { symbol: "PEPE", name: null } }], requestId: "r" }, NOW);
     assert.deepEqual(m.subjects, [{ kind: "token", tokenKey: `eip155:?:${A}`, address: A, chain: "base", symbol: "PEPE" }]);
     assert.equal(m.dossierRevision, null, "a different network is a different coin");
@@ -274,7 +274,7 @@ describe("applyResult (after the lookup)", () => {
     assert.doesNotMatch(s.symbol, /[\u0000-\u001f​]/);
     // The address, not the label, is what any follow-up sends.
     const next = classifyFomoQuestion("what about the sellers?", { memory: { ...m, lastIntent: "token-theses" }, now: NOW });
-    assert.deepEqual(next?.toolCalls[0]?.args, { token: A, chain: "robinhood", side: "sell" });
+    assert.deepEqual(next?.toolCalls[0]?.args, { token: A, chain: "bsc", side: "sell" });
   });
 
   it("ignores a forged token key and a malformed request id", () => {
@@ -296,7 +296,7 @@ describe("mergeResolved", () => {
   it("fills a compare from memory without duplicating the named coin", () => {
     const memory = resolvedMemory();
     const merged = mergeResolved([{ kind: "token", symbol: "WIF" }], memory, ["token"], "compare-theses", NOW);
-    assert.deepEqual(merged, [{ kind: "token", symbol: "WIF" }, { kind: "token", address: A, chain: "robinhood", symbol: "PEPE" }]);
+    assert.deepEqual(merged, [{ kind: "token", symbol: "WIF" }, { kind: "token", address: A, chain: "bsc", symbol: "PEPE" }]);
     const same = mergeResolved([{ kind: "token", address: A }], memory, ["token"], "compare-theses", NOW);
     assert.equal(same.length, 1);
   });
@@ -311,7 +311,7 @@ describe("serialize / deserialize", () => {
   it("round-trips", () => {
     const m = resolvedMemory({
       subjects: [
-        { kind: "token", tokenKey: `solana:1399811149:${"7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"}`, address: "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU", chain: "solana", symbol: "BONK" },
+        { kind: "token", tokenKey: `eip155:56:${"0xf0f571fa2e7ec7b5470df5574dd1fc2db2929528"}`, address: "0xf0f571fa2e7ec7b5470df5574dd1fc2db2929528", chain: "bsc", symbol: "BONK" },
         { kind: "trader", userId: USER, handle: "CryptoKaleo" },
       ],
       window: "24h",

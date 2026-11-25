@@ -81,10 +81,10 @@ const FRANK = "6dcf7c78-2537-522a-8307-3f9970c081be";
 const KALEO = "1f08e6ab-5c73-5443-9225-bfc496cde51f";
 const STAR = "254245a7-575a-51be-9bc3-090a924789eb";
 
-const rh = (hex: string) => `eip155:4663:0x${hex.repeat(40 / hex.length)}`;
-const PONS = "eip155:4663:0x39dbed3a00000000000000000000000000000c0d";
+const rh = (hex: string) => `eip155:56:0x${hex.repeat(40 / hex.length)}`;
+const PONS = "eip155:56:0x39dbed3a00000000000000000000000000000c0d";
 /** KALEO's Robinhood coin in the alerts fixture: cohort activity on a coin nobody in these tests holds. */
-const CACHE_TOKEN = "eip155:4663:0x7fe9950000000000000000000000000000000ca5";
+const CACHE_TOKEN = "eip155:56:0x7fe9950000000000000000000000000000000ca5";
 const X1 = rh("11");
 const X2 = rh("22");
 const Y1 = rh("33");
@@ -252,7 +252,7 @@ function board(window: string, ids: readonly string[], trades = 120): Record<str
       trades,
       followers: 1,
       holdings: 1,
-      wallets: { solana: null, evm: null },
+      wallets: { evm: null },
       topTokens: [],
       verified: false,
     })),
@@ -815,7 +815,7 @@ describe("review candidates", () => {
   });
 
   it("a full file keeps places for candidates by leaving out the cohort's oldest coins, and pays for no candidate it turned away", async () => {
-    const coinN = (n: number) => `eip155:4663:0x${n.toString(16).padStart(40, "0")}`;
+    const coinN = (n: number) => `eip155:56:0x${n.toString(16).padStart(40, "0")}`;
     const db = await freshDb();
     await seedCohort(db, [member(KALEO, "CryptoKaleo")]);
     // 45 cohort coins inside the breadth window, one every 30 s: more than a file holds on their own.
@@ -1059,7 +1059,7 @@ describe("tails", () => {
     const db = await freshDb();
     const Z1 = rh("77"); // STAR's coin: nobody holds, watches or follows it in the cohort
     const Z2 = rh("88"); // FRANK's coin
-    const SOLC = "solana:1399811149:So11111111111111111111111111111111111111112"; // a thesis off Robinhood Chain: not public discovery
+    const SOLC = "eip155:4663:0x00000000000000000000000000000000000b5c01"; // a thesis off Robinhood Chain: not public discovery
     await seedCohort(db, [member(KALEO, "CryptoKaleo")]);
     await tail(db, T1, STAR, { consider: true, handle: "starboy" });
     await tail(db, T1, FRANK, { consider: false });
@@ -2205,7 +2205,7 @@ describe("the orchestrator's wiring", () => {
     assert.equal(fomoFailureText(`connect failed for ${STREAM_URL} (owner ${T1})`), "connect failed for wss://stream.test/[redacted] (owner 0x…)");
     // A key in the URL's path, which no ?key= scrub reaches: Alchemy's /v2/<key>, Triton's and Syndica's.
     for (const url of ["https://eth-mainnet.g.alchemy.com/v2/AbCdEf0123456789GhIjKlMn", "https://agentcap.mainnet.rpcpool.com/0b7c4a1e-2f3d-4c5b-9a8e-1d2c3b4a5f6e",
-      "https://solana-mainnet.api.syndica.io/api-key/2xYzAbCdEf0123456789"]) {
+      "https://bsc-mainnet.api.syndica.io/api-key/2xYzAbCdEf0123456789"]) {
       const line = fomoFailureText(`pass failed — fetch ${url} timed out`);
       assert.equal(line, `pass failed — fetch ${url.slice(0, url.indexOf("/", 8))}/[redacted] timed out`, url);
     }

@@ -8,7 +8,7 @@
  *
  * The reads are not obscure. GeckoTerminal's trending feed, Bitquery's GraphQL
  * endpoint, the research reader (which fetches pages an ATTACKER chose, via
- * `read_link`), Rialto's quote API, and the MCP transport. Four of the five are
+ * `read_link`), a quote API, and the MCP transport. Four of the five are
  * third parties and one of them serves arbitrary web pages.
  *
  * THE CAP IS ENFORCED WHILE READING, NOT MEASURED AFTERWARDS. Checking
@@ -26,7 +26,7 @@
 
 /**
  * 2 MB. Chosen against what these endpoints legitimately return — a
- * GeckoTerminal page is tens of kilobytes, a Rialto quote is smaller, a research
+ * GeckoTerminal page is tens of kilobytes, a quote is smaller, a research
  * page read is capped in characters downstream — with two orders of magnitude of
  * slack so a bound is never the reason a real read fails.
  *

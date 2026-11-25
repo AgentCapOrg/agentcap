@@ -104,7 +104,7 @@ describe("classifyStage maps the existing vocabularies, keeping the original rea
     const want: [string, FunnelStep][] = [
       ["no-route", "UNSUPPORTED_ROUTE"], ["impact-cap", "UNSUPPORTED_ROUTE"], ["impact-unknown", "UNSUPPORTED_ROUTE"],
       ["sponsor-refused", "SPONSORSHIP_UNAVAILABLE"], ["no-gas", "SUBMISSION_FAILED"], ["not-recorded", "SUBMISSION_FAILED"],
-      ["fence-v4-refused", "SUBMISSION_FAILED"], ["entry-energy-withheld", "BUDGET_EXHAUSTED"], ["energy-needs-live", "BUDGET_EXHAUSTED"],
+      ["fence-v4-refused", "SUBMISSION_FAILED"],
       ["group-entry-cap", "BUDGET_EXHAUSTED"],
       // The gas pre-flight's open vocabulary: built, not sent.
       ["gas-ceiling", "SUBMISSION_FAILED"], ["enable-redundant", "SUBMISSION_FAILED"],
@@ -233,8 +233,7 @@ describe("the real take() drops read to their codes", () => {
 describe("classifyReview reads a completed review", () => {
   const trigger = { fire: true, reason: "scheduled-review", detail: "", candidates: [] } as never;
   const ok = (d: object) => ({ ran: true, trigger, nextReviewAt: null, snapshot: {} as never, result: { ok: true, seconds: 0, decision: { decision_id: "d9", action: "hold", ...d } } }) as unknown as ShadowOutcome;
-  it("not run: energy, unconfigured, and a quiet trigger files nothing", () => {
-    assert.equal(classifyReview({ ran: false, why: "energy: today's reviews are paced or spent", trigger, nextReviewAt: null }, { held: false, priceStale: false })?.stage, "BUDGET_EXHAUSTED");
+  it("not run: unconfigured, and a quiet trigger files nothing", () => {
     assert.equal(classifyReview({ ran: false, why: "brainUrl/brainToken not configured", trigger, nextReviewAt: null }, { held: false, priceStale: false })?.detail, "brain-not-configured");
     assert.equal(classifyReview({ ran: false, why: "nothing moved", trigger: { ...(trigger as object), fire: false } as never, nextReviewAt: 5 }, { held: false, priceStale: false }), null);
   });
@@ -265,7 +264,7 @@ describe("the entry screen, the candidate builder and the review guard", () => {
     assert.equal(code(cand({ fdvUsd: 10_000 })), "fdv-below-min");
     assert.equal(code(cand({ ageSec: 60 })), "too-young");
     assert.equal(code(cand({ fdvUsd: Number.NaN })), "incomplete-market-data");
-    for (const unpriceable of ["no-quote", "stale-price", "zero-price", "curve-priced", "v4-priced", "feed-priced", "unknown-source", "not-watched"] as const) {
+    for (const unpriceable of ["no-quote", "stale-price", "zero-price", "feed-priced", "unknown-source", "not-watched"] as const) {
       assert.equal(code(cand({ priceable: false, unpriceable })), "unpriceable", unpriceable);
     }
     assert.equal(code(cand({ priceable: false })), "unpriceable");
@@ -285,18 +284,17 @@ describe("the entry screen, the candidate builder and the review guard", () => {
   });
 
   it("trenchReviewBlock follows the guard's order and ignores non-review ticks", () => {
-    const base = { brainConfigured: true, bookIncomplete: false, brainTick: true, reviewsOpen: true };
+    const base = { brainConfigured: true, bookIncomplete: false, brainTick: true, };
     assert.equal(trenchReviewBlock(base), null);
     assert.equal(trenchReviewBlock({ ...base, brainTick: false, brainConfigured: false }), null);
     assert.equal(trenchReviewBlock({ ...base, brainConfigured: false, bookIncomplete: true }), "brain-not-configured");
-    assert.equal(trenchReviewBlock({ ...base, bookIncomplete: true, reviewsOpen: false }), "book-incomplete");
-    assert.equal(trenchReviewBlock({ ...base, reviewsOpen: false }), "review-energy-spent");
+    assert.equal(trenchReviewBlock({ ...base, bookIncomplete: true }), "book-incomplete");
   });
 });
 
 describe("discovery: the screen and the verified slice", () => {
   const pool = (token: string, over: Partial<GeckoPool> = {}): GeckoPool => ({
-    tokenAddress: token, poolAddress: token, poolId: token, dex: "uniswap-v3-robinhood", name: "X / USDG", volume24hUsd: 200_000,
+    tokenAddress: token, poolAddress: token, poolId: token, dex: "pancakeswap-v3-bsc", name: "X / USDG", volume24hUsd: 200_000,
     buyers24h: 50, buys24h: 100, sells24h: 80,
     buckets: { ...emptyGeckoBuckets(), m5: { changePct: 2, volumeUsd: 1000, buys: 10, sells: 8, buyers: 9, sellers: 8 } }, ...over,
   } as GeckoPool);
@@ -312,7 +310,7 @@ describe("discovery: the screen and the verified slice", () => {
       assert.equal(r, want);
       assert.equal(classifyStage({ kind: "discovery", screen: r! }).stage, "DISCOVERY_SCREENED_OUT");
     }
-    assert.equal(trenchScreenReason(pool(CASH.USDG.toLowerCase())), "quote-asset");
+    assert.equal(trenchScreenReason(pool(CASH.USDT.toLowerCase())), "quote-asset");
   });
 
   it("unqualified coins are named by venue, rank and verification; qualified ones are not explained", () => {
@@ -362,8 +360,8 @@ describe("discovery: the screen and the verified slice", () => {
   });
 
   it("entryTokenOf: only a buy out of cash is an entry", () => {
-    assert.equal(entryTokenOf({ kind: "swap", sellToken: CASH.USDG, buyToken: A.toUpperCase().replace("0X", "0x") }), A);
-    assert.equal(entryTokenOf({ kind: "swap", sellToken: A, buyToken: CASH.USDG }), null, "an exit is not this funnel");
+    assert.equal(entryTokenOf({ kind: "swap", sellToken: CASH.USDT, buyToken: A.toUpperCase().replace("0X", "0x") }), A);
+    assert.equal(entryTokenOf({ kind: "swap", sellToken: A, buyToken: CASH.USDT }), null, "an exit is not this funnel");
     assert.equal(entryTokenOf({ kind: "transfer" }), null);
     assert.equal(trencherSymbol(A), "T000000000A1", "the derivation trencher-discovery.ts uses");
   });

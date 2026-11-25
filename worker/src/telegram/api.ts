@@ -1,7 +1,7 @@
 /**
  * Telegram Bot API client — the agentcapavatar's mouth and ears.
  *
- * Mirrors the venue-client discipline (worker/src/venues/rialto.ts): an
+ * The venue-client discipline: an
  * injectable `FetchLike` for tests, and every method returns `{ result, reason }`
  * and NEVER throws — a dead network or a bad token degrades to a reason string,
  * it doesn't crash the poll loop. No SDK; bare fetch against

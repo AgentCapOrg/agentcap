@@ -95,24 +95,24 @@
       "id": "alrt_1789999997000_8997",
       "alertType": "buy",
       "source": "feed",
-      "trader": "sol_fake",
-      "token": "FSOL",
+      "trader": "bnb_fake",
+      "token": "FBNB",
       "eventId": "57575757-aaaa-4bbb-8ccc-000000000008",
       "userId": "68686868-1111-4222-8333-444444444444",
       "tradeId": "77777777-1111-4222-8333-000000000006",
       "swapId": null,
       "transferId": null,
-      "tokenAddress": "FakeCoinMint1111111111111111111111111pump",
-      "chainId": 1399811149,
-      "chain": "solana",
+      "tokenAddress": "0xe59b28a6f3fa7c14ad0c1a99c38cdf87a7f1bb7d",
+      "chainId": 56,
+      "chain": "bsc",
       "notificationType": null,
       "usdValue": 700,
       "positionValueUsd": 700,
-      "text": "sol_fake bought $FSOL ($700 size)",
+      "text": "bnb_fake bought $FBNB ($700 size)",
       "ts": 1790000000000,
       "raw": {
         "title": "",
-        "text": "sol_fake bought $FSOL ($700 size)"
+        "text": "bnb_fake bought $FBNB ($700 size)"
       }
     },
     {

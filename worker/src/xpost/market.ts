@@ -277,7 +277,7 @@ export function majorUnreadAnswers(seed: string, style: { lower: boolean }, o: C
 
 /**
  * "HOW'S THE MARKET?" AS CODE READ IT (the owner's decision, 2026-10-12):
- * the big coins' day on CoinGecko (bitcoin, ether, solana) and the Robinhood
+ * the big coins' day on CoinGecko (bitcoin, ether, bnb) and the Robinhood
  * Chain coins past the fleet's floors on the index, each by code's own
  * thresholds. Null where a source was not read. The figures themselves go in
  * code's line (figures.ts "24h:" and "trending:"), never in these words.
@@ -302,9 +302,9 @@ export interface MarketRead {
 /**
  * THE BIG COINS' DAY, READ TOGETHER FROM THE FIGURES THE LINE SHOWS
  * (red-team review, 2026-10-12). It was read from moveOf, which calls a move
- * under half a percent flat, so bitcoin +0.5% beside ether and solana at
+ * under half a percent flat, so bitcoin +0.5% beside ether and bnb at
  * -0.49% read as "up": "majors lean green today ... coingecko 24h: $BTC
- * +0.5%, $ETH -0.5%, $SOL -0.5%", words a reader takes as fact against the
+ * +0.5%, $ETH -0.5%, $BNB -0.5%", words a reader takes as fact against the
  * figures beside them. Now each change is read as the figures line writes it
  * (figures.ts signedPercent, rounded to a tenth): up only when every coin
  * shown is above +0%, down only when every one is below, flat only when every
@@ -318,12 +318,12 @@ export function majorsDirOf(changes: readonly unknown[]): MarketRead["majors"] {
   const dir = signs.every((x) => x > 0) ? "up" : signs.every((x) => x < 0) ? "down" : signs.every((x) => x === 0) ? "flat" : "mixed";
   if (dir === "mixed" || dir === "flat") return { dir };
   // HOW FAR, AS EVERY COIN THE LINE SHOWS MOVED (red-team review of
-  // a964a74c, 2026-10-12): "$BTC -15.2%, $ETH -21.7%, $SOL -28.3%" went out
+  // a964a74c, 2026-10-12): "$BTC -15.2%, $ETH -21.7%, $BNB -28.3%" went out
   // beside "the giants dipped slightly". Then the coin that moved most set the
   // size, and it overstated (red-team review of 1ed46625): "$BTC -1.2%, $ETH
-  // -2%, $SOL -10.5%" went out beside "majors are plunging" and "the old guard
-  // took a beating", "$BTC -0.1%, $ETH -0.2%, $SOL -14%" beside "the giants
-  // fell steeply", and "$BTC +0.8%, $ETH +1.1%, $SOL +10.3%" beside "majors are
+  // -2%, $BNB -10.5%" went out beside "majors are plunging" and "the old guard
+  // took a beating", "$BTC -0.1%, $ETH -0.2%, $BNB -14%" beside "the giants
+  // fell steeply", and "$BTC +0.8%, $ETH +1.1%, $BNB +10.3%" beside "majors are
   // surging": a crash or a surge in bitcoin and ether that the figures beside
   // them contradict. Each coin is read on moveOf's bands from the very figure
   // shown; a band only when every coin is in it, and "uneven" otherwise, said
@@ -344,7 +344,7 @@ const MAJORS_SUBJECT: readonly string[] = ["majors", "the heavyweights", "blue c
 /**
  * ALL UP OR ALL DOWN, IN WORDS AS BIG AS THE MOVE (red-team review of
  * a964a74c, 2026-10-12): "dipped slightly" and "taking a breather" went out
- * beside BTC -15.2%, ETH -21.7%, SOL -28.3%, and "inching forward" beside
+ * beside BTC -15.2%, ETH -21.7%, BNB -28.3%, and "inching forward" beside
  * +18.4%, +24.9%, +31%. One band for each of moveOf's: a little (under three
  * percent), a fair bit (under ten), sharply. No "slightly", "a touch",
  * "gently" or "inching" past the small band, nothing small in the sharp one.

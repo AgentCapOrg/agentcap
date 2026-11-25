@@ -51,7 +51,6 @@ The orchestrator injects these into each child; a tenant never sets them (they a
 | `AGENTCAP_PUBLIC_ORIGIN` | the web service's public URL, e.g. `https://agentcap.up.railway.app` — auth binds signatures to it |
 | `PORT` | set by Railway automatically; `start:web` honours it |
 | `GROQ_API_KEY` *(or `ANTHROPIC_API_KEY`)* | **the dashboard chat's brain.** Not optional if you want the chat to think — see below |
-| `AGENTCAP_SOLANA` | **leave unset.** Solana stays off in production until its release gates are signed off; see [Solana (off in production)](#solana-off-in-production) |
 
 > **The chat needs a key on the WEB service, not just the orchestrator.**
 > `/api/chat` resolves a model from the web container's own environment, so
@@ -440,7 +439,7 @@ routing, voice and consent":
 
 | | asked | answered with |
 |---|---|---|
-| a) market | "how's the market", "market update", "is it a green day" and the like (a strict allowlist) | code's casual words and code's figures line: bitcoin, ether and solana's day on CoinGecko, and what's moving on Robinhood Chain |
+| a) market | "how's the market", "market update", "is it a green day" and the like (a strict allowlist) | code's casual words and code's figures line: bitcoin and ether's day on CoinGecko, and what's moving on Robinhood Chain |
 | b) coin facts | a major by name or ticker, "what's hot", a `$ticker` or a contract on the chain | the research and majors path, never confirming a buy by name |
 | c) itself | what it trades, how it trades, what it has been up to | a draft from its own public facts, told its buys only for the plain questions about what it trades |
 | d) chat | plain banter ("how are you", "who are you", "tell me a joke", "what do you think about ai agents") | a casual draft that states no fact it was not handed; "are you bullish?" and "wen moon" get code's non-committal line about itself |
@@ -682,7 +681,7 @@ runs `scripts/container-start.sh`, which `exec`s the role's package.json start
 script itself: no npm and no `sh -c` on the start path.
 
 - **The roles:** `start:web` (or the variable unset), `start:orchestrator`,
-  `start:recovery-replies`, and the separate `start:solana`. Anything else — **including the variable set but
+  and `start:recovery-replies`. Anything else — **including the variable set but
   empty** — is refused with exit 64 and nothing starts. To get the web role,
   delete the variable; do not clear it.
 - **Leave each service's Start Command empty.** One set in Railway would replace
@@ -712,176 +711,14 @@ script itself: no npm and no `sh -c` on the start path.
 1. **web** — new service from this repo. Leave `AGENTCAP_START` unset → runs the Next dashboard. Set the web env above, then add the custom domain (`app.agentcap.xyz`) and follow its DNS record.
 2. **orchestrator** — a second service from the same repo. Set `AGENTCAP_START=start:orchestrator`. Set the orchestrator env above. It needs **no public domain**.
 
-The optional Solana worker uses an explicit, separate `start:solana` role;
-none of the RH roles starts it. Its hosted guard requires
-`AGENTCAP_SOLANA_SERVICE_ID` to match `RAILWAY_SERVICE_ID`, rejects a match with
-the configured RH `AGENTCAP_FLEET_SERVICE_ID`, and requires `DATABASE_URL` plus
-the image's `AGENTCAP_IMAGE=dockerfile-v1` marker. The web and Solana worker must
-share their Solana authority/accounting database and encryption configuration.
-The direct CLI applies the same hosted checks, and starts only with
-`AGENTCAP_SOLANA=1` on its own service (exit 78 otherwise, before any storage);
-`--help` only prints usage.
-Local development can use `npm run start:solana`, which reads an optional
-ignored `.env.solana.local`. Selecting this role does not deploy the vault
-program or authorize trading: each account must explicitly enable its strategy,
-and live execution still requires the verified immutable program and finalized
-owner-approved session. The app displays **Waiting for Solana worker** when an
-enabled strategy has no recent worker heartbeat. Adding this role does not
-provision or start a hosted service.
+### Grant request limits
 
-### Solana (off in production)
-
-Merging the Solana work deploys nothing and turns nothing on. Production keeps
-it off; the full plan, settings and runbooks are in
-[`solana-integration.md`](solana-integration.md), and every setting is listed in
-[`.env.solana.example`](../.env.solana.example).
-
-- **`AGENTCAP_SOLANA` stays unset on the web service.** Unset, the network
-  switch, the `/solana` screen and Privy's Solana wallets are not rendered, and
-  every `/api/solana` route answers 404 before sign-in, body parsing or any
-  database read. Set it (to `1`) only in the order of "Turning Solana on"
-  below: first for paper, with `AGENTCAP_SOLANA_LIVE_TENANTS` empty, and live
-  only after the release gates in `solana-integration.md` are signed off. No
-  `start:solana` service exists, and none should before step 2.
-- **`NEXT_PUBLIC_AGENTCAP_SOLANA_OWNER_KEY_EXPORT` is a Dockerfile build ARG,
-  not a runtime variable.** Next inlines it when the web app is built, so a
-  change needs a rebuild and redeploy of the web service, not a restart. The
-  default is empty, which is off; only the exact value `1` shows the Solana
-  "Back up your owner key" card. Set it on the Railway web service only after
-  wallet export is enabled for the Privy app in its dashboard and the deployed
-  vault's release entry ships in the published `agentcap` CLI. It is public by
-  design, like the other `NEXT_PUBLIC_` values.
-- **Settings that must match.** `AGENTCAP_SOLANA_LIVE_TENANTS`, the four
-  `AGENTCAP_SOLANA_LIVE_MAX_*` caps, `AGENTCAP_SOLANA_PYTH_GENERATION`,
-  `AGENTCAP_SOLANA_REFERENCE_TOLERANCE_BPS`,
-  `AGENTCAP_SOLANA_EXPIRED_ATTEMPT_ALLOWANCE` and the fee settings go on every
-  service that runs the Solana runtime (web and the Solana worker) with the same
-  values. Each service applies a change only once it is redeployed. The live
-  list and caps are also checked: each service publishes a digest of the ones it
-  runs (the worker with every heartbeat, the web as it starts, every 30 s after
-  and whenever it serves Solana status, a preview or a trade), and while the
-  two differ every live buy is held on both, status says so (a buys-only
-  blocker; exits, revoke and withdraw continue) and
-  `[alert] solana-live-rollout differs` pages the operator. Deploy a change to
-  the worker first, then the web ("Turning Solana on", step 4).
-  `AGENTCAP_SOLANA_RESOLVE_THIRD_RPC`
-  goes on an operator's machine only, and `AGENTCAP_SOLANA_RECOVER_RPC` only on
-  an owner's own computer.
-- **Alert lines.** Once Solana is on, page on every line starting `[alert]` in
-  the web and Solana worker services' logs (stderr), as for the orchestrator.
-  From both web and worker (the runtime's status and trade paths):
-  `[alert] Solana fee payer is low|cannot fund buys|cannot fund exits…`,
-  `[alert] solana fee-payer-threshold misconfigured`,
-  `[alert] solana-reference-price refused: reason=… generation=…`,
-  `[alert] solana-reference-tolerance misconfigured`,
-  `[alert] solana-jupiter-key misconfigured`,
-  `[alert] solana-live-rollout misconfigured`,
-  `[alert] solana-live-rollout differs`,
-  `[alert] solana-live-rollout unchecked` and
-  `[alert] solana-live-rollout unpublished` (the web's start or periodic
-  publish, or the worker's beside its heartbeat). From the Solana worker only:
-  `[alert] Solana transactions stuck pending`,
-  `[alert] Solana vault below its book`,
-  `[alert] Solana autonomous strategy refused: proven-expired attempts used up…`
-  and the earlier warning `[warn] Solana proven-expired attempts use more than
-  half…`. Each line, its cause and what to do are in `solana-integration.md`
-  ("Operator runbooks"). Every Solana process installs the stdio guard before it
-  prints, and URL redaction treats `helius-rpc.com`, `helius.xyz`, `rpcpool.com`
-  and `syndica.io` as keyed hosts, so a provider key does not reach these logs.
-- **Robinhood kills and the Solana tables.** "Kill all agents" and Telegram
-  `/kill` also stop the tenant's Solana strategy. They first look
-  `solana_wallet_bindings` (and its `strategy_json` column) up read-only in the
-  catalog. On a database where Solana was never used, which is production today,
-  the table is absent: the kill creates nothing, takes no Solana lock, runs no
-  Solana DDL and reports done exactly as before. Both kills remove the Robinhood
-  grant first; only where the Solana table exists can a Solana fault make the
-  web answer 503 "Kill incomplete" or keep a Telegram kill pending for a retry.
-  While a Telegram kill is pending (or its kill state cannot be read), the
-  orchestrator keeps the tenant's home and its request but still removes the
-  cached grant copy, `settings.json` (the bot token), `telegram.json` and the
-  memory, as for any removed agent; only the wipe of the home waits.
-- **`POST /api/grants` owner-key scan.** The Solana secret walk reads each
-  string once under a grant-sized budget (32 candidates, small window budget):
-  a 230 KB hostile body costs about 7 to 15 ms of CPU. The route is not paced.
-- **`/api/grants` request limits** (Robinhood code, changed with this work).
-  `POST /api/grants` refuses a body over 256 KiB with 413 ("That request is too
-  large. Nothing was saved."), the same bound as partner activation, and a body
-  that is not JSON with 400 `not a grant`. The kill switch's `DELETE` body is
-  limited to 8 KiB (413). A grant whose `chainId` is not Robinhood Chain (4663)
-  or its testnet (46630), or that names no chain, is refused with 400
-  `unsupported_chain`; the dashboard's signers always send one of the two.
-
-#### Turning Solana on
-
-Like Robinhood's rollout, a few tenants at a time, and each step only after the
-one before it looks right. `AGENTCAP_SOLANA_LIVE_TENANTS` names the tenants that
-may go live (unset or empty: nobody), and the `AGENTCAP_SOLANA_LIVE_MAX_*` caps
-bound the live limits anyone may sign (default 10 and 25 USDG, 0.1 and 0.25 SOL;
-details in `solana-integration.md`, "Live rollout"). The list never stops an
-owner's exits, revoke or withdrawals, and the caps stop buys before exits: the
-vault program charges a sale's USDG proceeds to the same per-trade and daily
-limits as a buy, so a buy is refused once it would leave too little of them to
-sell the whole SOL position within the same 24 hours (a day's buys stop at
-about half the USDG cap). Withdraw is never limited.
-
-1. **Paper first.** On the web service set `AGENTCAP_SOLANA=1` with
-   `AGENTCAP_SOLANA_LIVE_TENANTS` unset or empty. It needs
-   `AGENTCAP_SOLANA_RPC_MAINNET`, `AGENTCAP_JUPITER_API_KEY`, `DATABASE_URL`,
-   `AGENTCAP_PUBLIC_ORIGIN` and Solana embedded wallets on the production Privy
-   app (enabled in place, never a new app id). Every signed-in owner can bind a
-   wallet and paper trade; nobody can save live mode, register a permission or
-   buy live, and the page offers no live switch. Watch the `[alert]` lines.
-2. **The program deployment and fee payer.** Only after the release gates in
-   `solana-integration.md` (external audit, production `declare_id` and its
-   keypair check, devnet rehearsal, the `--final` deployment and its pinned
-   release, the Pyth re-check): set `AGENTCAP_SOLANA_VAULT_PROGRAM`,
-   `AGENTCAP_SOLANA_VAULT_SHA256`, `AGENTCAP_SOLANA_RPC_MAINNET_FALLBACK` (a
-   second provider), `AGENTCAP_STORE_DEK` and a funded
-   `AGENTCAP_SOLANA_FEE_PAYER_SEED` on web and on a new `start:solana` service
-   (its own Railway service id, `AGENTCAP_SOLANA=1`), with the list still empty.
-   Status should show the vault program verified and the fee payer funded.
-3. **The canary tenant.** Set `AGENTCAP_SOLANA_LIVE_TENANTS=0x<canary>` on web
-   and worker, with the caps at the smallest amounts the canary needs, and
-   deploy both, the worker first, then the web: the worker buys nothing live
-   until the web has published the same settings, which it does as it starts
-   and every 30 s after (until then the worker says
-   `[alert] solana-live-rollout differs: the web has not published …`, or
-   `… the web last published different …`). Run the canary checks in the
-   release gates: a small funded trade, restart and outage, full exit, withdraw
-   and revoke, expiry.
-4. **Widen.** Add tenants to the list, a few at a time, and raise the caps only
-   as an owner decision. Every change to the list or the caps goes on web and
-   worker, **the Solana worker first, then the web**, each service applying it
-   only once redeployed. The worker restarts with the new settings and compares
-   them with the web's latest digest, whatever its age: while they differ it
-   holds every live buy (a tenant re-added, caps raised). The web, still on the
-   old ones, sees the worker's new digest and holds every live buy, for every
-   tenant, until it is deployed too (above). The redeployed web publishes the
-   new settings as it starts, and every 30 s after, and both buy again: no page
-   needs opening. So any change, taking tenants off or adding them, lowering or
-   raising the caps, needs no hold: once the worker has published the new ones
-   (its first tick), no buy is made under the old ones, and paper, sales,
-   revoke and withdrawals carry on throughout. Once both are deployed, check no
-   `[alert] solana-live-rollout differs` or `… unpublished` follows; those
-   taken off are exits-only from then on. A worker restarted with unchanged
-   settings is not held. What the check cannot see: the worker trusts the
-   latest digest written as the web's. While the web cannot publish (its
-   `[alert] solana-live-rollout unpublished`), or for up to 30 s after an old
-   web container still draining during the deploy last wrote its own, that
-   digest is out of date, and where it equals the worker's settings the worker
-   buys under settings the running web may no longer run. In this order the old
-   web's digest is never the new worker's settings, so that overlap holds buys.
-   Deployed the other way round, the web first, the old worker may buy under
-   its old settings, which the new web no longer runs, whenever the old web
-   container still draining wrote the digest last. For an incident, hold
-   trading: `npm
-   run solana:hold -- set all --reason "…"` refuses every new trade for
-   everyone, paper and live, buys and sales alike (revoke, withdrawals and
-   receipt recovery continue), and `set 0x<tenant>` holds one tenant the same
-   way; the hold CLI takes the tenant id in lowercase only, while
-   `AGENTCAP_SOLANA_LIVE_TENANTS` takes either case. Never unset the web's
-   `AGENTCAP_SOLANA` alone, which also removes owners' in-app revoke and
-   withdraw.
+`POST /api/grants` refuses a body over 256 KiB with 413 ("That request is too
+large. Nothing was saved."), the same bound as partner activation, and a body
+that is not JSON with 400 `not a grant`. The kill switch's `DELETE` body is
+limited to 8 KiB (413). A grant whose `chainId` is not Robinhood Chain (4663)
+or its testnet (46630), or that names no chain, is refused with 400
+`unsupported_chain`; the dashboard's signers always send one of the two.
 
 ### Perpetual futures (paper intake available; rollout gated)
 
@@ -899,7 +736,7 @@ one is built to be safe alone with perps off.
 - **Every kill already reaches a Perps wallet** (slice 2). "Kill all agents",
   the phone apps' Stop (both through `DELETE /api/grants`), a hosted Telegram
   /kill, `agentcap kill` and Start over revoke the tenant's Perps grant beside
-  its Spot grant (and, all but Start over, its Solana strategy), and report the
+  its Spot grant, and report the
   kill incomplete, never done, when the Perps half fails. A tenant with no Perps wallet costs a kill one catalog
   read of `perps_grants`, with no lock and no schema written.
 - **The tables are additive.** `perps_grants` and `perps_tenant_settings` hold
@@ -916,7 +753,7 @@ change. They limit trading, never a kill.
 
 | variable | where | value |
 |---|---|---|
-| `AGENTCAP_PERPS` | **both** `web` and `orchestrator` | `off` · `paper` · `live`. **Unset means off, hosted and self-hosted**, as `AGENTCAP_SOLANA` does; anything it does not recognise reads as `off` too — a typo in a switch that takes capability away must not hand it back. Set `AGENTCAP_PERPS=off` on both services anyway before slice 1 merges. Until real-money perps land (the plan's Phase 4), `live` also reads as `off`: there is no live executor to reach, and a deployment that asked for live is never left trading practice perps its operator believes are real. `web` reads it to decide whether to offer the opt-in and mint a Lighter key; children inherit the orchestrator's value. Keep the two equal |
+| `AGENTCAP_PERPS` | **both** `web` and `orchestrator` | `off` · `paper` · `live`. **Unset means off, hosted and self-hosted**; anything it does not recognise reads as `off` too — a typo in a switch that takes capability away must not hand it back. Set `AGENTCAP_PERPS=off` on both services anyway before slice 1 merges. Until real-money perps land (the plan's Phase 4), `live` also reads as `off`: there is no live executor to reach, and a deployment that asked for live is never left trading practice perps its operator believes are real. `web` reads it to decide whether to offer the opt-in and mint a Lighter key; children inherit the orchestrator's value. Keep the two equal |
 | `AGENTCAP_PERPS_LIVE_TENANTS` | **both** | Only read with `AGENTCAP_PERPS=live`. A comma-separated list of **Perps wallet** smart accounts (the Perps grant's `smartAccount` — never the Spot wallet's, and never the SIWE sign-in wallet, which is a different address again); an entry that is not an address is dropped. Hosted, a Perps wallet not on it stays on paper. Empty means nobody. Do not name anyone before [the mainnet checklist](perps-mainnet-checklist.md) has passed and both mobile apps show the perps banner |
 | `AGENTCAP_HALT_PERP_ENTRIES` *(optional)* | `orchestrator` | `1`: no perp opens for any tenant; exits, the protective loop, stand-downs, withdrawals and claims keep running. Only an empty value, `0`, `false`, `no` or `off` means not halted — any other spelling halts. Children read it at spawn, so it takes effect when Railway restarts the service on the variable change (seconds). This is the lever to reach for first in a perps incident (section 8) |
 | `AGENTCAP_LIGHTER_VENDOR_DIR` *(optional)* | `orchestrator` | A directory holding `lighter-signer.wasm` and `wasm_exec.js`. Unset, the signer is found at `worker/vendor/lighter/`, which the image carries. Both files are hash-checked before a byte runs, and a known-answer test must pass, whatever the path; an override that points at the wrong place fails closed (live perps stay unarmed). Paper never loads the signer |

@@ -1,5 +1,4 @@
 /** A public wallet is supplied by trusted grant/owner-consent projection, never by a model. */
-import { onchainIdIn } from "../../../packages/core/src/ids";
 import { xWeightedLength, X_MAX_WEIGHTED } from "./client";
 
 export interface PublicWallet {
@@ -14,32 +13,15 @@ const ADDRESS_IN_TEXT = /0x[0-9a-fA-F]{6,}/;
 const MARKER = " Wallet (";
 const TOKEN_MARKER = " CA (";
 
-/**
- * An id anywhere in the text: a 0x run as before, or any id core's detector
- * finds (a Solana key or signature, a Solana explorer link). Solana ids carry
- * no 0x, so the hex rule alone let one through as ordinary prose. The glued
- * scan: "CA<mint>" or "<mint>is" is an id too (audit regressions F3).
- *
- * ITS ACCEPTED COST, measured 2026-10-19 over a corpus of prose, tickers,
- * URLs, hashtags, digests and numbers (re-measured 2026-10-20): prose,
- * tickers, URLs and hashtags under 43 characters are never read as an id, nor
- * is a long number standing alone. An unbroken base58 run of 43 or more
- * characters can be (about 11% of 43-59-character camelCase hashtags, 22% of
- * longer ones, 1% of "commit<sha>" strings, and about 1.7% of 10-200-digit
- * numbers glued to a word, "<digits>tokens": 0.3% of a corpus of long numbers
- * written every way; a zero breaks a run, so it is the digits after the last
- * zero, with the word, that are read; a run of exactly 43 or 44 that decodes
- * to 32 bytes already was, by the default scan). Such a post is withheld,
- * never published with an id in it. The test pins both sides.
- */
+/** An id anywhere in the text: a 0x run. A post carrying one is withheld, never published with an id in it. */
 function idInText(text: string): boolean {
-  return ADDRESS_IN_TEXT.test(text) || onchainIdIn(text, { glued: true });
+  return ADDRESS_IN_TEXT.test(text);
 }
 
 /** Unknown networks and malformed accounts fail closed instead of borrowing a chain label. */
 export function publicWalletSuffix(wallet: PublicWallet | null | undefined): string | null {
   if (!wallet || !ADDRESS.test(wallet.address)) return null;
-  const chain = wallet.chainId === 4663 ? "Robinhood Chain" : wallet.chainId === 46630 ? "Robinhood Chain Testnet" : null;
+  const chain = wallet.chainId === 56 ? "BNB Chain" : wallet.chainId === 97 ? "BNB Chain Testnet" : null;
   return chain ? `${MARKER}${chain}): ${wallet.address.toLowerCase()}` : null;
 }
 
@@ -68,7 +50,7 @@ export function publicWalletStillAllowed(
 }
 
 /** Where a landed Robinhood Chain transaction is shown. Testnet trades get no link. */
-const TX_BASE = "https://robinhoodchain.blockscout.com/tx/";
+const TX_BASE = "https://bscscan.com/tx/";
 
 /**
  * A CA is a completed trade's exact token contract on its verified execution
@@ -78,8 +60,8 @@ const TX_BASE = "https://robinhoodchain.blockscout.com/tx/";
  * goes on its own line just before it.
  */
 export function publicTokenSuffix(token: PublicWallet | null | undefined, withTx = false): string | null {
-  if (!token || !ADDRESS.test(token.address) || ![4663, 46630].includes(token.chainId)) return null;
-  const tx = withTx && token.chainId === 4663 && typeof token.txHash === "string" && /^0x[0-9a-fA-F]{64}$/.test(token.txHash)
+  if (!token || !ADDRESS.test(token.address) || ![56, 97].includes(token.chainId)) return null;
+  const tx = withTx && token.chainId === 56 && typeof token.txHash === "string" && /^0x[0-9a-fA-F]{64}$/.test(token.txHash)
     ? `\n\n${TX_BASE}${token.txHash.toLowerCase()}` : "";
   return `${tx}\n\n${token.address.toLowerCase()}`;
 }

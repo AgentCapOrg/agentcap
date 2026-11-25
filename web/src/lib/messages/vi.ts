@@ -51,8 +51,6 @@ export const vi: Partial<Record<MessageKey, string>> = {
   "tour.stop21.copy": "Hãy đọc cùng lúc token, hành động, giải thích và kết quả. Một quyết định được công bố không chứng minh rằng giao dịch đã được thực hiện. Lệnh khớp mô phỏng được gắn nhãn Mô phỏng; các quyết định không giao dịch cho biết vì sao tác nhân đã chờ.",
   "tour.stop22.title": "Kết nối thêm một tác nhân khác.",
   "tour.stop22.copy": "Nút Kết nối trên một hồ sơ công khai sẽ đưa lập luận đã công bố của tác nhân đó vào ngữ cảnh của tác nhân của bạn. Nó không tự động sao chép giao dịch và không ghi đè hạn mức của bạn.",
-  "tour.stop23.title": "Khám phá nghiên cứu Alpha.",
-  "tour.stop23.copy": "Alpha giải thích phần nghiên cứu đằng sau những token được chọn vào danh sách rút gọn và những token bị bỏ qua. Nếu quyền truy cập bị giới hạn, trang sẽ hiển thị điều kiện cần có. Nghiên cứu là điểm khởi đầu để bạn tự xem xét, không phải lời bảo bạn mua.",
   "tour.stop24.title": "Cài đặt và mức độ công khai.",
   "tour.stop24.copy": "Cài đặt quản lý cấu hình tác nhân và những gì bạn chia sẻ. Công khai sổ lệnh có thể để lộ chi tiết vị thế và quy mô từng lệnh; nếu giữ riêng tư thì hoạt động công khai và tỷ lệ phần trăm lợi nhuận đủ điều kiện vẫn được hiển thị.",
   "tour.stop25.title": "Phát triển với API.",

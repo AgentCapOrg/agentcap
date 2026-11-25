@@ -50,7 +50,7 @@ describe("authenticated CoinGecko market source", () => {
  * fail, rather than the screen quietly returning nothing forever.
  */
 const CHUMP = {
-  id: "robinhood_0x714442e9a611f8561a7df108d6d925132937cfb8",
+  id: "bsc_0x714442e9a611f8561a7df108d6d925132937cfb8",
   type: "pool",
   attributes: {
     base_token_price_usd: "0.0222452357304331",
@@ -67,9 +67,9 @@ const CHUMP = {
     reserve_in_usd: "521702.1056",
   },
   relationships: {
-    base_token: { data: { id: "robinhood_0x0e0d2c89a5a019fe1cf762e5e33187631dacc21b", type: "token" } },
-    quote_token: { data: { id: "robinhood_0x0bd7d308f8e1639fab988df18a8011f41eacad73", type: "token" } },
-    dex: { data: { id: "uniswap-v3-robinhood", type: "dex" } },
+    base_token: { data: { id: "bsc_0x0e0d2c89a5a019fe1cf762e5e33187631dacc21b", type: "token" } },
+    quote_token: { data: { id: "bsc_0x0bd7d308f8e1639fab988df18a8011f41eacad73", type: "token" } },
+    dex: { data: { id: "pancakeswap-v3-bsc", type: "dex" } },
   },
 };
 
@@ -90,7 +90,7 @@ const MICRODUCK = {
     transactions: { h24: { buys: 900, sells: 700, buyers: 310, sellers: 280 } },
   },
   relationships: {
-    base_token: { data: { id: "robinhood_0xd5f1afea47b1a9eab414d2ee740cf1d6d039e725" } },
+    base_token: { data: { id: "bsc_0xd5f1afea47b1a9eab414d2ee740cf1d6d039e725" } },
     dex: { data: { id: "pons-v2-dex" } },
   },
 };
@@ -105,7 +105,7 @@ describe("parseGeckoPool", () => {
     // confusing the two would have the agent trading the pool contract.
     assert.equal(p!.tokenAddress, "0x0e0d2c89a5a019fe1cf762e5e33187631dacc21b");
     assert.equal(p!.name, "CHUMP / WETH 1%");
-    assert.equal(p!.dex, "uniswap-v3-robinhood");
+    assert.equal(p!.dex, "pancakeswap-v3-bsc");
   });
 
   it("turns the API's strings into numbers, not NaN", () => {
@@ -322,7 +322,7 @@ describe("fetchGeckoPoolsResult separates a refusal from an empty market", () =>
     try {
       await withFetch((async (url, init) => {
         calls++;
-        assert.equal(String(url), "https://pro-api.coingecko.com/api/v3/onchain/networks/robinhood/pools?page=2");
+        assert.equal(String(url), "https://pro-api.coingecko.com/api/v3/onchain/networks/bsc/pools?page=2");
         assert.equal(new Headers(init?.headers).get("x-cg-pro-api-key"), "test-private-key");
         assert.equal(init?.redirect, "error");
         return new Response("refused", { status: 401 });
@@ -459,7 +459,7 @@ describe("readTokenPools", () => {
       const pools = await readTokenPools(CHUMP_TOKEN.toUpperCase().replace("0X", "0x"));
       assert.deepEqual(pools?.map((p) => p.tokenAddress), [CHUMP_TOKEN]);
     });
-    assert.deepEqual(urls, [`https://api.geckoterminal.com/api/v2/networks/robinhood/tokens/${CHUMP_TOKEN}/pools?page=1`]);
+    assert.deepEqual(urls, [`https://api.geckoterminal.com/api/v2/networks/bsc/tokens/${CHUMP_TOKEN}/pools?page=1`]);
   });
 
   it("a 404 is an answer (no pools known), not a failure", async () => {
@@ -671,7 +671,7 @@ describe("the Pro lane's pace, priority and plan latch", () => {
     const t = now;
     await fetchGeckoPoolsResult("trending_pools");
     // The default row's next slot is t+3000; the evidence read takes its own.
-    const route = `/networks/robinhood/pools/0x${"4".repeat(40)}/trades?token=0x${"3".repeat(40)}`;
+    const route = `/networks/bsc/pools/0x${"4".repeat(40)}/trades?token=0x${"3".repeat(40)}`;
     await cachedGeckoDetail<FeedResult>("evidence-leg", async (source, remainingMs) => {
       await fetch(`${source.base}${route}`, { signal: AbortSignal.timeout(remainingMs) });
       return { failed: false, observedAt: now };
@@ -702,7 +702,7 @@ describe("the Pro lane's pace, priority and plan latch", () => {
       assert.equal(page2.failure, "plan-restricted");
       assert.equal(urls.filter(u => u.includes("/trending_pools")).length, 1, "the latched family spends no further requests");
       assert.equal((await fetchGeckoPoolsResult("new_pools")).failed, false);
-      const latchLines = lines.filter(l => /refused networks\/robinhood\/trending_pools/.test(l));
+      const latchLines = lines.filter(l => /refused networks\/bsc\/trending_pools/.test(l));
       assert.equal(latchLines.length, 1);
       assert.ok(urls.every(u => u.startsWith("https://pro-api.coingecko.com/")));
     } finally { console.warn = warn; }
@@ -710,7 +710,7 @@ describe("the Pro lane's pace, priority and plan latch", () => {
 
   /** A Brain-style evidence detail read of one pool's trades, on whichever source the lane picks. */
   const evidenceRead = (n: string) => {
-    const route = `/networks/robinhood/pools/0x${n.repeat(40)}/trades?token=0x${"3".repeat(40)}`;
+    const route = `/networks/bsc/pools/0x${n.repeat(40)}/trades?token=0x${"3".repeat(40)}`;
     return cachedGeckoDetail<FeedResult>(`evidence-${n}`, async (source) => {
       const res = await fetch(`${source.base}${route}`);
       return res.ok ? { failed: false, observedAt: now } : { failed: true, failure: `http-${res.status}` };

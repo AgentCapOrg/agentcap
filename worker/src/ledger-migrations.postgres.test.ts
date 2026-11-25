@@ -183,7 +183,7 @@ test("Postgres: repeated ledger setup does not queue exclusive locks behind publ
 });
 
 /**
- * THE EVM-ONLY TX-HASH FOLD, ON POSTGRES (Solana P0; audit merge-history 2b(1)).
+ * THE EVM-ONLY TX-HASH FOLD, ON POSTGRES (audit merge-history 2b(1)).
  *
  * Every open runs `UPDATE flows SET tx_hash = LOWER(tx_hash) WHERE ... AND <0x + 64 hex>`
  * through applyLedgerMigrations, which swallows a non-ALTER statement's error. So if
@@ -192,7 +192,7 @@ test("Postgres: repeated ledger setup does not queue exclusive locks behind publ
  * counted twice beside its lower-case twin), and nothing would say so. ledger-hash-case
  * .test.ts proves it on SQLite; this proves it here, over two opens.
  */
-test("Postgres: the open-time fold lowercases EVM hashes and leaves a Solana signature as written", { skip: !url, timeout: 60_000 }, async () => {
+test("Postgres: the open-time fold lowercases EVM hashes and leaves a non-EVM hash as written", { skip: !url, timeout: 60_000 }, async () => {
   const target = new URL(url!);
   assert.ok(["localhost", "127.0.0.1", "[::1]"].includes(target.hostname), "only a disposable local PostgreSQL is allowed");
   const pg = createRequire(import.meta.url)("pg") as { Client: new (config: { connectionString: string }) => Client };
@@ -216,7 +216,7 @@ test("Postgres: the open-time fold lowercases EVM hashes and leaves a Solana sig
     const UPPER = `0x${"0123456789ABCDEF".repeat(4)}`;
     const MIXED = `0x${"aBcDeF01".repeat(8)}`;
     const CAPITAL_X = `0X${"FEDCBA98".repeat(8)}`;
-    // Base58, 64 bytes, upper case in it to lose: a Solana signature's shape.
+    // A non-EVM hash with upper case in it to lose.
     const SIGNATURE = "5VERv8NMvzbJMEkV8xnrLkEaWRtSz9CosKDYjCJjBRnbJLgp8uirBgmQpjKhoR4tjF3ZpRzrFmBV6UjKdiSZkQUW";
     // 66 characters with a 0x, but not hex throughout: not an EVM hash, kept as written.
     const NOT_HEX = `0x${"ABCDEFGH".repeat(8)}`;

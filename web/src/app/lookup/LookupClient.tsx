@@ -19,11 +19,11 @@ import { useState } from "react";
 import { formatUnits } from "viem";
 import { isAddr, normalizeAddr } from "@/lib/address";
 import { chainFor, readAddress, readAsOwner, verdictOf, type Lookup, type Reading } from "@/lib/account-lookup";
-import { robinhoodChain, robinhoodTestnet } from "@agentcap/core";
+import { bnbChain, bnbTestnet } from "@agentcap/core";
 import "@/styles/lookup.css";
 
-const MAINNET = robinhoodChain.id;
-const TESTNET = robinhoodTestnet.id;
+const MAINNET = bnbChain.id;
+const TESTNET = bnbTestnet.id;
 
 const fmtEth = (wei: bigint | null) => (wei === null ? "unreadable" : `${formatUnits(wei, 18)} ETH`);
 
@@ -31,12 +31,10 @@ function ReadingCard({
   title,
   note,
   reading,
-  extra,
 }: {
   title: string;
   note: string;
   reading: Reading;
-  extra?: { label: string; rows: { symbol: string; amount: string }[] };
 }) {
   const nothing = reading.holdings.length === 0 && (reading.nativeWei === null || reading.nativeWei === 0n);
   return (
@@ -53,7 +51,7 @@ function ReadingCard({
             : "not deployed"}
       </p>
 
-      {nothing && !extra?.rows.length ? (
+      {nothing ? (
         <p className="mm-lookup-none">Nothing held here.</p>
       ) : (
         <div className="mm-lookup-rows">
@@ -69,14 +67,6 @@ function ReadingCard({
               <span>{fmtEth(reading.nativeWei)}</span>
             </div>
           )}
-          {extra?.rows.map((r) => (
-            <div className="mm-lookup-row" key={`${extra.label}-${r.symbol}`}>
-              <span>
-                {r.symbol} <em>{extra.label}</em>
-              </span>
-              <span>{r.amount}</span>
-            </div>
-          ))}
         </div>
       )}
 
@@ -188,13 +178,9 @@ export function LookupClient() {
   const [settled, setSettled] = useState(false);
 
   /**
-   * The two readings run SEPARATELY and render as they land.
-   *
-   * Awaiting both took about thirty seconds on chain 4663, because deriving an
-   * account also scans for a class vault over a very large block range. Someone
-   * who pasted their account address watched a spinner for half a minute to see
-   * a balance that had been ready in two — and a page for people who think
-   * their money is gone is the worst possible place to look broken.
+   * The two readings run SEPARATELY and render as they land: deriving an account
+   * is the slower half, and a page for people who think their money is gone is
+   * the worst possible place to look broken.
    */
   async function run() {
     const addr = normalizeAddr(value);
@@ -292,7 +278,7 @@ export function LookupClient() {
             {settled ? (
               <Verdict l={result} />
             ) : (
-              <p className="mm-lookup-meta">reading the chain — the owner derivation scans for a class vault and can take about half a minute.</p>
+              <p className="mm-lookup-meta">reading the chain…</p>
             )}
 
             {result.asOwner && (
@@ -300,14 +286,6 @@ export function LookupClient() {
                 title="Read as an owner → the account it derives"
                 note="the ERC-4337 account this address controls"
                 reading={result.asOwner.reading}
-                {...(result.asOwner.classHoldings.length > 0
-                  ? {
-                      extra: {
-                        label: "in class vault",
-                        rows: result.asOwner.classHoldings.map((h) => ({ symbol: h.symbol, amount: h.amount })),
-                      },
-                    }
-                  : {})}
               />
             )}
             {result.ownerError && (

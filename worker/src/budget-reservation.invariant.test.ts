@@ -25,7 +25,7 @@ import test from "node:test";
  * so a big enough leak blocks the sell that would clear the position. Slow,
  * silent, and it ends with the agent unable to get out.
  *
- * That is not hypothetical: the Rialto router-migration skip did exactly this
+ * That is not hypothetical: a venue skip once did exactly this
  * with a bare `return;` from inside the execution try, and two paper-rail
  * windows could do it via a throwing store write.
  *
@@ -115,16 +115,3 @@ test("the execution try carries a finally, because a return inside it runs neith
   );
 });
 
-test("the Rialto router-migration skip records a row rather than returning bare", () => {
-  // The original leak, pinned by name so it cannot silently come back.
-  const idx = SRC.indexOf("Rialto router migrated to");
-  assert.ok(idx > 0, "sanity: the router-migration branch still exists");
-  const branch = SRC.slice(idx, idx + 2000);
-  const ret = branch.indexOf("\n          return;");
-  assert.ok(ret > 0, "sanity: the branch still returns");
-  assert.match(
-    branch.slice(0, ret),
-    /recordTrade\(\{[\s\S]*?reject_rule:\s*"router-migrated"/,
-    "the skip must write a rejected row before returning — that is what releases the reservation",
-  );
-});

@@ -67,7 +67,7 @@
  * commands). The Perps wallet differs in what it takes:
  *
  * - EXITS ONLY (readPerpsWalletOrder): close one perpetual position, or close
- *   all of them, on the practice book. No entry, no Spot order, no energy buy
+ *   all of them, on the practice book. No entry and no Spot order
  *   is ever queued for it, and the Spot wallet refuses an exit
  *   (SPOT_WALLET_HOLDS_NO_PERPS). The worker judges both again
  *   (order-gate.ts walletOrderRefusal) before anything is built.
@@ -180,16 +180,10 @@ const perpsStoodDown = (what: string) =>
  * a second, genuinely-intended order impossible: ask for the same thing again
  * next minute and it is a new id, as it should be.
  */
-function orderId(agent: string, o: { side: string; symbol: string; usdgAmount: number; purpose?: string }, nowMs: number): string {
+function orderId(agent: string, o: { side: string; symbol: string; usdgAmount: number }, nowMs: number): string {
   const bucket = Math.floor(nowMs / 60_000);
-  // THE ENERGY MARKER IS PART OF WHAT THE ORDER IS, so it is part of its id: a
-  // get-energy card and a plain buy card with the same numbers in the same
-  // minute are two different orders, and the second must not be answered
-  // "already queued" off the first. Appended only when present, so every other
-  // order keeps the id it always had.
-  const purpose = o.purpose ? `|${o.purpose}` : "";
   return createHash("sha256")
-    .update(`${agent.toLowerCase()}|${o.side}|${o.symbol}|${o.usdgAmount}|${bucket}${purpose}`)
+    .update(`${agent.toLowerCase()}|${o.side}|${o.symbol}|${o.usdgAmount}|${bucket}`)
     .digest("hex")
     .slice(0, 32);
 }
@@ -329,7 +323,7 @@ export async function POST(req: Request) {
   const expiresAt = now + ttlMs;
   // An exit's own id, fresh every time (exitId); every other order's is the
   // minute-bucket hash it always had. Only the Perps wallet takes an exit.
-  const id = isPerpExitPurpose(order.purpose) ? exitId() : orderId(agent, order, now);
+  const id = "purpose" in order && isPerpExitPurpose(order.purpose) ? exitId() : orderId(agent, order, now);
   const args = { ...order };
 
   // Both rails run the rules in lib/order-state.ts, where a test drives them

@@ -10,7 +10,7 @@ import type { AccountState } from "./HostedControls";
 const OWNER = `0x${"a".repeat(40)}`;
 const FACTORY = `0x${"e".repeat(40)}`;
 const ACCOUNT: AccountState = { session: { hosted: true, address: OWNER }, status: { exists: false, tenant: OWNER } };
-const GRANT = { smartAccount: `0x${"b".repeat(40)}`, owner: OWNER, sessionKeyAddress: `0x${"c".repeat(40)}`, chainId: 4663,
+const GRANT = { smartAccount: `0x${"b".repeat(40)}`, owner: OWNER, sessionKeyAddress: `0x${"c".repeat(40)}`, chainId: 56,
   // The monthly default (`DEFAULT_PERMISSION_DAYS`): a new agent's first
   // permission runs thirty days, so the review must say thirty too.
   caps: { perTradeUsdg: 10, dailyUsdg: 50, expiryDays: 30, maxDrawdownPct: 5, maxOpsPerDay: 24 },
@@ -44,8 +44,6 @@ before(async () => {
     if (parent?.filename === path) {
       if (id === "@/terminal/usePrivyOwner") return { usePrivyOwner: () => ({ account: { address: OWNER }, did: "did:privy:test" }) };
       if (id === "@/lib/trencher-permission") return { get TRENCHER_FACTORY() { return factory; } };
-      if (id === "@/lib/verified-adapter") return { verifiedAdapter: async () => undefined };
-      if (id === "../tier") return { loadTier: async () => null, newAgentQualifies: () => true };
       if (id === "../account-session") return { fetchAccountForSession: async () => current };
       if (id === "@/lib/saved-grant-binding") return { loadRecoveryGrants: () => [], trustedSavedGrant: async (candidate: Grant) => candidate.owner === OWNER };
       if (id === "@/lib/session") return {
@@ -118,7 +116,7 @@ describe("new Trencher setup through the actual CreateAgent screen", () => {
     assert.equal(mints[0]!.trencherFactory, FACTORY);
     assert.deepEqual(mints[0]!.caps, GRANT.caps);
     assert.equal(mints[0]!.hostedAs, OWNER);
-    assert.equal(mints[0]!.chainId, 4663);
+    assert.equal(mints[0]!.chainId, 56);
     assert.match(text(), /Your wallet is connected/);
     assert.match(text(), /Add trading funds/);
     assert.doesNotMatch(text(), /I saved my recovery key|I understand: if I lose|Retry activation/);

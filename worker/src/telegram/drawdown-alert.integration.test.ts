@@ -16,7 +16,7 @@ afterEach(() => mock.restoreAll());
 const { startNotifier } = await import("./notifier");
 const { makeChatTally } = await import("./poll-rules");
 
-const NOW = Math.floor(Date.parse("2026-10-01T15:00:00Z") / 1000);
+const NOW = Math.floor(Date.parse("2026-12-01T15:00:00Z") / 1000);
 const OWNER = 123_456_789;
 const KEY = "drawdown-halted:500";
 const RETRY_SEC = 30 * 60;
@@ -27,7 +27,7 @@ const GRANT = JSON.stringify({
   owner: "0x2222222222222222222222222222222222222222",
   sessionKeyAddress: "0x3333333333333333333333333333333333333333",
   serialized: "test-only-permission",
-  chainId: 4663,
+  chainId: 56,
   grantedAt: NOW,
   expiresAt: NOW + 14 * 86400,
   caps: { perTradeUsdg: 25, dailyUsdg: 100, expiryDays: 14, maxDrawdownPct: 5, maxOpsPerDay: 20 },
@@ -100,13 +100,13 @@ async function withNotifier(
     stateRef: { get: () => state, set: (next) => { state = next; } },
     buildStatusContext: () => ({
       name: "Robin", strategy: "s", venue: "v", paused: false,
-      workerAliveSec: 0, grant: null, chainId: 4663, telegramMaxActionUsdg: 25,
+      workerAliveSec: 0, grant: null, chainId: 56, telegramMaxActionUsdg: 25,
     }),
     getAlertInputs: () => ({
       grantExpiresAt: NOW + 14 * 86400, maxActionUsdg, cashUsdg: 100,
       drawdownBps, breakerBps: 500, gasWei: null,
     }),
-    getChainId: () => 4663,
+    getChainId: () => 56,
     getAgentId: () => ACCOUNT,
     tally: makeChatTally((_level, message) => logs.push(message), () => time),
     now: () => time,

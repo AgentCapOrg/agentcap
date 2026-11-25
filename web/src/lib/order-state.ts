@@ -22,7 +22,6 @@
  * second order was admitted beside one GET still called queued.
  */
 // Browser-safe: chat-commands.ts, which the card bundles, imports it too.
-import { AGENTCAP_TOKEN } from "@agentcap/core";
 // Browser-safe too (it imports one type), and by path: the worker checks an
 // exit with this same parser before it builds one, so the two gates cannot
 // come to disagree about what an exit is.
@@ -140,15 +139,6 @@ export type OrderAsked = {
   side: "buy" | "sell";
   symbol: string;
   usdgAmount: number;
-  /**
-   * THE ONE MARKER THAT MAKES AN ORDER THE AGENT'S ENERGY BUY. Written only by
-   * the get-energy card, as a value the command fixes (chat-commands.ts), and
-   * kept here only when it is exactly "energy" — anything else is dropped, so
-   * no other card, and no other value, can reach the worker's energy route
-   * (worker/src/order-gate.ts orderRoute, which routes on it and never on the
-   * symbol). Absent on every other order.
-   */
-  purpose?: "energy";
 };
 
 /**
@@ -161,6 +151,11 @@ export type OrderAsked = {
  * assets and every cap live in the worker, which decides again.
  */
 export function readOrder(body: OrderBody): { order: OrderAsked } | { error: string } {
+  // A STALE CLIENT'S REMOVED CARD IS REFUSED, never read as an ordinary order:
+  // the owner confirmed a different act from the one that would run.
+  if (body.purpose === "energy") {
+    return { error: "this app no longer places that kind of order. Reload and try again. Nothing was queued" };
+  }
   const side = body.side === "buy" || body.side === "sell" ? body.side : null;
   if (!side) return { error: "that is neither a buy nor a sell" };
   const symbol = typeof body.symbol === "string" ? body.symbol.trim().toUpperCase() : "";
@@ -174,18 +169,6 @@ export function readOrder(body: OrderBody): { order: OrderAsked } | { error: str
   // Rounded to cents before it is hashed, so "25" and "25.000000001" are the
   // same order rather than two — the id is the idempotency key.
   const order: OrderAsked = { side, symbol, usdgAmount: Math.round(usdgAmount * 100) / 100 };
-  // THE ENERGY MARKER, exactly or not at all (see OrderAsked.purpose). A
-  // marked order is the get-energy card, which fixes a buy of $AGENTCAP — so a
-  // marked order that says anything else did not come from it, and is refused
-  // here rather than handed to a route that buys the reserve whatever the
-  // symbol said. The worker refuses the same mismatch again.
-  if (body.purpose === "energy") {
-    if (side !== "buy" || symbol !== AGENTCAP_TOKEN.symbol) {
-      // "$" + the ticker — a token's name, not a currency amount.
-      return { error: `an energy order is a buy of ${"$" + AGENTCAP_TOKEN.symbol} and nothing else` };
-    }
-    order.purpose = "energy";
-  }
   return { order };
 }
 
@@ -196,7 +179,7 @@ export type PerpsWalletOrder = PerpExitOrder;
 
 /**
  * Said to an owner whose Perps wallet was asked for anything but an exit.
- * Nothing is queued: a buy, a sell or an energy buy would spend the practice
+ * Nothing is queued: a buy or a sell would spend the practice
  * book's collateral on tokens, and the worker refuses each again
  * (order-gate.ts walletOrderRefusal).
  */

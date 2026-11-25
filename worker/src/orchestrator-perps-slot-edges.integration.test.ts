@@ -95,8 +95,11 @@ let leaseRefused: ReadonlySet<string> = new Set();
 orch.setLeaseAcquireForTest(async (t) => (leaseRefused.has(t.toLowerCase()) ? null : acquireTenantLease(t)));
 const confirmed: Array<{ tenant: string; perps: boolean }> = [];
 orch.setKillConfirmForTest(async (tenant, done) => { confirmed.push({ tenant, perps: done?.perps === true }); });
-let solanaDown = false;
-orch.setSolanaKillForTest(async () => { if (solanaDown) throw new Error("solana bindings unavailable"); });
+let perpsFailsAfter = false;
+orch.setPerpsPaperKillForTest(async (tenant) => {
+  if (perpsFailsAfter) throw new Error("perps settings store unavailable");
+  return settingsStores.disablePaperPerpsForKill(tenant, undefined, true);
+});
 orch.setPaperRestoreForTest(async () => ({ ok: true, line: null }));
 orch.setPerpsFeedStartForTest(() => ({ stop: () => {} }));
 const said: string[] = [];
@@ -126,7 +129,7 @@ after(() => {
   rmSync(fleet, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
 });
 afterEach(async () => {
-  solanaDown = false;
+  perpsFailsAfter = false;
   leaseRefused = new Set();
   orch.setPhantomProcessesForTest(0);
   orch.setRetirementMemoryStoreForTest(null);
@@ -178,8 +181,8 @@ describe("a kill whose Perps half does not finish", () => {
     await settle();
     assert.equal(live(perpsKey(o)).length, 1);
     // A Perps-only owner's kill (in the Spot home, as a recorded one lands)
-    // whose Solana half fails: the Perps grant goes, a ✅ naming it is owed.
-    solanaDown = true;
+    // whose Perps half fails after revoking: the Perps grant goes, a ✅ naming it is owed.
+    perpsFailsAfter = true;
     mkdirSync(orch.childHome(o), { recursive: true });
     writeKillRequest(orch.childHome(o), { serialized: "recorded-kill" } as never, nowSec());
     await orch.honourPendingKills();
@@ -195,7 +198,7 @@ describe("a kill whose Perps half does not finish", () => {
     await settle();
     const resigned = live(perpsKey(o));
     assert.equal(resigned.length, 1, "the re-signed Perps grant arms");
-    solanaDown = false;
+    perpsFailsAfter = false;
     await orch.reconcile();
     await settle();
     assert.ok(await perps.get(o), "the newer grant is kept");
@@ -204,7 +207,7 @@ describe("a kill whose Perps half does not finish", () => {
   });
 
   it("a non-0x roster id's kill completes as it always did (no Perps worker to stand down)", async () => {
-    const id = "sol:abc" as `0x${string}`;
+    const id = "agent:abc" as `0x${string}`;
     await spot.put(id, grant(address(0xf1), address(0xf2)));
     try {
       mkdirSync(orch.childHome(id), { recursive: true });
@@ -212,7 +215,7 @@ describe("a kill whose Perps half does not finish", () => {
       await orch.reconcile();
       await settle();
       assert.equal(await spot.get(id), null);
-      assert.ok(!said.some((l) => l.includes("Perps wallet could not be stopped")), said.filter((l) => l.includes("sol:abc")).join("\n"));
+      assert.ok(!said.some((l) => l.includes("Perps wallet could not be stopped")), said.filter((l) => l.includes("agent:abc")).join("\n"));
     } finally {
       await spot.remove(id);
     }

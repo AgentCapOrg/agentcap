@@ -14,6 +14,7 @@ process.env.AGENTCAP_HOME = HOME;
 const store = await import("./store");
 const { homePaths } = await import("./home");
 const { CASH } = await import("../../packages/core/src/index");
+const { usdt } = await import("./testdata/bnb-cash");
 const { TRANSFER_TOPIC } = await import("./deposit-log");
 const { bookInferredReceipt, scanAndBookDepositWindow } = await import("./deposit-scan");
 const { deriveBootstrapAccounting } = await import("./bootstrap-source");
@@ -23,13 +24,13 @@ const { receiptFloorAfter, receiptWindow } = await import("./flow-inference");
 
 const ACCOUNT = "0x00000000000000000000000000000000000d0033";
 const OWNER = "0x00000000000000000000000000000000000d0044";
-const USDG = CASH.USDG as Hex;
+const USDG = CASH.USDT as Hex;
 const RISK = "deposit-scan-risk";
 const GRANT = {
   smartAccount: ACCOUNT,
   owner: OWNER,
   sessionKeyAddress: "0x00000000000000000000000000000000000000fe",
-  chainId: 4663,
+  chainId: 56,
   caps: { perTradeUsdg: 10, dailyUsdg: 50, expiryDays: 14, maxDrawdownPct: 5, maxOpsPerDay: 24 },
   grantedAt: 1_700_000_000,
   expiresAt: 2_000_000_000,
@@ -37,10 +38,11 @@ const GRANT = {
 const topic = (address: string): Hex => `0x${address.slice(2).padStart(64, "0")}`;
 const hash = (id: number): Hex => `0x${id.toString(16).padStart(64, "0")}`;
 
-function transfer(direction: "in" | "out", amount: bigint, index: number, tx = hash(index + 1)): RawLog {
+/** `micro` is the amount in micro-USDT; the log carries it in base units. */
+function transfer(direction: "in" | "out", micro: bigint, index: number, tx = hash(index + 1)): RawLog {
   return {
     topics: [TRANSFER_TOPIC, topic(direction === "in" ? OWNER : ACCOUNT), topic(direction === "in" ? ACCOUNT : OWNER)],
-    data: `0x${amount.toString(16).padStart(64, "0")}`,
+    data: `0x${usdt(micro).toString(16).padStart(64, "0")}`,
     transactionHash: tx,
     blockNumber: "0x64",
     logIndex: `0x${index.toString(16)}`,
@@ -90,7 +92,7 @@ const window = (client: ReconcileChain) => ({
   // Deliberately stale: safety cannot depend on a pre-read dedup set.
   knownKeys: new Set<string>(),
   tradeTxHashes: new Set<string>(),
-  chainId: 4663,
+  chainId: 56,
 });
 
 before(async () => { await store.initStore(); });
@@ -204,7 +206,7 @@ describe("a change inference would book, booked as its receipt instead (flow-inf
   const TOP_UP = 59_954_460n;
   const booked = (tx: string) => store.hasFlowForTx(ACCOUNT, tx);
   const infer = (client: ReconcileChain, deltaUsdg6: bigint, over: Partial<Parameters<typeof bookInferredReceipt>[1]> = {}) =>
-    bookInferredReceipt(window(client), { agentId: ACCOUNT, mode: "live", deltaUsdg6, flowBookedForTx: booked, ...over });
+    bookInferredReceipt(window(client), { agentId: ACCOUNT, mode: "live", deltaUsdg6: usdt(deltaUsdg6), flowBookedForTx: booked, ...over });
   const row = () => ({ ...sql<{ source: string; tx_hash: string | null; block_number: number | null; log_index: number | null; amount_usdg: number; direction: string }>(
     "SELECT source, tx_hash, block_number, log_index, amount_usdg, direction FROM flows WHERE agent_id = ? ORDER BY id DESC LIMIT 1", ACCOUNT) });
   /** The peaks are REAL columns: compared in micro-USDG, as the anchor reads them. */
@@ -311,7 +313,7 @@ describe("a change inference would book, booked as its receipt instead (flow-inf
     // The store would admit a real receipt in paper mode; a simulated change has none.
     const paper = await infer(client, TOP_UP, { mode: "paper" });
     assert.ok(paper.kind === "unmatched" && /simulated/.test(paper.why));
-    const other = await bookInferredReceipt(window(client), { agentId: OWNER, mode: "live", deltaUsdg6: TOP_UP, flowBookedForTx: booked });
+    const other = await bookInferredReceipt(window(client), { agentId: OWNER, mode: "live", deltaUsdg6: usdt(TOP_UP), flowBookedForTx: booked });
     assert.equal(other.kind, "unmatched");
     assert.equal(flowCount(), 0);
   });
@@ -339,7 +341,7 @@ describe("a change inference would book, booked as its receipt instead (flow-inf
     assert.ok(!("none" in w) && w.fromBlock > 1_300n, "the window starts above the inferred deposit's block");
     if ("none" in w) return;
     const r = await bookInferredReceipt(scanOf(ranged([deposit]), w), {
-      agentId: ACCOUNT, mode: "live", deltaUsdg6: TOP_UP, flowBookedForTx: booked,
+      agentId: ACCOUNT, mode: "live", deltaUsdg6: usdt(TOP_UP), flowBookedForTx: booked,
     });
     assert.equal(r.kind, "unmatched");
     assert.equal(flowsBySource("chain-log"), 0);
@@ -349,7 +351,7 @@ describe("a change inference would book, booked as its receipt instead (flow-inf
     assert.ok(!("none" in unguarded) && unguarded.fromBlock <= 1_300n);
     if ("none" in unguarded) return;
     const twice = await bookInferredReceipt(scanOf(ranged([deposit]), unguarded), {
-      agentId: ACCOUNT, mode: "live", deltaUsdg6: TOP_UP, flowBookedForTx: booked,
+      agentId: ACCOUNT, mode: "live", deltaUsdg6: usdt(TOP_UP), flowBookedForTx: booked,
     });
     assert.equal(twice.kind, "booked", "this is the double count the floor exists to prevent");
     assert.equal(micro(await peak()), 100_000_000 + 2 * Number(TOP_UP), "and the one-way peak raised twice");
@@ -369,7 +371,7 @@ describe("a change inference would book, booked as its receipt instead (flow-inf
 describe("the deposit scan never resumes across a flow booked by inference", () => {
   const insert = (source: string, at: number, block: number | null, tx: string | null, logIndex: number | null) =>
     exec(`INSERT INTO flows (agent_id, direction, amount_usdg, tx_hash, block_number, log_index, source, epoch, chain_id, at)
-      VALUES ('${ACCOUNT}', 'in', 10, ${tx ? `'${tx}'` : "NULL"}, ${block ?? "NULL"}, ${logIndex ?? "NULL"}, '${source}', 1, 4663, ${at})`);
+      VALUES ('${ACCOUNT}', 'in', 10, ${tx ? `'${tx}'` : "NULL"}, ${block ?? "NULL"}, ${logIndex ?? "NULL"}, '${source}', 1, 56, ${at})`);
 
   it("an inferred flow booked after the mark's receipt refuses the resume; one long before it does not", async () => {
     insert("chain-log", 1_700_000_000, 100, hash(5), 0);

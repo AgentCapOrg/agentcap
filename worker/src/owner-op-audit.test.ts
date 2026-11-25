@@ -18,11 +18,13 @@ import { DatabaseSync } from "node:sqlite";
 import { after, describe, it } from "node:test";
 import { wrapSqlite } from "./db";
 import { applyLedgerSchema } from "./store";
-import { GRANT_PONS_CLASS } from "../../packages/core/src/index";
 import type { RpcCall } from "./chain-capital";
 import { CliError, connectBooking, pgClientDb, type PgClient } from "./chain-gap-booking-cli";
 import { auditExitCode, auditReport, auditRpc, AuditRefused, readAuditChain, readAuditSnapshot } from "./owner-op-audit";
 import { AUDIT_APPLICATION_NAME, failureLine, main, parseAuditArgs } from "./owner-op-audit-cli";
+
+// The feature marker older stored grant rows carry.
+const GRANT_PONS_CLASS = "pons-class";
 
 const dir = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentcap-owner-op-audit-")));
 const handles: DatabaseSync[] = [];

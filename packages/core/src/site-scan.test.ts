@@ -3,7 +3,6 @@ import { describe, it } from "node:test";
 import { affiliated, findInSources, ownRepo, siteNames, siteOf, FINDINGS_MAX } from "./site-scan";
 
 const CA = "0x86aF99052DB086a66aF7D764bB04d3abb81b485F";
-const MINT = "t9bnCGiZVUYsRKvx4d5dPcoDCSyuBM9C33ZNGNULARP";
 
 describe("what a scanned site points at", () => {
   it("finds a contract in the page's words and keeps where it was seen, strongest first", () => {
@@ -26,24 +25,6 @@ describe("what a scanned site points at", () => {
   it("drops the addresses every dapp's libraries carry", () => {
     const f = findInSources([{ where: "script", text: `"0xcA11bde05977b3631167028862bE2a173976CA11","0x000000000022D473030F116dDEE9F6B43aC78BA3","0x0000000000000000000000000000000000000000","0x4200000000000000000000000000000000000006","0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"` }]);
     assert.deepEqual(f.evm, []);
-  });
-
-  it("reads a Solana mint from words and links, but in a bundle only as a whole quoted string", () => {
-    const words = findInSources([{ where: "text", text: `Official CA ${MINT} copy` }]);
-    assert.deepEqual(words.solana.map((s) => s.address), [MINT]);
-    const bundle = findInSources([{ where: "script", text: `var a=${MINT};var b="${MINT}xyz";var c='${MINT}';` }]);
-    assert.deepEqual(bundle.solana.map((s) => s.where), [["script"]]);
-    assert.equal(bundle.solana.length, 1, "only the quoted, whole one");
-  });
-
-  it("never reads an English word, a one-case run or a system program as a mint", () => {
-    const f = findInSources([{ where: "text", text: "abcdefghijkmnopqrstuvwxyzabcdefghijk ABCDEFGHJKLMNPQRSTUVWXYZABCDEFGH23 TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA So11111111111111111111111111111111111111112 SysvarRecentB1ockHashes11111111111111111111" }]);
-    assert.deepEqual(f.solana, []);
-  });
-
-  it("ignores base58-looking runs inside an inline image", () => {
-    const blob = "data:image/png;base64," + "iVBORw0KGgo/" + "Ab3dEf5hJk7mNp9qRs2tUv4wXy6zAb3dEf5hJk7m" + "+AAAA==";
-    assert.deepEqual(findInSources([{ where: "html", text: `<img src="${blob}">` }]).solana, []);
   });
 
   it("finds GitHub however it is written, and never GitHub's own pages", () => {
@@ -83,7 +64,7 @@ describe("what a scanned site points at", () => {
   it("reads malformed input as nothing", () => {
     // @ts-expect-error: what a caller might hand in from JSON
     const f = findInSources([null, { where: "nowhere", text: CA }, { where: "text", text: 12 }]);
-    assert.deepEqual([f.evm, f.solana, f.github], [[], [], []]);
+    assert.deepEqual([f.evm, f.github], [[], []]);
   });
 });
 

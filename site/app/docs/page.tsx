@@ -170,7 +170,7 @@ agentcap kill       # kill switch — destroys the grant`}
           Your agentcapavatar can hang out in a Telegram group like one more person: it answers when
           it&apos;s called, now and then joins in, remembers the chat, and when someone posts a
           Robinhood Chain coin it takes a look, tags them, and says whether it&apos;s in or passing.
-          Coins from other chains (Ethereum, Solana, BNB and the rest) it leaves alone. In trencher
+          Coins from other chains it leaves alone. In trencher
           mode its Brain decides and every limit still applies — a group message can put a coin in
           front of it, never order a trade. It never posts alerts, sizes, prices or P&amp;L, or
           anything private.

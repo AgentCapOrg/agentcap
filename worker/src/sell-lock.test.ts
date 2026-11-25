@@ -28,8 +28,8 @@ import {
   type Hex,
   type PublicClient,
 } from "viem";
-import { robinhoodChain } from "../../packages/core/src/chain";
-import { CASH, TRENCHER_VAULT_ABI, UNISWAP, type StockToken } from "../../packages/core/src/index";
+import { bnbChain } from "../../packages/core/src/chain";
+import { CASH, TRENCHER_VAULT_ABI, PANCAKESWAP, type StockToken } from "../../packages/core/src/index";
 import { FEE_TIERS } from "./venues/uniswap";
 import { readPositions } from "./positions";
 import { quarantineOf, unknownCostOf } from "./quarantine";
@@ -47,13 +47,12 @@ import {
 } from "./sell-lock";
 
 const FACTORY_ABI = parseAbi(["function getPool(address a, address b, uint24 fee) view returns (address)"]);
-const MULTICALL3 = robinhoodChain.contracts.multicall3.address.toLowerCase();
-const V3_FACTORY = getAddress(UNISWAP.v3Factory);
-const V4_PM = getAddress(UNISWAP.v4PoolManager);
-const USDG = getAddress(CASH.USDG);
-const WETH = getAddress(CASH.WETH);
-/** What index.ts hands checkEntry: the factory, the PoolManager, and where a coin's canonical pools are looked for. */
-const VENUE = { v3Factory: V3_FACTORY, v4PoolManager: V4_PM, quotes: [USDG, WETH], fees: [100, 500, 3000, 10000] } as const;
+const MULTICALL3 = bnbChain.contracts.multicall3.address.toLowerCase();
+const V3_FACTORY = getAddress(PANCAKESWAP.v3Factory);
+const USDG = getAddress(CASH.USDT);
+const WETH = getAddress(CASH.WBNB);
+/** What index.ts hands checkEntry: the factory, and where a coin's canonical pools are looked for. */
+const VENUE = { v3Factory: V3_FACTORY, quotes: [USDG, WETH], fees: [100, 500, 2500, 10000] } as const;
 
 /** How a fake token treats a transfer from anyone but its deployer. */
 type Rule = "clean" | "pool-locked" | "all-locked" | "false-to-pool" | "no-return";
@@ -100,7 +99,7 @@ class FakeChain {
 
   client(): PublicClient {
     return createPublicClient({
-      chain: robinhoodChain,
+      chain: bnbChain,
       // retryCount 0, as every production read client is (rpc-governor.ts):
       // viem's default of 3 would ask each revert four times.
       transport: custom({
@@ -214,7 +213,7 @@ describe("balanceSlotCandidates", () => {
 
 describe("chainReverted — only the chain's own answer is a revert", () => {
   const errorOf = async (e: Error): Promise<unknown> => {
-    const c = createPublicClient({ chain: robinhoodChain, transport: custom({ async request() { throw e; } }, { retryCount: 0 }) });
+    const c = createPublicClient({ chain: bnbChain, transport: custom({ async request() { throw e; } }, { retryCount: 0 }) });
     try {
       await c.call({ to: COIN, data: "0x" });
     } catch (err) {
@@ -505,31 +504,30 @@ describe("SellLockGate — cached, shared, bounded", () => {
     const token = chain.token({ address: COIN, rule: "pool-locked" });
     const routed = getAddress("0x00000000000000000000000000000000000d1ec7");
     const blocked = getAddress("0x00000000000000000000000000000000000b10c4");
-    chain.pool(USDG, COIN, 3000, routed);
+    chain.pool(USDG, COIN, 2500, routed);
     chain.pool(WETH, COIN, 10000, blocked);
     token.pools = new Set([blocked.toLowerCase()]); // only the WETH pool refuses
     const gate = new SellLockGate();
-    const r = await gate.checkEntry(chain.client(), { route: { tokenIn: USDG, token: COIN, fee: 3000 }, holder: HOLDER, amount: ONE, venue: VENUE });
+    const r = await gate.checkEntry(chain.client(), { route: { tokenIn: USDG, token: COIN, fee: 2500 }, holder: HOLDER, amount: ONE, venue: VENUE });
     assert.equal(r.verdict, "locked");
     assert.equal(r.verdict === "locked" && r.pool, blocked);
   });
 
-  it("checkEntry sells into the LAST hop of a bridged route, the direct pool otherwise, the PoolManager for v4", async () => {
+  it("checkEntry sells into the LAST hop of a bridged route, the direct pool otherwise", async () => {
     const chain = new FakeChain();
     chain.token({ address: COIN });
     const direct = getAddress("0x00000000000000000000000000000000000d1ec7");
     chain.pool(WETH, COIN, 100, POOL);
-    chain.pool(USDG, COIN, 3000, direct);
+    chain.pool(USDG, COIN, 2500, direct);
     const gate = new SellLockGate();
     const venue = VENUE;
     const bridged = await gate.routePool(chain.client(), { tokenIn: USDG, token: COIN, fee: 500, path: { tokens: [USDG, WETH, COIN], fees: [500, 100] } }, venue);
     assert.deepEqual(bridged, { ok: true, pool: POOL });
-    assert.deepEqual(await gate.routePool(chain.client(), { tokenIn: USDG, token: COIN, fee: 3000 }, venue), { ok: true, pool: direct });
-    assert.deepEqual(await gate.routePool(chain.client(), { tokenIn: USDG, token: COIN, fee: 3000, v4: { key: {} } }, venue), { ok: true, pool: V4_PM });
+    assert.deepEqual(await gate.routePool(chain.client(), { tokenIn: USDG, token: COIN, fee: 2500 }, venue), { ok: true, pool: direct });
     const getPools = chain.log.filter((l) => l.fn === "getPool").length;
-    await gate.routePool(chain.client(), { tokenIn: USDG, token: COIN, fee: 3000 }, venue);
+    await gate.routePool(chain.client(), { tokenIn: USDG, token: COIN, fee: 2500 }, venue);
     assert.equal(chain.log.filter((l) => l.fn === "getPool").length, getPools, "a pool address, once read, is kept");
-    assert.equal((await gate.checkEntry(chain.client(), { route: { tokenIn: USDG, token: COIN, fee: 3000 }, holder: HOLDER, amount: ONE, venue })).verdict, "sellable");
+    assert.equal((await gate.checkEntry(chain.client(), { route: { tokenIn: USDG, token: COIN, fee: 2500 }, holder: HOLDER, amount: ONE, venue })).verdict, "sellable");
   });
 
   it("a pool that cannot be read refuses the buy, and the candidate list hears of it", async () => {
@@ -549,7 +547,7 @@ describe("SellLockGate — cached, shared, bounded", () => {
   it("canonicalPools finds every pool a held coin could sell into in one multicall, and a failed read is not 'none'", async () => {
     const { chain } = chainWith("clean");
     const gate = new SellLockGate();
-    const venue = { v3Factory: V3_FACTORY, quotes: [USDG, WETH], fees: [100, 500, 3000, 10000] };
+    const venue = { v3Factory: V3_FACTORY, quotes: [USDG, WETH], fees: [100, 500, 2500, 10000] };
     assert.deepEqual(await gate.canonicalPools(chain.client(), COIN, venue), { ok: true, pools: [POOL] });
     assert.equal(chain.log.filter((l) => l.fn === "aggregate3").length, 1);
     await gate.canonicalPools(chain.client(), COIN, venue);
@@ -611,7 +609,7 @@ describe("PROBE: GATO, the coin Shogun bought", () => {
   it("the HELD question (the vault's own 2,842 GATO, no override) says locked too", async () => {
     const chain = gato();
     const gate = new SellLockGate();
-    const pools = await gate.canonicalPools(chain.client(), GATO, { v3Factory: V3_FACTORY, quotes: [USDG, WETH], fees: [100, 500, 3000, 10000] });
+    const pools = await gate.canonicalPools(chain.client(), GATO, { v3Factory: V3_FACTORY, quotes: [USDG, WETH], fees: [100, 500, 2500, 10000] });
     assert.deepEqual(pools, { ok: true, pools: [GATO_POOL] });
     const held = 2_842_330_000_000_000_000_000n;
     assert.equal((await gate.check(chain.client(), { token: GATO, holder: VAULT, pools: [GATO_POOL], amount: held, heldRaw: held })).verdict, "locked");
@@ -638,15 +636,15 @@ describe("PROBE: the unpriced vault restore, read → sell check → cost() → 
     ({ symbol, name: symbol, address, chainlinkFeed: null, kind: "memecoin", decimals: 18 }) as StockToken;
   const watch = [feedless("GATO", GATO), feedless("MOON", MOON)];
 
-  it("MOON gets the vault's 2.5 USDG and leaves unknownCost; GATO stays in it, cost() unread", async () => {
+  it("MOON gets the vault's 2.5 USDT and leaves unknownCost; GATO stays in it, cost() unread", async () => {
     const chain = new FakeChain();
     const gato = chain.token({ address: GATO, rule: "pool-locked" });
     const moon = chain.token({ address: MOON, rule: "clean" });
     chain.pool(WETH, GATO, 100, GATO_POOL);
-    chain.pool(WETH, MOON, 3000, MOON_POOL);
+    chain.pool(WETH, MOON, 2500, MOON_POOL);
     gato.balances.set(VAULT.toLowerCase(), 2_842_330_000_000_000_000_000n);
     moon.balances.set(VAULT.toLowerCase(), 9_000n * ONE);
-    chain.vaults.set(VAULT.toLowerCase(), new Map([[GATO.toLowerCase(), 2_500_000n], [MOON.toLowerCase(), 2_500_000n]]));
+    chain.vaults.set(VAULT.toLowerCase(), new Map([[GATO.toLowerCase(), 2_500_000_000_000_000_000n], [MOON.toLowerCase(), 2_500_000_000_000_000_000n]]));
     const client = chain.client();
 
     const custodyRead = await readPositions(client, VAULT, watch, new Map());
@@ -675,9 +673,9 @@ describe("PROBE: the unpriced vault restore, read → sell check → cost() → 
       },
     });
     assert.deepEqual(out.map((o) => [o.symbol, o.result]), [["GATO", "not-sellable"], ["MOON", "restored"]]);
-    assert.deepEqual(basis.get("MOON"), { qtyRaw: 9_000n * ONE, costUsdg: 2_500_000n });
+    assert.deepEqual(basis.get("MOON"), { qtyRaw: 9_000n * ONE, costUsdg: 2_500_000_000_000_000_000n });
     const q = quarantine();
-    assert.deepEqual(Object.fromEntries(q.holdings.map((h) => [h.symbol, h.costUsdg])), { GATO: 0n, MOON: 2_500_000n });
+    assert.deepEqual(Object.fromEntries(q.holdings.map((h) => [h.symbol, h.costUsdg])), { GATO: 0n, MOON: 2_500_000_000_000_000_000n });
     assert.deepEqual(unknownCostOf(q), ["GATO"], "after: MOON carried at cost; GATO still has no cost on record");
     const costReads = chain.log.filter((l) => l.fn === "cost");
     assert.equal(costReads.length, 1, "only MOON's cost() was read");
@@ -687,9 +685,9 @@ describe("PROBE: the unpriced vault restore, read → sell check → cost() → 
   it("a failed cost() read over the transport seeds nothing", async () => {
     const chain = new FakeChain();
     const moon = chain.token({ address: MOON, rule: "clean" });
-    chain.pool(WETH, MOON, 3000, MOON_POOL);
+    chain.pool(WETH, MOON, 2500, MOON_POOL);
     moon.balances.set(VAULT.toLowerCase(), ONE);
-    chain.vaults.set(VAULT.toLowerCase(), new Map([[MOON.toLowerCase(), 2_500_000n]]));
+    chain.vaults.set(VAULT.toLowerCase(), new Map([[MOON.toLowerCase(), 2_500_000_000_000_000_000n]]));
     chain.fail = (c) => (c.fn === "cost" ? rateLimited() : null);
     const client = chain.client();
     const gate = new SellLockGate();

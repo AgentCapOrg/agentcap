@@ -137,17 +137,17 @@ export const OUT_HANDOUT =
 // ── new: quotes and the rug permit ──────────────────────────────────────────
 
 /**
- * A DOUBLING SCAM OR A SEND, in any wording a quote carries: "send 1 SOL to
- * get 2 back", "deposit 100 usdc and receive 200", "transfer 1 sol for 2
- * back", "double your sol", "2x your bag", and the same in Spanish ("envia 1
- * sol y recibe 2 de vuelta", "manda 2 sol"). A drainer's whole pitch is a
+ * A DOUBLING SCAM OR A SEND, in any wording a quote carries: "send 1 BNB to
+ * get 2 back", "deposit 100 usdc and receive 200", "transfer 1 bnb for 2
+ * back", "double your bnb", "2x your bag", and the same in Spanish ("envia 1
+ * bnb y recibe 2 de vuelta", "manda 2 bnb"). A drainer's whole pitch is a
  * send, so a quote that asks for one is never said back. In English too, a
- * send of a coin ("deposit 1 sol get 2 sol", "send sol to the burn address")
- * and a send with something coming back ("they send 1 sol back", "sends 2
+ * send of a coin ("deposit 1 bnb get 2 bnb", "send bnb to the burn address")
+ * and a send with something coming back ("they send 1 bnb back", "sends 2
  * back") or a reason to send ("to verify", "to unlock"); and with any words
- * between the send and what comes back ("send 2 sol to this wallet, get 4
- * back instantly", "send any amount of sol to the dev and it comes back
- * doubled", "s3nd 1 sol to get 2 back"). "send it", "send it to 10m",
+ * between the send and what comes back ("send 2 bnb to this wallet, get 4
+ * back instantly", "send any amount of bnb to the dev and it comes back
+ * doubled", "s3nd 1 bnb to get 2 back"). "send it", "send it to 10m",
  * "transfer tax is 5%" and "dev sent the lp to the burn address, never
  * getting it back" stay (review, 2026-10-09).
  */
@@ -266,7 +266,7 @@ export const SPENT_BRAG = U(/\bmerry\s?m[ae]n\b|\b(?:one\s+of\s+)?ours\b|\bone\s
  */
 export const POST_RUG_LURE = U(
   new RegExp(
-    String.raw`\b(?:refund\w*|reimburs\w*|compensat\w*|restitution|made\s+whole|giv(?:e|es|ing)\s+back|recover(?:y|ing)?\s+(?:\S+\s+){0,2}?(?:funds?|sol|eth|money|bags?|tokens?|wallets?|tool|bot|service|agent|app|site)|approv(?:e|es|al|ing)|v2|relaunch\w*|re-launch\w*|new\s+(?:ca|contract|token)|migrat(?:e|ion)\s+(?:now|today|here|asap|before|over)` +
+    String.raw`\b(?:refund\w*|reimburs\w*|compensat\w*|restitution|made\s+whole|giv(?:e|es|ing)\s+back|recover(?:y|ing)?\s+(?:\S+\s+){0,2}?(?:funds?|sol|bnb|eth|money|bags?|tokens?|wallets?|tool|bot|service|agent|app|site)|approv(?:e|es|al|ing)|v2|relaunch\w*|re-launch\w*|new\s+(?:ca|contract|token)|migrat(?:e|ion)\s+(?:now|today|here|asap|before|over)` +
       String.raw`|swap\b[^.!?\n]{0,30}\b(?:official|site|link|bot|portal|new|v2)|official\s+(?:site|link|channel|bot|group|website|tg|telegram|discord|x|twitter)` +
       String.raw`|(?:search|google|look\s+up|find)\b[^.!?\n]{0,30}\b(?:refund\w*|bot|link|site|channel|group|telegram|tg|discord|bio)` +
       String.raw`|check\s+(?:out\s+)?(?:the\s+|their\s+|its\s+|his\s+)?(?:x|twitter|telegram|tg|discord|site|website|pinned|pin|bio|channel|description|desc|banner)|read\s+(?:the\s+)?pinned|links?\s+in\s+(?:the\s+|their\s+)?bio` +
@@ -421,7 +421,7 @@ export const ENGLISH_WORDS: readonly string[] = (
   "a an at by from up down out all no yes if or as can got get been do did dont don't what who why how when there their our us me you your " +
   "lol lmao gm ngl tbh imo dyor nfa lfg rn fr yolo rugged rug holders holder dev devs chart team coin token bullish bearish dead good bad now " +
   "mcap volume pump dump moon ath dip bag ape degen wagmi ngmi frens fren ser anon alpha narrative meta agent ai launch listing cex dex " +
-  "liquidity lp whale supply wallet mint burn roadmap utility community vibe jeet sol eth btc base onchain defi nft memecoin meme trenches gem"
+  "liquidity lp whale supply wallet mint burn roadmap utility community vibe jeet eth btc base onchain defi nft memecoin meme trenches gem"
 ).split(" ");
 
 /**

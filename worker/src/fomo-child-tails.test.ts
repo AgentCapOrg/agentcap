@@ -10,7 +10,7 @@ import { EarlyCandidateBook } from "./early-candidates";
 import { FOMO_CHILD, FomoChild, memoryExplorationStore, type FomoChildSettings, type FomoLiveFacts } from "./fomo-child";
 import type { ChildFomoRead } from "./fomo/child-file";
 import type { ChildFomoFile, ChildTail, FomoAccess } from "./fomo/contract";
-import { robinhoodChain, tokenIdentity } from "./fomo/identity";
+import { bnbChain, tokenIdentity } from "./fomo/identity";
 
 const T0 = 1_800_000_000_000;
 const TENANT = "0x00000000000000000000000000000000000000a1";
@@ -27,7 +27,7 @@ const TAIL: ChildTail = {
     {
       eventKey: "ev-1",
       kind: "buy",
-      token: tokenIdentity(robinhoodChain(), COIN),
+      token: tokenIdentity(bnbChain(), COIN),
       label: { symbol: "PONS", name: null },
       at: T0 - 60_000,
       observedAt: T0 - 55_000,
@@ -176,8 +176,8 @@ describe("FomoChild tail accessors", () => {
   it("holds(): a held Robinhood coin by its token key, as of the last tick", () => {
     const r = rig();
     r.tick([{ token: COIN.toUpperCase().replace("0X", "0x") }]);
-    assert.equal(r.child.holds(tokenIdentity(robinhoodChain(), COIN)!.key), true);
-    assert.equal(r.child.holds(tokenIdentity(robinhoodChain(), `0x${"34".repeat(20)}`)!.key), false);
+    assert.equal(r.child.holds(tokenIdentity(bnbChain(), COIN)!.key), true);
+    assert.equal(r.child.holds(tokenIdentity(bnbChain(), `0x${"34".repeat(20)}`)!.key), false);
   });
 
   it("followReadiness(): paper and able, or the closed list of what blocks it, read from the follow path's own conditions", () => {

@@ -112,11 +112,11 @@ describe("what may be asked, and nothing else", () => {
     }
   });
 
-  it("a holder list needs twenty bytes of hex and nothing else", () => {
-    const good = "0x322f0929c4625ed5bad873c95208d54e1c003b2d";
-    assert.equal(holdersUrl(good), `https://${VENUE_HOSTS.blockscout}/api/v2/tokens/${good}/holders`);
-    assert.equal(holdersUrl(good.toUpperCase().replace("0X", "0x")), holdersUrl(good), "case is normalised");
+  it("no holder list is asked of anyone on BNB Chain, however the address is spelled", () => {
+    // No holder index is wired for BNB Chain, and the old chain's explorer
+    // would answer about another token at the same address.
     for (const bad of [
+      "0x322f0929c4625ed5bad873c95208d54e1c003b2d",
       "",
       "0x",
       "0x322f",
@@ -135,7 +135,6 @@ describe("what may be asked, and nothing else", () => {
       quoteUrl("assets"),
       quoteUrl("prices"),
       chartUrl("TSLA", "1M"),
-      holdersUrl("0x322f0929c4625ed5bad873c95208d54e1c003b2d"),
     ];
     const hosts = new Set<string>(Object.values(VENUE_HOSTS));
     for (const u of built) {

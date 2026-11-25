@@ -51,7 +51,7 @@ import {
   type TgCallback,
   type TgMessage,
 } from "./api";
-import { runAgentTask, solanaSecretValues } from "./agent";
+import { runAgentTask, serverSecretValues } from "./agent";
 import { SETTING_CONFIRM_TTL_SEC, TAIL_CONFIRM_TTL_SEC, executeCommand, type CommandDeps, type KillResult, type PendingAction } from "./executor";
 import {
   appliedManyText,
@@ -1794,7 +1794,6 @@ export function startTelegram(deps: TelegramServiceDeps): { stop: () => void } {
         cfg.groqApiKey,
         cfg.llmApiKey,
         cfg.bundlerApiKey,
-        cfg.rialtoApiKey,
         cfg.telegramTranscribeKey,
         cfg.virtualsApiKey,
         // The signed wallet grant custodies funds. Its 0x owner/session keys already
@@ -1808,8 +1807,8 @@ export function startTelegram(deps: TelegramServiceDeps): { stop: () => void } {
         // custom AGENTCAP_HOME can put where no path guard expects. Every
         // spelling, 0x and bare, either case; the 80-hex shape backs it up.
         ...perpKeySecretForms(agentcapHome(), grant?.perp?.apiPublicKey),
-        // Solana's server secrets, from the environment and a self-hosted .env.solana.local.
-        ...solanaSecretValues(process.env, [path.join(process.cwd(), ".env.solana.local"), path.join(agentcapHome(), ".env.solana.local")]),
+        // The server's own secrets, from the environment.
+        ...serverSecretValues(process.env),
       ].filter((s): s is string => typeof s === "string" && s.length >= 8);
       const stopFlag = { stopped: false };
       agentRuns.set(msg.chatId, stopFlag);

@@ -4,7 +4,7 @@ import { fillSymbolFor, nonCashLeg, tokenLabelSync } from "../../../worker/src/t
 
 // Feed holdings are on Robinhood mainnet. Passing these through the existing
 // guard also stops an unrelated contract borrowing an official coin's ticker.
-const OFFICIAL_TOKENS = officialCoinTokens(4663);
+const OFFICIAL_TOKENS = officialCoinTokens(56);
 
 /** A complete token identity; a ledger's shortened Trencher ID is never enough. */
 export function positionTokenAddress(value: string | null | undefined): string | null {

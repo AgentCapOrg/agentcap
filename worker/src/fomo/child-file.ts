@@ -199,7 +199,7 @@ function strings(v: unknown, maxChars: number = CHILD_FOMO_LIMITS.listItemChars)
 /**
  * A token whose key re-parses (identity.ts tokenFromKey) and whose parts say
  * the same thing as the key. Symbols are never consulted. An uppercase EVM
- * address, a Solana mint on an EVM network or a key/address mismatch is a
+ * address, a key/address mismatch is a
  * forged or corrupt identity and is refused.
  */
 function tokenOf(v: unknown): TokenIdentity | null {

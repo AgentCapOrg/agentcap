@@ -51,8 +51,8 @@ import { canTradeForReal, execModeOf, type ExecInputs } from "./exec-mode";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const MAINNET = 4663;
-const TESTNET = 46630;
+const MAINNET = 56;
+const TESTNET = 97;
 
 /**
  * A healthy rail. Every safety condition satisfied, so the ONLY variable in the
@@ -68,7 +68,7 @@ const healthy: ExecInputs = {
   armed: true,
   executor: true,
   chainId: MAINNET,
-  cashUsdg: 500_000_000n, // 500 USDG, funded
+  cashUsdg: 500n * 10n ** 18n, // 500 USDG, funded
   gasWei: 0n,
   gasSponsored: true,
   deadPolicy: false,
@@ -90,7 +90,7 @@ describe("funding a paper agent does not transition it to live", () => {
     // reported as the thing he expected to control, so it is asserted as a
     // transition and not as two unrelated states.
     const unfunded = { ...healthy, liveTradingEnabled: false, cashUsdg: 0n };
-    const funded = { ...unfunded, cashUsdg: 10_000_000_000n };
+    const funded = { ...unfunded, cashUsdg: 10_000n * 10n ** 18n };
     assert.equal(execModeOf(unfunded).mode, "paper");
     assert.equal(execModeOf(funded).mode, "paper", "a deposit is not a signature");
   });
@@ -132,7 +132,7 @@ describe("explicit live intent is what turns real execution on", () => {
 
   it("but it does not override any safety condition — LIVE + TESTNET is never live", () => {
     // Intent is ADDED to the safety conditions, never substituted for them.
-    // A grant sealed for 46630 cannot reach a mainnet router whatever the owner
+    // A grant sealed for 97 cannot reach a mainnet router whatever the owner
     // has ticked, so consent must not be able to talk the rail into trying.
     const a = { ...healthy, liveTradingEnabled: true, chainId: TESTNET };
     assert.equal(canTradeForReal(a), false, "testnet is never real trading");
@@ -203,7 +203,7 @@ describe("the whole matrix, as the owner specified it", () => {
         ...healthy,
         chainId: row.chainId,
         liveTradingEnabled: row.live,
-        cashUsdg: row.funded ? 500_000_000n : 0n,
+        cashUsdg: row.funded ? 500n * 10n ** 18n : 0n,
       };
       assert.equal(execModeOf(a).mode, row.expect);
     });

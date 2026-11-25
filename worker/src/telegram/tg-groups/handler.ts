@@ -175,7 +175,7 @@ const ROUTE_LEAVES_MS = 8 * SEC;
 const FOMO_THREAD_MS = 2 * 60 * MIN;
 /** The persona asking back which Fomo board or coin was meant. */
 const FOMO_ASK_BACK = /\b(?:fomo|theses|thesis|trending|top traders?|leaderboard|graduated|most held|robinhood)\b/iu;
-const FOMO_SELECTED_CHAIN = /^(?:robinhood(?: chain)?|rh|solana|sol|base|ethereum|eth|bsc|bnb)$/iu;
+const FOMO_SELECTED_CHAIN = /^(?:robinhood(?: chain)?|rh|base|ethereum|eth|bsc|bnb)$/iu;
 /** Only trusted vocatives and plain answer filler; never remove trade verbs. */
 const researchSelectionText = (text: string, names: readonly string[]): string => {
   let selected = text.trim().replace(/[.!?]+$/u, "").trim();
@@ -188,8 +188,7 @@ const researchSelectionText = (text: string, names: readonly string[]): string =
 };
 /** A contract supplied on its own answers a question; it is not a trading instruction. */
 const contractSelection = (text: string): boolean => {
-  // Base58 mints are case-sensitive: do not use the chain regex's i flag.
-  const match = /^(?:0x[0-9a-fA-F]{40}|[1-9A-HJ-NP-Za-km-z]{32,44})(?:\s+on\s+(.+))?$/u.exec(text.trim().replace(/[.!?]+$/u, "").trim());
+  const match = /^(?:0x[0-9a-fA-F]{40})(?:\s+on\s+(.+))?$/u.exec(text.trim().replace(/[.!?]+$/u, "").trim());
   // An unfamiliar chain still cannot turn this answer into a trade. The
   // research planner decides whether it can place that chain safely.
   return !!match && (!match[1] || /^[a-z][a-z -]{0,40}$/iu.test(match[1]));
@@ -2473,11 +2472,11 @@ export function createTgGroups(d: TgGroupsDeps): TgGroups {
         }
       }
       if (j.fomo === true && !tailAsk && !request && dec.mood !== "private-ask" && !isInjection(j.line.text) && j.addressed !== null) {
-        // Every chain, unless the line names one ("what's trending on solana"):
+        // Every chain, unless the line names one ("what's trending on base"):
         // then that chain's slice of the board (Milla, 2026-10-07).
         const onChain = j.trending === true ? chainIn(j.line.text) : undefined;
         // The desk reads Robinhood Chain only: it stands in for a bare trending ask, or one naming
-        // that chain, never for Solana's or Base's board. Those get Fomo's own plain line instead
+        // that chain, never for Base's or Ethereum's board. Those get Fomo's own plain line instead
         // (its refusal with the reset time, FOMO_BUSY, FOMO_LATE, FOMO_UNREACHED): rule 5.
         const deskStandsIn = onChain === undefined || onChain === "robinhood";
         const r = j.trending === true
@@ -2900,7 +2899,7 @@ export function createTgGroups(d: TgGroupsDeps): TgGroups {
     const current = said.coin ? (live ?? recentFomoCoin(msg.chatId, threadId)) : live;
     if (!current) return;
     if (said.coin && said.coin !== current.symbol.toUpperCase()) return;
-    // "auton rugged on base lol" is about another AUTON than the room's Solana one (review r2).
+    // "auton rugged on base lol" is about another AUTON than the room's BSC one (review r2).
     const saidChain = chainIn(text);
     if (saidChain && current.chain && saidChain !== current.chain) return;
     if (heardHere(msg.chatId, current.symbol)) return;
@@ -2976,7 +2975,7 @@ export function createTgGroups(d: TgGroupsDeps): TgGroups {
       // The permit is for the coin measured on its chain. The chain this line's coin is on: the one it names, else
       // the same-ticker Fomo answer it replies under, else (replying to nothing) the topic's last same-ticker Fomo
       // coin. Another chain is another coin of that ticker: a Base AUTON's collapse never lands on a reply under
-      // the Solana AUTON's answer (review r2).
+      // the BSC AUTON's answer (review r2).
       const sameChain = (c: FomoCoin | undefined): boolean => !p.chain || !c?.chain || c.chain === p.chain;
       const repliedTo = isMsgId(trigger.replyTo) ? fomoCoinLines.get(msgKey(chatId, trigger.replyTo)) : undefined;
       const liveUnder = repliedTo && repliedTo.symbol.toLowerCase() === low && t - repliedTo.at <= FOMO_THREAD_MS ? repliedTo : undefined;
@@ -4259,7 +4258,7 @@ export function createTgGroups(d: TgGroupsDeps): TgGroups {
       let cas = hits.map((h) => h.address);
       let otherChain = hits.filter((h) => h.chain === "other").map((h) => h.address);
       // Another chain's coin with no 0x + 40-hex address in it: a mint, a TON
-      // address, or a chart link DexScreener hands out for a Solana, TON, Sui
+      // address, or a chart link DexScreener hands out for a Tron, TON, Sui
       // or v4 pair. The flow owns the line and says nothing.
       let foreignMint = hasForeignMint(text) || hasOtherChainLink(text);
       let cashtags = extractCashtags(text);
@@ -4746,7 +4745,7 @@ export function createTgGroups(d: TgGroupsDeps): TgGroups {
         // with the desk, even right after a Fomo answer (D1): never a Fomo follow-up.
         const venueMarket = desked?.kind === "market" && desked.trending !== true;
         // So does a line the desk owns: an analysis, a comparison, or a coin
-        // it names ("what do you think about sol?", "should i buy sol?"),
+        // it names ("what do you think about bnb?", "should i buy bnb?"),
         // unless the coin word is a chain in a chain's position ("on base?"),
         // or the line asks what traders are saying about the coin ("what are
         // people saying about $PONS now"): that is the coin's theses, never a chart.

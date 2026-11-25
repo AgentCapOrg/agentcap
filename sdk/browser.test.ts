@@ -10,7 +10,7 @@ import { verifyMessage, type Hex } from "viem";
 import { derivationOf, type AgentCapSettings } from "@agentcap/core";
 // FIRST, before ./browser: the fixture trusts its stub Trencher bytecode by
 // setting the env var trencher-permission.ts reads once, when session.ts loads.
-import { CLASS_FACTORY, CLASS_VAULT, TRENCHER_FACTORY, withStubChain, type KernelState } from "../web/src/lib/canonical-wall-fixture";
+import { TRENCHER_FACTORY, withStubChain, type KernelState } from "../web/src/lib/canonical-wall-fixture";
 import {
   prepareAgentCapAvatar, signAgentCapAvatarAuthorization, partnerGrantDigest, PARTNER_API_VERSION, SDK_VERSION,
   type LocalAccount, type PrepareAgentCapAvatarOptions, type StoredGrant, type PartnerEnrollmentClaim,
@@ -172,11 +172,6 @@ async function activate(grant: StoredGrant, owner: LocalAccount) {
     store, secret: () => SECRET,
     derive: async () => derivationOf(ACCOUNT),
     // The stub chain's factory answer, which activation re-reads to pin the vault.
-    classVault: async (factory, account) => {
-      assert.equal(factory.toLowerCase(), CLASS_FACTORY);
-      assert.equal(account.toLowerCase(), ACCOUNT.toLowerCase());
-      return CLASS_VAULT;
-    },
     grants: { get: async (t) => saved.get(t) ?? null, put: async (t, g) => { saved.set(t, g); }, tenantForAccount: async () => null },
     settings: { get: async () => null, put: async () => {} },
     identities: { ensure: async (tenant, account) => ({ tenant, slug: "0000000000000001", accounts: [account], createdAt: 1, updatedAt: 1 }) },
@@ -242,18 +237,16 @@ describe("prepareAgentCapAvatar", () => {
     await refusedUpFront({ ponsAdapterAddress: FOREIGN, extraTokens: [] }, /remove ponsAdapterAddress, extraTokens\./);
     // Absent and undefined are the same thing, as for chainId.
     const a = attempt({ ponsAdapterAddress: undefined, trencherFactory: undefined });
-    assert.equal((await a.grant).ponsAdapterAddress, undefined);
+    assert.equal((await a.grant).trencherFactoryAddress, undefined);
   });
 
-  it("refuses them because the signer seals any adapter or token it is given, unverified", async () => {
-    // What a partner's own contract would have become: a sealed route and an
-    // approved spender in the owner's one signature.
+  it("refuses them because the signer seals any token it is given, unverified", async () => {
+    // What a partner's own contract would have become: an approved token in the
+    // owner's one signature.
     const { owner } = wallet();
     const grant = await withStubChain(ACCOUNT, () => prepareAgentGrant(owner, {
-      caps: CAPS, onStatus: () => {}, ponsAdapterAddress: FOREIGN, extraTokens: [{ symbol: "PRTNR", address: FOREIGN, decimals: 18 }],
+      caps: CAPS, onStatus: () => {}, extraTokens: [{ symbol: "PRTNR", address: FOREIGN, decimals: 18 }],
     }));
-    assert.equal(grant.ponsAdapterAddress, FOREIGN);
-    assert.ok(grant.grantFeatures?.includes("pons-adapter"));
     assert.deepEqual(grant.grantTokens, [FOREIGN]);
     assert.deepEqual(checkCanonicalWall({ ...grant }), { ok: true }, "the wall rebuilds from the grant's own addresses");
   });
@@ -268,14 +261,9 @@ describe("prepareAgentCapAvatar", () => {
   });
 
   it("produces a grant partner activation accepts and stores unmodified", async () => {
-    // The default mainnet mint is the fullest grant the SDK makes: it seals the
-    // platform class vault, so its vault fields are what activation must accept.
     const a = attempt();
     const grant = await a.grant;
-    assert.ok(grant.ponsClassVaultAddress, "the class vault was sealed");
-    assert.equal(grant.ponsClassVaultFactoryAddress, CLASS_FACTORY, "from the platform's own factory");
-    assert.equal(grant.ponsAdapterAddress, undefined, "and no adapter route anyone named");
-    assert.equal(grant.v4AdapterAddress, undefined);
+    assert.equal(grant.trencherVaultAddress, undefined, "no sealed address at all");
     assert.deepEqual(grant.grantTokens ?? [], [], "nor a token beyond the listings");
     const { result, stored } = await activate(grant, a.owner);
     assert.equal(result.connection.status, "linked");

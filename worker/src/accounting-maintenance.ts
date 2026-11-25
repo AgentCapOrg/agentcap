@@ -5,7 +5,7 @@ export const ACCOUNTING_HOLD_ENV = "AGENTCAP_ACCOUNTING_HOLD_TENANTS";
 
 /**
  * The tenants held, or a throw: a hold that dropped one entry would leave
- * that tenant running. An id that is not 0x and 40 hex (a Solana one, say)
+ * that tenant running. An id that is not 0x and 40 hex (another chain's, say)
  * refuses the same way, with its own reason: this build cannot hold what it
  * cannot name, and holding the rest would be the partial hold.
  */

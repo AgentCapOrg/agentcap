@@ -372,10 +372,10 @@ describe("the orchestrator asks the claims on every path that writes a settings.
     const fn = body("async function writeSettingsForChild(");
     const noSettings = fn.indexOf("if (!settings) return null;");
     const gate = fn.indexOf("settings = await gateBot(tenant, settings, seenBots, botClaimsRead);");
-    const build = fn.indexOf("childSettingsFor(settings, holder)");
+    const build = fn.indexOf("const forChild: AgentCapSettings = { ...settings };");
     const write = fn.indexOf("writeChildSettings(tenant, forChild)");
     assert.ok(noSettings > 0 && gate > noSettings && build > gate && write > build, "gated, then built, then written");
-    assert.match(fn, /return settings;/, "and the gated settings are what the caller sees (holderBotReady reads them)");
+    assert.match(fn, /return settings;/, "and the gated settings are what the caller sees (botReady reads them)");
   });
 
   it("gateBot READS THE CLAIMS ITSELF FOR A SPAWN, CLAIMS AN UNCLAIMED BOT FIRST, THEN ASKS claimGate", () => {
@@ -431,7 +431,7 @@ describe("the orchestrator asks the claims on every path that writes a settings.
     const held = rec.indexOf("for (const [tenant, held] of [...holders])", read);
     const kids = rec.indexOf("for (const tenant of children.keys())", held);
     assert.ok(read > 0 && held > read && kids > held, "read once, before both loops, held tenants first");
-    const call = "writeSettingsForChild(tenant as `0x${string}`, seenBots, holderClaims, botClaims)";
+    const call = "writeSettingsForChild(tenant as `0x${string}`, seenBots, botClaims)";
     assert.ok(rec.indexOf(call, held) > held && rec.indexOf(call, held) < kids, "the holders' refresh");
     assert.ok(rec.indexOf(call, kids) > kids, "the children's refresh");
     assert.equal(rec.split("readBotClaimsForPass()").length - 1, 1, "once per pass, not once per tenant");

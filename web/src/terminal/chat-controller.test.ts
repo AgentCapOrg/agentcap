@@ -202,7 +202,6 @@ const SETTINGS_VIEW: SettingsView = {
   groqApiKey: unset,
   anthropicApiKey: unset,
   llmApiKey: unset,
-  rialtoApiKey: unset,
   telegramBotToken: unset,
   telegramTranscribeKey: unset,
   virtualsApiKey: unset,

@@ -40,10 +40,22 @@
  */
 import hre from "hardhat";
 import { keccak256, isAddress, type Address } from "viem";
+import { readFileSync } from "node:fs";
 
-/** The reviewed factory and its runtime hash — contracts/trencher-deployment.json. */
-const FACTORY = "0x32a2a19a9a0ff54ffcaeb40955fd710e77cbbbf7" as Address;
-const FACTORY_CODE_HASH = "0xd450d4761ccb39e8b8f623e84884f1424c7b580f91a62822a5f3c024b7b3a1a4";
+/**
+ * The reviewed factory and its runtime hash come from
+ * contracts/trencher-deployment.json. NONE IS DEPLOYED ON BNB CHAIN YET, so the
+ * manifest holds nulls and this script refuses to run until
+ * deploy-trenchervault.ts has written a real one and it has been reviewed.
+ */
+function reviewedFactory(): { address: Address; codeHash: string } {
+  const manifest = JSON.parse(readFileSync("trencher-deployment.json", "utf8")) as { chainId?: unknown; factory?: unknown; codeHash?: unknown };
+  const { chainId, factory, codeHash } = manifest;
+  if (chainId !== 56 || typeof factory !== "string" || !isAddress(factory) || typeof codeHash !== "string" || !/^0x[0-9a-fA-F]{64}$/.test(codeHash)) {
+    throw new Error("No reviewed Trencher factory is deployed on BNB Chain (contracts/trencher-deployment.json)");
+  }
+  return { address: factory as Address, codeHash };
+}
 
 const ABI = [
   { type: "function", name: "deploy", stateMutability: "nonpayable", inputs: [{ name: "owner", type: "address" }], outputs: [{ type: "address" }] },
@@ -57,7 +69,8 @@ async function main() {
   }
   const client = await hre.viem.getPublicClient();
   const chainId = await client.getChainId();
-  if (chainId !== 4663) throw new Error("This targets Robinhood mainnet 4663 only");
+  if (chainId !== 56) throw new Error("This targets BNB Chain mainnet 56 only");
+  const { address: FACTORY, codeHash: FACTORY_CODE_HASH } = reviewedFactory();
 
   const code = await client.getCode({ address: FACTORY });
   if (!code || code === "0x") throw new Error(`No factory at ${FACTORY}`);

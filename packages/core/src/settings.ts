@@ -76,10 +76,6 @@ export interface AgentCapSettings {
    */
   brainUrl?: string;
   brainToken?: string;
-  /** Rialto integrator key — enables the full quote→swap leg. */
-  rialtoApiKey?: string;
-  /** Header name the Rialto API expects the key in (their docs say). */
-  rialtoApiKeyHeader?: string;
 
   // ── contracts ──────────────────────────────────────────────────────────
   /**
@@ -97,13 +93,6 @@ export interface AgentCapSettings {
 
   /** Deployed BreakerRegistry; a tripped breaker halts all intents. */
   breakerAddress?: string;
-  /**
-   * Deployed V4SelfSwap adapter — the contract that makes Uniswap v4
-   * constrainable by the wall. Per-chain (testnet and mainnet deploys have
-   * different addresses), and SETTING IT DOES NOTHING BY ITSELF: the address
-   * is sealed into the grant at signing time, so it only takes effect after a
-   * re-sign. The worker executes against the grant-sealed address, never this.
-   */
   /**
    * What the owner calls their agent.
    *
@@ -166,33 +155,6 @@ export interface AgentCapSettings {
    * real boolean for the same reason: the string "false" is truthy.
    */
   publicBook?: boolean;
-  v4AdapterAddress?: string;
-  /**
-   * The deployed PonsSelfTrade adapter for this chain, or absent.
-   *
-   * A HINT, never the authority. The worker calls whatever address the grant
-   * was SEALED against (grantPonsAdapter); this field only lets the dashboard
-   * offer it at signing time and lets the worker warn when the two have
-   * drifted. Reading it at tick time would let a setting redirect trades at a
-   * contract the signature never covered.
-   */
-  ponsAdapterAddress?: string;
-  /**
-   * The deployed PonsClassVaultFactory for this chain, or absent.
-   *
-   * A HINT AT SIGNING TIME, on exactly the terms `ponsAdapterAddress` is one:
-   * the worker calls whatever the grant was sealed against
-   * (grantPonsClassVaultFactory), and this only lets the dashboard offer it when
-   * a grant is minted.
-   *
-   * THE FACTORY, NOT THE VAULT, and that is not interchangeable. A vault is
-   * CREATE2-salted with one smart account, so there is no vault address that is
-   * correct for every agent — the signer derives each account's own from this.
-   *
-   * Setting it alone changes nothing. It has to be sealed by re-signing at
-   * /grant, and the wall REFUSES to seal a vault without it.
-   */
-  ponsClassVaultFactory?: string;
 
   // ── paper trading (the full loop with zero funds) ──────────────────────
   /** When the account can't sign (no bundler key), fill approved intents as
@@ -240,7 +202,6 @@ export interface AgentCapSettings {
   /** Builtin ("steady-basket" | "weekend-gap" | "llm-strategist") or the
    * filename of a user-written strategy in strategies/. */
   strategy?: string;
-  swapVenue?: "uniswap" | "rialto";
   /** Max slippage vs the pre-trade quote, bps. */
   slippageBps?: number;
   /**
@@ -343,37 +304,12 @@ export interface AgentCapSettings {
   strategistStopLossBps?: number;
   takeProfitBps?: number;
   buyPerTickUsdg?: number;
-  /** Steady-basket: cash floor kept liquid; the excess sweeps to the vault. */
-  idleFloorUsdg?: number;
   /** Weekend-gap: total USDG deployed per gap window. */
   gapEnterBudgetUsdg?: number;
   /** LLM strategist knobs. */
   llmModel?: string;
   llmIntervalMin?: number;
   llmMaxActionUsdg?: number;
-
-  // ── $AGENTCAP · the Merry Circle (holder perks) ────────────────────────
-  /** The wallet you hold $AGENTCAP in. The worker reads its balance (read-only)
-   * to set your Circle tier — which lowers your platform fee and unlocks perks.
-   * Optional; blank = no tier. Purely a discount/perk lookup, never a spend key. */
-  holderAddress?: string;
-  /**
-   * A DIFFERENT WALLET, PROVEN BY ITS OWN SIGNATURE.
-   *
-   * `holderAddress` above is self-declared: shape-validated and nothing more,
-   * which is why /api/alpha refuses to use it as an authorisation input and why
-   * the orchestrator overwrites it with the session-verified tenant. That made
-   * the tier earnable and shut out anyone holding $AGENTCAP somewhere other
-   * than the wallet they log in with — a real case, raised by a tester.
-   *
-   * This is that case, answered the only way a claim can become an
-   * authorisation: the wallet signs a message naming itself and this account,
-   * and /api/holder verifies the recovery. WRITTEN ONLY BY THAT ROUTE. The
-   * settings PUT handler has no branch for it, so a tenant cannot set it by
-   * hand; holder-proof.test.ts pins that, because the day it gains one is the
-   * day the tier goes back to being a claim.
-   */
-  holderProof?: { address: string; at: number };
 
   /**
    * PROOF THAT `xHandle` IS ACTUALLY THEIRS — written only by /api/x-proof.
@@ -386,10 +322,10 @@ export interface AgentCapSettings {
    * be linked, and only then.
    *
    * The settings PUT handler has no branch for this field, deliberately: like
-   * `holderProof`, a tenant must not be able to mint their own proof through
+   * a server-side proof, a tenant must not be able to mint their own through
    * the API they do have.
    *
-   * POINT-IN-TIME, like the holder proof beside it. `at` records when we
+   * POINT-IN-TIME. `at` records when we
    * looked; deleting the post later does not un-verify, and nothing re-checks.
    */
   xProof?: { handle: string; at: number };
@@ -542,47 +478,11 @@ export interface AgentCapSettings {
   scoutBudgetUsdg?: number;
   /** Max USDG into any single unpriceable token. */
   scoutPerTokenUsdg?: number;
-
-  // ── the class route (buying tokens the grant never named) ──────────────
-  /**
-   * MAY THIS AGENT BUY A TOKEN NOBODY ENUMERATED? OFF by default.
-   *
-   * READ THIS BEFORE TURNING IT ON. Every other venue can only trade assets the
-   * owner named in `customTokens` and sealed by re-signing at /grant. The class
-   * route is the one exception: it buys tokens that did not exist when the grant
-   * was signed, holds them in a per-account vault (because a token the ACCOUNT
-   * holds cannot be sold — the wall has no approve permission for an address
-   * nobody enumerated), and sells them back through the same vault.
-   *
-   * What still bounds it: the per-trade cap, the daily cap, the ops cap, the
-   * scout budget, `classPerEntryUsdg` below, and the fact that the vault can pay
-   * nobody but this account. What does NOT bound it, stated rather than implied:
-   * NOTHING ON CHAIN VOUCHES FOR THE TOKEN. The wall cannot pin a curve — a new
-   * address per launch — so provenance lives entirely in the worker's
-   * factory-filtered launch feed. For this permission the chain is LOOSER than
-   * the off-chain mirror, which is the reverse of this system's usual posture,
-   * and it is the price of the capability.
-   *
-   * A SEPARATE DECISION FROM THE SIGNATURE, deliberately. Sealing a class vault
-   * at /grant says "this key COULD reach class tokens". This says "go and do
-   * it". The distinction is the one curveLegsNow was fixed to respect: an
-   * owner's "know about this" must never be read as "trade this", and the same
-   * rule applies one level up.
-   */
-  classSnipeEnabled?: boolean;
   /**
    * Trade the platform's OFFICIAL COINS — the curated non-equity listings in
-   * packages/core/src/official-coins.ts. Default ON.
-   *
-   * DEFAULT ON, which is the opposite of `classSnipeEnabled` two fields up, and
-   * the difference is what is being trusted. The class route buys a token nobody
-   * enumerated, on provenance that lives entirely off-chain; an official coin is
-   * an address the platform published, verified and stands behind, reaching the
-   * owner the same way the default equity basket does. Requiring an opt-in for a
-   * curated listing would reproduce the exact failure this was built to end: an
-   * owner holding the default basket, shown the sentence "Memecoins trade around
-   * the clock and are unaffected", with nothing on the platform able to reach
-   * one.
+   * packages/core/src/official-coins.ts. Default ON: an official coin is an
+   * address the platform published, verified and stands behind, reaching the
+   * owner the same way the default equity basket does.
    *
    * Turning it off removes the listings from the watch set entirely, so they are
    * not watched, not priced, not legs, and not sealed at the next re-sign —
@@ -594,52 +494,6 @@ export interface AgentCapSettings {
    * coin stays unreachable.
    */
   officialCoinsEnabled?: boolean;
-  /**
-   * Max USDG into a single class entry. 0 = nothing, which is the default.
-   *
-   * Two switches rather than one because they fail differently: forgetting to
-   * set a size is a no-op, and forgetting to turn the route off is not.
-   */
-  classPerEntryUsdg?: number;
-  /** Max simultaneous class positions. 0 = no limit beyond the scout budget. */
-  classMaxPositions?: number;
-  /**
-   * How long a class position may be held before it is sold back, seconds.
-   *
-   * THE EXIT THAT CANNOT BE BLOCKED BY A MISSING PRICE, which is why it is a
-   * clock and not a stop-loss. A class token has no oracle and may have no
-   * depth; a rugged one has no price at all. Every price-based exit is
-   * unreachable in exactly the case an exit matters most, so the one exit that
-   * always works has to be time.
-   *
-   * A position that cannot be closed is not a position. Until this existed, the
-   * route could open one and nothing in the codebase could ever close it.
-   */
-  classMaxHoldSec?: number;
-  /**
-   * Sell once the curve is this far toward graduation, percent.
-   *
-   * NOT A PROFIT TARGET — a trap door. `PonsClassVault` refuses a trade on a
-   * graduated curve by name (`CurveGraduated`), because a graduated curve
-   * resets its reserves and reports a live market that has actually moved to a
-   * pool. So a position still in the vault when its curve graduates can never
-   * be sold through that curve again, and the only way out becomes the owner's
-   * own key via `sweep`.
-   *
-   * Leaving early costs whatever the last stretch would have paid. Leaving late
-   * costs the whole position, and costs it in a way the agent cannot fix.
-   */
-  classExitAtGraduationPct?: number;
-  /**
-   * Minimum REAL curve depth, USDG, before a class entry is considered.
-   *
-   * Real, not reported: a Pons curve's quote reserve includes a virtual seed
-   * worth 40% of the graduation threshold, which is not money anyone can sell
-   * into. `CURVE_GUARD_DEFAULTS.minRealDepthUsdg` is the venue's own
-   * correctly-scaled floor; trencher's $25,000 is a POOL figure and sits 2.4x
-   * above the maximum a curve can ever hold.
-   */
-  classMinDepthUsdg?: number;
   /** Master switch — OFF by default. When on (and a key is set), landed/rejected
    * trades and the daily report are PUBLISHED to your agent's Virtuals page.
    * Outbound + public: nothing streams until you turn this on. */
@@ -690,7 +544,7 @@ export interface AgentCapSettings {
   /** Which consent text the owner agreed to (PERPS_LIVE_CONSENT_VERSION at the time). */
   perpsLiveConsentVersion?: number;
   /**
-   * When the owner gave it, Unix MILLISECONDS (Date.now(), like holderProof.at
+   * When the owner gave it, Unix MILLISECONDS (Date.now()
    * and xProof.at). WRITTEN ONLY BY THE SETTINGS PUT, from its own clock, at the
    * moment consent is given — never taken from a request body, so a client can
    * neither backdate a consent nor keep one alive by echoing an old stamp.
@@ -941,7 +795,6 @@ export const SECRET_SETTING_KEYS = [
   "groqApiKey",
   "anthropicApiKey",
   "llmApiKey",
-  "rialtoApiKey",
   "telegramBotToken",
   "telegramTranscribeKey",
   "virtualsApiKey",
@@ -998,8 +851,6 @@ export const HOUSE_KEY_FIELDS = [
   // pointing the platform fee at their own wallet.
   "tradeFeeBps",
   "tradeFeeAddress",
-  "rialtoApiKey",
-  "rialtoApiKeyHeader",
   "bitqueryApiKey",
   "agentcapToken",
   "fomoApiKey",
@@ -1104,9 +955,7 @@ export const SETTINGS_DEFAULTS = {
   // PRIVATE. The book is published only when its owner says so — see
   // AgentCapSettings.publicBook.
   publicBook: false,
-  rialtoApiKeyHeader: "x-api-key",
   strategy: "steady-basket" as const,
-  swapVenue: "uniswap" as const,
   slippageBps: 100,
   // 3%. Comfortably above what a healthy pool charges for a normal ticket, and
   // well below the point where a fill is being eaten. An owner who wants "any
@@ -1152,36 +1001,11 @@ export const SETTINGS_DEFAULTS = {
   scoutEnabled: false,
   scoutBudgetUsdg: 0,
   scoutPerTokenUsdg: 25,
-  // THE CLASS ROUTE IS OFF, AND SIZED AT ZERO. Two closed doors rather than
-  // one, because they fail differently: an owner who enables the route and
-  // forgets the size gets a no-op, and one who sets a size and forgets to
-  // disable the route does not. See AgentCapSettings.classSnipeEnabled for what
-  // is actually being opted into.
-  classSnipeEnabled: false,
-  classPerEntryUsdg: 0,
-  classMaxPositions: 0,
-  // SIX HOURS, and unlike the two above this one is NOT a closed door — it is
-  // the door out, so it defaults to a real value rather than to zero. A
-  // launchpad coin's depth has a measured half-life of hours (of the 14 deepest
-  // USDG curves, 7 fell under the tradable floor in 3.5), so a hold window
-  // longer than that is holding through the part where the exit stops working.
-  classMaxHoldSec: 6 * 3600,
-  // Well clear of the cliff. Graduation is not gradual — the curve resets — and
-  // the vault refuses a graduated curve outright, so the margin is the whole
-  // protection. 85% leaves room for a tick to be missed and for the last read
-  // to be stale.
-  classExitAtGraduationPct: 85,
-  // ON, unlike everything above it. See AgentCapSettings.officialCoinsEnabled
-  // for why a curated listing defaults differently from a discovered one.
+  // ON. See AgentCapSettings.officialCoinsEnabled.
   officialCoinsEnabled: true,
-  // The venue's own floor (CURVE_GUARD_DEFAULTS.minRealDepthUsdg), not
-  // trencher's $25,000 — that is a POOL figure and sits 2.4x above the most a
-  // Pons curve can ever hold.
-  classMinDepthUsdg: 250,
   strategistStopLossBps: 0,
   takeProfitBps: 0,
   buyPerTickUsdg: 25,
-  idleFloorUsdg: 50,
   gapEnterBudgetUsdg: 75,
   // Groq retired the whole Llama 3.x chat line; llama-3.3-70b-versatile now
   // answers 404 model_not_found, which is why the chat could not think.

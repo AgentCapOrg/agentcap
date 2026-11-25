@@ -117,7 +117,7 @@ describe("the chain a routed list is cut to (decision D3, live 2026-10-07)", () 
   it("the menu carries an optional chain, and says when to put one", () => {
     const props = (ROUTE_SPEC.schema as { properties: Record<string, { enum?: string[] }>; required: string[] }).properties;
     assert.deepEqual(props.chain!.enum, [...ROUTE_CHAINS]);
-    assert.deepEqual([...ROUTE_CHAINS], ["robinhood", "solana", "base", "ethereum", "bsc"]);
+    assert.deepEqual([...ROUTE_CHAINS], ["robinhood", "base", "ethereum", "bsc"]);
     assert.deepEqual((ROUTE_SPEC.schema as { required: string[] }).required, ["action"], "a plain chat pick is never refused");
     assert.match(ROUTE_SYSTEM, /fomo_board: .*Put a chain in chain only when they want one chain's coins/);
     assert.match(ROUTE_SYSTEM, /with the coin, board, chain or trader it named/);
@@ -126,22 +126,22 @@ describe("the chain a routed list is cut to (decision D3, live 2026-10-07)", () 
   it("chainIn: full names anywhere, short names only where a chain goes", () => {
     const want: Array<[string, string | undefined]> = [
       ["what's trending on robinhood", "robinhood"], ["robinhood chain coins on fomo", "robinhood"], ["what about robinhood coins on fomo", "robinhood"],
-      ["new coins on base", "base"], ["anything hot on sol", "solana"], ["hood coins?", "robinhood"], ["what's pumping on rh", "robinhood"],
-      ["solana ones", "solana"], ["anything on eth", "ethereum"], ["bnb chain memes", "bsc"],
-      ["solana or robinhood?", undefined], ["send it?", undefined], ["do it", undefined], ["what's the base case here", undefined],
-      ["the robin in my garden", undefined], ["SOL is ripping", undefined], ["eth price?", undefined],
+      ["new coins on base", "base"], ["anything hot on bnb", "bsc"], ["hood coins?", "robinhood"], ["what's pumping on rh", "robinhood"],
+      ["bsc ones", "bsc"], ["anything on eth", "ethereum"], ["bnb chain memes", "bsc"],
+      ["bsc or robinhood?", undefined], ["send it?", undefined], ["do it", undefined], ["what's the base case here", undefined],
+      ["the robin in my garden", undefined], ["BNB is ripping", undefined], ["eth price?", undefined],
       // A chain left out or dismissed is no chain: never the one cut the asker did not want.
-      ["what's trending besides solana", undefined], ["what's trending? solana is dead lol", undefined], ["what's trending that isn't on solana", undefined],
-      ["what's trending on fomo other than robinhood coins", undefined], ["anything trending on fomo outside of solana?", undefined],
-      ["base sucks, what's hot", undefined], ["solana's cooked, what's trending", undefined], ["what's trending, sick of sol coins", undefined],
-      ["what's trending over on solana", "solana"], ["trending on solana instead", "solana"],
+      ["what's trending besides bsc", undefined], ["what's trending? bsc is dead lol", undefined], ["what's trending that isn't on bsc", undefined],
+      ["what's trending on fomo other than robinhood coins", undefined], ["anything trending on fomo outside of bsc?", undefined],
+      ["base sucks, what's hot", undefined], ["bsc's cooked, what's trending", undefined], ["what's trending, sick of bnb coins", undefined],
+      ["what's trending over on bsc", "bsc"], ["trending on bsc instead", "bsc"],
     ];
     for (const [t, c] of want) assert.equal(chainIn(t), c, t);
   });
 
   it("a line that leaves a chain out cuts a routed board to no chain, whatever the model or an earlier line said", () => {
-    assert.deepEqual(parseRoute({ action: "fomo_board", board: "trending" }, ctxOf("what's trending besides solana")), { action: "fomo", request: { kind: "board", board: "trending" } });
-    assert.deepEqual(parseRoute({ action: "fomo_board", board: "trending", chain: "solana" }, ctxOf("what's trending besides solana", { askerLines: ["anything hot on solana?"] })), { action: "fomo", request: { kind: "board", board: "trending" } });
+    assert.deepEqual(parseRoute({ action: "fomo_board", board: "trending" }, ctxOf("what's trending besides bsc")), { action: "fomo", request: { kind: "board", board: "trending" } });
+    assert.deepEqual(parseRoute({ action: "fomo_board", board: "trending", chain: "bsc" }, ctxOf("what's trending besides bsc", { askerLines: ["anything hot on bsc?"] })), { action: "fomo", request: { kind: "board", board: "trending" } });
     assert.deepEqual(parseRoute({ action: "fomo_board", board: "trending", chain: "robinhood" }, ctxOf("what's trending on fomo other than robinhood coins", { askerLines: ["what about robinhood coins on fomo"] })), { action: "fomo", request: { kind: "board", board: "trending" } });
   });
 
@@ -152,11 +152,11 @@ describe("the chain a routed list is cut to (decision D3, live 2026-10-07)", () 
     line(2, "Shogun", "Trending on Fomo (board position is popularity, not quality):", { own: true }),
     line(3, "Milla", "what about robinhood coins on fomo", { fromId: MILLA }),
     line(4, "Shogun", "i can pull the fomo board for robinhood chain coins if you want, just say the word", { own: true }),
-    line(5, "Ann", "solana is where it's at", { fromId: 8_008 }),
+    line(5, "Ann", "bsc is where it's at", { fromId: 8_008 }),
     line(6, "Milla", "do it", { fromId: MILLA }),
   ]);
   const doIt = room.lines[5]!;
-  const BOARD_ROWS = "Trending on Fomo (board position is popularity, not quality):\n1. ETAC on solana, market cap $874.6k";
+  const BOARD_ROWS = "Trending on Fomo (board position is popularity, not quality):\n1. ETAC on bsc, market cap $874.6k";
 
   it("the asker's own lines the model was shown, never its own or anyone else's", () => {
     assert.deepEqual(askerLinesOf(room, doIt), ["I said what's trending on fomo", "what about robinhood coins on fomo"]);
@@ -173,8 +173,8 @@ describe("the chain a routed list is cut to (decision D3, live 2026-10-07)", () 
 
   it("a chain nobody asking wrote is dropped: the replied rows, another member, the persona's offer, the model's guess", () => {
     const theirs = askerLinesOf(room, doIt);
-    // Solana is only in the board's rows and in Ann's line.
-    assert.deepEqual(parseRoute({ action: "fomo_board", board: "trending", chain: "solana" }, ctxOf("send it?", { replied: BOARD_ROWS, askerLines: theirs })), { action: "fomo", request: { kind: "board", board: "trending" } });
+    // BSC is only in the board's rows and in Ann's line.
+    assert.deepEqual(parseRoute({ action: "fomo_board", board: "trending", chain: "bsc" }, ctxOf("send it?", { replied: BOARD_ROWS, askerLines: theirs })), { action: "fomo", request: { kind: "board", board: "trending" } });
     // Without her earlier line, the offer alone grounds nothing.
     assert.deepEqual(parseRoute({ action: "fomo_board", board: "trending", chain: "robinhood" }, ctxOf("do it", { replied: room.lines[3]!.text, askerLines: [] })), { action: "fomo", request: { kind: "board", board: "trending" } });
     assert.deepEqual(parseRoute({ action: "fomo_board", board: "trending", chain: "base" }, ctxOf("what's hot over there")), { action: "fomo", request: { kind: "board", board: "trending" } });
@@ -182,7 +182,7 @@ describe("the chain a routed list is cut to (decision D3, live 2026-10-07)", () 
   });
 
   it("the line's own words win, whatever the model picked", () => {
-    assert.deepEqual(parseRoute({ action: "fomo_board", board: "trending", chain: "robinhood" }, ctxOf("trending on solana instead", { askerLines: ["what about robinhood coins on fomo"] })), { action: "fomo", request: { kind: "board", board: "trending", chain: "solana" } });
+    assert.deepEqual(parseRoute({ action: "fomo_board", board: "trending", chain: "robinhood" }, ctxOf("trending on bsc instead", { askerLines: ["what about robinhood coins on fomo"] })), { action: "fomo", request: { kind: "board", board: "trending", chain: "bsc" } });
     assert.deepEqual(parseRoute({ action: "fomo_crowd", side: "buy" }, ctxOf("what are whales aping on base")), { action: "fomo", request: { kind: "crowd", side: "buy", chain: "base" } });
     assert.deepEqual(parseRoute({ action: "fomo_small_coins", chain: "robinhood" }, ctxOf("any tiny hood gems getting love")), { action: "fomo", request: { kind: "small-coins", chain: "robinhood" } });
     assert.deepEqual(parseRoute({ action: "fomo_crowd", side: "sell", chain: "ethereum" }, ctxOf("what's the crowd dumping", { reaskOf: "what are they selling on eth" })), { action: "fomo", request: { kind: "crowd", side: "sell", chain: "ethereum" } }, "their unanswered question is their own words");
@@ -192,7 +192,7 @@ describe("the chain a routed list is cut to (decision D3, live 2026-10-07)", () 
     assert.deepEqual(parseRoute({ action: "fomo_board", chain: "robinhood" }, ctxOf("hood coins?")), { action: "fomo", request: { kind: "board", board: "trending", chain: "robinhood" } });
     assert.deepEqual(parseRoute({ action: "fomo_board", board: null, chain: "robinhood" }, ctxOf("what about robinhood ones")), { action: "fomo", request: { kind: "board", board: "trending", chain: "robinhood" } });
     assert.equal(parseRoute({ action: "fomo_board" }, ctxOf("boards?")), null);
-    assert.equal(parseRoute({ action: "fomo_board", chain: "solana" }, ctxOf("boards?")), null, "a chain the line does not ground makes no board");
+    assert.equal(parseRoute({ action: "fomo_board", chain: "bsc" }, ctxOf("boards?")), null, "a chain the line does not ground makes no board");
   });
 });
 
@@ -655,7 +655,7 @@ describe("their earlier question, when they say it was missed (route.ts reask, r
 
 describe("a coin's theses quoted, on its chain, and its facts: read from the line, never the model (2026-10-09)", () => {
   it("a theses pick carries quotes only when the line asks for the theses themselves", () => {
-    const ctx = ctxOf("can you list the last 10", { replied: "What traders on Fomo are saying about AUTON on Solana (25 recent theses from 13 traders):" });
+    const ctx = ctxOf("can you list the last 10", { replied: "What traders on Fomo are saying about AUTON on BSC (25 recent theses from 13 traders):" });
     assert.deepEqual(parseRoute({ action: "fomo_coin", coin: "AUTON", aspect: "theses" }, ctx), { action: "fomo", request: { kind: "coin", symbol: "AUTON", aspect: "theses", quotes: 10 } });
     assert.deepEqual(parseRoute({ action: "fomo_coin", coin: "AUTON", aspect: "theses" }, ctxOf("show me the last 5 on $AUTON")), { action: "fomo", request: { kind: "coin", symbol: "AUTON", aspect: "theses", quotes: 5 } });
   });
@@ -666,11 +666,11 @@ describe("a coin's theses quoted, on its chain, and its facts: read from the lin
   });
 
   it("a coin's chain comes from the line's own words, never the model's pick alone", () => {
-    assert.deepEqual(parseRoute({ action: "fomo_coin", coin: "AUTON", aspect: "theses", chain: "solana" }, ctxOf("what are people saying about $AUTON on solana")), {
+    assert.deepEqual(parseRoute({ action: "fomo_coin", coin: "AUTON", aspect: "theses", chain: "bsc" }, ctxOf("what are people saying about $AUTON on bsc")), {
       action: "fomo",
-      request: { kind: "coin", symbol: "AUTON", chain: "solana", aspect: "theses" },
+      request: { kind: "coin", symbol: "AUTON", chain: "bsc", aspect: "theses" },
     });
-    assert.deepEqual(parseRoute({ action: "fomo_coin", coin: "AUTON", aspect: "theses", chain: "solana" }, ctxOf("what are people saying about $AUTON")), {
+    assert.deepEqual(parseRoute({ action: "fomo_coin", coin: "AUTON", aspect: "theses", chain: "bsc" }, ctxOf("what are people saying about $AUTON")), {
       action: "fomo",
       request: { kind: "coin", symbol: "AUTON", aspect: "theses" },
     });

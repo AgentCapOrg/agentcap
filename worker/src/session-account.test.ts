@@ -8,7 +8,7 @@ import { toECDSASigner } from "@zerodev/permissions/signers";
 import { toRateLimitPolicy, toTimestampPolicy } from "@zerodev/permissions/policies";
 import { getEntryPoint } from "@zerodev/sdk/constants";
 import { KERNEL_V3_3 } from "@zerodev/sdk/constants";
-import { robinhoodChain, WALL_POLICY_FLAG } from "../../packages/core/src/index";
+import { bnbChain, WALL_POLICY_FLAG } from "../../packages/core/src/index";
 
 /**
  * THE ASSERTION WHOSE ABSENCE LET THIS SHIP.
@@ -29,7 +29,7 @@ import { robinhoodChain, WALL_POLICY_FLAG } from "../../packages/core/src/index"
  * dials out. That is why this can be a unit test at all.
  */
 
-const client = createPublicClient({ chain: robinhoodChain, transport: http("http://127.0.0.1:1") });
+const client = createPublicClient({ chain: bnbChain, transport: http("http://127.0.0.1:1") });
 const entryPoint = getEntryPoint("0.7");
 const NOW = 1_800_000_000;
 

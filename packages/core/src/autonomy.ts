@@ -26,6 +26,8 @@
  * live, and a bug here can only mislabel — never unblock.
  */
 
+import { bnbChain } from "./chain";
+
 /**
  * The leg of the live rail that failed.
  *
@@ -185,9 +187,6 @@ export const RENEW_SOON_DAYS = 3;
  * panel offers. The exceptions are paths with no signed caps to copy —
  * restoring a lost key, starting over — which open on the presets and so on
  * this default, and say "for N days" before the signature.
- *
- * Solana is not covered: its hosted limit is 168 hours, enforced by the vault
- * program itself (solana.ts `SOLANA_MAX_PERMISSION_MS`).
  */
 export const DEFAULT_PERMISSION_DAYS = 30;
 
@@ -236,7 +235,7 @@ function ownerRemedy(rule: RefuseRule | "expired"): {
         // another testnet grant. The owner re-signed, the banner came back, and
         // he reported the product as broken. `chain` is the intent travelling
         // with the button so the destination can honour what the label promised.
-        action: { label: "Re-sign on Robinhood Chain", kind: "renew-grant", chain: 4663 },
+        action: { label: "Re-sign on BNB Chain", kind: "renew-grant", chain: bnbChain.id },
       };
     case "grant-too-wide":
       return {

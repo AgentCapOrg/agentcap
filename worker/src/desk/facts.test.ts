@@ -15,8 +15,8 @@ import { COLLAPSE_DRAWDOWN_PCT, collapseOf, type CoinFacts } from "../coin-facts
 import { createCoinFactsReader, factsAddressOk, FactsLimiter, mainPoolOf, measureBars, parseFactsInfo, parseFactsPools, type FactsFetch } from "./facts";
 import { resetDeskReadsForTest } from "./gecko";
 
-const MINT = "39ahtL8ynzE4amH26J29C93PA5172V3ft9UuUcqQS8fz";
-const MAIN = "FiYyzxapRvkbUhF5ZD3mJigWwqBGhtVLH49MDSgCLHdB";
+const MINT = "0x2980a1f1bcd7307ff6b9084a435357d5cb8d30cb";
+const MAIN = "0x0b8e0770dda3fd26b2f81254be3cc4b6b2ec1e8d";
 const NOW = Date.parse("2026-10-09T01:15:00Z");
 const fixture = (name: string): unknown => JSON.parse(readFileSync(new URL(`./testdata/${name}.json`, import.meta.url), "utf8"));
 
@@ -26,9 +26,9 @@ function fakeIndex(over: { pools?: unknown; fail?: RegExp } = {}): { fetch: Fact
   const fetch: FactsFetch = async (route) => {
     routes.push(route);
     if (over.fail?.test(route)) return { ok: false, failure: "http-503" };
-    if (route === `/networks/solana/tokens/${MINT}/pools?page=1`) return { ok: true, body: over.pools ?? fixture("auton-pools"), observedAt: NOW };
-    if (route.startsWith(`/networks/solana/pools/${MAIN}/ohlcv/hour?`)) return { ok: true, body: fixture("auton-ohlcv-hour"), observedAt: NOW };
-    if (route === `/networks/solana/tokens/${MINT}/info`) return { ok: true, body: fixture("auton-info"), observedAt: NOW };
+    if (route === `/networks/bsc/tokens/${MINT}/pools?page=1`) return { ok: true, body: over.pools ?? fixture("auton-pools"), observedAt: NOW };
+    if (route.startsWith(`/networks/bsc/pools/${MAIN}/ohlcv/hour?`)) return { ok: true, body: fixture("auton-ohlcv-hour"), observedAt: NOW };
+    if (route === `/networks/bsc/tokens/${MINT}/info`) return { ok: true, body: fixture("auton-info"), observedAt: NOW };
     return { ok: false, failure: "http-404" };
   };
   return { fetch, routes };
@@ -42,13 +42,13 @@ describe("AUTON, measured (live probe 2026-10-09 01:15 UTC)", () => {
   beforeEach(() => resetDeskReadsForTest());
 
   it("the main pool is the deepest credible one, never the stale STONK pool with a stranded reserve", () => {
-    const pools = parseFactsPools(fixture("auton-pools"), "solana", MINT);
+    const pools = parseFactsPools(fixture("auton-pools"), "bsc", MINT);
     assert.equal(pools.length, 20, "the LPPP/AUTON pool counts too: AUTON is its quote token");
     const main = mainPoolOf(pools)!;
     assert.equal(main.poolAddress, MAIN);
     assert.equal(main.isBase, true);
     near(main.priceUsd, 0.00003633764859, 1e-12, "price");
-    const stonk = pools.find((p) => p.poolAddress === "ECqtTtP6ojGHPwRCEQp6qC2ean6dhn4Kv4e4iTh52rca")!;
+    const stonk = pools.find((p) => p.poolAddress === "0xeb15a12714098b783f70ce5f474f7edcf85c5b87")!;
     assert.ok(stonk.reserveUsd! > main.reserveUsd!, "its reserve is the larger");
     assert.equal(stonk.volume24hUsd, 0, "and nobody trades it");
     const quoted = pools.find((p) => !p.isBase)!;
@@ -59,10 +59,10 @@ describe("AUTON, measured (live probe 2026-10-09 01:15 UTC)", () => {
   it("reads every fact the room may hear, with the creator's share and never the creator's address", async () => {
     const idx = fakeIndex();
     const read = createCoinFactsReader({ fetchJson: idx.fetch, now: () => NOW });
-    const r = await read({ network: "solana", address: MINT, chatId: -100123, timeoutMs: 10_000, withInfo: true });
+    const r = await read({ network: "bsc", address: MINT, chatId: -100123, timeoutMs: 10_000, withInfo: true });
     assert.ok(r.ok, JSON.stringify(r));
     const f = r.facts;
-    assert.equal(f.network, "solana");
+    assert.equal(f.network, "bsc");
     assert.equal(f.observedAt, NOW);
     near(f.fdvNowUsd, 36_245, 1, "FDV now");
     // The highest HOURLY CLOSE, never the $8.0M wick: the hour from 04:00 UTC on Oct 7, which closed at 05:00.
@@ -95,7 +95,7 @@ describe("AUTON, measured (live probe 2026-10-09 01:15 UTC)", () => {
 
   it("without the info read: no holders and no creator's share, and one read fewer", async () => {
     const idx = fakeIndex();
-    const r = await createCoinFactsReader({ fetchJson: idx.fetch, now: () => NOW })({ network: "solana", address: MINT, chatId: 1, timeoutMs: 10_000, withInfo: false });
+    const r = await createCoinFactsReader({ fetchJson: idx.fetch, now: () => NOW })({ network: "bsc", address: MINT, chatId: 1, timeoutMs: 10_000, withInfo: false });
     assert.ok(r.ok);
     assert.equal(r.facts.holders, null);
     assert.equal(r.facts.creatorHoldingPct, null);
@@ -104,14 +104,14 @@ describe("AUTON, measured (live probe 2026-10-09 01:15 UTC)", () => {
 
   it("a pool set of dust and stale pools is not-found; a failed pools read is unavailable; failed bars leave no high", async () => {
     const pools = fixture("auton-pools") as { data: Array<{ attributes: Record<string, unknown> }> };
-    const junk = { data: pools.data.map((p) => ({ ...p, attributes: { ...p.attributes, reserve_in_usd: (p.attributes.address === "ECqtTtP6ojGHPwRCEQp6qC2ean6dhn4Kv4e4iTh52rca" ? "39449.66" : "500") } })) };
-    const notFound = await createCoinFactsReader({ fetchJson: fakeIndex({ pools: junk }).fetch, now: () => NOW })({ network: "solana", address: MINT, chatId: 2, timeoutMs: 10_000, withInfo: false });
+    const junk = { data: pools.data.map((p) => ({ ...p, attributes: { ...p.attributes, reserve_in_usd: (p.attributes.address === "0xeb15a12714098b783f70ce5f474f7edcf85c5b87" ? "39449.66" : "500") } })) };
+    const notFound = await createCoinFactsReader({ fetchJson: fakeIndex({ pools: junk }).fetch, now: () => NOW })({ network: "bsc", address: MINT, chatId: 2, timeoutMs: 10_000, withInfo: false });
     assert.deepEqual(notFound, { ok: false, why: "not-found" });
     resetDeskReadsForTest();
-    const down = await createCoinFactsReader({ fetchJson: fakeIndex({ fail: /\/pools\?page=1$/ }).fetch, now: () => NOW })({ network: "solana", address: MINT, chatId: 3, timeoutMs: 10_000, withInfo: false });
+    const down = await createCoinFactsReader({ fetchJson: fakeIndex({ fail: /\/pools\?page=1$/ }).fetch, now: () => NOW })({ network: "bsc", address: MINT, chatId: 3, timeoutMs: 10_000, withInfo: false });
     assert.deepEqual(down, { ok: false, why: "unavailable" });
     resetDeskReadsForTest();
-    const noBars = await createCoinFactsReader({ fetchJson: fakeIndex({ fail: /ohlcv/ }).fetch, now: () => NOW })({ network: "solana", address: MINT, chatId: 4, timeoutMs: 10_000, withInfo: false });
+    const noBars = await createCoinFactsReader({ fetchJson: fakeIndex({ fail: /ohlcv/ }).fetch, now: () => NOW })({ network: "bsc", address: MINT, chatId: 4, timeoutMs: 10_000, withInfo: false });
     assert.ok(noBars.ok);
     assert.equal(noBars.facts.high, null);
     assert.equal(noBars.facts.drawdownPct, null);
@@ -122,16 +122,17 @@ describe("AUTON, measured (live probe 2026-10-09 01:15 UTC)", () => {
     const idx = fakeIndex();
     const read = createCoinFactsReader({ fetchJson: idx.fetch, now: () => NOW });
     for (const [network, address] of [
-      ["solana", "0x39dbed3a00000000000000000000000000000c0d"],
-      ["robinhood", MINT],
+      ["bsc", "not-an-address"],
+      ["robinhood", "not-an-address"],
+      ["robinhood", `${MINT}/../../x`],
       ["base", "not-an-address"],
-      ["solana", `${MINT}/../../x`],
+      ["bsc", `${MINT}/../../x`],
       ["polygon", "0x39dbed3a00000000000000000000000000000c0d"],
     ] as const) {
       assert.deepEqual(await read({ network: network as never, address, chatId: 5, timeoutMs: 10_000, withInfo: true }), { ok: false, why: "unsupported" }, `${network} ${address}`);
     }
     assert.deepEqual(idx.routes, []);
-    assert.equal(factsAddressOk("solana", MINT), true);
+    assert.equal(factsAddressOk("bsc", MINT), true);
     assert.equal(factsAddressOk("ethereum", "0x39DBED3A00000000000000000000000000000C0D"), true);
   });
 
@@ -140,12 +141,12 @@ describe("AUTON, measured (live probe 2026-10-09 01:15 UTC)", () => {
     const idx = fakeIndex();
     const limiter = new FactsLimiter({ now: () => t });
     const read = createCoinFactsReader({ fetchJson: idx.fetch, now: () => t, limiter });
-    for (let i = 0; i < 4; i++) assert.ok((await read({ network: "solana", address: MINT, chatId: 7, timeoutMs: 10_000, withInfo: false })).ok);
+    for (let i = 0; i < 4; i++) assert.ok((await read({ network: "bsc", address: MINT, chatId: 7, timeoutMs: 10_000, withInfo: false })).ok);
     const asked = idx.routes.length;
-    assert.deepEqual(await read({ network: "solana", address: MINT, chatId: 7, timeoutMs: 10_000, withInfo: false }), { ok: false, why: "busy" });
+    assert.deepEqual(await read({ network: "bsc", address: MINT, chatId: 7, timeoutMs: 10_000, withInfo: false }), { ok: false, why: "busy" });
     assert.equal(idx.routes.length, asked, "busy costs nothing");
     t += 10 * 60_000;
-    assert.ok((await read({ network: "solana", address: MINT, chatId: 7, timeoutMs: 10_000, withInfo: false })).ok, "a new ten minutes");
+    assert.ok((await read({ network: "bsc", address: MINT, chatId: 7, timeoutMs: 10_000, withInfo: false })).ok, "a new ten minutes");
     const agent = new FactsLimiter({ now: () => t });
     for (let i = 0; i < 20; i++) assert.equal(agent.take(1_000 + i), true);
     assert.equal(agent.take(9_999), false, "twenty an hour for the agent, whichever rooms ask");
@@ -157,7 +158,7 @@ describe("AUTON, measured (live probe 2026-10-09 01:15 UTC)", () => {
     try {
       const idx = fakeIndex();
       const read = createCoinFactsReader({ fetchJson: idx.fetch, now: () => NOW, lane: { fleetHome: home } });
-      assert.ok((await read({ network: "solana", address: MINT, chatId: 9, timeoutMs: 10_000, withInfo: false })).ok);
+      assert.ok((await read({ network: "bsc", address: MINT, chatId: 9, timeoutMs: 10_000, withInfo: false })).ok);
       const lanes = readdirSync(home);
       assert.equal(lanes.length, 1, "one provider lane under the fleet home");
       assert.ok(existsSync(path.join(home, lanes[0]!, "gecko-feed-cache.sqlite")), "the children's shared pacing file");
@@ -179,16 +180,15 @@ describe("AUTON, measured (live probe 2026-10-09 01:15 UTC)", () => {
       late = setTimeout(() => resolve({ ok: false, failure: "late" }), 5_000);
     });
     try {
-      const r = await createCoinFactsReader({ fetchJson: slow, now: () => NOW })({ network: "solana", address: MINT, chatId: 8, timeoutMs: 30, withInfo: false });
+      const r = await createCoinFactsReader({ fetchJson: slow, now: () => NOW })({ network: "bsc", address: MINT, chatId: 8, timeoutMs: 30, withInfo: false });
       assert.deepEqual(r, { ok: false, why: "unavailable" });
     } finally {
       clearTimeout(late);
     }
     for (const junk of [null, undefined, 42, "x", [], { data: null }, { data: [null, 1, "x", { id: 5 }, { attributes: { address: {} } }] }]) {
-      assert.deepEqual(parseFactsPools(junk, "solana", MINT), []);
-      assert.equal(parseFactsInfo(junk, "solana", MINT), null);
+      assert.deepEqual(parseFactsPools(junk, "bsc", MINT), []);
+      assert.equal(parseFactsInfo(junk, "bsc", MINT), null);
     }
-    assert.equal(parseFactsInfo(fixture("auton-info"), "solana", MINT.toLowerCase()), null, "a Solana mint is matched exactly");
     assert.deepEqual(measureBars([], 1, null), { high: null, barsFromMs: null, drawdownPct: null, steepest: null });
     // A high in the bar still forming is timed when it was read, never in the future.
     const forming = Date.parse("2026-10-09T01:15:00Z");
@@ -200,7 +200,7 @@ describe("AUTON, measured (live probe 2026-10-09 01:15 UTC)", () => {
 
 describe("collapseOf: measured, worth saying, and nearly all gone", () => {
   const f = (over: Partial<CoinFacts>): CoinFacts => ({
-    network: "solana", observedAt: NOW, priceUsd: 1, fdvNowUsd: 1_000_000, high: { closeUsd: 2, fdvUsd: 2_000_000, atMs: NOW - 86_400_000 },
+    network: "bsc", observedAt: NOW, priceUsd: 1, fdvNowUsd: 1_000_000, high: { closeUsd: 2, fdvUsd: 2_000_000, atMs: NOW - 86_400_000 },
     barsFromMs: null, poolCreatedAtMs: null, drawdownPct: 50, steepest: null, liquidityUsd: 50_000, change24hPct: -5,
     buyers24h: null, sellers24h: null, holders: null, creatorHoldingPct: null, info: "read", poolsSeen: 1, ...over,
   });
@@ -222,14 +222,14 @@ describe("collapseOf: measured, worth saying, and nearly all gone", () => {
 });
 
 describe("the token's own links, for the X agent's larp check", () => {
-  const MINT_ID = "solana_t9bnCGiZVUYsRKvx4d5dPcoDCSyuBM9C33ZNGNULARP";
+  const MINT_ID = "bsc_0x017d8013ecc5257d38debc6183defacdb7e86b7d";
   const info = (a: Record<string, unknown>) => ({ data: { id: MINT_ID, attributes: { holders: null, ...a } } });
   it("keeps https websites and a handle X could have, and nothing else", () => {
-    const r = parseFactsInfo(info({ websites: ["https://larpcheck.app/", "http://plain.example", "javascript:alert(1)", "https://a.example/x y", 7, "https://b.example", "https://c.example", "https://d.example"], twitter_handle: "@larpcheck" }), "solana", MINT_ID.slice(7));
+    const r = parseFactsInfo(info({ websites: ["https://larpcheck.app/", "http://plain.example", "javascript:alert(1)", "https://a.example/x y", 7, "https://b.example", "https://c.example", "https://d.example"], twitter_handle: "@larpcheck" }), "bsc", MINT_ID.slice(4));
     assert.deepEqual(r?.links, { websites: ["https://larpcheck.app/", "https://b.example", "https://c.example"], twitter: "larpcheck" });
   });
   it("a handle no X account could have is none", () => {
-    const r = parseFactsInfo(info({ twitter_handle: "not a handle!" }), "solana", MINT_ID.slice(7));
+    const r = parseFactsInfo(info({ twitter_handle: "not a handle!" }), "bsc", MINT_ID.slice(4));
     assert.deepEqual(r?.links, { websites: [], twitter: null });
   });
 });

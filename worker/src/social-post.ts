@@ -36,7 +36,6 @@
  * it. A social layer that must always produce something is a social layer that
  * will eventually produce anything.
  */
-import { onchainIdIn } from "../../packages/core/src/ids";
 import type { ClassEvidence } from "./class-evidence";
 
 /** How many of an agent's own recent posts are weighed for repetition. */
@@ -83,18 +82,11 @@ export const POST_MIN_WORDS = 4;
  *
  * A HONEST LIMITATION, STATED RATHER THAN PAPERED OVER: two agents configured
  * identically will produce the same traits and therefore similar voices, and
- * that is correct. Shogun and SirSendIt are byte-identically configured today —
- * same hold window, same entry size, same graduation exit, same impact ceiling —
- * so nothing here can make them sound different, and inventing a difference
- * would mean inventing a fact about the agent. What separates them over time is
- * `recent`: their own past posts, which diverge as their books do.
+ * that is correct — inventing a difference would mean inventing a fact about the
+ * agent. What separates them over time is `recent`: their own past posts.
  */
 export interface Disposition {
-  maxHoldSec: number;
-  exitAtGraduationPct: number;
-  perEntryUsdg: number;
   maxImpactBps: number;
-  minDepthUsdg: number;
 }
 
 /**
@@ -106,13 +98,8 @@ export interface Disposition {
  */
 export function traitsOf(d: Disposition, defaults: Disposition): string[] {
   const t: string[] = [];
-  if (d.maxHoldSec < defaults.maxHoldSec * 0.75) t.push("moves early and does not wait around");
-  if (d.maxHoldSec > defaults.maxHoldSec * 1.5) t.push("sits on a position longer than most");
   if (d.maxImpactBps < defaults.maxImpactBps * 0.75) t.push("dislikes pushing a price around");
   if (d.maxImpactBps > defaults.maxImpactBps * 1.5) t.push("will take size even when it moves the market");
-  if (d.minDepthUsdg > defaults.minDepthUsdg * 1.5) t.push("wants real liquidity before committing");
-  if (d.minDepthUsdg < defaults.minDepthUsdg * 0.75) t.push("will go into thinner things than most");
-  if (d.exitAtGraduationPct < defaults.exitAtGraduationPct * 0.9) t.push("leaves well before the curve graduates");
   return t;
 }
 
@@ -223,7 +210,7 @@ export interface PostVerdict {
   refusal?: PostRefusal;
 }
 
-/** The same shape `thesis-policy.ts` refuses on, applied one layer earlier; core's detector adds Solana ids. */
+/** The same shape `thesis-policy.ts` refuses on, applied one layer earlier. */
 const ADDRESSY = /\b(?:0x[0-9a-fA-F]{6,}|rh:[A-Za-z0-9-]{1,64})\b/;
 /** A handle or a link would make the agent reachable, or make it endorse someone. */
 const HANDLEY = /(^|\s)[@#]\w|https?:\/\//;
@@ -311,10 +298,7 @@ export function admitPost(raw: string, c: WriterContext): PostVerdict {
    * "has-digits" in the operator log — a refusal that says the wrong thing
    * about why, on the one case where knowing why matters most.
    */
-  // Glued too: "CA<mint>" or "<mint>is" is an address (audit regressions F3).
-  // Its cost is the one X accepts (xpost/public-wallet.ts idInText): an unbroken
-  // base58 run of 43 or more characters may read as an id and cost the take.
-  if (ADDRESSY.test(body) || onchainIdIn(body, { glued: true })) return { ok: false, refusal: "has-address" };
+  if (ADDRESSY.test(body)) return { ok: false, refusal: "has-address" };
   if (HANDLEY.test(body)) return { ok: false, refusal: "has-handle" };
 
   /**

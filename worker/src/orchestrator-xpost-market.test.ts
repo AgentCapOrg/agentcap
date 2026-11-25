@@ -124,7 +124,7 @@ describe("what's hot in code's words", () => {
           for (const line of lines) {
             const words = withoutReplyOptOut(line);
             assert.doesNotMatch(words, /\p{N}|\$|@|#|https?:|0x/u, line);
-            assert.doesNotMatch(words, /\b(?:btc|eth|sol|bitcoin|ether|ethereum|solana|pepe|bonk|wif|doge)\b/i, line);
+            assert.doesNotMatch(words, /\b(?:btc|eth|sol|bnb|bitcoin|ether|ethereum|solana|pepe|bonk|wif|doge)\b/i, line);
             assert.doesNotMatch(words, /\b(?:buy|buying|bought|sell|hold|holding|entry|target|bullish|bearish|moon|pump|bounce|bottom|recover\w*|cheap|from here)\b/i, line);
             assert.doesNotMatch(line, /opt out|\bstop\b/i, line);
             const v = told(line, mode, said);
@@ -147,7 +147,7 @@ describe("what's hot in code's words", () => {
   });
 
   it("the big coins' words agree with the figures beside them: read as the line rounds them, and never of one coin (red-team 2026-10-12)", () => {
-    // Read as "up" at 58ba9fd0 beside "$BTC +0.5%, $ETH -0.5%, $SOL -0.5%".
+    // Read as "up" at 58ba9fd0 beside "$BTC +0.5%, $ETH -0.5%, $BNB -0.5%".
     assert.equal(majorsDirOf([0.5, -0.49, -0.49])?.dir, "mixed");
     assert.equal(majorsDirOf([2.4, -0.45, -0.48])?.dir, "mixed");
     assert.equal(majorsDirOf([0.6, -0.4, -0.4])?.dir, "mixed");
@@ -163,8 +163,8 @@ describe("what's hot in code's words", () => {
   });
 
   it("the big coins' words are as big as the move, and the chain's words count without a direction (red-team review of a964a74c, 2026-10-12)", () => {
-    // POSTED at a964a74c: "the giants dipped slightly ... $BTC -15.2%, $ETH -21.7%, $SOL -28.3%", "the leaders are taking a breather",
-    // "the bellwethers are inching forward ... $BTC +18.4%, $ETH +24.9%, $SOL +31%", and "a solo runner", "several runners",
+    // POSTED at a964a74c: "the giants dipped slightly ... $BTC -15.2%, $ETH -21.7%, $BNB -28.3%", "the leaders are taking a breather",
+    // "the bellwethers are inching forward ... $BTC +18.4%, $ETH +24.9%, $BNB +31%", and "a solo runner", "several runners",
     // "a pack running" beside $CHUMP -62.5% and chain coins down by half.
     assert.deepEqual(majorsDirOf([-15.2, -21.7, -28.3]), { dir: "down", size: "sharply" });
     assert.deepEqual(majorsDirOf([18.4, 24.9, 31]), { dir: "up", size: "sharply" });
@@ -191,7 +191,7 @@ describe("what's hot in code's words", () => {
   });
 
   it("one coin's big day sets no size for all the big coins: in different bands they are only up or down, with no size (red-team review of 1ed46625, 2026-10-12)", () => {
-    // POSTED at 1ed46625: "majors are plunging" beside $BTC -1.2%, $ETH -2%, $SOL -10.5%; "majors are surging" beside +0.8%, +1.1%, +10.3%;
+    // POSTED at 1ed46625: "majors are plunging" beside $BTC -1.2%, $ETH -2%, $BNB -10.5%; "majors are surging" beside +0.8%, +1.1%, +10.3%;
     // "the giants fell steeply" beside -0.1%, -0.2%, -14%; "the heavyweights lost solid ground" beside -1.2%, -2%, -4.5%.
     assert.deepEqual(majorsDirOf([-1.2, -2.0, -10.5]), { dir: "down", size: "uneven" });
     assert.deepEqual(majorsDirOf([0.8, 1.1, 10.3]), { dir: "up", size: "uneven" });
@@ -282,7 +282,7 @@ describe("code insight posts", () => {
         const v = admitXPost(line, { kind: "casual", insight: true, house: true, buys: "none", lookedOnly: false,
           agentName: "Alan Al Dale", mode: paper ? "paper" : "live", coins: [], recentOwn: [], recentFleet: [] }, admitAgentLine);
         assert.ok(v.ok, `${focus}: ${line} → ${v.ok ? "" : v.reason}`);
-        assert.doesNotMatch(line, /\p{N}|\$|https?:|coingecko|bitquery|robinhood|bitcoin|ethereum|solana/iu);
+        assert.doesNotMatch(line, /\p{N}|\$|https?:|coingecko|bitquery|robinhood|bitcoin|ethereum|solana|bnb/iu);
       }
     }
   });

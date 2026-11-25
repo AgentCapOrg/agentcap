@@ -37,7 +37,7 @@ describe("worker keys", () => {
       ` ${OWNER}:perps`,
       `${OWNER}:perps `,
       `${OWNER.slice(0, -1)}:perps`,
-      `sol:${OWNER}`,
+      `agent:${OWNER}`,
       ":perps",
       "",
       undefined,

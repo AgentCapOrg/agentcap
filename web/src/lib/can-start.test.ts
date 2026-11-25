@@ -46,20 +46,9 @@ describe("with sponsorship", () => {
     );
   });
 
-  it("counts the VAULT as capital", () => {
-    // Idle cash is swept to the vault on the first tick, so an owner who funded
-    // and then waited a minute has a zero cash balance and is not unfunded.
-    // Missing this would push exactly the people who did everything right back
-    // onto the fund step.
-    assert.equal(
-      canStart({ balances: { ethWei: "0", cashUsdg: "0", vaultUsdg: "250000000" }, gasSponsored: true }),
-      true,
-    );
-  });
-
   it("still needs SOMETHING — sponsorship is not capital", () => {
     assert.equal(
-      canStart({ balances: { ethWei: "0", cashUsdg: "0", vaultUsdg: "0" }, gasSponsored: true }),
+      canStart({ balances: { ethWei: "0", cashUsdg: "0" }, gasSponsored: true }),
       false,
     );
     assert.equal(canStart({ gasSponsored: true }), false);
@@ -75,10 +64,9 @@ describe("a balance that could not be read is not a balance", () => {
     // The status route now says null for a chain read that failed, rather
     // than "0". Null must close the gate exactly as zero did — unknown money is
     // not money to start with.
-    assert.equal(canStart({ balances: { ethWei: null, cashUsdg: null, vaultUsdg: null }, gasSponsored: true }), false);
+    assert.equal(canStart({ balances: { ethWei: null, cashUsdg: null }, gasSponsored: true }), false);
     assert.equal(canStart({ balances: { ethWei: null, cashUsdg: "5000000" }, gasSponsored: false }), false);
     assert.equal(hasGas(null), false);
-    assert.equal(hasCapital({ cashUsdg: null, vaultUsdg: "1" }), true, "the leg that WAS read still counts");
   });
 
   it("never reads unparseable capital as funded", () => {
@@ -91,13 +79,6 @@ describe("a balance that could not be read is not a balance", () => {
         `must not accept cashUsdg=${JSON.stringify(v)}`,
       );
     }
-  });
-
-  it("hasCapital sums the two legs rather than taking either alone", () => {
-    assert.equal(hasCapital({ cashUsdg: "0", vaultUsdg: "0" }), false);
-    assert.equal(hasCapital({ cashUsdg: "0", vaultUsdg: "1" }), true);
-    assert.equal(hasCapital({ cashUsdg: "1", vaultUsdg: "0" }), true);
-    assert.equal(hasCapital(undefined), false);
   });
 
   it("hasGas keeps its original lenient fallback", () => {

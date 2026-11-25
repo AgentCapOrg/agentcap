@@ -80,7 +80,7 @@ describe("decisions substrate — /why joins the trade to its own decision", () 
     await setBasis(AGENT, "paper", SYM, buy.basis);
     await addTrade({
       agent_id: AGENT, kind: "swap", target: "0x0000000000000000000000000000000000000002",
-      amount_usdg: 200, fill_cash_usdg:200,sell_token:CASH.USDG,buy_token:TSLA,status: "paper",
+      amount_usdg: 200, fill_cash_usdg:200,sell_token:CASH.USDT,buy_token:TSLA,status: "paper",
       fill_side: "buy", fill_qty_raw: (2n * SHARE).toString(), fill_price_usd: 100, basis_source: "paper",
     });
     const afterBuy = await getBasis(AGENT, "paper", SYM);
@@ -94,7 +94,7 @@ describe("decisions substrate — /why joins the trade to its own decision", () 
     assert.equal(sell.realizedUsdg, usdg6(50));
     await addTrade({
       agent_id: AGENT, kind: "swap", target: "0x0000000000000000000000000000000000000002",
-      amount_usdg: 150, fill_cash_usdg:150,sell_token:TSLA,buy_token:CASH.USDG,status: "paper",
+      amount_usdg: 150, fill_cash_usdg:150,sell_token:TSLA,buy_token:CASH.USDT,status: "paper",
       fill_side: "sell", fill_qty_raw: SHARE.toString(), fill_price_usd: 150,
       realized_pnl_usdg: 50, basis_source: "paper",
     });

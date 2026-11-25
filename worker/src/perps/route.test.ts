@@ -126,7 +126,7 @@ describe("runPerpRoute: the strategist's intents are held to this tick's view", 
 
   it("the brakes stop the strategist's entry and never its exits", () => {
     const v = withBtcExit();
-    for (const c of [ctx({ breakerIdle: false }), ctx({ energyEntriesLeft: false }), ctx({ opsHeadroom: false })]) {
+    for (const c of [ctx({ breakerIdle: false }), ctx({ entriesLeft: false }), ctx({ opsHeadroom: false })]) {
       const r = runPerpRoute({ view: v, settings: settings(), driver: "strategist", perpTrendCtx: c, strategistPerpIntents: [strategistClose(v), strategistOpen(v)] });
       assert.equal(r.exits.length, 1);
       assert.equal(r.entry, null);

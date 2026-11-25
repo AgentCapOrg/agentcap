@@ -4,8 +4,6 @@ import { buildCallPermissions, grantWallOptions, usableExtraTokens } from "./wal
 import { wallShape } from "./first-enable-gas";
 import { CASH, STOCK_TOKENS, type CustomToken } from "./tokens";
 import type { GrantCaps } from "./grant";
-import { GRANT_ENERGY } from "./energy";
-import { AGENTCAP_TOKEN } from "./token";
 import { GRANT_PERP_LIGHTER, LIGHTER_ROUTE_V1 } from "./perps";
 
 /** A real Lighter API public key (the official signer's, from the spike). */
@@ -89,7 +87,7 @@ describe("a rebuilt wall is the same wall", () => {
     // Already covered by the base wall, so they are dropped rather than added.
     // Storing them unfiltered would make the rebuild two permissions too wide.
     const builtins = [
-      { symbol: "USDG", address: CASH.USDG as `0x${string}`, decimals: 6 },
+      { symbol: "USDG", address: CASH.USDT as `0x${string}`, decimals: 6 },
       { symbol: STOCK_TOKENS[0]!.symbol, address: STOCK_TOKENS[0]!.address as `0x${string}`, decimals: 18 },
     ];
     const r = roundTrip([...builtins, tok(7), tok(8)]);
@@ -124,55 +122,25 @@ describe("a rebuilt wall is the same wall", () => {
     // permission — the single largest driver of wall size — so the rebuild has
     // to reproduce them from grantFeatures too, not only the token count.
     //
-    // THE ENERGY BUY IS A DIMENSION TOO, and the one with no sealed address:
-    // it is rebuilt from the GRANT_ENERGY marker alone. It adds a permission
-    // AND a spender entry on the USDG approve, so a rebuild that missed it
-    // would be 1,408 bytes narrower than the wall that was signed.
-    //
     // PERPS ARE A DIMENSION TOO, and the first one rebuilt from more than a
     // marker: `grantWallOptions` reads the grant's chain and `perp` block
     // through `grantPerp`, so the rebuild has to be handed both — three
     // permissions, eleven rules and a spender entry (2,816 bytes) ride on it.
-    const V4 = "0x" + "a".repeat(40);
-    const PONS = "0x" + "b".repeat(40);
-    for (const allowRialto of [false, true])
-      for (const allowUniswapV4 of [false, true])
-        for (const v4 of [false, true])
-          for (const pons of [false, true])
-            for (const energyBuy of [false, true])
-              for (const perps of [false, true]) {
-                const caps = {
-                  allowRialto,
-                  allowUniswapV4,
-                  ...(v4 ? { v4AdapterAddress: V4 } : {}),
-                  ...(pons ? { ponsAdapterAddress: PONS } : {}),
-                  energyBuy,
-                  ...(perps ? { perpLighter: PERP_LIGHTER } : {}),
-                };
-                const tokens = [tok(1), tok(1), tok(2)];
-                const signed = shapeOf({ extraTokens: tokens, ...caps });
-                const grantTokens = usableExtraTokens(tokens).map((t) => t.address.toLowerCase());
-                const rebuilt = shapeOf({
-                  ...grantWallOptions({
-                    grantTokens,
-                    grantFeatures: [
-                      ...(allowRialto ? ["rialto"] : []),
-                      ...(allowUniswapV4 ? ["v4"] : []),
-                      ...(energyBuy ? [GRANT_ENERGY] : []),
-                      ...(perps ? [GRANT_PERP_LIGHTER] : []),
-                    ],
-                    chainId: LIGHTER_ROUTE_V1.chainId,
-                    ...(perps ? { perp: PERP_BLOCK } : {}),
-                  }),
-                  ...(v4 ? { v4AdapterAddress: V4 } : {}),
-                  ...(pons ? { ponsAdapterAddress: PONS } : {}),
-                });
-                assert.deepEqual(
-                  rebuilt,
-                  signed,
-                  `combination r=${allowRialto} v4=${allowUniswapV4} a=${v4} p=${pons} e=${energyBuy} perps=${perps}`,
-                );
-              }
+    for (const perps of [false, true]) {
+      const caps = perps ? { perpLighter: PERP_LIGHTER } : {};
+      const tokens = [tok(1), tok(1), tok(2)];
+      const signed = shapeOf({ extraTokens: tokens, ...caps });
+      const grantTokens = usableExtraTokens(tokens).map((t) => t.address.toLowerCase());
+      const rebuilt = shapeOf(
+        grantWallOptions({
+          grantTokens,
+          grantFeatures: perps ? [GRANT_PERP_LIGHTER] : [],
+          chainId: LIGHTER_ROUTE_V1.chainId,
+          ...(perps ? { perp: PERP_BLOCK } : {}),
+        }) as never,
+      );
+      assert.deepEqual(rebuilt, signed, `combination perps=${perps}`);
+    }
   });
 
   it("PERPS REBUILD ONLY FROM MARKER + CHAIN + BLOCK, all three — a partial claim rebuilds the narrower wall", () => {
@@ -200,34 +168,13 @@ describe("a rebuilt wall is the same wall", () => {
     }
     // And callers that pass neither chain nor block get exactly the object
     // they always got.
-    assert.deepEqual(Object.keys(grantWallOptions({ grantFeatures: [GRANT_ENERGY] })).sort(), [
-      "allowRialto",
-      "allowUniswapV4",
-      "energyBuy",
-      "extraTokens",
-      "scopedSpenders",
-    ]);
+    assert.deepEqual(Object.keys(grantWallOptions({})).sort(), ["extraTokens", "scopedSpenders"]);
   });
 
-  it("THE ENERGY MARKER, AND ONLY THE MARKER, turns the energy buy on in a rebuild", () => {
-    assert.equal(grantWallOptions({ grantFeatures: [GRANT_ENERGY] }).energyBuy, true);
-    assert.equal(grantWallOptions({ grantFeatures: ["tradeable-v2"] }).energyBuy, false);
-    assert.equal(grantWallOptions({}).energyBuy, false, "no features, no energy buy");
-    // A future route is a future marker. v1's rebuild must not answer to it.
-    assert.equal(grantWallOptions({ grantFeatures: ["energy-buy-v2"] }).energyBuy, false);
-  });
-
-  it("$AGENTCAP LISTED AS AN EXTRA does not survive into grantTokens, so the rebuild still matches", () => {
-    // usableExtraTokens drops the reserve (it must never get an approve), and
-    // both signers record grantTokens post-filter — so the executor rebuilds a
-    // wall with no AGENTCAP approve, exactly as signed.
-    const merry: CustomToken = { symbol: "AGENTCAP", address: AGENTCAP_TOKEN.address, decimals: 18 };
-    const tokens = [merry, tok(3)];
-    const signed = shapeOf({ extraTokens: tokens, energyBuy: true });
-    const grantTokens = usableExtraTokens(tokens).map((t) => t.address.toLowerCase());
-    assert.deepEqual(grantTokens, [addr(3)], "the reserve is never recorded as a covered token");
-    const rebuilt = shapeOf({ ...grantWallOptions({ grantTokens, grantFeatures: [GRANT_ENERGY] }) });
-    assert.deepEqual(rebuilt, signed);
+  it("RETIRED MARKERS rebuild nothing — an old grant's Pons or energy claim adds no permission", () => {
+    const retired = grantWallOptions({ grantFeatures: ["pons-adapter", "pons-class", "energy-buy-v1"] });
+    assert.deepEqual(retired, grantWallOptions({}));
+    assert.deepEqual(shapeOf({ ...retired }), shapeOf({}));
   });
 
   it("THE PROPERTY, STATED DIRECTLY: filtering is idempotent over stored addresses", () => {
@@ -237,7 +184,7 @@ describe("a rebuilt wall is the same wall", () => {
     const messy = [
       tok(1),
       tok(1),
-      { symbol: "USDG", address: CASH.USDG as `0x${string}`, decimals: 6 },
+      { symbol: "USDG", address: CASH.USDT as `0x${string}`, decimals: 6 },
       { symbol: "BAD", address: "0xzzz" as `0x${string}`, decimals: 18 },
       tok(2),
       { ...tok(2), address: addr(2).toUpperCase() as `0x${string}` },

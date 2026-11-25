@@ -35,7 +35,7 @@ export async function settleKeyInstall(deps: KeyInstallAccounting, agentId: stri
     try { priced = await deps.priceGas(outcome.proof.gasWei); } catch { /* cost survives an unavailable price */ }
   }
   return deps.addTrade({
-    agent_id: agentId, kind: KEY_INSTALL_KIND, target: CASH.USDG, amount_usdg: 0,
+    agent_id: agentId, kind: KEY_INSTALL_KIND, target: CASH.USDT, amount_usdg: 0,
     user_op_hash: outcome.userOpHash, tx_hash: outcome.proof.txHash,
     status: outcome.success ? "landed" : "reverted",
     ...(outcome.success ? {} : { reject_rule: outcome.rejectRule ?? "reverted on-chain (resolved)" }),
@@ -79,7 +79,7 @@ export async function installKeyRecorded(deps: KeyInstallAccounting & {
     const exec = await executor.installKey({ onSubmitted: async (hash, op) => {
       deps.beforeBroadcast?.();
       recorded = await deps.addTrade({
-        agent_id: agentId, kind: KEY_INSTALL_KIND, target: CASH.USDG, amount_usdg: 0,
+        agent_id: agentId, kind: KEY_INSTALL_KIND, target: CASH.USDT, amount_usdg: 0,
         user_op_hash: hash, ...(op.nonce !== null ? { user_op_nonce: op.nonce.toString() } : {}), status: "submitted",
       });
       if (!recorded) throw new NotRecorded(hash);

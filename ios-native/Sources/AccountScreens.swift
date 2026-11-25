@@ -177,7 +177,7 @@ struct PermissionsScreen: View {
                     stopReview = StandDown.Confirmation(owner: store.owner, generation: store.generation)
                     stop = stopReview != nil
                 }.disabled(busy).accessibilityIdentifier("stop-all-agents")
-                Text("Stops Spot, Perps and Solana for this login. It removes active server permissions and agent memory. It does not withdraw assets or revoke permissions on-chain.").font(.caption).foregroundStyle(.secondary)
+                Text("Stops Spot and Perps for this login. It removes active server permissions and agent memory. It does not withdraw assets or revoke permissions on-chain.").font(.caption).foregroundStyle(.secondary)
             }
         }.navigationTitle("Wallet & permissions")
         .confirmationDialog("Stop all agents for this login?", isPresented: $stop, titleVisibility: .visible) {
@@ -187,11 +187,11 @@ struct PermissionsScreen: View {
                     guard let reviewed, let body = reviewed.body(currentOwner: store.owner, generation: store.generation) else { throw APIError(status: 409, message: "Your account changed. Review the stop again for the current login.") }
                     let result = try await store.perform("/api/grants", method: "DELETE", body: body, expectedOwner: reviewed.owner)
                     guard result["ok"].bool == true else { throw APIError(status: 502, message: "The stop response could not be confirmed. Check all agents before trying again.") }
-                    revision += 1; store.notice = "Stop request accepted for Spot, Perps and Solana. Existing assets remain in their accounts."
+                    revision += 1; store.notice = "Stop request accepted for Spot and Perps. Existing assets remain in their accounts."
                 } catch { store.notice = error.localizedDescription } }
             }
             Button("Cancel", role: .cancel) { stopReview = nil }
-        } message: { Text("Spot, Perps and Solana for this login will stop managing positions. Active server permissions and agent memory are removed; re-signing does not restore that memory. This does not close or sell positions, withdraw assets, or revoke permissions on-chain.") }
+        } message: { Text("Spot and Perps for this login will stop managing positions. Active server permissions and agent memory are removed; re-signing does not restore that memory. This does not close or sell positions, withdraw assets, or revoke permissions on-chain.") }
         // The worker refuses this on the live rail, so it can only ever touch
         // the paper book; the button is also shown only for paper agents.
         .confirmationDialog("Restart the paper book?", isPresented: $resetPaper, titleVisibility: .visible) {

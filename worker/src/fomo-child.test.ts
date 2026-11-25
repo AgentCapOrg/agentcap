@@ -50,7 +50,7 @@ import { brokerFailureEnvelope, createIpcBroker, serveBrokerRequests, validateBr
 import { writeChildFomoFile } from "./fomo/child-file";
 import type { BrokerReport, BrokerRequest, BrokerResponse, ChildFomoFile, ChildSignal, ChildTail, FomoBroker, MemoryRead } from "./fomo/contract";
 import type { FollowCounters } from "./fomo/following";
-import { chainFromProvider, robinhoodChain, tokenIdentity } from "./fomo/identity";
+import { chainFromProvider, bnbChain, tokenIdentity } from "./fomo/identity";
 import { AUTONOMOUS_ENTRY_CAP_6 } from "./fomo/sizing";
 import { createFomoRuntime } from "./fomo/runtime";
 import { enqueueJob, getSubject, recentJobs, setSubject } from "./fomo/store";
@@ -60,11 +60,13 @@ const T0 = 1_800_000_000_000;
 const TENANT = "0x00000000000000000000000000000000000000a1";
 const OTHER = "0x00000000000000000000000000000000000000b2";
 const U = (n: number) => BigInt(Math.round(n * 100)) * 10_000n;
+/** The same figure in cash base units (18dp): what an intent and the cost basis carry. */
+const CASHU = (n: number) => U(n) * 10n ** 12n;
 const P = (usd: number) => BigInt(Math.round(usd * 1e8));
 const coin = (n: number) => `0x${(0x7a000 + n).toString(16).padStart(40, "0")}`;
-const tok = (address: string): TokenIdentity => tokenIdentity(robinhoodChain(), address)!;
-const MINT = "So11111111111111111111111111111111111111112";
-const SOL = tokenIdentity(chainFromProvider(1_399_811_149, "solana"), MINT)!;
+const tok = (address: string): TokenIdentity => tokenIdentity(bnbChain(), address)!;
+const MINT = "0x00000000000000000000000000000000000b5c01";
+const SOL = tokenIdentity(chainFromProvider(8453, "base"), MINT)!; // a chain we do not trade
 const LENS = "Source: trader activity grouped by AgentCap. Two distinct buyers in the window. [ref:dabc123r3c1]";
 
 const homes: string[] = [];
@@ -382,9 +384,9 @@ function harness(o: HarnessOpts = {}) {
     (broker && "reports" in broker ? (broker as { reports: BrokerReport[] }).reports : []).filter((r): r is Extract<BrokerReport, { kind: "assessment" }> => r.kind === "assessment").map((r) => r.assessment);
   const entry = (address: string, usdg: number, decisionId = `d-${address.slice(-4)}`) => ({
     kind: "swap",
-    sellToken: CASH.USDG,
+    sellToken: CASH.USDT,
     buyToken: address,
-    notionalUsdg: U(usdg),
+    notionalUsdg: CASHU(usdg),
     decisionId,
   });
   const reports = (): BrokerReport[] => (broker && "reports" in broker ? (broker as unknown as { reports: BrokerReport[] }).reports : []);
@@ -405,7 +407,7 @@ async function loaded(o: HarnessOpts) {
 const DAY = new Date(T0).toISOString().slice(0, 10);
 
 function stateOf(as: readonly FollowAssessment[], address: string): FollowAssessment | undefined {
-  // EVM addresses are lowercase identity; a Solana mint keeps its case.
+  // EVM addresses are lowercase identity.
   return [...as].reverse().find((a) => a.token.address === address || a.token.address === address.toLowerCase());
 }
 
@@ -828,7 +830,7 @@ describe("the entry gate", () => {
     const h = harness();
     h.tick();
     assert.deepEqual(h.child.gateEntry(h.entry(coin(9), 5)), { kind: "none" });
-    assert.deepEqual(h.child.gateEntry({ kind: "swap", sellToken: coin(1), buyToken: CASH.USDG, notionalUsdg: U(5) }), { kind: "none" }, "an exit is never gated");
+    assert.deepEqual(h.child.gateEntry({ kind: "swap", sellToken: coin(1), buyToken: CASH.USDT, notionalUsdg: U(5) }), { kind: "none" }, "an exit is never gated");
   });
 
   it("no fill: the reservation is released, the pending position removed and the day's follow entry given back", () => {
@@ -1293,7 +1295,7 @@ describe("an entry is recorded before it is sent", () => {
     assert.equal(b.child.ceilingFor(coin(2), b.t.now).parts["exploration-remaining"], U(15));
     assert.equal(b.durableCounters!.takeFollowEntry(DAY, 1), false, "and its day claim");
     // The basis shows it landed: an ordinary held position from now on.
-    b.basis.set(b.symbol(coin(1)), { qtyRaw: 5n * 10n ** 18n, costUsdg: U(5) });
+    b.basis.set(b.symbol(coin(1)), { qtyRaw: 5n * 10n ** 18n, costUsdg: CASHU(5) });
     b.t.now += 1_000;
     b.tick();
     await b.child.settled();
@@ -1543,7 +1545,7 @@ describe("a held coin", () => {
       ],
     });
     const symbol = h.symbol(held);
-    h.basis.set(symbol, { qtyRaw: 5n * 10n ** 18n, costUsdg: U(5) });
+    h.basis.set(symbol, { qtyRaw: 5n * 10n ** 18n, costUsdg: CASHU(5) });
     h.entrySecs.set(symbol, Math.floor((T0 - 10 * 60_000) / 1000));
     const position: HeldCoin = { token: held, symbol, decimals: 18, valueUsdg6: U(5), price8: P(1), priceStale: false };
     h.tick([position]);
@@ -1706,7 +1708,7 @@ describe("reports", () => {
     h.tick([pos]);
     const held = h.reports().filter((r) => r.kind === "held-tokens");
     assert.equal(held.length, 2);
-    assert.deepEqual(held[0]!.kind === "held-tokens" && held[0]!.tokenKeys, [`eip155:4663:${coin(7)}`]);
+    assert.deepEqual(held[0]!.kind === "held-tokens" && held[0]!.tokenKeys, [`eip155:56:${coin(7)}`]);
   });
 
   it("nothing tenant-private is reported for an owner with research off", () => {
@@ -1726,9 +1728,9 @@ describe("reports", () => {
     it("go out for a live fast-Trencher agent on the research allowlist, as Robinhood keys, never a held coin or cash", () => {
       const h = liveAgent();
       h.tick([{ token: coin(3), symbol: "T3", decimals: 18, valueUsdg6: U(3), price8: P(1), priceStale: false }]);
-      const n = h.child.reportReviewCandidates([coin(1), coin(2).toUpperCase().replace("0X", "0x"), coin(1), coin(3), CASH.USDG, "not-an-address"], LISTED);
+      const n = h.child.reportReviewCandidates([coin(1), coin(2).toUpperCase().replace("0X", "0x"), coin(1), coin(3), CASH.USDT, "not-an-address"], LISTED);
       assert.equal(n, 2);
-      assert.deepEqual(sent(h).map((r) => r.tokenKeys), [[`eip155:4663:${coin(1)}`, `eip155:4663:${coin(2)}`]]);
+      assert.deepEqual(sent(h).map((r) => r.tokenKeys), [[`eip155:56:${coin(1)}`, `eip155:56:${coin(2)}`]]);
       assert.equal(sent(h)[0]!.atMs, T0);
       // Every report the child sends is one the orchestrator accepts.
       assert.ok(validateBrokerReport(sent(h)[0], TENANT).ok);
@@ -1744,13 +1746,13 @@ describe("reports", () => {
       h.t.now += 10 * 60_000;
       const again = h.child.reportReviewCandidates(twelve, LISTED);
       assert.equal(again, 10);
-      assert.deepEqual(sent(h)[1]!.tokenKeys.slice(0, 2), [coin(20), coin(21)].map((c) => `eip155:4663:${c}`), "the two that waited go first");
+      assert.deepEqual(sent(h)[1]!.tokenKeys.slice(0, 2), [coin(20), coin(21)].map((c) => `eip155:56:${c}`), "the two that waited go first");
       assert.equal(sent(h).length, 2);
     });
 
     it("a report the orchestrator did not accept gives its coins back, so the next review sends them again", async () => {
       const turn = () => new Promise((r) => setImmediate(r));
-      const rk = (c: string) => `eip155:4663:${c}`;
+      const rk = (c: string) => `eip155:56:${c}`;
       const answers: [string, () => Promise<boolean | void>][] = [
         ["refused, rate-limited, timed out or unanswered", async () => false],
         ["a wrapper that cannot tell", async () => undefined],
@@ -1962,7 +1964,7 @@ describe("the child's broker", () => {
     const jobs = box.jobs;
     assert.ok(jobs, "the loop is started for a self-hosted runtime");
     const base = { tenant: "self", idempotencyKey: null, conversationKey: "tg-dm:1", surface: "telegram-dm" as const, costAllowanceCredits: null };
-    const late = await enqueueJob(db, { ...base, kind: "deep-research", params: { tokenKey: `eip155:4663:${coin(1)}` }, deadlineMs: T0 + 60_000, nowMs: T0 });
+    const late = await enqueueJob(db, { ...base, kind: "deep-research", params: { tokenKey: `eip155:56:${coin(1)}` }, deadlineMs: T0 + 60_000, nowMs: T0 });
     const odd = await enqueueJob(db, { ...base, kind: "not-a-kind", params: {}, deadlineMs: T0 + 3_600_000, nowMs: T0 });
     assert.ok(late.ok && odd.ok);
     now = T0 + 120_000; // the first job missed its deadline while nothing ran it
@@ -1995,16 +1997,16 @@ describe("index.ts wires the follow path's money rules", () => {
     const LOOP = CODE.slice(loopAt, CODE.indexOf("\n    }\n", loopAt));
     const gate = LOOP.indexOf("const followGate = entry ? fomoChild.gateEntry(intent) : null;");
     const persist = LOOP.indexOf("if (followGate && !(await fomoChild.persistEntry(followGate, intent.decisionId))) {");
-    const energy = LOOP.indexOf("const energyClaim = entry ? await claimEntry() : null;");
     const sent = LOOP.indexOf("await processIntentReporting(intent");
-    assert.ok(loopAt > 0 && gate > 0 && persist > gate && energy > persist && sent > energy);
+    assert.ok(loopAt > 0 && gate > 0 && persist > gate && sent > persist);
   });
 
   it("one scout pool: the follow ceiling is told the quarantined cost, and the scout gate the exploration cost", () => {
-    assert.match(CODE, /scoutHeldCost6: lastQuarantinedKnown \? lastQuarantinedUsdg : null,/);
+    assert.match(CODE, /scoutHeldCost6: lastQuarantinedKnown \? cashToMicroUp\(lastQuarantinedUsdg\) : null,/);
     assert.match(CODE, /lastQuarantinedKnown = true;/);
     const fn = CODE.slice(CODE.indexOf("async function scoutContextFor("));
-    assert.match(fn.slice(0, 9000), /quarantinedUsdg: await withExplorationQuarantine\(lastQuarantinedUsdg, fomoChild\.explorationScoutUse6\(\), trenchHeldCostOrBudget\),/);
+    // The exploration ledger counts micro; the scout gate counts cash base units.
+    assert.match(fn.slice(0, 9000), /quarantinedUsdg: await withExplorationQuarantine\(lastQuarantinedUsdg, \(\(\) => \{\s*const use6 = fomoChild\.explorationScoutUse6\(\);\s*return use6 === null \? null : cashFromMicro\(use6\);\s*\}\)\(\), trenchHeldCostOrBudget\),/);
     // An unknown ledger is charged the Trencher book (the bound on what follow
     // can hold), never silently zero, and the whole budget only if the book
     // itself is unreadable — so the Fomo channel being down is not a scout kill switch.

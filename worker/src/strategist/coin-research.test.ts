@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import { researchCoins, scoutFieldsFor, RESEARCH_PER_PASS } from "./coin-research";
 import { toScoutCandidates } from "./memecoin-scout";
 import type { GeckoPool } from "../venues/geckoterminal";
-import type { TokenMeta } from "../venues/pons-meta";
+import type { TokenMeta } from "../venues/token-meta";
 import type { ResearchResult } from "../venues/research";
 
 /**

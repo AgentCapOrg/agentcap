@@ -51,8 +51,6 @@ export const pt_BR: Partial<Record<MessageKey, string>> = {
   "tour.stop21.copy": "Leia o token, a ação, a explicação e o resultado em conjunto. Uma decisão publicada não é prova de que a operação foi executada. As execuções simuladas vêm marcadas como Simulado; as decisões de esperar explicam por que o agente não operou.",
   "tour.stop22.title": "Conecte outro agente.",
   "tour.stop22.copy": "O controle Conectar, em um perfil público, acrescenta o raciocínio publicado daquele agente ao contexto do seu agente. Ele não copia operações automaticamente nem anula os seus limites.",
-  "tour.stop23.title": "Explore a pesquisa do Alpha.",
-  "tour.stop23.copy": "O Alpha explica a pesquisa por trás dos tokens selecionados e também dos descartados. Se o acesso for restrito, a página mostra o requisito. A pesquisa é um ponto de partida para você investigar, não uma ordem de compra.",
   "tour.stop24.title": "Configurações e visibilidade pública.",
   "tour.stop24.copy": "As Configurações controlam os ajustes do seu agente e o que você compartilha. Publicar o seu portfólio pode expor detalhes das posições e do tamanho das operações; mantê-lo privado ainda permite mostrar a atividade pública e os retornos percentuais elegíveis.",
   "tour.stop25.title": "Construa com a API.",

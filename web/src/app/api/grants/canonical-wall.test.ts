@@ -128,16 +128,6 @@ it("a legacy transfer marker is refused, whatever the permission underneath", as
   assert.equal(noncesSpent, 0);
 });
 
-it("the Rialto target and the v4 UniversalRouter are refused the same way", async () => {
-  const { grant, owner } = await signerGrant({ account: SMART });
-  for (const change of [{ allowRialto: true }, { allowUniswapV4: true }]) {
-    const res = await post(await resealed(grant, owner, change), owner);
-    assert.equal(res.status, 400, JSON.stringify(res.body));
-    assert.equal(res.body.code, "invalid_wall");
-  }
-  assert.equal(noncesSpent, 0);
-});
-
 it("a really signed claim for a chain AgentCap does not run on is refused before its nonce is spent", async () => {
   // The wall does not read the chain, the binding signs whatever id it is
   // given, and the derivation maps any id but the testnet to mainnet: before

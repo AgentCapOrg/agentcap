@@ -42,7 +42,7 @@ import { parseAbi } from "viem";
 import { scalePrice, tickToPrice8 } from "./pool-price";
 
 const POOL_DEPTH_ABI = parseAbi([
-  "function slot0() view returns (uint160 sqrtPriceX96, int24 tick, uint16 observationIndex, uint16 observationCardinality, uint16 observationCardinalityNext, uint8 feeProtocol, bool unlocked)",
+  "function slot0() view returns (uint160 sqrtPriceX96, int24 tick, uint16 observationIndex, uint16 observationCardinality, uint16 observationCardinalityNext, uint32 feeProtocol, bool unlocked)",
   "function liquidity() view returns (uint128)",
   "function tickSpacing() view returns (int24)",
   "function token0() view returns (address)",

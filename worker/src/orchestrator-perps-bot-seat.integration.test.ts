@@ -64,7 +64,6 @@ orch.setLeaseAcquireForTest(async tenant => {
 orch.setPaperRestoreForTest(async () => ({ ok: true, line: null }));
 orch.setPerpsFeedStartForTest(() => ({ stop() {} }));
 orch.setBotConfirmForTest(async token => token.split(":")[0]!);
-orch.setSolanaKillForTest(async () => {});
 orch.setKillConfirmForTest(async (tenant, done) => {
   confirmations.push({ tenant, perps: done?.perps === true,
     grantGone: await perps.get(tenant) === null,

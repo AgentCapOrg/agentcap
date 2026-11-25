@@ -13,10 +13,10 @@ export function TokenActivity({ coin, evidence, loading }: { coin: DiscoveryRow 
     <header><h3>Market activity</h3><span>{coin.venue} · Indexed pool data</span></header>
     <div className="activity-facts">
       <div><span>24h volume</span><strong>{compactUsd(coin.volume24hUsd)}</strong></div>
-      <div><span>{coin.onCurve ? 'Virtual / indexed reserve' : 'Indexed liquidity'}</span><strong>{compactUsd(coin.reserveUsd)}</strong></div>
+      <div><span>Indexed liquidity</span><strong>{compactUsd(coin.reserveUsd)}</strong></div>
       <div><span>24h buyers</span><strong>{coin.buyers24h === undefined ? '—' : count(coin.buyers24h)}</strong></div>
     </div>
-    <p className="activity-note">{coin.onCurve ? 'Curve reserves can include virtual liquidity and are not an available exit quote.' : 'Indexed liquidity is not a guaranteed execution price.'}</p>
+    <p className="activity-note">Indexed liquidity is not a guaranteed execution price.</p>
     <div className="activity-scroll"><table className="activity-windows"><caption>Reported trading windows</caption><thead><tr><th scope="col">Window</th><th scope="col">Volume</th><th scope="col">Buys</th><th scope="col">Sells</th></tr></thead><tbody>
       {(['m5', 'h1', 'h6', 'h24'] as const).map((w, i) => <tr key={w}><th scope="row">{['5m', '1h', '6h', '24h'][i]}</th><td>{compactUsd(coin.buckets[w].volumeUsd)}</td><td>{coin.buckets[w].buys === undefined ? '—' : count(coin.buckets[w].buys)}</td><td>{coin.buckets[w].sells === undefined ? '—' : count(coin.buckets[w].sells)}</td></tr>)}
     </tbody></table></div>
@@ -25,7 +25,7 @@ export function TokenActivity({ coin, evidence, loading }: { coin: DiscoveryRow 
     {!trades || trades.failed ? <p role="status">Recent trades are temporarily unavailable.</p> : <>
       <p className="activity-note">{stale ? 'Older snapshot' : 'Snapshot'} · {trades.observedAt ? fullDateTime(trades.observedAt) : 'Time unavailable'}</p>
       {trades.data.length === 0 ? <p>No matching trades were returned in this sample.</p> : <div className="activity-scroll"><table><thead><tr><th scope="col">Side</th><th scope="col">Value</th><th scope="col">Token price</th><th scope="col">Time / transaction</th></tr></thead><tbody>
-        {trades.data.slice(0, 12).map(t => <tr key={t.id}><td className={t.side === 'buy' ? 'activity-buy' : 'activity-sell'}>{t.side === 'buy' ? 'Buy' : 'Sell'}</td><td>{t.usd === null ? "—" : money(t.usd)}</td><td>{coinPrice(t.priceUsd)}</td><td><a href={`https://robinhoodchain.blockscout.com/tx/${t.tx}`} target="_blank" rel="noreferrer" aria-label={`View ${t.side} transaction ${t.tx}`}>{timeOnly(t.time * 1000)} ↗</a></td></tr>)}
+        {trades.data.slice(0, 12).map(t => <tr key={t.id}><td className={t.side === 'buy' ? 'activity-buy' : 'activity-sell'}>{t.side === 'buy' ? 'Buy' : 'Sell'}</td><td>{t.usd === null ? "—" : money(t.usd)}</td><td>{coinPrice(t.priceUsd)}</td><td><a href={`https://bscscan.com/tx/${t.tx}`} target="_blank" rel="noreferrer" aria-label={`View ${t.side} transaction ${t.tx}`}>{timeOnly(t.time * 1000)} ↗</a></td></tr>)}
       </tbody></table></div>}
     </>}
   </section>;

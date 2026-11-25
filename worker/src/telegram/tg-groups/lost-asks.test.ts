@@ -109,7 +109,7 @@ class FakePort implements TgCoinsPort {
 }
 
 type SpyAsk = { text: string; request?: TgFomoRequest; chatId: number; threadId?: number; timeoutMs?: number; owner?: boolean };
-const BOARD = "Trending on Fomo (board position is popularity, not quality):\n1. ETAC on solana, market cap $874.6k";
+const BOARD = "Trending on Fomo (board position is popularity, not quality):\n1. ETAC on bsc, market cap $874.6k";
 class SpyFomo implements TgFomoPort {
   asks: SpyAsk[] = [];
   hold: Promise<void> | null = null;
@@ -667,8 +667,8 @@ describe("'i asked a question' after nothing answered runs her ask again, once (
 });
 
 describe("a coin post the coin flow keeps quiet on is never re-run by a poke (review 2026-10-08)", () => {
-  const MINT = "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU";
-  for (const post of [`shogun ${MINT} wdyt`, "shogun https://dexscreener.com/solana/7xkxtg2cw87d97txjsdpbd5jbkhetqa83tzrujosgasu"]) {
+  const MINT = "TaT7UdgF6LWe1GKoDAwwZkEp74PsVrS4Lt";
+  for (const post of [`shogun ${MINT} wdyt`, "shogun https://dexscreener.com/bsc/tap72h1n66macg9s5c1zr1jcedfb5xwrpq"]) {
     for (const after of [20, 45, 100]) {
       it(`${post.slice(0, 32)}…, then 'shogun ?' ${after} s later: 'hey 👋' to the poke, nothing about the coin`, async () => {
         make();

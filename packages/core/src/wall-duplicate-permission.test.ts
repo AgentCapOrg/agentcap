@@ -34,8 +34,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { buildCallPermissions } from "./wall";
-import { ENERGY_ROUTE_V1 } from "./energy";
 import { LIGHTER_ROUTE_V1 } from "./perps";
+import { CASH } from "./tokens";
 
 /** A real Lighter API public key (the official signer's, from the spike) — the wall refuses invented ones. */
 const PERP_LIGHTER = {
@@ -79,16 +79,8 @@ test("nor does it with every optional rail switched on at once", () => {
   // collide as rails are added independently of each other.
   const everything = {
     ...TRENCHER,
-    ponsClassVaultAddress: "0x4444444444444444444444444444444444444444",
-    ponsClassVaultFactoryAddress: "0x5555555555555555555555555555555555555555",
     v4AdapterAddress: "0x6666666666666666666666666666666666666666",
-    ponsAdapterAddress: "0x7777777777777777777777777777777777777777",
     withdrawalAddresses: ["0x8888888888888888888888888888888888888888"],
-    // The energy buy is the newest rail and the one that most invites the
-    // Trencher mistake: its router pulls USDG, so the obvious build is a second
-    // USDG `approve` scoped to the router — the exact (target, selector) pair
-    // the ordinary approve already holds.
-    energyBuy: true,
     // Perps are three permissions on ONE target (the Lighter proxy) plus a
     // spender on the USDG approve — the same temptation twice over: a second
     // USDG approve for the proxy, or two permissions sharing a selector.
@@ -97,23 +89,13 @@ test("nor does it with every optional rail switched on at once", () => {
   assert.deepEqual(duplicatesIn(buildCallPermissions(CAPS as never, SELF, everything) as never), []);
 });
 
-test("the energy router is a USDG spender through the ONE approve, not a second one", () => {
-  const wall = buildCallPermissions(CAPS as never, SELF, { energyBuy: true } as never) as readonly {
-    target: string; functionName?: string; args?: readonly (null | { value?: unknown })[];
-  }[];
-  const approvals = wall.filter((p) => p.functionName === "approve" && /^0x5fc5360d/i.test(p.target));
-  assert.equal(approvals.length, 1, "exactly one USDG approve permission");
-  const spenders = (approvals[0]!.args?.[0]?.value as string[]).map((a) => a.toLowerCase());
-  assert.ok(spenders.includes(ENERGY_ROUTE_V1.router), "the router rides in that approve's ONE_OF");
-});
-
 test("the Trencher vault is still an approved USDG spender after any de-duplication", () => {
   // The fix must not be "drop one entry": the vault has to remain approvable or
   // buy() cannot pull cash, and the whole rail is dead in a quieter way.
   const wall = buildCallPermissions(CAPS as never, SELF, TRENCHER) as readonly {
     target: string; functionName?: string; args?: readonly (null | { value?: unknown })[];
   }[];
-  const approvals = wall.filter((p) => p.functionName === "approve" && /^0x5fc5360d/i.test(p.target));
+  const approvals = wall.filter((p) => p.functionName === "approve" && p.target.toLowerCase() === CASH.USDT.toLowerCase());
   assert.ok(approvals.length >= 1, "USDG approve must exist");
   const vault = TRENCHER.trencherVaultAddress.toLowerCase();
   const names = approvals.flatMap((p) => {
@@ -124,15 +106,14 @@ test("the Trencher vault is still an approved USDG spender after any de-duplicat
 });
 
 test("the Lighter proxy is a USDG spender through the ONE approve, and its three permissions have three selectors", () => {
-  const wall = buildCallPermissions(CAPS as never, SELF, { perpLighter: PERP_LIGHTER, energyBuy: true } as never) as readonly {
+  const wall = buildCallPermissions(CAPS as never, SELF, { perpLighter: PERP_LIGHTER } as never) as readonly {
     target: string; functionName?: string; args?: readonly (null | { value?: unknown })[];
   }[];
   assert.deepEqual(duplicatesIn(wall as never), []);
-  const approvals = wall.filter((p) => p.functionName === "approve" && /^0x5fc5360d/i.test(p.target));
+  const approvals = wall.filter((p) => p.functionName === "approve" && p.target.toLowerCase() === CASH.USDT.toLowerCase());
   assert.equal(approvals.length, 1, "exactly one USDG approve permission");
   const spenders = (approvals[0]!.args?.[0]?.value as string[]).map((a) => a.toLowerCase());
   assert.ok(spenders.includes(LIGHTER_ROUTE_V1.proxy), "the proxy rides in that approve's ONE_OF");
-  assert.ok(spenders.includes(ENERGY_ROUTE_V1.router), "beside the energy router, not instead of it");
   const onProxy = wall.filter((p) => p.target.toLowerCase() === LIGHTER_ROUTE_V1.proxy).map((p) => p.functionName);
   assert.deepEqual(onProxy, ["deposit", "changePubKey", "withdrawPendingBalance"]);
 });

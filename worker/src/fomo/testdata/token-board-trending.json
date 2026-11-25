@@ -28,10 +28,10 @@
       "token": {
         "name": "Fu2o",
         "symbol": "FU2O",
-        "address": "Fu2oZoGxFtCDp29NKA4A89xcn255khq9xbxG7Mmtpump"
+        "address": "0xc66101b7bbddc5e8738608b393c2eac96bbfef6a"
       },
       "holders": 310,
-      "network": "solana",
+      "network": "bsc",
       "priceUsd": 0.0026,
       "change24h": -12.5,
       "volume24hUsd": 9000
