@@ -9,20 +9,17 @@
  * through checkPolicy itself rather than restating its rules.
  *
  * And the other half of the contract: an exit is never gated, and the per-arm
- * backstop lets exactly one gated buy per (venue, token, rule) reach the wall.
+ * backstop lets exactly one gated buy per (token, rule) reach the wall.
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { checkPolicy, type AgentLimits, type AgentState, type TradeIntent } from "./policy";
-import { entryGateFor, entryGateLatch, entryGatesOf, intentEntryGate, type EntryVenue } from "./entry-gates";
+import { entryGateFor, entryGateLatch, entryGatesOf, intentEntryGate } from "./entry-gates";
 
 const ROUTER = "0x1111111111111111111111111111111111111111" as const;
-const ADAPTER = "0x2222222222222222222222222222222222222222" as const;
 const USDG = "0x3333333333333333333333333333333333333333" as const;
-const CLASS_VAULT = "0x4444444444444444444444444444444444444444" as const;
 const TRENCH_VAULT = "0x5555555555555555555555555555555555555555" as const;
-const CURVE = "0x6666666666666666666666666666666666666666" as const;
 /** Allowed and sellable — the ordinary case. */
 const OK = "0xaAaaAaAaaAaAaaaAaAAAaaAaaAaaAAaAAaaAAAaA" as const;
 /** Watched (allowed) but not covered by the signature — the `no-exit` case. */
@@ -40,12 +37,11 @@ function limits(over: Partial<AgentLimits> = {}): AgentLimits {
   return {
     perTradeUsdg: 1_000_000_000n,
     dailyUsdg: 10_000_000_000n,
-    allowedTargets: [ROUTER, ADAPTER, USDG, CLASS_VAULT, TRENCH_VAULT],
+    allowedTargets: [ROUTER, USDG, TRENCH_VAULT],
     allowedAssets: [USDG, OK, WATCHED],
     sellableAssets: [USDG, OK, SIGNED],
     quoteAssets: [USDG],
     cashToken: USDG,
-    knownCurves: [CURVE],
     maxDrawdownBps: 1_000,
     expiresAt: NOW + 86_400,
     maxOpsPerDay: 1_000,
@@ -64,19 +60,6 @@ const buySwap = (token: `0x${string}`): TradeIntent => ({
   notionalUsdg: 5_000_000n,
 });
 
-const buyCurve = (token: `0x${string}`, target: `0x${string}` = ADAPTER): TradeIntent => ({
-  kind: "curve-trade",
-  target,
-  curve: CURVE,
-  assetIn: USDG,
-  assetOut: token,
-  amountInRaw: 5_000_000n,
-  minAmountOutRaw: 1n,
-  notionalUsdg: 5_000_000n,
-});
-
-const intentFor = (venue: EntryVenue, token: `0x${string}`) => (venue === "curve" ? buyCurve(token) : buySwap(token));
-
 /** Every shape of the two lists a grant can produce, including "the rule cannot run". */
 const SHAPES: { name: string; over: Partial<AgentLimits> }[] = [
   { name: "both lists", over: {} },
@@ -87,30 +70,26 @@ const SHAPES: { name: string; over: Partial<AgentLimits> }[] = [
 
 describe("one-direction parity: a gate implies checkPolicy refuses with the same rule", () => {
   for (const shape of SHAPES) {
-    for (const venue of ["swap", "curve"] as const) {
-      it(`${venue}, ${shape.name}`, () => {
-        const l = limits(shape.over);
-        const gates = entryGatesOf(l);
-        let gated = 0;
-        for (const token of TOKENS) {
-          const rule = entryGateFor(gates, token, venue);
-          const intent = intentFor(venue, token);
-          const verdict = checkPolicy(intent, l, state);
-          if (rule !== null) {
-            gated += 1;
-            assert.equal(verdict.ok, false, `${venue} gate ${rule} on ${token} but the wall would accept it`);
-            assert.equal(!verdict.ok && verdict.rule, rule, `${venue} gate names ${rule}, the wall names another`);
-          }
-          // The intent-level gate is the same answer, for the same token.
-          const whole = intentEntryGate(intent, l);
-          assert.deepEqual(whole, rule === null ? null : { token: token.toLowerCase(), venue, rule });
+    it(`swap, ${shape.name}`, () => {
+      const l = limits(shape.over);
+      const gates = entryGatesOf(l);
+      let gated = 0;
+      for (const token of TOKENS) {
+        const rule = entryGateFor(gates, token);
+        const intent = buySwap(token);
+        const verdict = checkPolicy(intent, l, state);
+        if (rule !== null) {
+          gated += 1;
+          assert.equal(verdict.ok, false, `gate ${rule} on ${token} but the wall would accept it`);
+          assert.equal(!verdict.ok && verdict.rule, rule, `gate names ${rule}, the wall names another`);
         }
-        // The sweep must actually exercise the rule, or it proves nothing. The
-        // one shape with nothing to gate is a curve with no sellable list: the
-        // wall's curve rule cannot run there, so neither can this.
-        if (l.sellableAssets !== undefined || venue === "swap") assert.ok(gated > 0, "nothing was gated");
-      });
-    }
+        // The intent-level gate is the same answer, for the same token.
+        const whole = intentEntryGate(intent, l);
+        assert.deepEqual(whole, rule === null ? null : { token: token.toLowerCase(), rule });
+      }
+      // The sweep must actually exercise the rule, or it proves nothing.
+      assert.ok(gated > 0, "nothing was gated");
+    });
   }
 
   it("the swap gate asks in the wall's order: not watched is asset-allowlist before it is no-exit", () => {
@@ -121,16 +100,10 @@ describe("one-direction parity: a gate implies checkPolicy refuses with the same
     assert.equal(entryGateFor(gates, OK), null);
   });
 
-  it("the curve gate never reads allowedAssets — the wall does not, so neither may this", () => {
-    const l = limits();
-    assert.equal(entryGateFor(entryGatesOf(l), SIGNED, "curve"), null, "signed but not watched is buyable on a curve");
-    assert.deepEqual(checkPolicy(buyCurve(SIGNED), l, state), { ok: true });
-  });
-
   it("unread gates gate nothing", () => {
     for (const token of TOKENS) {
       assert.equal(entryGateFor(undefined, token), null);
-      assert.equal(entryGateFor(null, token, "curve"), null);
+      assert.equal(entryGateFor(null, token), null);
     }
   });
 });
@@ -141,8 +114,6 @@ describe("what a gate must never touch", () => {
     for (const token of TOKENS) {
       const sell: TradeIntent = { kind: "swap", target: ROUTER, sellToken: token, buyToken: USDG, sellAmountRaw: 1n, notionalUsdg: 1n };
       assert.equal(intentEntryGate(sell, l), null, `swap exit out of ${token}`);
-      const curveSell: TradeIntent = { ...(buyCurve(USDG) as Extract<TradeIntent, { kind: "curve-trade" }>), assetIn: token, assetOut: USDG };
-      assert.equal(intentEntryGate(curveSell, l), null, `curve exit out of ${token}`);
     }
   });
 
@@ -155,12 +126,10 @@ describe("what a gate must never touch", () => {
     const l = limits({ allowedAssets: [OK, WATCHED], sellableAssets: [OK, SIGNED] });
     const gates = entryGatesOf(l);
     assert.equal(entryGateFor(gates, USDG), "asset-allowlist", "buying the cash leg WOULD be gated");
-    assert.equal(entryGateFor(gates, USDG, "curve"), "asset-allowlist");
     const latch = entryGateLatch();
     for (const token of TOKENS) {
       const sell: TradeIntent = { kind: "swap", target: ROUTER, sellToken: token, buyToken: USDG, sellAmountRaw: 1n, notionalUsdg: 1n };
-      const curveSell: TradeIntent = { ...(buyCurve(USDG) as Extract<TradeIntent, { kind: "curve-trade" }>), assetIn: token, assetOut: USDG };
-      for (const exit of [sell, curveSell]) {
+      for (const exit of [sell]) {
         assert.equal(intentEntryGate(exit, l), null, `${exit.kind} exit out of ${token}`);
         // Nor can the backstop ever hold one back — not even after a row
         // naming the rule the cash leg would be refused under.
@@ -177,26 +146,17 @@ describe("what a gate must never touch", () => {
     assert.equal(intentEntryGate(intent, limits()), null);
   });
 
-  it("a class trade may leave the class token un-enumerated, so it is not gated", () => {
-    const l = limits({ ponsClassVault: CLASS_VAULT });
-    assert.equal(intentEntryGate(buyCurve(NEITHER, CLASS_VAULT), l), null);
-    assert.deepEqual(checkPolicy(buyCurve(NEITHER, CLASS_VAULT), l, state), { ok: true });
-  });
-
-  it("vault movements, transfers and the energy buy are not these rules' business", () => {
+  it("transfers and equity orders are not these rules' business", () => {
     const l = limits();
     const others: TradeIntent[] = [
-      { kind: "vault-deposit", target: USDG, amountUsdg: 1n },
-      { kind: "vault-withdraw", target: USDG, amountUsdg: 1n },
       { kind: "transfer", target: USDG, recipient: OK, amountUsdg: 1n },
-      { kind: "energy-buy", target: ROUTER, sellToken: USDG, buyToken: NEITHER, sellAmountRaw: 1n, notionalUsdg: 1n },
       { kind: "equity-order", ticker: "AAPL", side: "buy", notionalUsdg: 1n },
     ];
     for (const intent of others) assert.equal(intentEntryGate(intent, l), null, intent.kind);
   });
 });
 
-describe("the backstop: one rejected row per (venue, token, rule) per arm, then withheld", () => {
+describe("the backstop: one rejected row per (token, rule) per arm, then withheld", () => {
   /**
    * index.ts's proposal loop, as far as the latch sees it: ask `withhold`, and
    * if the intent goes on, `settle` with the row the wall wrote — here the
@@ -226,29 +186,15 @@ describe("the backstop: one rejected row per (venue, token, rule) per arm, then 
     // The same token refused under a different rule is a different fact, and
     // gets its own row: the owner is owed both sentences.
     const narrow = limits({ sellableAssets: [USDG] });
-    assert.equal(reach(latch, buyCurve(OK), narrow), false, "asset-allowlist on the curve venue");
-    assert.equal(reach(latch, buySwap(OK), narrow), false, "no-exit on the swap venue is a different rule");
-    assert.equal(reach(latch, buyCurve(OK), narrow), true);
+    assert.equal(reach(latch, buySwap(OK), limits({ allowedAssets: [USDG] })), false, "asset-allowlist is one rule");
+    assert.equal(reach(latch, buySwap(OK), narrow), false, "no-exit is a different rule");
     assert.equal(reach(latch, buySwap(OK), narrow), true);
-  });
-
-  it("keys on the VENUE too: the same rule on a swap and on a curve is two refusals with two remedies", () => {
-    const latch = entryGateLatch();
-    const l = limits();
-    // NEITHER is `asset-allowlist` on both venues — not watched (swap), not in
-    // the grant (curve). Same token, same rule name, different sentence.
-    assert.deepEqual(intentEntryGate(buySwap(NEITHER), l), { token: NEITHER, venue: "swap", rule: "asset-allowlist" });
-    assert.deepEqual(intentEntryGate(buyCurve(NEITHER), l), { token: NEITHER, venue: "curve", rule: "asset-allowlist" });
-    assert.equal(reach(latch, buySwap(NEITHER), l), false, "the swap's row");
-    assert.equal(reach(latch, buyCurve(NEITHER), l), false, "and the curve's own row, not swallowed by the swap's");
-    assert.equal(reach(latch, buySwap(NEITHER), l), true);
-    assert.equal(reach(latch, buyCurve(NEITHER), l), true);
   });
 
   it("THE ROW IS SPENT WHEN THE WALL WRITES IT — a gated buy stopped before the wall leaves it owed", () => {
     const latch = entryGateLatch();
     const l = limits();
-    // A refused group claim, a closed energy allowance or a failed decision
+    // A refused group claim or a failed decision
     // row: `withhold` let it go and nothing ever reached the wall. Asking
     // again, any number of times, must not spend the row.
     for (let tick = 0; tick < 5; tick++) assert.equal(latch.withhold(buySwap(WATCHED), l), false, `stopped before the wall, tick ${tick}`);

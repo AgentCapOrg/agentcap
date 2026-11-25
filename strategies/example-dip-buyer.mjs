@@ -14,14 +14,13 @@
  *
  * No imports needed — `ctx` injects the verified registry:
  *   ctx.tokenBySymbol.QQQ          token address by symbol
- *   ctx.CASH.USDG                  the cash leg
- *   ctx.UNISWAP.swapRouter02       swap router (or ctx.RIALTO.routerSnapshot)
- *   ctx.MORPHO.steakhouseUsdgVault the yield vault
- *   ctx.usdg(25)                   25 → 25_000_000n (USDG is 6dp)
+ *   ctx.CASH.USDT                  the cash leg
+ *   ctx.PANCAKESWAP.smartRouter    swap router
+ *   ctx.usdg(25)                   25 → 25 * 10^18 (USDT is 18dp)
  *
  * snapshot fields:
- *   cashUsdg, vaultUsdg            bigint, USDG 6dp
- *   holdings                       Map<symbol, { token, rawBalance(18dp), valueUsdg(6dp), priceStale }>
+ *   cashUsdg, vaultUsdg            bigint, USDT 18dp
+ *   holdings                       Map<symbol, { token, rawBalance(18dp), valueUsdg(18dp), priceStale }>
  *   prices                         Map<symbol, { price8(8dp USD), stale }>
  *   pausedTokens, staleFeeds       Set — stale is EXPECTED nights/weekends (24/5 feeds, 24/7 tokens)
  *   sequencerUp                    boolean — respect it
@@ -66,21 +65,19 @@ export default {
     return [
       {
         kind: "swap",
-        target: ctx.UNISWAP.swapRouter02,
-        sellToken: ctx.CASH.USDG, // buying: sell USDG…
+        target: ctx.PANCAKESWAP.smartRouter,
+        sellToken: ctx.CASH.USDT, // buying: sell USDG…
         buyToken: token, // …for the stock token
-        sellAmountRaw: clip, // raw units of sellToken (USDG = 6dp)
+        sellAmountRaw: clip, // raw units of sellToken (USDT = 18dp)
         notionalUsdg: clip, // what the policy caps judge
       },
     ];
 
     // Other intents you can return:
-    //   sell everything:  { kind: "swap", target: ctx.UNISWAP.swapRouter02,
-    //                       sellToken: token, buyToken: ctx.CASH.USDG,
+    //   sell everything:  { kind: "swap", target: ctx.PANCAKESWAP.smartRouter,
+    //                       sellToken: token, buyToken: ctx.CASH.USDT,
     //                       sellAmountRaw: snap.holdings.get(WATCHED).rawBalance,
     //                       notionalUsdg: snap.holdings.get(WATCHED).valueUsdg }
-    //   park cash:        { kind: "vault-deposit",  target: ctx.MORPHO.steakhouseUsdgVault, amountUsdg: ctx.usdg(50) }
-    //   pull cash:        { kind: "vault-withdraw", target: ctx.MORPHO.steakhouseUsdgVault, amountUsdg: ctx.usdg(50) }
     // tick may be async (return a Promise) if you fetch external signals.
   },
 };

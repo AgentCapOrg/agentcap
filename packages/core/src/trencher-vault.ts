@@ -1,6 +1,7 @@
 import { erc20Abi, parseAbi, type Address } from "viem";
 import { ParamCondition } from "@zerodev/permissions/policies";
 import { CASH } from "./tokens";
+import { TRENCHER_PER_BUY_UNITS } from "./cash";
 
 export const GRANT_TRENCHER = "trencher-vault-v1";
 export const TRENCHER_VAULT_ABI = parseAbi([
@@ -83,7 +84,7 @@ export function trencherPermissions(opts: TrencherPermission, self: Address, cap
   const addresses = trencherAddresses(opts);
   if (!addresses) return [];
   if (cap <= 0n) throw new Error("Trencher needs a positive entry cap");
-  const limit = cap < 5_000_000n ? cap : 5_000_000n;
+  const limit = cap < TRENCHER_PER_BUY_UNITS ? cap : TRENCHER_PER_BUY_UNITS;
   return [
     { target: addresses.vault, valueLimit: 0n, abi: TRENCHER_VAULT_ABI, functionName: "buy", args: [
       null,null,null,{condition:ParamCondition.LESS_THAN_OR_EQUAL,value:limit},null,null,

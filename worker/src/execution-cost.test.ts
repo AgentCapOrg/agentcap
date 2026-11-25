@@ -35,7 +35,7 @@ describe("the estimate is of the NEXT trade", () => {
       ethPrice8: BigInt(Math.round(ETH_PRICE8)),
     });
     assert.notEqual(micro, null);
-    const usdg = Number(micro) / 1e6;
+    const usdg = Number(micro) / 1e18;
     assert.ok(Math.abs(usdg - 0.7647) < 0.01, `expected ~0.7647 USDG, got ${usdg.toFixed(6)}`);
   });
 
@@ -47,7 +47,7 @@ describe("the estimate is of the NEXT trade", () => {
       gasPriceWei: 597_000_000n,
       ethPrice8: BigInt(Math.round(ETH_PRICE8)),
     });
-    assert.ok(Number(micro) / 1e6 < 1.742 / 2, "the marginal cost must not inherit the setup cost");
+    assert.ok(Number(micro) / 1e18 < 1.742 / 2, "the marginal cost must not inherit the setup cost");
   });
 
   it("REFUSES rather than returning zero when the ETH price is unavailable", () => {

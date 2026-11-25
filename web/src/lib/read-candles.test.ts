@@ -162,7 +162,7 @@ describe("chart reads on the Pro key, once a pacing knob is set on web, are pace
     delete process.env.AGENTCAP_COINGECKO_PRO_SPACING_MS;
     const starts: number[] = [];
     globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
-      assert.ok(String(input).startsWith("https://pro-api.coingecko.com/api/v3/onchain/networks/robinhood/pools/"));
+      assert.ok(String(input).startsWith("https://pro-api.coingecko.com/api/v3/onchain/networks/bsc/pools/"));
       assert.equal(new Headers(init?.headers).get("x-cg-pro-api-key"), "private-web-key");
       starts.push(now);
       return Response.json(okBody());
@@ -175,7 +175,7 @@ describe("chart reads on the Pro key, once a pacing knob is set on web, are pace
   it("two pools' charts are spaced by the Pro pace (default 3000 ms, or the knob)", async () => {
     const starts: number[] = [];
     globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
-      assert.ok(String(input).startsWith("https://pro-api.coingecko.com/api/v3/onchain/networks/robinhood/pools/"));
+      assert.ok(String(input).startsWith("https://pro-api.coingecko.com/api/v3/onchain/networks/bsc/pools/"));
       assert.equal(new Headers(init?.headers).get("x-cg-pro-api-key"), "private-web-key");
       starts.push(now);
       return Response.json(okBody());

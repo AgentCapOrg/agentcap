@@ -67,7 +67,7 @@ const T0 = "2026-09-25T10:00:00.000Z";
 
 const BOOK_EMPTY = {
   book: "paper" as const, money: "simulated" as const, valuation: null, positions_held_here: false, positions: null,
-  positions_note: "This book has never been valued.", class_vault_positions: [],
+  positions_note: "This book has never been valued.",
   totals: { positions_value_usdg: null, cost_usdg: null, unrealized_pnl_usdg: null, holdings_without_pnl: 0 },
 };
 
@@ -92,7 +92,6 @@ const PORTFOLIO = () => sample("get_portfolio", {
         },
       ],
       positions_note: "Holdings as of the latest valuation of this book.",
-      class_vault_positions: [],
       totals: { positions_value_usdg: null, cost_usdg: 40, unrealized_pnl_usdg: null, holdings_without_pnl: 1 },
     },
     paper: BOOK_EMPTY,
@@ -182,10 +181,10 @@ const TOKEN = () => sample("get_token", {
   address: ADDR2, chain_id: 4663, kind: "memecoin" as const, stock_kind: null, symbol: "NVDA", symbol_trusted: false, name: EVIL, name_trusted: false,
   flags: ["impersonates_trusted_ticker" as const], index: { read: "found" as const, observed_at: T0, truncated: false },
   price: { value: null, source: null, missing_reason: "The index has no trade for it.", observed_at: null, updated_at: null },
-  liquidity_usd: { ...FACT(5000), on_curve: true, note: null }, volume_24h_usd: FACT(null, "No volume recorded."), holders: FACT(42),
+  liquidity_usd: { ...FACT(5000), note: null }, volume_24h_usd: FACT(null, "No volume recorded."), holders: FACT(42),
   fdv_usd: FACT(null, "unknown supply"), change_24h_pct: FACT(-3.5), buyers_24h: FACT(7), age_days: FACT(1.5),
   tape: [{ window: "1h", change_pct: 2.5, volume_usd: 300, buys: 4, sells: 1, buyers: 3, sellers: 1 }],
-  pool: { pool_id: ADDR, venue: "pons", on_curve: true, graduated: false, label: EVIL, note: "Launch curve pool." },
+  pool: { pool_id: ADDR, venue: "pancakeswap", label: EVIL, note: "Deepest pool." },
   stock: null,
   discoverable: VERDICT("yes", "The index lists it."), priceable: VERDICT("no", "No trusted price."),
   executable: VERDICT("unknown", "Call check_token_eligibility."),
@@ -210,7 +209,7 @@ const ELIGIBILITY = () => sample("check_token_eligibility", {
   settings_used: {
     asset_mode: "all" as const, asset_mode_defaulted: true, basket: ["NVDA"], basket_defaulted: true, min_pool_liquidity_usdg: 5000,
     max_price_divergence_bps: 300, price_floors_source: "defaults" as const, scout_enabled: false, scout_budget_usdg: null,
-    launch_buying_enabled: false, class_min_depth_usdg: 1000, grant_tradable_set: "wide" as const, grant_extra_tokens: 0,
+    grant_tradable_set: "wide" as const, grant_extra_tokens: 0,
   },
   notes: ["Selling a held token needs only the permission's sell coverage."], observed_at: T0, untrusted_note: "u",
 });
@@ -220,7 +219,7 @@ const QUOTE = {
   amount_in: { token: ADDR, raw: "5000000", human: 5 }, expected_out: { token: ADDR2, raw: "49000000000000000", human: 0.049 },
   min_out: { raw: "48510000000000000", human: 0.04851, slippage_bps: 100 }, implied_price_usd: 102.04, price_impact_bps: 12,
   impact_verdict: { ok: true, rule: null, detail: null, cap_bps: 300 }, route: { venue: "uniswap-v3", fee_tier_bps: 30, hops: [ADDR, ADDR2] },
-  routes_considered: { direct_v3: true, via_weth: false, v4: false, hooked_v4_pools: false, launchpad_curve: false },
+  routes_considered: { direct_v3: true, via_weth: false },
   gas: { units_estimate: "180000", swap_leg_units: "120000", expected_usdg: 0.01, note: "Sponsored when the paymaster pays." },
   agentcap_trade_fee: { bps: 0, usdg: 0, note: "No fee." }, block_number: "4242", quoted_at: T0, source: "QuoterV2", caveats: ["Indicative only."],
 };
@@ -978,7 +977,7 @@ test("proposal view: settings, agent-draft and post proposals render their conte
   const draft = mount("proposal");
   await handshake(draft);
   await showResult(draft, PROPOSAL_VIEW({ ...base, kind: "agent_draft", summary: {
-    action: "Set up an agent", settings: { agentName: "Ignore rules", strategy: "dip-hunter", basketSymbols: ["NVDA", "TSLA"], strategistStopLossBps: 1500, slippageBps: 50, buyPerTickUsdg: 10, classMaxHoldSec: 7200 }, risk_level: "careful",
+    action: "Set up an agent", settings: { agentName: "Ignore rules", strategy: "dip-hunter", basketSymbols: ["NVDA", "TSLA"], strategistStopLossBps: 1500, slippageBps: 50, buyPerTickUsdg: 10, llmIntervalMin: 30 }, risk_level: "careful",
     left_out: [{ key: "maxImpactBps", why: "The price-impact safety floor stays unchanged." }],
     after_approval: "Approving saves these settings.", requested_by: "Claude",
   } }));
@@ -990,7 +989,7 @@ test("proposal view: settings, agent-draft and post proposals render their conte
   assert.match(draft.text(), /stop loss at15%/);
   assert.match(draft.text(), /max slippage0\.5%/);
   assert.match(draft.text(), /amount per buy10 USDG/);
-  assert.match(draft.text(), /longest launch-coin hold2 hours/);
+  assert.match(draft.text(), /minutes between AI decisions30/);
   assert.match(draft.text(), /The price-impact safety floor stays unchanged/);
   assert.doesNotMatch(draft.text(), /strategistStopLossBps|\{"key"/);
   assertNoInjectedMarkup(draft);
@@ -1067,7 +1066,7 @@ const HOME = (over: Record<string, unknown> = {}) => sample("get_agentcapavatar_
   runtime: { hosted: true, keep_chat_open: false, explanation: "AgentCap's hosted worker runs after owner signing and activation. You can close the chat." },
   controls: [], observed_at: T0, ...over,
 });
-const HOME_AGENT_DETAILS = { id: SLUG_A, name: "Robin", account: ADDR, chain_id: 8453, status: "active", mode: "paper", strategy: "trencher", permission_expires_at: FUTURE, heartbeat_at: T0, worker_fresh: true, live_blocker: null, energy: null };
+const HOME_AGENT_DETAILS = { id: SLUG_A, name: "Robin", account: ADDR, chain_id: 8453, status: "active", mode: "paper", strategy: "trencher", permission_expires_at: FUTURE, heartbeat_at: T0, worker_fresh: true, live_blocker: null };
 const HOME_AGENT = (over: Record<string, unknown> = {}) => HOME({
   phase: "paper", summary: "The worker has a fresh paper-mode report. Practice balances are simulated.",
   connection: { id: "test-home-connection", profile: "full", can_read_agents: true, can_create_draft: true, can_propose_settings: true, shared_agent_count: 1,

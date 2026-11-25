@@ -82,18 +82,11 @@ export const POST_MIN_WORDS = 4;
  *
  * A HONEST LIMITATION, STATED RATHER THAN PAPERED OVER: two agents configured
  * identically will produce the same traits and therefore similar voices, and
- * that is correct. Shogun and SirSendIt are byte-identically configured today —
- * same hold window, same entry size, same graduation exit, same impact ceiling —
- * so nothing here can make them sound different, and inventing a difference
- * would mean inventing a fact about the agent. What separates them over time is
- * `recent`: their own past posts, which diverge as their books do.
+ * that is correct — inventing a difference would mean inventing a fact about the
+ * agent. What separates them over time is `recent`: their own past posts.
  */
 export interface Disposition {
-  maxHoldSec: number;
-  exitAtGraduationPct: number;
-  perEntryUsdg: number;
   maxImpactBps: number;
-  minDepthUsdg: number;
 }
 
 /**
@@ -105,13 +98,8 @@ export interface Disposition {
  */
 export function traitsOf(d: Disposition, defaults: Disposition): string[] {
   const t: string[] = [];
-  if (d.maxHoldSec < defaults.maxHoldSec * 0.75) t.push("moves early and does not wait around");
-  if (d.maxHoldSec > defaults.maxHoldSec * 1.5) t.push("sits on a position longer than most");
   if (d.maxImpactBps < defaults.maxImpactBps * 0.75) t.push("dislikes pushing a price around");
   if (d.maxImpactBps > defaults.maxImpactBps * 1.5) t.push("will take size even when it moves the market");
-  if (d.minDepthUsdg > defaults.minDepthUsdg * 1.5) t.push("wants real liquidity before committing");
-  if (d.minDepthUsdg < defaults.minDepthUsdg * 0.75) t.push("will go into thinner things than most");
-  if (d.exitAtGraduationPct < defaults.exitAtGraduationPct * 0.9) t.push("leaves well before the curve graduates");
   return t;
 }
 

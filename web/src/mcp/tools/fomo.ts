@@ -77,7 +77,7 @@ const SERVED_FROM = Object.keys({ live: true, cache: true, "stale-cache": true, 
 
 const TOKEN = refuseControls(z.string().min(1).max(64))
   .regex(/^(0x[0-9a-fA-F]{40}|\$?[A-Za-z0-9][A-Za-z0-9_-]{0,19})$/, "a contract address or a ticker")
-  .describe("Contract address or ticker (e.g. PONS).");
+  .describe("Contract address or ticker (e.g. CAKE).");
 const TRADER = refuseControls(z.string().min(1).max(64))
   .regex(/^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|@?[A-Za-z0-9_]{1,30})$/, "a Fomo user id (UUID) or a handle")
   .describe("Fomo user id (UUID) or handle, with or without @.");

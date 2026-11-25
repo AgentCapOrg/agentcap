@@ -1,4 +1,5 @@
 /** Receipt-backed capital booking for one completely read scan window. */
+import { cashNumber } from "../../packages/core/src/cash";
 import { findTransferFlows, type TransferFlow } from "./deposit-log";
 import { matchInferredDelta } from "./flow-inference";
 import { errorText } from "./redact-urls";
@@ -30,7 +31,7 @@ export async function scanAndBookDepositWindow(
     const booked = await bookCapitalFlow({
       agentId: accounting.agentId,
       direction: flow.direction,
-      amountUsdg: Number(flow.amountUsdg6) / 1e6,
+      amountUsdg: cashNumber(flow.amountUsdg6),
       source: "chain-log",
       txHash: flow.txHash,
       blockNumber: flow.blockNumber,
@@ -76,7 +77,7 @@ export async function bookInferredReceipt(
   accounting: {
     agentId: string;
     mode: "live" | "paper";
-    /** The change to explain, signed raw 6dp USDG: in is positive. */
+    /** The change to explain, signed cash base units: in is positive. */
     deltaUsdg6: bigint;
     /** Does any flow row name this transaction? Null when the ledger did not answer. */
     flowBookedForTx: (txHash: string) => Promise<boolean | null>;
@@ -107,7 +108,7 @@ export async function bookInferredReceipt(
   const booked = await bookCapitalFlow({
     agentId: accounting.agentId,
     direction: flow.direction,
-    amountUsdg: Number(flow.amountUsdg6) / 1e6,
+    amountUsdg: cashNumber(flow.amountUsdg6),
     source: "chain-log",
     txHash: flow.txHash,
     blockNumber: flow.blockNumber,

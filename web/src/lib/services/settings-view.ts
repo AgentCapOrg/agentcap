@@ -9,7 +9,6 @@
  */
 import { STOCK_TOKENS, TELEGRAM_GROUPS_CHATTINESS, isValidCustomToken, type TelegramGroupsChattiness } from "@agentcap/core";
 import { getSettingsStore } from "@agentcap/settings-store";
-import { withoutEnergyReserve, withoutReserveBasket } from "../energy-reserve";
 import { CHAT_SETTING_KEYS } from "../../../../worker/src/telegram/setting-spec";
 
 export interface SettingsView {
@@ -33,7 +32,6 @@ export interface SettingsView {
   fomoFollowEnabled: boolean | null;
   scoutEnabled: boolean | null;
   scoutBudgetUsdg: number | null;
-  launchBuying: { enabled: boolean; perEntryUsdg: number | null; maxPositions: number | null; maxHoldSec: number | null; minDepthUsdg: number | null };
   trencherLiveEnabled: boolean | null;
   /**
    * The fast Trencher (worker settings.ts trencherFastEnabled, off by default).
@@ -80,12 +78,8 @@ const chattiness = (v: unknown): TelegramGroupsChattiness | null =>
 export function projectSettings(raw: Record<string, unknown> | null | undefined): SettingsView | null {
   if (!raw || typeof raw !== "object") return null;
   const s = raw;
-  // THE RESERVE IS NOT A TOKEN THIS OWNER TRADES — left out here as GET
-  // /api/settings leaves it out, with the basket symbol only it supplied, so
-  // the MCP view never offers AGENTCAP to a basket proposal (energy-reserve.ts).
-  const tokens = withoutEnergyReserve(Array.isArray(s.customTokens) ? s.customTokens : []) ?? [];
-  const selectable = new Set([...STOCK_TOKENS.map((t) => t.symbol), ...tokens.filter(isValidCustomToken).map((t) => t.symbol)]);
-  const basket = withoutReserveBasket(Array.isArray(s.basketSymbols) ? s.basketSymbols : [], s.customTokens, selectable) ?? [];
+  const tokens: unknown[] = Array.isArray(s.customTokens) ? s.customTokens : [];
+  const basket: unknown[] = Array.isArray(s.basketSymbols) ? s.basketSymbols : [];
   const mode = s.assetMode;
   return {
     agentName: typeof s.agentName === "string" ? s.agentName.slice(0, 64) : null,
@@ -108,13 +102,6 @@ export function projectSettings(raw: Record<string, unknown> | null | undefined)
     fomoFollowEnabled: b(s.fomoFollowEnabled),
     scoutEnabled: b(s.scoutEnabled),
     scoutBudgetUsdg: n(s.scoutBudgetUsdg),
-    launchBuying: {
-      enabled: s.classSnipeEnabled === true && (n(s.classPerEntryUsdg) ?? 0) > 0,
-      perEntryUsdg: n(s.classPerEntryUsdg),
-      maxPositions: n(s.classMaxPositions),
-      maxHoldSec: n(s.classMaxHoldSec),
-      minDepthUsdg: n(s.classMinDepthUsdg),
-    },
     trencherLiveEnabled: b(s.trencherLiveEnabled),
     trencherFastEnabled: b(s.trencherFastEnabled),
     telegram: {

@@ -1,5 +1,6 @@
+import { DATA } from "../../packages/core/src/chain";
 import { erc20Abi, parseAbi, type Address, type PublicClient } from "viem";
-import { CASH, TRENCHER_VAULT_ABI, isEnergyReserveToken, type StockToken, type StoredGrant } from "../../packages/core/src/index";
+import { CASH, TRENCHER_VAULT_ABI, type StockToken, type StoredGrant } from "../../packages/core/src/index";
 import { highVolumePools } from "./trencher-brain";
 import { NOMINATE } from "./trencher-nominate";
 import { EARLY_VENUE, earlyVerifyPools } from "./early-candidates";
@@ -67,7 +68,7 @@ export interface DiscoveryOptions {
    * added to this pass's reads — after the slice, up to NOMINATED_VERIFY_MAX —
    * and then runs the loop every other pool runs: Uniswap v3 on this chain, a
    * USDG or WETH quote, the pool the canonical factory's `getPool` returns for
-   * its own token0/token1/fee, the decimals bound, never the energy reserve.
+   * its own token0/token1/fee, the decimals bound.
    * And it must already be in `highVolumePools`' output to be considered at
    * all, so a quiet coin nominated by a chat is dropped by the same screen that
    * drops a quiet coin on the trending list.
@@ -214,7 +215,7 @@ export async function discoverTrencherUniverse(client: PublicClient, grant: Stor
   const qualified: QualifiedPool[] = [];
   // Filter supported venues before token deduplication: a larger V2/V4 pool
   // must not erase an otherwise eligible V3 route for the same token.
-  const ranked = discoveryPoolOrder(highVolumePools(pools.filter(p => p.dex === "uniswap-v3-robinhood")), opts.focus ?? "balanced", opts.nowSec ?? Math.floor(Date.now() / 1000));
+  const ranked = discoveryPoolOrder(highVolumePools(pools.filter(p => p.dex === DATA.pancakeswapV3DexId)), opts.focus ?? "balanced", opts.nowSec ?? Math.floor(Date.now() / 1000));
   const nominated = new Set([...(opts.nominated ?? [])].map(a => String(a).toLowerCase()));
   const beyond = nominated.size
     ? ranked.slice(DISCOVERY_SLICE).filter(p => nominated.has(p.tokenAddress.toLowerCase())).slice(0, NOMINATED_VERIFY_MAX)
@@ -228,12 +229,7 @@ export async function discoverTrencherUniverse(client: PublicClient, grant: Stor
   const earlyReads = earlyAll.slice(0, EARLY_VERIFY_MAX);
   const earlyRead = new Set<GeckoPool>(earlyReads);
   for (const p of [...regularReads, ...earlyReads]) {
-    if (p.dex !== "uniswap-v3-robinhood" || !p.poolAddress || !/^0x[0-9a-fA-F]{40}$/.test(p.poolAddress)) continue;
-    // The energy reserve is never a trencher candidate: it is held as energy,
-    // never watched, bought or sold as a coin. Excluded here, where a NEW token
-    // would enter; `held` is left alone — the vault's own tokens() cannot hold
-    // a coin it never bought, and a held-token read must never be narrowed.
-    if (isEnergyReserveToken(p.tokenAddress)) continue;
+    if (p.dex !== DATA.pancakeswapV3DexId || !p.poolAddress || !/^0x[0-9a-fA-F]{40}$/.test(p.poolAddress)) continue;
     try {
       const address = p.poolAddress as Address;
       const cache = opts.cache;
@@ -254,7 +250,7 @@ export async function discoverTrencherUniverse(client: PublicClient, grant: Stor
       const {token0:a,token1:b,fee} = facts;
       if (![a,b].some(t=>t.toLowerCase()===p.tokenAddress.toLowerCase())) continue;
       const quote = a.toLowerCase()===p.tokenAddress.toLowerCase()?b:a;
-      if (![CASH.USDG.toLowerCase(),CASH.WETH.toLowerCase()].includes(quote.toLowerCase())) {
+      if (![CASH.USDT.toLowerCase(),CASH.WBNB.toLowerCase()].includes(quote.toLowerCase())) {
         if (fresh) cache?.rememberRefused(factory, address, p.tokenAddress);
         continue;
       }

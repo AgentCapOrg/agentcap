@@ -46,9 +46,7 @@ const basket = (over: Partial<SteadyBasketConfig> = {}): SteadyBasketConfig => (
     { symbol: "TSLA", token: TSLA, weightBps: 3333 },
   ],
   buyPerTickUsdg: 25_000_000n,
-  idleFloorUsdg: 50_000_000n,
   swapRouter: ROUTER,
-  vault: VAULT,
   usdg: USDG,
   ...over,
 });
@@ -72,18 +70,6 @@ describe("steady-basket reads the trade count, not just the money", () => {
   it("A KNOWN ZERO PROPOSES NO BUY, however much budget and cash there is", () => {
     const t = steadyBasketTick(basket(), snap({ opsHeadroom: 0 }));
     assert.deepEqual(buys(t), [], "a buy the ops rule will certainly refuse must not be proposed");
-  });
-
-  it("and no vault move either, because a deposit and a withdrawal each spend a trade", () => {
-    // 900 cash above a 50 floor would otherwise be parked; the ops rule refuses
-    // a deposit exactly as it refuses a buy.
-    const flush = steadyBasketTick(basket(), snap({ opsHeadroom: 0 }));
-    assert.equal(flush.intents.some((i) => i.kind === "vault-deposit"), false);
-    // Short of one buy with cash in the vault: the unpark would be refused too,
-    // and it is the one proposal that returns before any other check.
-    const short = steadyBasketTick(basket(), snap({ opsHeadroom: 0, cashUsdg: 1_000_000n, vaultUsdg: 400_000_000n }));
-    assert.equal(short.intents.some((i) => i.kind === "vault-withdraw"), false);
-    assert.equal(short.idle?.code, "ops-spent", "and the count, not the cash, is what it names");
   });
 
   it("AND SAYS WHY, through the idle channel the tick already dedupes", () => {

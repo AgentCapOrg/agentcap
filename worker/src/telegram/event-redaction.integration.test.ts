@@ -1,14 +1,13 @@
 /**
  * NO ADDRESS REACHES THE TELEGRAM CHAT MODEL THROUGH EVENT TEXT.
  *
- * When an entry is withheld the worker writes the energy notice as a warn
- * event, and it names the agent's account and the owner's own holder wallet in
+ * A warn event can name the agent's account and an owner's own wallet in
  * full. The chat builds its prompt from readLlmState, which appended the last
  * five events whole — so both chat models had both addresses verbatim, and the
  * owner's private wallet went to the LLM provider with every message. The
  * "never type an address" instruction was the only defence.
  *
- * Proven against a REAL sqlite ledger: the notice is the real energyNotice,
+ * Proven against a REAL sqlite ledger: a notice of that shape is written,
  * and every model-facing read of it (readRecentEvents, readLlmState, the
  * recent_activity tool) carries no address, while the owner's /status-side
  * report still can.
@@ -26,7 +25,6 @@ process.env.AGENTCAP_HOSTED = "1";
 const { closeStoreForTest, initStore, addEvent } = await import("../store");
 const { readLlmState, readRecentEvents, readReport, redactAddresses, redactHexRuns } = await import("./reads");
 const { toolByName } = await import("./chat-tools");
-const { energyNotice } = await import("../energy-copy");
 
 const AGENT = "0x00000000000000000000000000000000000a9e17";
 const ACCOUNT = "0x5aFE00000000000000000000000000000000c0de";
@@ -34,17 +32,7 @@ const HOLDER = "0xb1a5ed00000000000000000000000000000beef5";
 const TX = `0x${"ab".repeat(32)}`;
 const NOW = Math.floor(Date.now() / 1000);
 
-const notice = energyNotice({
-  day: "2026-09-28",
-  account: ACCOUNT,
-  chainId: 4663,
-  holder: HOLDER,
-  holderTokens: 1_000,
-  agentTokens: 0,
-  level: "low",
-  buy: "ready",
-  estimateUsdg: 12.5,
-});
+const notice = `Funds are short. Send them to my account ${ACCOUNT} from your own wallet ${HOLDER}.`;
 
 const statusCtx = {
   agentId: AGENT,
@@ -75,7 +63,7 @@ after(() => {
   rmSync(HOME, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
 });
 
-describe("the energy notice as written", () => {
+describe("an address-naming notice as written", () => {
   it("names both addresses in full — which is why every model-facing read must redact", () => {
     assert.ok(notice.includes(ACCOUNT) && notice.includes(HOLDER), notice);
   });
@@ -84,7 +72,7 @@ describe("the energy notice as written", () => {
 describe("model-facing reads of it", () => {
   it("readRecentEvents keeps the words and drops the addresses", () => {
     const got = readRecentEvents(AGENT, 5);
-    assert.match(got, /Energy spent for/);
+    assert.match(got, /Funds are short/);
     assert.match(got, /to my account \[address\]/);
     assert.match(got, /your own wallet \[address\]/);
     assert.ok(!got.toLowerCase().includes(HOLDER.toLowerCase()) && !got.toLowerCase().includes(ACCOUNT.toLowerCase()));
@@ -112,7 +100,7 @@ describe("model-facing reads of it", () => {
         now: NOW + 60,
       } as never,
     );
-    assert.match(out, /Energy spent for/);
+    assert.match(out, /Funds are short/);
     assert.match(out, /recipient \[address\] is not on the allowlist/);
     assert.ok(!out.toLowerCase().includes(HOLDER.toLowerCase()) && !out.toLowerCase().includes(ACCOUNT.toLowerCase()), out);
     assert.doesNotMatch(out, /0x[0-9a-fA-F]{20,40}(?![0-9a-fA-F])/, "not even the part a length cap leaves");

@@ -766,8 +766,8 @@ describe("swaps → FillRow", () => {
     const RH_TOKEN = "0xaa00000000000000000000000000000000000a0a";
     const row = (over: Rec): Rec => ({
       swapId: "sw-x",
-      chainId: 4663,
-      chain: "robinhood",
+      chainId: 56,
+      chain: "bsc",
       tokenIn: { address: USDC_ETH, amount: 300, usd: 300 },
       tokenOut: { address: RH_TOKEN, amount: 120, usd: 294 },
       tradeIdIn: null,
@@ -778,7 +778,7 @@ describe("swaps → FillRow", () => {
     const read = async (...rows: Rec[]) => ok(await harness(() => json({ swaps: rows })).client.swaps(STAR)).rows;
 
     const [buy] = await read(row({}));
-    assert.equal(buy!.tokenOut.token?.key, `eip155:4663:${RH_TOKEN}`, "the bought token is the row's own");
+    assert.equal(buy!.tokenOut.token?.key, `eip155:56:${RH_TOKEN}`, "the bought token is the row's own");
     assert.ok(isRobinhoodToken(buy!.tokenOut.token));
     assert.equal(buy!.tokenIn.token?.key, `eip155:?:${USDC_ETH}`);
     assert.ok(!isRobinhoodToken(buy!.tokenIn.token), "a cash leg from another chain is never a Robinhood token");
@@ -789,11 +789,11 @@ describe("swaps → FillRow", () => {
     assert.ok(isRobinhoodToken(sell!.tokenIn.token));
     assert.ok(!isRobinhoodToken(sell!.tokenOut.token));
 
-    // A leg that names its own chain is placed there: on Ethereum, it is a cross-chain fill; on Robinhood, it is Robinhood's.
+    // A leg that names its own chain is placed there: on Ethereum, it is a cross-chain fill; on BNB Chain, it is ours.
     const [said] = await read(row({ tokenIn: { address: USDC_ETH, amount: 300, chainId: 1 } }));
     assert.equal(said!.tokenIn.token?.key, `eip155:1:${USDC_ETH}`);
     assert.equal(said!.crossChain, true);
-    const [home] = await read(row({ tokenIn: { address: USDC_ETH, amount: 300, chain: "robinhood" } }));
+    const [home] = await read(row({ tokenIn: { address: USDC_ETH, amount: 300, chainId: 56, chain: "bsc" } }));
     assert.ok(isRobinhoodToken(home!.tokenIn.token), "the leg says so");
     assert.equal(home!.crossChain, false);
 

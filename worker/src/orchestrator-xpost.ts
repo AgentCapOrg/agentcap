@@ -1,3 +1,4 @@
+import { isBnbChainId } from "../../packages/core/src/chain";
 import { TIMELINE_QUESTIONS, timelineLane, timelineQuestions } from "./xpost/rotation";
 import { timelineMemory } from "./xpost/memory";
 /**
@@ -512,7 +513,7 @@ export async function publicTokenForDecision(
   decisionId: string,
   side: "buy" | "sell",
 ): Promise<PublicWallet | null> {
-  if (!/^0x[0-9a-fA-F]{40}$/.test(current.address) || ![4663, 46630].includes(current.chainId)) return null;
+  if (!/^0x[0-9a-fA-F]{40}$/.test(current.address) || !isBnbChainId(current.chainId)) return null;
   const row = await shared.prepare(`
     SELECT t.buy_token, t.sell_token, t.status, t.tx_hash, t.fill_qty_raw, a.chain_id
     FROM decisions d

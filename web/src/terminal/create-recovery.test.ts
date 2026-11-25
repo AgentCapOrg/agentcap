@@ -48,8 +48,6 @@ before(async () => {
     if (parent?.filename === screen) {
       if (id === "@/terminal/usePrivyOwner") return { usePrivyOwner: () => signerReady ? ({ account: { address: signerAddress }, did: "did:privy:test" }) : null };
       if (id === "@/lib/trencher-permission") return { TRENCHER_FACTORY: `0x${"e".repeat(40)}` };
-      if (id === "@/lib/verified-adapter") return { verifiedAdapter: async () => undefined };
-      if (id === "../tier") return { loadTier: async () => null, newAgentQualifies: () => true };
       if (id === "../account-session") return { fetchAccountForSession: async () => current };
       if (id === "@/lib/saved-grant-binding") return {
         loadRecoveryGrants: () => { if (storageFailed) throw new Error("storage unreadable"); return snapshots; },

@@ -5,12 +5,11 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { buildStrategy, BUILTIN_STRATEGIES, isCircleStrategy, PERPS_ONLY_STRATEGY, type StrategyBuildOpts } from "./registry";
+import { buildStrategy, BUILTIN_STRATEGIES, PERPS_ONLY_STRATEGY, type StrategyBuildOpts } from "./registry";
 import type { Snapshot } from "./types";
 
 test("the internal Perps strategy is not selectable and never proposes Spot purchases or vault deposits", async () => {
   assert.equal((BUILTIN_STRATEGIES as readonly string[]).includes(PERPS_ONLY_STRATEGY), false);
-  assert.equal(isCircleStrategy(PERPS_ONLY_STRATEGY), false);
   const options = new Proxy({} as StrategyBuildOpts, { get: () => { throw new Error("spot/provider settings must not be evaluated"); } });
   const strategy = buildStrategy(PERPS_ONLY_STRATEGY, options);
   assert.equal(strategy.name, PERPS_ONLY_STRATEGY);

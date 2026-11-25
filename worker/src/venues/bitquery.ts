@@ -33,7 +33,7 @@ import { readBoundedJson } from "../bounded-read";
 export const BITQUERY_DEFAULT_ENDPOINT = "https://streaming.bitquery.io/graphql";
 
 /** This chain's identifier in Bitquery's EVM schema. */
-export const BITQUERY_NETWORK = "robinhood";
+export const BITQUERY_NETWORK = "bsc";
 
 /**
  * The shared holder gateway. A agentcapavatar with a Merry Circle token needs no
@@ -273,7 +273,7 @@ export async function bitqueryPing(creds: BitqueryCreds): Promise<BitqueryResult
   const raw = r.data?.EVM?.Blocks?.[0]?.Block?.Number;
   const blockHeight = Number(raw);
   if (!Number.isFinite(blockHeight) || blockHeight <= 0) {
-    return { ok: false, error: "bitquery answered but returned no Robinhood Chain blocks" };
+    return { ok: false, error: "bitquery answered but returned no BNB Chain blocks" };
   }
   return { ok: true, data: { blockHeight } };
 }
@@ -437,7 +437,7 @@ export function parsePoolEvent(ev: unknown): NewPair | null {
     symbol: "",
     decimals: 18,
     quote: addrs[1] as `0x${string}`,
-    protocol: "uniswap",
+    protocol: "pancakeswap",
     createdAt: time,
     txHash: hash,
     ...(key ? { key } : {}),

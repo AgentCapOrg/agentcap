@@ -27,23 +27,17 @@
  */
 
 import { NextResponse } from "next/server";
-import { createPublicClient, http, recoverMessageAddress } from "viem";
+import { recoverMessageAddress } from "viem";
 import { consumeChallengeNonce, issueChallengeNonce, requestOrigin } from "@/lib/auth";
 import { deriveKernelAccountAddress } from "@/lib/derive-account";
 import { mintTicket, recoveryChallengeMessage, TICKET_TTL_MS } from "@/lib/recovery-ticket";
-import {
-  PONS_CLASS_VAULT_FACTORY,
-  PONS_CLASS_VAULT_FACTORY_V2,
-  resolveClassVault,
-  robinhoodChain,
-  robinhoodTestnet,
-} from "@agentcap/core";
+import { bnbChain, bnbTestnet } from "@agentcap/core";
 import { walletUnknown, NO_STORE_HEADERS } from "@/lib/route-guard";
 import { readWalletParam } from "@/lib/wallet-param";
 
 export const runtime = "nodejs";
 
-const KNOWN_CHAINS = new Set<number>([robinhoodChain.id, robinhoodTestnet.id]);
+const KNOWN_CHAINS = new Set<number>([bnbChain.id, bnbTestnet.id]);
 
 export async function GET(req: Request) {
   const wallet = readWalletParam(req);
@@ -112,50 +106,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "could not derive the account for that owner" }, { status: 502 });
   }
 
-  /**
-   * THIS ACCOUNT'S CLASS VAULT, resolved here so the relay never has to.
-   *
-   * The relay admits a `sweep(address)` leg only when its target equals this,
-   * and it reads it out of the ticket's own hmac-signed body — so the pinning
-   * costs no chain read on the money path and cannot be edited by the caller.
-   *
-   * A FAILURE HERE MUST NOT BLOCK AN ORDINARY WITHDRAWAL. `vaultFor` is a view
-   * on a factory that may be absent on this chain (testnet has none) or simply
-   * unreachable this second. Either way the right answer is a ticket that
-   * blesses no vault: the USDG and ETH still sweep, and only the class leg —
-   * which most owners do not have — is refused, with a reason that says so.
-   */
-  /**
-   * BOTH FACTORIES, because after v2 an account has two vaults.
-   *
-   * The vault address is a CREATE2 function of the factory, so a second factory
-   * means a second address — and an owner who has re-signed onto v2 may still
-   * have a balance in their v1 vault, which the session key can no longer
-   * reach. A ticket that blesses one of them tells the other's owner that their
-   * own vault is "something other than this account's own class vault".
-   *
-   * A CLOSED SET DECIDED HERE, from the account and the pinned constants alone.
-   * Nothing the caller sends contributes to it, which is the property that has
-   * to survive going plural.
-   *
-   * One factory failing does not remove the other: the per-factory try is not a
-   * nicety, it is what stops a blinking v1 read from hiding a live v2 vault.
-   */
-  const classVaults: `0x${string}`[] = [];
-  const chain = chainId === robinhoodChain.id ? robinhoodChain : robinhoodTestnet;
-  for (const factory of [PONS_CLASS_VAULT_FACTORY_V2[chainId], PONS_CLASS_VAULT_FACTORY[chainId]]) {
-    if (!factory) continue;
-    try {
-      const client = createPublicClient({ chain, transport: http() });
-      const vault = await resolveClassVault(client, factory as `0x${string}`, smartAccount);
-      if (!classVaults.some((v) => v.toLowerCase() === vault.toLowerCase())) classVaults.push(vault);
-    } catch {
-      // A factory that will not answer yields no vault rather than an error —
-      // the USDG and ETH must still sweep. Unchanged from the single-factory
-      // rule, now applied per factory.
-    }
-  }
-
   // SET AS A COOKIE, not returned for the client to attach.
   //
   // The relay is reached through viem's own http transport inside
@@ -168,7 +118,7 @@ export async function POST(req: Request) {
   // so no other site can cause it to be sent; and short-lived by the ticket's
   // own expiry, which is what actually bounds it.
   const res = NextResponse.json({ smartAccount, expiresInMs: TICKET_TTL_MS }, { headers: NO_STORE_HEADERS });
-  res.cookies.set("agentcap_recovery", mintTicket({ smartAccount, chainId, classVaults, purpose: wallet }), {
+  res.cookies.set("agentcap_recovery", mintTicket({ smartAccount, chainId, purpose: wallet }), {
     httpOnly: true,
     secure: true,
     sameSite: "strict",

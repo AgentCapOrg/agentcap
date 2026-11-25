@@ -10,14 +10,14 @@ import {
   positionDeterioration,
   thesisChanges,
 } from "./features";
-import { robinhoodChain, tokenIdentity } from "./identity";
+import { bnbChain, tokenIdentity } from "./identity";
 import type { Thesis, TraderEvent } from "./types";
 
 const NOW = 1_790_000_000_000;
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
-const TOKEN = tokenIdentity(robinhoodChain(), "0x" + "ab".repeat(20))!;
-const NEW_TOKEN = tokenIdentity(robinhoodChain(), "0x" + "ef".repeat(20))!;
+const TOKEN = tokenIdentity(bnbChain(), "0x" + "ab".repeat(20))!;
+const NEW_TOKEN = tokenIdentity(bnbChain(), "0x" + "ef".repeat(20))!;
 
 function author(userId: string) {
   return { userId, handle: userId, displayName: null, verified: null };
@@ -96,8 +96,8 @@ describe("earlyDiscovery", () => {
       event("n2", "buy", "bob", { token: NEW_TOKEN, sourceEventAt: NOW - HOUR }),
       event("n3", "buy", "outsider", { token: NEW_TOKEN }),
       event("old", "buy", "alice"),
-      event("air", "airdrop", "alice", { token: tokenIdentity(robinhoodChain(), "0x" + "11".repeat(20)) }),
-      event("xin", "transfer-in", "bob", { token: tokenIdentity(robinhoodChain(), "0x" + "22".repeat(20)) }),
+      event("air", "airdrop", "alice", { token: tokenIdentity(bnbChain(), "0x" + "11".repeat(20)) }),
+      event("xin", "transfer-in", "bob", { token: tokenIdentity(bnbChain(), "0x" + "22".repeat(20)) }),
     ];
     const found = earlyDiscovery(events, new Map([[TOKEN.key, NOW - 10 * DAY]]), new Set(["alice", "bob"]));
     assert.equal(found.length, 1);

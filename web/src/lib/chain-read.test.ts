@@ -13,7 +13,7 @@
  * requests against a budget nobody is counting.
  *
  * THE CLIENT-SIDE ONES ARE DELIBERATELY LEFT ALONE, and that distinction is the
- * point of the last test here. `session.ts` and `verified-adapter.ts` run in the
+ * point of the last test here. `session.ts` runs in the
  * visitor's browser, from the visitor's IP. They are not part of this problem,
  * and routing them through a server-shaped transport would be a change with no
  * benefit and a bundling risk.
@@ -31,15 +31,10 @@ const SERVER_READERS = [
   "./read-discoveries.ts",
   "../app/api/grants/route.ts",
   "../app/api/proposals/route.ts",
-  "../app/api/alpha/route.ts",
-  "../app/api/circle/route.ts",
-  // Reads the owner's wallet AND the agent's account in one multicall now
-  // (agentcap-standing.ts), over the transport it builds here.
-  "../app/api/tier/route.ts",
 ] as const;
 
 /** Modules that reach the chain from the VISITOR's browser, on the visitor's own IP. */
-const CLIENT_READERS = ["./session.ts", "./verified-adapter.ts"] as const;
+const CLIENT_READERS = ["./session.ts"] as const;
 
 describe("every server-side chain read is batched", () => {
   for (const f of SERVER_READERS) {

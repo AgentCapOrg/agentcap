@@ -43,7 +43,6 @@ import {
 import { useShellClocks } from "./live-clocks";
 
 import { Agent } from "./screens/Agent";
-import { Alpha } from "./screens/Alpha";
 import { terminalWallet } from "./perps-navigation";
 import { TradingModeToggle } from "./TradingModeToggle";
 import { useTradingModeTransition } from "./use-trading-mode-transition";
@@ -124,7 +123,7 @@ export function App({ perps = false }: { perps?: boolean }) {
    *
    * Each read runs on its own clock and applies its answer the moment it
    * arrives (live-clocks.ts); `live` is derived from all of them, so the feed
-   * no longer waits for the launchpad sweep to be drawn, and no read's answer
+   * no longer waits for the discovery sweep to be drawn, and no read's answer
    * overwrites another's.
    */
   const [sources, setSources] = useState<LiveSources>(seedSources);
@@ -260,7 +259,7 @@ export function App({ perps = false }: { perps?: boolean }) {
    * EVERY READ ON ITS OWN CLOCK — see live-clocks.ts and refresh-loop.ts.
    *
    * This was one pass a minute over quotes, six reads in a Promise.all and the
-   * account, and nothing rendered until the slowest — the launchpad sweep, at
+   * account, and nothing rendered until the slowest — the discovery sweep, at
    * 10-12s cold — had come back. Now the feed reads every ten seconds while
    * the tab is visible (a minute while hidden, so the title can count what
    * arrived), the market and its quotes every thirty, the board every minute,
@@ -421,10 +420,10 @@ export function App({ perps = false }: { perps?: boolean }) {
     setScreen({ kind: "tab", tab: next });
   };
   // FROM THE URL, not from the click history. `tab` is only ever written by
-  // goTab, so a cold load of /alpha left the bar highlighting Home until the
-  // user clicked something.
+  // goTab, so a cold load of another tab's URL left the bar highlighting Home
+  // until the user clicked something.
   const activeTab = screen.kind === "tab" ? screen.tab : requestedScreen.kind === "tab" ? requestedScreen.tab : tab;
-  // Explore's views all light Explore in the bar; Research (alpha) included.
+  // Explore's views all light Explore in the bar.
   // The account's own screens (wardrobe, settings, wallet, limits, money) are
   // part of Me, and creating an agent starts from Home — so no screen falls
   // back to whatever tab happened to be clicked last.
@@ -791,13 +790,8 @@ export function App({ perps = false }: { perps?: boolean }) {
             onSettings={() => openScreen({ kind: "settings" })}
             liveBlocker={account?.status.liveBlocker}
             staleBlocker={blockerPredatesGrant}
-            energy={recovery ? null : account?.status.energy}
             account={account?.status.grant?.smartAccount ?? null}
-            chainId={account?.status.grant?.chainId ?? null}
           />
-        )}
-        {screen.kind === "tab" && screen.tab === "alpha" && (
-          <Alpha onToken={(id) => openScreen({ kind: "token", id })} />
         )}
         {screen.kind === "tab" && screen.tab === "you" && (
           <You
@@ -856,7 +850,7 @@ export function App({ perps = false }: { perps?: boolean }) {
             fact about the address rather than a fact about the request. */}
         {screen.kind === "token" && !token && (() => {
           // WHICH READ WOULD HAVE HAD IT. Every listed equity comes from the
-          // registry seed and /api/market; every coin comes from the launchpad
+          // registry seed and /api/market; every coin comes from the discovery
           // sweep. So an unreachable index means the coins are simply absent
           // from the list, and "check the address" would be publishing OUR
           // outage as a fact about the instrument. The three arms are ordered
@@ -1049,9 +1043,7 @@ export function App({ perps = false }: { perps?: boolean }) {
             onSettings={() => openScreen({ kind: "settings" })}
             liveBlocker={account?.status.liveBlocker}
             staleBlocker={blockerPredatesGrant}
-            energy={recovery ? null : account?.status.energy}
             account={account?.status.grant?.smartAccount ?? null}
-            chainId={account?.status.grant?.chainId ?? null}
           />
         </ChatDock>
       )}

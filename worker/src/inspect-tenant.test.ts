@@ -14,12 +14,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 
-import {
-  describeAccounting,
-  describeClassPositions,
-  describeTenant,
-  type TenantFacts,
-} from "./inspect-tenant";
+import { describeAccounting, describeTenant, type TenantFacts } from "./inspect-tenant";
 import { fleetIdTarget } from "./fleet-id";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -27,23 +22,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const facts = (over: Partial<TenantFacts> = {}): TenantFacts => ({
   tenant: "0x4b6dcd559c82ea897c34dacfb785fb0c8f85d4c5",
   smartAccount: "0xa96Bf429888e1aAb4255762d17d29C53f6a0370d",
-  grantClassVault: null,
-  derivedClassVault: "0xC8776FAFf15212C359b23BAe531fF3aC7d760E0F",
-  vaultDeployed: false,
   assetMode: null,
   liveTradingEnabled: true,
   discoveryEnabled: null,
-  classSnipeEnabled: null,
-  classPerEntryUsdg: null,
-  classMaxPositions: null,
   scoutEnabled: null,
   scoutBudgetUsdg: null,
   scoutPerTokenUsdg: null,
-  classMinDepthUsdg: null,
   maxImpactBps: null,
   slippageBps: null,
-  classMaxHoldSec: null,
-  classExitAtGraduationPct: null,
   settingsMissing: false,
   settingsError: null,
   ...over,
@@ -54,14 +40,8 @@ describe("the report says what is set and what is merely defaulted", () => {
     // These resolve identically at runtime and mean opposite things to somebody
     // deciding what to change: one is a choice, the other is a gap.
     const out = describeTenant(facts()).join("\n");
-    assert.match(out, /classSnipeEnabled\s+\(unset\) -> default false/);
-    assert.match(out, /classMinDepthUsdg\s+\(unset\) -> default 250/);
-  });
-
-  it("and prints a set field as its actual value", () => {
-    const out = describeTenant(facts({ classPerEntryUsdg: 5, assetMode: "all" })).join("\n");
-    assert.match(out, /classPerEntryUsdg\s+5/);
-    assert.match(out, /assetMode\s+"all"/);
+    assert.match(out, /scoutEnabled\s+\(unset\) -> default false/);
+    assert.match(out, /slippageBps\s+\(unset\) -> default 100/);
   });
 
   it("reports an unreadable settings row as UNKNOWN, never as default", () => {
@@ -69,116 +49,6 @@ describe("the report says what is set and what is merely defaulted", () => {
     assert.match(out, /settings UNREADABLE/);
     assert.match(out, /unknown, NOT default/);
     assert.doesNotMatch(out, /\(unset\)/, "a failed read must not be dressed as an absent field");
-  });
-
-  it("and an absent vault-code read as UNKNOWN, not NO", () => {
-    const out = describeTenant(facts({ vaultDeployed: null })).join("\n");
-    assert.match(out, /deployed on-chain: UNKNOWN \(could not read\)/);
-  });
-});
-
-describe("sealed and deployed are answered separately", () => {
-  it("says NO to sealed when the grant carries no vault", () => {
-    const out = describeTenant(facts({ grantClassVault: null })).join("\n");
-    assert.match(out, /class vault sealed in grant:\s+NO/);
-    // And still names the vault, so a NO can be discussed concretely.
-    assert.match(out, /0xC8776FAFf15212C359b23BAe531fF3aC7d760E0F/);
-  });
-
-  it("says YES when it does, and reports deployment independently", () => {
-    const out = describeTenant(
-      facts({ grantClassVault: "0xC8776FAFf15212C359b23BAe531fF3aC7d760E0F", vaultDeployed: false }),
-    ).join("\n");
-    assert.match(out, /class vault sealed in grant:\s+YES/);
-    assert.match(out, /deployed on-chain: NO/);
-  });
-});
-
-describe("it names the blocker rather than leaving it to be inferred", () => {
-  it("lists every closed gate", () => {
-    const out = describeTenant(facts()).join("\n");
-    assert.match(out, /class route BLOCKED BY/);
-    assert.match(out, /no class vault sealed/);
-    assert.match(out, /classSnipeEnabled is not true/);
-    assert.match(out, /classPerEntryUsdg is 0/);
-  });
-
-  it("and says so when every gate it can see is open", () => {
-    const out = describeTenant(
-      facts({
-        grantClassVault: "0xC8776FAFf15212C359b23BAe531fF3aC7d760E0F",
-        classSnipeEnabled: true,
-        classPerEntryUsdg: 5,
-        classMaxPositions: 3,
-        liveTradingEnabled: true,
-        assetMode: "all",
-      }),
-    ).join("\n");
-    assert.match(out, /every gate this module can see is OPEN/);
-  });
-
-  it("never calls classMaxPositions 0 a blocker: 0 is no ceiling at all (class-active.ts ceilingBlocks)", () => {
-    const out = describeTenant(
-      facts({
-        grantClassVault: "0xC8776FAFf15212C359b23BAe531fF3aC7d760E0F",
-        classSnipeEnabled: true,
-        classPerEntryUsdg: 5,
-        classMaxPositions: 0,
-        liveTradingEnabled: true,
-        assetMode: "all",
-      }),
-    ).join("\n");
-    assert.doesNotMatch(out, /classMaxPositions is 0/);
-    assert.match(out, /every gate this module can see is OPEN/);
-  });
-
-  it("and counts assetMode 'stocks' as a blocker, because it excludes the route", () => {
-    const out = describeTenant(facts({ assetMode: "stocks" })).join("\n");
-    assert.match(out, /assetMode is "stocks"/);
-  });
-
-  /**
-   * THE GATE THAT STARVES THE ROUTE INSTEAD OF REFUSING IT.
-   *
-   * Shogun sat for hours with every gate below open, printing
-   * `[class funnel] scanned 0 → … → 0 qualified` — because a funnel with no
-   * input reports the same zeroes as a funnel that rejected everything. This
-   * module said "every gate this module can see is OPEN" and sent the search
-   * to the gates that were already fine.
-   */
-  const OPEN = {
-    grantClassVault: "0xC8776FAFf15212C359b23BAe531fF3aC7d760E0F",
-    classSnipeEnabled: true,
-    classPerEntryUsdg: 5,
-    classMaxPositions: 3,
-    liveTradingEnabled: true,
-    assetMode: "all",
-  } as const;
-
-  it("names discoveryEnabled=false as a blocker even with every buy-side gate open", () => {
-    const out = describeTenant(facts({ ...OPEN, discoveryEnabled: false })).join("\n");
-    assert.match(out, /class route BLOCKED BY/);
-    assert.match(out, /discoveryEnabled is false/);
-    assert.match(out, /candidate table stays empty/);
-    assert.doesNotMatch(out, /every gate this module can see is OPEN/);
-  });
-
-  it("but UNSET is not off — this field defaults on, unlike every other gate here", () => {
-    // The whole fleet leaves it unset. Reading null as false would report a
-    // starved route for almost every tenant and make the real one invisible.
-    const out = describeTenant(facts({ ...OPEN, discoveryEnabled: null })).join("\n");
-    assert.doesNotMatch(out, /discoveryEnabled is false/);
-    assert.match(out, /every gate this module can see is OPEN/);
-    assert.match(out, /discoveryEnabled\s+\(unset\) -> default true/);
-  });
-
-  it("AND SAYS WHAT IT STILL CANNOT SEE — an open gate is not a candidate", () => {
-    // "Every gate is OPEN" is a statement about configuration. Supply lives in
-    // the child's ephemeral sqlite, reachable from nowhere but the child, and
-    // conflating the two is what cost the hours this test exists to prevent.
-    const out = describeTenant(facts({ ...OPEN })).join("\n");
-    assert.match(out, /not visible from here: the candidate table itself/);
-    assert.match(out, /class census/);
   });
 });
 
@@ -214,7 +84,7 @@ describe("IT CANNOT PRINT A SECRET", () => {
     const body = orch.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
     // The whole settings object must never be spread into the facts record.
     assert.doesNotMatch(body, /describeTenant\(\s*\{[^}]*\.\.\.s\b/);
-    assert.match(body, /pick\("classSnipeEnabled"\)/, "fields are named individually");
+    assert.match(body, /pick\("slippageBps"\)/, "fields are named individually");
   });
 
   it("and refuses a tenant value that is not an address", () => {
@@ -361,97 +231,5 @@ describe("the accounting report reads the EFFECTIVE peak", () => {
       error: null,
     }).join("\n");
     assert.match(out, /durable peak \(effective\)\s+25\.487111\s+= gross 56\.272455 − withdrawn 30\.785344/);
-  });
-});
-
-/**
- * THE CEILING COUNTED HISTORY, AND THE CENSUS MUST COUNT THE WAY THE GATE DOES.
- *
- * `proposeClassEntries` compared `classMaxPositions` against every row
- * `class_positions` had ever carried, so a closed round trip held a slot for
- * ever and Shogun sat at 3 of 3 owning nothing. The gate now counts through
- * `activeClassPositions`; a census that counted its own way could report a
- * route open that the agent has shut, which is worse than no census at all.
- */
-describe("the position census counts the way the gate counts", () => {
-  const USDG = "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168";
-  const T = (n: number) => `0x${String(n).repeat(40).slice(0, 40)}`;
-
-  const census = (
-    rows: { token: string; quoteToken?: string | null; state: string | null; symbol?: string | null }[],
-    ceiling: number | null,
-  ) =>
-    describeClassPositions({
-      rows: rows.map((r) => ({ quoteToken: null, symbol: null, ...r })),
-      ceiling,
-    }).join("\n");
-
-  it("SHOGUN'S BOOK — closed + swept + cash counts 0, and the ceiling is OPEN", () => {
-    const out = census(
-      [
-        { token: T(1), state: "closed", symbol: "SOLD" },
-        { token: T(2), state: "swept", symbol: "DOGGOS" },
-        { token: USDG, state: "recovered" },
-      ],
-      3,
-    );
-    assert.match(out, /ceiling OPEN — room for 3 more/);
-    assert.doesNotMatch(out, /ENTRIES ARE SHUT/);
-    // It must SAY the cash row is cash rather than silently dropping it.
-    assert.match(out, /NOT COUNTED — this is the vault's cash/);
-    // And keep the old arithmetic visible, so a repaired tenant stays
-    // distinguishable from one that was never stuck.
-    assert.match(out, /the old count would have shut it: 3 ledger rows >= 3/);
-  });
-
-  it("A GENUINELY FULL BOOK still shuts, without the repair note", () => {
-    const out = census(
-      [
-        { token: T(1), state: "open" },
-        { token: T(2), state: "open" },
-        { token: T(3), state: "recovered" },
-      ],
-      3,
-    );
-    assert.match(out, /ENTRIES ARE SHUT: 3 >= 3/);
-    assert.match(out, /the book is genuinely full/);
-    assert.doesNotMatch(out, /old count would have shut it/);
-  });
-
-  it("shows every row and why it did or did not count", () => {
-    const out = census(
-      [
-        { token: T(1), state: "open", symbol: "AAA" },
-        { token: T(2), state: "closed", symbol: "BBB" },
-      ],
-      3,
-    );
-    assert.match(out, /AAA .*state=open .*counted/);
-    assert.match(out, /BBB .*state=closed .*not counted — closed/);
-  });
-
-  it("a cash row that is standing BY STATE is still not a position", () => {
-    // The exact phantom: `recovered` is a good standing state, so a state-only
-    // census reported "standing: 1" about the vault's own cash.
-    assert.match(
-      census([{ token: USDG, state: "recovered" }], 3),
-      /standing \(open\/recovered, excluding cash\): 0/,
-    );
-  });
-
-  it("and an unset or zero ceiling is reported as inert, not as shut", () => {
-    for (const c of [null, 0]) {
-      const out = census(
-        [
-          { token: T(1), state: "open" },
-          { token: T(2), state: "open" },
-          { token: T(3), state: "open" },
-          { token: T(4), state: "open" },
-        ],
-        c,
-      );
-      assert.match(out, /the ceiling does not bind/);
-      assert.doesNotMatch(out, /ENTRIES ARE SHUT/);
-    }
   });
 });

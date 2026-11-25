@@ -81,6 +81,8 @@
  * what Postgres says), start a risk period, or write a key into an archive.
  * Any failure leaves the tenant held and the step resumable.
  */
+import { bnbTestnet } from "../../packages/core/src/chain";
+import { CASH_PER_MICRO, formatCash6 } from "../../packages/core/src/cash";
 import { createHash, randomUUID } from "node:crypto";
 import { chmodSync, closeSync, constants, copyFileSync, existsSync, fchmodSync, fstatSync, fsyncSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, type Stats } from "node:fs";
 import path from "node:path";
@@ -1765,8 +1767,14 @@ export function chainFactsPostgresLacks(o: {
     }
     const from = topicAddress(l.topics[1]), to = topicAddress(l.topics[2]);
     const direction = from === account && to === account ? "self" : from === account ? "out" : "in";
+    const amountRaw = hexQuantity(l.data);
+    // INCOMING DUST IS NOT A GAP. Under a millionth of a USDT the book cannot
+    // record it (the deposit scan skips it too), so no row could ever answer it
+    // and anyone could hold this account out by sending one base unit. Only
+    // money coming IN with a read amount: outgoing and self legs still count.
+    if (direction === "in" && amountRaw !== null && BigInt(amountRaw) < CASH_PER_MICRO) continue;
     found.push({ kind: "transfer", txHash: tx, block: hexQuantity(l.blockNumber), logIndex: i, direction,
-      amountRaw: hexQuantity(l.data), counterparty: direction === "out" ? to : direction === "in" ? from : account });
+      amountRaw, counterparty:direction === "out" ? to : direction === "in" ? from : account });
   }
   return found.sort((a, b) => {
     const [ab, ai] = factOrder(a), [bb, bi] = factOrder(b);
@@ -1774,10 +1782,9 @@ export function chainFactsPostgresLacks(o: {
   });
 }
 
-/** USDG base units (6dp) as a decimal figure, exactly: "5.000000". */
+/** USDT base units (18dp) as a six-decimal figure, truncated: "5.000000". */
 export function usdg6(raw: string): string {
-  const v = BigInt(raw), sign = v < 0n ? "-" : "", abs = v < 0n ? -v : v;
-  return `${sign}${abs / 1_000_000n}.${(abs % 1_000_000n).toString().padStart(6, "0")}`;
+  return formatCash6(BigInt(raw));
 }
 
 /** One found fact as an operator reads it: every hash in full, so it can be pasted into an explorer. */
@@ -2041,7 +2048,7 @@ export async function knownChainFacts(db: Db, account: string, owner?: { tenant:
  * Null only for a chain with no endpoint at all.
  */
 export function resumeChainFor(chainId: number, env: NodeJS.ProcessEnv = process.env): GapChain | null {
-  const url = (chainId === 46630 ? env.AGENTCAP_RPC_TESTNET : env.AGENTCAP_RPC_MAINNET) || chainForId(chainId).rpcUrls.default.http[0];
+  const url = (chainId === bnbTestnet.id ? env.AGENTCAP_RPC_TESTNET : env.AGENTCAP_RPC_MAINNET) || chainForId(chainId).rpcUrls.default.http[0];
   if (!url) return null;
   const client = createPublicClient({ chain: chainForId(chainId), transport: http(url, { timeout: 20_000 }) });
   return {
@@ -2061,7 +2068,7 @@ export function resumeChainFor(chainId: number, env: NodeJS.ProcessEnv = process
     },
   };
 }
-export const RESUME_USDG = String(CASH.USDG);
+export const RESUME_USDG = String(CASH.USDT);
 
 // ── phase A: the home ────────────────────────────────────────────────────────
 

@@ -390,7 +390,7 @@ function startsWithRefusal(fn: Handler): boolean {
 const BEFORE_WALLET_READ: Readonly<Record<string, ReadonlySet<string>>> = {
   "grants/route.ts POST": new Set([
     "readGrantBody", "NextResponse.json", "tooLarge", "JSON.parse", "isAddr", "duplicateWallPermissions",
-    "isRobinhoodChainId", "JSON.stringify", "JSON.stringify(grant.chainId).slice", "Array.isArray", "grant.grantFeatures.some",
+    "isBnbChainId", "JSON.stringify", "JSON.stringify(grant.chainId).slice", "Array.isArray", "grant.grantFeatures.some",
   ]),
 };
 

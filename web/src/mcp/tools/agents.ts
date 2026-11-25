@@ -75,7 +75,6 @@ const getAgentStatus = defineTool({
     asset_mode: z.string().nullable(),
     live_trading_enabled: z.boolean(),
     paper_trading_enabled: z.boolean(),
-    launch_buying_enabled: z.boolean(),
     permission: z.object({ granted_at: z.string().nullable(), expires_at: z.string().nullable(), expired: z.boolean().nullable(), days_left: z.number().nullable() }),
     freshness: z.object({
       heartbeat_at: z.string().nullable(),
@@ -118,7 +117,6 @@ const getAgentStatus = defineTool({
         asset_mode: settings?.assetMode ?? null,
         live_trading_enabled: settings?.liveTradingEnabled ?? false,
         paper_trading_enabled: settings?.paperTradingEnabled ?? true,
-        launch_buying_enabled: settings?.launchBuying.enabled ?? false,
         permission: {
           granted_at: isoOrNull(a.grantedAt),
           expires_at: isoOrNull(a.expiresAt),
@@ -174,7 +172,6 @@ const getAgentControls = defineTool({
       take_profit_bps: z.number().nullable(),
       chat_action_ceiling_usdg: z.number().nullable(),
       tick_seconds: z.number().nullable(),
-      launch_buying: z.object({ enabled: z.boolean(), per_entry_usdg: z.number().nullable(), max_positions: z.number().nullable() }),
     }),
     controls: z.array(z.object({ control: z.string(), where: z.string(), effect: z.string(), available_here: z.boolean() })),
     observed_at: z.string(),
@@ -221,11 +218,6 @@ const getAgentControls = defineTool({
           take_profit_bps: settings?.takeProfitBps ?? null,
           chat_action_ceiling_usdg: settings?.telegram.maxActionUsdg ?? null,
           tick_seconds: settings?.tickSeconds ?? null,
-          launch_buying: {
-            enabled: settings?.launchBuying.enabled ?? false,
-            per_entry_usdg: settings?.launchBuying.perEntryUsdg ?? null,
-            max_positions: settings?.launchBuying.maxPositions ?? null,
-          },
         },
         controls: agentControls(ctx.principal),
         observed_at: new Date(now * 1000).toISOString(),

@@ -28,7 +28,7 @@ const FUTURE = "2099-01-01T00:00:00.000Z";
 const PID = "prp_" + "a".repeat(32);
 const SID = "nsub_" + "b".repeat(32);
 const CAPABILITIES = ["get_agentcapavatar_setup", "get_agent_settings", "get_agent_controls", "create_agent_draft", "propose_settings_change", "list_proposals", "get_proposal", "cancel_proposal", "list_notification_channels", "list_subscriptions", "subscribe", "unsubscribe"];
-const AGENT = { id: SLUG, name: "Old worker name", account: ADDR, chain_id: 4663, status: "active", mode: "paper", strategy: "trencher", permission_expires_at: FUTURE, heartbeat_at: TIME, worker_fresh: true, live_blocker: null, energy: null };
+const AGENT = { id: SLUG, name: "Old worker name", account: ADDR, chain_id: 4663, status: "active", mode: "paper", strategy: "trencher", permission_expires_at: FUTURE, heartbeat_at: TIME, worker_fresh: true, live_blocker: null };
 const setup = (over: Record<string, unknown> = {}) => sample("get_agentcapavatar_setup", {
   phase: "paper", summary: "The worker reports paper mode. Practice uses simulated funds.",
   connection: { id: "connection-test-a", profile: "full", can_read_agents: true, can_create_draft: true, can_propose_settings: true, shared_agent_count: 1, available_tools: CAPABILITIES },
@@ -40,8 +40,8 @@ const settings = (over: Record<string, unknown> = {}) => sample("get_agent_setti
   agent: SLUG, configured_name: "Saved name", strategy: "steady-basket",
   settings: [
     spec("slippageBps", "pct", 50, { label: "max slippage", unit: "basis_points", min: 1, max: 1000, display_value: "0.5%" }),
-    spec("classMaxHoldSec", "hoursAsSec", null, { unit: "seconds", min: 60, max: 2592000 }),
-    spec("classMaxPositions", "int", 0, { min: 1, max: 1000, display_value: "no limit", zero_meaning: "no limit", valid_for_proposal: false }),
+    spec("exampleHoldSec", "hoursAsSec", null, { unit: "seconds", min: 60, max: 2592000 }),
+    spec("exampleMaxCount", "int", 0, { min: 1, max: 1000, display_value: "no limit", zero_meaning: "no limit", valid_for_proposal: false }),
     spec("officialCoinsEnabled", "bool", true, { unit: "boolean", display_value: "on" }),
     spec("basketSymbols", "symbols", ["NVDA"], { unit: "symbols", display_value: "NVDA" }),
     spec("assetMode", "enum", "stocks", { unit: "choice", options: ["all", "stocks", "crypto"] }),
@@ -124,9 +124,9 @@ test("preference editor uses stored units and bounds, leaves unset and unproposa
   change(m, "New value (%)", "10.01"); submit(m, "New value (%)"); assert.equal(calls(m).length, before);
   change(m, "New value (%)", "0.8"); submit(m, "New value (%)"); const call = last(m, "propose_settings_change");
   assert.deepEqual(call.params!.arguments?.changes, { slippageBps: 80 }); assert.equal(call.params!.arguments?.agent, SLUG);
-  await fail(m, call); change(m, "Preference to change", "classMaxHoldSec"); assert.equal(field(m, "New value (hours)").value, "");
+  await fail(m, call); change(m, "Preference to change", "exampleHoldSec"); assert.equal(field(m, "New value (hours)").value, "");
   assert.match(m.text(), /Not set - worker default/); submit(m, "New value (hours)"); assert.equal(calls(m).at(-1), call);
-  change(m, "Preference to change", "classMaxPositions"); assert.equal(field(m, "New value (integer)").value, ""); assert.match(m.text(), /Zero means: no limit/);
+  change(m, "Preference to change", "exampleMaxCount"); assert.equal(field(m, "New value (integer)").value, ""); assert.match(m.text(), /Zero means: no limit/);
 });
 
 test("typed boolean and case-preserving basket edits are proposed without coercing unrelated preferences", async () => {
@@ -284,7 +284,7 @@ test("a cancelled configuration draft does not trap an identical new intent behi
 
 test("percent and hour fields convert exactly to bounded stored units, without silently rounding invalid precision", async () => {
   const m = await start(); await loadSettings(m); change(m, "New value (%)", "0.555"); const before = calls(m).length; submit(m, "New value (%)"); assert.equal(calls(m).length, before);
-  change(m, "Preference to change", "classMaxHoldSec"); change(m, "New value (hours)", "0.5"); submit(m, "New value (hours)"); const call = last(m, "propose_settings_change"); assert.deepEqual(call.params!.arguments?.changes, { classMaxHoldSec: 1800 }); await fail(m, call);
+  change(m, "Preference to change", "exampleHoldSec"); change(m, "New value (hours)", "0.5"); submit(m, "New value (hours)"); const call = last(m, "propose_settings_change"); assert.deepEqual(call.params!.arguments?.changes, { exampleHoldSec: 1800 }); await fail(m, call);
   change(m, "New value (hours)", "0.0001"); submit(m, "New value (hours)"); assert.equal(calls(m).at(-1), call);
   change(m, "New value (hours)", "0.50001"); submit(m, "New value (hours)"); assert.equal(calls(m).at(-1), call);
 });

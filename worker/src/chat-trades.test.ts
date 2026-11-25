@@ -16,7 +16,7 @@ function db() {
   d.prepare("INSERT INTO decisions VALUES ('sell',?,?,'PRISM','Prism','sell','took a measured gain','brain')").run(OWNER,DAY+2);
   d.prepare("INSERT INTO decisions VALUES ('other',?,?,'SECRET','Secret','buy','OTHER_SECRET','brain')").run(OTHER,DAY+3);
   const add=(id:number,epoch:number,side:string,at:number,hash:string,status:string,cash:number,qty:string,source:string,pnl:number|null,decision:string|null,who=OWNER)=>d.prepare(`INSERT INTO trades(id,agent_id,epoch,kind,target,sell_token,buy_token,amount_usdg,status,user_op_hash,created_at,decision_id,fill_side,fill_symbol,fill_cash_usdg,fill_qty_raw,basis_source,realized_pnl_usdg)
-     VALUES (?, ?, ?, 'swap','router',?, ?,999,?,?,?, ?,?,'PRISM',?,?,?,?)`).run(id,who,epoch,side==="buy"?CASH.USDG:COIN,side==="buy"?COIN:CASH.USDG,status,hash,at,decision,side,cash,qty,source,pnl);
+     VALUES (?, ?, ?, 'swap','router',?, ?,999,?,?,?, ?,?,'PRISM',?,?,?,?)`).run(id,who,epoch,side==="buy"?CASH.USDT:COIN,side==="buy"?COIN:CASH.USDT,status,hash,at,decision,side,cash,qty,source,pnl);
   return {d,add};
 }
 test("chat facts match the web's canonical IDs, execution provenance, reason and current run",async()=> {
@@ -74,7 +74,7 @@ test("mixed-case account history cannot hide an estimated buy beneath a measured
 
 test("stock-pair side inference also happens before a side-filtered limit",async()=> {
   const {d}=db(),stock=STOCK_TOKENS[0]!;
-  d.prepare("INSERT INTO trades(id,agent_id,epoch,kind,target,sell_token,buy_token,amount_usdg,status,fill_cash_usdg,basis_source,created_at) VALUES (1,?,2,'swap','router',?,?,5,'landed',5,'receipt',?)").run(OWNER,CASH.USDG,stock.address,DAY+1);
+  d.prepare("INSERT INTO trades(id,agent_id,epoch,kind,target,sell_token,buy_token,amount_usdg,status,fill_cash_usdg,basis_source,created_at) VALUES (1,?,2,'swap','router',?,?,5,'landed',5,'receipt',?)").run(OWNER,CASH.USDT,stock.address,DAY+1);
   const facts=await readTradeFacts(readOnlyFactsDb(d),{account:OWNER,epoch:2,since:DAY,until:NOW,side:"buy"});
   assert.equal(facts.trades.length,1);assert.equal(facts.trades[0]?.side,"buy");assert.equal(facts.trades[0]?.label,stock.symbol);
   d.close();

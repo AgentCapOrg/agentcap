@@ -37,7 +37,7 @@ import type { FleetRecoveryView } from "../../../worker/src/fleet-recovery";
  * ranking answer the same question ("how am I doing") and used to be two taps
  * apart.
  */
-export type Tab = "home" | "feed" | "agent" | "alpha" | "you";
+export type Tab = "home" | "feed" | "agent" | "you";
 export type TokenTab = "held" | "buys";
 export type Screen =
   | { kind: "tab"; tab: Tab }
@@ -395,7 +395,7 @@ export interface LiveState {
   reads: {
     market: ReadState;
     /**
-     * The launchpad sweep, which is where every memecoin on the list comes
+     * The discovery sweep, which is where every memecoin on the list comes
      * from — and whose failure was swallowed into an empty array.
      *
      * A refused discoveries read therefore dropped every coin from the market
@@ -637,7 +637,7 @@ export class LiveLoadError extends Error {
  * each on its own clock now.
  *
  * They were one Promise.all inside one 60s pass, so the feed could not render
- * until the market, the board, the owner's book, the quotes and the launchpad
+ * until the market, the board, the owner's book, the quotes and the discovery
  * sweep had all come back, and the sweep measured 10-12s cold. Each is now
  * fetched on its own schedule (refresh-loop.ts) and applied the moment it
  * arrives; everything the screens read is DERIVED from the latest answer of
@@ -922,32 +922,6 @@ export function liveOf(s: LiveSources): LiveState {
       kind: "memecoin",
       marks,
       cast: castOf(posts),
-    });
-  }
-
-  for (const f of disc?.fresh ?? []) {
-    if (!f.token) continue;
-    const id = f.token.toLowerCase();
-    if (tokens.has(id) && tokens.get(id)!.logo) continue;
-    const symbol = (f.symbol || f.name || "TOKEN").toUpperCase();
-    const posts = bySymbol.get(symbol) ?? [];
-    const prev = tokens.get(id);
-    tokens.set(id, {
-      id,
-      symbol,
-      name: f.name || symbol,
-      logo: f.logo
-        ? `/api/coin-image?uri=${encodeURIComponent(f.logo)}`
-        : (prev?.logo ?? ""),
-      priceUsd: prev?.priceUsd ?? null,
-      change24hPct: prev?.change24hPct ?? null,
-      fdvUsd: prev?.fdvUsd ?? null,
-      holders: prev?.holders ?? null,
-      agents: uniqueAgents(posts),
-      buys: f.trades ?? 0,
-      kind: "memecoin",
-      marks: prev?.marks ?? [],
-      cast: prev?.cast ?? castOf(posts),
     });
   }
 
@@ -1525,14 +1499,13 @@ interface Feed {
    * /api/feed had selected these for a long time and the terminal dropped them
    * on the floor: LiveMine had no field for them, so every gate that reports
    * itself with addEvent() and nothing else was invisible by construction.
-   * That is what turned a blocked agent into a quiet one — the Circle-strategy
-   * gate, the trencher rail and the discovery credential check all announce
-   * themselves here and nowhere else.
+   * That is what turned a blocked agent into a quiet one — the trencher rail
+   * and the discovery credential check announce themselves here and nowhere
+   * else.
    *
    * THEY REACH A SCREEN NOW: `notice` is built from this array at ~line 735
    * (newest warn/err/error with a message) and rendered on the agent desk at
    * screens/Agent.tsx, guarded so a resolved blocker outranks a log line.
-   * circle-strategies.test.ts pins the filter and that JSX.
    *
    * This paragraph said the opposite in the present tense for a while after
    * that landed, and it cost a re-audit: the stale sentence is more convincing

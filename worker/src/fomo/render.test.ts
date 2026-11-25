@@ -10,7 +10,7 @@ import { admitTgLine } from "../telegram/tg-groups/gate";
 import { readThesisForDigest } from "./digest";
 import { resolveFamilies } from "./dossier";
 
-import { chainFromProvider, robinhoodChain, tokenIdentity } from "./identity";
+import { chainFromProvider, bnbChain, tokenIdentity } from "./identity";
 import type { FomoQuestionPlan } from "./intent";
 import {
   EVIDENCE_HEADER,
@@ -30,7 +30,7 @@ import type { FomoEnvelope, FomoToolName, ResolvedSubject, ResultStatus, Thesis,
 
 const NOW = Date.UTC(2026, 9, 4, 16, 5);
 const PONS = "0x39dbed3a00000000000000000000000000000c0d";
-const T: TokenIdentity = tokenIdentity(robinhoodChain(), PONS)!;
+const T: TokenIdentity = tokenIdentity(bnbChain(), PONS)!;
 const FRANK = "6dcf7c78-2537-522a-8307-3f9970c081be";
 const TOKEN_SUBJECT: ResolvedSubject = { kind: "token", token: T, label: { symbol: "PONS", name: "Pons" } };
 
@@ -87,7 +87,7 @@ describe("renderEnvelope", () => {
   it("answers first, labels the reading as ours and the words as theirs, and attributes once", () => {
     const text = renderEnvelope(env("fomo_get_token_theses", "ok", theses()), O);
     const lines = text.split("\n");
-    assert.match(lines[0]!, /^\$PONS on robinhood \(0x39db…0c0d\): 3 theses from 3 authors in 2 evidence families — AgentCap's reading: 1 supporting/);
+    assert.match(lines[0]!, /^\$PONS on bsc \(0x39db…0c0d\): 3 theses from 3 authors in 2 evidence families — AgentCap's reading: 1 supporting/);
     assert.ok(text.includes("(their words)"));
     assert.equal(lines[lines.length - 1], FOMO_ATTRIBUTION);
     assert.equal(text.split(FOMO_ATTRIBUTION).length, 2);
@@ -104,7 +104,7 @@ describe("renderEnvelope", () => {
   it("in a group: coin-level aggregates only — no handles, addresses, links, cashtags or quotes", () => {
     const text = renderEnvelope(env("fomo_get_token_theses", "ok", theses(INJECTION)), G);
     // What they argue in fixed words, never their words or counts (plan WP9, D6).
-    assert.ok(text.startsWith("What traders on Fomo are saying about PONS on Robinhood Chain (1 thesis read from 1 trader):"), text);
+    assert.ok(text.startsWith("What traders on Fomo are saying about PONS on BNB Chain (1 thesis read from 1 trader):"), text);
     assert.doesNotMatch(text, /ignore|instructions|evidence famil|AgentCap's reading|supporting|opposing|neutral/);
     assert.ok(!/frankdegods|0x[0-9a-f]{6}|https?:|\$PONS|their words/.test(text), text);
     // The attribution is the owner's; a group has had its post about the source (Milla, 2026-10-07).
@@ -118,7 +118,7 @@ describe("renderEnvelope", () => {
       formerHandle: false,
       focus: "context",
       holdings: {
-        rows: [{ token: T, symbol: "PONS", chain: "robinhood", amount: 1, priceUsd: 1, valueUsd: 3_120, change24hPct: null, robinhood: true }],
+        rows: [{ token: T, symbol: "PONS", chain: "bsc", amount: 1, priceUsd: 1, valueUsd: 3_120, change24hPct: null, robinhood: true }],
         rowsTotal: 1, truncated: false, totalValueUsdFloor: 3_120, complete: true, dropped: 0, byChain: [],
       },
       cohort: { member: true, followable: true, version: 3, size: 120 },
@@ -130,7 +130,7 @@ describe("renderEnvelope", () => {
     assert.notEqual(group, GROUP_DM_DEFLECTION);
     assert.deepEqual(group.split("\n"), [
       "frankdegods on Fomo holds 1 coin worth $3.1k (provider-reported snapshot, valued at current prices).",
-      "Largest held by frankdegods: PONS on robinhood $3.1k.",
+      "Largest held by frankdegods: PONS on bsc $3.1k.",
       "Holdings are a snapshot valued at current prices: a change in value can be price, not buying.",
     ]);
     assert.doesNotMatch(group, /cohort|watched|follow|P&L|12,000|\$12k|6dcf7c78/i);
@@ -160,7 +160,7 @@ describe("renderEnvelope", () => {
     const e = env("fomo_get_trader_activity", "ok", act, { subject: { kind: "trader", trader: act.trader } });
     assert.deepEqual(renderEnvelope(e, G).split("\n"), [
       "frankdegods in the last 7d: 1 buy and 0 sells in the feed.",
-      "• frankdegods bought PONS on robinhood 2m ago, fill $1.2M (matched on chain)",
+      "• frankdegods bought PONS on bsc 2m ago, fill $1.2M (matched on chain)",
       "Positions of frankdegods (provider-reported): PONS open (cost $3k, $0 realised, +$121 not yet realised).",
     ]);
     assert.match(renderEnvelope(e, O), /frankdegods on Fomo in the last 7d: 1 buy/);
@@ -280,8 +280,8 @@ describe("renderEnvelope", () => {
       tokens: [{ rank: 1, token: T, label: { symbol: "PONS", name: "Pons" }, holders: null, priceUsd: null, change24hPct: null, marketCapUsd: 2_080_000, volume24hUsd: null, executionAvailability: "unknown" as never }],
     };
     const e = env("fomo_get_rankings", "ok", board, { subject: { kind: "market" } });
-    assert.match(renderEnvelope(e, G), /\n1\. PONS on robinhood, market cap \$2\.1M$/);
-    assert.match(renderEnvelope(e, O), /\n1\. \$PONS on robinhood, market cap \$2\.08M\n/);
+    assert.match(renderEnvelope(e, G), /\n1\. PONS on bsc, market cap \$2\.1M$/);
+    assert.match(renderEnvelope(e, O), /\n1\. \$PONS on bsc, market cap \$2\.08M\n/);
   });
 
   it("empty is not 'nobody traded', failed is not empty, and each status reads differently", () => {
@@ -292,7 +292,7 @@ describe("renderEnvelope", () => {
     const empty = renderEnvelope(env("fomo_get_token_activity", "empty", act), O);
     assert.match(empty, /No matching sells were returned/);
     assert.match(empty, /not the same as nobody trading/);
-    // Live 2026-10-09: "No matching activity were returned for AUTON on bsc…".
+    // Live 2026-10-09: "No matching activity were returned for AUTON on base…".
     const anySide = renderEnvelope(env("fomo_get_token_activity", "empty", { ...act, side: null }), O);
     assert.match(anySide, /No matching activity was returned for /);
     assert.doesNotMatch(anySide, /activity were/);
@@ -336,7 +336,7 @@ describe("renderEnvelope", () => {
   });
 
   it("asks one question for an ambiguous ticker, without addresses in a group", () => {
-    const bnb = tokenIdentity({ namespace: "eip155", networkId: 56, slug: "bsc" }, "0xc66101b7bbddc5e8738608b393c2eac96bbfef6a")!;
+    const bnb = tokenIdentity({ namespace: "eip155", networkId: 8453, slug: "base" }, "0xc66101b7bbddc5e8738608b393c2eac96bbfef6a")!;
     const e = env("fomo_get_token_theses", "needs-clarification", null, {
       subject: null,
       candidates: [
@@ -345,13 +345,13 @@ describe("renderEnvelope", () => {
       ],
     });
     const owner = renderEnvelope(e, O);
-    assert.match(owner, /matches more than one: \$PONS on robinhood \(0x39db…0c0d\); \$PONS on bsc \(0xc661…ef6a\)\. Which one do you mean\?/);
+    assert.match(owner, /matches more than one: \$PONS on bsc \(0x39db…0c0d\); \$PONS on base \(0xc661…ef6a\)\. Which one do you mean\?/);
     const group = renderEnvelope(e, G);
-    assert.equal(group, "PONS matches more than one: PONS on robinhood; PONS on bsc. Which one do you mean?");
+    assert.equal(group, "PONS matches more than one: PONS on bsc; PONS on base. Which one do you mean?");
   });
 
   it("explains same-chain ticker collisions instead of asking a group to choose between identical labels", () => {
-    const other = tokenIdentity(robinhoodChain(), `0x${"b2".repeat(20)}`)!;
+    const other = tokenIdentity(bnbChain(), `0x${"b2".repeat(20)}`)!;
     const e = env("fomo_get_token_theses", "needs-clarification", null, {
       subject: null,
       candidates: [T, other].map((token) => ({
@@ -359,7 +359,7 @@ describe("renderEnvelope", () => {
       })),
     });
     const group = renderEnvelope(e, G);
-    assert.equal(group, "Fomo lists different BOOMER tokens on Robinhood Chain. Reply with the contract address of the one you mean.");
+    assert.equal(group, "Fomo lists different BOOMER tokens on BNB Chain. Reply with the contract address of the one you mean.");
     assert.doesNotMatch(group, /Which one|0x|matches more than one:/);
     assert.ok(admitTgLine(group, { agentName: "Shogun", kind: "research", recentOwn: [] }).ok);
     const owner = renderEnvelope(e, O);
@@ -368,7 +368,7 @@ describe("renderEnvelope", () => {
   });
 
   it("a shared display label never turns conflicting chain identities into one chain", () => {
-    const unplaced = tokenIdentity(chainFromProvider(8453, "robinhood"), T.address)!;
+    const unplaced = tokenIdentity(chainFromProvider(8453, "bsc"), T.address)!;
     const e = env("fomo_get_token_theses", "needs-clarification", null, {
       subject: null,
       candidates: [T, unplaced].map((token) => ({
@@ -391,7 +391,7 @@ describe("renderEnvelope", () => {
       job: null, executionAvailability: "unsupported-venue",
     };
     const text = renderEnvelope(env("fomo_research_coin", "ok", d), O);
-    assert.match(text.split("\n")[0]!, /^\$PONS on robinhood \(0x39db…0c0d\) — AgentCap's research \(revision 3\)/);
+    assert.match(text.split("\n")[0]!, /^\$PONS on bsc \(0x39db…0c0d\) — AgentCap's research \(revision 3\)/);
     assert.match(text, /Support \(AgentCap's reading\)/);
     assert.match(text, /\(their words\)/);
     assert.match(text, /"no change" is not claimed/);
@@ -571,11 +571,11 @@ describe("review fixes", () => {
     const mint = "0xc66101b7bbddc5e8738608b393c2eac96bbfef6a";
     const e = env("fomo_get_token_activity", "ok", null, {
       evidence: [
-        { id: `fomo:token-stats/eip155:4663:${addr}@${NOW}`, kind: "token-stats", sourceUrl: null },
-        { id: `fomo:fills/${FRANK}:eip155:4663:${addr}@${NOW}`, kind: "fills", sourceUrl: null },
+        { id: `fomo:token-stats/eip155:56:${addr}@${NOW}`, kind: "token-stats", sourceUrl: null },
+        { id: `fomo:fills/${FRANK}:eip155:56:${addr}@${NOW}`, kind: "fills", sourceUrl: null },
         { id: `fomo:event/log:${tx}:3`, kind: "event", sourceUrl: null },
         { id: `fomo:holdings/${FRANK}`, kind: "holdings", sourceUrl: null },
-        { id: `fomo:token-stats/eip155:56:${mint}`, kind: "token-stats", sourceUrl: null },
+        { id: `fomo:token-stats/eip155:8453:${mint}`, kind: "token-stats", sourceUrl: null },
         { id: "fomo:thesis/th-0001", kind: "thesis", sourceUrl: null },
       ],
     });
@@ -585,7 +585,7 @@ describe("review fixes", () => {
     assert.ok(!/0x[0-9a-fA-F]{16,}/.test(refs), refs);
     assert.ok(!refs.includes(FRANK), "no full provider user id");
     assert.ok(!refs.includes(mint), "no full mint");
-    assert.match(refs, /fomo:token-stats\/eip155:4663:0x39db…0c0d@/);
+    assert.match(refs, /fomo:token-stats\/eip155:56:0x39db…0c0d@/);
     assert.match(refs, /fomo:thesis\/th-0001/);
     assert.equal(refForModel("fomo:board/trending@1"), "fomo:board/trending@1", "a ref with nothing long is unchanged");
   });
@@ -617,13 +617,13 @@ describe("the watched-trader cohort, in words", () => {
   });
 });
 
-describe("a board says what its chain filter did, and where Robinhood Chain stands (Milla, 2026-10-07)", () => {
-  const BNB = { namespace: "eip155" as const, networkId: 56, slug: "bsc" };
-  const solToken = (i: number): TokenIdentity => ({ chain: BNB, address: `So1${i}`, key: `eip155:56:So1${i}` });
+describe("a board says what its chain filter did, and where BNB Chain stands (Milla, 2026-10-07)", () => {
+  const BNB = { namespace: "eip155" as const, networkId: 8453, slug: "base" };
+  const solToken = (i: number): TokenIdentity => ({ chain: BNB, address: `So1${i}`, key: `eip155:8453:So1${i}` });
   const row = (rank: number, symbol: string, token: TokenIdentity | null, cap = 874_600) => ({
     rank, token, label: { symbol, name: symbol }, holders: null, priceUsd: null, change24hPct: null, marketCapUsd: cap, volume24hUsd: null, executionAvailability: "unknown" as never,
   });
-  const CACHE = tokenIdentity(robinhoodChain(), "0x7fe9950000000000000000000000000000000ca5")!;
+  const CACHE = tokenIdentity(bnbChain(), "0x7fe9950000000000000000000000000000000ca5")!;
   const board = (over: Partial<RankingsData>): FomoEnvelope<RankingsData> =>
     env("fomo_get_rankings", "ok", { board: "trending-tokens", window: null, basis: "x", traders: [], tokens: [], ...over } as RankingsData, { subject: { kind: "market" } });
   /** The incident: BSC on top, PONS 12th and CACHE 31st of 100. */
@@ -633,66 +633,66 @@ describe("a board says what its chain filter did, and where Robinhood Chain stan
     robinhood: { rows: 2, top: [row(12, "PONS", T, 2_080_000), row(31, "CACHE", CACHE)] },
   });
 
-  it("every chain, no Robinhood Chain row shown: three rows and that chain's best placed rows, by rank in words", () => {
+  it("every chain, no BNB Chain row shown: three rows and that chain's best placed rows, by rank in words", () => {
     const g = renderEnvelope(incident, G).split("\n");
     assert.deepEqual(g, [
       "Trending on Fomo (board position is popularity, not quality):",
-      "1. ETAC on bsc, market cap $874.6k",
-      "2. CATE on bsc, market cap $874.6k",
-      "3. STONK on bsc, market cap $874.6k",
-      "On Robinhood Chain, the chain I trade: PONS (12th), CACHE (31st).",
+      "1. ETAC on base, market cap $874.6k",
+      "2. CATE on base, market cap $874.6k",
+      "3. STONK on base, market cap $874.6k",
+      "On BNB Chain, the chain I trade: PONS (12th), CACHE (31st).",
     ]);
     // The owner sees ten rows and the same line, with her cashtags.
     const o = renderEnvelope(incident, O);
-    assert.match(o, /\n10\. \$PURR on bsc/);
-    assert.match(o, /\nOn Robinhood Chain, the chain I trade: \$PONS \(12th\), \$CACHE \(31st\)\./);
+    assert.match(o, /\n10\. \$PURR on base/);
+    assert.match(o, /\nOn BNB Chain, the chain I trade: \$PONS \(12th\), \$CACHE \(31st\)\./);
   });
 
-  it("no line when a Robinhood Chain row is already shown; 'none of the top N' when the board has none", () => {
+  it("no line when a BNB Chain row is already shown; 'none of the top N' when the board has none", () => {
     const shown = board({ tokens: [row(1, "PONS", T), row(2, "ETAC", solToken(2))], boardRows: 3, matched: 3, unplaced: 0, robinhood: { rows: 2, top: [row(1, "PONS", T)] } });
     const g = renderEnvelope(shown, G);
     assert.doesNotMatch(g, /chain I trade/);
     assert.equal(g.split("\n").length, 3);
     const none = board({ tokens: [row(1, "ETAC", solToken(1))], boardRows: 30, matched: 30, unplaced: 0, robinhood: { rows: 0, top: [] } });
-    assert.match(renderEnvelope(none, G), /\nNone of the top 30 trending coins are on Robinhood Chain, the chain I trade\.$/);
+    assert.match(renderEnvelope(none, G), /\nNone of the top 30 trending coins are on BNB Chain, the chain I trade\.$/);
   });
 
-  it("an unfiltered board's 'none on Robinhood Chain' says how many rows could not be placed on a chain (review r2)", () => {
+  it("an unfiltered board's 'none on BNB Chain' says how many rows could not be placed on a chain (review r2)", () => {
     const research = { agentName: "Shogun", kind: "research" as const, recentOwn: [] };
     const two = board({ tokens: [row(1, "ETAC", solToken(1))], boardRows: 97, matched: 97, unplaced: 2, robinhood: { rows: 0, top: [] } });
     const line = renderEnvelope(two, G).split("\n").pop()!;
-    assert.equal(line, "None of the top 97 trending coins are on Robinhood Chain, the chain I trade (2 rows could not be placed on a chain).");
+    assert.equal(line, "None of the top 97 trending coins are on BNB Chain, the chain I trade (2 rows could not be placed on a chain).");
     assert.ok(admitTgLine(line, research).ok, line);
     const one = board({ tokens: [row(1, "ETAC", solToken(1))], boardRows: 99, matched: 99, unplaced: 1, robinhood: { rows: 0, top: [] } });
     const single = renderEnvelope(one, G).split("\n").pop()!;
     assert.match(single, /the chain I trade \(1 row could not be placed on a chain\)\.$/);
     assert.ok(admitTgLine(single, research).ok, single);
     // The owner's answer says the same.
-    assert.match(renderEnvelope(two, O), /\nNone of the top 97 trending coins are on Robinhood Chain, the chain I trade \(2 rows could not be placed on a chain\)\./);
+    assert.match(renderEnvelope(two, O), /\nNone of the top 97 trending coins are on BNB Chain, the chain I trade \(2 rows could not be placed on a chain\)\./);
   });
 
   it("one chain asked: its rows under an honest header, or none of the top N on it, or an empty board", () => {
-    const hood = board({ chain: "robinhood", tokens: [row(12, "PONS", T, 2_080_000), row(31, "CACHE", CACHE)], boardRows: 100, matched: 2, unplaced: 0 });
+    const hood = board({ chain: "bsc", tokens: [row(12, "PONS", T, 2_080_000), row(31, "CACHE", CACHE)], boardRows: 100, matched: 2, unplaced: 0 });
     assert.deepEqual(renderEnvelope(hood, G).split("\n"), [
-      "Trending on Fomo, Robinhood Chain only (2 of the top 100):",
-      "12. PONS on robinhood, market cap $2.1M",
-      "31. CACHE on robinhood, market cap $874.6k",
+      "Trending on Fomo, BNB Chain only (2 of the top 100):",
+      "12. PONS on bsc, market cap $2.1M",
+      "31. CACHE on bsc, market cap $874.6k",
     ]);
-    const none = board({ chain: "robinhood", tokens: [], boardRows: 30, matched: 0, unplaced: 2 });
-    assert.equal(renderEnvelope({ ...none, status: "empty" }, G), "None of the top 30 trending coins on Fomo are on Robinhood Chain right now (2 rows could not be placed on a chain).");
+    const none = board({ chain: "bsc", tokens: [], boardRows: 30, matched: 0, unplaced: 2 });
+    assert.equal(renderEnvelope({ ...none, status: "empty" }, G), "None of the top 30 trending coins on Fomo are on BNB Chain right now (2 rows could not be placed on a chain).");
     const eth = board({ board: "graduated-tokens", chain: "eth", tokens: [], boardRows: 12, matched: 0, unplaced: 0 });
     assert.equal(renderEnvelope({ ...eth, status: "empty" }, G), "None of the top 12 newly graduated coins on Fomo are on Ethereum right now.");
-    const empty = board({ chain: "robinhood", tokens: [], boardRows: 0, matched: 0, unplaced: 0 });
+    const empty = board({ chain: "bsc", tokens: [], boardRows: 0, matched: 0, unplaced: 0 });
     assert.equal(renderEnvelope({ ...empty, status: "empty" }, G), "The trending board came back empty.");
     // An answer without the counts (built before they existed) still reads as a sentence.
-    const bare = board({ chain: "robinhood", tokens: [row(1, "PONS", T)] });
-    assert.match(renderEnvelope(bare, G), /^Trending on Fomo, Robinhood Chain only:\n1\. PONS on robinhood/);
-    assert.equal(renderEnvelope({ ...board({ chain: "bsc", tokens: [] }), status: "empty" }, G), "None of the trending coins on Fomo are on BSC right now.");
+    const bare = board({ chain: "bsc", tokens: [row(1, "PONS", T)] });
+    assert.match(renderEnvelope(bare, G), /^Trending on Fomo, BNB Chain only:\n1\. PONS on bsc/);
+    assert.equal(renderEnvelope({ ...board({ chain: "base", tokens: [] }), status: "empty" }, G), "None of the trending coins on Fomo are on Base right now.");
   });
 
   it("the trader board with a chain asked says it covers every chain, and still fits a room", () => {
     const lb = env("fomo_get_rankings", "ok", {
-      board: "traders", window: "24h", basis: "x", tokens: [], chain: "robinhood",
+      board: "traders", window: "24h", basis: "x", tokens: [], chain: "bsc",
       traders: [1, 2, 3, 4].map((rank) => ({ rank, trader: { userId: FRANK, handle: `t${rank}`, displayName: null, verified: null }, pnlUsd: 1_000 * rank, volumeUsd: null, trades: null, inCohort: null })),
     } as RankingsData, { subject: { kind: "market" } });
     const g = renderEnvelope(lb, G).split("\n");
@@ -708,9 +708,9 @@ describe("a board says what its chain filter did, and where Robinhood Chain stan
       topTokens: [{ token: T, label: { symbol: "PONS", name: null }, buyers: 5, sellers: 1 }, { token: solToken(1), label: { symbol: "ROO", name: null }, buyers: 1, sellers: 0 }],
     };
     const g = renderEnvelope(env("fomo_get_token_activity", "ok", act, { subject: { kind: "market" } }), G);
-    assert.match(g, /\nMost bought in the newest Fomo trades read: PONS on robinhood \(5 buyers\), ROO on bsc \(1 buyer\)\./);
+    assert.match(g, /\nMost bought in the newest Fomo trades read: PONS on bsc \(5 buyers\), ROO on base \(1 buyer\)\./);
     const sold = renderEnvelope(env("fomo_get_token_activity", "ok", { ...act, side: "sell", topTokens: [{ ...act.topTokens![0]!, sellers: 2 }] }, { subject: { kind: "market" } }), G);
-    assert.match(sold, /\nMost sold in the newest Fomo trades read: PONS on robinhood \(2 sellers\)\./);
+    assert.match(sold, /\nMost sold in the newest Fomo trades read: PONS on bsc \(2 sellers\)\./);
   });
 });
 
@@ -780,7 +780,7 @@ describe("a coin with no theses, in a room (review r2)", () => {
     it(`${name}: 'That is Fomo's record', every line admitted as research`, () => {
       const text = groupScrub(renderAnswer([e], { intent: "token-theses", clarification: null } as unknown as FomoQuestionPlan, G));
       const lines = text.split("\n");
-      assert.match(lines[0]!, /^No theses were returned for PONS on robinhood( in that window)?\. That is Fomo's record, not proof nobody has a view\.$/, text);
+      assert.match(lines[0]!, /^No theses were returned for PONS on bsc( in that window)?\. That is Fomo's record, not proof nobody has a view\.$/, text);
       for (const l of lines) assert.ok(admitTgLine(l, research).ok, `${name}: ${l}`);
       // The owner keeps her wording.
       assert.match(renderEnvelope(e, O), /That is the provider's record/);
@@ -809,8 +809,8 @@ describe("a coin with no theses, in a room (review r2)", () => {
     const unavailable = env("fomo_get_token_theses", "empty", { ...none, available: false, pageRows: 0 }, cov(null));
     const counted = env("fomo_get_token_theses", "empty", { ...none, pageRows: 0 }, cov(4190));
     for (const [e, want] of [
-      [unavailable, /^Fomo didn't return the theses on PONS on robinhood just now\.$/],
-      [counted, /^Fomo didn't return the theses on PONS on robinhood just now \(it lists 4,190\)\.$/],
+      [unavailable, /^Fomo didn't return the theses on PONS on bsc just now\.$/],
+      [counted, /^Fomo didn't return the theses on PONS on bsc just now \(it lists 4,190\)\.$/],
     ] as const) {
       const text = groupScrub(renderAnswer([e], { intent: "token-theses", clarification: null } as unknown as FomoQuestionPlan, G));
       assert.match(text.split("\n")[0]!, want, text);
@@ -824,13 +824,13 @@ describe("a coin with no theses, in a room (review r2)", () => {
     }
     // A windowed read whose page had theses, none in the window, is still "none in that window", whatever the all-time count.
     const windowed = env("fomo_get_token_theses", "empty", { ...none, pageRows: 25 }, { coverage: { ...cov(4190).coverage, requested: { window: "24h" } } });
-    assert.match(renderEnvelope(windowed, G), /No theses were returned for PONS on robinhood in that window/);
+    assert.match(renderEnvelope(windowed, G), /No theses were returned for PONS on bsc in that window/);
   });
 
   it("a windowed ask on a page the provider answered empty under a count is 'didn't return', never 'none in that window' (review on #306)", () => {
     const e = env("fomo_get_token_theses", "empty", { ...none, pageRows: 0 }, { coverage: { requested: { window: "24h" }, achieved: {}, pagesRequested: 1, pagesReturned: 1, itemsReturned: 0, duplicatesRemoved: 0, providerTotal: 4190, capped: true, missing: [], notes: [] } });
     const text = groupScrub(renderAnswer([e], { intent: "token-theses", clarification: null } as unknown as FomoQuestionPlan, G));
-    assert.match(text.split("\n")[0]!, /^Fomo didn't return the theses on PONS on robinhood just now\./, text);
+    assert.match(text.split("\n")[0]!, /^Fomo didn't return the theses on PONS on bsc just now\./, text);
     assert.doesNotMatch(text, /No theses were returned|in that window/, text);
     assert.doesNotMatch(text, /it lists/, "an all-time count is not the window's");
     for (const l of text.split("\n")) assert.ok(admitTgLine(l, research).ok, l);
@@ -843,7 +843,7 @@ describe("a coin with no theses, in a room (review r2)", () => {
     const offChain = env("fomo_get_token_theses", "empty", { ...none, pageRows: 25, chainFilterHonoured: false }, cov(4190, ["25 thesis row(s) were about a coin on another chain and were removed."]));
     for (const o of [G, O]) {
       const text = o === G ? groupScrub(renderAnswer([offChain], { intent: "token-theses", clarification: null } as unknown as FomoQuestionPlan, o)) : renderEnvelope(offChain, o);
-      assert.match(text.split("\n")[0]!, /^No theses were returned for \$?PONS on robinhood\b/, text);
+      assert.match(text.split("\n")[0]!, /^No theses were returned for \$?PONS on bsc\b/, text);
       assert.doesNotMatch(text, /didn't return|it lists/, text);
     }
     // A trader's theses on one coin: that route's total is the coin's, not the trader's.
@@ -885,7 +885,7 @@ describe("a coin's theses in a room: what they argue, not counts (plan WP9 P1, D
   it("the rich fixture: for, against, what it is about, how much was read; every line through the gate as research", () => {
     const text = renderEnvelope(RICH, G);
     const lines = text.split("\n");
-    assert.equal(lines[0], "What traders on Fomo are saying about PONS on Robinhood Chain (25 theses read from 20 traders):");
+    assert.equal(lines[0], "What traders on Fomo are saying about PONS on BNB Chain (25 theses read from 20 traders):");
     assert.match(lines[1]!, /^For it: it's still early, a strong community/);
     assert.match(lines[2]!, /^Against it: .*fears it could collapse/);
     assert.match(lines[3]!, /^Topics mentioned: /);
@@ -957,7 +957,7 @@ describe("a coin's theses in a room: what they argue, not counts (plan WP9 P1, D
       assert.match(text, /posts: Aug 11 to Sep 4, 2026 UTC/);
       assert.match(text, /Data age: 2h/);
       assert.match(text, /Not read: older posts/);
-      assert.match(text, /BOOMERLONGNAMETWENTYY on Robinhood Chain/);
+      assert.match(text, /BOOMERLONGNAMETWENTYY on BNB Chain/);
       assert.equal(text.includes("For it:"), text.includes("Against it:"), "a shortened mixed read preserves both sides or neither");
       for (const line of text.split("\n")) assert.ok(admitTgLine(line, { agentName: "Shogun", kind: "research", recentOwn: [] }).ok, line);
     }
@@ -972,7 +972,7 @@ describe("a coin's theses in a room: what they argue, not counts (plan WP9 P1, D
     const full = renderEnvelope(RICH, G).split("\n");
     const maxChars = [full[0], full[1], full.at(-1)].join("\n").length;
     for (const text of [renderEnvelope(RICH, { ...G, maxChars }), renderAnswer([RICH], null, { ...G, maxChars })]) {
-      assert.match(text, /PONS on Robinhood Chain/);
+      assert.match(text, /PONS on BNB Chain/);
       assert.match(text, /Their claims, not facts/);
       assert.doesNotMatch(text, /For it:|Against it:/);
       assert.ok(text.length <= maxChars);

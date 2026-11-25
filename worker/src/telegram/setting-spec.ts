@@ -19,14 +19,12 @@
  *
  * It deliberately does NOT cover:
  *   - switches that start spending real money where none was being spent
- *     (`liveTradingEnabled`, `trencherLiveEnabled`, `scoutEnabled`,
- *     `classSnipeEnabled`) — the step from practice to real money stays a
- *     dashboard act, as chat-settings.test.ts has always pinned;
+ *     (`liveTradingEnabled`, `trencherLiveEnabled`, `scoutEnabled`) — the
+ *     step from practice to real money stays a dashboard act, as chat-settings.test.ts has always pinned;
  *   - letting the agent post on the owner's X account, which needs a
  *     warning naming that account (DASHBOARD_ONLY.xPosting);
  *   - the floors that protect against manipulated prices
- *     (`minPoolLiquidityUsdg`, `maxPriceDivergenceBps`, `maxImpactBps`,
- *     `classMinDepthUsdg`) — lowering one is how a pushed price gets through;
+ *     (`minPoolLiquidityUsdg`, `maxPriceDivergenceBps`, `maxImpactBps`) — lowering one is how a pushed price gets through;
  *   - anything remote-execution, secret, house-owned, the allowlist, transfers,
  *     or Telegram's own on/off switches;
  *   - how it behaves in Telegram groups (DASHBOARD_ONLY.telegramGroups), since
@@ -72,12 +70,7 @@ export interface SettingSpec {
   values?: readonly string[];
   /** One line on what it does, for the list and for the model. */
   help: string;
-  /**
-   * What a stored 0 means, when it is not "none": "no limit". Without it
-   * /settings printed "max launch coins held: 0", and the agent reading that
-   * list told an owner to raise it before launchpad buying could buy, when 0
-   * is the one value that never blocks a buy.
-   */
+  /** What a stored 0 means, when it is not "none": "no limit". */
   zero?: string;
 }
 
@@ -87,8 +80,6 @@ export const SETTING_SPECS: readonly SettingSpec[] = Object.freeze([
   { key: "buyPerTickUsdg", label: "amount per buy", kind: "usd", min: 1, max: 100_000, help: "how much I put into each buy" },
   { key: "llmMaxActionUsdg", label: "max per AI trade", kind: "usd", min: 1, max: 100_000, help: "the most one AI-chosen trade can use" },
   { key: "telegramMaxActionUsdg", label: "max per chat trade", kind: "usd", min: 1, max: 100_000, help: "the most one /buy or /sell from this chat can use" },
-  { key: "classPerEntryUsdg", label: "amount per launch coin", kind: "usd", min: 0, max: 1_000_000, help: "how much I put into each new launchpad coin", zero: "$0.00 (launchpad buying buys nothing)" },
-  { key: "idleFloorUsdg", label: "cash kept aside", kind: "usd", min: 0, max: 1_000_000, help: "cash I never trade with" },
   { key: "gapEnterBudgetUsdg", label: "weekend-gap budget", kind: "usd", min: 1, max: 1_000_000, help: "what the weekend-gap strategy may use" },
   { key: "takeProfitBps", label: "take profit at", kind: "pct", min: 0, max: 1_000_000, help: "sell a holding once it is up this much (0 = off)" },
   { key: "strategistStopLossBps", label: "stop loss at", kind: "pct", min: 0, max: 10_000, help: "sell a holding once it is down this much (0 = off)" },
@@ -98,11 +89,6 @@ export const SETTING_SPECS: readonly SettingSpec[] = Object.freeze([
   { key: "assetMode", label: "what I may buy", kind: "enum", values: ["all", "stocks", "crypto"], help: "all, stocks only, or crypto only" },
   { key: "basketSymbols", label: "basket", kind: "symbols", help: "the stock tokens the basket strategy buys" },
   { key: "officialCoinsEnabled", label: "official coins", kind: "bool", help: "trade the chain's official coins" },
-  // min 1, not the resolver's 0: stored 0 means NO LIMIT, so a chat "0" meant
-  // as "none" would have removed the ceiling. "No limit" stays a dashboard act.
-  { key: "classMaxPositions", label: "max launch coins held", kind: "int", min: 1, max: 1_000, help: "how many launchpad coins I hold at once (0, set on the dashboard, means no limit)", zero: "no limit" },
-  { key: "classMaxHoldSec", label: "longest launch-coin hold", kind: "hoursAsSec", min: 60, max: 30 * 86_400, help: "sell a launchpad coin after this long" },
-  { key: "classExitAtGraduationPct", label: "sell launch coins at % to graduation", kind: "int", min: 1, max: 100, help: "sell before the coin leaves the launchpad" },
   { key: "discoveryEnabled", label: "new-coin scanning", kind: "bool", help: "look for newly launched coins" },
   { key: "discoveryIntervalMin", label: "minutes between new-coin scans", kind: "int", min: 1, max: 1_440, help: "how often I scan for new coins" },
   { key: "telegramNotifyEveryMin", label: "trade message batching (minutes)", kind: "int", min: 0, max: 1_440, help: "0 = a message per trade, otherwise one summary every N minutes", zero: "off (a message per trade)" },
@@ -117,19 +103,6 @@ export const DASHBOARD_ONLY: Readonly<Record<string, string>> = Object.freeze({
   liveTrading: "Switching between practice and real money is only done in Settings on the dashboard, so nobody who gets into this chat can start spending your funds.",
   memecoinLive: "Letting the memecoin strategy use real money is only switched on in Settings on the dashboard.",
   scout: "Buying brand-new coins that have no price yet is only switched on in Settings on the dashboard.",
-  /**
-   * SAYS WHERE, AND WHAT ELSE IT NEEDS. "Only switched on in Settings" sent an
-   * owner to a page where nothing was called launchpad anything: the switch sat
-   * in a closed group under the name "class route", and the agent, asked where,
-   * guessed "near the real money switch". The button under this reply opens
-   * that group (settings-chat.ts DASHBOARD_ANCHORS). The rest is what keeps a
-   * switched-on route from buying (chat-tools.ts launchpadStillNeeded checks
-   * each one for this owner), so the owner is not sent back a second time.
-   */
-  launchSniping:
-    "I can't switch launchpad buying on or off from chat. It's on the dashboard: Settings → Custom tokens & discovery → tick \"launchpad buying (class route)\". The button below opens it. " +
-    "It only buys once these are set too: scout mode on (just above it), with a scout budget and a \"max per token\" each at least one launch buy; live trading on; and a \"Class vault factory contract\" under Advanced settings → Connections, then your key re-signed. " +
-    "Ask me what's still missing and I'll check.",
   safetyFloors: "The safety checks that stop me buying at a manipulated price (pool depth, price jumps, price impact) are only changed in Settings on the dashboard.",
   customTokens: "Adding a token by its address is done in Settings on the dashboard.",
   aiProvider: "The AI provider and its key are set in Settings on the dashboard.",

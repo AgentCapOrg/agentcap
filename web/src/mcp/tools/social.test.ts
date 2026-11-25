@@ -131,7 +131,7 @@ function installIdentities(o: { down?: boolean } = {}) {
 
 function agentRow(d: TestDb, account: string, owner: string, o: { name?: string; mode?: string; chainId?: number } = {}) {
   d.raw.prepare(`INSERT INTO agents (smart_account, name, owner_address, session_key_address, chain_id, caps, granted_at, expires_at, status, mode, beat_at, epoch)
-    VALUES (?, ?, ?, '0x1', ?, '{}', 1700000000, 4102444800, 'active', ?, ?, 1)`).run(account, o.name ?? "Agent", owner, o.chainId ?? 4663, o.mode ?? "live", NOW - 30);
+    VALUES (?, ?, ?, '0x1', ?, '{}', 1700000000, 4102444800, 'active', ?, ?, 1)`).run(account, o.name ?? "Agent", owner, o.chainId ?? 56, o.mode ?? "live", NOW - 30);
 }
 
 interface TradeSeed {
@@ -436,7 +436,7 @@ test("share_trade_summary (public book): confirmed trades only, measured realize
   const sell1 = s.trades.find((t: any) => t.trade_id === String(ids.sell1));
   assert.equal(sell1.verified_on_chain, true);
   assert.equal(sell1.tx_hash, txh(2));
-  assert.equal(sell1.explorer_url, `${explorerFor(4663)}/tx/${txh(2)}`);
+  assert.equal(sell1.explorer_url, `${explorerFor(56)}/tx/${txh(2)}`);
   assert.equal(sell1.size_usdg, 12);
   assert.equal(sell1.realized_pnl_usdg, 2);
   assert.equal(sell1.realized_return_pct, 20);
@@ -449,7 +449,7 @@ test("share_trade_summary (public book): confirmed trades only, measured realize
   // The text carries the same figures and the links, and says practice is not included.
   assert.match(s.text, /Trades confirmed on .+: 4 \(2 buys, 2 sells\)/);
   assert.match(s.text, /\+20\.00% \(\+\$2\.00\)/);
-  assert.ok(s.text.includes(`${explorerFor(4663)}/tx/${txh(2)}`));
+  assert.ok(s.text.includes(`${explorerFor(56)}/tx/${txh(2)}`));
   assert.match(s.text, /Practice \(paper, simulated money, not real\): 2 fills.*Not included above/);
   assert.ok(!/\$1,?00[02]/.test(s.text), "the practice dollars never appear, alone or added to the real ones");
   assert.match(s.text, /\+1000\.00% on measured practice sells\. Not included above/);
@@ -493,7 +493,7 @@ test("share_trade_summary (private book): no dollar figure anywhere, percentages
 
   const asked = await call("share_trade_summary", { period: "day", include_links: true }, a);
   assert.equal(asked.sc.privacy.links_in_text, true);
-  assert.ok(asked.sc.text.includes(`${explorerFor(4663)}/tx/`));
+  assert.ok(asked.sc.text.includes(`${explorerFor(56)}/tx/`));
   assert.ok(asked.sc.warnings.some((w: string) => /explorer link/.test(w)), "asking for links on a private book is warned what a link shows");
   assert.deepEqual(dollarFields(asked.sc).filter(([, v]) => v !== null), []);
 });
@@ -567,7 +567,7 @@ test("share_trade_summary: another owner's trade id reads exactly like one that 
 });
 
 test("share_trade_summary: input rules, scope, testnet labelling, and untrusted symbols", async () => {
-  const { d, a } = await setup({ publicBookA: true, agentA: agentFixture(SLUG_A, ACCOUNT_A, { chainId: 46630 }) });
+  const { d, a } = await setup({ publicBookA: true, agentA: agentFixture(SLUG_A, ACCOUNT_A, { chainId: 97 }) });
   trade(d, ACCOUNT_A, { status: "landed", sell: USDG, buy: T1, side: "buy", qty: "1", cash: 2, source: "receipt", symbol: "NV\u202eDA", op: oph(40), tx: txh(40), at: NOW - 60 });
 
   const both = await call("share_trade_summary", { trade_id: "1", period: "day" }, a);
@@ -582,7 +582,7 @@ test("share_trade_summary: input rules, scope, testnet labelling, and untrusted 
   assert.equal(r.sc.network.real_money, false);
   assert.equal(r.sc.real.money, "testnet");
   assert.equal(r.sc.trades[0].money, "testnet");
-  assert.ok(r.sc.trades[0].explorer_url.startsWith(`${explorerFor(46630)}/tx/`));
+  assert.ok(r.sc.trades[0].explorer_url.startsWith(`${explorerFor(97)}/tx/`));
   assert.ok(r.sc.warnings.some((w: string) => /test funds/.test(w)));
   assert.match(r.sc.text, /test funds/);
   assert.equal(r.sc.trades[0].symbol, "NVDA", "the bidi override is stripped from the structured symbol");
@@ -604,7 +604,7 @@ test("share_trade_summary: post_line is held to the group chat's gate, and is nu
   const { d, a } = await setup({ publicBookA: false });
   seedShare(d);
   const ok = await call("share_trade_summary", { period: "day" }, a);
-  assert.equal(ok.sc.post_line, "Robin: 4 trades confirmed on Robinhood Chain in the last 24 hours, +20.00% realised on 1 measured sell, plus 2 practice (paper) fills, not counted.");
+  assert.equal(ok.sc.post_line, "Robin: 4 trades confirmed on BNB Smart Chain in the last 24 hours, +20.00% realised on 1 measured sell, plus 2 practice (paper) fills, not counted.");
 
   // An agent name that reads as a link would be refused by draft_post, so no line is offered.
   d.raw.prepare("UPDATE agents SET name = ? WHERE smart_account = ?").run("Robin of scam.com", ACCOUNT_A);

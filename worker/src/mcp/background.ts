@@ -30,7 +30,7 @@
  * bounds do not reach is in boundedDb's comment.
  */
 import { createPublicClient, http } from "viem";
-import { robinhoodChain } from "../../../packages/core/src/index";
+import { bnbChain } from "../../../packages/core/src/index";
 import type { Db } from "../db";
 import { ensureMcpSchema } from "./schema";
 import { JOB_LIMITS, oracleFeedReader, runMcpJobsPass } from "./jobs";
@@ -257,7 +257,7 @@ export function makeMcpBackground(o: McpBackgroundOptions): () => void {
     });
     start("notify", async (db) => {
       notifyDeps ??= hostedNotifyDeps(db, {
-        price: chainlinkPriceReader(createPublicClient({ chain: robinhoodChain, transport: http(o.rpcUrl) }) as never),
+        price: chainlinkPriceReader(createPublicClient({ chain: bnbChain, transport: http(o.rpcUrl) }) as never),
         log: o.log,
       });
       await runNotifyPass(db, notifyDeps);

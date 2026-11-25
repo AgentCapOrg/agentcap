@@ -29,9 +29,6 @@ const ACCOUNT = "0x00000000000000000000000000000000000a11ce" as const;
 const OTHER_ACCOUNT = "0x00000000000000000000000000000000000b0b00" as const;
 const KEY = `0x${"1a".repeat(40)}` as `0x${string}`;
 const OTHER_KEY = `0x${"2b".repeat(40)}` as `0x${string}`;
-const EXTRA = { symbol: "CATE", address: "0x0000000000000000000000000000000000ca7e00" as const, decimals: 18 };
-const EXTRA2 = { symbol: "UBIK", address: "0x0000000000000000000000000000000000ca7e02" as const, decimals: 18 };
-const EXTRA3 = { symbol: "NEON", address: "0x0000000000000000000000000000000000ca7e03" as const, decimals: 18 };
 
 /** A previous grant's public projection carrying perps, as GET /api/grants returns it. */
 const withPerps = (account: string, key: string = KEY, extra: Record<string, unknown> = {}) => ({
@@ -210,40 +207,15 @@ describe("the decision", () => {
 describe("through the real signer", () => {
   const passes = (g: StoredGrant) => assert.deepEqual(checkCanonicalWall(g as unknown as Record<string, unknown>), { ok: true });
 
-  it("a re-sign carries the key forward from the server's PUBLIC projection alone", async () => {
-    const { grant: first } = await signerGrant({ account: ACCOUNT, perp: { apiPublicKey: KEY, apiKeySealed: "blob" } });
-    passes(first);
-    // What a second browser or the phone sees: publicGrantView drops the blob.
-    const projection = publicGrantView(first);
-    assert.equal((projection.perp as Record<string, unknown> | undefined)?.apiKeySealed, undefined);
-    const { grant: again } = await signerGrant({ account: ACCOUNT, previousGrant: projection });
-    passes(again);
-    assert.ok(again.grantFeatures?.includes(GRANT_PERP_LIGHTER), "the marker is carried");
-    assert.deepEqual(again.perp, { route: GRANT_PERP_LIGHTER, apiKeyIndex: 16, apiPublicKey: KEY });
-    assert.notEqual(again.sessionKeyAddress, first.sessionKeyAddress, "it is still a new signature");
-  });
-
-  it("a carried perps block that no longer fits is REFUSED with its remedy, never dropped", async () => {
+  it("on BNB Chain a re-sign that would carry a key forward is REFUSED, never signed without it", async () => {
+    // There is no Lighter here, and a signature that quietly left the key out
+    // would leave a registered key with no worker. So it refuses, by name.
     await assert.rejects(
-      signerGrant({ account: ACCOUNT, previousGrant: withPerps(ACCOUNT), extraTokens: [EXTRA, EXTRA2, EXTRA3] }),
-      (e: unknown) =>
-        e instanceof PerpSigningRefusal &&
-        e.code === "perp-does-not-fit" &&
-        /Remove some tokens/.test(e.message) &&
-        /turn perpetuals off/.test(e.message) &&
-        /has not been replaced/.test(e.message),
+      signerGrant({ account: ACCOUNT, previousGrant: withPerps(ACCOUNT) }),
+      (e: unknown) => e instanceof PerpSigningRefusal && e.code === "perp-off-mainnet" && /has not been replaced/.test(e.message),
     );
-    // And a new opt-in that does not fit is refused too — the owner chooses.
-    await refusedAsync(signerGrant({ account: ACCOUNT, perp: { apiPublicKey: KEY }, trencher: true, extraTokens: [EXTRA] }), "perp-does-not-fit");
-  });
-
-  it("energy is what gives way: a default wall with perps drops the energy buy, not perps", async () => {
-    const { grant: plain } = await signerGrant({ account: ACCOUNT });
-    assert.ok(plain.grantFeatures?.includes("energy-buy-v1"), "premise: the default wall carries the energy buy");
-    const { grant } = await signerGrant({ account: ACCOUNT, perp: { apiPublicKey: KEY } });
-    assert.ok(grant.grantFeatures?.includes(GRANT_PERP_LIGHTER));
-    assert.ok(!grant.grantFeatures?.includes("energy-buy-v1"), "no room for both on a first install — energy gave way");
-    passes(grant);
+    // And a new opt-in is refused too.
+    await refusedAsync(signerGrant({ account: ACCOUNT, perp: { apiPublicKey: KEY } }), "perp-off-mainnet");
   });
 
   it("dropping through the real signer: refused unless flat, then a wall without perps", async () => {
@@ -256,8 +228,8 @@ describe("through the real signer", () => {
     passes(grant);
   });
 
-  it("off mainnet, and another account's armed perps, refuse before any signature", async () => {
-    await refusedAsync(signerGrant({ account: ACCOUNT, perp: { apiPublicKey: KEY }, chainId: 46630 }), "perp-off-mainnet");
+  it("off Lighter's chain, and another account's armed perps, refuse before any signature", async () => {
+    await refusedAsync(signerGrant({ account: ACCOUNT, perp: { apiPublicKey: KEY }, chainId: 97 }), "perp-off-mainnet");
     await refusedAsync(signerGrant({ account: ACCOUNT, previousGrant: withPerps(OTHER_ACCOUNT) }), "perp-other-account");
   });
 });

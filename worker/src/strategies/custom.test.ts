@@ -135,7 +135,7 @@ describe("makeCustomStrategy — hot-loaded, crash-isolated", () => {
     // Rewrite the file with a real intent and force a different mtime.
     writeFileSync(
       file,
-      `export default { tick: () => [{ kind: "vault-deposit", target: "${ROUTER}", amountUsdg: 7n }] }`,
+      `export default { tick: () => [{ kind: "swap", target: "${ROUTER}", sellToken: "${ROUTER}", buyToken: "${ROUTER}", sellAmountRaw: 7n, notionalUsdg: 7n }] }`,
     );
     const future = new Date(Date.now() + 5_000);
     const { utimesSync } = await import("node:fs");
@@ -143,6 +143,6 @@ describe("makeCustomStrategy — hot-loaded, crash-isolated", () => {
 
     const intents = await run(s, snap());
     assert.equal(intents.length, 1);
-    assert.equal(intents[0]!.kind, "vault-deposit");
+    assert.equal(intents[0]!.kind, "swap");
   });
 });

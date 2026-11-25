@@ -8,13 +8,16 @@ import { trencherStrategyTerms } from "./strategy-terms";
 import { trenchBrainPersona } from "./trencher-brain";
 import { withAgentBrief } from "./agent-brief";
 
+// 6dp micro figures, scaled to 18dp USDT base units.
+const MICRO = 10n ** 12n;
+
 const TOKEN = `0x${"a".repeat(40)}` as const;
 const OTHER = `0x${"b".repeat(40)}` as const;
-const quote = (amountOut: bigint) => ({ amountOut, fee: 3000, gasEstimate: 100_000n });
+const quote = (amountOut: bigint) => ({ amountOut, fee: 3000, gasEstimate: (100_000n * MICRO) });
 const args = {
   client: {} as PublicClient, token: TOKEN,
-  facts: { token0: CASH.USDG, token1: TOKEN, fee: 3000 },
-  sizeUsdg: 2_500_000n, gasPerOperationUsdg: 10_000n, tradeFeeBps: 25,
+  facts: { token0: CASH.USDT, token1: TOKEN, fee: 3000 },
+  sizeUsdg: (2_500_000n * MICRO), gasPerOperationUsdg: (10_000n * MICRO), tradeFeeBps: 25,
 };
 
 test("research opt-in binds exact account addresses and accepts no wildcard or prefix", () => {
@@ -36,11 +39,11 @@ test("the boot line names the allowlisted accounts and only counts what is not a
 });
 
 test("research sizing cannot exceed the strategy, signed cap, remaining daily spend, cash or early bound", () => {
-  assert.equal(researchEntrySize([2_500_000n, 10_000_000n, 50_000_000n, 100_000_000n]), 2_500_000n);
-  assert.equal(researchEntrySize([2_500_000n, 1_000_000n, 50_000_000n]), 1_000_000n);
-  assert.equal(researchEntrySize([2_500_000n, 10_000_000n, 750_000n]), 750_000n);
-  assert.equal(researchEntrySize([2_500_000n, 0n]), 0n);
-  assert.equal(researchEntrySize([2_500_000n, -1n]), 0n);
+  assert.equal(researchEntrySize([(2_500_000n * MICRO), (10_000_000n * MICRO), (50_000_000n * MICRO), (100_000_000n * MICRO)]), (2_500_000n * MICRO));
+  assert.equal(researchEntrySize([(2_500_000n * MICRO), (1_000_000n * MICRO), (50_000_000n * MICRO)]), (1_000_000n * MICRO));
+  assert.equal(researchEntrySize([(2_500_000n * MICRO), (10_000_000n * MICRO), (750_000n * MICRO)]), (750_000n * MICRO));
+  assert.equal(researchEntrySize([(2_500_000n * MICRO), 0n]), 0n);
+  assert.equal(researchEntrySize([(2_500_000n * MICRO), -1n]), 0n);
   assert.equal(researchEntrySize([]), 0n);
 });
 
@@ -48,11 +51,11 @@ test("quotes the exact entry output back to cash, counting two gas costs and bot
   const calls: { tokens: readonly string[]; amount: bigint }[] = [];
   const text = await entryCostEvidence(args, { quote: async (route, amount) => {
     calls.push({ tokens: route.tokens, amount });
-    return quote(calls.length === 1 ? 1_234_000n : 2_450_000n);
+    return quote(calls.length === 1 ? (1_234_000n * MICRO) : (2_450_000n * MICRO));
   } });
   assert.deepEqual(calls, [
-    { tokens: [CASH.USDG, TOKEN], amount: 2_500_000n },
-    { tokens: [TOKEN, CASH.USDG], amount: 1_234_000n },
+    { tokens: [CASH.USDT, TOKEN], amount: (2_500_000n * MICRO) },
+    { tokens: [TOKEN, CASH.USDT], amount: (1_234_000n * MICRO) },
   ]);
   assert.match(text, /2\.450000 USDG back/);
   assert.match(text, /turnover fees for both legs: 0\.012375 USDG/);
@@ -65,14 +68,14 @@ test("quotes the exact entry output back to cash, counting two gas costs and bot
 
 test("WETH bridge search is bounded and reverses the winning route's fee order", async () => {
   const calls: { tokens: readonly string[]; fees: readonly number[]; amount: bigint }[] = [];
-  const text = await entryCostEvidence({ ...args, facts: { token0: TOKEN, token1: CASH.WETH, fee: 10000 } }, {
+  const text = await entryCostEvidence({ ...args, facts: { token0: TOKEN, token1: CASH.WBNB, fee: 10000 } }, {
     quote: async (route, amount) => {
       calls.push({ ...route, amount });
-      return quote(route.tokens[0] === CASH.USDG ? BigInt(route.fees[0]!) : 2_400_000n);
+      return quote(route.tokens[0] === CASH.USDT ? BigInt(route.fees[0]!) : (2_400_000n * MICRO));
     },
   });
   assert.equal(calls.length, 5);
-  assert.deepEqual(calls.at(-1), { tokens: [TOKEN, CASH.WETH, CASH.USDG], fees: [10000, 10000], amount: 10000n });
+  assert.deepEqual(calls.at(-1), { tokens: [TOKEN, CASH.WBNB, CASH.USDT], fees: [10000, 10000], amount: 10000n });
   assert.match(text, /2\.400000 USDG back/);
 });
 
@@ -81,14 +84,14 @@ test("missing or failed exit quotes are unknown, not evidence of a cheap trade",
   const text = await entryCostEvidence(args, { quote: async () => ++calls === 1 ? quote(100n) : null });
   assert.match(text, /unavailable/);
   assert.doesNotMatch(text, /0\.00|drag:/);
-  const missingGas = await entryCostEvidence({ ...args, gasPerOperationUsdg: null }, { quote: async route => quote(route.tokens[0] === TOKEN ? 2_490_000n : 100n) });
+  const missingGas = await entryCostEvidence({ ...args, gasPerOperationUsdg: null }, { quote: async route => quote(route.tokens[0] === TOKEN ? (2_490_000n * MICRO) : 100n) });
   assert.match(missingGas, /gas for two operations: unknown/);
   assert.match(missingGas, /Total round-trip drag is unknown/);
 });
 
 test("unknown, unsupported and mismatched verified pool facts make no quote requests", async () => {
   let calls = 0;
-  for (const facts of [undefined, { token0: OTHER, token1: CASH.USDG, fee: 3000 }, { token0: TOKEN, token1: OTHER, fee: 3000 }]) {
+  for (const facts of [undefined, { token0: OTHER, token1: CASH.USDT, fee: 3000 }, { token0: TOKEN, token1: OTHER, fee: 3000 }]) {
     assert.match(await entryCostEvidence({ ...args, facts }, { quote: async () => { calls++; return null; } }), /unavailable/);
   }
   assert.equal(calls, 0);
@@ -112,12 +115,12 @@ test("a budget miss returns promptly and late entry evidence cannot start an exi
 // ─── The momentum entry plan (research accounts, entry reviews) ──────────
 
 test("cost research returns the figures its sentence states, and none when the sentence says unknown", async () => {
-  const deps = { now: () => 1_800_000_000_000, quote: async (route: { tokens: readonly string[] }) => quote(route.tokens[0] === TOKEN ? 2_450_000n : 1_234_000n) };
+  const deps = { now: () => 1_800_000_000_000, quote: async (route: { tokens: readonly string[] }) => quote(route.tokens[0] === TOKEN ? (2_450_000n * MICRO) : (1_234_000n * MICRO)) };
   const quoted = await entryCostResearch(args, deps);
-  assert.deepEqual([quoted.sizeUsdg, quoted.backUsdg, quoted.dragUsdg], [2_500_000n, 2_450_000n, 82_375n]);
+  assert.deepEqual([quoted.sizeUsdg, quoted.backUsdg, quoted.dragUsdg], [(2_500_000n * MICRO), (2_450_000n * MICRO), (82_375n * MICRO)]);
   assert.match(quoted.text, /round-trip drag: 0\.082375 USDG/);
-  const noGas = await entryCostResearch({ ...args, gasPerOperationUsdg: null }, { quote: async route => quote(route.tokens[0] === TOKEN ? 2_450_000n : 1_234_000n) });
-  assert.equal(noGas.backUsdg, 2_450_000n);
+  const noGas = await entryCostResearch({ ...args, gasPerOperationUsdg: null }, { quote: async route => quote(route.tokens[0] === TOKEN ? (2_450_000n * MICRO) : (1_234_000n * MICRO)) });
+  assert.equal(noGas.backUsdg, (2_450_000n * MICRO));
   assert.equal(noGas.dragUsdg, null, "drag unknown in the text, unknown in the figures");
   const none = await entryCostResearch({ ...args, facts: undefined });
   assert.match(none.text, /unavailable/);
@@ -125,9 +128,9 @@ test("cost research returns the figures its sentence states, and none when the s
   assert.equal(await entryCostEvidence(args, deps), quoted.text, "the text API is the same sentence");
 });
 
-const fallback = { sizeUsdg: 2_500_000n, gasPerOperationUsdg: 10_000n, tradeFeeBps: 25 };
+const fallback = { sizeUsdg: (2_500_000n * MICRO), gasPerOperationUsdg: (10_000n * MICRO), tradeFeeBps: 25 };
 /** The quoted round trip of the cost tests above: 50,000 venue friction, 12,375 turnover fees, 20,000 gas. */
-const sane = { sizeUsdg: 2_500_000n, backUsdg: 2_450_000n, dragUsdg: 82_375n };
+const sane = { sizeUsdg: (2_500_000n * MICRO), backUsdg: (2_450_000n * MICRO), dragUsdg: (82_375n * MICRO) };
 /** The odds threshold a brief prints, as a number. */
 const threshold = (brief: string) => Number(/P is above (?:at least )?about (\d+)%/.exec(brief)?.[1]);
 
@@ -148,20 +151,20 @@ test("break-even: brackets run from the fill, so each exit pays the exit leg, bo
 
 test("an anomalous quote is not a cost: more back than went in, or a drag under the gas-and-fee floor, falls back — never negative", () => {
   for (const anomaly of [
-    { sizeUsdg: 2_500_000n, backUsdg: 2_600_000n, dragUsdg: -67_625n },
-    { sizeUsdg: 2_500_000n, backUsdg: 2_500_000n, dragUsdg: 1_000n },
+    { sizeUsdg: (2_500_000n * MICRO), backUsdg: (2_600_000n * MICRO), dragUsdg: -(67_625n * MICRO) },
+    { sizeUsdg: (2_500_000n * MICRO), backUsdg: (2_500_000n * MICRO), dragUsdg: (1_000n * MICRO) },
   ]) {
     const be = trenchBreakEven(anomaly, fallback);
     assert.equal(be.basis, "gas-and-fees");
     assert.ok(be.roundTripPct >= 0 && be.bracketCostPct >= 0);
-    const brief = trenchMomentumBrief(TRENCHER_FAST, be, 2_500_000n);
+    const brief = trenchMomentumBrief(TRENCHER_FAST, be, (2_500_000n * MICRO));
     assert.doesNotMatch(brief, /-\d+(\.\d+)?% in gas|about -|least -/, "no negative cost printed");
     assert.ok(threshold(brief) >= 100 * 1_000 / (1_000 + 2_000), "never below stop / (take + stop)");
   }
 });
 
 test("the momentum brief reads its exits from the strategy, states where the brackets run from, and keeps every check", () => {
-  const brief = trenchMomentumBrief(TRENCHER_FAST, trenchBreakEven(sane, fallback), 2_500_000n);
+  const brief = trenchMomentumBrief(TRENCHER_FAST, trenchBreakEven(sane, fallback), (2_500_000n * MICRO));
   assert.match(brief, /Horizon: minutes, not days/);
   assert.match(brief, /stop -10%, take \+20%, close at 30 minutes, or early if 50% of entry liquidity drains/);
   assert.match(brief, /Brackets run from your average fill, which includes the entry leg's venue cost/);
@@ -176,11 +179,11 @@ test("the momentum brief reads its exits from the strategy, states where the bra
   assert.match(brief, /Missing news, fundamentals or social-media data is not by itself a reason to hold here/);
   assert.match(brief, /All checks above still apply\.$/);
   // NOT HARDCODED: another config says other numbers.
-  const other = trenchMomentumBrief({ stopLossBps: 1_500, takeProfitBps: 3_000, maxHoldSec: 45 * 60, liquidityDrainFraction: 0.6 }, { basis: "unknown" }, 1_000_000n);
+  const other = trenchMomentumBrief({ stopLossBps: 1_500, takeProfitBps: 3_000, maxHoldSec: 45 * 60, liquidityDrainFraction: 0.6 }, { basis: "unknown" }, (1_000_000n * MICRO));
   assert.match(other, /stop -15%, take \+30%, close at 45 minutes, or early if 40% of entry liquidity drains/);
   assert.match(other, /c could not be priced; treat a marginal setup as insufficient/);
   assert.match(other, /clearly above 33% at s = 15, 43% at s = 22\.5, plus the unknown cost/);
-  const floor = trenchMomentumBrief(TRENCHER_FAST, trenchBreakEven(null, fallback), 2_500_000n);
+  const floor = trenchMomentumBrief(TRENCHER_FAST, trenchBreakEven(null, fallback), (2_500_000n * MICRO));
   assert.match(floor, /costs at least 1\.3% in gas and turnover fees \(venue fee and impact not quoted\)/);
   assert.match(floor, /P is above at least about 38%/, "a floor's threshold is a floor too");
 });
@@ -193,7 +196,7 @@ test("the momentum plan and the desk policy state the same exits, the same s and
   const num = (t: string, re: RegExp) => Number(re.exec(t)?.[1]);
   for (const cfg of [TRENCHER_FAST, TRENCHER_DEFAULTS, { ...TRENCHER_FAST, stopLossBps: 1_250, takeProfitBps: 3_000 }]) {
     const terms = trencherStrategyTerms(cfg)!.terms!;
-    const unknown = trenchMomentumBrief(cfg, { basis: "unknown" }, 2_500_000n);
+    const unknown = trenchMomentumBrief(cfg, { basis: "unknown" }, (2_500_000n * MICRO));
     const stop = num(terms, /triggers at -([\d.]+)% \(stop-loss\)/), take = num(terms, /and \+([\d.]+)% \(take-profit\)/);
     const realised = num(terms, /average realised stop of -([\d.]+)%/);
     assert.ok(unknown.includes(`stop -${stop}%, take +${take}%`), "the same triggers");
@@ -213,18 +216,18 @@ test("the momentum plan and the desk policy state the same exits, the same s and
   // With a priced c, the brief's bars are the terms' formula at that c.
   const be = trenchBreakEven(sane, fallback);
   if (be.basis !== "quoted") throw new Error("quoted");
-  const brief = trenchMomentumBrief(TRENCHER_FAST, be, 2_500_000n);
+  const brief = trenchMomentumBrief(TRENCHER_FAST, be, (2_500_000n * MICRO));
   assert.equal(threshold(brief), Math.round(100 * (10 + be.bracketCostPct) / 30));
   assert.ok(brief.includes(`, ${Math.round(100 * (15 + be.bracketCostPct) / 35)}% at s = 15;`));
 });
 
 test("when the take-profit cannot cover the cost, no odds threshold is printed; a printed one stays under 100%", () => {
-  const dear = trenchBreakEven(null, { ...fallback, gasPerOperationUsdg: 400_000n });
+  const dear = trenchBreakEven(null, { ...fallback, gasPerOperationUsdg: (400_000n * MICRO) });
   assert.equal(dear.basis, "gas-and-fees");
-  const brief = trenchMomentumBrief(TRENCHER_FAST, dear, 2_500_000n);
+  const brief = trenchMomentumBrief(TRENCHER_FAST, dear, (2_500_000n * MICRO));
   assert.match(brief, /no odds make it positive: the take-profit cannot cover c at this size/);
   assert.doesNotMatch(brief, /P is above/);
-  const edge = trenchMomentumBrief(TRENCHER_FAST, { basis: "quoted", roundTripPct: 20, bracketCostPct: 19.85 }, 2_500_000n);
+  const edge = trenchMomentumBrief(TRENCHER_FAST, { basis: "quoted", roundTripPct: 20, bracketCostPct: 19.85 }, (2_500_000n * MICRO));
   assert.equal(threshold(edge), 99, "99.5% prints as 99, never 100");
 });
 
@@ -243,7 +246,7 @@ test("the whole research persona fits inside the Brain's 4000-character strategy
   ];
   for (const be of branches) {
     const persona = withAgentBrief(trenchBrainPersona("X".repeat(16), false), "dry sarcastic casual") +
-      `\n\n${DECISION_RESEARCH_GUIDANCE}\n\n` + trenchMomentumBrief(TRENCHER_FAST, be, 2_500_000n);
+      `\n\n${DECISION_RESEARCH_GUIDANCE}\n\n` + trenchMomentumBrief(TRENCHER_FAST, be, (2_500_000n * MICRO));
     assert.ok(persona.length <= 3900, `${JSON.stringify(be)}: ${persona.length} characters leaves too little room under 4000`);
     assert.match(persona, /All checks above still apply\.$/, "the last check sentence is inside the cut");
   }

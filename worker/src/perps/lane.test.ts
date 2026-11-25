@@ -521,7 +521,7 @@ describe("one intent's reservation", () => {
 
 describe("the route's producer", () => {
   for (const failure of ["before-booking", "after-booking", "after-booking-unread"] as const) {
-    it(`an uncertain strategy open keeps its energy until the ledger proves no entry: ${failure}`, async () => {
+    it(`an uncertain strategy open is not refused until the ledger proves no entry: ${failure}`, async () => {
       writeFeed();
       let unread = false;
       const r = await rig({
@@ -544,23 +544,17 @@ describe("the route's producer", () => {
       const intent = await openDraft(r);
       await r.lane.readWithBook(() => store.getPaperBook(r.id, 100));
       r.lane.deliverStrategist([intent as PerpRouteIntent]);
-      let refunds = 0;
       let status: string | undefined;
       const running = r.lane.runRoute({
-        equityUsdg: u(100), equityKnown: true, breakerIdle: true, energyEntriesLeft: true,
+        equityUsdg: u(100), equityKnown: true, breakerIdle: true, 
         opsHeadroom: true, spendHeadroomMicro: u(500), strategistLive: true,
       }, {
-        claimEntry: async () => ({ ok: true }),
-        refundEntry: async () => { refunds++; },
-        withholdEntry: async () => {},
         ensureDecision: async () => ({ ok: true }),
-        processIntentReporting: async (i) => {
+        processIntent: async (i: TradeIntent) => {
           const outcome = await r.lane.execute(i as PerpOrderIntent, { equityUsdg: u(100), equityKnown: true });
           status = outcome.status;
           if (failure === "after-booking") assert.equal(outcome.amountUsdg, undefined, "an unavailable fill receipt supplies no invented amount");
-          return outcome;
         },
-        processIntent: async () => { assert.fail("this is an entry"); },
       });
       if (failure === "after-booking-unread") {
         await assert.rejects(running, /entry outcome unavailable/);
@@ -569,7 +563,6 @@ describe("the route's producer", () => {
         await running;
         assert.equal(status, failure === "after-booking" ? "paper" : "rejected");
       }
-      assert.equal(refunds, failure === "before-booking" ? 1 : 0);
       assert.equal(fillsOf(r.id), failure === "before-booking" ? 0 : 1);
       assert.deepEqual(r.budget.released, r.budget.reserved);
       if (failure === "after-booking") {
@@ -586,19 +579,13 @@ describe("the route's producer", () => {
     await r.lane.readWithBook(() => store.getPaperBook(r.id, 100));
     let executed = 0;
     const hooks = {
-      claimEntry: async () => ({ ok: true }),
-      refundEntry: async () => {},
-      withholdEntry: async () => {},
       ensureDecision: async () => ({ ok: true as const }),
-      processIntentReporting: async (i: TradeIntent) => {
+      processIntent: async (i: TradeIntent) => {
         executed++;
-        return r.lane.execute(i as PerpOrderIntent, { equityUsdg: u(100), equityKnown: true });
-      },
-      processIntent: async () => {
-        executed++;
+        await r.lane.execute(i as PerpOrderIntent, { equityUsdg: u(100), equityKnown: true });
       },
     };
-    const tick = { equityUsdg: u(100), equityKnown: true, breakerIdle: true, energyEntriesLeft: true, opsHeadroom: true, spendHeadroomMicro: u(500) };
+    const tick = { equityUsdg: u(100), equityKnown: true, breakerIdle: true, opsHeadroom: true, spendHeadroomMicro: u(500) };
     r.lane.deliverStrategist([intent as PerpRouteIntent]);
     await r.lane.runRoute({ ...tick, strategistLive: false }, hooks);
     assert.equal(executed, 0, "manual: the strategist's intents are not read");
@@ -2010,7 +1997,7 @@ describe("the wiring in index.ts", () => {
   });
 
   it("A PERPS WALLET'S WORKER REFUSES EVERY NON-PERP INTENT, first, with no trades row", () => {
-    // An owner's /buy, /transfer, app trade, self-test or energy buy is not a
+    // An owner's /buy, /transfer, app trade, or self-test is not a
     // producer the settings can turn off; it would spend the perp collateral.
     const locked = fn("processIntentLocked");
     const refusal = locked.indexOf("const walletRefusal = perpsWalletRefusal(cfg.workerWallet, intent);");
@@ -2019,7 +2006,7 @@ describe("the wiring in index.ts", () => {
     const body = locked.slice(refusal, locked.indexOf("\n    }\n", refusal));
     assert.match(body, /lastTradeOutcome = \{ status: "rejected", rejectRule: walletRefusal\.rule \};\s*return;/);
     // The rule itself: every non-perp kind on a Perps wallet, nothing on Spot.
-    for (const kind of ["swap", "curve-trade", "transfer", "energy-buy", "equity-order"] as const) {
+    for (const kind of ["swap", "transfer", "equity-order"] as const) {
       assert.deepEqual(perpsWalletRefusal("perps", { kind }), { rule: "perps-wallet-spot" });
       assert.equal(perpsWalletRefusal("spot", { kind }), null);
     }

@@ -1,10 +1,10 @@
 /** Read-only proof for preserved owner records beside a sole USDG deposit. */
 import { createHash } from "node:crypto";
 import { decodeFunctionData, encodeFunctionData, parseAbi, type Hex } from "viem";
-import { CASH, ENTRYPOINT, GRANT_PONS_CLASS, GRANT_TRENCHER, grantPonsClassVault, grantTrencher } from "../../packages/core/src/index";
+import { CASH, ENTRYPOINT, GRANT_TRENCHER, grantTrencher } from "../../packages/core/src/index";
 import { opsOfHandleOps, USER_OPERATION_EVENT_TOPIC } from "./asset-movements";
 import { classifyRpcError, TRANSFER_TOPIC, type RpcCall } from "./chain-capital";
-import { custodyAddressesOf } from "./custody";
+import { custodyAddressesOf, historicalClassVault } from "./custody";
 import { OWNER_OPERATION_COLUMNS, ownerOperationOf, ownerOperationRow, type OwnerOperationRow } from "./owner-operations";
 import { canonicalJson } from "./store";
 
@@ -28,10 +28,11 @@ const topic = (a: string) => `0x${a.slice(2).padStart(64, "0")}`;
 export function attestationCustody(grant: Row): string[] {
   const features = grant.grantFeatures == null ? [] : typeof grant.grantFeatures === "string" ? JSON.parse(grant.grantFeatures) : grant.grantFeatures;
   if (!Array.isArray(features) || features.some(v => typeof v !== "string")) refuse();
-  const g = { grantFeatures: features as string[], ponsClassVaultAddress: grant.ponsClassVaultAddress as string | undefined,
+  const g = { grantFeatures: features as string[],
     trencherVaultAddress: grant.trencherVaultAddress as string | undefined, trencherFactoryAddress: grant.trencherFactoryAddress as string | undefined };
-  if ((features.includes(GRANT_PONS_CLASS) && !grantPonsClassVault(g)) || (features.includes(GRANT_TRENCHER) && !grantTrencher(g))) refuse();
-  return [...new Set(custodyAddressesOf(g))].map(a => a.toLowerCase()).sort();
+  const classVault = historicalClassVault(g.grantFeatures, grant.ponsClassVaultAddress);
+  if ((features.includes("pons-class") && !classVault) || (features.includes(GRANT_TRENCHER) && !grantTrencher(g))) refuse();
+  return [...new Set([...custodyAddressesOf(g), ...(classVault ? [classVault] : [])])].map(a => a.toLowerCase()).sort();
 }
 
 /** The original raw rows remain separately bound; this projection compares their meaning. */
@@ -146,7 +147,7 @@ export async function proveAttestationOwnerOperations(rpc: RpcCall, o: {
     const matches = receipt.logs.filter(l => l.logIndex === event.logIndex);
     if (matches.length !== 1 || !same(matches[0], event)) refuse();
     const reading = ownerOperationOf({ receiptLogs: receipt.logs, userOpHash: record.user_op_hash, txHash: record.tx_hash,
-      account, custody: o.custody, usdg: CASH.USDG, chainId: o.chainId });
+      account, custody: o.custody, usdg: CASH.USDT, chainId: o.chainId });
     if (!reading || reading.disposition !== "acknowledged" || reading.usdgLegs.length || reading.covers.length || reading.tokenMoves.length
       || !same(ownerOperationRow(reading, { agentId: account, chainId: o.chainId, blockNumber: receipt.blockNumber, blockTime: receipt.at, recordedEpoch: 1 }), record)) refuse();
     const calls = opsOfHandleOps(receipt.input)?.filter(call => call.sender === account && call.nonce === BigInt(record.nonce));

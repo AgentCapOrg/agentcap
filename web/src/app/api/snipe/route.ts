@@ -31,7 +31,6 @@ import { OWNER_CHANGED, ownerMismatch } from "@/lib/order-owner";
 import { getSettingsStore } from "@agentcap/settings-store";
 import { sharedRead } from "@/lib/read-discoveries";
 import { usd } from "@/lib/format";
-import { snipeEnergyAnswer } from "@/lib/energy-reserve";
 import { walletNotSupported } from "@/lib/route-guard";
 
 export const runtime = "nodejs";
@@ -172,12 +171,6 @@ export async function POST(req: Request) {
   }
 
   const t = resolved.target;
-  // $AGENTCAP IS ENERGY, NOT A COIN TO SNIPE — covered or not. Uncovered, the
-  // answer below would say "add it and re-sign", which no signature can ever
-  // satisfy; covered (an old grant), a snipe card would place an energy buy
-  // under words that never said so. It has one way in: get-energy.
-  const energy = snipeEnergyAnswer(t);
-  if (energy) return NextResponse.json(energy);
   if (!t.covered) {
     return NextResponse.json({
       outcome: "needs-signature",

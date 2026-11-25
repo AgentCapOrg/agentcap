@@ -170,7 +170,7 @@ test("DELIVERY IS CHECKED WHEREVER A TOKEN WAS ACQUIRED, not only where the deco
   // minted, and it was the one lane with nothing watching.
   const gate = INDEX.indexOf("const acquired: { token:");
   assert.ok(gate > 0, "the acquisition gate must exist");
-  assert.match(INDEX.slice(gate, gate + 700), /intent\.kind === "curve-trade"/, "curve must be covered");
+  assert.match(INDEX.slice(gate, gate + 700), /intent\.kind === "swap" && intent\.buyToken/, "every bought token is covered");
 
   // And it must run BEFORE the decode. `measured` is a receipt decode, and this
   // check exists precisely because receipt logs are contract-authored: a token

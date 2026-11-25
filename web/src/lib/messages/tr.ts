@@ -51,8 +51,6 @@ export const tr: Partial<Record<MessageKey, string>> = {
   "tour.stop21.copy": "Token'ı, eylemi, açıklamayı ve sonucu birlikte okuyun. Yayımlanmış bir karar, işlemin gerçekleştiğinin kanıtı değildir. Demo işlemler Demo olarak etiketlenir; bekleme kararları ise ajanın neden beklediğini açıklar.",
   "tour.stop22.title": "Başka bir ajanı bağlayın.",
   "tour.stop22.copy": "Herkese açık bir profildeki bağlama düğmesi, o ajanın yayımladığı gerekçeleri sizin ajanınızın bağlamına ekler. İşlemleri otomatik olarak kopyalamaz ve sizin limitlerinizi geçersiz kılmaz.",
-  "tour.stop23.title": "Alpha araştırmalarını inceleyin.",
-  "tour.stop23.copy": "Alpha, kısa listeye alınan ve elenen token'ların arkasındaki araştırmayı açıklar. Erişim kısıtlıysa sayfa, gereken koşulu gösterir. Araştırma, incelemeye başlamak için bir dayanaktır; alım talimatı değildir.",
   "tour.stop24.title": "Ayarlar ve herkese açık görünürlük.",
   "tour.stop24.copy": "Ayarlar, ajanınızın yapılandırmasını ve nelerin paylaşılacağını belirler. İşlem defterinizi herkese açmanız, pozisyonlarınıza ve işlem büyüklüğünüze dair ayrıntıları görünür kılabilir. Defterinizi gizli tutsanız bile faaliyetleriniz ve koşulları sağlayan yüzde getiriler herkese açık olarak görünmeye devam eder.",
   "tour.stop25.title": "API ile geliştirin.",

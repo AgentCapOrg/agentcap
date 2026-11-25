@@ -97,7 +97,7 @@ describe("3. owner remedies stay with the owner", () => {
   const remedy = /re-sign|add funds|lower the size|in settings|at \/grant|change the mode/i;
 
   const cases: Why[] = [
-    { code: "under-one-buy", cashRaw: 23_660_000n, needRaw: 25_000_000n, vaultRaw: 0n },
+    { code: "under-one-buy", cashRaw: 23_660_000n, needRaw: 25_000_000n },
     { code: "budget-spent", capRaw: 25_000_000n },
     { code: "keel-top", symbol: "AAPL", underRaw: 270_000n, capped: true },
     { code: "keel-seed", usdgRaw: 8_330_000n, legs: 3, capped: true },

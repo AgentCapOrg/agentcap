@@ -5,7 +5,7 @@ import { wrapSqlite } from "./db";
 import { publicTokenForDecision } from "./orchestrator-xpost";
 import { PUBLISHABLE_SOURCES } from "./thesis-policy";
 
-const agent = { address: `0x${"aa".repeat(20)}`, chainId: 4663 };
+const agent = { address: `0x${"aa".repeat(20)}`, chainId: 56 };
 const token = `0x${"bb".repeat(20)}`;
 const hash = `0x${"12".repeat(32)}`;
 
@@ -22,8 +22,8 @@ test("public CA comes from the landed scoped decision, exact token side, and mat
   await db.prepare("INSERT INTO agents (smart_account, chain_id) VALUES (?, ?)").run(agent.address, agent.chainId);
   await db.prepare("INSERT INTO decisions VALUES (?, ?, ?, ?)").run("d1", agent.address, "buy", PUBLISHABLE_SOURCES[0]!);
   await db.prepare("INSERT INTO trades (id, decision_id, agent_id, kind, status, tx_hash, buy_token, sell_token) VALUES (?, ?, ?, ?, ?, ?, ?, ?)").run(1, "d1", agent.address, "swap", "landed", hash, token, agent.address);
-  assert.deepEqual(await publicTokenForDecision(db, agent, "d1", "buy"), { address: token, chainId: 4663, txHash: hash });
-  assert.equal(await publicTokenForDecision(db, { ...agent, chainId: 46630 }, "d1", "buy"), null);
+  assert.deepEqual(await publicTokenForDecision(db, agent, "d1", "buy"), { address: token, chainId: 56, txHash: hash });
+  assert.equal(await publicTokenForDecision(db, { ...agent, chainId: 97 }, "d1", "buy"), null);
   assert.equal(await publicTokenForDecision(db, { ...agent, address: token }, "d1", "buy"), null);
   assert.equal(await publicTokenForDecision(db, agent, "d1", "sell"), null);
   await db.prepare("UPDATE trades SET tx_hash = NULL").run();

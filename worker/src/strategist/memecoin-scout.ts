@@ -35,7 +35,7 @@
 import { llmToolCall, type LlmCreds } from "../llm";
 import type { GeckoPool } from "../venues/geckoterminal";
 import type { ScoutSiteFields } from "./coin-research";
-import { sanitizeMeta } from "../venues/pons-meta";
+import { sanitizeMeta } from "../venues/token-meta";
 
 /**
  * One candidate as the MODEL sees it — a label and numbers, no address.

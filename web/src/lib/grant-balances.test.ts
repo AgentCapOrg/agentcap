@@ -21,29 +21,29 @@ const failed = { status: "failure" as const, error: new Error("execution reverte
 describe("the agent's chain balances", () => {
   it("are null, not zero, when the chain did not answer", async () => {
     const b = await readGrantBalances({ eth: refuse, tokens: refuse });
-    assert.deepEqual(b, { ethWei: null, cashUsdg: null, vaultUsdg: null });
+    assert.deepEqual(b, { ethWei: null, cashUsdg: null });
   });
 
   it("keep a measured zero as zero", async () => {
     const b = await readGrantBalances({
       eth: async () => 0n,
-      tokens: async () => [ok(0n), ok(0n)],
+      tokens: async () => [ok(0n)],
     });
-    assert.deepEqual(b, { ethWei: "0", cashUsdg: "0", vaultUsdg: "0" });
+    assert.deepEqual(b, { ethWei: "0", cashUsdg: "0" });
   });
 
   it("null only the call that failed inside a batch that answered", async () => {
     const b = await readGrantBalances({
       eth: async () => 12n,
-      tokens: async () => [failed, ok(250_000_000n)],
+      tokens: async () => [failed],
     });
-    assert.deepEqual(b, { ethWei: "12", cashUsdg: null, vaultUsdg: "250000000" });
+    assert.deepEqual(b, { ethWei: "12", cashUsdg: null });
   });
 
   it("refuse a 'success' that carried no number", async () => {
     const b = await readGrantBalances({
       eth: async () => 1n,
-      tokens: async () => [{ status: "success" as const, result: undefined }, ok(1n)],
+      tokens: async () => [{ status: "success" as const, result: undefined }],
     });
     assert.equal(b.cashUsdg, null);
   });
@@ -57,7 +57,7 @@ describe("the agent's chain balances", () => {
     assert.equal(paper.action, null);
 
     // …while a balance that WAS read as empty still gets the button.
-    const empty = await readGrantBalances({ eth: async () => 0n, tokens: async () => [ok(0n), ok(0n)] });
+    const empty = await readGrantBalances({ eth: async () => 0n, tokens: async () => [ok(0n)] });
     const bare = autonomyOf({ mode: "idle", liveBlocker: null, realCashUsd: usdgOrNull(empty.cashUsdg) });
     assert.equal(bare.action?.kind, "add-funds");
   });
@@ -72,7 +72,7 @@ describe("the route's own calls", () => {
   it("a client that cannot reach the chain yields nulls, never zeros", async () => {
     const { readGrantBalancesFrom } = await import("./grant-balances");
     const b = await readGrantBalancesFrom({ getBalance: refuse, multicall: refuse }, ACCOUNT);
-    assert.deepEqual(b, { ethWei: null, cashUsdg: null, vaultUsdg: null });
+    assert.deepEqual(b, { ethWei: null, cashUsdg: null });
   });
 
   it("asks about the agent's account, and keeps what the chain said", async () => {
@@ -86,12 +86,12 @@ describe("the route's own calls", () => {
         },
         multicall: async ({ contracts }) => {
           for (const c of contracts) asked.push(`${c.functionName}:${c.args[0]}`);
-          return [ok(0n), failed];
+          return [ok(0n)];
         },
       },
       ACCOUNT,
     );
-    assert.deepEqual(b, { ethWei: "0", cashUsdg: "0", vaultUsdg: null });
-    assert.deepEqual(asked, [`eth:${ACCOUNT}`, `balanceOf:${ACCOUNT}`, `balanceOf:${ACCOUNT}`]);
+    assert.deepEqual(b, { ethWei: "0", cashUsdg: "0" });
+    assert.deepEqual(asked, [`eth:${ACCOUNT}`, `balanceOf:${ACCOUNT}`]);
   });
 });

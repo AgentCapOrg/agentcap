@@ -695,18 +695,6 @@ describe("templates only say true things", () => {
     for (const l of unknown) for (const w of ageWords) assert.ok(!new RegExp(`\\b${w}\\b`).test(l), `age "${w}" with no age: ${l}`);
   });
 
-  it("has a first-person voice for every trait traitsOf can produce, and a spoken name for every publishable strategy", () => {
-    const d: Disposition = { maxHoldSec: 21600, exitAtGraduationPct: 85, perEntryUsdg: 5, maxImpactBps: 300, minDepthUsdg: 100 };
-    const every = new Set([
-      ...traitsOf({ ...d, maxHoldSec: 1, maxImpactBps: 1, minDepthUsdg: 1e9, exitAtGraduationPct: 1 }, d),
-      ...traitsOf({ ...d, maxHoldSec: 1e9, maxImpactBps: 1e9, minDepthUsdg: 0 }, d),
-    ]);
-    assert.ok(every.size >= 7, `traitsOf sweep found only ${every.size}`);
-    for (const t of every) assert.ok(T.TRAIT_VOICE[t], `no first-person voice for trait "${t}"`);
-    assert.deepEqual(Object.keys(T.STRATEGY_SPOKEN).sort(), [...PUBLISHABLE_STRATEGIES].sort());
-    assert.deepEqual(Object.keys(T.STRATEGY_FLAVOUR).sort(), [...PUBLISHABLE_STRATEGIES].sort());
-  });
-
   it("names only a strategy the room may name", () => {
     for (const strategy of [null, "llm-strategist", "my-secret-file"]) {
       const sp = speaker(9, { strategy });

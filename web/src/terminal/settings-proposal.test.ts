@@ -33,10 +33,8 @@ before(async () => {
     if (parent?.filename === settingsPath) {
       if (id === "next/link") return ({ children, ...props }: React.ComponentProps<"a">) => React.createElement("a", props, children);
       if (id === "../SetupChecklist") return () => null;
-      if (id === "../HolderLink") return { HolderLink: () => null };
       if (id === "../XPosting") return { XPosting: () => null };
       if (id === "../AgentImageField") return { AgentImageField: () => null };
-      if (id === "../tier") return { loadTier: async () => null };
     }
     return load.call(this, id, parent, isMain);
   });
@@ -58,7 +56,7 @@ function view(): SettingsView {
   const secret = { set: false, hint: null };
   return {
     bundlerApiKey: secret, groqApiKey: secret, anthropicApiKey: secret,
-    llmApiKey: secret, rialtoApiKey: secret, telegramBotToken: secret,
+    llmApiKey: secret, telegramBotToken: secret,
     telegramTranscribeKey: secret, virtualsApiKey: secret, bitqueryApiKey: secret,
     agentcapToken: secret,
     values: { ...stored },
@@ -162,7 +160,7 @@ describe("tell your agent how to work, then approve", () => {
     assert.equal(lines[0], "Real money: off — practising with simulated cash", "practice is the shipped default");
     assert.match(lines[1] ?? "", /^Strategy: steady-basket · buys /);
     assert.equal(lines[2], "Each buy: $25.00 · stop loss: off · take profit: off");
-    assert.match(lines[3] ?? "", /^Launchpad buying: off/);
+    assert.match(lines[3] ?? "", /^New-coin scanning: /);
     assert.match(lines[4] ?? "", /^Telegram trade messages: /);
   });
 

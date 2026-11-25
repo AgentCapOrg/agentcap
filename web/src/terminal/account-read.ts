@@ -6,11 +6,12 @@
  * next/navigation and cannot be mounted by the test runner, and every mistake
  * this file exists to prevent was a coercion that looked harmless in source.
  */
+import { cashNumber } from "../../../packages/core/src/cash";
 import type { AccountState } from "./HostedControls";
 import type { ReadState } from "./live";
 
 /**
- * A 6dp USDG amount from the chain, in dollars — or null when nobody read it.
+ * A cash base-unit amount from the chain, in dollars — or null when nobody read it.
  *
  * `Number(null)` is 0, which is how a failed balance read used to become a
  * balance of zero here even after the route stopped inventing one. An amount
@@ -18,8 +19,8 @@ import type { ReadState } from "./live";
  */
 export function usdgOrNull(raw: string | null | undefined): number | null {
   if (raw === null || raw === undefined || raw.trim() === "") return null;
-  const n = Number(raw);
-  return Number.isFinite(n) ? n / 1e6 : null;
+  // Digits only: an 18dp amount does not survive a Number, and BigInt keeps it.
+  return /^[0-9]+$/.test(raw.trim()) ? cashNumber(BigInt(raw.trim())) : null;
 }
 
 const capOrNull = (v: unknown): number | null =>

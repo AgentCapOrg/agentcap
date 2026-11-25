@@ -1,5 +1,6 @@
 /** Private, descriptive learning from this account's durable filled book.
  * Never a trading permission, forecast, public thesis, or counterfactual mark. */
+import { cashFromMicro, cashToMicro } from "../../packages/core/src/cash";
 import type { Db } from "./db";
 import { applyFill, ZERO_BASIS, type BasisRow } from "./basis";
 import { distinctTrades } from "./distinct-trades";
@@ -112,14 +113,16 @@ function summarize(rows: readonly Record<string, unknown>[], out: OwnOutcomeLear
       const evidence = row.basis_source === "receipt" && HASH.test(String(row.tx_hash)) && HASH.test(String(row.user_op_hash));
       state.evidenced &&= evidence && cash !== null && fee !== null && gas !== null;
       // Unknown cash can preserve the quantity boundary but never a result.
-      const applied = applyFill(state.basis, { side, qtyRaw: qty, cashUsdg: cash ?? 0n });
+      // The basis is replayed in the base units the live book keeps it in, so
+      // its pro-rata cost, and the realised figure, come out the same.
+      const applied = applyFill(state.basis, { side, qtyRaw: qty, cashUsdg: cashFromMicro(cash ?? 0n) });
       if (side === "sell" && applied.basisUnknown) {
         state.quantityKnown = false;
         state.evidenced = false;
         continue;
       }
       if (side === "sell") {
-        state.evidenced &&= micros(row.realized_pnl_usdg, true) === applied.realizedUsdg;
+        state.evidenced &&= micros(row.realized_pnl_usdg, true) === cashToMicro(applied.realizedUsdg);
         state.proceeds += cash ?? 0n;
       } else {
         state.spent += cash ?? 0n;

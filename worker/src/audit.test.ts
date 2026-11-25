@@ -10,6 +10,9 @@ import {
   type ExportedEntry,
 } from "./audit";
 
+// 6dp micro figures, scaled to 18dp USDT base units.
+const MICRO = 10n ** 12n;
+
 /** Build a well-formed chain from a list of payloads, the way the store would. */
 function chain(payloads: { kind: string; payload: unknown }[]): ExportedEntry[] {
   const out: ExportedEntry[] = [];
@@ -174,40 +177,40 @@ describe("compareRecord — the ledger against the chain", () => {
     compareRecord({ seq: 1, kind, payload, receipt, account: ME, usdgToken: USDG });
 
   it("confirms a buy whose legs match the chain", () => {
-    const r = ok([xfer(USDG, ME, ROUTER, 50_000_000n), xfer(NVDA, ROUTER, ME, ONE / 4n)]);
+    const r = ok([xfer(USDG, ME, ROUTER, (50_000_000n * MICRO)), xfer(NVDA, ROUTER, ME, ONE / 4n)]);
     assert.deepEqual(check(buyPayload, r), []);
   });
 
   it("CATCHES a quantity the chain does not support", () => {
     // The exact failure the receipt work fixed: a fill booked from the quote
     // records fewer units than actually arrived. An audit now sees it.
-    const r = ok([xfer(USDG, ME, ROUTER, 50_000_000n), xfer(NVDA, ROUTER, ME, ONE / 3n)]);
+    const r = ok([xfer(USDG, ME, ROUTER, (50_000_000n * MICRO)), xfer(NVDA, ROUTER, ME, ONE / 3n)]);
     const f = check(buyPayload, r);
     assert.equal(f.length, 1);
     assert.match(f[0]!.detail, /raw units/);
   });
 
   it("CATCHES a cash amount the chain does not support", () => {
-    const r = ok([xfer(USDG, ME, ROUTER, 40_000_000n), xfer(NVDA, ROUTER, ME, ONE / 4n)]);
+    const r = ok([xfer(USDG, ME, ROUTER, (40_000_000n * MICRO)), xfer(NVDA, ROUTER, ME, ONE / 4n)]);
     assert.match(check(buyPayload, r)[0]!.detail, /USDG movement/);
   });
 
   it("tolerates a one-unit cash difference — our storage is float, the chain is not", () => {
-    const r = ok([xfer(USDG, ME, ROUTER, 50_000_001n), xfer(NVDA, ROUTER, ME, ONE / 4n)]);
+    const r = ok([xfer(USDG, ME, ROUTER, (50_000_001n * MICRO)), xfer(NVDA, ROUTER, ME, ONE / 4n)]);
     assert.deepEqual(check(buyPayload, r), []);
   });
 
   it("checks direction, not just magnitude", () => {
     // Same amounts, opposite way round: a 'buy' whose USDG came IN.
-    const r = ok([xfer(USDG, ROUTER, ME, 50_000_000n), xfer(NVDA, ME, ROUTER, ONE / 4n)]);
+    const r = ok([xfer(USDG, ROUTER, ME, (50_000_000n * MICRO)), xfer(NVDA, ME, ROUTER, ONE / 4n)]);
     assert.ok(check(buyPayload, r).length >= 1);
   });
 
   it("confirms a deposit, and catches an inflated one", () => {
     const flow = { direction: "in", amountUsdg: 1000, txHash: "0xdep" };
-    const good = ok([xfer(USDG, ROUTER, ME, 1_000_000_000n)]);
+    const good = ok([xfer(USDG, ROUTER, ME, (1_000_000_000n * MICRO))]);
     assert.deepEqual(check(flow, good, "flow"), []);
-    const short = ok([xfer(USDG, ROUTER, ME, 10_000_000n)]);
+    const short = ok([xfer(USDG, ROUTER, ME, (10_000_000n * MICRO))]);
     assert.match(check(flow, short, "flow")[0]!.detail, /claims a inflow of 1000/);
   });
 
@@ -222,8 +225,8 @@ describe("compareRecord — the ledger against the chain", () => {
 
   it("ignores transfers between other parties in the same transaction", () => {
     const r = ok([
-      xfer(USDG, ME, ROUTER, 50_000_000n),
-      xfer(USDG, ROUTER, "0x00000000000000000000000000000000000000cc", 50_000_000n),
+      xfer(USDG, ME, ROUTER, (50_000_000n * MICRO)),
+      xfer(USDG, ROUTER, "0x00000000000000000000000000000000000000cc", (50_000_000n * MICRO)),
       xfer(NVDA, ROUTER, ME, ONE / 4n),
     ]);
     assert.deepEqual(check(buyPayload, r), []);
@@ -309,7 +312,7 @@ describe("an energy purchase in the journal", () => {
   it("the flow and the fill-less trade both agree with the receipt", () => {
     const receipt = {
       status: "0x1",
-      logs: [xfer(USDG, ME, PAIR, 42_000_000n), xfer(AGENTCAP, PAIR, ME, 98_000n * 10n ** 18n)],
+      logs: [xfer(USDG, ME, PAIR, (42_000_000n * MICRO)), xfer(AGENTCAP, PAIR, ME, 98_000n * 10n ** 18n)],
     };
     const check = (kind: string, payload: Record<string, unknown>) =>
       compareRecord({ seq: 1, kind, payload, receipt, account: ME, usdgToken: USDG });

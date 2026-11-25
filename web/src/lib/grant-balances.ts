@@ -13,18 +13,16 @@
  * one unknown and one fact. A measured zero stays "0" — that is the one case
  * where "Add funds" is true.
  *
- * STILL DECIMAL STRINGS, and still the same three keys, so nothing that parsed
- * the old shape breaks. Every reader of these on the web side already
+ * STILL DECIMAL STRINGS. Every reader of these on the web side already
  * coalesces a missing value (`?? 0`, `if (!v)`); the Android client does not
  * read `balances` at all, and no other client calls GET /api/grants.
  */
 import { parseAbi } from "viem";
-import { CASH, MORPHO } from "@agentcap/core";
+import { CASH } from "@agentcap/core";
 
 export interface GrantBalances {
   ethWei: string | null;
   cashUsdg: string | null;
-  vaultUsdg: string | null;
 }
 
 /** One multicall entry, in the shape viem returns with `allowFailure` on. */
@@ -34,8 +32,7 @@ type Settled = { status: "success" | "failure"; result?: unknown };
 const amount = (v: unknown): string | null => (typeof v === "bigint" ? v.toString() : null);
 
 /**
- * `eth` reads the native balance; `tokens` is the [cash, vault] balanceOf
- * batch. Passed as thunks so the route keeps its own viem calls and transport
+ * `eth` reads the native balance; `tokens` is the [cash] balanceOf batch. Passed as thunks so the route keeps its own viem calls and transport
  * (chain-read.test.ts pins those), and this keeps only the question of what a
  * failure means.
  */
@@ -49,7 +46,7 @@ export async function readGrantBalances(read: {
   ]);
   const entry = (i: number): string | null =>
     tokens?.[i]?.status === "success" ? amount(tokens[i]!.result) : null;
-  return { ethWei: eth, cashUsdg: entry(0), vaultUsdg: entry(1) };
+  return { ethWei: eth, cashUsdg: entry(0) };
 }
 
 /** The two viem calls the status route makes, and nothing else of the client. */
@@ -83,8 +80,7 @@ export function readGrantBalancesFrom(client: BalanceClient, account: `0x${strin
     tokens: () =>
       client.multicall({
         contracts: [
-          { address: CASH.USDG as `0x${string}`, abi: BALANCE_ABI, functionName: "balanceOf", args: [account] },
-          { address: MORPHO.steakhouseUsdgVault as `0x${string}`, abi: BALANCE_ABI, functionName: "balanceOf", args: [account] },
+          { address: CASH.USDT as `0x${string}`, abi: BALANCE_ABI, functionName: "balanceOf", args: [account] },
         ],
       }),
   });

@@ -1,3 +1,4 @@
+import { cashNumber, cashToMicro, formatCash6 } from "../../packages/core/src/cash";
 import { CASH } from "../../packages/core/src/index";
 import { tradeFeeUsdg } from "./fees";
 import type { TrencherConfig } from "./strategies/trencher";
@@ -74,15 +75,15 @@ export async function entryCostResearch(args: CostArgs, deps: CostDeps = {}): Pr
   const deadline = start + (deps.budgetMs ?? 5000);
   const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
   const { facts, token, sizeUsdg: size } = args;
-  if (!facts || size <= 0n || size > BigInt(Number.MAX_SAFE_INTEGER) ||
+  if (!facts || size <= 0n || cashToMicro(size) > BigInt(Number.MAX_SAFE_INTEGER) ||
       !Number.isInteger(facts.fee) || facts.fee < 0 || facts.fee >= 1_000_000 ||
       !Number.isInteger(args.tradeFeeBps) || args.tradeFeeBps < 0 || args.tradeFeeBps >= 10_000) return none;
   if (same(facts.token0, token) === same(facts.token1, token)) return none;
   const other = same(facts.token0, token) ? facts.token1 : facts.token0;
-  const routes: Route[] = same(other, CASH.USDG)
-    ? [{ tokens: [CASH.USDG, token], fees: [facts.fee] }]
-    : same(other, CASH.WETH)
-      ? FEE_TIERS.map(fee => ({ tokens: [CASH.USDG, CASH.WETH, token], fees: [fee, facts.fee] }))
+  const routes: Route[] = same(other, CASH.USDT)
+    ? [{ tokens: [CASH.USDT, token], fees: [facts.fee] }]
+    : same(other, CASH.WBNB)
+      ? FEE_TIERS.map(fee => ({ tokens: [CASH.USDT, CASH.WBNB, token], fees: [fee, facts.fee] }))
       : [];
   if (!routes.length) return none;
   const read: QuoteReader = deps.quote ?? (async (route, amountIn) => route.tokens.length === 2
@@ -98,11 +99,11 @@ export async function entryCostResearch(args: CostArgs, deps: CostDeps = {}): Pr
     if (!buy || now() >= deadline) return none;
     const route = routes[quotes.indexOf(buy)]!;
     const sell = await safeRead({ tokens: [...route.tokens].reverse(), fees: [...route.fees].reverse() }, buy.amountOut);
-    if (!sell || sell.amountOut <= 0n || sell.amountOut > BigInt(Number.MAX_SAFE_INTEGER) || now() >= deadline) return none;
+    if (!sell || sell.amountOut <= 0n || cashToMicro(sell.amountOut) > BigInt(Number.MAX_SAFE_INTEGER) || now() >= deadline) return none;
     const fee = tradeFeeUsdg(size, args.tradeFeeBps) + tradeFeeUsdg(sell.amountOut, args.tradeFeeBps);
     const gas = args.gasPerOperationUsdg !== null && args.gasPerOperationUsdg >= 0n
       ? args.gasPerOperationUsdg * 2n : null;
-    const cash = (n: bigint) => (Number(n) / 1e6).toFixed(6);
+    const cash = formatCash6;
     const drag = gas === null ? null : size - sell.amountOut + fee + gas;
     const text = `Entry/exit research at ${new Date(start).toISOString()}: ${cash(size)} USDG in; ` +
       `selling the quoted token output on the reverse v3 route quotes ${cash(sell.amountOut)} USDG back. ` +
@@ -201,7 +202,7 @@ export function trenchMomentumBrief(
     const s = v.toFixed(dp);
     return s.includes(".") ? s.replace(/0+$/, "").replace(/\.$/, "") : s;
   };
-  const entry = (Number(entryUsdg) / 1e6).toFixed(2);
+  const entry = cashNumber(entryUsdg).toFixed(2);
   // c: what each exit pays beyond the fill, which is also the rise above the
   // fill that breaks even (trenchBreakEven) — the desk policy's c.
   const cost = be.basis === "quoted"

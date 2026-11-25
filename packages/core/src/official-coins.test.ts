@@ -17,27 +17,16 @@ import {
   OFFICIAL_COINS,
   officialCoinByAddress,
   officialCoinBySymbol,
-  officialCoinCurve,
   officialCoinSymbols,
   officialCoinTokens,
   officialCoinsFor,
 } from "./official-coins";
 import { CASH, STOCK_TOKENS } from "./tokens";
-import { builtinGrantTargets, usableExtraTokens, V4_SELF_SWAP } from "./index";
-import { ponsAdapterForSigning, PONS_CLASS_VAULT_FACTORY, PONS_CLASS_VAULT_FACTORY_V2, PONS_SELF_TRADE } from "./protocols";
+import { builtinGrantTargets, usableExtraTokens } from "./index";
 
 const MAINNET = 4663;
 const TESTNET = 46630;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-describe("verified v4 deployment registry", () => {
-  it("exports the verified mainnet adapter without implying a testnet deployment", () => {
-    assert.equal(V4_SELF_SWAP[MAINNET], "0xe0ce6bd81a472f021a9e85392a8008b8786f9218");
-    assert.equal(V4_SELF_SWAP[TESTNET], null);
-    assert.equal(V4_SELF_SWAP[1], undefined);
-    assert.ok(Object.isFrozen(V4_SELF_SWAP));
-  });
-});
 
 describe("official coins — the listing", () => {
   it("returns a list for every known chain, empty or not", () => {
@@ -55,26 +44,12 @@ describe("official coins — the listing", () => {
     assert.deepEqual(officialCoinSymbols(999_999), []);
   });
 
-  it("pins every field a curve needs to be priced, with no zero or placeholder", () => {
-    for (const c of officialCoinsFor(MAINNET)) {
-      assert.match(c.address, /^0x[0-9a-f]{40}$/, `${c.symbol} address must be lowercase hex`);
-      assert.match(c.curve, /^0x[0-9a-f]{40}$/, `${c.symbol} curve must be lowercase hex`);
-      assert.notEqual(c.address, c.curve, `${c.symbol}: the token is not its own curve`);
-      assert.ok(c.decimals > 0 && c.decimals <= 18, `${c.symbol} decimals out of range`);
-      // A zero threshold makes the virtual seed zero, which makes REAL depth
-      // equal the reported reserve — confidently wrong in the direction of
-      // "deeper than it is". See pons-price.ts:realQuoteRaw.
-      assert.ok(c.graduationThresholdRaw > 0n, `${c.symbol} needs a real graduation threshold`);
-      assert.match(c.listedOn, /^\d{4}-\d{2}-\d{2}$/, `${c.symbol} needs a listing date`);
-    }
-  });
-
   it("carries only USDG-quoted curves, because the adapter cannot reach the others", () => {
     // PonsSelfTrade is non-payable and the wall keeps valueLimit at 0, so a
     // native-ETH curve — 57.6% of the launchpad — is unreachable. A listing the
     // agent could see and never trade is the failure this file exists to end.
     for (const c of officialCoinsFor(MAINNET)) {
-      assert.equal(c.quoteToken.toLowerCase(), (CASH.USDG as string).toLowerCase());
+      assert.equal(c.quoteToken.toLowerCase(), (CASH.USDT as string).toLowerCase());
     }
   });
 
@@ -83,11 +58,10 @@ describe("official coins — the listing", () => {
     // watched, priced, basketed or sealed. If it were applied per-call-site,
     // one missed site would resurrect exactly the bug.
     const raw = OFFICIAL_COINS[MAINNET] ?? [];
-    const nonUsdg = raw.filter((c) => c.quoteToken.toLowerCase() !== (CASH.USDG as string).toLowerCase());
+    const nonUsdg = raw.filter((c) => c.quoteToken.toLowerCase() !== (CASH.USDT as string).toLowerCase());
     for (const c of nonUsdg) {
       assert.equal(officialCoinByAddress(MAINNET, c.address), null);
       assert.equal(officialCoinBySymbol(MAINNET, c.symbol), null);
-      assert.equal(officialCoinCurve(MAINNET, c.address), null);
       assert.ok(!officialCoinSymbols(MAINNET).includes(c.symbol));
       assert.ok(!officialCoinTokens(MAINNET).some((t) => t.address === c.address));
     }
@@ -105,19 +79,6 @@ describe("official coins — the listing", () => {
     // while the list is empty: a miss must be null, never a partial answer.
     assert.equal(officialCoinByAddress(MAINNET, "0x" + "9".repeat(40)), null);
     assert.equal(officialCoinBySymbol(MAINNET, "NOSUCHCOIN"), null);
-  });
-
-  it("returns the curve record as one object or not at all", () => {
-    // The store keeps curve/quote/threshold together because a threshold
-    // without a curve cannot be read as money. The accessor must not be looser.
-    for (const c of officialCoinsFor(MAINNET)) {
-      const rec = officialCoinCurve(MAINNET, c.address);
-      assert.ok(rec, "a listed coin must resolve a curve record");
-      assert.equal(rec.curve, c.curve);
-      assert.equal(rec.quoteToken, c.quoteToken);
-      assert.equal(rec.graduationThresholdRaw, c.graduationThresholdRaw);
-    }
-    assert.equal(officialCoinCurve(MAINNET, "0x" + "9".repeat(40)), null);
   });
 
   it("has no duplicate symbol or address within a chain", () => {
@@ -203,140 +164,3 @@ describe("official coins — what a listing must never become", () => {
   });
 });
 
-describe("ponsAdapterForSigning", () => {
-  it("prefers the owner's own address over the platform constant", () => {
-    const mine = "0x" + "a".repeat(40);
-    assert.equal(ponsAdapterForSigning(MAINNET, mine), mine);
-  });
-
-  it("lowercases whatever it returns, so a sealed address compares equal", () => {
-    const mixed = "0xAbCdEf0123456789AbCdEf0123456789AbCdEf01";
-    assert.equal(ponsAdapterForSigning(MAINNET, mixed), mixed.toLowerCase());
-  });
-
-  it("ignores a malformed settings value rather than sealing nonsense", () => {
-    // A typo must not mint a marker plus a permission pinned at nonsense.
-    assert.equal(ponsAdapterForSigning(MAINNET, "not-an-address"), undefined);
-    assert.equal(ponsAdapterForSigning(MAINNET, "0x1234"), undefined);
-  });
-
-  it("returns undefined, never a zero address, when there is no adapter", () => {
-    // Every signer treats the field as optional-and-absent; a zero would mint a
-    // marker and a permission pointing nowhere.
-    assert.equal(ponsAdapterForSigning(1, undefined), undefined);
-    assert.equal(ponsAdapterForSigning(1, null), undefined);
-    assert.equal(ponsAdapterForSigning(1, ""), undefined);
-  });
-
-  it("NEVER falls back to the deployed constant, even where one exists", () => {
-    // THE SECURITY PROPERTY, pinned because it is one line to undo by accident
-    // and its absence is invisible until a key is stolen.
-    //
-    // The curve argument to PonsSelfTrade.tradeExactIn is unpinnable — ~475 new
-    // curve addresses an hour — and the adapter hands that caller-supplied
-    // address a live allowance over the pulled input. The stock-token approve
-    // permissions carry no amount condition and the adapter is in `spenders`, so
-    // a compromised session key that holds this permission can name a contract
-    // it controls and have the tokens taken. Sealing it must therefore be an
-    // owner's explicit choice, never a platform default.
-    assert.ok(PONS_SELF_TRADE[MAINNET], "this test is only meaningful while an adapter is deployed");
-    assert.equal(
-      ponsAdapterForSigning(MAINNET, undefined),
-      undefined,
-      "a deployed adapter must NOT be sealed into a grant the owner did not ask for",
-    );
-    assert.equal(ponsAdapterForSigning(MAINNET, null), undefined);
-  });
-
-  it("keeps the two chains separate", () => {
-    // Two deploys, two nonces, two addresses. One flat value cannot serve both,
-    // and /grant offers a two-click chain switch.
-    assert.ok(MAINNET in PONS_SELF_TRADE && TESTNET in PONS_SELF_TRADE);
-  });
-
-  it("matches contracts/deployments.json, which is the deploy's own record", () => {
-    // TWO RECORDS OF ONE FACT, so they are pinned to each other.
-    //
-    // The constant is what every signer seals; deployments.json is what the
-    // deploy script wrote. If they drifted, grants would be minted against an
-    // address nobody deployed — and the failure appears at the bundler, one
-    // re-sign too late, as a UserOp the account contract refuses.
-    //
-    // A MISSING FILE IS NOT A PASS. `contracts/deployments.json` is gitignored
-    // by nothing and absent only when nothing has been deployed, so the file's
-    // absence has to mean the constants are null rather than "skip the check".
-    //
-    // EVERY DEPLOY CONSTANT, FROM ONE TABLE. Written per-contract, the next one
-    // gets added the day it is deployed and forgotten every day after — which is
-    // precisely the drift this test exists to catch. The class-vault factory is
-    // listed at both versions on purpose: v1 stays pinned because a v1 vault may
-    // still hold a position, and recovery derives that vault from the factory.
-    const file = path.join(__dirname, "..", "..", "..", "contracts", "deployments.json");
-    let book: Record<string, Record<string, { address?: string }>> = {};
-    let present = true;
-    try {
-      book = JSON.parse(readFileSync(file, "utf8"));
-    } catch {
-      present = false;
-    }
-    const PINNED: readonly [string, Readonly<Record<number, string | null>>][] = [
-      ["V4SelfSwap", V4_SELF_SWAP],
-      ["PonsSelfTrade", PONS_SELF_TRADE],
-      ["PonsClassVaultFactory", PONS_CLASS_VAULT_FACTORY],
-      ["PonsClassVaultFactoryV2", PONS_CLASS_VAULT_FACTORY_V2],
-    ];
-    for (const [contract, table] of PINNED) {
-      for (const chainId of [MAINNET, TESTNET]) {
-        const constant = table[chainId];
-        const recorded: string | undefined = present
-          ? book[String(chainId)]?.[contract]?.address
-          : undefined;
-        if (!present || recorded === undefined) {
-          assert.equal(
-            constant,
-            null,
-            `chain ${chainId}: ${contract} constant names an address that no deployment records`,
-          );
-          continue;
-        }
-        assert.equal(
-          constant?.toLowerCase(),
-          recorded.toLowerCase(),
-          `chain ${chainId}: the ${contract} constant and the deploy record disagree`,
-        );
-      }
-    }
-  });
-
-  it("names every deployed contract in a constant, so none is recorded and unused", () => {
-    // The other direction, and it is not symmetric. The check above catches a
-    // constant with no deployment; this catches a DEPLOYMENT WITH NO CONSTANT —
-    // an address that exists, cost gas, and that no signer will ever seal. That
-    // is how PonsSelfTrade spent a release deployed-by-nobody and unreachable,
-    // and the only evidence was the absence of trades.
-    const file = path.join(__dirname, "..", "..", "..", "contracts", "deployments.json");
-    let book: Record<string, Record<string, { address?: string }>> = {};
-    try {
-      book = JSON.parse(readFileSync(file, "utf8"));
-    } catch {
-      return; // nothing deployed yet is a legitimate state
-    }
-    const TABLES: Record<string, Readonly<Record<number, string | null>>> = {
-      V4SelfSwap: V4_SELF_SWAP,
-      PonsSelfTrade: PONS_SELF_TRADE,
-      PonsClassVaultFactory: PONS_CLASS_VAULT_FACTORY,
-      PonsClassVaultFactoryV2: PONS_CLASS_VAULT_FACTORY_V2,
-    };
-    for (const [chainId, contracts] of Object.entries(book)) {
-      for (const [contract, rec] of Object.entries(contracts)) {
-        const table = TABLES[contract];
-        assert.ok(table, `${contract} is deployed on chain ${chainId} but no constant carries it`);
-        assert.equal(
-          table[Number(chainId)]?.toLowerCase(),
-          rec.address?.toLowerCase(),
-          `${contract} on chain ${chainId} is deployed but its constant does not name it`,
-        );
-      }
-    }
-  });
-});

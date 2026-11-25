@@ -2,7 +2,7 @@
  * THE CHAINLINK ETH/USD FEED, FOR WHAT GAS COST.
  *
  * gas-price.ts says "there is no Chainlink ETH/USD feed on this chain". There is
- * (CASH_FEEDS.ETH_USD, read by the web's trade quote), and the worker never used
+ * (CASH_FEEDS.BNB_USD, read by the web's trade quote), and the worker never used
  * it. Gas was priced only off the WETH/USDG pool's TWAP, so every tick that pool
  * was refused left a landed trade's gas unpriced — and an operation settled
  * later (the stranded-op resolver, the orphan sweep) was never priced at all,
@@ -40,7 +40,7 @@ function toPrice8(answer: bigint, decimals: number): bigint {
 
 /** The feed, read through `client`. Decimals are read once and remembered. */
 export function ethUsdFeed(client: Pick<PublicClient, "readContract">): EthFeed {
-  const address = CASH_FEEDS.ETH_USD as `0x${string}`;
+  const address = CASH_FEEDS.BNB_USD as `0x${string}`;
   let decimals: number | null = null;
   const scale = async (): Promise<number> => {
     if (decimals === null) decimals = Number(await client.readContract({ address, abi: CHAINLINK_ABI, functionName: "decimals" }));

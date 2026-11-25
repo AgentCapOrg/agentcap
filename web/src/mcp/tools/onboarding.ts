@@ -1,7 +1,6 @@
 /** A read-only path from a connected assistant to an owner-authorized worker. */
 import * as z from "zod";
 import { RENEW_SOON_DAYS } from "@agentcap/core";
-import { readAgentEnergy } from "@/lib/agent-energy";
 import { blockerAdvice } from "@/lib/live-blocker";
 import { readAgentStatus } from "@/lib/services/agent-status";
 import { settingsReader } from "@/lib/services/settings-view";
@@ -16,7 +15,7 @@ import { AGENT_ARG, isoOrNull, untrusted } from "./shared";
 
 const PHASE = z.enum([
   "no_shared_agent", "select_agent", "permission_required", "permission_expired",
-  "awaiting_worker", "worker_stale", "recovery_hold", "blocked", "energy_limited", "paper", "live", "idle",
+  "awaiting_worker", "worker_stale", "recovery_hold", "blocked", "paper", "live", "idle",
 ]);
 const STEP = z.object({
   action: z.string(), label: z.string(), detail: z.string(), url: z.string().nullable(),
@@ -28,17 +27,12 @@ const AGENT_VIEW = z.object({
   status: z.string(), mode: z.string(), strategy: z.string().nullable(),
   permission_expires_at: z.string().nullable(), heartbeat_at: z.string().nullable(), worker_fresh: z.boolean().nullable(),
   live_blocker: z.string().nullable(),
-  energy: z.object({
-    level: z.string(), gated: z.boolean(), fresh: z.boolean(), entry_allowance_exhausted: z.boolean().nullable(),
-    entries_used: z.number().nullable(), entries_allowed: z.number().nullable(), resets_at: z.string().nullable(),
-    reported_at: z.string().nullable(),
-  }).nullable(),
 }).nullable();
 
 const getAgentCapAvatarSetup = defineTool({
   name: "get_agentcapavatar_setup",
   title: "AgentCapAvatar setup and next steps",
-  description: "Read the current connection's setup, authorized agent readiness and next steps: owner signing, permission renewal, funding, worker freshness, recovery and energy. Distinguishes an unshared agent from a missing trading permission. Includes links to existing owner controls; does not create a wallet, activate trading or change settings.",
+  description: "Read the current connection's setup, authorized agent readiness and next steps: owner signing, permission renewal, funding, worker freshness and recovery. Distinguishes an unshared agent from a missing trading permission. Includes links to existing owner controls; does not create a wallet, activate trading or change settings.",
   capability: "market.read",
   anyOf: ["market.read", "agents.read", "drafts.write"],
   directoryAnyOf: ["market.read", "agents.read"],
@@ -103,9 +97,6 @@ const getAgentCapAvatarSetup = defineTool({
       const currentGrantSeen = beat !== null && selected.grantedAt !== null && beat >= selected.grantedAt
         && status?.granted_at === selected.grantedAt && status?.expires_at === selected.expiresAt
         && selected.chainId !== null && status?.chain_id === selected.chainId;
-      const energy = selected.account ? await readAgentEnergy(selected.account, fn => ctx.ledger(db => fn(db))) : null;
-      const energyFresh = energy !== null && energy.at > 0 && energy.at <= now + 30 && !workerStale(energy.at, now, settings?.tickSeconds)
-        && energy.day === new Date(now * 1000).toISOString().slice(0, 10) && energy.resetsAt > now;
       // Recovery failures propagate: a failed hold read cannot report a healthy worker.
       const recovery = selected.account && selected.chainId !== null
         ? await ctx.ledger(db => readFleetRecoveryView(db, { tenant: ctx.principal.tenant, smartAccount: selected.account!, chainId: selected.chainId! }, beat)) : null;
@@ -117,12 +108,6 @@ const getAgentCapAvatarSetup = defineTool({
         chain_id: selected.chainId, status: status?.status ?? "unknown", mode: status?.mode ?? "unknown",
         strategy: untrusted(settings?.strategy, 64), permission_expires_at: isoOrNull(selected.expiresAt), heartbeat_at: isoOrNull(beat),
         worker_fresh: fresh, live_blocker: rule,
-        energy: energy ? {
-          level: energy.level, gated: energy.gated, fresh: energyFresh,
-          entry_allowance_exhausted: energyFresh ? energy.gated && energy.spent : null,
-          entries_used: energy.entries?.used ?? null, entries_allowed: energy.entries?.allowed ?? null,
-          resets_at: isoOrNull(energy.resetsAt), reported_at: isoOrNull(energy.at),
-        } : null,
       };
       if (!selected.account) {
         phase = "permission_required";
@@ -153,12 +138,8 @@ const getAgentCapAvatarSetup = defineTool({
         phase = "blocked";
         summary = status?.live_blocker?.text ?? "The worker reports a live-trading blocker.";
         if (advice?.resign) step("review_permission", "Review trading permission", advice.say, links.wallet);
-        else if (advice?.funding) step("review_funding", rule === "no-gas" ? "Review ETH for network fees" : "Review USDG funding", advice.say, links.funding);
+        else if (advice?.funding) step("review_funding", rule === "no-gas" ? "Review BNB for network fees" : "Review USDG funding", advice.say, links.funding);
         else step("check_blocker", "Check the worker's blocker", advice?.say ?? "This blocker needs inspection; no signature or deposit is recommended from this report.", link("/agent"), false);
-      } else if (energyFresh && energy?.gated && energy.spent) {
-        phase = "energy_limited";
-        summary = "The worker reports that today's energy allowance for new autonomous entries is used up. This does not establish that protective exits are blocked.";
-        step("review_energy", "Review energy allowance", "Wait for the reported reset or review energy in AgentCap. This tool does not buy tokens or change the allowance.", link("/agent"), false);
       } else {
         phase = status?.mode === "live" ? "live" : status?.mode === "paper" ? "paper" : "idle";
         summary = phase === "live" ? "The worker has a fresh live-mode report for this permission. Individual trades still pass its risk, budget and market checks."

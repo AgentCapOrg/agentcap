@@ -5,13 +5,15 @@ import { CASH } from "./tokens";
 import { GRANT_TRENCHER, grantTrencher, trencherPermissions } from "./trencher-vault";
 import { buildCallPermissions, buildWallPolicies } from "./wall";
 import { firstEnableEnvelope, wallShape } from "./first-enable-gas";
+// USDT counts 18 places on BNB Chain.
+const U = 10n**18n;
 const self = "0x1111111111111111111111111111111111111111";
 const opts = {trencherVaultAddress:"0x2222222222222222222222222222222222222222",trencherFactoryAddress:"0x3333333333333333333333333333333333333333"};
 test("autonomous permission is explicit and cannot grant recovery or arbitrary approvals",()=>{
-  assert.deepEqual(trencherPermissions({},self,5_000_000n),[]);
+  assert.deepEqual(trencherPermissions({},self,5n*U),[]);
   assert.equal(grantTrencher(opts),null);
   assert.ok(grantTrencher({...opts,grantFeatures:[GRANT_TRENCHER]}));
-  const permissions=trencherPermissions(opts,self,10_000_000n);
+  const permissions=trencherPermissions(opts,self,10n*U);
   // NO `approve` OF ITS OWN, and that absence is the point rather than a
   // narrowing. It used to carry one — USDG approve, EQUAL(vault) — which
   // collided with the router approve on Kernel's (target, selector) key and
@@ -24,17 +26,17 @@ test("autonomous permission is explicit and cannot grant recovery or arbitrary a
   // compile. The deepEqual below is what pins the set; that nothing here
   // targets cash is asserted instead, since that is not type-level.
   assert.deepEqual(permissions.map(p=>p.functionName),["buy","sell","deploy"]);
-  assert.ok(!permissions.some(p=>p.target===CASH.USDG),"nothing of its own targets cash");
+  assert.ok(!permissions.some(p=>p.target===CASH.USDT),"nothing of its own targets cash");
   assert.equal(permissions[0]!.target,opts.trencherVaultAddress);
   // The 5 USDG entry ceiling still binds, now on `buy` rather than the approve.
-  assert.deepEqual(permissions[0]!.args[3],{condition:ParamCondition.LESS_THAN_OR_EQUAL,value:5_000_000n});
+  assert.deepEqual(permissions[0]!.args[3],{condition:ParamCondition.LESS_THAN_OR_EQUAL,value:5n*U});
   assert.deepEqual(permissions[2]!.args[0],{condition:ParamCondition.EQUAL,value:self});
   const wall=buildCallPermissions({perTradeUsdg:3,dailyUsdg:20,maxOpsPerDay:10,maxDrawdownBps:500,expiryDays:7} as never,self,opts);
   const buy=wall.find(p=>p.functionName==="buy" && p.target===opts.trencherVaultAddress);
-  assert.ok(buy); assert.deepEqual(buy.args?.[3],{condition:ParamCondition.LESS_THAN_OR_EQUAL,value:3_000_000n});
+  assert.ok(buy); assert.deepEqual(buy.args?.[3],{condition:ParamCondition.LESS_THAN_OR_EQUAL,value:3n*U});
   // The vault must be approvable for cash, or `buy()` cannot pull it and the
   // rail is dead in a quieter way than before.
-  const approve=wall.find(p=>p.functionName==="approve" && p.target===CASH.USDG);
+  const approve=wall.find(p=>p.functionName==="approve" && p.target===CASH.USDT);
   assert.ok(approve,"the wall still carries exactly one USDG approve");
   assert.ok(
     (approve.args?.[0]?.value as readonly string[]).includes(opts.trencherVaultAddress),
@@ -43,7 +45,7 @@ test("autonomous permission is explicit and cannot grant recovery or arbitrary a
 });
 test("incomplete or malformed custody permissions fail closed",()=>{
   for(const bad of [{trencherVaultAddress:opts.trencherVaultAddress},{...opts,trencherFactoryAddress:"0x"},{...opts,trencherVaultAddress:"0x"+"0".repeat(40)},{...opts,trencherFactoryAddress:opts.trencherVaultAddress}]) {
-    assert.throws(()=>trencherPermissions(bad,self,5_000_000n));
+    assert.throws(()=>trencherPermissions(bad,self,5n*U));
     assert.equal(grantTrencher({...bad,grantFeatures:[GRANT_TRENCHER]}),null);
   }
 });

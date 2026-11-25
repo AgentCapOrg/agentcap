@@ -24,7 +24,7 @@
  * the live market carries five coins called NEON (snipe-target.ts) — so symbols
  * are grouped and flagged here, never used to pick a token.
  *
- * Third-party text (pool labels, launcher descriptions, scout reasons, symbols
+ * Third-party text (pool labels, scout reasons, symbols
  * read from contracts) is returned RAW by this module; the surface that shows
  * it must mark it untrusted.
  */
@@ -40,12 +40,11 @@ import {
 import type { Db } from "../../../../worker/src/db";
 import { screenPools, type GeckoPool } from "../../../../worker/src/venues/geckoterminal";
 import { FIVE_MINUTE_EVIDENCE_CAVEAT, readPoolEvidence, summarizeEvidence, type PoolEvidence } from "../../../../worker/src/venues/pool-evidence";
-import { ACTIVITY_GATE } from "../../../../worker/src/venues/pons-activity";
 import { tokenLabelSync } from "../../../../worker/src/token-label";
 import { usdFixed } from "@/lib/format";
 import { fetchMarket, type MarketData, type MarketToken } from "@/lib/market";
 import { readCandles, type CandleRead, type CandleWindow } from "@/lib/read-candles";
-import { sharedPools, sharedRead, type DiscoveryRow, type FreshRow, type Payload } from "@/lib/read-discoveries";
+import { sharedPools, sharedRead, type DiscoveryRow, type Payload } from "@/lib/read-discoveries";
 
 // ── readers ─────────────────────────────────────────────────────────────────
 
@@ -146,7 +145,7 @@ export class MarketUnavailableError extends Error {
 }
 
 /**
- * A pool id as the index spells it: a 20-byte pool contract or a 32-byte v4/Pons
+ * A pool id as the index spells it: a 20-byte pool contract or a 32-byte
  * poolId. The same check readPoolEvidence applies (pool-evidence.ts), required
  * here BEFORE an id reaches readCandles, which puts it straight into a provider
  * URL that may carry the Pro key header.
@@ -154,8 +153,8 @@ export class MarketUnavailableError extends Error {
 export const POOL_ID_RE = /^0x([0-9a-f]{40}|[0-9a-f]{64})$/;
 const ADDRESS_RE = /^0x[0-9a-f]{40}$/;
 const CUSTOM_SYMBOL_RE = /^[A-Za-z0-9._-]{1,16}$/;
-const USDG = (CASH.USDG as string).toLowerCase();
-const WETH = (CASH.WETH as string).toLowerCase();
+const USDG = (CASH.USDT as string).toLowerCase();
+const WETH = (CASH.WBNB as string).toLowerCase();
 
 export const INDEX_SOURCE = "GeckoTerminal (CoinGecko on-chain) index";
 export const CHAINLINK_SOURCE = "Chainlink feed, read on chain";
@@ -259,7 +258,7 @@ export function trustedTickers(customTokens: readonly OwnerToken[]): Map<string,
   put("WETH", WETH);
   put("ETH", WETH);
   for (const t of STOCK_TOKENS) put(t.symbol, t.address);
-  for (const c of officialCoinsFor(4663)) put(c.symbol, c.address);
+  for (const c of officialCoinsFor(56)) put(c.symbol, c.address);
   for (const t of customTokens) put(t.symbol, t.address);
   return m;
 }
@@ -294,7 +293,7 @@ export type TokenFlag = "impersonates_trusted_ticker" | "duplicate_symbol";
 export function tokenKind(address: string, known: boolean): TokenKind {
   const a = address.toLowerCase();
   if (STOCK_TOKENS.some((t) => t.address.toLowerCase() === a)) return "stock";
-  if (a === USDG || a === WETH || officialCoinByAddress(4663, a)) return "established";
+  if (a === USDG || a === WETH || officialCoinByAddress(56, a)) return "established";
   if (!known) return "unknown";
   return instrumentClassOf(a) === "equity-token" ? "stock" : "memecoin";
 }
@@ -446,12 +445,6 @@ export function priceability(f: Pick<TokenFacts, "address" | "stock" | "row" | "
       ? { state: "unknown", reasons: ["The market index could not be read, and an agent reads pool depth on chain only when it trades."] }
       : { state: "unknown", reasons: ["The market index does not list a pool for it; an agent reads pool depth on chain only when it trades."] };
   }
-  if (f.row.onCurve) {
-    return {
-      state: "no",
-      reasons: ["It is still on a Pons bonding curve. A curve price has no oracle and no divergence check, so AgentCap uses it to value a holding but never to authorise a buy; buying it needs scout mode with a budget, or the class route."],
-    };
-  }
   if (f.row.reserveUsd === null) {
     return { state: "unknown", reasons: ["The index reports no reserve figure for its pool, so the depth floor cannot be checked from here."] };
   }
@@ -482,7 +475,7 @@ const have = <T>(value: T | null | undefined, source: string, missing: string): 
 
 export interface TokenView {
   address: string;
-  chain_id: 4663;
+  chain_id: 56;
   kind: TokenKind;
   stock_kind: "stock" | "etf" | null;
   /** Raw: trusted when symbol_trusted, otherwise the pool's own label. */
@@ -493,7 +486,7 @@ export interface TokenView {
   flags: TokenFlag[];
   index: IndexState;
   price: FactOf<number> & { observed_at: string | null; updated_at: string | null };
-  liquidity_usd: FactOf<number> & { on_curve: boolean | null; note: string | null };
+  liquidity_usd: FactOf<number> & { note: string | null };
   volume_24h_usd: FactOf<number>;
   holders: FactOf<number>;
   fdv_usd: FactOf<number>;
@@ -502,8 +495,8 @@ export interface TokenView {
   age_days: FactOf<number>;
   tape: Array<{ window: string; change_pct: number | null; volume_usd: number | null; buys: number | null; sells: number | null; buyers: number | null; sellers: number | null }>;
   /** Raw pool label; attacker-chosen. */
-  pool: { pool_id: string; venue: string; on_curve: boolean; graduated: boolean; label: string; note: string } | null;
-  stock: { has_feed: boolean; paused: boolean | null; ui_multiplier: number | null; rialto_liquid: boolean | null; read: "found" | "unread" } | null;
+  pool: { pool_id: string; venue: string; label: string; note: string } | null;
+  stock: { has_feed: boolean; paused: boolean | null; ui_multiplier: number | null; read: "found" | "unread" } | null;
   discoverable: Verdict;
   priceable: Verdict;
   warnings: string[];
@@ -540,10 +533,9 @@ export function tokenView(f: TokenFacts, customTokens: readonly OwnerToken[]): T
   const liquidity: TokenView["liquidity_usd"] = f.row
     ? {
       ...have(f.row.reserveUsd, INDEX_SOURCE, "The index reports no reserve figure."),
-      on_curve: f.row.onCurve,
-      note: f.row.onCurve ? "On a bonding curve this is mostly a virtual seed, not money anyone can sell into." : "Total value in the pool as the index reports it; not a depth you can trade against.",
+      note: "Total value in the pool as the index reports it; not a depth you can trade against.",
     }
-    : { value: null, source: null, missing_reason: notIndexed, on_curve: null, note: null };
+    : { value: null, source: null, missing_reason: notIndexed, note: null };
 
   const volume = f.stock
     ? have(sm?.volume24hUsd ?? null, "Blockscout", f.stockMarket.read === "unread" ? "The stock market read failed." : "Blockscout did not report 24h volume (it often refuses server requests).")
@@ -556,7 +548,7 @@ export function tokenView(f: TokenFacts, customTokens: readonly OwnerToken[]): T
 
   return {
     address: f.address,
-    chain_id: 4663,
+    chain_id: 56,
     kind,
     stock_kind: f.stock ? (f.stock.kind === "etf" ? "etf" : "stock") : null,
     symbol,
@@ -588,14 +580,12 @@ export function tokenView(f: TokenFacts, customTokens: readonly OwnerToken[]): T
       ? {
         pool_id: f.row.poolId,
         venue: f.row.dex,
-        on_curve: f.row.onCurve,
-        graduated: f.row.graduated,
         label: f.row.name,
         note: "The index keeps this token's busiest pool only; other pools are not listed.",
       }
       : null,
     stock: f.stock
-      ? { has_feed: !!f.stock.chainlinkFeed, paused: sm?.paused ?? null, ui_multiplier: sm?.uiMultiplier ?? null, rialto_liquid: sm?.rialtoLiquid ?? null, read: f.stockMarket.read === "found" ? "found" : "unread" }
+      ? { has_feed: !!f.stock.chainlinkFeed, paused: sm?.paused ?? null, ui_multiplier: sm?.uiMultiplier ?? null, read: f.stockMarket.read === "found" ? "found" : "unread" }
       : null,
     discoverable: discoverability(f),
     priceable: priceability(f),
@@ -621,7 +611,7 @@ interface Candidate {
 
 export interface SearchHit {
   address: string;
-  chain_id: 4663;
+  chain_id: 56;
   symbol: string | null;
   symbol_trusted: boolean;
   name: string | null;
@@ -648,7 +638,7 @@ export interface SearchResult {
   index: { reachable: boolean; observed_at: string | null; truncated: boolean };
 }
 
-const WATCHLIST_SEARCH_SQL = "SELECT token, label FROM mcp_watchlist WHERE tenant = ? AND chain_id = 4663 ORDER BY created_at DESC, token ASC LIMIT 100";
+const WATCHLIST_SEARCH_SQL = "SELECT token, label FROM mcp_watchlist WHERE tenant = ? AND chain_id = 56 ORDER BY created_at DESC, token ASC LIMIT 100";
 
 /**
  * Search the tokens this caller can see: the curated registry, the index's
@@ -697,7 +687,7 @@ export async function searchTokens(db: Db, o: {
     c.sources.add("registry");
     trust(c, symbol, name);
   }
-  for (const coin of officialCoinsFor(4663)) {
+  for (const coin of officialCoinsFor(56)) {
     const c = get(coin.address);
     c.sources.add("registry");
     trust(c, coin.symbol, coin.name);
@@ -781,7 +771,7 @@ export async function searchTokens(db: Db, o: {
     const facts = { address: c.address, identity: trustedIdentity(c.address, o.customTokens), stock, row: c.row, index: indexStateOf(pools, c.row) };
     return {
       address: c.address,
-      chain_id: 4663,
+      chain_id: 56,
       symbol: c.symbol,
       symbol_trusted: c.symbolTrusted,
       name: c.name,
@@ -1004,7 +994,7 @@ export async function poolActivity(o: { address: string; poolId?: string; reader
 
 // ── discovery lists ─────────────────────────────────────────────────────────
 
-export type DiscoverList = "trending" | "new" | "high_volume" | "established";
+export type DiscoverList = "trending" | "high_volume" | "established";
 
 export type DiscoverItem =
   | {
@@ -1016,8 +1006,6 @@ export type DiscoverItem =
     kind: TokenKind;
     venue: string;
     pool_id: string;
-    on_curve: boolean;
-    graduated: boolean;
     price_usd: number | null;
     reserve_usd: number | null;
     fdv_usd: number | null;
@@ -1030,24 +1018,6 @@ export type DiscoverItem =
     screen: { passed: boolean; reasons: string[] };
     /** The display scout's line, model-written. Null when it passed or could not look. */
     scout_verdict: { conviction: number; reason: string } | null;
-    flags: TokenFlag[];
-    caveats: string[];
-  }
-  | {
-    origin: "launchpad";
-    address: string;
-    /** Raw, from the token contract. */
-    symbol: string | null;
-    name: string | null;
-    kind: TokenKind;
-    curve: string;
-    trades: number;
-    traders: number;
-    age_s: number | null;
-    progress_bps: number | null;
-    /** Raw launcher text. */
-    description: string | null;
-    published_socials: boolean | null;
     flags: TokenFlag[];
     caveats: string[];
   }
@@ -1100,7 +1070,6 @@ function flagDuplicates(items: DiscoverItem[], customTokens: readonly OwnerToken
 
 function poolItem(r: DiscoveryRow): DiscoverItem {
   const caveats = [INDEX_CAVEAT];
-  if (r.onCurve) caveats.push("Still on its bonding curve: the reserve is mostly a virtual seed, not money anyone can sell into.");
   return {
     origin: "index_pool",
     address: r.token.toLowerCase(),
@@ -1109,8 +1078,6 @@ function poolItem(r: DiscoveryRow): DiscoverItem {
     kind: tokenKind(r.token, true),
     venue: r.dex,
     pool_id: r.poolId,
-    on_curve: r.onCurve,
-    graduated: r.graduated,
     price_usd: r.priceUsd,
     reserve_usd: r.reserveUsd,
     fdv_usd: r.fdvUsd,
@@ -1127,34 +1094,10 @@ function poolItem(r: DiscoveryRow): DiscoverItem {
   };
 }
 
-function launchItem(r: FreshRow, metaRead: boolean): DiscoverItem {
-  return {
-    origin: "launchpad",
-    address: r.token.toLowerCase(),
-    symbol: r.symbol || null,
-    name: r.name || null,
-    kind: tokenKind(r.token, true),
-    curve: r.curve.toLowerCase(),
-    trades: r.trades,
-    traders: r.traders,
-    age_s: r.ageSec,
-    progress_bps: r.progressBps,
-    description: r.description || null,
-    // Only a successful metadata read can say "none"; an unread coin's blank
-    // socials are unknown, not absent (read-discoveries.ts on `bare`).
-    published_socials: r.twitter || r.telegram || r.website ? true : metaRead ? false : null,
-    flags: [],
-    caveats: [
-      "A launch from the last ~15 minutes on its bonding curve. It has no pool price AgentCap trusts; buying it needs scout mode with a budget or the class route.",
-      "The name, symbol and description are the launcher's own claims.",
-    ],
-  };
-}
-
 /**
- * The four lists, each from the dashboard's own shared payload. `trending` and
+ * The three lists, each from the dashboard's own shared payload. `trending` and
  * `high_volume` are the SCREENED pools (the display floor), in the coins
- * panel's order and by 24h volume respectively; `new` is the launchpad funnel;
+ * panel's order and by 24h volume respectively;
  * `established` is the curated stock-token registry with its Chainlink reads.
  */
 export async function discoverTokens(o: { list: DiscoverList; readers: MarketReaders; customTokens: readonly OwnerToken[]; offset: number; limit: number }): Promise<DiscoverView> {
@@ -1206,24 +1149,17 @@ export async function discoverTokens(o: { list: DiscoverList; readers: MarketRea
     observedAt = iso(payload.fetchedAt);
     truncated = payload.truncated;
     degraded = payload.degraded;
-    if (o.list === "new") {
-      if (!payload.chain.launchpad) throw new MarketUnavailableError("The launchpad could not be read from the chain just now; retry shortly.");
-      ranking = `Launchpad coins from the last ~15 minutes with at least ${ACTIVITY_GATE.minTrades} trades from ${ACTIVITY_GATE.minTraders} addresses, by distinct traders.`;
-      items = payload.fresh.map((r) => launchItem(r, payload.chain.meta));
-      if (!payload.chain.meta || !payload.chain.facts) caveats.push("Some launch details (names, descriptions, curve progress) could not be read this time; missing ones are null.");
+    if (payload.indexUnreachable) throw new MarketUnavailableError("The market index could not be read just now; retry shortly.");
+    scout = payload.verdictsWhy ?? "present_where_given";
+    const rows = [...payload.rows];
+    if (o.list === "high_volume") {
+      rows.sort((a, b) => (b.volume24hUsd ?? -1) - (a.volume24hUsd ?? -1));
+      ranking = "Pools clearing the display screen, by 24h volume.";
     } else {
-      if (payload.indexUnreachable) throw new MarketUnavailableError("The market index could not be read just now; retry shortly.");
-      scout = payload.verdictsWhy ?? "present_where_given";
-      const rows = [...payload.rows];
-      if (o.list === "high_volume") {
-        rows.sort((a, b) => (b.volume24hUsd ?? -1) - (a.volume24hUsd ?? -1));
-        ranking = "Pools clearing the display screen, by 24h volume.";
-      } else {
-        ranking = "Pools clearing the display screen, in the coins panel's order: graduated first, then by 24h price change.";
-      }
-      items = rows.map(poolItem);
-      if (truncated) caveats.push("The index cut its walk short, so this is a prefix of the market rather than all of it.");
+      ranking = "Pools clearing the display screen, in the coins panel's order: by 24h price change.";
     }
+    items = rows.map(poolItem);
+    if (truncated) caveats.push("The index cut its walk short, so this is a prefix of the market rather than all of it.");
   }
   flagDuplicates(items, o.customTokens);
   return {
@@ -1305,7 +1241,7 @@ export async function addToWatchlist(db: Db, o: {
   const tenant = o.tenant.toLowerCase();
   const token = o.address.toLowerCase();
   if (!ADDRESS_RE.test(token)) throw new MarketInputError("address must be a 0x-prefixed 20-byte address");
-  const symbol = o.chainId === 4663 ? trustedIdentity(token, [])?.symbol ?? null : null;
+  const symbol = o.chainId === 56 ? trustedIdentity(token, [])?.symbol ?? null : null;
   return db.tx(async (tx) => {
     const existing = await tx.prepare("SELECT token FROM mcp_watchlist WHERE tenant = ? AND chain_id = ? AND token = ?").get(tenant, o.chainId, token);
     let added = false;

@@ -1392,7 +1392,7 @@ describe("the live-trade count", () => {
  * hands it each writer, and these tests run it with writers that record.
  */
 describe("what a tick may write down", () => {
-  const BOOK = { incomplete: false, curveMarked: 0 };
+  const BOOK = { incomplete: false, };
   /** Every writer, recording what reached it. */
   function writers() {
     const calls: string[] = [];
@@ -1453,7 +1453,7 @@ describe("what a tick may write down", () => {
   });
 
   it("A CURVE-MARKED HOLDING RATCHETS NOTHING, on any tick — but the regular tick's equity row is still written", async () => {
-    const r = tickRatchets(tickPlan("regular"), { incomplete: false, curveMarked: 1 });
+    const r = tickRatchets(tickPlan("regular"), { incomplete: false, });
     const w = writers();
     assert.equal(await r.paperPeak({ hwmUsdg: 100 }, 120, w.paper), 100);
     await r.riskPeak(120, w.risk);
@@ -1504,8 +1504,8 @@ describe("what a tick may write down", () => {
   it("the held observation obeys every other guard: a command tick or a curve mark observes nothing", async () => {
     for (const [plan, book] of [
       [tickPlan("command"), BOOK],
-      [tickPlan("regular"), { incomplete: false, curveMarked: 1 }],
-      [tickPlan("regular"), { incomplete: true, curveMarked: 0 }],
+      [tickPlan("regular"), { incomplete: false, }],
+      [tickPlan("regular"), { incomplete: true, }],
     ] as const) {
       const r = tickRatchets(plan, { ...book, held: true, breakerObservationUsdg: 110_000_000n });
       const w = writers();
@@ -1522,7 +1522,7 @@ describe("what a tick may write down", () => {
   });
 
   it("A BOOK THAT COULD NOT BE TOTALLED WRITES NO EQUITY ROW — a gap is honest, a partial total is not", async () => {
-    const r = tickRatchets(tickPlan("regular"), { incomplete: true, curveMarked: 0 });
+    const r = tickRatchets(tickPlan("regular"), { incomplete: true, });
     const w = writers();
     await r.equityRow(w.equity);
     assert.equal(await r.accrue(ACCRUAL, PEAK, w.fee), PEAK);

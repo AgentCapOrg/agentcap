@@ -33,7 +33,7 @@ const POLICY = readFileSync(new URL("./policy.ts", import.meta.url), "utf8");
 
 describe("what the chain actually sizes", () => {
   it("THE BUY LEG IS CAPPED — the USDG approve carries a limit", () => {
-    const usdgApprove = WALL.slice(WALL.indexOf("target: CASH.USDG as Address"), WALL.indexOf("approve the TRADEABLE stock tokens"));
+    const usdgApprove = WALL.slice(WALL.indexOf("target: CASH.USDT as Address"), WALL.indexOf("approve the TRADEABLE stock tokens"));
     assert.match(usdgApprove, /LESS_THAN_OR_EQUAL, value: usdgUnits\(caps\.perTradeUsdg\)/);
   });
 
@@ -44,7 +44,7 @@ describe("what the chain actually sizes", () => {
     assert.match(sellApprove, /No amount condition/);
     // `stockSpenders`: the scoped list on a scoped wall, `spenders` otherwise
     // (WallOptions.scopedSpenders) — either way, no amount word.
-    assert.match(sellApprove, /args: \[\{ condition: ParamCondition\.ONE_OF, value: stockSpenders \}, null\]/);
+    assert.match(sellApprove, /args: \[\{ condition: ParamCondition\.ONE_OF, value: coinSpenders \}, null\]/);
   });
 
   it("and a TRANSFER genuinely is capped, which is why it stays capped here", () => {
@@ -54,11 +54,10 @@ describe("what the chain actually sizes", () => {
 });
 
 describe("the exemption is exactly as wide as that fact", () => {
-  it("A SELL INTO CASH AND A CURVE TRADE OUT ARE EXEMPT", () => {
+  it("A SELL INTO CASH IS EXEMPT", () => {
     const pred = POLICY.slice(POLICY.indexOf("const isUnsizedExit ="), POLICY.indexOf("A RATE LIMIT MUST NOT BECOME"));
     assert.match(pred, /intent\.kind === "swap"/);
     assert.match(pred, /lc\(intent\.buyToken\) === lc\(limits\.cashToken\)/);
-    assert.match(pred, /intent\.kind === "curve-trade"/);
   });
 
   it("AND NOTHING ELSE IS — not a transfer, not an equity order, not a buy", () => {
@@ -75,7 +74,7 @@ describe("the exemption is exactly as wide as that fact", () => {
     // The whole point. The cap that is real, on chain, and bounds what an agent
     // may spend stays exactly where it was.
     assert.match(POLICY, /if \(!isUnsizedExit && notional > perOpCap\)/);
-    assert.match(POLICY, /rule: isDeposit \? "deposit-cap" : "per-trade-cap"/);
+    assert.match(POLICY, /rule: "per-trade-cap"/);
   });
 });
 

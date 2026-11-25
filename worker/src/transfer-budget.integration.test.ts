@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { transferBudgetRefusal } from "./transfer-budget";
+import { usdt } from "./testdata/bnb-cash";
 
 const scratch = mkdtempSync(path.join(os.tmpdir(), "agentcap-transfer-budget-"));
 const isolatedCwd = path.join(scratch, "cwd");
@@ -38,14 +39,14 @@ describe("the transfer sub-budget", () => {
     const pending = hash();
     assert.equal(await write(ACCOUNT, 50, "submitted", pending), true);
     assert.equal(await store.getTransferredTodayUsdg(ACCOUNT), 50);
-    assert.match(transferBudgetRefusal(50_000_000n, await store.getTransferredTodayUsdg(ACCOUNT), 50)!, /daily transfer limit/);
+    assert.match(transferBudgetRefusal(usdt(50_000_000n), await store.getTransferredTodayUsdg(ACCOUNT), 50)!, /daily transfer limit/);
 
     store.closeStoreForTest();
     await store.initStore();
     assert.equal(await store.getTransferredTodayUsdg(ACCOUNT), 50, "a worker restart does not forget a locally persisted pending transfer");
     assert.equal(await write(ACCOUNT, 50, "landed", pending), true);
     assert.equal(await store.getTransferredTodayUsdg(ACCOUNT), 50, "settlement resolves the reservation rather than charging twice");
-    assert.equal(transferBudgetRefusal(1n, await store.getTransferredTodayUsdg(ACCOUNT), 50) !== null, true);
+    assert.equal(transferBudgetRefusal(usdt(1n), await store.getTransferredTodayUsdg(ACCOUNT), 50) !== null, true);
   });
 
   it("only releases a pending charge on a terminal no-spend outcome", async () => {
@@ -110,11 +111,12 @@ describe("the transfer sub-budget", () => {
   });
 
   it("judges the exact micro-unit boundary and refuses unreadable counters", () => {
-    assert.equal(transferBudgetRefusal(1n, 49.999999, 50), null);
-    assert.match(transferBudgetRefusal(2n, 49.999999, 50)!, /daily transfer limit/);
+    assert.equal(transferBudgetRefusal(usdt(1n), 49.999999, 50), null);
+    assert.match(transferBudgetRefusal(usdt(1n) + 1n, 49.999999, 50)!, /daily transfer limit/, "one base unit over");
+    assert.match(transferBudgetRefusal(usdt(2n), 49.999999, 50)!, /daily transfer limit/);
     for (const unreadable of [NaN, Infinity, -1]) {
-      assert.match(transferBudgetRefusal(1n, unreadable, 50)!, /could not be verified/);
-      assert.match(transferBudgetRefusal(1n, 0, unreadable)!, /could not be verified/);
+      assert.match(transferBudgetRefusal(usdt(1n), unreadable, 50)!, /could not be verified/);
+      assert.match(transferBudgetRefusal(usdt(1n), 0, unreadable)!, /could not be verified/);
     }
   });
 

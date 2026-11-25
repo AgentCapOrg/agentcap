@@ -1,10 +1,10 @@
 /**
- * POST /api/grants TAKES A GRANT FOR ROBINHOOD CHAIN OR ITS TESTNET, AND
+ * POST /api/grants TAKES A GRANT FOR BNB CHAIN OR ITS TESTNET, AND
  * NOTHING ELSE.
  *
  * Nothing checked chainId before, and what reads it downstream maps any id
  * but the testnet to mainnet, so a grant for chain 1 or one
- * with no chainId was stored and read as Robinhood Chain. Driven through the
+ * with no chainId was stored and read as BNB Chain. Driven through the
  * real handler, self-hosted, against a real home: a refusal must leave
  * grant.json and the archive exactly as they were. The hosted refusal, with a
  * really signed claim, is in canonical-wall.test.ts.
@@ -41,7 +41,7 @@ after(() => {
 
 const grantFile = () => path.join(home, "grant.json");
 const archiveDir = () => path.join(home, "grants");
-const LIVE = `{\n  "smartAccount": "${A}",\n  "serialized": "0xserialized",\n  "chainId": 4663\n}\n`;
+const LIVE = `{\n  "smartAccount": "${A}",\n  "serialized": "0xserialized",\n  "chainId": 56\n}\n`;
 
 beforeEach(() => {
   rmSync(archiveDir(), { recursive: true, force: true });
@@ -56,15 +56,15 @@ async function post(grant: Record<string, unknown>) {
 }
 
 describe("POST /api/grants, self-hosted — the chain id", () => {
-  it("refuses every id that is not 4663 or 46630, and leaves grant.json and the archive alone", async () => {
-    const refused: unknown[] = [1, 0, -1, 46631, 4663.5, 8453, "4663", "46630", null, true, [4663], { id: 4663 }, CHAINS.robinhood];
+  it("refuses every id that is not 56 or 97, and leaves grant.json and the archive alone", async () => {
+    const refused: unknown[] = [1, 0, -1, 98, 56.5, 8453, 4663, 46630, "56", "97", null, true, [56], { id: 56 }, CHAINS.bnb];
     for (const chainId of refused) {
       const res = await post({ smartAccount: B, serialized: "0xserialized", chainId });
       assert.equal(res.status, 400, `${JSON.stringify(chainId)}: ${JSON.stringify(res.body)}`);
       assert.equal(res.body.code, "unsupported_chain");
       assert.equal(
         res.body.error,
-        `this grant is for chain ${JSON.stringify(chainId)}, and AgentCap only runs on Robinhood Chain (4663) and its testnet (46630). Nothing was saved.`,
+        `this grant is for chain ${JSON.stringify(chainId)}, and AgentCap only runs on BNB Chain (56) and its testnet (97). Nothing was saved.`,
       );
       assert.equal(readFileSync(grantFile(), "utf8"), LIVE, "the grant in place is untouched");
       assert.equal(existsSync(archiveDir()), false, "nothing was archived for a grant that was never taken");
@@ -75,18 +75,18 @@ describe("POST /api/grants, self-hosted — the chain id", () => {
     const res = await post({ smartAccount: B, serialized: "0xserialized" });
     assert.equal(res.status, 400);
     assert.equal(res.body.code, "unsupported_chain");
-    assert.match(res.body.error ?? "", /^this grant names no chain, and AgentCap only runs on Robinhood Chain \(4663\)/);
+    assert.match(res.body.error ?? "", /^this grant names no chain, and AgentCap only runs on BNB Chain \(56\)/);
     assert.equal(readFileSync(grantFile(), "utf8"), LIVE);
   });
 
   it("keeps a long id out of the message past 64 characters", async () => {
     const res = await post({ smartAccount: B, serialized: "0xserialized", chainId: "9".repeat(500) });
     assert.equal(res.status, 400);
-    assert.equal(res.body.error, `this grant is for chain "${"9".repeat(63)}, and AgentCap only runs on Robinhood Chain (4663) and its testnet (46630). Nothing was saved.`);
+    assert.equal(res.body.error, `this grant is for chain "${"9".repeat(63)}, and AgentCap only runs on BNB Chain (56) and its testnet (97). Nothing was saved.`);
   });
 
-  it("takes 4663 and 46630 exactly as before", async () => {
-    for (const chainId of [4663, 46630]) {
+  it("takes 56 and 97", async () => {
+    for (const chainId of [56, 97]) {
       const res = await post({ smartAccount: B, serialized: "0xserialized", chainId });
       assert.equal(res.status, 200, JSON.stringify(res.body));
       assert.deepEqual(res.body, { ok: true });

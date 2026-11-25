@@ -32,7 +32,7 @@ import type {
 
 /**
  * The caps, all EXTRA caps on top of every existing limit — none of them can
- * raise anything the vault, the signed wall, energy or the breaker allow.
+ * raise anything the vault, the signed wall or the breaker allow.
  */
 export const NOMINATE = {
   /** A nomination with no outcome by now is reported `expired`. */
@@ -500,7 +500,7 @@ export class NominationBook {
   /**
    * CLAIM A GROUP-SOURCED ENTRY, before the entry path starts one for a
    * nominated coin. Claim first, refund on no fill (`refundEntry`), the
-   * energy-entry pattern: a crash in between under-spends by one, never
+   * claim-before-use pattern: a crash in between under-spends by one, never
    * over-spends.
    *
    * Three answers, because "nothing was taken" is not one thing:

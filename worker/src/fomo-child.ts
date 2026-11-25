@@ -22,7 +22,7 @@
  * WHAT THIS FILE CANNOT DO. It builds no intent, signs nothing and calls no
  * executor. An entry that a follow nomination reached still goes through the
  * Brain, take() (60 s, 2% band, the min of every bound), the strategy's own
- * sizing, the energy claim, checkPolicy, the vault caps and the paper/live
+ * sizing, checkPolicy, the vault caps and the paper/live
  * rail exactly as before. The only thing added at the entry is a GATE that can
  * drop a follow entry (revalidation against the newest assessment, the
  * exploration reservation, the follow-entry day cap, and a pending record of
@@ -50,7 +50,7 @@
 
 import { readFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
-import { CASH, instrumentClassOf, isEnergyReserveToken } from "../../packages/core/src/index";
+import { CASH, instrumentClassOf } from "../../packages/core/src/index";
 import { writeFileAtomicSync } from "./atomic-write";
 import { tradeConsumesSnapshot } from "./brain-live";
 import type { ShadowOutcome } from "./brain-shadow";
@@ -75,7 +75,7 @@ import {
   type FollowQuote,
   type FollowRoute,
 } from "./fomo/following";
-import { executionAvailabilityOf, isRobinhoodToken, keyOf, robinhoodChain } from "./fomo/identity";
+import { executionAvailabilityOf, isRobinhoodToken, keyOf, bnbChain } from "./fomo/identity";
 import { TRADER_FLOW_LENS } from "./fomo/lens";
 import { dossierStrength, objectionStrengthened, reviewHeldPosition, thesisStrengthened, type DossierStrength, type HeldReview } from "./fomo/lifecycle";
 import { openLocalFomoDb } from "./fomo/local-db";
@@ -84,6 +84,7 @@ import type { FomoBudgetConfig } from "./fomo/budget";
 import { createFomoRuntime } from "./fomo/runtime";
 import { AUTONOMOUS_ENTRY_CAP_6, ExplorationReservations, entryCeiling, microUsdgFloor, type EntryCeiling, type ReservationSnapshot } from "./fomo/sizing";
 import { ensureFomoSchema, sweepJobs } from "./fomo/store";
+import { cashToMicroUp } from "../../packages/core/src/cash";
 import type { FollowAssessment, FomoHealthState, FunnelStage, TraderEvent } from "./fomo/types";
 import type { Db } from "./db";
 
@@ -1505,8 +1506,11 @@ export class ExplorationLedger implements DurableBacked {
         continue;
       }
       if (b.qtyRaw > 0n) {
-        if (p.heldCost6 !== b.costUsdg || !p.everHeld || p.flatSince !== null) changed = true;
-        p.heldCost6 = b.costUsdg;
+        // The basis is in cash base units; this ledger counts micro. A held
+        // cost is spent against a budget, so it rounds up.
+        const held6 = cashToMicroUp(b.costUsdg);
+        if (p.heldCost6 !== held6 || !p.everHeld || p.flatSince !== null) changed = true;
+        p.heldCost6 = held6;
         p.everHeld = true;
         p.flatSince = null;
         continue;
@@ -1821,14 +1825,13 @@ export interface LensTrace {
 
 const lower = (a: unknown) => (typeof a === "string" ? a.trim().toLowerCase() : "");
 const EVM = /^0x[0-9a-f]{40}$/;
-const robinhoodKey = (address: string) => keyOf(robinhoodChain(), lower(address));
+const robinhoodKey = (address: string) => keyOf(bnbChain(), lower(address));
 
-/** A coin the desk could ever hold as a speculative position: a memecoin, not cash, not the energy reserve. */
+/** A coin the desk could ever hold as a speculative position: a memecoin, not cash. */
 export function tradableCoin(address: string): boolean {
   const a = lower(address);
   if (!EVM.test(a)) return false;
-  if ([CASH.USDG, CASH.WETH].some((c) => c.toLowerCase() === a)) return false;
-  if (isEnergyReserveToken(a)) return false;
+  if ([CASH.USDT, CASH.WBNB].some((c) => c.toLowerCase() === a)) return false;
   return instrumentClassOf(a) === "memecoin";
 }
 
@@ -2497,7 +2500,7 @@ export class FomoChild {
     const broker = this.deps.broker();
     if (!broker || now - this.heldTokensAt < FOMO_CHILD.heldTokensEveryMs) return;
     this.heldTokensAt = now;
-    const keys = [...new Set(held.map((h) => lower(h.token)).filter((a) => EVM.test(a) && ![CASH.USDG, CASH.WETH].some((c) => c.toLowerCase() === a) && !isEnergyReserveToken(a)))]
+    const keys = [...new Set(held.map((h) => lower(h.token)).filter((a) => EVM.test(a) && ![CASH.USDT, CASH.WBNB].some((c) => c.toLowerCase() === a)))]
       .slice(0, 200)
       .map(robinhoodKey);
     void broker.report({ kind: "held-tokens", tokenKeys: keys, atMs: now }).catch(() => {});
@@ -2552,7 +2555,9 @@ export class FomoChild {
           } catch {
             entrySec = null;
           }
-          next.set(h.symbol, { entrySec, qtyRaw: b?.qtyRaw ?? null, cost6: b && b.qtyRaw > 0n ? b.costUsdg : null });
+          // The basis is in cash base units; Fomo counts micro. A held cost
+          // is spent against a budget, so it rounds up.
+          next.set(h.symbol, { entrySec, qtyRaw: b?.qtyRaw ?? null, cost6: b && b.qtyRaw > 0n ? cashToMicroUp(b.costUsdg) : null });
         }
         this.heldFacts = next;
       } catch {
@@ -2624,7 +2629,7 @@ export class FomoChild {
         // An early-book coin with no follow nomination behind it (its ceiling
         // is remembered past its offer): passes, but its cost is recorded as
         // a PENDING exploration position before it is sent, or it is dropped.
-        const size6 = typeof intent.notionalUsdg === "bigint" && intent.notionalUsdg > 0n ? intent.notionalUsdg : null;
+        const size6 = typeof intent.notionalUsdg === "bigint" && intent.notionalUsdg > 0n ? cashToMicroUp(intent.notionalUsdg) : null;
         if (size6 === null) return { kind: "none" };
         const symbol = this.symbolOf(token);
         const entryId = this.entryId("e", now);
@@ -2648,7 +2653,7 @@ export class FomoChild {
         latest,
       });
       if (!r.ok) return drop(r.reason);
-      const size6 = typeof intent.notionalUsdg === "bigint" ? intent.notionalUsdg : null;
+      const size6 = typeof intent.notionalUsdg === "bigint" ? cashToMicroUp(intent.notionalUsdg) : null;
       if (size6 === null || size6 <= 0n) return drop("size-unknown");
       if (size6 > r.maxUsdg6) return drop("above-ceiling");
       if (size6 < sizing.floor6) return drop("size-below-floor");

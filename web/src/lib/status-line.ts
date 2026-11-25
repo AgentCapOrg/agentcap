@@ -117,7 +117,7 @@ function network(testnet: boolean): string {
  * always had; a rewording that escaped this would restore the old behaviour
  * (an error shown), which is the safe direction to fail in.
  */
-const GAS_REFUSAL = /no ETH in the account|USDG alone cannot pay gas/i;
+const GAS_REFUSAL = /no (?:ETH|BNB) in the account|USDG alone cannot pay gas/i;
 
 export function statusLine(a: AgentSnapshot): StatusLine {
   const name = a.name || "Your agent";
@@ -191,7 +191,7 @@ export function statusLine(a: AgentSnapshot): StatusLine {
           headline: `${name} is live and its trading fees are covered — you only fund ${money(a.cashUsdg)}.`,
           next:
             "We pay the network fee on every trade, so you never have to top up gas to keep it running. " +
-            "Moving money back OUT to your own wallet is the one thing that still needs a little ETH in the account.",
+            "Moving money back OUT to your own wallet is the one thing that still needs a little BNB in the account.",
           tone: "good",
         }
       : {
@@ -200,7 +200,7 @@ export function statusLine(a: AgentSnapshot): StatusLine {
           // not, so the owner LEAST likely to know it was the one not told. Same
           // scope, same sentence: sponsorship covers trading, not the way out.
           next:
-            `Send USDG to the account address, on ${net}. It does not need ETH to trade — only to ` +
+            `Send USDG to the account address, on ${net}. It does not need BNB to trade — only to ` +
             "move money back out to your own wallet later.",
           tone: "waiting",
         };
@@ -208,19 +208,19 @@ export function statusLine(a: AgentSnapshot): StatusLine {
   if (!a.hasGas) {
     return a.cashUsdg > 0
       ? {
-          headline: `${name} has ${money(a.cashUsdg)} to trade with, but no ETH to pay the fees.`,
+          headline: `${name} has ${money(a.cashUsdg)} to trade with, but no BNB to pay the fees.`,
           next:
-            "Your money is there. This chain charges fees in ETH, which is a separate thing from " +
-            "the dollars you trade with, so the account needs a little of both. A few dollars of ETH " +
-            `covers many trades — send it to the same account address, on ${net}. ETH sent on ` +
+            "Your money is there. This chain charges fees in BNB, which is a separate thing from " +
+            "the dollars you trade with, so the account needs a little of both. A few dollars of BNB " +
+            `covers many trades — send it to the same account address, on ${net}. Coins sent on ` +
             "Ethereum, Base or any other network will not arrive here.",
           tone: "waiting",
         }
       : {
-          headline: `${name} can't trade yet — the account has no ETH for fees.`,
+          headline: `${name} can't trade yet — the account has no BNB for fees.`,
           next:
-            `Send a little ETH to the account address, on ${net} — not Ethereum or Base, which is ` +
-            "where it most often ends up. A few dollars covers many trades.",
+            `Send a little BNB to the account address, on ${net} — not Ethereum or Base: nothing sent ` +
+            "there arrives here. A few dollars covers many trades.",
           tone: "waiting",
         };
   }
@@ -229,7 +229,7 @@ export function statusLine(a: AgentSnapshot): StatusLine {
   if (a.testnet) {
     return {
       headline: `${name} is on the testnet, so none of this is real money.`,
-      next: "Re-sign its key for Robinhood Chain from the wallet page when you are ready — revoking the old permissions requires network fees.",
+      next: "Re-sign its key for BNB Chain from the wallet page when you are ready — revoking the old permissions requires network fees.",
       tone: "waiting",
     };
   }

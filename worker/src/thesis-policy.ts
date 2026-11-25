@@ -1279,11 +1279,10 @@ export function rejectRuleRemedy(rule: string | null | undefined): string | null
       return "No action needed: your agent installs its new permissions on their own first, and the trade goes as an ordinary one on a later tick. If this keeps repeating, re-sign at /grant with fewer custom tokens or capabilities — renewal revokes old permissions on-chain and requires network fees.";
     case "no-cash":
       return "Send USDG to the agent's account.";
-    // Most often a coin whose only market is a Uniswap v4 pool, on a key that
-    // does not carry the v4 adapter. Conditional, because a coin with no pool
-    // anywhere gets the same slug and no setting fixes that.
+    // A fact about where the coin trades, not about the permission signed: the
+    // one swap route is PancakeSwap v3, and no setting adds another.
     case "no-route":
-      return "If it trades only on Uniswap v4 and your key doesn't carry the v4 adapter yet, save the V4SelfSwap adapter in /settings and re-sign at /grant so your agent can reach it.";
+      return "No PancakeSwap v3 pool could quote it, and no setting adds another swap route.";
     case "no-gas":
       return "Send a little ETH to the agent's account — every operation pays a fee before it reaches the chain.";
     // The network holds the whole fee limit up front and returns what is not

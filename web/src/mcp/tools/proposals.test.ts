@@ -49,11 +49,12 @@ function fakeChain(o: { price?: number; fail?: boolean } = {}): PublicClient {
     async simulateContract({ functionName, args }: { functionName: string; args: unknown[] }) {
       if (o.fail || functionName !== "quoteExactInputSingle") throw new Error("no pool");
       const p = args[0] as { tokenIn: string; amountIn: bigint; fee: number };
-      if (p.fee !== 3000) throw new Error("no pool at this tier");
+      if (p.fee !== 2500) throw new Error("no pool at this tier");
       const buying = p.tokenIn.toLowerCase() !== NVDA;
       // Slight impact: larger size, slightly worse rate.
-      const f = 1 - Math.min(0.02, Number(p.amountIn) / (buying ? 1e12 : 1e24));
-      const out = buying ? BigInt(Math.floor((Number(p.amountIn) / 1e6 / price) * f * 1e18)) : BigInt(Math.floor((Number(p.amountIn) / 1e18) * price * f * 1e6));
+      const f = 1 - Math.min(0.02, Number(p.amountIn) / 1e24);
+      // USDT and NVDA both count in 18 decimals.
+      const out = buying ? BigInt(Math.floor((Number(p.amountIn) / 1e18 / price) * f * 1e18)) : BigInt(Math.floor((Number(p.amountIn) / 1e18) * price * f * 1e18));
       return { result: [out, 0n, 0, 120_000n] };
     },
     async readContract({ functionName }: { functionName: string }) {
@@ -78,7 +79,7 @@ async function setup(o: { settings?: Record<string, unknown>; directory?: Return
   // The receipt column is added by the orchestrator's own migration, not the ledger schema.
   d.raw.exec("ALTER TABLE agent_commands ADD COLUMN receipt TEXT");
   d.raw.prepare(`INSERT INTO agents (smart_account, name, owner_address, session_key_address, chain_id, caps, granted_at, expires_at, status, mode, beat_at, epoch)
-    VALUES (?, 'Shogun', ?, '0x1', 4663, '{}', 1700000000, 4102444800, 'active', ?, ?, 1)`).run(ACCOUNT_A, OWNER_A, o.mode ?? "live", NOW - 10);
+    VALUES (?, 'Shogun', ?, '0x1', 56, '{}', 1700000000, 4102444800, 'active', ?, ?, 1)`).run(ACCOUNT_A, OWNER_A, o.mode ?? "live", NOW - 10);
   const a = await connectAs(deps, OWNER_A, { scopes: SCOPES });
   const b = await connectAs(deps, OWNER_B, { scopes: SCOPES });
   const run = (name: string, args: Record<string, unknown>, who = a.principal) => runTool(tool(name), args, who, "trace", { now: () => NOW });
@@ -153,7 +154,7 @@ test("quote_trade: expected, minimum at the agent's slippage, impact, route and 
   assert.equal(r.isError, undefined, JSON.stringify(r));
   const q = data(r);
   assert.equal(q.quoted, true);
-  assert.equal((q.route as { fee_tier_bps: number }).fee_tier_bps, 30);
+  assert.equal((q.route as { fee_tier_bps: number }).fee_tier_bps, 25); // PancakeSwap's 2500 tier
   assert.equal((q.min_out as { slippage_bps: number }).slippage_bps, 100);
   assert.ok(BigInt((q.min_out as { raw: string }).raw) < BigInt((q.expected_out as { raw: string }).raw));
   assert.equal(typeof q.price_impact_bps, "number");
@@ -533,7 +534,7 @@ test("past the evidence deadline with no row of its own, the outcome is unknown:
 
 // ── results never relay raw worker text (C11) ───────────────────────────────
 
-const RAW = "🧱 refused. Nothing was sent and nothing was spent. (couldn't submit: RPC Request failed. URL: https://api.pimlico.io/v2/4663/rpc?apikey=pim_SECRETKEY)";
+const RAW = "🧱 refused. Nothing was sent and nothing was spent. (couldn't submit: RPC Request failed. URL: https://api.pimlico.io/v2/56/rpc?apikey=pim_SECRETKEY)";
 const leaks = (s: string) => /pim_|pimlico|apikey|couldn.?t submit|https?:/i.test(s);
 
 test("a refusal's result is built from the rule vocabulary and the agent's sentence without its raw tail", async () => {
@@ -551,7 +552,7 @@ test("a refusal's result is built from the rule vocabulary and the agent's sente
   // The rule is on this order's own row, as free text the receipt's slug check dropped: classified, detail withheld.
   // A receipt built from a row names that row's token leg.
   const b = await answered(ctx, "raw-line-2", { doneAfter: 5, line: RAW, receipt: { ...refused, token: NVDA } });
-  ownerOrderTrade(ctx.d, { status: "rejected", at: NOW + 2, rule: "couldn't submit: RPC Request failed. URL: https://api.pimlico.io/v2/4663/rpc?apikey=pim_SECRETKEY" });
+  ownerOrderTrade(ctx.d, { status: "rejected", at: NOW + 2, rule: "couldn't submit: RPC Request failed. URL: https://api.pimlico.io/v2/56/rpc?apikey=pim_SECRETKEY" });
   const second = await b.follow(settledAt(NOW + 5));
   assert.equal(second.status, "refused");
   assert.equal(leaks(second.result_json!), false, second.result_json!);
@@ -718,22 +719,22 @@ test("propose_trade refuses a registry stock outside the agent's basket: the wor
 test("addressableSymbol resolves through the worker's watch set: basket stocks, owner tokens that survive the collision rule, and the official-coins switch", () => {
   const settings = (raw: Record<string, unknown>) => projectSettings(raw);
   // The default basket: NVDA is watched, AAPL is not.
-  assert.deepEqual(addressableSymbol(NVDA, settings({}), 4663), { symbol: "NVDA" });
-  assert.match((addressableSymbol(AAPL, settings({}), 4663) as { why: string }).why, /not in the agent's basket/);
-  assert.deepEqual(addressableSymbol(AAPL, settings({ basketSymbols: ["AAPL"] }), 4663), { symbol: "AAPL" });
+  assert.deepEqual(addressableSymbol(NVDA, settings({}), 56), { symbol: "NVDA" });
+  assert.match((addressableSymbol(AAPL, settings({}), 56) as { why: string }).why, /not in the agent's basket/);
+  assert.deepEqual(addressableSymbol(AAPL, settings({ basketSymbols: ["AAPL"] }), 56), { symbol: "AAPL" });
   // NVDA left the basket: an order for it is one the worker would refuse.
-  assert.match((addressableSymbol(NVDA, settings({ basketSymbols: ["AAPL"] }), 4663) as { why: string }).why, /not in the agent's basket/);
+  assert.match((addressableSymbol(NVDA, settings({ basketSymbols: ["AAPL"] }), 56) as { why: string }).why, /not in the agent's basket/);
   // An owner token is watched unless the worker drops it (a symbol a registry stock already uses, in any case).
   const CAT = { symbol: "CAT", address: "0x00000000000000000000000000000000000ca7ca", decimals: 18 };
-  assert.deepEqual(addressableSymbol(CAT.address, settings({ customTokens: [CAT] }), 4663), { symbol: "CAT" });
+  assert.deepEqual(addressableSymbol(CAT.address, settings({ customTokens: [CAT] }), 56), { symbol: "CAT" });
   const FAKE = { symbol: "aapl", address: "0x00000000000000000000000000000000000faa01", decimals: 18 };
-  assert.match((addressableSymbol(FAKE.address, settings({ customTokens: [FAKE] }), 4663) as { why: string }).why, /The owner added it, but the worker does not watch it/);
+  assert.match((addressableSymbol(FAKE.address, settings({ customTokens: [FAKE] }), 56) as { why: string }).why, /The owner added it, but the worker does not watch it/);
   // Of two owner tokens under one symbol the worker keeps the first; the second is never addressable.
   const CAT2 = { symbol: "CAT", address: "0x00000000000000000000000000000000000ca7cb", decimals: 18 };
-  assert.deepEqual(addressableSymbol(CAT.address, settings({ customTokens: [CAT, CAT2] }), 4663), { symbol: "CAT" });
-  assert.equal("why" in addressableSymbol(CAT2.address, settings({ customTokens: [CAT, CAT2] }), 4663), true);
+  assert.deepEqual(addressableSymbol(CAT.address, settings({ customTokens: [CAT, CAT2] }), 56), { symbol: "CAT" });
+  assert.equal("why" in addressableSymbol(CAT2.address, settings({ customTokens: [CAT, CAT2] }), 56), true);
   // Nothing the agent knows.
-  assert.match((addressableSymbol("0x000000000000000000000000000000000000dead", settings({}), 4663) as { why: string }).why, /not one of the agent's tokens/);
+  assert.match((addressableSymbol("0x000000000000000000000000000000000000dead", settings({}), 56) as { why: string }).why, /not one of the agent's tokens/);
 });
 
 // ── notes refuse control characters (L9) ────────────────────────────────────

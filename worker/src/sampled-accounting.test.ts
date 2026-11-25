@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
-import { curveMarkedSymbols, sampledGainUsdg, type Position } from "./positions";
+import { sampledGainUsdg, type Position } from "./positions";
 
 /**
  * A SAMPLED PRICE IS BUDGETED LIKE THE THIN CLAIM IT IS — everywhere a price
@@ -16,10 +16,6 @@ const pos = (symbol: string, priceSource: Position["priceSource"], valueUsdg: bi
 const usd = (n: number) => BigInt(Math.round(n * 1e6));
 
 describe("sampledGainUsdg — what peaks and the fee may not be set from", () => {
-  it("is the sampled marks' gain above cost, and nothing else's", () => {
-    const book = [pos("NEW", "sampled", usd(3)), pos("OLD", "pool", usd(100)), pos("CRV", "curve", usd(9))];
-    assert.equal(sampledGainUsdg(book, () => usd(2.5)), usd(0.5));
-  });
 
   it("lets a sampled loss through, so a peak can only be judged lower, never higher", () => {
     assert.equal(sampledGainUsdg([pos("NEW", "sampled", usd(1))], () => usd(2.5)), 0n);
@@ -27,10 +23,6 @@ describe("sampledGainUsdg — what peaks and the fee may not be set from", () =>
 
   it("counts the whole mark when its cost is unknown", () => {
     assert.equal(sampledGainUsdg([pos("NEW", "sampled", usd(3))], () => null), usd(3));
-  });
-
-  it("does not freeze the whole book's peaks the way a curve mark does", () => {
-    assert.deepEqual(curveMarkedSymbols([pos("NEW", "sampled", usd(3)), pos("CRV", "curve", usd(1))]), ["CRV"]);
   });
 });
 
@@ -51,7 +43,7 @@ describe("the tick's wiring", () => {
   it("counts a held sampled coin's cost in the scout running total, paper or live, except vault custody", () => {
     assert.match(INDEX, /const inVault = qMode === "live"\s*\? autoTrenchBalances\.has\(token\)\s*: !!autoTrench && !!active && !!grantTrencher\(active\.grant\) && !baseTokenAddress\(token\) &&\s*!!active\.limits\.knownTrencherAssets\?\.some/);
     assert.match(INDEX, /const sampledBudgeted = p\.priceSource === "sampled" && !inVault;/);
-    assert.match(INDEX, /if \(p\.priceSource !== "curve" && !sampledBudgeted\) continue;/);
+    assert.match(INDEX, /if \(!sampledBudgeted\) continue;/);
   });
 
   it("judges every peak and the fee on equity with sampled holdings held to cost", () => {

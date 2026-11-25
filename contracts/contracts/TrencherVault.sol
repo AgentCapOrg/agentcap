@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {IERC20Trade} from "./interfaces/IPonsCurve.sol";
+import {IERC20Trade} from "./interfaces/IERC20Trade.sol";
 
 interface ITrencherV3Factory {
     function getPool(address a, address b, uint24 fee) external view returns (address);
@@ -16,8 +16,9 @@ interface ITrencherV3Router {
 /// recovery is an owner-key operation. Pools and volume are not guarantees of value.
 contract TrencherVault {
     uint256 public constant VERSION = 1;
-    uint256 public constant PER_BUY = 5_000_000;
-    uint256 public constant DAILY_BUYS = 25_000_000;
+    // BNB Chain USDT has 18 decimals: exactly 5 USDT a buy and 25 USDT a 24h window.
+    uint256 public constant PER_BUY = 5 * 10 ** 18;
+    uint256 public constant DAILY_BUYS = 25 * 10 ** 18;
     address public immutable owner;
     address public immutable cash;
     address public immutable bridge;

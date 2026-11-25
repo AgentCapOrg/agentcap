@@ -52,7 +52,7 @@ const CALM: AgentState = {
 
 const sendTo = (recipient: `0x${string}`): TradeIntent => ({
   kind: "transfer",
-  target: CASH.USDG as `0x${string}`,
+  target: CASH.USDT as `0x${string}`,
   recipient,
   amountUsdg: usdgUnits(10),
 });
@@ -93,21 +93,6 @@ test("a pre-allowlist grant still works — absent must not be read as legacy", 
   assert.equal(limits.withdrawalAddresses, undefined, "left free-form, exactly as before");
   const verdict = checkPolicy(sendTo("0x00000000000000000000000000000000000000ee"), limits, CALM);
   assert.equal(verdict.ok, true, "a legacy grant keeps the capability its signature actually carries");
-});
-
-test("swaps and vault moves are untouched by any of this", () => {
-  // Narrowing the transfer path must not narrow the trading path with it.
-  const limits = limitsFromGrant(grantWith(["tradeable-v2"]));
-  const verdict = checkPolicy(
-    {
-      kind: "vault-deposit",
-      target: limits.allowedTargets[2]!,
-      amountUsdg: usdgUnits(10),
-    } as never,
-    limits,
-    CALM,
-  );
-  assert.equal(verdict.ok, true, "parking cash is not a withdrawal");
 });
 
 test("a STALE marker is not a permission — the Aug 2..26 generation is refused too", () => {

@@ -477,7 +477,7 @@ function fourBoards(seed: number): { candidates: CohortCandidate[]; presentIn: M
 }
 
 const pos = (o: Partial<PositionRow> & { key?: string }): PositionRow => {
-  const key = o.key ?? `eip155:4663:0x${"ab".repeat(20)}`;
+  const key = o.key ?? `eip155:56:0x${"ab".repeat(20)}`;
   const [namespace, net, address] = key.split(":") as [TokenIdentity["chain"]["namespace"], string, string];
   const { key: _k, ...rest } = o;
   return {
@@ -501,7 +501,8 @@ const pos = (o: Partial<PositionRow> & { key?: string }): PositionRow => {
     ...rest,
   };
 };
-const BSC_KEY = `eip155:56:0xd77cf5c8a1c79d6b78408a3f545dea88441790fb`;
+// A chain AgentCap does not trade (the name is historical: BNB Chain, 56, is ours).
+const BSC_KEY = `eip155:4663:0xd77cf5c8a1c79d6b78408a3f545dea88441790fb`;
 
 describe("leaderboard-only evidence", () => {
   it("is calibrated as documented: four boards clear the floor, three clear it with a real record, two never do", () => {

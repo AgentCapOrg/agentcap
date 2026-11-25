@@ -414,10 +414,10 @@ describe("owner-scoped public wallet intros", () => {
   const T0 = Date.UTC(2026, 8, 28, 8, 0);
   it("appends the verified account only after gating, keeps the review window, and never gives it to the writer", async (t) => {
     const w = await world(t, T0);
-    const p = poster(w, { socialProfile: async () => ({ xVoice: "dry", publicWallet: { address: AGENT, chainId: 4663 } }) });
+    const p = poster(w, { socialProfile: async () => ({ xVoice: "dry", publicWallet: { address: AGENT, chainId: 56 } }) });
     await p.step(w.db, ROSTER, new Map(), T0);
     const [intro] = await rows(w);
-    assert.equal(intro?.body, `${INTRO} Wallet (Robinhood Chain): ${AGENT.toLowerCase()}`);
+    assert.equal(intro?.body, `${INTRO} Wallet (BNB Chain): ${AGENT.toLowerCase()}`);
     assert.equal(intro?.dueAtMs, T0 + 10 * MIN);
     assert.equal(w.tweets.length, 0);
     assert.ok(w.prompts.every((prompt) => !prompt.includes(AGENT)));
@@ -430,10 +430,10 @@ describe("owner-scoped public wallet intros", () => {
   for (const change of ["consent", "account", "chain"] as const) {
     it(`does not send a pending wallet intro after its ${change} changes`, async (t) => {
       const w = await world(t, T0);
-      let wallet: { address: string; chainId: number } | null = { address: AGENT, chainId: 4663 };
+      let wallet: { address: string; chainId: number } | null = { address: AGENT, chainId: 56 };
       const p = poster(w, { socialProfile: async () => ({ publicWallet: wallet }) });
       await p.step(w.db, ROSTER, new Map(), T0);
-      wallet = change === "consent" ? null : change === "account" ? { address: `0x${"ef".repeat(20)}`, chainId: 4663 } : { address: AGENT, chainId: 46630 };
+      wallet = change === "consent" ? null : change === "account" ? { address: `0x${"ef".repeat(20)}`, chainId: 56 } : { address: AGENT, chainId: 97 };
       await p.step(w.db, ROSTER, new Map(), T0 + 10 * MIN);
       assert.equal(w.tweets.length, 0);
       assert.equal((await rows(w))[0]?.reason, "context-changed");
@@ -463,13 +463,13 @@ describe("owner-scoped token contracts", () => {
       CREATE TABLE decisions (id TEXT, agent_id TEXT, action TEXT, source TEXT);
       CREATE TABLE trades (id INTEGER PRIMARY KEY, decision_id TEXT, agent_id TEXT, kind TEXT, status TEXT, tx_hash TEXT, buy_token TEXT, sell_token TEXT, epoch INTEGER DEFAULT 1, basis_source TEXT DEFAULT 'paper', fill_side TEXT DEFAULT 'buy', fill_qty_raw TEXT DEFAULT '1');
     `);
-    await w.db.prepare("INSERT INTO agents (smart_account, chain_id) VALUES (?, ?)").run(AGENT, 4663);
+    await w.db.prepare("INSERT INTO agents (smart_account, chain_id) VALUES (?, ?)").run(AGENT, 56);
     await w.db.prepare("INSERT INTO decisions VALUES (?, ?, ?, ?)").run("ca-buy", AGENT, "buy", PUBLISHABLE_SOURCES[0]!);
     await w.db.prepare("INSERT INTO trades (id, decision_id, agent_id, kind, status, tx_hash, buy_token, sell_token) VALUES (?, ?, ?, ?, ?, ?, ?, ?)").run(1, "ca-buy", AGENT, "swap", "paper", null, TOKEN, null);
     let consent = true;
     const p = poster(w, {
       calls: [call({ decisionId: "ca-buy", token: TOKEN, atSec: (T0 + MIN) / 1000 })],
-      socialProfile: async () => ({ xTokenAddresses: consent, currentAgent: { address: AGENT, chainId: 4663 } }),
+      socialProfile: async () => ({ xTokenAddresses: consent, currentAgent: { address: AGENT, chainId: 56 } }),
     });
     await p.step(w.db, ROSTER, new Map(), T0);
     const intro = (await rows(w))[0]!;
@@ -494,7 +494,7 @@ describe("owner-scoped token contracts", () => {
         CREATE TABLE decisions (id TEXT, agent_id TEXT, action TEXT, source TEXT);
         CREATE TABLE trades (id INTEGER PRIMARY KEY, decision_id TEXT, agent_id TEXT, kind TEXT, status TEXT, tx_hash TEXT, buy_token TEXT, sell_token TEXT, epoch INTEGER DEFAULT 1, basis_source TEXT DEFAULT 'paper', fill_side TEXT DEFAULT 'buy', fill_qty_raw TEXT DEFAULT '1');
       `);
-      await w.db.prepare("INSERT INTO agents (smart_account, chain_id) VALUES (?, ?)").run(AGENT, 4663);
+      await w.db.prepare("INSERT INTO agents (smart_account, chain_id) VALUES (?, ?)").run(AGENT, 56);
       await w.db.prepare("INSERT INTO decisions VALUES (?, ?, ?, ?)").run("project-buy", AGENT, "buy", PUBLISHABLE_SOURCES[0]!);
       await w.db.prepare("INSERT INTO trades (id, decision_id, agent_id, kind, status, tx_hash, buy_token, sell_token) VALUES (?, ?, ?, ?, ?, ?, ?, ?)").run(1, "project-buy", AGENT, "swap", "paper", null, TOKEN, null);
       const intro = await store.schedulePost(w.db, { tenant: TENANT, xUserId: "111", kind: "intro", dedupeKey: `intro:${TENANT}:111`, body: INTRO, dueAtMs: T0 + 10 * MIN, nowMs: T0 });
@@ -502,12 +502,12 @@ describe("owner-scoped token contracts", () => {
       let reads = 0;
       const p = poster(w, {
         calls: [call({ decisionId: "project-buy", token: TOKEN, atSec: (T0 + MIN) / 1000 })],
-        socialProfile: async () => ({ xTokenAddresses: true, discoveryFocus: scenario === "balanced" ? "balanced" : "new-projects", currentAgent: { address: AGENT, chainId: 4663 } }),
+        socialProfile: async () => ({ xTokenAddresses: true, discoveryFocus: scenario === "balanced" ? "balanced" : "new-projects", currentAgent: { address: AGENT, chainId: 56 } }),
         publicProjectDescription: async (token, chainId) => {
           reads++;
           assert.equal(token, TOKEN);
-          assert.equal(chainId, 4663);
-          return scenario === "no-source" ? null : { token: scenario === "wrong-token" ? AGENT : token, chainId: scenario === "wrong-chain" ? 46630 : chainId, description: "A community tool for sharing local art." };
+          assert.equal(chainId, 56);
+          return scenario === "no-source" ? null : { token: scenario === "wrong-token" ? AGENT : token, chainId: scenario === "wrong-chain" ? 97 : chainId, description: "A community tool for sharing local art." };
         },
         answer: () => scenario === "attributed" ? "pepe's project says it helps people share art. i bought on paper because the pool was deep." : BUY,
       });
@@ -545,7 +545,7 @@ describe("receipt-backed sale posts", () => {
     await ready(w);
     const p = poster(w, {
       answer: () => "i sold pepe, receipt filed.", facts: factsOf([], "live"),
-      socialProfile: async () => ({ xTradeResults: true, currentAgent: { address: AGENT, chainId: 4663 } }),
+      socialProfile: async () => ({ xTradeResults: true, currentAgent: { address: AGENT, chainId: 56 } }),
       saleResults: async () => [sale],
     });
     await p.step(w.db, ROSTER, new Map(), T0 + MIN);
@@ -587,7 +587,7 @@ describe("receipt-backed sale posts", () => {
         answer: () => over.answer ?? "i sold pepe, receipt filed.", facts: factsOf([], "live"),
         ...(over.llmPerDay === undefined ? {} : { llmPerDay: over.llmPerDay }),
         fetch: xWithMedia(calls, over.upload),
-        socialProfile: async () => ({ xTradeResults: true, currentAgent: { address: AGENT, chainId: 4663 } }),
+        socialProfile: async () => ({ xTradeResults: true, currentAgent: { address: AGENT, chainId: 56 } }),
         saleResults: async () => results,
         saleCard: over.card ?? (async (_db, agent, chainId, op) => { asked.push({ agent, chainId, op }); return CARD; }),
         renderCard: over.render ?? (async (card) => { drawn.push(card); return PNG; }),
@@ -615,7 +615,7 @@ describe("receipt-backed sale posts", () => {
       assert.equal(sale[0]!.body.media_category, "tweet_image");
       assert.deepEqual([...Buffer.from(String(sale[0]!.body.media), "base64")], [...PNG]);
       assert.deepEqual(sale[1]!.body, { text: post.body, media: { media_ids: ["1880028106020515840"] } });
-      assert.deepEqual(asked, [{ agent: AGENT, chainId: 4663, op: WIN.operationKey }], "the card is the vouched sale's, asked once");
+      assert.deepEqual(asked, [{ agent: AGENT, chainId: 56, op: WIN.operationKey }], "the card is the vouched sale's, asked once");
       assert.deepEqual(drawn, [CARD]);
       assert.match(logs.join(" "), /card-attached 1/);
     });
@@ -666,7 +666,7 @@ describe("receipt-backed sale posts", () => {
         await ready(w);
         const p = poster(w, {
           active: true, answer: () => "i sold pepe, receipt filed.", facts: factsOf([], "live"),
-          socialProfile: async () => ({ xTradeResults: true, currentAgent: { address: AGENT, chainId: 4663 } }),
+          socialProfile: async () => ({ xTradeResults: true, currentAgent: { address: AGENT, chainId: 56 } }),
           saleResults: async () => [result],
         });
         await p.step(w.db, ROSTER, new Map(), T0 + MIN);
@@ -692,13 +692,13 @@ describe("receipt-backed sale posts", () => {
             CREATE TABLE trades (id INTEGER PRIMARY KEY, decision_id TEXT, agent_id TEXT, kind TEXT, status TEXT, tx_hash TEXT, buy_token TEXT, sell_token TEXT, epoch INTEGER DEFAULT 1, basis_source TEXT DEFAULT 'receipt', fill_side TEXT DEFAULT 'sell', fill_qty_raw TEXT DEFAULT '1');
           `);
           const tx = `0x${randomBytes(32).toString("hex")}`;
-          await w.db.prepare("INSERT INTO agents (smart_account, chain_id) VALUES (?, ?)").run(AGENT, 4663);
+          await w.db.prepare("INSERT INTO agents (smart_account, chain_id) VALUES (?, ?)").run(AGENT, 56);
           await w.db.prepare("INSERT INTO decisions VALUES (?, ?, ?, ?)").run(`sale-${i}`, AGENT, "sell", PUBLISHABLE_SOURCES[0]!);
           await w.db.prepare("INSERT INTO trades (id, decision_id, agent_id, kind, status, tx_hash, buy_token, sell_token) VALUES (?, ?, ?, ?, ?, ?, ?, ?)").run(1, `sale-${i}`, AGENT, "swap", "landed", tx, null, TOKEN);
           const win: PlanSell = { ...WIN, name, symbol, decisionId: `sale-${i}`, token: TOKEN, operationKey: `0x${randomBytes(32).toString("hex")}`, gainPct };
           const p = poster(w, {
             active: true, answer: () => answer, facts: factsOf([], "live"),
-            socialProfile: async () => ({ xTradeResults: true, xTokenAddresses: true, currentAgent: { address: AGENT, chainId: 4663 } }),
+            socialProfile: async () => ({ xTradeResults: true, xTokenAddresses: true, currentAgent: { address: AGENT, chainId: 56 } }),
             saleResults: async () => [win],
           });
           await p.step(w.db, ROSTER, new Map(), T0 + MIN);
@@ -737,7 +737,7 @@ describe("receipt-backed sale posts", () => {
       for (const [what, over, outcome, why] of cases) {
         const w = await world(t, T0, MEDIA);
         await ready(w);
-        const p = poster(w, { active: true, facts: factsOf([], "live"), socialProfile: async () => ({ xTradeResults: true, currentAgent: { address: AGENT, chainId: 4663 } }),
+        const p = poster(w, { active: true, facts: factsOf([], "live"), socialProfile: async () => ({ xTradeResults: true, currentAgent: { address: AGENT, chainId: 56 } }),
           saleResults: async () => [WIN], ...over });
         const log = (await p.step(w.db, ROSTER, new Map(), T0 + MIN)).log ?? "";
         assert.equal((await rows(w)).find((r) => r.kind === "sell")?.status, "scheduled", what);
@@ -784,7 +784,7 @@ describe("receipt-backed sale posts", () => {
       let evidence: PlanSell[] = [sale];
       const p = poster(w, {
         answer: () => "i sold pepe, receipt filed.", facts: factsOf([], "live"),
-        socialProfile: async () => ({ xTradeResults: allowed, currentAgent: { address: AGENT, chainId: 4663 } }),
+        socialProfile: async () => ({ xTradeResults: allowed, currentAgent: { address: AGENT, chainId: 56 } }),
         saleResults: async () => evidence,
       });
       await p.step(w.db, ROSTER, new Map(), T0 + MIN);

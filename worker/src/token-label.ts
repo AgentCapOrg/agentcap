@@ -28,7 +28,7 @@
 
 import { erc20Abi, type PublicClient } from "viem";
 
-import { CASH, STOCK_TOKENS, isEnergyReserveToken, officialCoinByAddress, type CustomToken } from "../../packages/core/src/index";
+import { CASH, STOCK_TOKENS, officialCoinByAddress, type CustomToken } from "../../packages/core/src/index";
 import { netTokenDeltas, type ReceiptLog } from "./fills";
 import { pickAcquiredLeg } from "./inflight-reconcile";
 
@@ -63,8 +63,8 @@ export interface TokenLabel {
   clash: boolean;
 }
 
-const USDG = CASH.USDG.toLowerCase();
-const WETH = CASH.WETH.toLowerCase();
+const USDG = CASH.USDT.toLowerCase();
+const WETH = CASH.WBNB.toLowerCase();
 const ADDR_RE = /^0x[0-9a-f]{40}$/;
 /** A Trencher id, `T` + the last 11 hex of the address — an id, not a name. */
 const TID_RE = /^T[0-9A-F]{11}$/;
@@ -212,7 +212,7 @@ export function tokenLabelSync(db: LabelDb | null, agentId: string | null, input
   if (a === WETH) return base({ ticker: "WETH", name: "wrapped ETH", source: "cash", trusted: true });
   const stock = STOCK_TOKENS.find((t) => t.address.toLowerCase() === a);
   if (stock) return base({ ticker: stock.symbol, name: stock.name !== stock.symbol ? stock.name : null, source: "stock", trusted: true });
-  const official = officialCoinByAddress(4663, a);
+  const official = officialCoinByAddress(56, a);
   if (official) return base({ ticker: official.symbol, name: null, source: "official", trusted: true });
   const mine = custom.find((t) => t.address.toLowerCase() === a);
   if (mine) return base({ ticker: mine.symbol.toUpperCase(), name: null, source: "custom", trusted: true });
@@ -348,22 +348,6 @@ export function labelText(l: TokenLabel): string {
   return l.clash && l.address ? `${word} (${shortAddr(l.address)}, not the real ${word})` : word;
 }
 
-/**
- * An energy purchase, read off a receipt for DISPLAY: USDG out of the book and
- * one energy reserve token in, nothing else moving. Never a fill and never a
- * basis — pickAcquiredLeg keeps refusing it for those — only so a row
- * recovered after a restart says what it was instead of "a coin I can't name".
- */
-function energyLegOf(deltas: ReadonlyMap<string, bigint>): { token: string; side: "buy"; cashUsdg: bigint } | null {
-  const usdgDelta = deltas.get(USDG) ?? 0n;
-  if (usdgDelta >= 0n) return null;
-  const others = [...deltas].filter(([t, v]) => t !== USDG && v !== 0n);
-  if (others.length !== 1) return null;
-  const [token, delta] = others[0]!;
-  if (!isEnergyReserveToken(token) || delta <= 0n) return null;
-  return { token, side: "buy", cashUsdg: -usdgDelta };
-}
-
 /** What a receipt says a trade was, for a row that lost its legs. */
 export interface ReceiptFacts {
   token: string;
@@ -395,9 +379,7 @@ export async function receiptFacts(
   const receipt = await withTimeout(client.getTransactionReceipt({ hash: txHash as `0x${string}` }), timeoutMs);
   if (!receipt) return null; // not cached: a timeout is not an answer
   const deltas = netTokenDeltas(receipt.logs as unknown as ReceiptLog[], book);
-  // pickAcquiredLeg refuses the energy reserve on purpose — it must never get
-  // a basis or a fill. For a NAME it is exactly right: this is only ever shown.
-  const leg = pickAcquiredLeg(deltas, USDG) ?? energyLegOf(deltas);
+  const leg = pickAcquiredLeg(deltas, USDG);
   if (!leg) {
     receiptCache.set(key, null);
     return null;

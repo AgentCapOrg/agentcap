@@ -1,4 +1,4 @@
-import { explorerFor, robinhoodChain, robinhoodTestnet, type Autonomy } from "@agentcap/core";
+import { explorerFor, bnbChain, bnbTestnet, type Autonomy } from "@agentcap/core";
 import type { FleetRecoveryView } from "../../../worker/src/fleet-recovery";
 import type { TelegramStatus } from "@/app/api/telegram/route";
 import { usd } from "@/lib/format";
@@ -42,19 +42,15 @@ export const RECOVERY_WITHDRAW_VERIFIED = false;
 /**
  * What "Cash on chain" counts, said every time it is shown.
  *
- * `vaultUsdg` is NOT added in, and not shown beside it either: /api/grants reads
- * it as `balanceOf` on the Morpho vault, which is a count of vault SHARES, not
- * of USDG. Printing it as dollars would need `convertToAssets`, which that route
- * does not call — and this notice only uses what the route already returns.
- * Tokens are left out for the same reason: no price for them is read here. And
- * what sits in the account's own vaults (class, Trencher) is not read by that
+ * No token is added in: no price for one is read here. And what sits in the
+ * account's own vaults (class, Trencher) is not read by that
  * route at all. So the figure is named for what it is, and each of them is
  * named as not in it — the notice has just said the funds are in those vaults.
  */
-export const RECOVERY_CASH_EXCLUDES = "Only USDG held in the account itself. Not included: USDG in the Morpho vault, anything held in vaults the account owns, and any tokens the account holds.";
+export const RECOVERY_CASH_EXCLUDES = "Only USDG held in the account itself. Not included: anything held in vaults the account owns, and any tokens the account holds.";
 
 /** The two chains this product runs on — anything else gets no explorer link. */
-const KNOWN_CHAINS = new Set<number>([robinhoodChain.id, robinhoodTestnet.id]);
+const KNOWN_CHAINS = new Set<number>([bnbChain.id, bnbTestnet.id]);
 
 /**
  * WHERE THE OWNER'S MONEY IS WHILE TRADING IS HELD.
@@ -81,8 +77,8 @@ const KNOWN_CHAINS = new Set<number>([robinhoodChain.id, robinhoodTestnet.id]);
  *     pause reads as money gone.
  *   - On the test network, no cash figure at all — and not "couldn't be read
  *     just now" either, because that promises a retry that can never succeed.
- *     /api/grants reads CASH.USDG, the MAINNET token address, through multicall
- *     on whichever chain the grant is on, and robinhoodTestnet defines no
+ *     /api/grants reads CASH.USDT, the MAINNET token address, through multicall
+ *     on whichever chain the grant is on, and bnbTestnet defines no
  *     multicall3: on 46630 that read throws every time, so `cashUsdg` is null
  *     every time (explain.ts already says the testnet USDG tile is "pinned at
  *     '—' forever"). Were it ever to answer, it would be a mainnet address read
@@ -128,7 +124,7 @@ export function recoveryFunds(status: Pick<AccountState["status"], "grant" | "ba
   const account = grant?.smartAccount;
   if (!grant || typeof account !== "string" || !/^0x[0-9a-fA-F]{40}$/.test(account)) return null;
   const known = Number.isSafeInteger(grant.chainId) && KNOWN_CHAINS.has(grant.chainId);
-  const testnet = grant.chainId === robinhoodTestnet.id;
+  const testnet = grant.chainId === bnbTestnet.id;
   // Field by field, as grant-balances.ts carries it: no `balances` at all (an
   // older server) and a failed multicall entry are both unread, never zero.
   const cash = status?.balances ? usdgOrNull(status.balances.cashUsdg) : null;

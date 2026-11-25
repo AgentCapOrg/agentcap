@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import type { PublicClient } from "viem";
 import { cleanProjectText, parseTokenInfo, projectLink, readTokenInfo, resetDeskReadsForTest, type TokenInfoRead } from "./gecko";
 import { createLoreReader } from "./lore";
-import type { TokenMeta } from "../venues/pons-meta";
+import type { TokenMeta } from "../venues/token-meta";
 import { FleetFeedCache, type FeedClock } from "../venues/fleet-feed-cache";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -13,8 +13,8 @@ import { setImmediate as nextTurn } from "node:timers/promises";
 const TOKEN = `0x${"a".repeat(40)}` as const;
 const OTHER = `0x${"b".repeat(40)}` as const;
 const NOW = 1_791_050_000_000;
-const client = (id = 4663) => ({ chain: { id } }) as PublicClient;
-const body = (attributes: Record<string, unknown> = {}, id = `robinhood_${TOKEN}`) => ({
+const client = (id = 56) => ({ chain: { id } }) as PublicClient;
+const body = (attributes: Record<string, unknown> = {}, id = `bsc_${TOKEN}`) => ({
   data: { id, type: "token", attributes: { address: TOKEN, name: "R Hooks", description: "A meme about hooks on Robinhood Chain.", websites: ["https://hooks.example/"], twitter_handle: "rhooks", ...attributes } },
 });
 const info = (over: Partial<NonNullable<TokenInfoRead["info"]>> = {}): TokenInfoRead => ({
@@ -30,7 +30,7 @@ describe("contract-bound project metadata", () => {
   it("reads Robinhooks' published project concept without inferring a meme from its ticker", () => {
     const token = "0xe07119cdd031e8a2043c3c9c4f9c56f34e54a81e";
     // Public /info response observed 2026-10-03; the project has not been GT verified.
-    const parsed = parseTokenInfo({ data: { id: `robinhood_${token}`, type: "token", attributes: {
+    const parsed = parseTokenInfo({ data: { id: `bsc_${token}`, type: "token", attributes: {
       address: token, name: "Robinhooks", symbol: "RHOOKS", gt_verified: false,
       description: "Robinhooks is a visual V4 hook builder for Robinhood Chain, letting users design, simulate, & deploy programmable pool logic without starting from raw Solidity.",
       websites: ["https://robinhooks.site"], twitter_handle: "robinhooks_rh",
@@ -42,16 +42,17 @@ describe("contract-bound project metadata", () => {
     assert.equal("verified" in (parsed ?? {}), false, "metadata does not become verification or trading authority");
   });
 
-  it("requires the exact address and Robinhood network even when names match", () => {
+  it("requires the exact address and BNB Chain network even when names match", () => {
     const parsed = parseTokenInfo(body(), TOKEN);
     assert.equal(parsed?.token, TOKEN);
     assert.equal(parsed?.description, "A meme about hooks on Robinhood Chain.");
     assert.equal(parseTokenInfo(body({}, `eth_${TOKEN}`), TOKEN), null);
+    assert.equal(parseTokenInfo(body({}, `robinhood_${TOKEN}`), TOKEN), null);
     assert.equal(parseTokenInfo(body({ address: OTHER }), TOKEN), null);
-    assert.equal(parseTokenInfo(body({}, `robinhood_${OTHER}`), TOKEN), null);
+    assert.equal(parseTokenInfo(body({}, `bsc_${OTHER}`), TOKEN), null);
     assert.equal(parseTokenInfo(body({ address: undefined }), TOKEN), null);
     assert.equal(parseTokenInfo({ data: { attributes: { address: TOKEN, description: "same ticker" } } }, TOKEN), null);
-    assert.equal(parseTokenInfo(body({}, `robinhood_${TOKEN.toUpperCase().replace("0X", "0x")}`), TOKEN)?.token, TOKEN);
+    assert.equal(parseTokenInfo(body({}, `bsc_${TOKEN.toUpperCase().replace("0X", "0x")}`), TOKEN)?.token, TOKEN);
   });
 
   it("bounds publisher prose and removes HTML, links, invisibles and obvious instructions", () => {
@@ -85,7 +86,7 @@ describe("contract-bound project metadata", () => {
       const second = await readTokenInfo(TOKEN.toUpperCase().replace("0X", "0x"), 1000);
       assert.equal(first.failed, false);
       assert.equal(first.observedAt, second.observedAt);
-      assert.deepEqual(urls, [`https://api.geckoterminal.com/api/v2/networks/robinhood/tokens/${TOKEN}/info`]);
+      assert.deepEqual(urls, [`https://api.geckoterminal.com/api/v2/networks/bsc/tokens/${TOKEN}/info`]);
       assert.equal((await readTokenInfo("CASHCAT")).failure, "invalid-token");
       assert.equal(urls.length, 1);
     } finally {
@@ -128,7 +129,7 @@ describe("contract-bound project metadata", () => {
       process.env.AGENTCAP_COINGECKO_PRO_API_KEY = "test-only-key";
       const pro = await readTokenInfo(TOKEN);
       assert.equal(pro.info?.description, "configured-source concept");
-      assert.equal(urls[1], `https://pro-api.coingecko.com/api/v3/onchain/networks/robinhood/tokens/${TOKEN}/info`);
+      assert.equal(urls[1], `https://pro-api.coingecko.com/api/v3/onchain/networks/bsc/tokens/${TOKEN}/info`);
       assert.doesNotMatch(JSON.stringify(pro), /test-only-key/);
       assert.equal(urls.length, 2);
     } finally {
@@ -212,8 +213,8 @@ describe("optional lore within the existing desk budget", () => {
     assert.deepEqual(target, [TOKEN]);
     assert.equal(result.failed, false);
     assert.equal(result.profile?.source, "token-published metadata");
-    assert.equal(result.profile?.url, `https://robinhoodchain.blockscout.com/token/${TOKEN}`);
-    assert.equal(result.profile?.chainId, 4663);
+    assert.equal(result.profile?.url, `https://bscscan.com/token/${TOKEN}`);
+    assert.equal(result.profile?.chainId, 56);
     assert.equal(signal?.aborted, true, "pending index/quota work is cancelled after the preferred source answers");
   });
 
@@ -222,7 +223,7 @@ describe("optional lore within the existing desk budget", () => {
     const result = await read(TOKEN);
     assert.equal(result.failed, false);
     assert.equal(result.profile?.source, "GeckoTerminal token info");
-    assert.equal(result.profile?.url, `https://www.geckoterminal.com/robinhood/tokens/${TOKEN}`);
+    assert.equal(result.profile?.url, `https://www.geckoterminal.com/bsc/tokens/${TOKEN}`);
     assert.equal(result.profile?.description, "A hooks-themed meme.");
   });
 
@@ -245,7 +246,7 @@ describe("optional lore within the existing desk budget", () => {
 
   it("refuses a testnet metadata client and preserves the exact token on the index path", async () => {
     let calls = 0;
-    const read = createLoreReader({ client: client(46630), now: () => NOW, indexed: async (a) => { assert.equal(a, TOKEN); return info(); }, metadata: async () => { calls++; return new Map([[TOKEN, meta()]]); } });
+    const read = createLoreReader({ client: client(97), now: () => NOW, indexed: async (a) => { assert.equal(a, TOKEN); return info(); }, metadata: async () => { calls++; return new Map([[TOKEN, meta()]]); } });
     assert.equal((await read(TOKEN)).profile?.source, "GeckoTerminal token info");
     assert.equal(calls, 0);
     assert.equal((await read("https://arbitrary.example/coin")).failure, "invalid-token");

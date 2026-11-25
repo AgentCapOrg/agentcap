@@ -14,11 +14,9 @@
  * not read the balance and leaves Max off. A failed read never becomes 0, which
  * would read as "this wallet is empty".
  */
-import { robinhoodChain } from "@agentcap/core";
 import type { DepositSource, SourceId } from "./deposit-math";
 
 export const SOURCE_RPC: Readonly<Record<SourceId, string>> = Object.freeze({
-  "eth-robinhood": robinhoodChain.rpcUrls.default.http[0]!,
   "eth-ethereum": "https://ethereum-rpc.publicnode.com",
   "eth-base": "https://mainnet.base.org",
   "eth-arbitrum": "https://arb1.arbitrum.io/rpc",

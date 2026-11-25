@@ -2,9 +2,9 @@
  * "Which network is my permission on?" — permission_status names the network
  * from the chain registry (ids.ts), not from "is it mainnet".
  *
- * It used to call every id but 4663 a "test network — not real money", so a
+ * It used to call every id but the mainnet a "test network — not real money", so a
  * grant naming any chain the registry does not know was described to its
- * owner as play money. 4663 and 46630 read exactly as before; anything else
+ * owner as play money. 56 and 97 are the registry's two; anything else
  * is said to be unrecognised and is never called not real money.
  */
 import assert from "node:assert/strict";
@@ -35,17 +35,17 @@ async function networkLine(chainId: unknown): Promise<string> {
 }
 
 /** What the line said before it read the registry. */
-const before = (chainId: number) => `Signed on network ${chainId === 4663 ? "Robinhood Chain (real)" : `${chainId} (test network — not real money)`}.`;
+const before = (chainId: number) => `Signed on network ${chainId === 56 ? "BNB Smart Chain (real)" : `${chainId} (test network — not real money)`}.`;
 
 describe("permission_status — the network a grant was signed on", () => {
-  it("reads exactly as before for Robinhood Chain and its testnet", async () => {
-    assert.equal(await networkLine(4663), "Signed on network Robinhood Chain (real).");
-    assert.equal(await networkLine(46630), "Signed on network 46630 (test network — not real money).");
-    for (const id of [4663, 46630]) assert.equal(await networkLine(id), before(id));
+  it("reads BNB Chain as real money and its testnet as not", async () => {
+    assert.equal(await networkLine(56), "Signed on network BNB Smart Chain (real).");
+    assert.equal(await networkLine(97), "Signed on network 97 (test network — not real money).");
+    for (const id of [56, 97]) assert.equal(await networkLine(id), before(id));
   });
 
   it("never calls a chain the registry does not name a test network, or real", async () => {
-    for (const id of [1, 0, 46631, 8453, "4663", undefined, null, Number.NaN]) {
+    for (const id of [1, 0, 4663, 46630, 8453, "4663", undefined, null, Number.NaN]) {
       const line = await networkLine(id);
       assert.doesNotMatch(line, /test network|not real money|\(real\)/, String(id));
       assert.match(line, /not one I recognise, so I can't say whether it is real money\)\.$/, String(id));

@@ -97,8 +97,6 @@ const EXEC_RULES: ReadonlySet<string> = new Set([
   // A venue the executor cannot build this trade for: a migrated router, no
   // API key for the venue's calldata, no curve adapter in the grant, and the
   // class-vault arm's own refusals to sign what it cannot read or confirm.
-  "router-migrated",
-  "no-rialto-key",
   "no-curve-adapter",
   "class-side-ambiguous",
   "class-legs-unconfirmed",

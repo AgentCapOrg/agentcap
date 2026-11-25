@@ -28,6 +28,7 @@
  * its own — never in the trading tick.
  */
 
+import { DATA } from "../../../packages/core/src/chain";
 import { readBounded, readBoundedJson } from "../bounded-read";
 import { FleetFeedCache, LocalFeedCache, REAL_FEED_CLOCK, credentialFingerprint, type FeedCache, type FeedClock, type FeedLane, type FeedResult } from "./fleet-feed-cache";
 import { proPacing } from "./coingecko-pacing";
@@ -229,8 +230,8 @@ export async function geckoRefusal(res: Pick<Response, "status"> & Partial<Pick<
   return { failure, retryAfterMs };
 }
 
-/** The network slug for Robinhood Chain (4663) in GeckoTerminal's namespace. */
-export const GECKO_NETWORK = "robinhood";
+/** The network slug for BNB Chain in GeckoTerminal's namespace. */
+export const GECKO_NETWORK = DATA.geckoTerminalSlug;
 
 /** Which list to ask for. Each answers a different question about a market. */
 export type PoolFeed = "trending_pools" | "new_pools" | "pools";

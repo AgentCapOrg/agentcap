@@ -8,23 +8,25 @@ import { proposalsToEquityIntents, type EquityUniverse, type ProposedAction } fr
  * and every gap between them must be a recorded rejection, never a repair.
  */
 
+const USDT = 10n ** 18n; // cash base units
+
 const UNIVERSE: EquityUniverse = {
   tickers: new Set(["AAPL", "NVDA", "MSFT"]),
-  maxPerActionUsdg: 100_000_000n, // 100 USD
+  maxPerActionUsdg: 100n * USDT, // 100 USD
   maxActionsPerTick: 3,
 };
 
 const buy = (symbol: string, sizeUsdg: number): ProposedAction => ({ action: "buy", symbol, sizeUsdg, reason: "" });
 const sell = (symbol: string, sizeUsdg: number): ProposedAction => ({ action: "sell", symbol, sizeUsdg, reason: "" });
 
-const flat = { cashUsdg: 500_000_000n, heldValueUsdg: () => 0n };
-const holding = (v: bigint) => ({ cashUsdg: 500_000_000n, heldValueUsdg: () => v });
+const flat = { cashUsdg: 500n * USDT, heldValueUsdg: () => 0n };
+const holding = (v: bigint) => ({ cashUsdg: 500n * USDT, heldValueUsdg: () => v });
 
 describe("proposalsToEquityIntents", () => {
   it("converts a buy into a notional order — no addresses, no share math", () => {
     const r = proposalsToEquityIntents([buy("AAPL", 50)], UNIVERSE, flat);
     assert.deepEqual(r.intents, [
-      { kind: "equity-order", ticker: "AAPL", side: "buy", notionalUsdg: 50_000_000n },
+      { kind: "equity-order", ticker: "AAPL", side: "buy", notionalUsdg: 50n * USDT },
     ]);
     assert.equal(r.rejected.length, 0);
   });
@@ -43,16 +45,16 @@ describe("proposalsToEquityIntents", () => {
   it("gates buys on SETTLED CASH and decrements across the batch", () => {
     // 500 cash: 300 + 150 fit, the third 100 does not — order matters and the
     // ceiling is what's LEFT, not what we started with.
-    const u = { ...UNIVERSE, maxPerActionUsdg: 400_000_000n };
+    const u = { ...UNIVERSE, maxPerActionUsdg: 400n * USDT };
     const r = proposalsToEquityIntents([buy("AAPL", 300), buy("NVDA", 150), buy("MSFT", 100)], u, flat);
     assert.equal(r.intents.length, 2);
     assert.match(r.rejected[0]!, /exceeds available cash/);
   });
 
   it("caps a sell at the held value — you cannot sell what you do not hold", () => {
-    const r = proposalsToEquityIntents([sell("AAPL", 100)], UNIVERSE, holding(30_000_000n));
+    const r = proposalsToEquityIntents([sell("AAPL", 100)], UNIVERSE, holding(30n * USDT));
     assert.deepEqual(r.intents, [
-      { kind: "equity-order", ticker: "AAPL", side: "sell", notionalUsdg: 30_000_000n },
+      { kind: "equity-order", ticker: "AAPL", side: "sell", notionalUsdg: 30n * USDT },
     ]);
   });
 

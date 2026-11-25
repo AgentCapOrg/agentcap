@@ -3,16 +3,15 @@
  *
  * The selector names which of a login's two wallets a request is about;
  * absent is Spot, so every existing client keeps its account. Here:
- *  - while AGENTCAP_PERPS is not paper, POST makes and renews no Perps wallet
- *    (?wallet=perps with a Perps grant is refused 403 before anything is read
- *    or stored), and a grant naming the other wallet than the request is
- *    refused whatever it says (dual-purpose*.test.ts make one at paper);
+ *  - on BNB Chain POST makes and renews no Perps wallet, whatever
+ *    AGENTCAP_PERPS says (?wallet=perps with a Perps grant is refused 403
+ *    before anything is read or stored), and a grant naming the other wallet
+ *    than the request is refused whatever it says;
  *  - GET ?wallet=perps answers for the Perps wallet, whatever AGENTCAP_PERPS
  *    says, and never with the Spot wallet's status;
- *  - a permission replacement stops exactly the wallet it names, so a Perps
- *    renewal's first step never touches the Spot grant, and the other way round
- *    (run at paper: with perps off a Perps renewal is refused whole, its stop
- *    included, which dual-purpose*.test.ts hold);
+ *  - a permission replacement stops exactly the wallet it names: a Spot one
+ *    never touches the Perps grant, and a Perps one is refused whole, its stop
+ *    included;
  *  - a kill names no wallet (it stops all of them), so a kill that names one
  *    is refused as ambiguous, with nothing deleted; a renewal may name its
  *    wallet, self-hosted as hosted.
@@ -61,7 +60,7 @@ after(() => {
 const addr = (n: number) => `0x${n.toString(16).padStart(40, "0")}` as `0x${string}`;
 const key = (byte: string) => `0x${byte.repeat(32)}` as `0x${string}`;
 const grant = (tenant: `0x${string}`, account: `0x${string}`, sessionKey: `0x${string}`, extra: Partial<StoredGrant> = {}): StoredGrant => ({
-  owner: tenant, smartAccount: account, chainId: 4663, demoSessionPrivateKey: sessionKey,
+  owner: tenant, smartAccount: account, chainId: 56, demoSessionPrivateKey: sessionKey,
   sessionKeyAddress: privateKeyToAccount(sessionKey).address, serialized: `permission-${account}`,
   grantedAt: 1, expiresAt: 9_999_999_999, grantFeatures: ["tradeable-v2"],
   caps: { perTradeUsdg: 25, dailyUsdg: 100, expiryDays: 14, maxDrawdownPct: 5, maxOpsPerDay: 4 },
@@ -71,8 +70,8 @@ const post = (query: string, body: unknown) =>
   route.POST(new Request(`${ORIGIN}/api/grants${query}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }));
 const json = async (res: Response) => ({ status: res.status, body: (await res.json()) as Record<string, unknown> });
 /**
- * A Perps renewal's stop runs only where a Perps wallet can be renewed:
- * AGENTCAP_PERPS=paper, for this test alone (the file runs with it unset).
+ * AGENTCAP_PERPS=paper, for this test alone (the file runs with it unset): the
+ * most the operator's lever can ask for.
  */
 const atPaper = (t: { after: (fn: () => void) => void }) => {
   process.env.AGENTCAP_PERPS = "paper";
@@ -86,7 +85,7 @@ describe("self-hosted: no Perps wallet is made while perps is off, and the kill 
     delete process.env.AGENTCAP_HOSTED;
     writeFileSync(grantFile(), kept);
   });
-  const spotGrant = { smartAccount: addr(0xa1), serialized: "0xserialized", chainId: 4663, grantFeatures: ["tradeable-v2"] };
+  const spotGrant = { smartAccount: addr(0xa1), serialized: "0xserialized", chainId: 56, grantFeatures: ["tradeable-v2"] };
 
   for (const [what, query, body, status, code] of [
     ["?wallet=perps", "?wallet=perps", spotGrant, 400, "wallet-mismatch"],
@@ -130,7 +129,7 @@ describe("self-hosted: no Perps wallet is made while perps is off, and the kill 
 
   // A renewal may name its wallet, as it may hosted, and stops only that one.
   const perpsGrantFile = () => path.join(home, "accounts", "perps", "grant.json");
-  const perpsKept = `{"smartAccount":"${addr(0xc3)}","purpose":"perps","owner":"${addr(0xa1)}","sessionKeyAddress":"${addr(0xb2)}","chainId":4663}\n`;
+  const perpsKept = `{"smartAccount":"${addr(0xc3)}","purpose":"perps","owner":"${addr(0xa1)}","sessionKeyAddress":"${addr(0xb2)}","chainId":56}\n`;
   const renew = (query: string) => route.DELETE(new Request(`${ORIGIN}/api/grants${query}`, {
     method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ purpose: "permission-replacement", expectedAccount: addr(0xc3), expectedSession: addr(0xb2) }),
   }));
@@ -148,14 +147,14 @@ describe("self-hosted: no Perps wallet is made while perps is off, and the kill 
     assert.equal(readFileSync(perpsGrantFile(), "utf8"), perpsKept, "and the Perps grant is left exactly as it was");
   });
 
-  it("a renewal that names the Perps wallet stops the Perps grant only, and none there is absent", async (t) => {
+  it("a renewal that names the Perps wallet is refused even at paper, and both grant.json files are kept", async (t) => {
     atPaper(t);
     withPerpsGrant();
-    assert.deepEqual(await json(await renew("?wallet=perps")), { status: 200, body: { ok: true, replacement: true, state: "stopped" } });
-    assert.equal(existsSync(perpsGrantFile()), false);
-    assert.equal(readFileSync(path.join(home, "accounts", "perps", "grants", `${addr(0xc3)}.json`), "utf8"), perpsKept, "its owner key is kept in its own home");
+    const res = await json(await renew("?wallet=perps"));
+    assert.equal(res.status, 403, JSON.stringify(res.body));
+    assert.equal(res.body.code, "perps-wallet-not-offered");
+    assert.equal(readFileSync(perpsGrantFile(), "utf8"), perpsKept, "the Perps grant is left exactly as it was");
     assert.equal(readFileSync(grantFile(), "utf8"), kept, "the Spot grant is untouched");
-    assert.deepEqual(await json(await renew("?wallet=perps")), { status: 200, body: { ok: true, replacement: true, state: "absent" } });
   });
 });
 
@@ -175,15 +174,6 @@ describe("hosted: a permission replacement stops the wallet it names, and only t
     await stores.getGrantStore("perps").put(T, grant(T, PERPS, key("cd"), { purpose: "perps" }));
   });
 
-  it("?wallet=perps stops the Perps grant; the Spot grant still signs", async (t) => {
-    atPaper(t);
-    const res = await json(await del("?wallet=perps", { purpose: "permission-replacement", expectedTenant: T, expectedAccount: PERPS }));
-    assert.deepEqual(res, { status: 200, body: { ok: true, replacement: true, state: "stopped" } });
-    assert.equal(await stores.getGrantStore("perps").get(T), null, "the Perps key is gone");
-    assert.ok((await stores.getGrantStore("perps").listTenants()).includes(T), "its place is kept for the renewal");
-    assert.equal((await stores.getGrantStore("spot").get(T))?.demoSessionPrivateKey, key("ab"), "Spot is untouched");
-  });
-
   it("no selector stops the Spot grant, as it always did; the Perps grant still signs", async () => {
     const res = await json(await del("", { purpose: "permission-replacement", expectedTenant: T, expectedAccount: SPOT }));
     assert.equal(res.status, 200, JSON.stringify(res.body));
@@ -191,12 +181,15 @@ describe("hosted: a permission replacement stops the wallet it names, and only t
     assert.equal((await stores.getGrantStore("perps").get(T))?.demoSessionPrivateKey, key("cd"));
   });
 
-  it("naming one wallet with the other's account changes nothing", async (t) => {
+  it("a Perps renewal is refused even at paper, whichever account it names, and both grants still sign", async (t) => {
     atPaper(t);
-    const res = await json(await del("?wallet=perps", { purpose: "permission-replacement", expectedTenant: T, expectedAccount: SPOT }));
-    assert.equal(res.status, 409);
-    assert.ok(await stores.getGrantStore("perps").get(T));
-    assert.ok(await stores.getGrantStore("spot").get(T));
+    for (const account of [PERPS, SPOT]) {
+      const res = await json(await del("?wallet=perps", { purpose: "permission-replacement", expectedTenant: T, expectedAccount: account }));
+      assert.equal(res.status, 403, JSON.stringify(res.body));
+      assert.equal(res.body.code, "perps-wallet-not-offered");
+    }
+    assert.equal((await stores.getGrantStore("perps").get(T))?.demoSessionPrivateKey, key("cd"));
+    assert.equal((await stores.getGrantStore("spot").get(T))?.demoSessionPrivateKey, key("ab"));
   });
 
   it("a kill aimed at one wallet is refused: both grants are kept", async () => {

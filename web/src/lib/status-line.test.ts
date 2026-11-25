@@ -42,7 +42,7 @@ test("MONEY IN, NO GAS: it does not tell him his money is missing", () => {
   // funded the account read it as a denial that he had.
   const l = statusLine({ ...base, hasGas: false, cashUsdg: 15 });
   assert.match(l.headline, /\$15/, "names the money he actually sent");
-  assert.match(l.headline, /no ETH to pay the fees/);
+  assert.match(l.headline, /no BNB to pay the fees/);
   assert.match(l.next, /Your money is there/, "answers the objection before he makes it");
   // The load-bearing explanation: two assets, not one.
   assert.match(l.next, /separate thing from the dollars you trade with/);
@@ -52,7 +52,7 @@ test("MONEY IN, NO GAS: it does not tell him his money is missing", () => {
 test("NO MONEY AND NO GAS still gets the plain sentence", () => {
   // The empty-account case must not claim a balance that is not there.
   const l = statusLine({ ...base, hasGas: false, cashUsdg: 0 });
-  assert.match(l.headline, /no ETH for fees/);
+  assert.match(l.headline, /no BNB for fees/);
   assert.doesNotMatch(l.next, /Your money is there/);
   assert.equal(l.tone, "waiting");
 });
@@ -151,13 +151,13 @@ test("no gas is distinguished from no capital — different problems, different 
   // FUNDED but ungassed — the case the group chat hit. Names the money first,
   // because the person reading it has already sent some.
   const noGas = statusLine({ ...base, hasGas: false });
-  assert.match(noGas.headline, /no ETH to pay the fees/);
+  assert.match(noGas.headline, /no BNB to pay the fees/);
   assert.match(noGas.next, /separate thing from the dollars you trade with/);
 
   // EMPTY and ungassed — the plain sentence, claiming no balance it cannot see.
   const bare = statusLine({ ...base, hasGas: false, cashUsdg: 0 });
-  assert.match(bare.headline, /no ETH for fees/);
-  assert.match(bare.next, /Send a little ETH/);
+  assert.match(bare.headline, /no BNB for fees/);
+  assert.match(bare.next, /Send a little BNB/);
 
   const noCash = statusLine({ ...base, cashUsdg: 0 });
   assert.match(noCash.headline, /nothing to trade with/);

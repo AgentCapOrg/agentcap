@@ -19,6 +19,8 @@
  * exactly that reason — the budget is the risk control, not the analysis.
  */
 
+import { usdgUnits } from "../../../packages/core/src/wall";
+import { CASH_CENT, CASH_PER_MICRO, CASH_UNIT, cashFloorUnits } from "../../../packages/core/src/cash";
 import type { PriceQuote } from "../../../packages/core/src/index";
 import { ENTRY_GATE_WHY, entryGateFor } from "../entry-gates";
 import type { TradeIntent } from "../policy";
@@ -55,8 +57,6 @@ export type UnpriceableCause =
   | "no-quote"
   | "stale-price"
   | "zero-price"
-  | "curve-priced"
-  | "v4-priced"
   | "sampled-priced"
   | "sampling"
   | "feed-priced"
@@ -91,8 +91,8 @@ export interface EntryEvidence {
  * boolean FROM the cause makes the drift unrepresentable rather than merely
  * fixed.
  *
- * `requirePoolSource` is the CALLER'S POLICY, not a fact about the quote: a v4
- * or curve mark is good enough to VALUE a holding and deliberately not good
+ * `requirePoolSource` is the CALLER'S POLICY, not a fact about the quote: a
+ * non-pool mark is good enough to VALUE a holding and deliberately not good
  * enough to authorise a new buy — `lastUnpriceable` in index.ts draws the same
  * line for the scout budget, and the two must agree.
  *
@@ -110,10 +110,6 @@ export function unpriceableCause(
   switch (quote.source) {
     case "pool":
       return null;
-    case "curve":
-      return "curve-priced";
-    case "v4":
-      return "v4-priced";
     case "sampled":
       if (!accept.sampled) return "sampled-priced";
       // A series still filling values a holding; it has not yet earned a buy.
@@ -191,8 +187,6 @@ const UNPRICEABLE_WHY: Record<UnpriceableCause, string> = {
   "no-quote": "no venue gave a usable price this tick",
   "stale-price": "its price stopped updating",
   "zero-price": "its quote came back at zero",
-  "curve-priced": "priced off its bonding curve, which has no oracle — enough to value it, not to buy it",
-  "v4-priced": "priced off a v4 pool, which has no oracle — enough to value it, not to buy it",
   "sampled-priced": "its pool is too new for an oracle — our own price readings can value it, not buy it here",
   "sampling": "its pool is too new for an oracle, and our own price readings of it are still filling in",
   "feed-priced": "the only price under this symbol is a stock feed, not this token's own market",
@@ -272,7 +266,7 @@ export interface TrencherConfig {
 }
 
 export const TRENCHER_DEFAULTS: TrencherConfig = {
-  perEntryUsdg: 5_000_000n, // $5
+  perEntryUsdg: 5n * CASH_UNIT, // $5
   minLiquidityUsd: 25_000,
   minFdvUsd: 50_000,
   maxFdvUsd: 5_000_000,
@@ -298,7 +292,7 @@ export type EntryVerdict = { enter: true } | { enter: false; why: string };
  */
 export const TRENCHER_FAST: TrencherConfig = {
   ...TRENCHER_DEFAULTS,
-  perEntryUsdg: 2_500_000n, // $2.50
+  perEntryUsdg: 250n * CASH_CENT, // $2.50
   stopLossBps: 1_000,
   takeProfitBps: 2_000,
   maxHoldSec: 30 * 60,
@@ -394,8 +388,8 @@ export function priceMoveBps(entry8: bigint, now8: bigint): number {
   return Number(((now8 - entry8) * 10_000n) / entry8);
 }
 
-/** A remainder worth less than this (USDG, 6dp) is not left behind: $0.10. */
-export const DUST_REMAINDER_USDG = 100_000n;
+/** A remainder worth less than this (cash base units) is not left behind: $0.10. */
+export const DUST_REMAINDER_USDG = 10n * CASH_CENT;
 /** …nor one under this share of the position: 1%. */
 export const DUST_REMAINDER_BPS = 100n;
 
@@ -414,7 +408,7 @@ export const DUST_REMAINDER_BPS = 100n;
  * it meant to. A rule exit (`forced`) always sells everything, as before.
  *
  * Pure: `raw` is the quantity held, `available` its value and `notional` the
- * value the exit asked for, both USDG 6dp. Returns what to sell and the value
+ * value the exit asked for, both cash base units. Returns what to sell and the value
  * that stands for.
  */
 export function exitSize(
@@ -443,7 +437,7 @@ export function exitSize(
  */
 export function buysOntoDust(prevQtyRaw: bigint, fillQtyRaw: bigint, fillCashUsdg: bigint): boolean {
   if (prevQtyRaw <= 0n || fillQtyRaw <= 0n || fillCashUsdg <= 0n) return false;
-  return (prevQtyRaw * fillCashUsdg) / fillQtyRaw <= 0n;
+  return (prevQtyRaw * fillCashUsdg) / fillQtyRaw < CASH_PER_MICRO;
 }
 
 export interface TrencherDeps {
@@ -527,7 +521,7 @@ export function makeTrencher(deps: TrencherDeps): Strategy {
         // held, the desk could not re-enter DELTA — its only candidate — for the
         // whole of it. Nothing is lost by not selling it: there is no cash in it.
         // Unpriceable positions are untouched — "no price" is not "worth zero".
-        if (held && held.rawBalance > 0n && !stillUnpriceable && available <= 0n) {
+        if (held && held.rawBalance > 0n && !stillUnpriceable && available < CASH_PER_MICRO) {
           dust.add(pos.symbol);
           continue;
         }
@@ -543,7 +537,7 @@ export function makeTrencher(deps: TrencherDeps): Strategy {
         );
         const brain = !verdict.exit && quote && !quote.stale ? deps.brainOrder?.(pos.symbol, pos.token, quote.price8, true) : null;
         if (!verdict.exit && brain?.side !== "sell") continue;
-        const brainNotional = brain ? BigInt(Math.round(brain.usdgAmount * 1e6)) : available;
+        const brainNotional = brain ? usdgUnits(brain.usdgAmount) : available;
         // Never a leftover: a partial that would strand a sliver sells it all (exitSize).
         const { amount, notional } = exitSize(raw, available, brainNotional < available ? brainNotional : available, verdict.exit);
         if (amount <= 0n) continue;
@@ -633,7 +627,8 @@ export function makeTrencher(deps: TrencherDeps): Strategy {
         const brain = deps.brainRequired ? deps.brainOrder?.(c.symbol, c.token, c.price8, false) : null;
         if (deps.brainRequired) {
           if (brain?.side !== "buy" || !Number.isFinite(brain.usdgAmount) || brain.usdgAmount <= 0) continue;
-          const approved = BigInt(Math.floor(brain.usdgAmount * 1e6));
+          // Rounded DOWN: the entry never exceeds what the Brain approved.
+          const approved = cashFloorUnits(brain.usdgAmount);
           if (approved < size) size = approved;
           if (size <= 0n || size > snap.spendHeadroomUsdg || size > snap.perTradeCapUsdg) continue;
         }

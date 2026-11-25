@@ -1,11 +1,10 @@
 /**
- * Uniswap v3 direct execution — the permissionless swap venue.
+ * PancakeSwap v3 direct execution — the one swap venue.
  *
- * Rialto's /quote API needs integrator onboarding; Uniswap v3 needs nobody's
- * permission. Flow per swap: QuoterV2 simulation across fee tiers (this IS the
+ * It needs nobody's permission. Flow per swap: QuoterV2 simulation across fee tiers (this IS the
  * pre-trade simulation — it reverts where the swap would revert and returns a
  * gas estimate we store as the receipt) → slippage-bounded minOut →
- * exactInputSingle through SwapRouter02.
+ * exactInputSingle through the smart router.
  *
  * LIQUIDITY REALITY (2026-07): stock-token v3 pools are seed-sized. The quoter
  * tells us the truth about impact before any money moves — a missing pool shows
@@ -34,26 +33,20 @@
  */
 
 import { encodeFunctionData, erc20Abi, parseAbi, type Hex, type PublicClient } from "viem";
-import { UNISWAP, UNISWAP_SWAP_ROUTER_ABI } from "../../../packages/core/src/index";
-import { buildV4AdapterSwapCalls, buildV4SwapCalls, findV4Pool, quoteV4, type PoolKey } from "./uniswap-v4";
+import { PANCAKESWAP, PANCAKESWAP_V3_FEE_TIERS, UNISWAP_SWAP_ROUTER_ABI } from "../../../packages/core/src/index";
 
 /**
- * Fee tiers to scan.
+ * Fee tiers to scan: every tier PancakeSwap v3 has. It uses 2500 where Uniswap
+ * uses 3000, so a Uniswap list silently misses every 0.25% pool.
  *
- * 100 (0.01%) IS WHERE THIS CHAIN'S MAIN PAIR LIVES, and it was missing. The
- * scout's own trending read reports "USDG/WETH 0.01% … the 26.1M pool"
- * (2026-10-02), so every price or route that hops through WETH could not see
- * the deepest WETH/USDG pool on the chain. Meanwhile the autonomous Trencher's
- * discovery verifies pools against the factory at the fee each pool REPORTS
- * (trencher-discovery.ts), so it admitted pools this list could never find:
- * the same agents logged "passing on T6F99D9422EB — no venue gave a usable
- * price" every tick for coins discovery had just proved were canonical v3
- * pools against USDG or WETH. A coin nothing can price is a coin it never buys.
+ * The list has to cover whatever discovery can admit: the autonomous Trencher
+ * verifies pools against the factory at the fee each pool REPORTS
+ * (trencher-discovery.ts), and a coin nothing here can price is never bought.
  *
  * The wall does not pin a tier (wall.ts: "fee — any tier the pool actually
- * has"), so a 0.01% route is one the owner's signature already allows.
+ * has"), so every tier here is one the owner's signature already allows.
  */
-export const FEE_TIERS = [100, 500, 3000, 10000] as const;
+export const FEE_TIERS = PANCAKESWAP_V3_FEE_TIERS;
 
 export const QUOTER_V2_ABI = parseAbi([
   "struct QuoteExactInputSingleParams { address tokenIn; address tokenOut; uint256 amountIn; uint24 fee; uint160 sqrtPriceLimitX96; }",
@@ -70,14 +63,6 @@ export interface Quote {
    * single-hop swap, which is what most of this file's callers still produce.
    */
   path?: { tokens: readonly `0x${string}`[]; fees: readonly number[] };
-  /**
-   * Present when this quote came from Uniswap **v4**, carrying the exact pool it
-   * priced. v4 executes through Permit2 + UniversalRouter, so a quote and its
-   * calldata are not interchangeable with v3's — buildTradeCalls dispatches on
-   * this, and losing it would mean executing a different route than the one
-   * minOut was computed against.
-   */
-  v4?: { key: PoolKey };
 }
 
 /**
@@ -128,7 +113,7 @@ export async function quoteTier(
 ): Promise<Quote | null> {
   try {
     const { result } = await client.simulateContract({
-      address: UNISWAP.v3QuoterV2 as `0x${string}`,
+      address: PANCAKESWAP.v3QuoterV2 as `0x${string}`,
       abi: QUOTER_V2_ABI,
       functionName: "quoteExactInputSingle",
       args: [
@@ -155,7 +140,7 @@ export async function quotePath(
 ): Promise<Quote | null> {
   try {
     const { result } = await client.simulateContract({
-      address: UNISWAP.v3QuoterV2 as `0x${string}`,
+      address: PANCAKESWAP.v3QuoterV2 as `0x${string}`,
       abi: QUOTER_V2_ABI,
       functionName: "quoteExactInput",
       args: [encodePath(args.tokens, args.fees), args.amountIn],
@@ -205,73 +190,10 @@ export async function bestRoute(
     amountIn: bigint;
     /** Intermediate token to try routing through. Omit to stay single-hop. */
     via?: `0x${string}`;
-    /**
-     * Also quote Uniswap v4. Gated by the CALLER on whether the signed grant
-     * carries the v4 permissions — quoting a venue the key can't reach would
-     * pick a route that then reverts at the wall, which is worse than never
-     * having considered it.
-     */
-    v4?: boolean;
-    /**
-     * Discovered v4 PoolKeys for this pair — the HOOKED pools, learned from
-     * Initialize events (store.poolKeysFor). findV4Pool can only ever guess
-     * hookless keys, so without this list the freshest launches are
-     * structurally unreachable. Quoted only when `v4` is on: a key the grant
-     * cannot execute is a route that reverts at the wall.
-     */
-    v4Keys?: readonly PoolKey[];
   },
 ): Promise<Quote | null> {
   const lc = (a: string) => a.toLowerCase();
   const direct = FEE_TIERS.map((fee) => quoteTier(client, { ...args, fee }));
-
-  // v4 is one more candidate in the same comparison, not a preference. Best
-  // amountOut wins outright, so adding it can only improve the fill — and on
-  // this chain it sometimes does (AAPL quotes better on v4 than v3).
-  const v4 = args.v4
-    ? [
-        (async (): Promise<Quote | null> => {
-          const pool = await findV4Pool(client, args.tokenIn, args.tokenOut);
-          if (!pool) return null;
-          const q = await quoteV4(client, { key: pool.key, tokenIn: args.tokenIn, amountIn: args.amountIn });
-          if (!q) return null;
-          return {
-            fee: pool.key.fee,
-            amountOut: q.amountOut,
-            gasEstimate: q.gasEstimate,
-            v4: { key: pool.key },
-          };
-        })(),
-        // The discovered keys, each its own candidate in the same comparison.
-        // quoteV4 is hooks-agnostic — it always could quote these; nothing
-        // ever FED it one before. Deduped against the hookless guess by pool
-        // id inside pickBestQuote's amountOut comparison (an identical pool
-        // quotes identically, so the duplicate merely ties with itself).
-        //
-        // ENTRY INTO A HOOKED POOL ALSO REQUIRES THE EXIT TO QUOTE. A hook
-        // decides per-swap: one that admits buys and reverts sells is the
-        // no-exit trap one level below the wall, and the wall cannot see it —
-        // the sell permission exists, the pool just refuses to fill it. The
-        // reverse probe is a heuristic (hook behaviour can change after
-        // entry, and that residual is what the scout budget bounds), but a
-        // pool that will not quote the way OUT right now is not a pool to
-        // walk into.
-        ...(args.v4Keys ?? []).map(async (key): Promise<Quote | null> => {
-          const q = await quoteV4(client, { key, tokenIn: args.tokenIn, amountIn: args.amountIn });
-          if (!q) return null;
-          if (lc(key.hooks) !== lc("0x0000000000000000000000000000000000000000")) {
-            const back = await quoteV4(client, { key, tokenIn: args.tokenOut, amountIn: q.amountOut });
-            if (!back || back.amountOut <= 0n) return null;
-          }
-          return {
-            fee: key.fee,
-            amountOut: q.amountOut,
-            gasEstimate: q.gasEstimate,
-            v4: { key },
-          };
-        }),
-      ]
-    : [];
 
   // Hopping through one of the endpoints is the same swap with extra steps.
   const viaUsable =
@@ -288,7 +210,7 @@ export async function bestRoute(
       )
     : [];
 
-  return pickBestQuote(await Promise.all([...direct, ...hops, ...v4]));
+  return pickBestQuote(await Promise.all([...direct, ...hops]));
 }
 
 /**
@@ -310,10 +232,6 @@ export async function requoteRoute(
   route: Quote,
   args: { tokenIn: `0x${string}`; tokenOut: `0x${string}`; amountIn: bigint },
 ): Promise<bigint | null> {
-  if (route.v4) {
-    const q = await quoteV4(client, { key: route.v4.key, tokenIn: args.tokenIn, amountIn: args.amountIn });
-    return q?.amountOut ?? null;
-  }
   if (route.path) {
     const q = await quotePath(client, {
       tokens: route.path.tokens,
@@ -330,11 +248,10 @@ export async function requoteRoute(
  * Every call needed to execute a quote, in order — the ONE place a route turns
  * into calldata.
  *
- * v3 and v4 need different approvals and a different router, and the quote is
- * what says which. Building these separately at the call site is how you end up
- * approving one router and swapping through another, or executing a v3 path
- * against a minOut computed on a v4 pool. Threading the quote through means the
- * route that was priced is necessarily the route that runs.
+ * Building the approve and the swap separately at the call site is how you end up
+ * approving one router and swapping through another, or executing one path
+ * against a minOut computed on a different one. Threading the quote through means
+ * the route that was priced is necessarily the route that runs.
  */
 export function buildTradeCalls(args: {
   quote: Quote;
@@ -343,43 +260,15 @@ export function buildTradeCalls(args: {
   recipient: `0x${string}`;
   amountIn: bigint;
   minAmountOut: bigint;
-  /** Unix seconds. v4 only — bounds the Permit2 allowance and the router call. */
-  deadline: number;
-  /**
-   * The grant-sealed V4SelfSwap address, when this grant carries one. Present
-   * ⇒ v4 quotes execute through the adapter (two calls, no Permit2, recipient
-   * structural). Absent ⇒ the legacy Permit2 + UniversalRouter path, which
-   * only pre-adapter GRANT_V4 grants can actually reach.
-   */
-  v4Adapter?: `0x${string}`;
 }): SwapCall[] {
-  if (args.quote.v4) {
-    if (args.v4Adapter) {
-      return buildV4AdapterSwapCalls({
-        adapter: args.v4Adapter,
-        key: args.quote.v4.key,
-        tokenIn: args.tokenIn,
-        amountIn: args.amountIn,
-        minAmountOut: args.minAmountOut,
-        deadline: args.deadline,
-      });
-    }
-    return buildV4SwapCalls({
-      key: args.quote.v4.key,
-      tokenIn: args.tokenIn,
-      amountIn: args.amountIn,
-      minAmountOut: args.minAmountOut,
-      deadline: args.deadline,
-    });
-  }
-  // v3: approve the router directly for exactly this trade, then swap.
+  // Approve the router directly for exactly this trade, then swap.
   const approve: SwapCall = {
     to: args.tokenIn,
     value: 0n,
     data: encodeFunctionData({
       abi: erc20Abi,
       functionName: "approve",
-      args: [UNISWAP.swapRouter02 as `0x${string}`, args.amountIn],
+      args: [PANCAKESWAP.smartRouter as `0x${string}`, args.amountIn],
     }),
   };
   return [
@@ -422,7 +311,7 @@ export function buildSwapCall(args: {
 }): SwapCall {
   if (args.path) {
     return {
-      to: UNISWAP.swapRouter02 as `0x${string}`,
+      to: PANCAKESWAP.smartRouter as `0x${string}`,
       value: 0n,
       data: encodeFunctionData({
         abi: UNISWAP_SWAP_ROUTER_ABI,
@@ -439,7 +328,7 @@ export function buildSwapCall(args: {
     };
   }
   return {
-    to: UNISWAP.swapRouter02 as `0x${string}`,
+    to: PANCAKESWAP.smartRouter as `0x${string}`,
     value: 0n,
     data: encodeFunctionData({
       abi: UNISWAP_SWAP_ROUTER_ABI,

@@ -37,7 +37,7 @@
 
 import { privateKeyToAccount } from "viem/accounts";
 import type { LocalAccount } from "viem";
-import { robinhoodChain, robinhoodTestnet, type GrantPurpose } from "@agentcap/core";
+import { bnbChain, bnbTestnet, type GrantPurpose } from "@agentcap/core";
 import {
   ownerFromPrivateKey,
   ownerFromSigner,
@@ -82,7 +82,7 @@ function ownerOf(w: BrowserWallet): RecoveryOwner {
   );
 }
 
-const chainOf = (id: number) => (id === robinhoodTestnet.id ? robinhoodTestnet : robinhoodChain);
+const chainOf = (id: number) => (id === bnbTestnet.id ? bnbTestnet : bnbChain);
 
 /** This origin's relay, which holds the house bundler key so the browser cannot. */
 export const relayUrl = (chainId: number, purpose: GrantPurpose = "spot") =>
@@ -195,22 +195,7 @@ export async function planFromBrowser(w: BrowserWallet): Promise<BrowserPlan> {
  * operation locally and submits it through the relay, which will refuse anything
  * that is not withdrawal-shaped.
  */
-export async function sweepFromBrowser(
-  w: BrowserWallet,
-  to: `0x${string}`,
-  /**
-   * THE CLASS LEG THE OWNER JUST APPROVED, carried from the plan they saw.
-   *
-   * `recoverFunds` re-plans internally, so without this the confirmation and
-   * the execution are built from two separate reads of a 6,000,000-block log
-   * scan — and when the second one came back empty the vault was silently
-   * skipped while the account sweep went ahead. Passing it makes the approved
-   * intent the thing that executes, and makes its failure fatal.
-   *
-   * Identity only. The AMOUNT is re-read from the vault before signing.
-   */
-  approvedClass?: { vault: `0x${string}`; tokens: readonly `0x${string}`[] },
-) {
+export async function sweepFromBrowser(w: BrowserWallet, to: `0x${string}`) {
   // Arms the relay by setting the ticket cookie. Same-origin requests carry it
   // automatically from here, including the ones viem makes inside recoverFunds.
   await getRecoveryTicket(w);
@@ -223,14 +208,5 @@ export async function sweepFromBrowser(
     to,
     expectedSmartAccount: w.smartAccount,
     extraTokens: grantExtraTokens(w.grantTokens),
-    ...(approvedClass
-      ? {
-          approvedClass: { ...approvedClass, destination: to },
-          // The browser path is the one that shows a per-holding confirmation,
-          // so it is the one where a disclosed sweep that cannot run must stop
-          // everything rather than proceed without it.
-          requireApprovedClassSweep: true,
-        }
-      : {}),
   });
 }

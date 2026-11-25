@@ -228,7 +228,7 @@ describe("the client picks the embedded wallet deliberately", () => {
       /embeddedWallets:\s*\{\s*ethereum:\s*\{\s*createOnLogin:\s*"all-users"\s*\}\s*\}/,
       "the flat v2 shape is silently ignored on v3 — no wallet, no error",
     );
-    assert.match(src, /supportedChains:\s*\[robinhoodChain\]/);
+    assert.match(src, /supportedChains:\s*\[bnbChain\]/);
     assert.ok(!/defineChain\(/.test(src), "chain 4663 comes from @agentcap/core, never a second definition");
   });
 });

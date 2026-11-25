@@ -12,7 +12,7 @@ import {
   writeChildFomoFile,
 } from "./child-file";
 import type { ChildFomoFile, ChildSignal, ChildTail, ChildTailEvent } from "./contract";
-import { chainFromProvider, robinhoodChain, tokenIdentity } from "./identity";
+import { chainFromProvider, bnbChain, tokenIdentity } from "./identity";
 import type { CoinDossier, DossierClaim, RetrievalPriority, TokenIdentity, TraderEvent } from "./types";
 
 const NOW = 1_800_000_000_000;
@@ -30,7 +30,7 @@ function home(): string {
 }
 
 function evm(n: number): TokenIdentity {
-  return tokenIdentity(robinhoodChain(), `0x${n.toString(16).padStart(40, "0")}`)!;
+  return tokenIdentity(bnbChain(), `0x${n.toString(16).padStart(40, "0")}`)!;
 }
 const BNB = tokenIdentity(chainFromProvider(56, "bsc"), MINT)!;
 

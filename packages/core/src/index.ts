@@ -3,15 +3,12 @@ export * from "./ids";
 export * from "./settings";
 export * from "./llm-providers";
 export * from "./tokens";
+export * from "./cash";
 export * from "./token";
-// ENERGY — what $AGENTCAP is for on the hosted service: the thresholds, the
-// report the worker publishes, and the one route an agent may buy it through.
-export * from "./energy";
 export * from "./protocols";
 export * from "./official-coins";
 export * from "./abis";
 export * from "./grant";
-export * from "./holder-proof";
 export * from "./derivation";
 export * from "./explain";
 // A NAME FOR AN AGENT NOBODY NAMED, seeded on the slug so the grants route and
@@ -19,10 +16,6 @@ export * from "./explain";
 export * from "./agent-name";
 export * from "./hosted";
 export * from "./wall";
-// The per-account vault address the wall pins, resolved from the factory at
-// signing time. Separate from wall.ts because that file is pure and this one
-// reads the chain.
-export * from "./classvault";
 export * from "./mcp";
 export * from "./safe-url";
 export * from "./robinhood-oauth";

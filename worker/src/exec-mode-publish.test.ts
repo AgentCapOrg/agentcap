@@ -24,12 +24,13 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { execModeOf, executionBlockerNotice, publishedMode, type ExecInputs, type ExecMode } from "./exec-mode";
+import { TRADEABLE_CHAIN_ID } from "./preflight";
 
 /** A fully-working agent. Each test below breaks exactly one leg. */
 const WORKING: ExecInputs = {
   armed: true,
   executor: true,
-  chainId: 4663,
+  chainId: TRADEABLE_CHAIN_ID,
   cashUsdg: 1_000_000n,
   gasWei: 10n ** 16n,
   deadPolicy: false,

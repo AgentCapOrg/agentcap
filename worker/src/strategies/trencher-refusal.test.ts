@@ -42,13 +42,13 @@ type Quote = { stale: boolean; price8: bigint; source: Source; sampled?: { readi
  * Every `PriceQuote.source`, BOUND TO THE UNION rather than copied from it.
  *
  * A bare `as const` list here claimed to cover the union and covered only
- * whatever someone last typed — so a sixth source would sail through the sweep
+ * whatever someone last typed — so a new source would sail through the sweep
  * AND through `unpriceableCause`'s classifier, and every quote from a new
  * venue would be described to the owner as a stock feed. The two halves of
  * that guarantee are the `satisfies` below (this list omits nothing) and the
  * `never` in the classifier's default arm (that list omits nothing either).
  */
-const SOURCES = ["chainlink", "pool", "broker", "curve", "v4", "sampled"] as const satisfies readonly Source[];
+const SOURCES = ["chainlink", "pool", "broker", "sampled"] as const satisfies readonly Source[];
 
 /** Fails to compile if a source exists that `SOURCES` does not name. */
 const _EVERY_SOURCE_LISTED: (typeof SOURCES)[number] extends Source
@@ -93,8 +93,6 @@ const ALL_CAUSES = [
   "no-quote",
   "stale-price",
   "zero-price",
-  "curve-priced",
-  "v4-priced",
   "sampled-priced",
   "sampling",
   "feed-priced",
@@ -220,13 +218,13 @@ describe("a sampled price opens only what its caller accepts", () => {
 
 describe("a cause names what actually happened", () => {
   it("reports the FIRST thing wrong, not the last", () => {
-    // The equivalence proof cannot see this: a zero-priced curve quote is
+    // The equivalence proof cannot see this: a zero-priced feed quote is
     // unpriceable either way, so reordering the checks keeps the boolean and
     // silently changes the sentence to one that is false. The owner would be
-    // told the token is on a bonding curve when the real fact is that its
+    // told it is a feed price when the real fact is that its
     // price read as zero.
-    assert.equal(unpriceableCause({ stale: false, price8: 0n, source: "curve" }, true), "zero-price");
-    assert.equal(unpriceableCause({ stale: true, price8: 0n, source: "v4" }, true), "stale-price");
+    assert.equal(unpriceableCause({ stale: false, price8: 0n, source: "chainlink" }, true), "zero-price");
+    assert.equal(unpriceableCause({ stale: true, price8: 0n, source: "chainlink" }, true), "stale-price");
     assert.equal(unpriceableCause(undefined, true), "no-quote");
   });
 
@@ -240,7 +238,7 @@ describe("a cause names what actually happened", () => {
     assert.equal(unpriceableCause({ stale: true, price8: 100n, source: "pool" }, false), "stale-price");
     assert.equal(unpriceableCause({ stale: false, price8: 0n, source: "pool" }, false), "zero-price");
     // ...and a non-pool source is NOT a refusal here, which is the difference.
-    assert.equal(unpriceableCause({ stale: false, price8: 100n, source: "v4" }, false), null);
+    assert.equal(unpriceableCause({ stale: false, price8: 100n, source: "chainlink" }, false), null);
   });
 
   it("gives every cause its own sentence", () => {
@@ -260,11 +258,11 @@ describe("a cause names what actually happened", () => {
   });
 
   it("does not claim a token that WAS priced could not be priced", () => {
-    // A v4 or curve mark is a real price the agent declines to OPEN on. Any
+    // A non-pool mark is a real price the agent declines to OPEN on. Any
     // wording that denies the price exists is the original bug in new clothes,
     // so this matches the CLAIM rather than one phrasing of it.
     const DENIES_A_PRICE = /can't be priced|couldn't be priced|no price|unpriceable|no venue|not priced/i;
-    for (const cause of ["curve-priced", "v4-priced", "sampled-priced", "sampling", "feed-priced"] as const) {
+    for (const cause of ["sampled-priced", "sampling", "feed-priced"] as const) {
       assert.doesNotMatch(whyOf(cause), DENIES_A_PRICE, `"${cause}" must not deny a price it has`);
     }
   });
@@ -298,13 +296,13 @@ describe("a cause names what actually happened", () => {
 });
 
 describe("what each site can and cannot say", () => {
-  it("requiring a pool source is what refuses a v4 or curve mark", () => {
+  it("requiring a pool source is what refuses a non-pool mark", () => {
     // `requirePoolSource` is the whole policy in one flag. With it, a mark that
     // no oracle checked cannot authorise a buy; without it, anything that
     // produced a number does. Both build sites now pass `true` — see the entry
     // policy test below for why — so `false` survives only as the shape of the
     // question, and this pins what each answer means.
-    for (const source of ["curve", "v4", "chainlink", "broker"] as const) {
+    for (const source of ["chainlink", "broker"] as const) {
       const q = { stale: false, price8: 100_000_000n, source };
       assert.equal(unpriceableCause(q, false), null, `valuation accepts a ${source} quote`);
       assert.notEqual(unpriceableCause(q, true), null, `entry must refuse a ${source} quote`);
@@ -328,8 +326,6 @@ describe("what each site can and cannot say", () => {
 
   it("names WHICH kind of price it declined to open on", () => {
     const q = (source: Source) => ({ stale: false, price8: 100_000_000n, source });
-    assert.equal(unpriceableCause(q("curve"), true), "curve-priced");
-    assert.equal(unpriceableCause(q("v4"), true), "v4-priced");
     assert.equal(unpriceableCause(q("chainlink"), true), "feed-priced");
     assert.equal(unpriceableCause(q("broker"), true), "feed-priced");
   });

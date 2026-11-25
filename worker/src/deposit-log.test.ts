@@ -6,6 +6,9 @@ import { TRANSFER_TOPIC, findTransferFlows, flowKey, resumeFrom } from "./deposi
 import { ENTRYPOINT } from "../../packages/core/src/index";
 import { ownerOperationOf } from "./owner-operations";
 
+// 6dp micro figures, scaled to 18dp USDT base units.
+const MICRO = 10n ** 12n;
+
 /**
  * WHY THIS FILE EXISTS. `FlowSource` declared 'chain-log' from the beginning and
  * nothing ever produced one, so every deposit was an inference with no
@@ -104,12 +107,12 @@ describe("reading flows off the chain", () => {
 
   it("books an inbound transfer as evidence, with its transaction", async () => {
     const flows = await scan([
-      transferLog({ from: OTHER, to: ACCT, value: 250_000_000n, txHash: "0xaa", blockNumber: 500, logIndex: 3 }),
+      transferLog({ from: OTHER, to: ACCT, value: (250_000_000n * MICRO), txHash: "0xaa", blockNumber: 500, logIndex: 3 }),
     ]);
     assert.equal(flows.length, 1);
     assert.deepEqual(flows[0], {
       direction: "in",
-      amountUsdg6: 250_000_000n,
+      amountUsdg6: (250_000_000n * MICRO),
       txHash: "0xaa",
       blockNumber: 500,
       logIndex: 3,
@@ -118,14 +121,14 @@ describe("reading flows off the chain", () => {
 
   it("books an outbound transfer as a withdrawal", async () => {
     const flows = await scan([
-      transferLog({ from: ACCT, to: OTHER, value: 5_000_000n, txHash: "0xbb", blockNumber: 501, logIndex: 0 }),
+      transferLog({ from: ACCT, to: OTHER, value: (5_000_000n * MICRO), txHash: "0xbb", blockNumber: 501, logIndex: 0 }),
     ]);
     assert.equal(flows.length, 1);
     assert.equal(flows[0]!.direction, "out");
     // This is the leg `transfer-intent` already covers when the AGENT signs it.
     // Read from the chain it also catches a withdrawal made with the owner key,
     // which nothing in the worker ever saw.
-    assert.equal(flows[0]!.amountUsdg6, 5_000_000n);
+    assert.equal(flows[0]!.amountUsdg6, (5_000_000n * MICRO));
   });
 
   it("NEVER books a swap's USDG leg as capital", async () => {
@@ -134,8 +137,8 @@ describe("reading flows off the chain", () => {
     // whole turnover and drive reported P&L steadily and confidently negative.
     const flows = await scan(
       [
-        transferLog({ from: ACCT, to: OTHER, value: 50_000_000n, txHash: "0xfill", blockNumber: 502, logIndex: 1 }),
-        transferLog({ from: OTHER, to: ACCT, value: 80_000_000n, txHash: "0xreal", blockNumber: 503, logIndex: 0 }),
+        transferLog({ from: ACCT, to: OTHER, value: (50_000_000n * MICRO), txHash: "0xfill", blockNumber: 502, logIndex: 1 }),
+        transferLog({ from: OTHER, to: ACCT, value: (80_000_000n * MICRO), txHash: "0xreal", blockNumber: 503, logIndex: 0 }),
       ],
       { tradeTxHashes: new Set(["0xfill"]) },
     );
@@ -147,7 +150,7 @@ describe("reading flows off the chain", () => {
     // resumeFrom is INCLUSIVE, so a block already partly recorded is read again.
     // knownKeys is what makes that free of consequence.
     const log = transferLog({
-      from: OTHER, to: ACCT, value: 10_000_000n, txHash: "0xcc", blockNumber: 600, logIndex: 2,
+      from: OTHER, to: ACCT, value: (10_000_000n * MICRO), txHash: "0xcc", blockNumber: 600, logIndex: 2,
     });
     const already = new Set([flowKey("0xcc", 2)]);
     assert.deepEqual(await scan([log], { knownKeys: already }), []);
@@ -158,11 +161,15 @@ describe("reading flows off the chain", () => {
   it("tells two transfers in one transaction apart", async () => {
     // The transaction hash alone is not a key.
     const flows = await scan([
-      transferLog({ from: OTHER, to: ACCT, value: 1_000_000n, txHash: "0xdd", blockNumber: 700, logIndex: 0 }),
-      transferLog({ from: OTHER, to: ACCT, value: 2_000_000n, txHash: "0xdd", blockNumber: 700, logIndex: 1 }),
+      transferLog({ from: OTHER, to: ACCT, value: (1_000_000n * MICRO), txHash: "0xdd", blockNumber: 700, logIndex: 0 }),
+      transferLog({ from: OTHER, to: ACCT, value: (2_000_000n * MICRO), txHash: "0xdd", blockNumber: 700, logIndex: 1 }),
     ]);
     assert.equal(flows.length, 2);
-    assert.deepEqual(flows.map((f) => f.amountUsdg6), [1_000_000n, 2_000_000n]);
+    assert.deepEqual(flows.map((f) => f.amountUsdg6), [(1_000_000n * MICRO), (2_000_000n * MICRO)]);
+  });
+
+  it("ignores dust under a millionth of a USDT: it cannot be booked, and must not hold the scan", async () => {
+    assert.deepEqual(await scan([transferLog({ from: OTHER, to: ACCT, value: MICRO - 1n, txHash: "0xd0", blockNumber: 701, logIndex: 0 })]), []);
   });
 
   it("ignores a self-transfer, which crosses no boundary", async () => {
@@ -170,7 +177,7 @@ describe("reading flows off the chain", () => {
     // deposit of its own size.
     assert.deepEqual(
       await scan([
-        transferLog({ from: ACCT, to: ACCT, value: 9_000_000n, txHash: "0xee", blockNumber: 800, logIndex: 0 }),
+        transferLog({ from: ACCT, to: ACCT, value: (9_000_000n * MICRO), txHash: "0xee", blockNumber: 800, logIndex: 0 }),
       ]),
       [],
     );
@@ -191,7 +198,7 @@ describe("reading flows off the chain", () => {
     // booked late, so this drops it and says so.
     const said: string[] = [];
     const flows = await scan(
-      [transferLog({ from: OTHER, to: ACCT, value: 7_000_000n, txHash: "0x01" })],
+      [transferLog({ from: OTHER, to: ACCT, value: (7_000_000n * MICRO), txHash: "0x01" })],
       { log: (m) => said.push(m) },
     );
     assert.deepEqual(flows, []);
@@ -202,11 +209,11 @@ describe("reading flows off the chain", () => {
     // The high-water mark moves with each flow, so out-of-order booking walks it
     // through a sequence the account never had.
     const flows = await scan([
-      transferLog({ from: OTHER, to: ACCT, value: 3n, txHash: "0x3", blockNumber: 902, logIndex: 0 }),
-      transferLog({ from: OTHER, to: ACCT, value: 1n, txHash: "0x1", blockNumber: 900, logIndex: 5 }),
-      transferLog({ from: OTHER, to: ACCT, value: 2n, txHash: "0x2", blockNumber: 900, logIndex: 9 }),
+      transferLog({ from: OTHER, to: ACCT, value: 3n * MICRO, txHash: "0x3", blockNumber: 902, logIndex: 0 }),
+      transferLog({ from: OTHER, to: ACCT, value: 1n * MICRO, txHash: "0x1", blockNumber: 900, logIndex: 5 }),
+      transferLog({ from: OTHER, to: ACCT, value: 2n * MICRO, txHash: "0x2", blockNumber: 900, logIndex: 9 }),
     ]);
-    assert.deepEqual(flows.map((f) => f.amountUsdg6), [1n, 2n, 3n]);
+    assert.deepEqual(flows.map((f) => f.amountUsdg6), [1n * MICRO, 2n * MICRO, 3n * MICRO]);
   });
 
   it("reads nothing from an empty or inverted range", async () => {
@@ -281,7 +288,7 @@ describe("the canary's real movements", () => {
 
   /** One trade: USDG out to the router, TSLA back in, same transaction. */
   const trade = (tx: string, block: number) => ({
-    usdg: transferLog({ from: ACCT, to: ROUTER, value: 1_666_500n, txHash: tx, blockNumber: block, logIndex: 0 }),
+    usdg: transferLog({ from: ACCT, to: ROUTER, value: (1_666_500n * MICRO), txHash: tx, blockNumber: block, logIndex: 0 }),
     paired: transferLog({
       from: ROUTER, to: ACCT, value: 4_420_417_000_000_000n, txHash: tx, blockNumber: block, logIndex: 1, token: TSLA,
     }),
@@ -289,7 +296,7 @@ describe("the canary's real movements", () => {
 
   const TRADES = [trade("0xt1", 601), trade("0xt2", 602), trade("0xt3", 603), trade("0xt4", 604)];
   const DEPOSIT = transferLog({
-    from: OTHER, to: ACCT, value: 10_000_000n, txHash: "0xfund", blockNumber: 600, logIndex: 0,
+    from: OTHER, to: ACCT, value: (10_000_000n * MICRO), txHash: "0xfund", blockNumber: 600, logIndex: 0,
   });
 
   it("books the deposit and NONE of the four trade legs", async () => {
@@ -313,8 +320,8 @@ describe("the canary's real movements", () => {
     assert.equal(flows.length, 1, "four purchases are not four withdrawals");
     assert.equal(flows[0]!.txHash, "0xfund");
     const net = flows.reduce((s, f) => s + (f.direction === "in" ? f.amountUsdg6 : -f.amountUsdg6), 0n);
-    assert.equal(net, 10_000_000n, "10.000000 USDG contributed");
-    assert.notEqual(net, 3_334_000n, "and NOT the cash balance, which is what direction-only netting gives");
+    assert.equal(net, (10_000_000n * MICRO), "10.000000 USDG contributed");
+    assert.notEqual(net, (3_334_000n * MICRO), "and NOT the cash balance, which is what direction-only netting gives");
   });
 
   it("refuses the whole pass when a receipt cannot be read", async () => {
@@ -375,37 +382,13 @@ describe("an energy purchase is not capital to the scanner", () => {
   const AGENTCAP = "0xa15cd06dd305269a0f48bebeb30aa3588fba7b32";
   const TX = "0xe0e0";
 
-  const USDG_OUT = transferLog({ from: ACCT, to: PAIR_A, value: 42_000_000n, txHash: TX, blockNumber: 700, logIndex: 5 });
+  const USDG_OUT = transferLog({ from: ACCT, to: PAIR_A, value: (42_000_000n * MICRO), txHash: TX, blockNumber: 700, logIndex: 5 });
   const OTHER_LEGS = [
     transferLog({ from: PAIR_A, to: PAIR_B, value: 9n * 10n ** 19n, txHash: TX, blockNumber: 700, logIndex: 6, token: VIRTUAL }),
     transferLog({ from: PAIR_B, to: AGENTCAP, value: 2n * 10n ** 21n, txHash: TX, blockNumber: 700, logIndex: 7, token: AGENTCAP }),
     transferLog({ from: PAIR_B, to: ACCT, value: 98n * 10n ** 21n, txHash: TX, blockNumber: 700, logIndex: 8, token: AGENTCAP }),
   ];
-  const DEPOSIT = transferLog({ from: OTHER, to: ACCT, value: 100_000_000n, txHash: "0xfund2", blockNumber: 699, logIndex: 0 });
-
-  it("with the reserve named, the purchase NOT in tradeTxHashes returns no flow and does not throw", async () => {
-    const lines: string[] = [];
-    const flows = await findTransferFlows({
-      chain: fakeChain([DEPOSIT, USDG_OUT], 1000n, OTHER_LEGS),
-      smartAccount: ACCT,
-      usdgToken: USDG,
-      fromBlock: 0n,
-      toBlock: 1000n,
-      knownKeys: new Set<string>(),
-      tradeTxHashes: new Set<string>(), // the miss
-      chainId: 4663,
-      log: (m) => lines.push(m),
-    });
-    assert.deepEqual(flows.map((f) => f.txHash), ["0xfund2"], "the deposit is booked, the purchase is not");
-    assert.ok(lines.some((l) => /reserve-out/.test(l)), "and the log says what it saw");
-  });
-
-  it("the chain defaults to mainnet, where the reserve exists", async () => {
-    const lines: string[] = [];
-    const flows = await scan([USDG_OUT], { chain: fakeChain([USDG_OUT], 1000n, OTHER_LEGS), log: (m) => lines.push(m) });
-    assert.equal(flows.length, 0);
-    assert.ok(lines.some((l) => /reserve-out/.test(l)));
-  });
+  const DEPOSIT = transferLog({ from: OTHER, to: ACCT, value: (100_000_000n * MICRO), txHash: "0xfund2", blockNumber: 699, logIndex: 0 });
 
   it("on a chain with no reserve the same legs are a trade — still not capital", async () => {
     const lines: string[] = [];
@@ -495,14 +478,14 @@ describe("the owner's own operation bundled beside a trade", () => {
 
   // The owner withdraws 348.368488 USDG (log 1); the agent sells TSLA for 25 USDG (logs 3, 4).
   const WITHDRAW_BESIDE_SELL = [
-    before(), tr(USDG, ACCT, OWNER, 348_368_488n), op(ROOT_OP, ROOT),
-    tr(TSLA, ACCT, POOL, 13n * 10n ** 18n), tr(USDG, POOL, ACCT, 25_000_000n), op(SESSION_OP, SESSION),
+    before(), tr(USDG, ACCT, OWNER, (348_368_488n * MICRO)), op(ROOT_OP, ROOT),
+    tr(TSLA, ACCT, POOL, 13n * 10n ** 18n), tr(USDG, POOL, ACCT, (25_000_000n * MICRO)), op(SESSION_OP, SESSION),
   ];
 
   it("the owner's withdrawal is booked; the trade's own USDG leg is never classified — and without the lookup, the old skip hides both", async () => {
     const asked: string[] = [];
     const flows = await scanTrade(bundle(WITHDRAW_BESIDE_SELL), new Set([SESSION_OP]), asked);
-    assert.deepEqual(flowsOf(flows), [["out", 348_368_488n, 1]]);
+    assert.deepEqual(flowsOf(flows), [["out", (348_368_488n * MICRO), 1]]);
     assert.deepEqual(asked, [TX], "asked once, for the owner's leg only");
     assert.deepEqual(await scanTrade(bundle(WITHDRAW_BESIDE_SELL), undefined), [], "the transaction-wide skip, as it was");
     assert.deepEqual(await scanTrade(bundle(WITHDRAW_BESIDE_SELL), new Set([SESSION_OP]), [], new Set([`${TX}#1`])), [], "a leg already booked is not booked again");
@@ -514,8 +497,8 @@ describe("the owner's own operation bundled beside a trade", () => {
     // capital. The record says so too (no flow, review), so nothing is left to a
     // flow that is never booked — the two readers agree in both shapes.
     const WITHDRAW_BESIDE_BUY = [
-      before(), tr(USDG, ACCT, OWNER, 5_000_000n), op(ROOT_OP, ROOT),
-      tr(USDG, ACCT, POOL, 25_000_000n), tr(PEPE, POOL, ACCT, 400n * 10n ** 18n), op(SESSION_OP, SESSION),
+      before(), tr(USDG, ACCT, OWNER, (5_000_000n * MICRO)), op(ROOT_OP, ROOT),
+      tr(USDG, ACCT, POOL, (25_000_000n * MICRO)), tr(PEPE, POOL, ACCT, 400n * 10n ** 18n), op(SESSION_OP, SESSION),
     ];
     for (const drafts of [WITHDRAW_BESIDE_SELL, WITHDRAW_BESIDE_BUY]) {
       const chain = bundle(drafts);
@@ -530,7 +513,7 @@ describe("the owner's own operation bundled beside a trade", () => {
     const asked: string[] = [];
     const flows = await scanTrade(bundle([
       before(), tr(TSLA, ACCT, OWNER, 13n * 10n ** 18n), op(ROOT_OP, ROOT),
-      tr(USDG, ACCT, POOL, 25_000_000n), tr(PEPE, POOL, ACCT, 400n * 10n ** 18n), op(SESSION_OP, SESSION),
+      tr(USDG, ACCT, POOL, (25_000_000n * MICRO)), tr(PEPE, POOL, ACCT, 400n * 10n ** 18n), op(SESSION_OP, SESSION),
     ]), new Set([SESSION_OP]), asked);
     assert.deepEqual(flows, []);
     assert.deepEqual(asked, []);
@@ -539,8 +522,8 @@ describe("the owner's own operation bundled beside a trade", () => {
   it("a trade's own USDG and validation's are never let through, even where they would read as capital", async () => {
     const asked: string[] = [];
     const flows = await scanTrade(bundle([
-      tr(USDG, ACCT, PAYMASTER, 1_000_000n), // validation: a paymaster's charge, nobody's execution
-      before(), tr(USDG, ACCT, OWNER, 5_000_000n), op(SESSION_OP, SESSION), // the agent's own transfer out
+      tr(USDG, ACCT, PAYMASTER, (1_000_000n * MICRO)), // validation: a paymaster's charge, nobody's execution
+      before(), tr(USDG, ACCT, OWNER, (5_000_000n * MICRO)), op(SESSION_OP, SESSION), // the agent's own transfer out
     ]), new Set([SESSION_OP]), asked);
     assert.deepEqual(flows, []);
     assert.deepEqual(asked, []);
@@ -553,19 +536,19 @@ describe("the owner's own operation bundled beside a trade", () => {
 
   it("only a SUCCESSFUL root operation of THIS account: a revert's logs and another account's root operation stay skipped", async () => {
     assert.deepEqual(await scanTrade(bundle([
-      before(), tr(USDG, ACCT, OWNER, 5_000_000n), op(ROOT_OP, ROOT, { success: false }),
-      tr(TSLA, ACCT, POOL, 1n), tr(USDG, POOL, ACCT, 1_000_000n), op(SESSION_OP, SESSION),
+      before(), tr(USDG, ACCT, OWNER, (5_000_000n * MICRO)), op(ROOT_OP, ROOT, { success: false }),
+      tr(TSLA, ACCT, POOL, 1n), tr(USDG, POOL, ACCT, (1_000_000n * MICRO)), op(SESSION_OP, SESSION),
     ]), new Set([SESSION_OP])), []);
     assert.deepEqual(await scanTrade(bundle([
-      before(), tr(USDG, OTHER_ACCOUNT, ACCT, 5_000_000n), op(ROOT_OP, ROOT, { sender: OTHER_ACCOUNT }),
-      tr(TSLA, ACCT, POOL, 1n), tr(USDG, POOL, ACCT, 1_000_000n), op(SESSION_OP, SESSION),
+      before(), tr(USDG, OTHER_ACCOUNT, ACCT, (5_000_000n * MICRO)), op(ROOT_OP, ROOT, { sender: OTHER_ACCOUNT }),
+      tr(TSLA, ACCT, POOL, 1n), tr(USDG, POOL, ACCT, (1_000_000n * MICRO)), op(SESSION_OP, SESSION),
     ]), new Set([SESSION_OP])), []);
   });
 
   it("a trade's receipt is only placed, never decoded, unless an owner's leg is let through: a malformed Transfer in someone else's operation stops nothing", async () => {
     const malformed = { ...tr(PEPE, POOL, OTHER_ACCOUNT, 1n), data: "0x" };
     const flows = await scanTrade(bundle([
-      before(), tr(TSLA, ACCT, POOL, 1n), tr(USDG, POOL, ACCT, 1_000_000n), op(SESSION_OP, SESSION),
+      before(), tr(TSLA, ACCT, POOL, 1n), tr(USDG, POOL, ACCT, (1_000_000n * MICRO)), op(SESSION_OP, SESSION),
       malformed, op(ROOT_OP, ROOT, { sender: OTHER_ACCOUNT }),
     ]), new Set([SESSION_OP]));
     assert.deepEqual(flows, [], "as before, when a trade's receipt was never read");
@@ -588,7 +571,7 @@ describe("the owner's own operation bundled beside a trade", () => {
    */
   describe("a Transfer whose amount cannot be read, beside an owner's leg that is let through", () => {
     const DEPOSIT_TX = `0x${"d0".repeat(32)}`;
-    const deposit = { address: USDG.toLowerCase(), topics: [TRANSFER_TOPIC, addressTopic(OTHER), addressTopic(ACCT)], data: `0x${w(7_000_000n)}` };
+    const deposit = { address: USDG.toLowerCase(), topics: [TRANSFER_TOPIC, addressTopic(OTHER), addressTopic(ACCT)], data: `0x${w((7_000_000n * MICRO))}` };
     /** The bundle, then a plain 7 USDG deposit in a later transaction of the same window. */
     const withLaterDeposit = (chain: ReconcileChain): ReconcileChain => ({
       getBlockNumber: () => chain.getBlockNumber(),
@@ -617,7 +600,7 @@ describe("the owner's own operation bundled beside a trade", () => {
         const lines: string[] = [];
         const chain = withLaterDeposit(bundle(withMalformed(data)));
         const flows = await scanTrade(chain, new Set([SESSION_OP]), [], new Set(), (m) => lines.push(m));
-        assert.deepEqual(flowsOf(flows), [["in", 7_000_000n, 0]], "the later deposit is booked; the owner's 348.368488 out is not");
+        assert.deepEqual(flowsOf(flows), [["in", (7_000_000n * MICRO), 0]], "the later deposit is booked; the owner's 348.368488 out is not");
         assert.equal(flows[0]!.txHash, DEPOSIT_TX);
         const refused = lines.filter((m) => m.includes(`${TX}#1`));
         assert.equal(refused.length, 1, `one refusal line for the owner's leg: ${JSON.stringify(lines)}`);
@@ -633,25 +616,25 @@ describe("the owner's own operation bundled beside a trade", () => {
     it("a malformed amount inside the owner's own execution refuses that transaction the same way", async () => {
       const lines: string[] = [];
       const drafts: Draft[] = [
-        before(), tr(USDG, ACCT, OWNER, 348_368_488n), { ...tr(PEPE, ACCT, OWNER, 1n), data: "0x" }, op(ROOT_OP, ROOT),
-        tr(TSLA, ACCT, POOL, 13n * 10n ** 18n), tr(USDG, POOL, ACCT, 25_000_000n), op(SESSION_OP, SESSION),
+        before(), tr(USDG, ACCT, OWNER, (348_368_488n * MICRO)), { ...tr(PEPE, ACCT, OWNER, 1n), data: "0x" }, op(ROOT_OP, ROOT),
+        tr(TSLA, ACCT, POOL, 13n * 10n ** 18n), tr(USDG, POOL, ACCT, (25_000_000n * MICRO)), op(SESSION_OP, SESSION),
       ];
       const flows = await scanTrade(withLaterDeposit(bundle(drafts)), new Set([SESSION_OP]), [], new Set(), (m) => lines.push(m));
-      assert.deepEqual(flowsOf(flows), [["in", 7_000_000n, 0]]);
+      assert.deepEqual(flowsOf(flows), [["in", (7_000_000n * MICRO), 0]]);
       assert.equal(lines.filter((m) => m.includes(`${TX}#1`) && /not booked/.test(m)).length, 1);
     });
 
     it("well-formed, the same window books both: the refusal is the malformed amount's alone", async () => {
       const lines: string[] = [];
       const flows = await scanTrade(withLaterDeposit(bundle(withMalformed(`0x${w(1n)}`))), new Set([SESSION_OP]), [], new Set(), (m) => lines.push(m));
-      assert.deepEqual(flowsOf(flows), [["out", 348_368_488n, 1], ["in", 7_000_000n, 0]]);
+      assert.deepEqual(flowsOf(flows), [["out", (348_368_488n * MICRO), 1], ["in", (7_000_000n * MICRO), 0]]);
       assert.deepEqual(lines.filter((m) => /not booked/.test(m)), []);
     });
 
     it("with no owner leg let through, the receipt is only placed: nothing is refused or logged for it", async () => {
       const lines: string[] = [];
       const flows = await scanTrade(withLaterDeposit(bundle(withMalformed("0x"))), new Set([SESSION_OP, ROOT_OP]), [], new Set(), (m) => lines.push(m));
-      assert.deepEqual(flowsOf(flows), [["in", 7_000_000n, 0]]);
+      assert.deepEqual(flowsOf(flows), [["in", (7_000_000n * MICRO), 0]]);
       assert.deepEqual(lines.filter((m) => m.includes(TX)), []);
     });
   });

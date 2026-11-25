@@ -7,13 +7,11 @@
  */
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, before, test } from "node:test";
 import type { PublicClient } from "viem";
 import { STOCK_TOKENS } from "@agentcap/core";
-import { getSettingsStore, resetSettingsStoreForTest } from "@agentcap/settings-store";
 import { mintSession } from "@/lib/auth";
 import { setQuoteClientForTest } from "@/lib/services/trade-quote";
 import { APPROVED_STALE_SEC, createProposal } from "@/lib/services/proposals";
@@ -42,8 +40,9 @@ afterEach(() => { restore?.(); restore = null; setQuoteClientForTest(null); });
 const fakeChain = {
   async simulateContract({ args }: { args: unknown[] }) {
     const p = args[0] as { tokenIn: string; amountIn: bigint; fee: number };
-    if (p.fee !== 3000) throw new Error("no pool");
-    const out = p.tokenIn.toLowerCase() === NVDA ? p.amountIn / 10n ** 12n * 100n : (p.amountIn * 10n ** 12n) / 100n;
+    if (p.fee !== 2500) throw new Error("no pool");
+    // $100 a share, and both legs count in 18 decimals.
+    const out = p.tokenIn.toLowerCase() === NVDA ? p.amountIn * 100n : p.amountIn / 100n;
     return { result: [out, 0n, 0, 100_000n] };
   },
   async readContract() { return 18; },
@@ -65,7 +64,7 @@ async function base(o: { mode?: string; settings?: Record<string, unknown>; dire
   setQuoteClientForTest(fakeChain);
   d.raw.exec("ALTER TABLE agent_commands ADD COLUMN receipt TEXT");
   d.raw.prepare(`INSERT INTO agents (smart_account, name, owner_address, session_key_address, chain_id, caps, granted_at, expires_at, status, mode, beat_at, epoch)
-    VALUES (?, 'A', ?, '0x1', 4663, '{}', 1, 4102444800, 'active', ?, ?, 1)`).run(ACCOUNT_A, OWNER_A, o.mode ?? "paper", Math.floor(Date.now() / 1000));
+    VALUES (?, 'A', ?, '0x1', 56, '{}', 1, 4102444800, 'active', ?, ?, 1)`).run(ACCOUNT_A, OWNER_A, o.mode ?? "paper", Math.floor(Date.now() / 1000));
   const deps = makeDeps(d);
   const a = await connectAs(deps, OWNER_A, { scopes: o.scopes ?? ["agents:read", "trade:propose"] });
   const run = async (name: string, args: Record<string, unknown>, who = a.principal) => {
@@ -239,7 +238,7 @@ test("new AgentCapAvatar approval reviews setup without writing settings, a gran
 test("creation approval refuses an agent created after the proposal, and a failed grant read", async () => {
   const { d, run } = await base({ directory: noCreatedAgent(), scopes: ["drafts:write"] });
   const { id, hash } = await run("create_agentcapavatar", { idempotency_key: "new-raced-01" });
-  d.raw.prepare("INSERT INTO grants VALUES (?, 4663, '{}', 'not-read', 1)").run(OWNER_A);
+  d.raw.prepare("INSERT INTO grants VALUES (?, 56, '{}', 'not-read', 1)").run(OWNER_A);
   let res = await POST(req(id, { body: { decision: "approve", hash } }), params(id));
   assert.equal(res.status, 409);
   assert.match((await res.json() as { error_description: string }).error_description, /already have a AgentCapAvatar/);
@@ -381,36 +380,6 @@ test("the approval page cancels, and says why, a proposal whose app no longer ho
   assert.equal(shown.result?.requester_withdrawn, true);
   assert.equal((await POST(req(id, { body: { decision: "approve", hash } }), params(id))).status, 409);
   assert.equal(orders(d), 0);
-});
-
-// ── every chat-settable key reaches the store (C2) ──────────────────────────
-
-test("an approved classExitAtGraduationPct change is saved and reported applied, never applied-but-ignored (C2)", async () => {
-  const home = mkdtempSync(join(tmpdir(), "agentcap-approvals-settings-"));
-  const saved = { home: process.env.AGENTCAP_HOME, db: process.env.DATABASE_URL };
-  // The settings route writes the per-tenant store: a file store here, cached
-  // before DATABASE_URL (which MCP needs to be enabled) is put back.
-  process.env.AGENTCAP_HOME = home;
-  delete process.env.DATABASE_URL;
-  resetSettingsStoreForTest();
-  getSettingsStore("spot");
-  process.env.DATABASE_URL = saved.db;
-  try {
-    const { run } = await base({ scopes: ["agents:read", "drafts:write"] });
-    const { id, hash } = await run("propose_settings_change", { changes: { classExitAtGraduationPct: 50 }, idempotency_key: "c2-grad-01" });
-    const res = await POST(req(id, { body: { decision: "approve", hash } }), params(id));
-    const body = await res.json() as Loose;
-    assert.equal(res.status, 200, JSON.stringify(body));
-    assert.equal(body.status, "applied", JSON.stringify(body.result));
-    assert.deepEqual(body.result?.applied, ["classExitAtGraduationPct"]);
-    assert.equal(body.result?.not_applied, undefined);
-    assert.equal(((await getSettingsStore("spot").get(OWNER_A)) as unknown as Record<string, unknown>).classExitAtGraduationPct, 50);
-  } finally {
-    resetSettingsStoreForTest();
-    if (saved.home === undefined) delete process.env.AGENTCAP_HOME;
-    else process.env.AGENTCAP_HOME = saved.home;
-    rmSync(home, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
-  }
 });
 
 // ── the practice / real-money box (L2) ──────────────────────────────────────

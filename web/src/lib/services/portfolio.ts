@@ -25,13 +25,12 @@
  * (whether a cost or a realized figure is a measurement), distinctTrades (one
  * row per operation), growthIndex/drawdownBps (flows divided out before a
  * drawdown), the worker's attributeBook (change no record explains),
- * rejectRuleLabel/Remedy, activeClassPositions and explorerFor.
+ * rejectRuleLabel/Remedy and explorerFor.
  *
  * Read-only, no network, no MCP imports: the app can serve the same views.
  */
 import { explorerFor, isEvidencedFlow } from "@agentcap/core";
 import type { Db } from "../../../../worker/src/db";
-import { activeClassPositions } from "../../../../worker/src/class-active";
 import { attributeBook, breakGap, type BookFlow, type BookMark } from "../../../../worker/src/period-pnl";
 import { rejectRuleLabel, rejectRuleRemedy } from "../../../../worker/src/thesis-policy";
 import { basisUsdg } from "../basis-usdg";
@@ -57,7 +56,7 @@ export const MONEY_TOLERANCE_USDG = 0.01;
 export const ACCOUNT_CUSTODY = "smart account (Trencher-vault holdings are merged in and not distinguished)";
 
 export const REMAINDER_EXPLAINED =
-  "equity − (cash + savings + positions): USDG held inside the agent's class or Trencher vaults, plus holdings the worker carries at cost because they have no price feed (class-vault tokens always are). The valuation row records the total but not these parts.";
+  "equity − (cash + savings + positions): USDG held inside the agent's Trencher vault, plus holdings the worker carries at cost because they have no price feed. The valuation row records the total but not these parts.";
 
 /** The agent's accounts, as the only agent_ids any read here may touch. */
 export interface LedgerScope {
@@ -71,7 +70,7 @@ export interface LedgerScope {
 export function ledgerScope(accounts: readonly string[], current: string | null, chainId: number | null): LedgerScope {
   const cur = current && ADDRESS.test(current.toLowerCase()) ? current.toLowerCase() : null;
   const list = [...new Set([...(cur ? [cur] : []), ...accounts.map((a) => a.toLowerCase()).filter((a) => ADDRESS.test(a))])].slice(0, 16);
-  return { accounts: list, current: cur ?? list[0] ?? null, chainId: chainId === 46630 ? 46630 : 4663 };
+  return { accounts: list, current: cur ?? list[0] ?? null, chainId: chainId === 97 ? 97 : 56 };
 }
 
 const qs = (n: number) => Array.from({ length: n }, () => "?").join(", ");
@@ -211,19 +210,6 @@ export interface PositionView {
   custody: string;
 }
 
-export interface ClassHoldingView {
-  token: string;
-  symbol: string | null;
-  state: "open" | "recovered";
-  qty_raw: string | null;
-  decimals: number | null;
-  cost_usdg: number | null;
-  vault: string | null;
-  entry_tx: string | null;
-  entry_tx_url: string | null;
-  opened_at: number | null;
-}
-
 export interface BookTotals {
   positions_value_usdg: number | null;
   cost_usdg: number | null;
@@ -237,7 +223,6 @@ export interface BookPortfolio {
   /** True when the positions table currently holds this book's holdings. */
   positions_held_here: boolean;
   positions: PositionView[] | null;
-  class_vault_positions: ClassHoldingView[];
   totals: BookTotals;
 }
 
@@ -362,46 +347,6 @@ async function readBookPositions(db: Db, scope: LedgerScope, holder: string, boo
   });
 }
 
-/**
- * Class-vault holdings the agent is still in (open, or recovered with an
- * unknown basis). Launch tokens in the class vault never reach `positions`:
- * the worker carries them at cost, so this is the only place they show.
- */
-/** The most class-vault holdings one read lists; a real book is a handful. */
-const CLASS_HOLDINGS_LIMIT = 200;
-
-async function readClassHoldings(db: Db, scope: LedgerScope, warnings: string[]): Promise<ClassHoldingView[]> {
-  if (!scope.accounts.length) return [];
-  // The standing states are filtered IN SQL, before the limit: class_positions
-  // keeps every token the vault ever held, so a limit over all states would let
-  // a long tail of closed round trips push a position still held off the list.
-  const rows = (await db
-    .prepare(`SELECT agent_id, token, symbol, decimals, quote_token, vault, entry_tx, cost_usdg, qty_raw, state, first_seen
-         FROM class_positions WHERE lower(agent_id) IN (${qs(scope.accounts.length)}) AND state IN ('open', 'recovered')
-        ORDER BY first_seen DESC LIMIT ${CLASS_HOLDINGS_LIMIT + 1}`)
-    .all(...scope.accounts)) as Record<string, unknown>[];
-  if (rows.length > CLASS_HOLDINGS_LIMIT) warnings.push(`Only the ${CLASS_HOLDINGS_LIMIT} newest class-vault holdings are listed.`);
-  const shaped = rows.slice(0, CLASS_HOLDINGS_LIMIT).map((r) => ({ row: r, token: String(r.token ?? ""), quoteToken: str(r.quote_token), state: str(r.state) }));
-  return activeClassPositions(shaped).map(({ row, state }) => {
-    const entry = hash(row.entry_tx);
-    const recovered = state === "recovered";
-    return {
-      token: tokenOf(row.token),
-      symbol: str(row.symbol),
-      state: recovered ? "recovered" : "open",
-      qty_raw: typeof row.qty_raw === "string" && /^\d{1,80}$/.test(row.qty_raw) ? row.qty_raw : null,
-      decimals: num(row.decimals),
-      // A recovered balance has an UNKNOWN basis (class_positions schema note);
-      // publishing whatever cost field it carries would book its exit as profit.
-      cost_usdg: recovered ? null : money(basisUsdg(row.cost_usdg)),
-      vault: addr(row.vault),
-      entry_tx: entry,
-      entry_tx_url: txUrl(scope.chainId, entry),
-      opened_at: num(row.first_seen),
-    };
-  });
-}
-
 function totalsOf(positions: PositionView[] | null): BookTotals {
   if (!positions) return { positions_value_usdg: null, cost_usdg: null, unrealized_pnl_usdg: null, holdings_without_pnl: 0 };
   const values = positions.map((p) => p.value_usdg);
@@ -431,7 +376,7 @@ function iso(sec: number): string {
 export async function readPortfolio(db: Db, scope: LedgerScope, o: { now: number; freshWithinSec: number }): Promise<PortfolioView> {
   const warnings: string[] = [];
   const emptyBook = (book: Book): BookPortfolio => ({
-    book, mark: null, positions_held_here: false, positions: null, class_vault_positions: [], totals: totalsOf(null),
+    book, mark: null, positions_held_here: false, positions: null, totals: totalsOf(null),
   });
   if (!scope.accounts.length) {
     return {
@@ -458,7 +403,6 @@ export async function readPortfolio(db: Db, scope: LedgerScope, o: { now: number
     books[latestBook].positions_held_here = true;
     books[latestBook].positions = await readBookPositions(db, scope, newest.account, latestBook, warnings, new Map());
   }
-  books.live.class_vault_positions = await readClassHoldings(db, scope, warnings);
 
   const heartbeatBook: Book | null = agentMode === "paper" || agentMode === "live" ? agentMode : null;
   const current = latestBook ?? heartbeatBook;
@@ -489,9 +433,6 @@ export async function readPortfolio(db: Db, scope: LedgerScope, o: { now: number
         warnings.push(`${label} book: the holdings listed (${listed.toFixed(2)} USDG) differ from the positions figure on the valuation (${m.positions_usdg.toFixed(2)} USDG); they were written on different ticks.`);
       }
     }
-  }
-  for (const c of books.live.class_vault_positions) {
-    if (c.cost_usdg === null) warnings.push(`Live book: a class-vault holding (${c.token}) has an unknown cost basis, so its value is unknown.`);
   }
 
   const agree = heartbeatBook && latestBook ? heartbeatBook === latestBook : null;
@@ -896,7 +837,7 @@ export async function readDecisionRealizedEvidence(db: Db, account: string, deci
     .prepare(`SELECT ${TRADE_COLS} FROM trades t ${DECISION_JOIN}
         WHERE t.decision_id = ? AND lower(t.agent_id) = ? ORDER BY t.created_at ASC, t.id ASC LIMIT ${DECISION_TRADES_MAX}`)
     .all(decisionId, account.toLowerCase())) as Record<string, unknown>[];
-  const views = rows.map((r) => tradeOf(r, 4663));
+  const views = rows.map((r) => tradeOf(r, 56));
   await markMeasured(db, views);
   return rows.map((r, i) => {
     const raw = num(r.realized_pnl_usdg);
@@ -1468,8 +1409,7 @@ export interface BookExposure {
  * Holdings across several agents, grouped by token within each book.
  *
  * Only what each agent's own portfolio attributes to a book is counted there:
- * the positions of the book it valued last, plus class-vault holdings (live,
- * at cost). The share divides by the same book's latest equity summed over the
+ * the positions of the book it valued last. The share divides by the same book's latest equity summed over the
  * agents valued in it, so a paper position is never a share of real money.
  */
 export function groupExposure(items: ReadonlyArray<{ agent: string; view: PortfolioView }>): Record<Book, BookExposure> {
@@ -1500,7 +1440,6 @@ export function groupExposure(items: ReadonlyArray<{ agent: string; view: Portfo
         byToken.set(token, e);
       };
       for (const p of b.positions ?? []) add(p.token, p.symbol, p.value_usdg, "mark", p.price_stale);
-      for (const c of b.class_vault_positions) add(c.token, c.symbol, c.cost_usdg, "cost", false);
     }
     const total = equityKnown ? money(equity) : null;
     const exposures: ExposureItem[] = [...byToken.entries()].map(([token, e]) => {

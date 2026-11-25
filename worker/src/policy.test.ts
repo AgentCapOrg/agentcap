@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { checkPolicy, type AgentLimits, type AgentState, type TradeIntent } from "./policy";
 
+// 6dp micro figures, scaled to 18dp USDT base units.
+const MICRO = 10n ** 12n;
+
 const ROUTER = "0x1111111111111111111111111111111111111111" as const;
 const VAULT = "0x2222222222222222222222222222222222222222" as const;
 const USDG = "0x3333333333333333333333333333333333333333" as const;
@@ -12,8 +15,8 @@ const NOW = 1_800_000_000;
 
 function limits(over: Partial<AgentLimits> = {}): AgentLimits {
   return {
-    perTradeUsdg: 50_000_000n, // 50 USDG
-    dailyUsdg: 500_000_000n, // 500 USDG
+    perTradeUsdg: (50_000_000n * MICRO), // 50 USDG
+    dailyUsdg: (500_000_000n * MICRO), // 500 USDG
     allowedTargets: [ROUTER, VAULT, USDG],
     allowedAssets: [USDG, AAPL],
     maxDrawdownBps: 1_000, // 10%
@@ -40,8 +43,8 @@ function swap(over: Partial<Extract<TradeIntent, { kind: "swap" }>> = {}): Trade
     target: ROUTER,
     sellToken: USDG,
     buyToken: AAPL,
-    sellAmountRaw: 25_000_000n,
-    notionalUsdg: 25_000_000n,
+    sellAmountRaw: (25_000_000n * MICRO),
+    notionalUsdg: (25_000_000n * MICRO),
     ...over,
   };
 }
@@ -73,22 +76,22 @@ describe("checkPolicy", () => {
   });
 
   it("rejects a trade above the per-trade cap", () => {
-    const v = checkPolicy(swap({ sellAmountRaw: 50_000_001n, notionalUsdg: 50_000_001n }), limits(), state());
+    const v = checkPolicy(swap({ sellAmountRaw: (50_000_001n * MICRO), notionalUsdg: (50_000_001n * MICRO) }), limits(), state());
     assert.equal(!v.ok && v.rule, "per-trade-cap");
   });
 
   it("allows a trade exactly at the per-trade cap", () => {
-    assert.deepEqual(checkPolicy(swap({ sellAmountRaw: 50_000_000n, notionalUsdg: 50_000_000n }), limits(), state()), { ok: true });
+    assert.deepEqual(checkPolicy(swap({ sellAmountRaw: (50_000_000n * MICRO), notionalUsdg: (50_000_000n * MICRO) }), limits(), state()), { ok: true });
   });
 
   it("rejects when the daily cap would be exceeded", () => {
-    const v = checkPolicy(swap(), limits(), state({ spentTodayUsdg: 490_000_000n }));
+    const v = checkPolicy(swap(), limits(), state({ spentTodayUsdg: (490_000_000n * MICRO) }));
     assert.equal(!v.ok && v.rule, "daily-cap");
   });
 
   it("counts existing spend toward the daily cap, not just this trade", () => {
     assert.deepEqual(
-      checkPolicy(swap(), limits(), state({ spentTodayUsdg: 475_000_000n })),
+      checkPolicy(swap(), limits(), state({ spentTodayUsdg: (475_000_000n * MICRO) })),
       { ok: true },
     );
   });
@@ -98,7 +101,7 @@ describe("checkPolicy", () => {
     const v = checkPolicy(
       swap(),
       limits(),
-      state({ highWaterMarkUsdg: 1_000_000_000n, equityUsdg: 900_000_000n }),
+      state({ highWaterMarkUsdg: (1_000_000_000n * MICRO), equityUsdg: (900_000_000n * MICRO) }),
     );
     assert.equal(!v.ok && v.rule, "drawdown-breaker");
   });
@@ -110,7 +113,7 @@ describe("checkPolicy", () => {
     // high-water mark only ratchets up, so nothing the agent could do cleared
     // it. The account was stuck until a human intervened, and the escape the
     // code actually offered was to DEPOSIT MORE.
-    const tripped = { highWaterMarkUsdg: 1_000_000_000n, equityUsdg: 800_000_000n }; // 20%
+    const tripped = { highWaterMarkUsdg: (1_000_000_000n * MICRO), equityUsdg: (800_000_000n * MICRO) }; // 20%
 
     it("still refuses a BUY — that is the whole point of the breaker", () => {
       const v = checkPolicy(swap(), limits({ cashToken: USDG }), state(tripped));
@@ -123,18 +126,9 @@ describe("checkPolicy", () => {
       assert.deepEqual(v, { ok: true });
     });
 
-    it("ALLOWS pulling cash back out of the vault", () => {
-      const v = checkPolicy(
-        { kind: "vault-withdraw", target: VAULT, amountUsdg: 100_000_000n },
-        limits({ cashToken: USDG }),
-        state(tripped),
-      );
-      assert.deepEqual(v, { ok: true });
-    });
-
     it("ALLOWS sending money home to a pinned recipient", () => {
       const v = checkPolicy(
-        { kind: "transfer", target: USDG, recipient: EVIL, amountUsdg: 10_000_000n },
+        { kind: "transfer", target: USDG, recipient: EVIL, amountUsdg: (10_000_000n * MICRO) },
         // EVIL is only "evil" elsewhere; here it stands for a registered
         // withdrawal address the wall already pinned at signing time.
         limits({ cashToken: USDG, withdrawalAddresses: [EVIL] }),
@@ -160,7 +154,7 @@ describe("checkPolicy", () => {
     const v = checkPolicy(
       swap(),
       limits(),
-      state({ highWaterMarkUsdg: 1_000_000_000n, equityUsdg: 901_000_000n }),
+      state({ highWaterMarkUsdg: (1_000_000_000n * MICRO), equityUsdg: (901_000_000n * MICRO) }),
     );
     assert.deepEqual(v, { ok: true });
   });
@@ -186,7 +180,7 @@ describe("checkPolicy", () => {
    */
   describe("drawdown breaker on an unknown book", () => {
     // $8k of the $10k book is an unpriceable memecoin; the visible part is $2k.
-    const partial = { highWaterMarkUsdg: 10_000_000_000n, equityUsdg: 2_000_000_000n };
+    const partial = { highWaterMarkUsdg: (10_000_000_000n * MICRO), equityUsdg: (2_000_000_000n * MICRO) };
 
     it("does NOT judge a drawdown when the book can't be totalled", () => {
       assert.deepEqual(
@@ -213,7 +207,7 @@ describe("checkPolicy", () => {
         "ops cap",
       );
       assert.equal(
-        !checkPolicy(swap(), limits(), state({ ...unknown, spentTodayUsdg: 490_000_000n })).ok,
+        !checkPolicy(swap(), limits(), state({ ...unknown, spentTodayUsdg: (490_000_000n * MICRO) })).ok,
         true,
         "daily cap",
       );
@@ -230,48 +224,13 @@ describe("checkPolicy", () => {
     assert.equal(!v.ok && v.rule, "ops-cap");
   });
 
-  it("vault deposits are capped at the DAILY limit, mirroring the on-chain policy", () => {
-    // A deposit above the per-trade cap (50) but under the daily cap (500) is
-    // fine — parking idle cash in the vault isn't a market spend, and the
-    // on-chain deposit policy caps at dailyUsdg, not perTradeUsdg. The old
-    // mirror rejected this and stranded funded agents in a rejection loop.
-    assert.deepEqual(
-      checkPolicy({ kind: "vault-deposit", target: VAULT, amountUsdg: 60_000_000n }, limits(), state()),
-      { ok: true },
-    );
-    // But a single deposit over the daily cap is still rejected.
-    const v = checkPolicy(
-      { kind: "vault-deposit", target: VAULT, amountUsdg: 500_000_001n },
-      limits(),
-      state(),
-    );
-    assert.equal(!v.ok && v.rule, "deposit-cap");
-  });
-
-  it("vault withdrawals are exempt from spend caps (funds return to the account)", () => {
-    const v = checkPolicy(
-      { kind: "vault-withdraw", target: VAULT, amountUsdg: 10_000_000_000n },
-      limits(),
-      state({ spentTodayUsdg: 500_000_000n }),
-    );
-    assert.deepEqual(v, { ok: true });
-  });
-
-  it("vault withdrawals still respect expiry and the ops cap", () => {
-    const intent: TradeIntent = { kind: "vault-withdraw", target: VAULT, amountUsdg: 1n };
-    const expired = checkPolicy(intent, limits(), state({ nowSec: NOW + 86_401 }));
-    assert.equal(!expired.ok && expired.rule, "expiry");
-    const throttled = checkPolicy(intent, limits(), state({ opsToday: 48 }));
-    assert.equal(!throttled.ok && throttled.rule, "ops-cap");
-  });
-
   // ── transfers: money leaving the wall is a spend, not a withdrawal ────────
   const RECIPIENT = "0x5555555555555555555555555555555555555555" as const;
   const transfer = (over: Partial<Extract<TradeIntent, { kind: "transfer" }>> = {}): TradeIntent => ({
     kind: "transfer",
     target: USDG,
     recipient: RECIPIENT,
-    amountUsdg: 25_000_000n,
+    amountUsdg: (25_000_000n * MICRO),
     ...over,
   });
 
@@ -292,12 +251,12 @@ describe("checkPolicy", () => {
   });
 
   it("transfers obey the per-trade cap", () => {
-    const v = checkPolicy(transfer({ amountUsdg: 50_000_001n }), limits(), state());
+    const v = checkPolicy(transfer({ amountUsdg: (50_000_001n * MICRO) }), limits(), state());
     assert.equal(!v.ok && v.rule, "per-trade-cap");
   });
 
   it("transfers count against the daily cap — NOT exempt like vault withdrawals", () => {
-    const v = checkPolicy(transfer(), limits(), state({ spentTodayUsdg: 490_000_000n }));
+    const v = checkPolicy(transfer(), limits(), state({ spentTodayUsdg: (490_000_000n * MICRO) }));
     assert.equal(!v.ok && v.rule, "daily-cap");
   });
 
@@ -383,7 +342,7 @@ describe("checkPolicy — the scout ceiling", () => {
   const CATE = "0x5555555555555555555555555555555555555555" as const;
   const base = limits({ allowedAssets: [USDG, AAPL, CATE], sellableAssets: [USDG, AAPL, CATE] });
   const scout = (over: Partial<import("./policy").ScoutContext> = {}) => ({
-    limits: { enabled: true, budgetUsdg: 100_000_000n, perTokenUsdg: 25_000_000n },
+    limits: { enabled: true, budgetUsdg: (100_000_000n * MICRO), perTokenUsdg: (25_000_000n * MICRO) },
     buyUnpriceable: true,
     existingCostUsdg: 0n,
     quarantinedUsdg: 0n,
@@ -391,7 +350,7 @@ describe("checkPolicy — the scout ceiling", () => {
   });
 
   it("allows an unpriceable buy inside the budget", () => {
-    const v = checkPolicy(swap({ buyToken: CATE, notionalUsdg: 10_000_000n }), base, state(), scout());
+    const v = checkPolicy(swap({ buyToken: CATE, notionalUsdg: (10_000_000n * MICRO) }), base, state(), scout());
     assert.equal(v.ok, true);
   });
 
@@ -400,27 +359,27 @@ describe("checkPolicy — the scout ceiling", () => {
       swap({ buyToken: CATE }),
       base,
       state(),
-      scout({ limits: { enabled: false, budgetUsdg: 100_000_000n, perTokenUsdg: 25_000_000n } }),
+      scout({ limits: { enabled: false, budgetUsdg: (100_000_000n * MICRO), perTokenUsdg: (25_000_000n * MICRO) } }),
     );
     assert.equal(v.ok === false && v.rule, "scout-budget");
   });
 
   it("REFUSES past the per-token ceiling, counting what's already sunk in", () => {
     const v = checkPolicy(
-      swap({ buyToken: CATE, notionalUsdg: 10_000_000n }),
+      swap({ buyToken: CATE, notionalUsdg: (10_000_000n * MICRO) }),
       base,
       state(),
-      scout({ existingCostUsdg: 20_000_000n }),
+      scout({ existingCostUsdg: (20_000_000n * MICRO) }),
     );
     assert.equal(v.ok === false && v.rule, "scout-budget");
   });
 
   it("REFUSES past the total budget", () => {
     const v = checkPolicy(
-      swap({ buyToken: CATE, notionalUsdg: 10_000_000n }),
+      swap({ buyToken: CATE, notionalUsdg: (10_000_000n * MICRO) }),
       base,
       state(),
-      scout({ quarantinedUsdg: 95_000_000n }),
+      scout({ quarantinedUsdg: (95_000_000n * MICRO) }),
     );
     assert.equal(v.ok === false && v.rule, "scout-budget");
   });
@@ -444,16 +403,16 @@ describe("checkPolicy — the scout ceiling", () => {
       state(),
       scout({
         buyUnpriceable: false,
-        quarantinedUsdg: 100_000_000n,
+        quarantinedUsdg: (100_000_000n * MICRO),
         limits: { enabled: false, budgetUsdg: 0n, perTokenUsdg: 0n },
       }),
     );
     assert.equal(v.ok, true);
   });
 
-  it("leaves vault moves and transfers alone", () => {
-    const dep: TradeIntent = { kind: "vault-deposit", target: VAULT, amountUsdg: 25_000_000n };
-    assert.equal(checkPolicy(dep, base, state(), scout()).ok, true);
+  it("leaves transfers alone", () => {
+    const out: TradeIntent = { kind: "transfer", target: USDG, recipient: VAULT, amountUsdg: (25_000_000n * MICRO) };
+    assert.equal(checkPolicy(out, base, state(), scout()).ok, true);
   });
 
   it("runs AFTER the no-exit rule — an unsellable token fails on that first", () => {
@@ -474,7 +433,7 @@ describe("checkPolicy — equity orders (the broker rail)", () => {
     kind: "equity-order",
     ticker: "AAPL",
     side: "buy",
-    notionalUsdg: 25_000_000n, // 25 USD
+    notionalUsdg: (25_000_000n * MICRO), // 25 USD
     ...over,
   });
   const eqLimits = (over: Partial<AgentLimits> = {}) => limits({ allowedTickers: ["AAPL", "NVDA"], ...over });
@@ -504,17 +463,17 @@ describe("checkPolicy — equity orders (the broker rail)", () => {
   });
 
   it("caps a single order at the per-trade limit", () => {
-    const v = checkPolicy(eq({ notionalUsdg: 50_000_001n }), eqLimits(), state());
+    const v = checkPolicy(eq({ notionalUsdg: (50_000_001n * MICRO) }), eqLimits(), state());
     assert.equal(!v.ok && v.rule, "per-trade-cap");
   });
 
   it("counts SELLS against the caps too — a sell is still an op and still exposure", () => {
-    const v = checkPolicy(eq({ side: "sell", notionalUsdg: 50_000_001n }), eqLimits(), state());
+    const v = checkPolicy(eq({ side: "sell", notionalUsdg: (50_000_001n * MICRO) }), eqLimits(), state());
     assert.equal(!v.ok && v.rule, "per-trade-cap");
   });
 
   it("enforces the rolling daily cap", () => {
-    const v = checkPolicy(eq(), eqLimits(), state({ spentTodayUsdg: 490_000_000n }));
+    const v = checkPolicy(eq(), eqLimits(), state({ spentTodayUsdg: (490_000_000n * MICRO) }));
     assert.equal(!v.ok && v.rule, "daily-cap");
   });
 
@@ -529,7 +488,7 @@ describe("checkPolicy — equity orders (the broker rail)", () => {
     const v = checkPolicy(
       eq(),
       eqLimits(),
-      state({ highWaterMarkUsdg: 1_000_000_000n, equityUsdg: 890_000_000n }),
+      state({ highWaterMarkUsdg: (1_000_000_000n * MICRO), equityUsdg: (890_000_000n * MICRO) }),
     );
     assert.equal(!v.ok && v.rule, "drawdown-breaker");
   });
@@ -539,9 +498,9 @@ describe("checkPolicy — equity orders (the broker rail)", () => {
     // notional; review() then returns priced terms (fees, slippage), and the
     // SAME checkPolicy judges those. This pins that a review-inflated notional
     // is caught — the property the live executor's safety rests on.
-    const proposed = eq({ notionalUsdg: 49_000_000n });
+    const proposed = eq({ notionalUsdg: (49_000_000n * MICRO) });
     assert.equal(checkPolicy(proposed, eqLimits(), state()).ok, true);
-    const reviewed = { ...proposed, notionalUsdg: 51_000_000n } as TradeIntent; // fees pushed it over
+    const reviewed = { ...proposed, notionalUsdg: (51_000_000n * MICRO) } as TradeIntent; // fees pushed it over
     const v = checkPolicy(reviewed, eqLimits(), state());
     assert.equal(!v.ok && v.rule, "per-trade-cap");
   });
@@ -552,7 +511,7 @@ describe("checkPolicy — the withdrawal allowlist mirrors the on-chain pin", ()
     kind: "transfer",
     target: USDG,
     recipient: recipient as `0x${string}`,
-    amountUsdg: 10_000_000n,
+    amountUsdg: (10_000_000n * MICRO),
   });
   // Hex letters on purpose: a checksummed (EIP-55) address differs from its
   // lowercase form only in the BODY — the "0x" prefix stays lowercase, which is
@@ -591,7 +550,7 @@ describe("checkPolicy — the withdrawal allowlist mirrors the on-chain pin", ()
 
   it("the amount cap still applies on top of the destination pin", () => {
     const v = checkPolicy(
-      { ...xfer(A), amountUsdg: 50_000_001n } as TradeIntent,
+      { ...xfer(A), amountUsdg: (50_000_001n * MICRO) } as TradeIntent,
       limits({ withdrawalAddresses: [A] }),
       state(),
     );
@@ -600,265 +559,17 @@ describe("checkPolicy — the withdrawal allowlist mirrors the on-chain pin", ()
 });
 
 
-/**
- * STAGE 4 — THE MIRROR WAS LOOSER THAN THE CHAIN FOR CURVE TRADES.
- *
- * Every asset rule used to sit inside `if (intent.kind === "swap")`, so a curve
- * trade reached the bundler having passed no asset check at all. The chain would
- * still refuse it — the wall pins both legs ONE_OF the sealed list — but
- * limits.ts records that the mirror going LOOSER than the chain is the one
- * direction that is never safe, and the cost of finding out on chain is a wasted
- * UserOp and a `gas-unreadable` refusal that names nothing.
- */
-describe("curve trades are judged off-chain, not discovered on-chain", () => {
-  const USDG = "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168";
-  const MEME = "0x1111111111111111111111111111111111111111";
-  const CURVE = "0x2222222222222222222222222222222222222222";
-  const ADAPTER = "0x3333333333333333333333333333333333333333";
-  const STOCK = "0x4444444444444444444444444444444444444444";
-
-  const curveIntent = (over: Record<string, unknown> = {}) =>
-    ({
-      kind: "curve-trade",
-      target: ADAPTER,
-      curve: CURVE,
-      assetIn: USDG,
-      assetOut: MEME,
-      amountInRaw: 10_000_000n,
-      minAmountOutRaw: 1n,
-      notionalUsdg: 10_000_000n,
-      ...over,
-    }) as never;
-
-  const limits = (over: Record<string, unknown> = {}) =>
-    ({
-      allowedTargets: [ADAPTER],
-      allowedAssets: [USDG, MEME],
-      sellableAssets: [USDG, MEME, STOCK],
-      quoteAssets: [USDG, STOCK],
-      knownCurves: [CURVE],
-      cashToken: USDG,
-      maxTradeUsdg: 1_000_000_000n,
-      maxDailyUsdg: 1_000_000_000n,
-      maxOpsPerDay: 100,
-      ...over,
-    }) as never;
-
-  const state = () =>
-    ({ spentTodayUsdg: 0n, opsToday: 0, equityUsdg: 1_000_000_000n, highWaterMarkUsdg: 0n }) as never;
-
-  it("refuses an asset the GRANT does not cover", () => {
+describe("removed order kinds", () => {
+  it("refuses a curve trade even when its target and both assets are allowed", () => {
+    const A = "0x1111111111111111111111111111111111111111";
+    const B = "0x2222222222222222222222222222222222222222";
     const v = checkPolicy(
-      curveIntent({ assetOut: "0x9999999999999999999999999999999999999999" }),
-      limits(),
-      state(),
+      { kind: "curve-trade", target: A, assetIn: A, assetOut: B } as never,
+      { allowedTargets: [A], allowedAssets: [A, B], sellableAssets: [A, B], cashToken: A } as never,
+      { spentTodayUsdg: 0n, opsToday: 0, equityUsdg: 0n, highWaterMarkUsdg: 0n } as never,
     );
     assert.equal(v.ok, false);
-    assert.equal((v as { rule: string }).rule, "asset-allowlist");
-  });
-
-  it("checks the GRANT list, not the settings list — the whole point of the fix", () => {
-    // allowedAssets is [USDG, ...watchTokens] and watchTokens hot-reload from
-    // SETTINGS with no signature. sellableAssets comes from the grant. An owner
-    // who adds a token in /settings and does not re-sign must still be refused
-    // here, or the fix reproduces the bug it is closing.
-    const v = checkPolicy(
-      curveIntent(),
-      limits({ allowedAssets: [USDG, MEME], sellableAssets: [USDG] }),
-      state(),
-    );
-    assert.equal(v.ok, false, "settings-derived reach must not authorise a curve buy");
-    assert.equal((v as { rule: string }).rule, "asset-allowlist");
-  });
-
-  it("refuses a curve nothing vouches for", () => {
-    // The curve is the one argument the wall CANNOT pin, so off-chain is the
-    // only place it can be constrained at all.
-    const v = checkPolicy(curveIntent({ curve: "0x8888888888888888888888888888888888888888" }), limits(), state());
-    assert.equal(v.ok, false);
-    assert.equal((v as { rule: string }).rule, "curve-provenance");
-  });
-
-  it("refuses a non-positive size instead of signing it", () => {
-    for (const over of [{ amountInRaw: 0n }, { notionalUsdg: 0n }, { amountInRaw: -1n }]) {
-      const v = checkPolicy(curveIntent(over), limits(), state());
-      assert.equal(v.ok, false, Object.keys(over).join(",") + "=" + Object.values(over).map(String).join(","));
-      assert.equal((v as { rule: string }).rule, "non-positive");
-    }
-  });
-
-  it("allows a legal curve buy", () => {
-    assert.equal(checkPolicy(curveIntent(), limits(), state()).ok, true);
-  });
-
-  /**
-   * THE CLASS ROUTE — where "both legs must be enumerated" stops being possible.
-   *
-   * A sniped token did not exist when the grant was signed, so it can never be
-   * in `sellableAssets`. The vault is what makes that safe rather than a trap:
-   * it holds the token, so exiting needs no per-token approve, and the wall pins
-   * the VAULT as the target rather than trying to pin a token nobody has heard
-   * of. These tests pin the three things that has to mean off-chain.
-   *
-   * Every case here differs from the block above by ONE field — `target`. That
-   * is deliberate: the class relaxation must be reachable only through the vault
-   * the grant sealed, and an identical trade through the ordinary adapter must
-   * still be refused. The pair below proves both halves.
-   */
-  describe("the class route", () => {
-    const VAULT = "0x7777777777777777777777777777777777777777";
-    const CLASS_TOKEN = "0x9999999999999999999999999999999999999999";
-    const OTHER_CLASS = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-    const classLimits = (over: Record<string, unknown> = {}) =>
-      limits({ allowedTargets: [ADAPTER, VAULT], ponsClassVault: VAULT, ...over });
-
-    it("buys a token that did not exist at signing — the capability", () => {
-      const v = checkPolicy(
-        curveIntent({ target: VAULT, assetOut: CLASS_TOKEN }),
-        classLimits(),
-        state(),
-      );
-      assert.equal(v.ok, true, "the class vault is the whole point; this must be reachable");
-    });
-
-    it("sells one back out — the exit, which is what the vault exists for", () => {
-      // assetIn is the un-enumerated leg on this shape. If only `assetOut` were
-      // allowed to be un-enumerated, entering would work and exiting would not:
-      // the no-exit trap, rebuilt inside the thing that was supposed to remove it.
-      const v = checkPolicy(
-        curveIntent({ target: VAULT, assetIn: CLASS_TOKEN, assetOut: USDG }),
-        classLimits(),
-        state(),
-      );
-      assert.equal(v.ok, true, "an exit must always be attemptable");
-    });
-
-    it("refuses the identical trade through the ordinary adapter", () => {
-      // The relaxation belongs to the vault, not to the venue. Through the
-      // adapter the token would land in the ACCOUNT, where selling it needs a
-      // per-token approve the wall cannot express — so this refusal is the
-      // no-exit rule doing its job one call earlier.
-      const v = checkPolicy(curveIntent({ assetOut: CLASS_TOKEN }), classLimits(), state());
-      assert.equal(v.ok, false);
-      assert.equal((v as { rule: string }).rule, "asset-allowlist");
-    });
-
-    it("refuses when NEITHER leg is in the grant", () => {
-      // One un-enumerated leg is the class token. Two means nothing in the trade
-      // is anchored to the signature at all — rolling junk into junk.
-      const v = checkPolicy(
-        curveIntent({ target: VAULT, assetIn: CLASS_TOKEN, assetOut: OTHER_CLASS }),
-        classLimits(),
-        state(),
-      );
-      assert.equal(v.ok, false);
-      assert.equal((v as { rule: string }).rule, "asset-allowlist");
-    });
-
-    it("refuses a class trade when the launch feed is UNREADABLE, not just when the curve is unknown", () => {
-      // THE INVERSION, and the only place in this file where it applies.
-      // `knownCurves: undefined` means "the rule cannot run" everywhere else and
-      // the trade proceeds on the rules that can. A class trade has no such
-      // rules left — its output leg is un-enumerated by design — so an absent
-      // feed is a refusal. A check that did not run must never read as a pass.
-      const v = checkPolicy(
-        curveIntent({ target: VAULT, assetOut: CLASS_TOKEN }),
-        classLimits({ knownCurves: undefined }),
-        state(),
-      );
-      assert.equal(v.ok, false);
-      assert.equal((v as { rule: string }).rule, "curve-provenance");
-    });
-
-    it("leaves an ORDINARY curve trade untouched when the feed is unreadable", () => {
-      // The counterpart to the case above, and what keeps that inversion from
-      // quietly becoming a fleet-wide fail-closed change nobody asked for.
-      const v = checkPolicy(curveIntent(), classLimits({ knownCurves: undefined }), state());
-      assert.equal(v.ok, true);
-    });
-
-    it("ignores the class rules entirely when the grant sealed no vault", () => {
-      // ABSENT IS THE SECURE DEFAULT: a grant signed before this feature existed
-      // gets the strict both-legs rule, with nothing to opt into and nothing to
-      // configure.
-      const v = checkPolicy(
-        curveIntent({ target: VAULT, assetOut: CLASS_TOKEN }),
-        limits({ allowedTargets: [ADAPTER, VAULT] }),
-        state(),
-      );
-      assert.equal(v.ok, false);
-      assert.equal((v as { rule: string }).rule, "asset-allowlist");
-    });
-  });
-});
-
-/**
- * THE BREAKER'S EXIT EXEMPTION — and the trap in widening it.
- *
- * The wall pins BOTH legs ONE_OF the same sealed list, so "assetOut is sellable"
- * is true of every curve trade ever built, buys included. Testing that would mark
- * the whole venue exempt and switch the breaker off exactly where risk is
- * highest. The real discriminator is that sellableAssets = builtinGrantTargets u
- * grantTokens: a launched memecoin arrives as an owner-added EXTRA, while USDG
- * and the stock tokens are BUILT IN.
- */
-describe("drawdown breaker and curve exits", () => {
-  const USDG = "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168";
-  const MEME = "0x1111111111111111111111111111111111111111";
-  const CURVE = "0x2222222222222222222222222222222222222222";
-  const ADAPTER = "0x3333333333333333333333333333333333333333";
-  const STOCK = "0x4444444444444444444444444444444444444444";
-
-  const lim = {
-    allowedTargets: [ADAPTER],
-    allowedAssets: [USDG, MEME, STOCK],
-    sellableAssets: [USDG, MEME, STOCK],
-    quoteAssets: [USDG, STOCK],
-    knownCurves: [CURVE],
-    cashToken: USDG,
-    maxTradeUsdg: 1_000_000_000n,
-    maxDailyUsdg: 1_000_000_000n,
-    maxOpsPerDay: 100,
-    maxDrawdownBps: 500,
-  } as never;
-
-  // Deep in a drawdown: equity is half the high-water mark.
-  const drawdown = {
-    spentTodayUsdg: 0n,
-    opsToday: 0,
-    equityUsdg: 500_000_000n,
-    highWaterMarkUsdg: 1_000_000_000n,
-    equityKnown: true,
-  } as never;
-
-  const trade = (assetIn: string, assetOut: string) =>
-    ({
-      kind: "curve-trade",
-      target: ADAPTER,
-      curve: CURVE,
-      assetIn,
-      assetOut,
-      amountInRaw: 10_000_000n,
-      minAmountOutRaw: 1n,
-      notionalUsdg: 10_000_000n,
-    }) as never;
-
-  it("lets a stock-quoted curve position OUT during a drawdown", () => {
-    // 42.8% of curves are quoted in a stock token. The cashToken-only test
-    // blocked the exit for nearly half the venue at the moment it matters most.
-    assert.equal(checkPolicy(trade(MEME, STOCK), lim, drawdown).ok, true);
-  });
-
-  it("still lets a USDG-quoted position out", () => {
-    assert.equal(checkPolicy(trade(MEME, USDG), lim, drawdown).ok, true);
-  });
-
-  it("does NOT treat a curve BUY as an exit", () => {
-    // The failure mode of a careless widening: every leg is sellable, so a naive
-    // test exempts entries too and the breaker stops existing for this venue.
-    const v = checkPolicy(trade(USDG, MEME), lim, drawdown);
-    assert.equal(v.ok, false, "buying deeper into a drawdown must still be blocked");
-    assert.equal((v as { rule: string }).rule, "drawdown-breaker");
+    assert.equal((v as { rule: string }).rule, "target-allowlist");
   });
 });
 
@@ -881,8 +592,8 @@ describe("cap refusals are written for the person who has to read them", () => {
       allowedAssets: [USDG, STOCK],
       sellableAssets: [USDG, STOCK],
       cashToken: USDG,
-      perTradeUsdg: 10_000_000n,
-      dailyUsdg: 50_000_000n,
+      perTradeUsdg: (10_000_000n * MICRO),
+      dailyUsdg: (50_000_000n * MICRO),
       maxOpsPerDay: 100,
       maxDrawdownBps: 10_000,
       expiresAt: 2_000_000_000,
@@ -902,13 +613,13 @@ describe("cap refusals are written for the person who has to read them", () => {
     ({
       spentTodayUsdg: spent,
       opsToday: 0,
-      equityUsdg: 1_000_000_000n,
+      equityUsdg: (1_000_000_000n * MICRO),
       highWaterMarkUsdg: 0n,
       nowSec: 1_000_000_000,
     }) as never;
 
   it("the daily-cap refusal contains no bare 6dp integer", () => {
-    const v = checkPolicy(capBuy(5_000_000n), capLimits(), capState(49_000_000n));
+    const v = checkPolicy(capBuy((5_000_000n * MICRO)), capLimits(), capState((49_000_000n * MICRO)));
     assert.equal(v.ok, false);
     assert.equal((v as { rule: string }).rule, "daily-cap");
     const detail = (v as { detail: string }).detail;
@@ -919,7 +630,7 @@ describe("cap refusals are written for the person who has to read them", () => {
   });
 
   it("and names what was spent, what the budget was, and what this trade wanted", () => {
-    const v = checkPolicy(capBuy(5_000_000n), capLimits(), capState(49_000_000n));
+    const v = checkPolicy(capBuy((5_000_000n * MICRO)), capLimits(), capState((49_000_000n * MICRO)));
     const detail = (v as { detail: string }).detail;
     for (const part of ["49.00 USDG", "50.00 USDG", "5.00 USDG"]) {
       assert.ok(detail.includes(part), `expected ${part} in: ${detail}`);
@@ -927,12 +638,12 @@ describe("cap refusals are written for the person who has to read them", () => {
   });
 
   it("says the exit is never blocked by it, because that is the question this prompts", () => {
-    const detail = (checkPolicy(capBuy(5_000_000n), capLimits(), capState(49_000_000n)) as { detail: string }).detail;
+    const detail = (checkPolicy(capBuy((5_000_000n * MICRO)), capLimits(), capState((49_000_000n * MICRO))) as { detail: string }).detail;
     assert.match(detail, /[Ee]xits are never blocked/);
   });
 
   it("the per-trade refusal is legible too, and names the re-sign", () => {
-    const v = checkPolicy(capBuy(25_000_000n), capLimits(), capState(0n));
+    const v = checkPolicy(capBuy((25_000_000n * MICRO)), capLimits(), capState(0n));
     assert.equal((v as { rule: string }).rule, "per-trade-cap");
     const detail = (v as { detail: string }).detail;
     assert.ok(!/\b\d{7,}\b/.test(detail), `raw figure in: ${detail}`);
@@ -940,120 +651,5 @@ describe("cap refusals are written for the person who has to read them", () => {
     // The remedy differs from the daily cap's: this one is sealed in the
     // signature, so settings cannot move it.
     assert.match(detail, /re-sign/);
-  });
-});
-
-/**
- * THE ENERGY BUY — a mirror of ONE permission, and no stricter than it.
- *
- * The wall seals the v2 swap on the router with the path pinned and the input
- * funded through the one USDG approve, capped LESS_THAN_OR_EQUAL perTradeUsdg.
- * So an honest buy at exactly the cap must pass here, a `swap` naming the
- * router must still be refused (the router is not in allowedTargets), and the
- * rules about POSITIONS — the watch set, the exit, the scout budget — must not
- * reach it at all.
- */
-describe("energy-buy", () => {
-  const V2 = "0x5555555555555555555555555555555555555555" as const;
-  const MERRY = "0x6666666666666666666666666666666666666666" as const;
-  const energyLimits = (over: Partial<AgentLimits> = {}): AgentLimits =>
-    limits({ cashToken: USDG, energy: { router: V2, token: MERRY }, sellableAssets: [USDG, AAPL], ...over });
-  const buy = (over: Partial<Extract<TradeIntent, { kind: "energy-buy" }>> = {}): TradeIntent => ({
-    kind: "energy-buy",
-    target: V2,
-    sellToken: USDG,
-    buyToken: MERRY,
-    sellAmountRaw: 10_000_000n,
-    notionalUsdg: 10_000_000n,
-    ...over,
-  });
-
-  it("approves an honest buy on a grant that sealed the route", () => {
-    assert.deepEqual(checkPolicy(buy(), energyLimits(), state()), { ok: true });
-  });
-
-  it("the router is NOT in allowedTargets, and a generic swap aimed at it stays target-allowlist", () => {
-    const l = energyLimits();
-    assert.ok(!l.allowedTargets.map((a) => a.toLowerCase()).includes(V2));
-    const v = checkPolicy(swap({ target: V2, buyToken: AAPL }), l, state());
-    assert.equal(!v.ok && v.rule, "target-allowlist");
-    // Even a swap INTO the reserve over the sealed router is not an energy buy.
-    const w = checkPolicy(swap({ target: V2, buyToken: MERRY }), l, state());
-    assert.equal(!w.ok && w.rule, "target-allowlist");
-  });
-
-  it("no route on the grant → energy-not-granted, whatever else is true", () => {
-    const v = checkPolicy(buy(), limits({ cashToken: USDG }), state());
-    assert.equal(!v.ok && v.rule, "energy-not-granted");
-    assert.match(!v.ok ? v.detail : "", /Re-sign at \/grant, or send \$AGENTCAP to the account directly/);
-  });
-
-  it("any other target → target-allowlist, case-insensitively", () => {
-    assert.equal((checkPolicy(buy({ target: ROUTER }), energyLimits(), state()) as { rule: string }).rule, "target-allowlist");
-    const upper = V2.toUpperCase().replace("0X", "0x") as `0x${string}`;
-    assert.deepEqual(checkPolicy(buy({ target: upper }), energyLimits(), state()), { ok: true });
-  });
-
-  it("the wrong sell or buy leg → asset-allowlist", () => {
-    for (const bad of [buy({ sellToken: AAPL }), buy({ buyToken: AAPL }), buy({ buyToken: USDG }), buy({ sellToken: MERRY, buyToken: USDG })]) {
-      const v = checkPolicy(bad, energyLimits(), state());
-      assert.equal(!v.ok && v.rule, "asset-allowlist");
-    }
-    // No cash token to judge the sell leg by is a refusal, not a pass.
-    const v = checkPolicy(buy(), energyLimits({ cashToken: undefined }), state());
-    assert.equal(!v.ok && v.rule, "asset-allowlist");
-  });
-
-  it("refuses a non-positive size, and a notional that is not the raw input", () => {
-    for (const bad of [
-      buy({ sellAmountRaw: 0n, notionalUsdg: 0n }),
-      buy({ sellAmountRaw: -1n, notionalUsdg: -1n }),
-      buy({ sellAmountRaw: 10_000_000n, notionalUsdg: 9_999_999n }),
-      buy({ sellAmountRaw: 10_000_000n, notionalUsdg: 1n }),
-    ]) {
-      const v = checkPolicy(bad, energyLimits(), state());
-      assert.equal(!v.ok && v.rule, "non-positive");
-    }
-  });
-
-  it("THE MIRROR IS NOT STRICTER: exactly the per-trade cap (the approve's LTE bound) passes; one unit over does not", () => {
-    const cap = 50_000_000n;
-    assert.deepEqual(checkPolicy(buy({ sellAmountRaw: cap, notionalUsdg: cap }), energyLimits(), state()), { ok: true });
-    const v = checkPolicy(buy({ sellAmountRaw: cap + 1n, notionalUsdg: cap + 1n }), energyLimits(), state());
-    assert.equal(!v.ok && v.rule, "per-trade-cap");
-  });
-
-  it("daily-cap and ops-cap apply — it is a spend", () => {
-    const d = checkPolicy(buy(), energyLimits(), state({ spentTodayUsdg: 495_000_000n }));
-    assert.equal(!d.ok && d.rule, "daily-cap");
-    assert.deepEqual(checkPolicy(buy({ sellAmountRaw: 5_000_000n, notionalUsdg: 5_000_000n }), energyLimits(), state({ spentTodayUsdg: 495_000_000n })), { ok: true });
-    const o = checkPolicy(buy(), energyLimits(), state({ opsToday: 48 }));
-    assert.equal(!o.ok && o.rule, "ops-cap");
-  });
-
-  it("the drawdown breaker applies — it is not an exit", () => {
-    const v = checkPolicy(buy(), energyLimits(), state({ highWaterMarkUsdg: 1_000_000_000n, equityUsdg: 850_000_000n }));
-    assert.equal(!v.ok && v.rule, "drawdown-breaker");
-  });
-
-  it("the scout budget does NOT apply, even flagged unpriceable with a zero budget", () => {
-    const scout = {
-      limits: { enabled: false, budgetUsdg: 0n, perTokenUsdg: 0n },
-      buyUnpriceable: true,
-      existingCostUsdg: 0n,
-      quarantinedUsdg: 0n,
-    };
-    assert.deepEqual(checkPolicy(buy(), energyLimits(), state(), scout), { ok: true });
-  });
-
-  it("no-exit does NOT apply while $AGENTCAP is absent from sellableAssets, nor asset-allowlist from the watch set", () => {
-    const l = energyLimits({ sellableAssets: [USDG], allowedAssets: [USDG] });
-    assert.ok(!l.sellableAssets!.includes(MERRY) && !l.allowedAssets.includes(MERRY));
-    assert.deepEqual(checkPolicy(buy(), l, state()), { ok: true });
-  });
-
-  it("the key's expiry still comes first", () => {
-    const v = checkPolicy(buy(), energyLimits(), state({ nowSec: NOW + 86_401 }));
-    assert.equal(!v.ok && v.rule, "expiry");
   });
 });

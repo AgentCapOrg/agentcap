@@ -665,8 +665,8 @@ function measure(c: NormalizedCandidate, opts: CohortScoringOptions, minHold: nu
     rh === null
       ? { value: null, note: "chain mix not measured" }
       : rhN === null
-        ? { value: rh, note: `${Math.round(rh * 100)}% of activity on Robinhood Chain (sample size unknown)` }
-        : { value: shrinkRate(rh, rhN), note: `${Math.round(rh * 100)}% of ${rhN} on Robinhood Chain` };
+        ? { value: rh, note: `${Math.round(rh * 100)}% of activity on BNB Chain (sample size unknown)` }
+        : { value: shrinkRate(rh, rhN), note: `${Math.round(rh * 100)}% of ${rhN} on BNB Chain` };
 
   const ed = c.earlyDiscoveries;
   // Half of a trader's coins bought early is already exceptional; that is full marks.

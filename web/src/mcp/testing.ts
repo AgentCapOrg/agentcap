@@ -61,7 +61,7 @@ export async function makeTestDb(): Promise<TestDb> {
 export function agentFixture(slug: string, account: `0x${string}`, over: Partial<OwnedAgent> = {}): OwnedAgent {
   return {
     ...agentFromParts({ slug, accounts: [account] }, {
-      chain_id: 4663, smart_account: account, granted_at: "1700000000", expires_at: "4102444800",
+      chain_id: 56, smart_account: account, granted_at: "1700000000", expires_at: "4102444800",
       caps: JSON.stringify({ perTradeUsdg: 25, dailyUsdg: 100, expiryDays: 30, maxDrawdownPct: 20, maxOpsPerDay: 20 }),
       features: "[]", tokens: "[]",
     })!,

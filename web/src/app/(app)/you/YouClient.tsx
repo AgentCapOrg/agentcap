@@ -15,6 +15,7 @@ import { rejectRuleLabel } from "@agentcap/thesis";
 import { timeAgo } from "@/lib/time";
 import type { PublicThesis } from "@/lib/thesis";
 import { usd } from "@/lib/format";
+import { usdgOrNull } from "@/terminal/account-read";
 
 /**
  * YOUR agent. One tab in a social product, not a control room.
@@ -75,7 +76,7 @@ interface GrantsResponse {
   mode?: string;
   gasSponsored?: boolean;
   grant?: { chainId?: number; caps?: Record<string, number>; expiresAt?: number } | null;
-  balances?: { ethWei?: string; cashUsdg?: number; vaultUsdg?: number } | null;
+  balances?: { ethWei?: string; cashUsdg?: string | null } | null;
 }
 
 const money = (n: number) =>
@@ -223,8 +224,8 @@ export function YouClient() {
   const positions = feed?.positions ?? [];
   const trades = (feed?.trades ?? []).slice(0, 7);
   const name = feed?.agent?.name ?? "Your agent";
-  const cash = grants?.balances?.cashUsdg ?? 0;
-  const vault = grants?.balances?.vaultUsdg ?? 0;
+  // /api/grants answers base units as a string.
+  const cash = usdgOrNull(grants?.balances?.cashUsdg) ?? 0;
   const positionsUsdg = positions.reduce((s, p) => s + Number(p.value_usdg ?? 0), 0);
 
   const today = Date.now() - 86_400_000;
@@ -240,7 +241,7 @@ export function YouClient() {
   const snap: AgentSnapshot = {
     name,
     mode: (grants?.mode as AgentSnapshot["mode"]) ?? "idle",
-    testnet: grants?.grant?.chainId === 46630,
+    testnet: grants?.grant?.chainId === 97,
     gasSponsored: grants?.gasSponsored,
     hasGas: BigInt(grants?.balances?.ethWei ?? "0") > 0n,
     cashUsdg: cash,
@@ -307,7 +308,7 @@ export function YouClient() {
             <AgentAvatar name={name} slug={feed?.agent?.slug ?? null} size={44} />
             <div>
               <p className="mm-kicker">everything it holds</p>
-              <p className="big mono">{money(latest || cash + vault + positionsUsdg)}</p>
+              <p className="big mono">{money(latest || cash + positionsUsdg)}</p>
             </div>
             <div className="mm-hero-pnl">
               {pnlPct === null ? (
@@ -332,7 +333,6 @@ export function YouClient() {
           )}
           <dl className="mm-slices">
             <Slice label="cash" value={money(cash)} />
-            <Slice label="vault" value={money(vault)} />
             <Slice label="positions" value={money(positionsUsdg)} />
           </dl>
         </section>

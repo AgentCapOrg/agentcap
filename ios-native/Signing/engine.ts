@@ -4,7 +4,6 @@
 import { toAccount } from "viem/accounts";
 import { createPrivyOwnedWallet, prepareAgentGrant, setPrivyTokenSource, type MintOptions } from "../../web/src/lib/session";
 import { bindingMessage, CASH, TRENCHER_VAULT_ABI } from "../../packages/core/src/index";
-import { verifiedAdapter } from "../../web/src/lib/verified-adapter";
 import { isValidCustomToken } from "../../packages/core/src/tokens";
 import { TRENCHER_FACTORY, resolveTrencherPermission } from "../../web/src/lib/trencher-permission";
 import type { Address, Hex, TypedDataDomain } from "viem";
@@ -64,8 +63,7 @@ function projectionFor(previousGrant: unknown, account: Address | undefined): un
 export async function create(input: {
   owner: Address; tenant: Address; did: string;
   caps: MintOptions["caps"]; expectAccount?: Address;
-  extraTokens: unknown[]; v4AdapterAddress?: Address; ponsAdapterAddress?: Address;
-  ponsClassVaultFactory?: Address; autonomousTrencher?: boolean; priorTrencherFactory?: Address;
+  extraTokens: unknown[]; autonomousTrencher?: boolean; priorTrencherFactory?: Address;
   /** The server's public projection of the current grant, when the host has it. Carry-forward only. */
   previousGrant?: unknown;
 }) {
@@ -78,13 +76,10 @@ export async function create(input: {
   if (input.caps.perTradeUsdg > input.caps.dailyUsdg) throw new Error("The per-trade cap exceeds the daily cap.");
   if (!input.extraTokens.every(isValidCustomToken)) throw new Error("A custom token is invalid.");
   const onStatus = (message: string) => { void nativeCall("status", { message }); };
-  const pons = await verifiedAdapter(input.ponsAdapterAddress, 4663, onStatus);
   setPrivyTokenSource(() => nativeCall("accessToken", {}));
   const result = await createPrivyOwnedWallet(signer(input.owner), input.did, {
     caps: input.caps, onStatus, chainId: 4663, hostedAs: input.tenant,
     expectAccount: input.expectAccount, extraTokens: input.extraTokens.filter(isValidCustomToken),
-    v4AdapterAddress: input.v4AdapterAddress, ponsAdapterAddress: pons,
-    ponsClassVaultFactory: input.ponsClassVaultFactory,
     trencherFactory: input.autonomousTrencher ? TRENCHER_FACTORY as Address : undefined,
     // Carry-forward only: mintGrant also reads this engine's stored grants.
     previousGrant: input.previousGrant,
@@ -108,11 +103,9 @@ export async function restore(input: Parameters<typeof create>[0]) {
   if (custody.state === 'unread') throw new Error('Existing Trencher custody could not be checked. No permission was signed.');
   if (custody.funded && !input.autonomousTrencher) throw new Error('This account has funds in its Trencher vault. Keep that permission enabled while restoring.');
   const onStatus = (message: string) => { void nativeCall('status', { message }); };
-  const pons = await verifiedAdapter(input.ponsAdapterAddress, 4663, onStatus);
   const grant = await prepareAgentGrant(signer(input.owner), {
     caps: input.caps, onStatus, chainId: 4663, expectAccount: input.expectAccount,
-    extraTokens: input.extraTokens.filter(isValidCustomToken), v4AdapterAddress: input.v4AdapterAddress,
-    ponsAdapterAddress: pons, ponsClassVaultFactory: input.ponsClassVaultFactory,
+    extraTokens: input.extraTokens.filter(isValidCustomToken),
     trencherFactory: input.autonomousTrencher ? TRENCHER_FACTORY as Address : undefined,
     // prepareAgentGrant reads no storage, so the previous grant for THIS account
     // is handed over: the host's server projection if it names it, else this
@@ -170,9 +163,9 @@ async function trencherState(account: Address): Promise<{ state: string; funded?
     return { state: 'read', vault, factory: TRENCHER_FACTORY, funded, balances };
   } catch { return { state: 'unread' }; }
 }
-export async function withdraw(input: Parameters<typeof recoveryWallet>[0] & { to: Address; approvedClass?: { vault: Address; tokens: Address[] } }) {
+export async function withdraw(input: Parameters<typeof recoveryWallet>[0] & { to: Address }) {
   if (!/^0x[0-9a-fA-F]{40}$/.test(input.to) || /^0x0{40}$/.test(input.to) || input.to.toLowerCase() === input.smartAccount.toLowerCase()) throw new Error("Choose a valid recipient other than this smart account.");
-  return sweepFromBrowser(recoveryWallet(input), input.to, input.approvedClass);
+  return sweepFromBrowser(recoveryWallet(input), input.to);
 }
 export async function reconcile(input: Parameters<typeof recoveryWallet>[0] & { hashes: Hex[] }) {
   await getRecoveryTicket(recoveryWallet(input));

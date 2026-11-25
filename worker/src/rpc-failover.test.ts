@@ -425,7 +425,7 @@ describe("chainReadRpc — the orchestrator's accounting tools read the same way
       const at = src.indexOf(`async function ${fn}(`);
       assert.ok(at > 0, fn);
       const body = src.slice(at, src.indexOf("\n}\n", at));
-      assert.match(body, new RegExp(`chainReadRpc\\(rpcUrl, robinhoodChain, \\{ label: "${label}", timeoutMs: \\d[\\d_]*`), fn);
+      assert.match(body, new RegExp(`chainReadRpc\\(rpcUrl, bnbChain, \\{ label: "${label}", timeoutMs: \\d[\\d_]*`), fn);
       assert.doesNotMatch(body, /fetch\(rpcUrl/, `${fn} posts to the configured endpoint alone`);
     }
   });

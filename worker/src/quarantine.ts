@@ -24,6 +24,8 @@
  * quarantined value has to say "at cost" so nobody reads it as a valuation.
  */
 
+import { cashNumber } from "../../packages/core/src/cash";
+
 /** A held position that cannot currently be priced, carried at its cost basis. */
 export interface QuarantinedHolding {
   symbol: string;
@@ -129,4 +131,4 @@ export function scoutAllows(
   return { ok: true };
 }
 
-const fmt = (v: bigint) => `${(Number(v) / 1e6).toFixed(2)} USDG`;
+const fmt = (v: bigint) => `${cashNumber(v).toFixed(2)} USDG`;

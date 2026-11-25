@@ -13,7 +13,6 @@
  * changes what "execute" means, never what is allowed.
  */
 
-import { isEnergyReserveToken } from "../../packages/core/src/index";
 import type { TradeIntent } from "./policy";
 
 export interface PaperBook {
@@ -52,28 +51,9 @@ export function paperUiShares(shares: number, multiplier: number): number {
   return shares * (multiplier > 0 ? multiplier : MULTIPLIER_ONE);
 }
 
-/**
- * The paper holdings the tick VALUES: held (shares > 0) and not the energy reserve.
- *
- * THE RESERVE IS NEVER A POSITION, on paper exactly as on the live path — it
- * sits outside the trading book the way ETH gas does (core energy.ts). Live
- * gets that for free: readPositions only reads the watch set, and the watch set
- * never holds the reserve (watchTokensFor). The paper valuation loop does NOT
- * read the watch set; it walks the stored book, and a symbol it cannot find in
- * the watch set is a MISSING PRICE — which holds the tick. A reserve row in a
- * paper book would therefore have frozen the agent forever: no equity, no
- * breaker, no strategy, and every owner order answered "book unread".
- *
- * DEFENSIVE, not a migration. No paper book can have bought $AGENTCAP: a paper
- * fill refuses without a live price, $AGENTCAP has no feed, and its only depth
- * is a v2 pair against VIRTUAL (measured, core energy.ts) while the worker had
- * no v2 venue before energy. So this drops a row that should not exist, rather
- * than letting its existence stop the book.
- * By ADDRESS, case-insensitively — a coin that merely calls itself AGENTCAP
- * elsewhere is an ordinary holding and is valued (or held) like any other.
- */
+/** The paper book's positions: every row that still holds shares. */
 export function paperBookPositions(positions: readonly PaperPosition[]): PaperPosition[] {
-  return positions.filter((p) => p.shares > 0 && !isEnergyReserveToken(p.token));
+  return positions.filter((p) => p.shares > 0);
 }
 
 /** What actually moved on a stock fill — the inputs cost-basis accounting needs. */
@@ -132,18 +112,6 @@ export function applyPaperIntent(
   const slip = opts.slippageBps / 10_000;
   const n = opts.notionalUsdg;
 
-  if (intent.kind === "vault-deposit") {
-    if (n > next.cashUsdg) return { ok: false, reason: "paper cash short of the deposit", book, positions };
-    next.cashUsdg = round6(next.cashUsdg - n);
-    next.vaultUsdg = round6(next.vaultUsdg + n);
-    return { ok: true, book: next, positions: pos, receipt: `paper: ${n} USDG → vault` };
-  }
-  if (intent.kind === "vault-withdraw") {
-    const amt = Math.min(n, next.vaultUsdg);
-    next.vaultUsdg = round6(next.vaultUsdg - amt);
-    next.cashUsdg = round6(next.cashUsdg + amt);
-    return { ok: true, book: next, positions: pos, receipt: `paper: ${amt} USDG ← vault` };
-  }
   if (intent.kind === "transfer") {
     if (n > next.cashUsdg) return { ok: false, reason: "paper cash short of the transfer", book, positions };
     next.cashUsdg = round6(next.cashUsdg - n);

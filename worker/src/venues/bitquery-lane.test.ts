@@ -168,15 +168,15 @@ describe("named queries, clamped variables — no caller writes GraphQL", () => 
     assert.notEqual(getAddress(lower), lower, "the checksum spelling really is a second spelling");
   });
 
-  it("v3 pools are asked of the pinned Uniswap factory and no other", () => {
+  it("v3 pools are asked of the pinned PancakeSwap factory and no other", () => {
     const req = buildLaneRequest(clampLaneInput("v3Pools", { token: TOKEN })!, T0);
-    assert.ok((req.variables.factory as string[]).includes("0x1f7d7550b1b028f7571e69a784071f0205fd2efa"));
+    assert.ok((req.variables.factory as string[]).includes("0x0bfbcf9fa4f9c56b0f40a671ad40e0805a091865"));
     assert.match(V3_POOLS_QUERY, /LogHeader: \{Address: \{in: \$factory\}\}/);
     assert.match(V3_POOLS_QUERY, /Name: \{is: "PoolCreated"\}/);
   });
 
-  it("the flow query is the Robinhood Trading cube, reads Side as the trader's side, and selects no wallet", () => {
-    assert.match(TOKEN_FLOW_QUERY, /NetworkBid: \{is: "bid:robinhood"\}/);
+  it("the flow query is the BNB Chain Trading cube, reads Side as the trader's side, and selects no wallet", () => {
+    assert.match(TOKEN_FLOW_QUERY, /NetworkBid: \{is: "bid:bsc"\}/);
     assert.match(TOKEN_FLOW_QUERY, /buyers5: count\(distinct: Trader_Address, if: \{Side: \{is: "Buy"\}/);
     assert.doesNotMatch(TOKEN_FLOW_QUERY, /Trader \{|Transaction \{/, "no address is selected in a flow reading");
     assert.equal(TOKEN_FLOW_QUERY.match(/TransactionHeader \{/g)?.length, 1, "a hash is selected once, by the largest sells, to drop duplicate legs");

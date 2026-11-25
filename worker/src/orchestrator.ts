@@ -36,6 +36,7 @@
  * ledger, which the child already has), and runs before the child seeds its
  * budget counters — noted at store.ts's fail-closed write and at the arm site.
  */
+import { cashNumber } from "../../packages/core/src/cash";
 import { handoffRecoveryReplyOffset, recoveryReplyPrivacyAllowsFork } from "./recovery-reply-handoff";
 import { readRiskPeriod, RISK_PERIOD_SCHEMA } from "./risk-period";
 import { DatabaseSync } from "node:sqlite";
@@ -69,7 +70,7 @@ function startHistoryRepair(): void {
   void (async () => {
     const db = await makePgDb(process.env.DATABASE_URL!);
     await applyLedgerSchema(db);
-    const result = await repairHistoricalFills(db, process.env.AGENTCAP_RPC_MAINNET ?? "https://rpc.mainnet.chain.robinhood.com");
+    const result = await repairHistoricalFills(db, process.env.AGENTCAP_RPC_MAINNET ?? bnbChain.rpcUrls.default.http[0]!);
     log(`historical fills: ${result.repaired} receipt-backed rows recovered; ${result.pnlRecovered} sale P&Ls recovered; ${result.unavailable} unavailable or ambiguous; reasons ${JSON.stringify(result.reasons)}`);
     // The chat's history files were read at spawn, before this ran. See refreshHistoryForLiveChildren.
     if (result.repaired + result.pnlRecovered > 0) await refreshHistoryForLiveChildren();
@@ -98,14 +99,32 @@ import { queuePerpsBotExit, readPerpsBotView } from "./perps/telegram-admission"
 import { applyPerpsBotControl } from "./perps/telegram-controls";
 import { KILL_CLOCK_SLACK_SEC, KILL_DONE_PERPS_HOME_TEXT, KILL_DONE_PERPS_TEXT, KILL_DONE_TEXT, honourKillRequest, killRequested, readKillRequest, writeKillRequest, type KillOutcome } from "./kill-request";
 import { stopPerpsForKill, type PerpsPaperKill } from "./perps-kill";
-import { CONTROLS_ARMED_FILE, CONTROL_RECEIPTS_SCHEMA, LEGACY_EVENTS_BOT, PAUSED_FILE, armOwnerControls, durablePauseLifted, foldRecoveryControls, readControlsEvidence, readRecoveryControls, type ControlScope } from "./recovery-reply-arm";
+import {
+  CONTROLS_ARMED_FILE,
+  CONTROL_RECEIPTS_SCHEMA,
+  LEGACY_EVENTS_BOT,
+  PAUSED_FILE,
+  armOwnerControls,
+  durablePauseLifted,
+  readControlsEvidence,
+  type ControlScope,
+} from "./recovery-reply-arm";
 import { hostedRecipient, telegramSend } from "./mcp/notify";
 import { getIdentityStore } from "./identity-store";
 import { getSettingsStore } from "./settings-store";
 import { CHAT_SETTABLE, promotedSettings, readChatSettings, type ChatSettings } from "./telegram/chat-settings";
 import { acquireTenantLease as acquireStoreLease, setTenantLeaseLossHandler, type TenantLease } from "./tenant-lease";
-import { CASH, DEFAULT_BASKET_SYMBOLS, effectiveHolder, energyReserveTokens, grantPurpose, isHostedMode, robinhoodChain, STOCK_TOKENS, type GrantPurpose, type AgentCapSettings, type StoredGrant } from "../../packages/core/src/index";
-import { backfillHolderClaims, childSettingsFor, lastWrittenHolder } from "./holder-claims";
+import {
+  CASH,
+  DEFAULT_BASKET_SYMBOLS,
+  grantPurpose,
+  isHostedMode,
+  bnbChain,
+  STOCK_TOKENS,
+  type GrantPurpose,
+  type AgentCapSettings,
+  type StoredGrant,
+} from "../../packages/core/src/index";
 import {
   botIdOf,
   botTokenOf,
@@ -165,7 +184,6 @@ import { decomposeGas, gasAuditLines, type GasOp } from "./gas-audit";
 import { cohortLines, vetCandidate, type CandidateVerdictDetail } from "./cohort-vetting";
 import { datasetLines, viewRun } from "./brain-dataset";
 import { auditIdentity, type GrantClaimLite, type IdentityRowLite } from "./identity-audit";
-import { replayLines, scoreDecision, type Observation, type PricedDecision } from "./replay";
 import { custodyAddressesOf } from "./custody";
 import { scanFleetCapital } from "./chain-capital";
 import { getFollowStore, MAX_FOLLOWS } from "./follow-store";
@@ -235,7 +253,6 @@ import { makeNewsDesk, type NewsDesk } from "./research-pass";
 import { peerThesesForSlugs, readPeerTheses } from "./peer-theses";
 import type { PublicThesis } from "./thesis-policy";
 import { ACCOUNTING_FIXED_AT, applyLedgerSchema } from "./store";
-import { energyUnrestoredPending, seedEnergyDays } from "./energy-seed";
 import { budgetUnrestored, seedBudget } from "./budget-seed";
 import { ORDER_IN_FLIGHT_MS, commandWhereabouts, dropCommandResult, drainCommandResults, writeCommand, type FileCommandResult } from "./command-files";
 import { expiredOrderReceipt, type OrderReceipt } from "./order-receipt";
@@ -2597,24 +2614,6 @@ function writeChildSettings(tenant: `0x${string}`, forChild: AgentCapSettings): 
   writeFileAtomicSync(file, next, 0o600);
 }
 
-/** wallet → the account holding its claim; null when the claims could not be read. */
-type HolderClaimsRead = ReadonlyMap<string, string> | null;
-
-/**
- * EVERY HOLDER CLAIM, READ ONCE FOR THE WHOLE PASS — one query for the fleet
- * rather than one per tenant every fifteen seconds. Null when unreadable: an
- * unread claim is not "nobody claims it", so writeSettingsForChild then keeps
- * the holder wallet it wrote last rather than guess (lastWrittenHolder).
- */
-async function readHolderClaims(): Promise<HolderClaimsRead> {
-  try {
-    return await getSettingsStore("spot").holderClaims();
-  } catch (e) {
-    log(`holder claims unreadable — each child keeps the holder wallet last written: ${e instanceof Error ? e.message : String(e)}`);
-    return null;
-  }
-}
-
 /** bot id → the account holding its claim; null when there are none to read. */
 type BotClaimsRead = Map<string, string> | null;
 
@@ -2860,10 +2859,9 @@ async function gateBot(
 async function writeSettingsForChild(
   tenant: `0x${string}`,
   seenBots?: Map<string, string>,
-  claimsRead?: HolderClaimsRead,
   botClaimsRead?: BotClaimsRead,
 ): Promise<AgentCapSettings | null> {
-  if (slotOf(tenant).perps) return writePerpsSettingsForChild(tenant, seenBots, claimsRead, botClaimsRead);
+  if (slotOf(tenant).perps) return writePerpsSettingsForChild(tenant, seenBots, botClaimsRead);
   try {
     let settings = await getSettingsStore("spot").get(tenant);
     // THE UNIVERSE IS RECORDED EVEN WHEN NOTHING WAS SAVED, and that is the fix.
@@ -2889,105 +2887,15 @@ async function writeSettingsForChild(
     // would double the decrypting SELECTs. chatProfileOf keeps a publishable
     // strategy name and trait words and nothing else; the blob goes no further.
     tenantChatProfile.set(tenant.toLowerCase(), chatProfileOf(settings));
-    /**
-     * ONE $AGENTCAP WALLET POWERS ONE AGENT — the same rule, the same claims,
-     * as every holder screen (web/src/lib/holder-wallet.ts), so a person is
-     * never told one thing while their agent is throttled on another.
-     *
-     * effectiveHolder counts the linked proof only while its claim names this
-     * tenant, the login wallet only while no other tenant claims it, and
-     * otherwise nothing: one bag linked into many accounts powers one agent,
-     * not all of them. The claims are read once per pass (reconcile), or here
-     * for a spawn.
-     *
-     * UNREADABLE CLAIMS KEEP THE WALLET WRITTEN LAST, and the rest of the file
-     * is still written: skipping the write would hand a freshly spawned child
-     * the defaults, and the default is paper. The kept wallet was derived from
-     * claims we could read; a fresh home has none, which is no wallet at all —
-     * never a guess in the generous direction.
-     */
-    const claims = claimsRead === undefined ? await readHolderClaims() : claimsRead;
-    const holder: `0x${string}` | null = claims
-      ? (effectiveHolder(tenant, settings?.holderProof ?? null, (w) => claims.get(w))?.address ?? null)
-      : lastWrittenHolder(path.join(childHome(tenant), "settings.json"));
-    /**
-     * A TENANT WHO NEVER SAVED SETTINGS STILL GETS A settings.json — holding
-     * only the wallet whose $AGENTCAP counts, by the same rule as below, or
-     * nothing at all when no wallet counts.
-     *
-     * This returned before writing anything, so the child saw no holder
-     * address at all, and circle.ts reads "no address" as a KNOWABLE outsider:
-     * a holder who never opened the settings screen was read as holding
-     * nothing — the Circle tier lost and, with energy, the agent throttled to
-     * a tenth of its day for tokens it holds. `{ holderAddress }` alone is the
-     * safe defaults plus the address, because the child resolves file, then
-     * env, then default, and AGENTCAP_HOLDER_ADDRESS is stripped from its env.
-     * Written even when it is `{}`, so a file from an earlier pass that named
-     * a wallet now claimed elsewhere does not outlive the claim.
-     */
-    if (!settings) writeChildSettings(tenant, childSettingsFor(null, holder));
+    // Written even for a tenant who never saved anything (`{}`: the safe
+    // defaults), so a file from an earlier pass does not outlive the store's.
+    if (!settings) writeChildSettings(tenant, {});
     if (!settings) return null;
     // ONE BOT, ONE TENANT, before the file is written: on a spawn as on a
     // refresh, so a second login's child never starts with a bot it would
     // lose a pass later, having polled it in between. See gateBot.
     settings = await gateBot(tenant, settings, seenBots, botClaimsRead);
-    /**
-     * WHOSE $AGENTCAP BALANCE DECIDES THE CIRCLE TIER — settled here, by the
-     * only process that knows the answer.
-     *
-     * TWO FAULTS, ONE LINE. `cfg.holderAddress` is what the child reads to
-     * resolve its tier (index.ts, readHolderStatus), and the tier is what gates
-     * `even-keel` and `dip-hunter` at the top of the tick. Hosted, NO SCREEN IN
-     * THE PRODUCT EVER WRITES THAT FIELD — it exists in the settings PUT
-     * handler and in /api/circle, which has no caller — so it is undefined for
-     * every tenant, circle.ts returns OUTSIDER on the spot, and half the
-     * create-time strategy picker has been inert for the whole beta no matter
-     * how much of the token anybody holds. A tester reported it as the agent
-     * "hasn't bought automatically a single stock token during all day".
-     *
-     * And it was SELF-DECLARED. The field is tenant-settable, shape-validated
-     * and nothing more, so anyone could have named a whale's address and
-     * claimed the tier. /api/alpha refuses to use this field for exactly that
-     * reason, in as many words: "fine for a fee discount an owner claims for
-     * themselves, never an authorisation input."
-     *
-     * The orchestrator holds the one address that is neither missing nor
-     * self-declared: the tenant is the wallet the session was verified against.
-     * Writing it here makes the gate satisfiable AND authoritative in the same
-     * move — a holder gets what they paid for, and naming someone else's
-     * wallet stops working, because this overwrite is unconditional.
-     *
-     * SELF-HOSTED IS UNTOUCHED. There is no orchestrator there, so a single
-     * operator's own `holderAddress` (or AGENTCAP_HOLDER_ADDRESS) stays exactly
-     * as it was — there is no other tenant for it to be wrong about.
-     */
-    /**
-     * A PROVEN WALLET OUTRANKS THE LOGIN ONE — and only a proven one does.
-     *
-     * Writing the tenant here made the tier earnable and authoritative, and it
-     * shut out the case a tester raised: "you don't own tokens in your privy
-     * based wallet and you have them somewhere else… the app should have the
-     * possibility to define the holder address."
-     *
-     * `holderProof` is that possibility, and it is a different KIND of value
-     * from `holderAddress` beside it. `holderAddress` is typed in — anyone can
-     * name a whale's wallet — so it is still overwritten and still not trusted.
-     * `holderProof` is written by /api/holder and by nothing else, after
-     * recovering a signature over a message naming BOTH the wallet and this
-     * account. The settings PUT handler has no branch for it, so a tenant
-     * cannot forge one through the API they do have.
-     *
-     * Shape-checked before use, because a settings blob is data: a malformed
-     * proof falls back to the tenant rather than reaching `balanceOf` as
-     * whatever it happens to be.
-     *
-     * AND CLAIMED, since one wallet powers one agent: `holder` above is
-     * effectiveHolder's answer, and when it is null — the proof and the login
-     * wallet both claimed by other tenants — childSettingsFor DELETES
-     * `holderAddress` rather than leave the typed-in value standing. The
-     * child then counts its own agent account alone.
-     */
-    const forChild: AgentCapSettings = childSettingsFor(settings, holder);
+    const forChild: AgentCapSettings = { ...settings };
     writeChildSettings(tenant, forChild);
     // The universe this tenant may trade, kept for the news desk. Recorded here
     // because this is the one place the orchestrator reads a tenant's settings,
@@ -3053,7 +2961,7 @@ function requirePerpsAdmissionForChild(tenant: `0x${string}`): void {
     // running worker may use only the last configuration this parent supplied.
     if (read.kind === "unusable" && !cached) throw new Error("Perps risk settings unreadable.");
     const previous = read.kind === "parsed" ? read.settings : cached ?? null;
-    const restricted = childSettingsFor({ ...perpsWorkerSettings(previous), perpsEnabled: false }, lastWrittenHolder(file));
+    const restricted = { ...perpsWorkerSettings(previous), perpsEnabled: false };
     mkdirSync(home, { recursive: true });
     writeFileAtomicSync(file, JSON.stringify(restricted, null, 2), 0o600, { durable: true, followSymlinks: false });
     // Retain only the parent's own market evidence in the feed cache.
@@ -3093,7 +3001,6 @@ function requirePerpsAdmissionForChild(tenant: `0x${string}`): void {
 async function writePerpsSettingsForChild(
   tenant: `0x${string}`,
   _seenBots?: Map<string, string>,
-  claimsRead?: HolderClaimsRead,
   _botClaimsRead?: BotClaimsRead,
 ): Promise<AgentCapSettings | null> {
   const { owner } = slotOf(tenant);
@@ -3102,11 +3009,6 @@ async function writePerpsSettingsForChild(
     requirePerpsAdmissionForChild(tenant);
     const admissionRevision = perpsPilotAdmission.allowed(owner) ? perpsPilotAdmission.revision() : null;
     const stored = await getSettingsStore("perps").get(owner);
-    const spot = await getSettingsStore("spot").get(owner);
-    const claims = claimsRead === undefined ? await readHolderClaims() : claimsRead;
-    const holder: `0x${string}` | null = claims
-      ? (effectiveHolder(owner, spot?.holderProof ?? null, (w) => claims.get(w))?.address ?? null)
-      : lastWrittenHolder(path.join(childHome(tenant), "settings.json"));
     const forChild = perpsWorkerSettings(stored);
     // Admission controls new entries; existing exits and protective stops stay
     // available if an invitation is withdrawn. Stored risk limits are kept.
@@ -3114,7 +3016,7 @@ async function writePerpsSettingsForChild(
     // the shared switch off, so an older true read must never resurrect it.
     if (admissionRevision === null || admissionRevision !== perpsPilotAdmission.revision() ||
       !perpsPilotAdmission.allowed(owner)) forChild.perpsEnabled = false;
-    writeChildSettings(tenant, childSettingsFor(forChild, holder));
+    writeChildSettings(tenant, forChild);
     if (forChild.perpsEnabled === true && admissionRevision !== null)
       perpsSettingsAdmissionRevision.set(tenant.toLowerCase(), admissionRevision);
     else perpsSettingsAdmissionRevision.delete(tenant.toLowerCase());
@@ -3130,12 +3032,11 @@ async function writePerpsSettingsForChild(
 
 /**
  * The Perps wallet's stored settings as its worker may hold them: `perps-only`
- * and every Spot producer off, with nothing of a bot or a holder in them (the
- * holder is the owner's, added by the caller).
+ * and every Spot producer off, with nothing of a bot in them.
  */
 export function perpsWorkerSettings(stored: AgentCapSettings | null): AgentCapSettings {
   const {
-    telegramBotToken: _token, telegramAllowlist: _allow, holderAddress: _holder, holderProof: _proof,
+    telegramBotToken: _token, telegramAllowlist: _allow,
     ...rest
   } = stored ?? {};
   return {
@@ -3145,7 +3046,6 @@ export function perpsWorkerSettings(stored: AgentCapSettings | null): AgentCapSe
     telegramGroupsEnabled: false,
     discoveryEnabled: false,
     officialCoinsEnabled: false,
-    classSnipeEnabled: false,
     scoutEnabled: false,
     trencherLiveEnabled: false,
     trencherFastEnabled: false,
@@ -3292,95 +3192,6 @@ async function seedBasisForChild(tenant: `0x${string}`, smartAccount: string): P
 }
 
 /**
- * GIVE A REBUILT CHILD BACK TODAY'S ENERGY BEFORE IT ARMS.
- *
- * A redeploy empties the child's sqlite, and with it `energy_days`: today's
- * used reviews and new trades, the day's notice stamp and the last balance
- * reading that decided the level. Without this every deploy would hand a
- * low-energy agent a fresh day's allowance, re-send the day's notice, and — the
- * one that matters to a holder — forget that the balance read full, so a
- * restart during an RPC outage would throttle somebody who holds the tokens.
- *
- * The mirror carries the rows up (ledger-mirror.ts); energy-seed.ts carries
- * today's and yesterday's back, merged by the same statement. BEFORE spawn,
- * beside the cost-basis seed and for the same reason — the child reads them on
- * its first tick. This opens the two databases; seedEnergyDays decides.
- *
- * A FAILED SEED NO LONGER ARMS A CHILD WITH A FRESH DAY. The child still arms
- * — its exits, stops and the owner's orders must run — but with the days the
- * seed could not put back marked UNRESTORED, which its store reads as
- * unreadable, so an enforcing gate opens nothing new for a low-energy agent
- * until retryEnergySeed (every reconcile pass) or the next spawn restores them.
- * A full-energy agent, and an observe or off fleet, are untouched.
- *
- * `when` is "retry" for a running child: it writes beside the live agent, so
- * it waits only briefly for the child's write lock (this is synchronous, and
- * blocks the fleet loop while it waits) and a failure leaves the marker as it
- * is. True when the days are restored (or there is nothing to restore).
- */
-const energySeedFailing = new Map<string, string>();
-async function seedEnergyForChild(tenant: `0x${string}`, smartAccount: string, when: "spawn" | "retry" = "spawn"): Promise<boolean> {
-  const url = process.env.DATABASE_URL;
-  if (!url) return true; // self-hosted: the child's own sqlite is the only copy, and it is never wiped
-  const home = childHome(tenant);
-  const opened: DatabaseSync[] = [];
-  try {
-    const r = await seedEnergyDays({
-      home,
-      agent: smartAccount,
-      nowSec: Math.floor(Date.now() / 1000),
-      when,
-      local: () => {
-        const raw = new DatabaseSync(path.join(home, "agentcap.db"));
-        opened.push(raw);
-        raw.exec("PRAGMA busy_timeout = 250");
-        return wrapSqlite(raw);
-      },
-      shared: () => makePgDb(url),
-    });
-    if (r.ok) {
-      const was = energySeedFailing.delete(tenant);
-      if (r.restored || was) log(`energy seed: ${tenant} — ${r.restored} day(s) restored${was ? " on retry; today's energy is readable again" : ""}`);
-      return true;
-    }
-    // Once per distinct failure, not once per fifteen-second pass.
-    if (when === "spawn" || energySeedFailing.get(tenant) !== r.why) {
-      log(
-        `energy seed: ${tenant} FAILED — ${r.why} ` +
-          (r.marked
-            ? `(the child arms with ${r.marked.join(", ")} UNRESTORED: a low-energy agent under an enforcing gate opens nothing new until a later pass restores them; exits, stops and the owner's orders run)`
-            : when === "retry"
-              ? "(still unrestored; tried again next pass)"
-              : "(and NO marker: the child arms without its energy history)"),
-      );
-    }
-    energySeedFailing.set(tenant, r.why);
-    return false;
-  } finally {
-    for (const raw of opened) {
-      try {
-        raw.close();
-      } catch {
-        /* already closed */
-      }
-    }
-  }
-}
-
-/**
- * A RUNNING CHILD WHOSE ENERGY HISTORY IS STILL MISSING, tried again.
- *
- * Only while its home holds the unrestored marker a failed seed left
- * (energy-seed.ts), so a healthy fleet pays one missing-file read per child per
- * pass. On success the child's next tick reads the restored counters.
- */
-async function retryEnergySeed(tenant: `0x${string}`): Promise<void> {
-  const child = children.get(tenant);
-  if (!child || !process.env.DATABASE_URL || !energyUnrestoredPending(childHome(tenant))) return;
-  await seedEnergyForChild(tenant, child.smartAccount, "retry");
-}
-
-/**
  * GIVE A REBUILT CHILD BACK ITS TRAILING DAY OF SPENDING BEFORE IT ARMS.
  *
  * The daily spend, ops and Telegram transfer caps are judged against the
@@ -3388,9 +3199,8 @@ async function retryEnergySeed(tenant: `0x${string}`): Promise<void> {
  * an empty day while the day it already spent sits in the shared ledger. The
  * arm's in-flight reconciler re-records only part of that day, and records a
  * transfer as a swap. budget-seed.ts carries the whole day down, one row per
- * operation, and store.ts adds it to every cap reader. BEFORE spawn, beside
- * the energy seed and for the same reason — the child reads its caps on its
- * first tick. This opens the two databases; seedBudget decides.
+ * operation, and store.ts adds it to every cap reader. BEFORE spawn, because
+ * the child reads its caps on its first tick. This opens the two databases; seedBudget decides.
  *
  * FAIL CLOSED, AND STILL ARMED. The marker goes into the child's home before
  * anything is read, and comes out only after every row is in, so a seed that
@@ -3424,7 +3234,7 @@ async function seedBudgetForChild(tenant: `0x${string}`, smartAccount: string, w
     const r = await seedBudget({
       home,
       agent: smartAccount,
-      cashToken: String(CASH.USDG),
+      cashToken: String(CASH.USDT),
       nowSec,
       when,
       local: () => {
@@ -5194,9 +5004,6 @@ async function spawnChild(tenant: `0x${string}`, restarts = 0): Promise<void> {
     // AN ATTESTED BOOK'S FIRST WORKER, though, only on the whole seed: its
     // first mirror pass publishes the book's basis and floors as Postgres's.
     if (resume.registered && !(await attestedSeedReady(tenant, smartAccount))) return;
-    // AND TODAY'S ENERGY — the counters, the notice stamp and the last good
-    // balance reading the redeploy just emptied. Same placement, same reason.
-    await seedEnergyForChild(tenant, smartAccount);
     // AND THE TRAILING DAY'S SPEND, OPS AND TRANSFERS, which the caps are
     // judged against. A failed seed still arms, held at no headroom; only a
     // seed that could neither run nor leave its marker keeps the worker off.
@@ -8001,8 +7808,6 @@ export async function reconcile(): Promise<void> {
   // fingerprint → the tenant polling it) keeps a bot no claim names to one
   // poller per token (see gateBot in writeSettingsForChild, and claimGate).
   const seenBots = new Map<string, string>();
-  // Every holder claim in one read for the whole fleet, not one per tenant.
-  const holderClaims = await readHolderClaims();
   // And every bot claim, the same way.
   const botClaims = await readBotClaimsForPass();
   // A HOLD PROCESS THIS PASS DOES NOT REFRESH MAY STILL BE POLLING ITS BOT:
@@ -8046,7 +7851,7 @@ export async function reconcile(): Promise<void> {
     // gone, the fleet halted or its grant removed, so nothing is ours to write
     // or claim for it beyond the bot that process reads (counted above).
     if (held.stoodDown) continue;
-    const stored = await writeSettingsForChild(tenant as `0x${string}`, seenBots, holderClaims, botClaims);
+    const stored = await writeSettingsForChild(tenant as `0x${string}`, seenBots, botClaims);
     if (held.perpsSeat) {
       if (!held.proc && !held.leaving && holderBotReady(stored)) await startHolderProcess(held);
       continue;
@@ -8086,7 +7891,7 @@ export async function reconcile(): Promise<void> {
   }
   for (const tenant of children.keys()) {
     try {
-      await writeSettingsForChild(tenant as `0x${string}`, seenBots, holderClaims, botClaims);
+      await writeSettingsForChild(tenant as `0x${string}`, seenBots, botClaims);
     } catch (error) {
       if (!(error instanceof PerpsAdmissionDeliveryError)) throw error;
       // This worker was already signalled and retained for its final copy.
@@ -8098,9 +7903,6 @@ export async function reconcile(): Promise<void> {
     // only on a restart — so an owner who re-signed to cover a token watched
     // their agent keep refusing it. See refreshGrantForChild.
     await refreshGrantForChild(tenant as `0x${string}`);
-    // AND ITS ENERGY HISTORY, if the seed before it armed could not put it
-    // back: until then its store reads those days as unreadable.
-    await retryEnergySeed(tenant as `0x${string}`);
     // AND ITS TRAILING DAY OF SPENDING, on the same terms: until then its new
     // entries have no headroom.
     await retryBudgetSeed(tenant as `0x${string}`);
@@ -9723,7 +9525,7 @@ async function runHwmRepairIfAsked(): Promise<void> {
       .all()) as unknown as Record<string, unknown>[];
     const sweptCostBy = new Map<string, number>();
     const sweptUnknownBy = new Map<string, number>();
-    const cashToken = String(CASH.USDG).toLowerCase();
+    const cashToken = String(CASH.USDT).toLowerCase();
     for (const c of classRows) {
       if (String(c.state ?? "") !== "swept") continue;
       // A QUOTE-TOKEN ROW IS NOT A POSITION, and counting it here would both
@@ -9742,7 +9544,7 @@ async function runHwmRepairIfAsked(): Promise<void> {
         sweptUnknownBy.set(k, (sweptUnknownBy.get(k) ?? 0) + 1);
         continue;
       }
-      sweptCostBy.set(k, (sweptCostBy.get(k) ?? 0) + Number(raw) / 1e6);
+      sweptCostBy.set(k, (sweptCostBy.get(k) ?? 0) + cashNumber(BigInt(raw)));
     }
 
     // ── the roster, from the grant store ─────────────────────────────────
@@ -9778,7 +9580,7 @@ async function runHwmRepairIfAsked(): Promise<void> {
     roster.push(...scoped);
 
     // ── the chain, full history, accounts AND their vaults ───────────────
-    const rpcUrl = process.env.AGENTCAP_RPC_MAINNET ?? "https://rpc.mainnet.chain.robinhood.com";
+    const rpcUrl = process.env.AGENTCAP_RPC_MAINNET ?? bnbChain.rpcUrls.default.http[0]!;
     let rpcId = 1;
     const rpc = async (method: string, params: unknown[]): Promise<unknown> => {
       const r = await fetch(rpcUrl, {
@@ -9798,7 +9600,7 @@ async function runHwmRepairIfAsked(): Promise<void> {
 
     const chain = await scanFleetCapital(rpc, {
       accounts: scanTargets,
-      usdgToken: String(CASH.USDG),
+      usdgToken: String(CASH.USDT),
       fromBlock: 0n,
       toBlock: head,
       custodyAddressesFor: (a) => custodyOf.get(a.toLowerCase()),
@@ -9806,7 +9608,6 @@ async function runHwmRepairIfAsked(): Promise<void> {
       // (capital that left the book, which the worker lowered the peak for)
       // rather than a trade — otherwise the derived peak is too high by every
       // purchase and this repair is a no-op exactly when one went unbooked.
-      reserveTokens: energyReserveTokens(Number(process.env.AGENTCAP_CHAIN_ID ?? 4663)),
       log: (m) => log(`hwm| ${m}`),
     });
 
@@ -9848,9 +9649,9 @@ async function runHwmRepairIfAsked(): Promise<void> {
           continue;
         }
         if (!c.complete) complete = false;
-        deposits = deposits === null ? null : deposits + Number(BigInt(c.totals.grossContributionsRaw)) / 1e6;
-        withdrawals = withdrawals === null ? null : withdrawals + Number(BigInt(c.totals.grossWithdrawalsRaw)) / 1e6;
-        reservePurchases += Number(BigInt(c.totals.grossReservePurchasesRaw)) / 1e6;
+        deposits = deposits === null ? null : deposits + cashNumber(BigInt(c.totals.grossContributionsRaw));
+        withdrawals = withdrawals === null ? null : withdrawals + cashNumber(BigInt(c.totals.grossWithdrawalsRaw));
+        reservePurchases += cashNumber(BigInt(c.totals.grossReservePurchasesRaw));
         internalMoves += c.totals.internal;
         tradeLegs += c.totals.tradeLegs;
         ambiguousMoves += c.totals.ambiguous;
@@ -9977,679 +9778,6 @@ async function runHwmRepairIfAsked(): Promise<void> {
     log(`hwm| FAILED — ${e instanceof Error ? e.message : String(e)}`);
   }
 }
-let enableClassRan = false;
-let haltClassEntriesRan = false;
-let resumeClassEntriesRan = false;
-
-/**
- * TURN NEW CLASS ENTRIES BACK ON FOR ONE TENANT. One field, the inverse of the
- * halt, and the same read-back on both halves — that entries actually resumed,
- * and that nothing an exit depends on moved while they did.
- */
-async function runResumeClassEntriesIfAsked(): Promise<void> {
-  const target = fleetIdTarget("AGENTCAP_RESUME_CLASS_ENTRIES_FOR", process.env.AGENTCAP_RESUME_CLASS_ENTRIES_FOR);
-  if (!target) return;
-  if (resumeClassEntriesRan) return;
-  resumeClassEntriesRan = true;
-  if ("refused" in target) {
-    log(`resume-entries: ${target.refused}`);
-    return;
-  }
-  const want = target.id;
-  try {
-    const { HALT_MUST_PRESERVE, mergeResumeEntries } = await import("./enable-class");
-    const { getSettingsStore } = await import("./settings-store");
-    const store = getSettingsStore("spot");
-    const current = (await store.get(want as `0x${string}`)) as unknown as Record<string, unknown> | null;
-    const before = Object.fromEntries(HALT_MUST_PRESERVE.map((k) => [k, current?.[k]]));
-    log(`resume-entries: classSnipeEnabled ${JSON.stringify(current?.classSnipeEnabled)} -> true for ${want}`);
-    await store.put(want as `0x${string}`, mergeResumeEntries(current) as never);
-    const after = (await store.get(want as `0x${string}`)) as unknown as Record<string, unknown> | null;
-    const moved = HALT_MUST_PRESERVE.filter((k) => JSON.stringify(after?.[k]) !== JSON.stringify(before[k]));
-    log(
-      after?.classSnipeEnabled === true
-        ? "resume-entries: WROTE and verified classSnipeEnabled=true"
-        : "resume-entries: *** VERIFY FAILED — classSnipeEnabled did not stick ***",
-    );
-    log(
-      moved.length === 0
-        ? `resume-entries: every exit setting preserved (${HALT_MUST_PRESERVE.join(", ")})`
-        : `resume-entries: *** ${moved.join(", ")} CHANGED ***`,
-    );
-    log("resume-entries: remove AGENTCAP_RESUME_CLASS_ENTRIES_FOR now.");
-  } catch (e) {
-    log(`resume-entries: FAILED — ${e instanceof Error ? e.message : String(e)}`);
-  }
-}
-
-let classPnlRepairRan = false;
-/** Once per process, like every other repair pass here. */
-let cashRowRepairRan = false;
-
-/**
- * BOOK THE RESULT OF CLASS ROUND TRIPS THAT COMPLETED WITHOUT ONE.
- *
- * `AGENTCAP_REPAIR_CLASS_PNL=report` prints and writes nothing; `apply` writes,
- * and refuses without `AGENTCAP_REPAIR_CLASS_PNL_ONLY` naming the tenants. Same
- * shape as the high-water-mark repair beside it, for the same reason: every
- * write here lands on a figure an owner reads as their result.
- *
- * THE EVIDENCE IS THE CHAIN. For each closed class position the vault's own
- * `ClassBuy`/`ClassSell` events are re-read and folded — the same
- * `foldClassEvents` the worker uses, so the repair and the engine cannot reach
- * different numbers from the same tape. A balance is never consulted: the vault
- * also holds unrelated reward USDG, and a balance would turn Shogun's 1.77 loss
- * into a gain.
- *
- * IDEMPOTENT ON CHAIN IDENTITY. The write lands on the `curve-trade` row the
- * EXIT TRANSACTION identifies, and only where that row has no realised figure
- * yet. Running twice is a no-op; running after the live path has booked the same
- * trip is refused by the planner rather than doubled. The `swap` row the
- * orphan-receipt reconciler writes for the same transaction is execution
- * evidence and is never touched — a result on both rows is the double count this
- * exists to avoid, which is why the planner refuses unless exactly one
- * `curve-trade` row carries that hash.
- */
-async function runClassPnlRepairIfAsked(): Promise<void> {
-  const mode = (process.env.AGENTCAP_REPAIR_CLASS_PNL ?? "").trim().toLowerCase();
-  if (!mode) return;
-  if (classPnlRepairRan) return;
-  classPnlRepairRan = true;
-
-  if (mode !== "report" && mode !== "apply") {
-    log(`class-pnl| AGENTCAP_REPAIR_CLASS_PNL=${mode} is not a mode. Use "report" or "apply".`);
-    return;
-  }
-  const applying = mode === "apply";
-  // Read whole (fleet-id.ts): an entry that is not 0x refuses the run, where
-  // it used to be dropped and, alone, leave a report of the whole fleet.
-  const scope = fleetIdScope("AGENTCAP_REPAIR_CLASS_PNL_ONLY", process.env.AGENTCAP_REPAIR_CLASS_PNL_ONLY);
-  if ("refused" in scope) {
-    log(`class-pnl| ${scope.refused}; nothing was done`);
-    return;
-  }
-  const only = new Set<string>(scope.ids);
-  if (applying && only.size === 0) {
-    log("class-pnl| REFUSING to apply without AGENTCAP_REPAIR_CLASS_PNL_ONLY — name the tenants");
-    return;
-  }
-  const url = process.env.DATABASE_URL;
-  if (!url) {
-    log("class-pnl| asked for, but there is no DATABASE_URL");
-    return;
-  }
-
-  try {
-    const { planClassPnlRepair, classPnlRepairLines } = await import("./class-pnl-repair");
-    const { foldClassEvents, parseClassLogs } = await import("./venues/class-log");
-    const shared = await makePgDb(url);
-    await applyLedgerSchema(shared);
-
-    const rpcUrl = process.env.AGENTCAP_RPC_MAINNET ?? "https://rpc.mainnet.chain.robinhood.com";
-    let rpcId = 1;
-    const rpc = async (method: string, params: unknown[]): Promise<unknown> => {
-      const r = await fetch(rpcUrl, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ jsonrpc: "2.0", id: rpcId++, method, params }),
-      });
-      const j = (await r.json()) as { result?: unknown; error?: { message?: string } };
-      if (j.error) throw new Error(j.error.message ?? "rpc error");
-      return j.result ?? null;
-    };
-
-    const gs = getGrantStore("spot");
-    const plans: Awaited<ReturnType<typeof planClassPnlRepair>>[] = [];
-    const targets: { plan: (typeof plans)[number]; account: string }[] = [];
-
-    for (const tenant of await gs.listTenants()) {
-      if (only.size && !only.has(tenant.toLowerCase())) continue;
-      const g = await gs.get(tenant);
-      const acct = g?.smartAccount ? String(g.smartAccount) : null;
-      const vault = custodyAddressesOf(g)[0] ?? null;
-      if (!acct || !vault) continue;
-
-      const rows = (await shared
-        .prepare(
-          `SELECT token, symbol, state, entry_tx, exit_tx
-             FROM class_positions WHERE lower(agent_id) = lower($1)`,
-        )
-        .all(acct)) as unknown as Record<string, unknown>[];
-      if (rows.length === 0) continue;
-
-      // THE WHOLE TAPE, ONCE. Folded by the same function the worker uses, so
-      // the repair cannot reach a different number from the same evidence.
-      type Entry = { costRaw: bigint; proceedsRaw: bigint; soldRaw: bigint; sweptRaw: bigint };
-      let folded: Map<string, Entry> | null = null;
-      try {
-        const head = BigInt((await rpc("eth_blockNumber", [])) as string);
-        const logs = (await rpc("eth_getLogs", [
-          { address: vault, fromBlock: "0x0", toBlock: "0x" + head.toString(16) },
-        ])) as { topics: string[]; data: string; blockNumber: string; transactionHash: string; logIndex: string }[];
-        const events = parseClassLogs(
-          logs.map((l) => ({
-            topics: l.topics,
-            data: l.data,
-            blockNumber: BigInt(l.blockNumber),
-            transactionHash: l.transactionHash,
-            logIndex: Number(l.logIndex),
-          })),
-        );
-        folded = foldClassEvents(events) as unknown as Map<string, Entry>;
-      } catch (e) {
-        log(`class-pnl| ${tenant}: vault log unreadable — ${e instanceof Error ? e.message.slice(0, 90) : e}`);
-      }
-
-      for (const r of rows) {
-        const token = String(r.token).toLowerCase();
-        const entry = folded?.get(token) ?? null;
-        const exitTx = r.exit_tx === null || r.exit_tx === undefined ? null : String(r.exit_tx);
-
-        // THE ROW THE RESULT WOULD LAND ON, identified by the EXIT TRANSACTION.
-        let intentRows = 0;
-        let recorded: number | null = null;
-        if (exitTx) {
-          const t = (await shared
-            .prepare(
-              `SELECT id, realized_pnl_usdg FROM trades
-                WHERE lower(agent_id) = lower($1) AND lower(tx_hash) = lower($2) AND kind = 'curve-trade'`,
-            )
-            .all(acct, exitTx)) as unknown as Record<string, unknown>[];
-          intentRows = t.length;
-          const v = t[0]?.realized_pnl_usdg;
-          recorded = v === null || v === undefined ? null : Number(v);
-        }
-        const b = (await shared
-          .prepare(
-            `SELECT qty_raw, cost_usdg FROM cost_basis
-              WHERE lower(agent_id) = lower($1) AND mode = 'live' AND symbol = $2`,
-          )
-          .get(acct, String(r.symbol ?? ""))) as { cost_usdg: string } | undefined;
-
-        const plan = planClassPnlRepair({
-          tenant,
-          smartAccount: acct,
-          token,
-          symbol: String(r.symbol ?? token),
-          entryTx: r.entry_tx === null || r.entry_tx === undefined ? null : String(r.entry_tx),
-          exitTx,
-          costRaw: entry ? entry.costRaw : null,
-          proceedsRaw: entry ? entry.proceedsRaw : null,
-          qtySoldRaw: entry ? entry.soldRaw : null,
-          sweptRaw: entry ? entry.sweptRaw : null,
-          state: String(r.state ?? "?"),
-          exitIntentRows: intentRows,
-          recordedRealizedUsdg: recorded,
-          basisRemainingRaw: b === undefined ? 0n : BigInt(b.cost_usdg || "0"),
-          scanComplete: folded !== null,
-        });
-        plans.push(plan);
-        targets.push({ plan, account: acct });
-      }
-    }
-
-    if (plans.length === 0) {
-      log("class-pnl| no class round trips found for the named tenant(s)");
-      return;
-    }
-    for (const line of classPnlRepairLines(plans)) log(`class-pnl| ${line}`);
-
-    if (!applying) {
-      log("class-pnl| REPORT ONLY — nothing was written. Remove AGENTCAP_REPAIR_CLASS_PNL now.");
-      return;
-    }
-
-    for (const { plan, account } of targets) {
-      const x = plan.facts;
-
-      // ── THE STALE SHARED BASIS, CLEARED FIRST AND ON ITS OWN TERMS ──────
-      //
-      // BEFORE the `ambiguous` guard, deliberately. A position whose result is
-      // already booked still has this row to clean up, and gating the cleanup on
-      // "did the P&L need writing" means the very run that books a result is the
-      // only run that can ever clear it — so the second attempt, after the first
-      // one's SQL failed, would skip it forever.
-      //
-      // The child holds NO cost_basis row: `setBasis` deletes at zero rather
-      // than zeroing, and the mirror reports `cost_basis 0` for this tenant on
-      // every pass. But the mirror skips its own `DELETE FROM cost_basis`
-      // whenever the child is flagged `rebuilt` — it cannot tell "I closed this"
-      // from "I have forgotten everything" — so the deletion had nothing to
-      // upsert over and the shared row sits there indefinitely, reading as a
-      // position still carrying cost that closed hours ago.
-      //
-      // Safe outright, and it stays deleted: there is no child row to re-push
-      // and the mirror's upsert only writes rows the child has. Idempotent — a
-      // DELETE of a row that is not there is a no-op.
-      if (x.state === "closed" || x.state === "swept") {
-        await shared
-          .prepare(
-            `DELETE FROM cost_basis
-              WHERE lower(agent_id) = lower($1) AND mode = 'live' AND symbol = $2`,
-          )
-          .run(account, x.symbol);
-        log(`class-pnl| ${x.symbol} stale shared cost basis cleared (${x.state}; the child holds none)`);
-      }
-
-      if (plan.ambiguous || plan.realizedRaw === null) continue;
-      const realized = Number(plan.realizedRaw) / 1e6;
-
-      // THE GUARD IS IN THE WRITE ITSELF, not only in the planner. The predicate
-      // is the chain's own identity for this trip — its exit transaction — plus
-      // the requirement that no result is there yet, so a concurrent booking by
-      // the live path cannot be overwritten and a second run changes nothing.
-      const res = (await shared
-        .prepare(
-          `UPDATE trades
-              SET realized_pnl_usdg = $1, fill_side = 'sell', fill_qty_raw = $2,
-                  fill_cash_usdg = $3, basis_source = 'receipt'
-            WHERE lower(agent_id) = lower($4) AND lower(tx_hash) = lower($5)
-              AND kind = 'curve-trade' AND realized_pnl_usdg IS NULL`,
-        )
-        .run(
-          realized,
-          x.qtySoldRaw === null ? null : x.qtySoldRaw.toString(),
-          x.proceedsRaw === null ? null : Number(x.proceedsRaw) / 1e6,
-          account,
-          x.exitTx,
-        )) as unknown;
-      void res;
-
-      const after = (await shared
-        .prepare(
-          `SELECT realized_pnl_usdg, fill_side FROM trades
-            WHERE lower(agent_id) = lower($1) AND lower(tx_hash) = lower($2) AND kind = 'curve-trade'`,
-        )
-        .all(account, x.exitTx)) as unknown as Record<string, unknown>[];
-      const got = after[0]?.realized_pnl_usdg;
-      const ok = after.length === 1 && got !== null && got !== undefined && Math.abs(Number(got) - realized) < 1e-9;
-
-
-      await shared
-        .prepare("INSERT INTO events (agent_id, level, message) VALUES (?, ?, ?)")
-        .run(
-          account,
-          "ok",
-          `class P&L repair: ${x.symbol} booked ${realized.toFixed(6)} USDG realised on exit ${x.exitTx}. ` +
-            `${plan.reason}. Derived from the vault's own events, never from a balance — this vault also ` +
-            `holds unrelated reward USDG.`,
-        );
-
-      log(
-        ok
-          ? `class-pnl| ${x.tenant} ${x.symbol} APPLIED — realised ${realized.toFixed(6)} USDG on ${x.exitTx}`
-          : `class-pnl| ${x.tenant} ${x.symbol} *** VERIFY FAILED — read back ${String(got)} across ` +
-            `${after.length} row(s), wanted ${realized.toFixed(6)} ***`,
-      );
-    }
-    log("class-pnl| APPLY COMPLETE. Remove AGENTCAP_REPAIR_CLASS_PNL now.");
-  } catch (e) {
-    log(`class-pnl| FAILED — ${e instanceof Error ? e.message : String(e)}`);
-  }
-}
-
-
-/**
- * TURN THE CLASS ROUTE ON FOR ONE NAMED TENANT.
- *
- * Same shape as the consent migration and the tenant inspector: one tenant named
- * explicitly, once per process, reported in full. The settings store is in a
- * Postgres reachable only from inside Railway, so there is no other way to set
- * these.
- *
- * MERGES. `put` writes the whole blob, so a naive write erases every setting the
- * owner chose. Remove the variable as soon as the write is confirmed.
- */
-async function runEnableClassIfAsked(): Promise<void> {
-  const target = fleetIdTarget("AGENTCAP_ENABLE_CLASS_FOR", process.env.AGENTCAP_ENABLE_CLASS_FOR);
-  if (!target) return;
-  if (enableClassRan) return;
-  enableClassRan = true;
-
-  if ("refused" in target) {
-    log(`enable-class: ${target.refused}`);
-    return;
-  }
-  const want = target.id;
-  try {
-    const { CANARY, DAVE_CLASS, classEnableBlockers, describeCanaryChange, mergeCanary } =
-      await import("./enable-class");
-    const { getSettingsStore } = await import("./settings-store");
-    const {
-      grantPonsClassVault,
-      grantPonsClassVaultFactory,
-      PONS_CLASS_VAULT_FACTORY,
-      PONS_CLASS_VAULT_FACTORY_V2,
-      PONS_CLASS_VAULT_FACTORY_ABI,
-    } = await import("../../packages/core/src/index");
-    const store = getSettingsStore("spot");
-
-    // WHICH CONFIGURATION. Named per tenant rather than one set for everyone:
-    // the numbers were agreed per owner, and `scoutBudgetUsdg` differs between
-    // them for a reason a shared constant would quietly erase.
-    const preset = (process.env.AGENTCAP_ENABLE_CLASS_PRESET ?? "canary").trim().toLowerCase();
-    if (preset !== "canary" && preset !== "dave") {
-      log(`enable-class: AGENTCAP_ENABLE_CLASS_PRESET=${preset} is not a preset. Use "canary" or "dave".`);
-      return;
-    }
-    const values = preset === "dave" ? DAVE_CLASS : CANARY;
-    log(`enable-class: preset ${preset}`);
-
-    // ── THE GRANT MUST BE ABLE TO EXECUTE WHAT THIS SWITCHES ON ─────────
-    //
-    // Enabling the route without a sealed vault is not merely inert: the agent
-    // scouts, scores, qualifies and builds entry intents its own key can never
-    // sign, every tick, forever. The owner sees an agent working and no trades,
-    // which is the most expensive failure shape this product has.
-    //
-    // Read through the SAME accessors the executor and the policy use, so the
-    // vault this check approves and the vault the wall pins cannot be two
-    // different addresses.
-    const url0 = process.env.DATABASE_URL;
-    if (!url0) {
-      log("enable-class: no DATABASE_URL — cannot read the grant to check it can execute this");
-      return;
-    }
-    let sealedVault: string | null = null;
-    let derivedVault: string | null = null;
-    try {
-      const g = await getGrantStore("spot").get(want as `0x${string}`);
-      sealedVault = (grantPonsClassVault(g as never) as string | null) ?? null;
-      const acct = g && g.smartAccount ? String(g.smartAccount) : null;
-      const chainId = Number(g && g.chainId ? g.chainId : 4663);
-      /**
-       * ── DERIVE FROM THE FACTORY THE GRANT ITSELF SEALED ──────────────────
-       *
-       * This read the v1 constant and nothing else, so for a grant sealed
-       * against a v2 factory the mismatch below is the CORRECT state — and
-       * classEnableBlockers would refuse with "the wall would pin a vault the
-       * executor never uses". A false blocker wearing a real safety refusal's
-       * clothes, and the reason a correctly signed v2 grant could not be put
-       * into service at all.
-       *
-       * The fix is the derivation, never the check. Relaxing the mismatch rule
-       * would remove a guard that catches a genuinely mispinned wall, which is
-       * a far worse failure than the one being fixed.
-       *
-       * GRANT FIRST, then both constants. The signature is the authority: it is
-       * what the wall was built from and what the executor will use. The
-       * constants are only a fallback for a grant that sealed no factory, and
-       * v2 is tried before v1 because a fresh grant is the one likelier to want
-       * it — but either way the answer is checked against what was SEALED.
-       */
-      const candidates = [
-        grantPonsClassVaultFactory(g as never) as string | null,
-        PONS_CLASS_VAULT_FACTORY_V2[chainId],
-        PONS_CLASS_VAULT_FACTORY[chainId],
-      ].filter((f): f is string => typeof f === "string" && /^0x[0-9a-fA-F]{40}$/.test(f));
-      if (acct && candidates.length > 0) {
-        const { createPublicClient, http } = await import("viem");
-        const rpcUrl = process.env.AGENTCAP_RPC_MAINNET ?? "https://rpc.mainnet.chain.robinhood.com";
-        const c = createPublicClient({ transport: http(rpcUrl) });
-        for (const factory of candidates) {
-          let answered: string;
-          try {
-            answered = String(
-              await c.readContract({
-                // The SHARED abi, not an inline literal. Two copies of one
-                // selector is how a pinned call and an encoded call drift apart,
-                // which is the whole reason this constant exists.
-                address: factory as `0x${string}`,
-                abi: PONS_CLASS_VAULT_FACTORY_ABI,
-                functionName: "vaultFor",
-                args: [acct as `0x${string}`],
-              }),
-            );
-          } catch {
-            continue; // a factory that will not answer is not evidence either way
-          }
-          derivedVault = answered;
-          // A factory whose answer MATCHES what the grant sealed is the one the
-          // grant was signed against. Stop there rather than letting a later
-          // candidate overwrite the agreement with a disagreement.
-          if (sealedVault && answered.toLowerCase() === sealedVault.toLowerCase()) break;
-        }
-      }
-    } catch (e) {
-      log(`enable-class: could not read the grant (${e instanceof Error ? e.message.slice(0, 90) : e})`);
-      return;
-    }
-    const blockers = classEnableBlockers({ sealedVault, derivedVault });
-    if (blockers.length > 0) {
-      for (const b of blockers) log(`enable-class: REFUSING — ${b}`);
-      log("enable-class: nothing was written.");
-      return;
-    }
-    log(`enable-class: grant seals ${sealedVault} and it matches this account's vault`);
-
-    const current = (await store.get(want as `0x${string}`)) as unknown as Record<
-      string,
-      unknown
-    > | null;
-    for (const line of describeCanaryChange(current, values)) log(`enable-class: ${line}`);
-
-    const next = mergeCanary(current, values);
-    await store.put(want as `0x${string}`, next as never);
-
-    // READ IT BACK. A write that reported success and changed nothing is the
-    // failure this whole milestone keeps running into.
-    const after = (await store.get(want as `0x${string}`)) as unknown as Record<
-      string,
-      unknown
-    > | null;
-    const wrong = Object.entries(values).filter(([k, v]) => after?.[k] !== v);
-    log(
-      wrong.length === 0
-        ? `enable-class: WROTE and verified all ${Object.keys(values).length} fields for ${want}`
-        : `enable-class: *** VERIFY FAILED — ${wrong.map(([k]) => k).join(", ")} did not stick ***`,
-    );
-    log("enable-class: remove AGENTCAP_ENABLE_CLASS_FOR now.");
-  } catch (e) {
-    log(`enable-class: FAILED — ${e instanceof Error ? e.message : String(e)}`);
-  }
-}
-
-/**
- * SWITCH OFF NEW CLASS ENTRIES FOR ONE TENANT, AND NOTHING ELSE.
- *
- * The case this exists for: an agent holding a live class position that needs to
- * stop opening new ones while it keeps managing the one it has. Those are
- * different switches, and conflating them strands money in a book that can no
- * longer close it.
- *
- * `classSnipeEnabled` gates `proposeClassEntries` and nothing else. The exit
- * path reads `classMaxHoldSec` and `classExitAtGraduationPct` and never consults
- * it, so an agent with entries off still sells on the clock and still sells at
- * the graduation cliff. That asymmetry is verified, not assumed — it is why one
- * field is the right lever and why `HALT_MUST_PRESERVE` names the exit triggers
- * so a test can prove they were untouched.
- *
- * MERGE, NEVER REPLACE, for the reason `enable-class.ts` gives at length: `put`
- * writes the whole blob, so a naive write erases every setting the owner chose.
- */
-async function runHaltClassEntriesIfAsked(): Promise<void> {
-  const target = fleetIdTarget("AGENTCAP_HALT_CLASS_ENTRIES_FOR", process.env.AGENTCAP_HALT_CLASS_ENTRIES_FOR);
-  if (!target) return;
-  if (haltClassEntriesRan) return;
-  haltClassEntriesRan = true;
-
-  // A halt this build cannot write for a tenant it cannot name is said as
-  // such, never taken as done: nothing here touches any other tenant.
-  if ("refused" in target) {
-    log(`halt-entries: ${target.refused}; NOTHING WAS HALTED`);
-    return;
-  }
-  const want = target.id;
-  try {
-    const { HALT_ENTRIES, HALT_MUST_PRESERVE, mergeHaltEntries } = await import("./enable-class");
-    const { getSettingsStore } = await import("./settings-store");
-    const store = getSettingsStore("spot");
-
-    const current = (await store.get(want as `0x${string}`)) as unknown as Record<
-      string,
-      unknown
-    > | null;
-    const before = Object.fromEntries(HALT_MUST_PRESERVE.map((k) => [k, current?.[k]]));
-    log(
-      `halt-entries: classSnipeEnabled ${JSON.stringify(current?.classSnipeEnabled)} -> false ` +
-        `for ${want}`,
-    );
-
-    await store.put(want as `0x${string}`, mergeHaltEntries(current) as never);
-
-    // READ IT BACK, and check BOTH halves: that entries actually stopped, and
-    // that nothing an exit depends on moved. A halt that silently took the exit
-    // with it would look identical in the log to one that did not.
-    const after = (await store.get(want as `0x${string}`)) as unknown as Record<
-      string,
-      unknown
-    > | null;
-    const stuck = after?.classSnipeEnabled === false;
-    const moved = HALT_MUST_PRESERVE.filter((k) => JSON.stringify(after?.[k]) !== JSON.stringify(before[k]));
-    log(
-      stuck
-        ? `halt-entries: WROTE and verified classSnipeEnabled=false (${Object.keys(HALT_ENTRIES).length} field)`
-        : `halt-entries: *** VERIFY FAILED — classSnipeEnabled did not stick ***`,
-    );
-    log(
-      moved.length === 0
-        ? `halt-entries: every exit setting preserved (${HALT_MUST_PRESERVE.join(", ")})`
-        : `halt-entries: *** ${moved.join(", ")} CHANGED — the exit path may be affected ***`,
-    );
-    log("halt-entries: remove AGENTCAP_HALT_CLASS_ENTRIES_FOR now.");
-  } catch (e) {
-    log(`halt-entries: FAILED — ${e instanceof Error ? e.message : String(e)}`);
-  }
-}
-
-/**
- * PRINT ONE TENANT'S CLASS-ROUTE CONFIGURATION, ONCE, AND WRITE NOTHING.
- *
- * The grant and settings live in a Postgres reachable only from inside Railway,
- * so this is the only way to answer "does this owner's signed wall carry a class
- * vault?" without guessing. It reads through the SAME stores the worker uses —
- * no second decoder to drift.
- *
- * ONCE PER PROCESS and named explicitly: the variable carries a single tenant
- * address, there is no "all" mode, and the guard below stops it reprinting every
- * fifteen seconds. It still prints on every RESTART while the variable is set,
- * which is why the runbook says to remove it as soon as the answer is captured.
- *
- * It cannot leak: `describeTenant` is handed a flat record of the thirteen
- * fields asked for, never the settings object, so nothing else is in scope where
- * the strings are built.
- */
-
-/**
- * DELETE A `class_positions` ROW THAT WAS NEVER A POSITION.
- *
- * The producer is fixed and the child's copy went with its sqlite, but the
- * ledger mirror skips `DELETE FROM class_positions` while the child reads
- * `rebuilt` — which it does after every redeploy — so the SHARED copy of a
- * phantom cash row would stand indefinitely. This removes it.
- *
- * Report first, apply only when a tenant is named. See class-cash-row-repair.ts
- * for the four clauses and why each one is required.
- */
-async function runCashRowRepairIfAsked(): Promise<void> {
-  const mode = (process.env.AGENTCAP_REPAIR_CLASS_CASH_ROW ?? "").trim().toLowerCase();
-  if (!mode) return;
-  if (cashRowRepairRan) return;
-  cashRowRepairRan = true;
-
-  if (mode !== "report" && mode !== "apply") {
-    log(`class-cash-row: AGENTCAP_REPAIR_CLASS_CASH_ROW=${mode} is not a mode. Use "report" or "apply".`);
-    return;
-  }
-  const applying = mode === "apply";
-  // Read whole (fleet-id.ts), as the class-pnl repair's scope is.
-  const scope = fleetIdScope("AGENTCAP_REPAIR_CLASS_CASH_ROW_ONLY", process.env.AGENTCAP_REPAIR_CLASS_CASH_ROW_ONLY);
-  if ("refused" in scope) {
-    log(`class-cash-row: ${scope.refused}; nothing was done`);
-    return;
-  }
-  const only = new Set<string>(scope.ids);
-  // NO FLEET APPLY. A tool that can delete rows for every owner at once is a
-  // different and much larger thing to leave armed by accident.
-  if (applying && only.size === 0) {
-    log("class-cash-row: REFUSING to apply without AGENTCAP_REPAIR_CLASS_CASH_ROW_ONLY — name the tenant");
-    return;
-  }
-  const url = process.env.DATABASE_URL;
-  if (!url) {
-    log("class-cash-row: asked for, but there is no DATABASE_URL");
-    return;
-  }
-
-  try {
-    const { planCashRowRepair, cashRowRepairLines } = await import("./class-cash-row-repair");
-    const { CASH } = await import("../../packages/core/src/index");
-    const shared = await makePgDb(url);
-    // TENANT -> SMART ACCOUNT. `class_positions.agent_id` IS the smart account
-    // and knows nothing about tenants; `grants` is the only bridge.
-    const grants = (await shared
-      // The account lives INSIDE the grant blob; there is no `smart_account`
-      // column and asking for one fails the whole pass. Same projection the
-      // other repair passes use.
-      .prepare(`SELECT tenant, grant_json->>'smartAccount' AS smart_account FROM grants`)
-      .all()) as unknown as Record<string, unknown>[];
-    for (const g of grants) {
-      const tenant = String(g.tenant ?? "").toLowerCase();
-      const acct = g.smart_account === null || g.smart_account === undefined ? null : String(g.smart_account);
-      if (!tenant || !acct) continue;
-      if (only.size > 0 && !only.has(tenant)) continue;
-
-      const rows = (await shared
-        .prepare(
-          "SELECT agent_id, token, symbol, quote_token, state, curve, entry_tx, cost_usdg " +
-            "FROM class_positions WHERE lower(agent_id) = lower(?)",
-        )
-        .all(acct)) as unknown as Record<string, unknown>[];
-      const str = (v: unknown): string | null => (v === null || v === undefined ? null : String(v));
-      const plan = planCashRowRepair(
-        tenant,
-        rows.map((r) => ({
-          agentId: String(r.agent_id ?? ""),
-          token: String(r.token ?? ""),
-          symbol: str(r.symbol),
-          quoteToken: str(r.quote_token),
-          state: str(r.state),
-          curve: str(r.curve),
-          entryTx: str(r.entry_tx),
-          costUsdg: str(r.cost_usdg),
-        })),
-        CASH.USDG,
-      );
-      if (plan.deletable.length === 0 && plan.refused.length === 0) continue;
-      for (const line of cashRowRepairLines(plan, applying ? "apply" : "report")) log(line);
-
-      if (!applying) continue;
-      for (const v of plan.deletable) {
-        // Keyed on the exact row, and re-stating every clause in the WHERE so
-        // the delete cannot widen even if the plan were wrong about a row.
-        await shared
-          .prepare(
-            "DELETE FROM class_positions WHERE lower(agent_id) = lower(?) AND lower(token) = lower(?) " +
-              "AND curve IS NULL AND entry_tx IS NULL AND cost_usdg IS NULL",
-          )
-          .run(v.row.agentId, v.row.token);
-      }
-      const left = (await shared
-        .prepare(
-          "SELECT COUNT(*) AS n FROM class_positions WHERE lower(agent_id) = lower(?) AND lower(token) = lower(?)",
-        )
-        .all(acct, plan.deletable[0]!.row.token)) as unknown as Record<string, unknown>[];
-      const n = Number(left[0]?.n ?? -1);
-      log(
-        n === 0
-          ? `class-cash-row: VERIFIED — the row is gone for ${tenant}`
-          : `class-cash-row: *** VERIFY FAILED — ${n} row(s) still present for ${tenant} ***`,
-      );
-    }
-  } catch (e) {
-    log(`class-cash-row: FAILED — ${e instanceof Error ? e.message : String(e)}`);
-  }
-}
 
 async function runTenantInspectIfAsked(): Promise<void> {
   const target = fleetIdTarget("AGENTCAP_INSPECT_TENANT", process.env.AGENTCAP_INSPECT_TENANT);
@@ -10679,15 +9807,6 @@ async function runTenantInspectIfAsked(): Promise<void> {
       type?: never;
     };
     void _t;
-    const {
-      grantPonsClassVault,
-      grantPonsClassVaultFactory,
-      PONS_CLASS_VAULT_FACTORY,
-      PONS_CLASS_VAULT_FACTORY_V2,
-      PONS_CLASS_VAULT_FACTORY_ABI,
-    } = await import(
-      "../../packages/core/src/index"
-    );
     const { getSettingsStore } = await import("./settings-store");
 
     // @ts-expect-error pg is runtime-only here, as everywhere else in this repo
@@ -10741,20 +9860,6 @@ async function runTenantInspectIfAsked(): Promise<void> {
         | null;
       error: string | null;
     } = { tradesByStatus: null, openPositions: null, classPositions: null, error: null };
-    /**
-     * THE CEILING'S OWN ROWS, READ WHILE THE CONNECTION IS STILL OPEN.
-     *
-     * Declared out here and filled inside the `try` below, because the section
-     * that PRINTS them belongs further down with the rest of the report. The
-     * first version did the query where it printed — after `client.end()` — and
-     * its production run said `class positions COULD NOT BE READ — Client was
-     * closed and is not queryable`. It reported the failure instead of showing
-     * an empty ceiling, which is the only reason it was noticed rather than
-     * believed.
-     */
-    let positionRows: { token: string; symbol: string | null; quoteToken: string | null; state: string | null }[] =
-      [];
-    let positionsError: string | null = null;
 
     const moves: {
       landed:
@@ -10925,29 +10030,6 @@ async function runTenantInspectIfAsked(): Promise<void> {
           moves.error = e instanceof Error ? e.message : String(e);
         }
       }
-
-      // Keyed by SMART ACCOUNT, like every other row in `class_positions` —
-      // `agent_id` is the smart account, and joining on the tenant would
-      // silently return nothing at all.
-      // `acctAddr` rather than `smartAccount`: the latter is declared below
-      // this try block, and the same fact is already in scope here.
-      if (acctAddr) {
-        try {
-          const pos = await client.query(
-            `SELECT token, symbol, quote_token, state FROM class_positions WHERE agent_id = $1`,
-            [acctAddr],
-          );
-          const str = (v: unknown): string | null => (v === null || v === undefined ? null : String(v));
-          positionRows = pos.rows.map((r) => ({
-            token: String(r.token ?? ""),
-            symbol: str(r.symbol),
-            quoteToken: str(r.quote_token),
-            state: str(r.state),
-          }));
-        } catch (e) {
-          positionsError = e instanceof Error ? e.message : String(e);
-        }
-      }
     } finally {
       await client.end();
     }
@@ -10959,53 +10041,6 @@ async function runTenantInspectIfAsked(): Promise<void> {
 
     const smartAccount = typeof grant.smartAccount === "string" ? grant.smartAccount : null;
     const chainId = Number(grant.chainId);
-    const grantClassVault = (grantPonsClassVault(grant as never) as string | null) ?? null;
-
-    // The DERIVED vault, which exists as an address whether or not it was
-    // sealed — so a NO on sealing can still say which vault is being discussed.
-    let derivedClassVault: string | null = null;
-    let vaultDeployed: boolean | null = null;
-    /**
-     * THE FACTORY THE GRANT SEALED, then v2, then v1.
-     *
-     * This read the v1 constant alone, so a tenant sealed against a v2 factory
-     * was reported as pinning a vault other than "this account's own" — sending
-     * an operator to look for a bug that is not there. A diagnostic that prints
-     * one derived address while the grant seals another is worse than printing
-     * nothing, because it looks like evidence.
-     */
-    const factory =
-      (grantPonsClassVaultFactory(grant as never) as string | null) ??
-      PONS_CLASS_VAULT_FACTORY_V2[chainId] ??
-      PONS_CLASS_VAULT_FACTORY[chainId];
-    if (factory && smartAccount) {
-      try {
-        const { createPublicClient, http } = await import("viem");
-        // The same default the announcement pass uses, so one operator
-        // variable governs every read this process makes.
-        const rpcUrl =
-          (chainId === 4663
-            ? process.env.AGENTCAP_RPC_MAINNET
-            : process.env.AGENTCAP_RPC_TESTNET) ?? "https://rpc.mainnet.chain.robinhood.com";
-        const client2 = createPublicClient({ transport: http(rpcUrl) });
-        derivedClassVault = (await client2.readContract({
-          // The shared ABI rather than an inline literal, so the selector a
-          // diagnostic reads with and the selector the wall pins cannot drift.
-          address: factory as `0x${string}`,
-          abi: PONS_CLASS_VAULT_FACTORY_ABI,
-          functionName: "vaultFor",
-          args: [smartAccount as `0x${string}`],
-        })) as string;
-        const target = (grantClassVault ?? derivedClassVault) as `0x${string}`;
-        const code = await client2.getBytecode({ address: target });
-        vaultDeployed = code !== undefined && code !== "0x";
-      } catch {
-        // UNKNOWN, not false. The whole point of this module is that somebody
-        // was about to act on the difference.
-        vaultDeployed = null;
-      }
-    }
-
     let settingsMissing = false;
     let settingsError: string | null = null;
     let s: Record<string, unknown> = {};
@@ -11026,24 +10061,14 @@ async function runTenantInspectIfAsked(): Promise<void> {
     const facts = {
       tenant: want,
       smartAccount,
-      grantClassVault,
-      derivedClassVault,
-      derivedFromFactory: factory ?? null,
-      vaultDeployed,
       assetMode: pick("assetMode"),
       liveTradingEnabled: pick("liveTradingEnabled"),
       discoveryEnabled: pick("discoveryEnabled"),
-      classSnipeEnabled: pick("classSnipeEnabled"),
-      classPerEntryUsdg: pick("classPerEntryUsdg"),
-      classMaxPositions: pick("classMaxPositions"),
       scoutEnabled: pick("scoutEnabled"),
       scoutBudgetUsdg: pick("scoutBudgetUsdg"),
       scoutPerTokenUsdg: pick("scoutPerTokenUsdg"),
-      classMinDepthUsdg: pick("classMinDepthUsdg"),
       maxImpactBps: pick("maxImpactBps"),
       slippageBps: pick("slippageBps"),
-      classMaxHoldSec: pick("classMaxHoldSec"),
-      classExitAtGraduationPct: pick("classExitAtGraduationPct"),
       settingsMissing,
       settingsError,
     };
@@ -11072,99 +10097,9 @@ async function runTenantInspectIfAsked(): Promise<void> {
     for (const line of describeLedger(ledger)) log(`inspect: ${line}`);
     for (const line of describeMovements(moves)) log(`inspect: ${line}`);
 
-    // THE CEILING'S OWN ARITHMETIC, formatted from the rows read above.
-    //
-    // IMPORTED FOR ITS REAL TYPE, NOT THROUGH A CAST. This read
-    // `as never as { describeClassPositions: (c: { states: … }) => string[] }`,
-    // and a hand-written structural type over `as never` erases the module's
-    // own signature — so widening the census from states to whole rows
-    // type-checked perfectly and would have thrown at runtime, on the one code
-    // path that only ever runs when somebody is already mid-incident. The other
-    // casts in this file are for `pg`, which is genuinely runtime-only; this
-    // module is ours and has types.
-    if (positionsError !== null) {
-      // Said out loud. An unreadable position table is not an empty one, and
-      // "the ceiling is fine" is exactly the wrong thing to infer from a failed
-      // read on the gate that shuts the route silently.
-      log(`inspect: class positions COULD NOT BE READ — ${positionsError}`);
-    } else if (smartAccount) {
-      const { describeClassPositions } = await import("./inspect-tenant");
-      const ceiling = facts.classMaxPositions;
-      for (const line of describeClassPositions({
-        rows: positionRows,
-        ceiling: typeof ceiling === "number" ? ceiling : null,
-      }))
-        log(`inspect: ${line}`);
-    }
     log("inspect: READ ONLY — nothing was written. Remove AGENTCAP_INSPECT_TENANT now.");
   } catch (e) {
     log(`inspect: FAILED — ${e instanceof Error ? e.message : String(e)}`);
-  }
-}
-
-/**
- * CLAIM THE PROOFS LINKED BEFORE CLAIMS EXISTED — once EVER, not once per process.
- *
- * effectiveHolder counts no unclaimed proof, so until this runs every holder
- * who linked a wallet reads their login wallet instead. It runs BEFORE
- * reconcile() on the first pass, so the first settings.json each child is
- * handed already counts the right wallet. Earliest proof wins a shared wallet
- * (planHolderBackfill); collisions are logged by name.
- *
- * ONCE EVER, BY A RECORD IN THE CLAIMS STORE (backfillHolderClaims). Re-run
- * at every start, it handed a wallet released on purpose back to a stale
- * collision loser at the next deploy. After a start that read every tenant
- * this is a no-op for good; `holderClaimsBackfilled` only spares later passes
- * of this process the store read.
- *
- * RETRIED ONLY WHILE TENANTS WERE UNREADABLE, and then only those tenants,
- * every HOLDER_BACKFILL_RETRY_MS — not every pass, or one blob that never
- * decrypts would re-log itself every 15 s for ever. A failed run (the store
- * or the lease unreachable) is retried next pass, as before.
- *
- * BEHIND A LEASE, the tenant-lease advisory lock on a fixed key that is not an
- * address, so it can never be a tenant's: one replica backfills at a time. A
- * replica that finds the lease taken simply tries again next pass and finds
- * the record written. A failure is loud; it never blocks the fleet from arming.
- */
-let holderClaimsBackfilled = false;
-let holderBackfillRetryAt = 0;
-const HOLDER_BACKFILL_RETRY_MS = 10 * 60_000;
-const HOLDER_BACKFILL_LEASE = "0xholder-claims-backfill" as const;
-
-async function runHolderClaimsBackfill(): Promise<void> {
-  if (holderClaimsBackfilled || Date.now() < holderBackfillRetryAt) return;
-  // It claims wallets for every tenant at once, held ones included: only once
-  // the rollout admits the whole fleet (fleet-rollout.ts). An admitted child
-  // meanwhile reads its login wallet, which can only cost it a perk it owns,
-  // never grant it one it does not (see AGENTCAP_HOLDER_ADDRESS).
-  if (!rolloutAdmitsWholeFleet()) return;
-  let lease: TenantLease | null;
-  try {
-    lease = await acquireTenantLease(HOLDER_BACKFILL_LEASE);
-  } catch (e) {
-    log(`holder claims backfill: lease attempt failed, trying again next pass — ${e instanceof Error ? e.message : String(e)}`);
-    return;
-  }
-  if (!lease) {
-    log("holder claims backfill: another replica holds its lease — trying again next pass");
-    return;
-  }
-  try {
-    const out = await backfillHolderClaims(getSettingsStore("spot"), log);
-    if (out.done) holderClaimsBackfilled = true;
-    else holderBackfillRetryAt = Date.now() + HOLDER_BACKFILL_RETRY_MS;
-    if (!out.alreadyDone) {
-      log(
-        `holder claims backfill: ${out.claimed} claimed, ${out.held} already held, ` +
-          `${out.collisions.length} collision(s), ${out.unreadable.length} tenant(s) unreadable` +
-          (out.done ? " — done for good" : " — only those are read again, in 10 min"),
-      );
-    }
-  } catch (e) {
-    log(`holder claims backfill: FAILED, trying again next pass — ${e instanceof Error ? e.message : String(e)}`);
-  } finally {
-    await lease.release();
   }
 }
 
@@ -11524,11 +10459,11 @@ async function runReceiptAttestationIfAsked(): Promise<void> {
   // it while the database and read path are prepared (retireExpiredGrants).
   maintenanceLeases.set(tenant, lease);
   try {
-    const shared = await makePgDb(process.env.DATABASE_URL), rpcUrl = process.env.AGENTCAP_RPC_MAINNET ?? "https://rpc.mainnet.chain.robinhood.com";
+    const shared = await makePgDb(process.env.DATABASE_URL), rpcUrl = process.env.AGENTCAP_RPC_MAINNET ?? bnbChain.rpcUrls.default.http[0]!;
     // The fleet's read path, failed over as the reconstruction's is (rpc-meter.ts
     // chainReadRpc): any error still refuses the attestation, a spent house
     // quota no longer does by itself.
-    const rpc: ReceiptAttestationOptions["rpc"] = chainReadRpc(rpcUrl, robinhoodChain, { label: "receipt-attestation", timeoutMs: 30_000 });
+    const rpc: ReceiptAttestationOptions["rpc"] = chainReadRpc(rpcUrl, bnbChain, { label: "receipt-attestation", timeoutMs: 30_000 });
     const report = await attestReceiptUnderSupervisor({ tenant, smartAccount: request.account, shared, rpc, mode: request.mode, approvedDigest: request.approvedDigest,
       ...(request.flowId === undefined ? {} : { sharedFlowId: request.flowId }) });
     log(`receipt-attestation| ${JSON.stringify(report)}`);
@@ -11684,10 +10619,10 @@ async function runReconstructionDryRunIfAsked(): Promise<void> {
     // RPC — where the children's own reads fail over — served the same logs.
     // Mainnet's chain object, because that is the endpoint this variable
     // names; the generous timeout is for one eth_getLogs over all of history.
-    const rpcUrl = process.env.AGENTCAP_RPC_MAINNET ?? "https://rpc.mainnet.chain.robinhood.com";
-    const rpc = chainReadRpc(rpcUrl, robinhoodChain, { label: "recon", timeoutMs: 60_000 });
+    const rpcUrl = process.env.AGENTCAP_RPC_MAINNET ?? bnbChain.rpcUrls.default.http[0]!;
+    const rpc = chainReadRpc(rpcUrl, bnbChain, { label: "recon", timeoutMs: 60_000 });
 
-    const usdgToken = String(CASH.USDG);
+    const usdgToken = String(CASH.USDT);
     const head = BigInt((await rpc("eth_blockNumber", [])) as string);
     log(
       `recon| scanning ${accounts.length} of ${allAccounts.length} account(s) to block ${head}` +
@@ -11717,7 +10652,6 @@ async function runReconstructionDryRunIfAsked(): Promise<void> {
       // The energy reserve, so an energy purchase is proposed as the
       // 'energy-buy' capital-out the worker books (and collides with it by
       // identity) rather than dropped as a trade. See accounting-reconstruction.
-      reserveTokens: energyReserveTokens(Number(process.env.AGENTCAP_CHAIN_ID ?? 4663)),
       log: (m) => log(`recon| ${m}`),
     });
 
@@ -11729,7 +10663,7 @@ async function runReconstructionDryRunIfAsked(): Promise<void> {
           { to: usdgToken, data: "0x70a08231" + a.toLowerCase().replace(/^0x/, "").padStart(64, "0") },
           "latest",
         ])) as string;
-        onchainCash.set(a.toLowerCase(), Number(BigInt(hex)) / 1e6);
+        onchainCash.set(a.toLowerCase(), cashNumber(BigInt(hex)));
       } catch {
         /* left absent, which renders as unknown rather than as zero */
       }
@@ -11818,7 +10752,7 @@ async function runRepairIfAsked(shared: Db, plans: readonly AccountPlan[]): Prom
     return;
   }
 
-  const chainId = Number(process.env.AGENTCAP_CHAIN_ID ?? 4663);
+  const chainId = Number(process.env.AGENTCAP_CHAIN_ID ?? bnbChain.id);
   const results = await runRepair(shared, plans, opts, chainId,
     (r) => log(`repair| ${r.account.slice(0, 10)} ${r.stage} — ${r.why}`),
     () => stopping || haltRequested() ? "orchestrator is stopping or FLEET_HALT is present" : null,
@@ -12983,7 +11917,7 @@ function xAnswerFlow(): { flow?: FlowReader; flowPerDay?: number } {
   if (!rt.service) return {};
   const flowPerDay = answerReadingsPerDay(rt.setup);
   log(`xpost: answers may read onchain flow — up to ${flowPerDay} readings per UTC day across X accounts, said only in bands`);
-  return { flow: (q) => (q.chainId === 4663 ? flowFor(q.address, { timeoutMs: q.timeoutMs }) : Promise.resolve(null)), flowPerDay };
+  return { flow: (q) => (q.chainId === bnbChain.id ? flowFor(q.address, { timeoutMs: q.timeoutMs }) : Promise.resolve(null)), flowPerDay };
 }
 
 let fomoBoot: FomoBoot | null = null;
@@ -14157,14 +13091,8 @@ export async function runOrchestrator(): Promise<void> {
       await runLiveIntentBackfillIfAsked();
       await runTenantInspectIfAsked();
       await runHwmRepairIfAsked();
-      await runEnableClassIfAsked();
-      await runHaltClassEntriesIfAsked();
-      await runResumeClassEntriesIfAsked();
-      await runClassPnlRepairIfAsked();
-      await runCashRowRepairIfAsked();
       // Before reconcile, so the first settings.json a child is handed
       // already counts the wallet its holder claim names.
-      await runHolderClaimsBackfill();
       await reconcile();
       watchdog();
       // Beside the watchdog, and nothing like it: this one only speaks.

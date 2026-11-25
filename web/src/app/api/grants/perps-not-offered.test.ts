@@ -1,15 +1,13 @@
 /**
- * PERPS SLICE 1: THE SIGNERS CAN CARRY A LIGHTER KEY, BUT NO SERVER TAKES ONE YET.
+ * NO SERVER TAKES A LIGHTER KEY, AND NONE MAKES A PERPS WALLET ON BNB CHAIN.
  *
  * Until the slice that lands keygen and perp-custody's intake, a grant naming
  * the perps marker, a `perp` block or a `perpRecovery` reference is refused
  * exactly as a perps-off server refuses a new opt-in (403 perp-not-offered),
  * and nothing is written.
  *
- * A Perps WALLET is a different thing (perps slice 5b): it may be made where
- * AGENTCAP_PERPS is paper, but a paper one carries no Lighter key either, so
- * the same refusal holds for it; where perps is off, it is refused as a wallet
- * not offered before its block is even read.
+ * A Perps WALLET is refused as not offered whatever AGENTCAP_PERPS says,
+ * before its block is even read.
  *
  * Self-hosted first, against grant.json. Then hosted, through the real route
  * with a real signed-in tenant and a real owner co-signature, like
@@ -51,7 +49,7 @@ const grantFile = () => path.join(home, "grant.json");
 beforeEach(() => rmSync(grantFile(), { force: true }));
 const post = (g: unknown) =>
   POST(new Request("http://localhost/api/grants", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(g) }));
-const base = { smartAccount: A, serialized: "0xserialized", chainId: 4663, grantFeatures: ["tradeable-v2"] };
+const base = { smartAccount: A, serialized: "0xserialized", chainId: 56, grantFeatures: ["tradeable-v2"] };
 const perp = { route: "perp-lighter-v1", apiKeyIndex: 16, apiPublicKey: KEY };
 /**
  * A well-formed recovery reference. Its validity is beside the point: the
@@ -61,7 +59,7 @@ const perp = { route: "perp-lighter-v1", apiKeyIndex: 16, apiPublicKey: KEY };
 const perpRecovery = {
   v: 1,
   smartAccount: A,
-  chainId: 4663,
+  chainId: 56,
   route: "perp-lighter-v1",
   accountIndex: 7,
   apiKeyIndex: 16,
@@ -119,12 +117,33 @@ describe("POST /api/grants refuses perps until the intake slice lands", () => {
     assert.ok(existsSync(grantFile()));
   });
 
+  it("AN EMPTY PERPS WALLET GRANT ON BNB CHAIN IS REFUSED OUTRIGHT, even where AGENTCAP_PERPS is paper", async () => {
+    // No Lighter key, no marker: nothing but the wallet it names. There are no
+    // perps on BNB Chain, so the operator's lever cannot turn one on.
+    process.env.AGENTCAP_PERPS = "paper";
+    try {
+      writeFileSync(grantFile(), "{}\n");
+      for (const chainId of [56, 97]) {
+        const res = await POST(new Request("http://localhost/api/grants?wallet=perps", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...base, chainId, purpose: "perps", grantFeatures: [] }),
+        }));
+        assert.equal(res.status, 403, String(chainId));
+        assert.equal(((await res.json()) as { code?: string }).code, "perps-wallet-not-offered");
+      }
+      assert.equal(readFileSync(grantFile(), "utf8"), "{}\n");
+      assert.equal(existsSync(path.join(home, "accounts")), false);
+    } finally {
+      delete process.env.AGENTCAP_PERPS;
+    }
+  });
+
   const KEPT = JSON.stringify({ smartAccount: "0x00000000000000000000000000000000000000b2" }) + "\n";
   // A PERPS WALLET'S GRANT, both ways the ceiling can stand. Nothing is written
   // in either: not grant.json, and no Perps home.
   const perpsWallet = (g: Record<string, unknown>) =>
     POST(new Request("http://localhost/api/grants?wallet=perps", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...g, purpose: "perps", grantFeatures: [] }) }));
-  for (const [ceiling, code] of [["paper", "perp-not-offered"], [undefined, "perps-wallet-not-offered"]] as const) {
+  for (const [ceiling, code] of [["paper", "perps-wallet-not-offered"], [undefined, "perps-wallet-not-offered"]] as const) {
     it(`a Perps wallet carrying a Lighter key, AGENTCAP_PERPS ${ceiling ?? "unset"}: 403 ${code}, nothing written`, async () => {
       if (ceiling) process.env.AGENTCAP_PERPS = ceiling;
       try {
@@ -229,15 +248,15 @@ describe("hosted: the refusal lands before the nonce, the ownership read and the
     assert.equal(ownershipReads, 1);
   });
 
-  it("the real signer's perps grant: 403 with no nonce spent, no ownership read, nothing stored", async () => {
-    const { grant, owner } = await fixture.signerGrant({ account: A, perp: { apiPublicKey: KEY as `0x${string}` } });
-    // THE PREMISE: every check before the binding would pass this grant — the
-    // canonical wall rebuilds a perps wall, and a 40-byte public key is not an
-    // owner key. So the slice-1 refusal is the only thing between it and the
-    // nonce; move the refusal later and this test sees a nonce spent.
-    assert.deepEqual(checkCanonicalWall(grant as unknown as Record<string, unknown>), { ok: true }, "premise: the wall check passes it");
-    assert.equal(carriesOwnerKey(grant), false, "premise: the owner-key scan passes it");
-    const res = await hostedPost(grant, owner);
+  it("a really signed grant with a perps marker and block: 403 with no nonce spent, no ownership read, nothing stored", async () => {
+    // The signer seals no Lighter key on BNB Chain, so the claim is added by
+    // hand to a grant it really signed. The refusal comes ahead of the wall
+    // check and the binding, so nothing is spent, read or stored for it.
+    const { grant, owner } = await fixture.signerGrant({ account: A });
+    const claimed = { ...grant, grantFeatures: [...(grant.grantFeatures ?? []), "perp-lighter-v1"], perp } as StoredGrant;
+    assert.equal(checkCanonicalWall(claimed as unknown as Record<string, unknown>).ok, false, "the wall check refuses it too");
+    assert.equal(carriesOwnerKey(claimed), false, "premise: the owner-key scan passes it");
+    const res = await hostedPost(claimed, owner);
     assert.equal(res.status, 403, JSON.stringify(res.body));
     assert.equal(res.body.code, "perp-not-offered");
     assert.equal(noncesSpent, 0, "a refused grant must not burn the single-use nonce");

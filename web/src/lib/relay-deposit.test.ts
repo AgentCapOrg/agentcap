@@ -14,7 +14,7 @@ import {
 
 const AGENT = "0x1111111111111111111111111111111111111111";
 const base = DEPOSIT_SOURCES["eth-base"];
-const robinhood = DEPOSIT_SOURCES["eth-robinhood"];
+const ethereum = DEPOSIT_SOURCES["eth-ethereum"];
 
 /**
  * The shape of Relay's `/price` answer, trimmed to the fields read, with the
@@ -35,9 +35,9 @@ function relayPrice(source: DepositSource, amount: string, over: { out?: string;
       recipient: over.recipient ?? AGENT,
       currencyIn: { currency: { ...sourceCurrency, chainId: over.inChain ?? source.relayChainId }, amount: over.inAmount ?? amount, amountUsd: "35.921563" },
       currencyOut: {
-        currency: { chainId: over.outChain ?? 4663, address: over.outToken ?? "0x5fc5360d0400a0fd4f2af552add042d716f1d168", symbol: "USDG", decimals: over.outDecimals ?? 6 },
-        amount: over.out ?? ("35850921"),
-        minimumAmount: over.min ?? ("35671666"),
+        currency: { chainId: over.outChain ?? 56, address: over.outToken ?? CASH.USDT.toLowerCase(), symbol: "USDT", decimals: over.outDecimals ?? 18 },
+        amount: over.out ?? ("35850921000000000000"),
+        minimumAmount: over.min ?? ("35671666000000000000"),
         amountUsd: "35.84",
       },
       totalImpact: { usd: "-0.090568", percent: "-0.25" },
@@ -55,14 +55,14 @@ describe("asking Relay for a price", () => {
       user: "0x0000000000000000000000000000000000000001",
       recipient: AGENT,
       originChainId: 8453,
-      destinationChainId: 4663,
+      destinationChainId: 56,
       originCurrency: "0x0000000000000000000000000000000000000000",
-      destinationCurrency: CASH.USDG,
+      destinationCurrency: CASH.USDT,
       amount: "20000000000000000",
       tradeType: "EXACT_INPUT",
       slippageTolerance: "50",
     });
-    assert.equal(priceRequest(robinhood, AMOUNT, AGENT).originChainId, 4663);
+    assert.equal(priceRequest(ethereum, AMOUNT, AGENT).originChainId, 1);
   });
 });
 
@@ -74,12 +74,12 @@ describe("reading Relay's answer", () => {
     const q = parsed.quote;
     assert.equal(q.amountIn, AMOUNT);
     assert.equal(q.amountInUsd, "35.921563");
-    assert.equal(q.expectedOut, 35_850_921n);
-    assert.equal(q.minOut, 35_671_666n);
+    assert.equal(q.expectedOut, 35_850_921n * 10n ** 12n);
+    assert.equal(q.minOut, 35_671_666n * 10n ** 12n);
     assert.equal(q.slippageBps, 50);
     assert.equal(q.etaSeconds, 1);
     assert.equal(q.impactPercent, "0.25");
-    assert.equal(q.route, "Relay: ETH on Base → USDG on Robinhood Chain");
+    assert.equal(q.route, "Relay: ETH on Base → USDT on BNB Chain");
     assert.deepEqual(q.fees.map((f) => [f.label, f.symbol, f.usd]), [["Relay fee", "ETH", "0.048310"], ["Network fee on Base", "ETH", "0.000398"]]);
     assert.equal(q.sourceNetworkFee, 211_615_385_242n);
   });
@@ -94,11 +94,11 @@ describe("reading Relay's answer", () => {
       ["recipient", { recipient: "0x2222222222222222222222222222222222222222" }],
       ["output token", { outToken: "0xaf88d065e77c8cc2239327c5edb3a432268e5831" }],
       ["output network", { outChain: 8453 }],
-      ["output decimals", { outDecimals: 18 }],
+      ["output decimals", { outDecimals: 6 }],
       ["input network", { inChain: 1 }],
       ["input amount", { inAmount: "1" }],
       ["slippage", { slippage: "200" }],
-      ["output amount", { min: "40000000" }],
+      ["output amount", { min: "40000000000000000000" }],
       ["output amount", { out: "0", min: "0" }],
       ["time estimate", { eta: "soon" }],
     ];
@@ -132,14 +132,14 @@ describe("reading Relay's answer", () => {
 });
 
 describe("the deep link to Relay", () => {
-  it("prefills the agent, USDG on Robinhood Chain, the source and the exact amount", () => {
+  it("prefills the agent, USDT on BNB Chain, the source and the exact amount", () => {
     const url = new URL(relayDeepLink(base, AMOUNT, AGENT));
     assert.equal(url.origin, "https://relay.link");
-    assert.equal(url.pathname, "/bridge/robinhood");
+    assert.equal(url.pathname, "/bridge/bsc");
     assert.deepEqual(Object.fromEntries(url.searchParams), {
       fromChainId: "8453",
       fromCurrency: "0x0000000000000000000000000000000000000000",
-      toCurrency: CASH.USDG,
+      toCurrency: CASH.USDT,
       toAddress: AGENT,
       amount: "0.02",
       tradeType: "EXACT_INPUT",
@@ -147,10 +147,10 @@ describe("the deep link to Relay", () => {
   });
 
   it("names the route and the wait the way an owner reads them", () => {
-    assert.equal(routeLabel(robinhood), "Relay swap on Robinhood Chain: ETH → USDG");
+    assert.equal(routeLabel(ethereum), "Relay: ETH on Ethereum → USDT on BNB Chain");
     assert.equal(etaText(1), "under a minute");
     assert.equal(etaText(60), "about a minute");
     assert.equal(etaText(600), "about 10 minutes");
-    assert.equal(usdgText(35_671_666n), "35.67");
+    assert.equal(usdgText(35_671_666n * 10n ** 12n), "35.67");
   });
 });

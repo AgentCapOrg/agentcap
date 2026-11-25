@@ -38,9 +38,10 @@ let opened: string[];
 function priceFor(body: Record<string, unknown>, over: { recipient?: string } = {}) {
   const currency = { chainId: body.originChainId, address: body.originCurrency, symbol: "ETH", decimals: 18 };
   const amount = BigInt(String(body.amount));
-  // $1,796 per ETH, as on the day; USDG out is 99.8% of that.
+  // $1,796 per ETH, as on the day; USDT out is 99.8% of that.
   const usdMicros = (amount * 1_796_000_000n) / ETH;
-  const out = (usdMicros * 998n) / 1000n;
+  // USDT on BNB Chain counts 18 places.
+  const out = ((usdMicros * 998n) / 1000n) * 10n ** 12n;
   const bps = BigInt(String(body.slippageTolerance));
   return {
     fees: {
@@ -52,7 +53,7 @@ function priceFor(body: Record<string, unknown>, over: { recipient?: string } = 
       recipient: over.recipient ?? body.recipient,
       currencyIn: { currency, amount: String(body.amount), amountUsd: `${usdMicros / 1_000_000n}.${String(usdMicros % 1_000_000n).padStart(6, "0")}` },
       currencyOut: {
-        currency: { chainId: 4663, address: CASH.USDG.toLowerCase(), symbol: "USDG", decimals: 6 },
+        currency: { chainId: 56, address: CASH.USDT.toLowerCase(), symbol: "USDT", decimals: 18 },
         amount: String(out),
         minimumAmount: String((out * (10_000n - bps)) / 10_000n),
       },
@@ -103,8 +104,8 @@ afterEach(async () => {
 
 const props = (over: Partial<DepositWaysProps> = {}): DepositWaysProps => ({
   agent: AGENT,
-  chainId: 4663,
-  balances: { ethWei: "1000000000000000", cashUsdg: "5000000", vaultUsdg: "0" },
+  chainId: 56,
+  balances: { ethWei: "1000000000000000", cashUsdg: "5000000000000000000" },
   gasSponsored: false,
   ownerAddress: OWNER,
   fetchImpl: stubFetch(),
@@ -132,17 +133,17 @@ const clickLink = async (label: string) => {
   return link;
 };
 
-describe("Send USDG, the way that shows first", () => {
+describe("Send USDT, the way that shows first", () => {
   it("shows the address as text and QR code, names the network and token, and warns against any other chain", async () => {
     await ui.render(view());
     const tabs = Array.from(ui.container.querySelectorAll('[role="tab"]'));
-    assert.deepEqual(tabs.map((t) => [t.textContent, t.getAttribute("aria-selected")]), [["Send USDG", "true"], ["From ETH", "false"]]);
+    assert.deepEqual(tabs.map((t) => [t.textContent, t.getAttribute("aria-selected")]), [["Send USDT", "true"], ["From ETH", "false"]]);
     assert.equal(ui.container.querySelector(".funding-address")!.textContent, AGENT);
     const qr = ui.container.querySelector('svg[role="img"]')!;
     assert.match(qr.getAttribute("aria-label")!, new RegExp(AGENT));
-    assert.match(text(), /NetworkRobinhood Chain/);
-    assert.match(text(), new RegExp(`TokenUSDG ${CASH.USDG}`));
-    assert.match(text(), /Send USDG on Robinhood Chain, and only there\./);
+    assert.match(text(), /NetworkBNB Chain/);
+    assert.match(text(), new RegExp(`TokenUSDT ${CASH.USDT}`));
+    assert.match(text(), /Send USDT on BNB Chain, and only there\./);
     assert.match(text(), /funds sent there are stuck, and no re-sign moves them back/);
     assert.equal(calls.length, 0, "showing an address reads nothing");
   });
@@ -163,10 +164,10 @@ describe("Send USDG, the way that shows first", () => {
     assert.equal(ui.container.querySelector('[role="alert"]')!.textContent, "Could not copy. Select the address above to copy it.");
   });
 
-  it("offers no conversions off Robinhood Chain mainnet, where they would not reach this agent", async () => {
-    await ui.render(view({ chainId: 46630 }));
+  it("offers no conversions off BNB Chain mainnet, where they would not reach this agent", async () => {
+    await ui.render(view({ chainId: 97 }));
     assert.equal(ui.container.querySelector('[role="tablist"]'), null);
-    assert.match(text(), /Send USDG on chain 46630, and only there\./);
+    assert.match(text(), /Send USDT on chain 97, and only there\./);
     assert.match(text(), /Copy deposit address/);
   });
 
@@ -194,7 +195,7 @@ describe("From ETH", () => {
     await tab("From ETH");
     const sources = Array.from(ui.container.querySelectorAll(".deposit-sources button"));
     assert.deepEqual(sources.map((b) => [b.textContent, b.getAttribute("aria-pressed")]),
-      [["Ethereum", "true"], ["Base", "false"], ["Arbitrum", "false"], ["Robinhood Chain", "false"]]);
+      [["Ethereum", "true"], ["Base", "false"], ["Arbitrum", "false"]]);
     assert.equal(inputs()[0]!.value, OWNER, "the owner's wallet is offered, and can be changed");
     await settle();
     assert.equal(calls[0]!.url, "https://ethereum-rpc.publicnode.com");
@@ -211,9 +212,9 @@ describe("From ETH", () => {
       user: "0x0000000000000000000000000000000000000001",
       recipient: AGENT,
       originChainId: 1,
-      destinationChainId: 4663,
+      destinationChainId: 56,
       originCurrency: "0x0000000000000000000000000000000000000000",
-      destinationCurrency: CASH.USDG,
+      destinationCurrency: CASH.USDT,
       amount: "998000000000000000",
       tradeType: "EXACT_INPUT",
       slippageTolerance: "50",
@@ -223,18 +224,18 @@ describe("From ETH", () => {
     const quote = ui.container.querySelector(".deposit-quote")!.textContent!;
     // Dollars go through format.ts, so the locale places the symbol and groups the digits.
     assert.match(quote, /You send0\.998 ETH on Ethereum \(about \$1,792\.40\)/);
-    assert.match(quote, /Your agent getsabout 1788\.82 USDG/);
-    assert.match(quote, /At least1779\.87 USDG, or Relay refunds you/);
-    assert.match(quote, /RouteRelay: ETH on Ethereum → USDG on Robinhood Chain/);
+    assert.match(quote, /Your agent getsabout 1788\.82 USDT/);
+    assert.match(quote, /At least1779\.87 USDT, or Relay refunds you/);
+    assert.match(quote, /RouteRelay: ETH on Ethereum → USDT on BNB Chain/);
     assert.match(quote, /FeesRelay fee 0\.000026 ETH \(\$0\.04\) · Network fee on Ethereum 0 ETH \(<\$0\.01\)/);
     assert.match(quote, /Slippage cap0\.5%/);
     assert.match(quote, /Price impact, fees included0\.25%/);
     assert.match(quote, /Arrivesunder a minute after you sign/);
 
     const link = new URL(ui.container.querySelector<HTMLAnchorElement>("a.flow-primary")!.href);
-    assert.equal(link.origin + link.pathname, "https://relay.link/bridge/robinhood");
+    assert.equal(link.origin + link.pathname, "https://relay.link/bridge/bsc");
     assert.equal(link.searchParams.get("toAddress"), AGENT);
-    assert.equal(link.searchParams.get("toCurrency"), CASH.USDG);
+    assert.equal(link.searchParams.get("toCurrency"), CASH.USDT);
     assert.equal(link.searchParams.get("fromChainId"), "1");
     assert.equal(link.searchParams.get("amount"), "0.998");
     assert.match(text(), /Relay asks you to confirm the recipient: it should be your agent's account, ending DEF0\./);
@@ -332,8 +333,8 @@ describe("From ETH", () => {
   });
 
   it("asks for about $2 of ETH for the agent's fees only when its ETH reads zero, and says when it couldn't read it", async () => {
-    for (const [ethWei, expect] of [["0", /Your agent has no ETH/], [null, /We couldn't read your agent's ETH just now/], ["5", null]] as const) {
-      await ui.remount(view({ balances: { ethWei, cashUsdg: "0", vaultUsdg: "0" } }));
+    for (const [ethWei, expect] of [["0", /Your agent has no BNB/], [null, /We couldn't read your agent's BNB just now/], ["5", null]] as const) {
+      await ui.remount(view({ balances: { ethWei, cashUsdg: "0" } }));
       await tab("From ETH");
       await ui.click("Base");
       await typeInto(inputs()[1]!, "0.02");
@@ -349,7 +350,7 @@ describe("From ETH", () => {
   });
 
   it("sets the agent's gas top-up aside on Max, so the wallet can still send it", async () => {
-    await ui.render(view({ balances: { ethWei: "0", cashUsdg: "0", vaultUsdg: "0" } }));
+    await ui.render(view({ balances: { ethWei: "0", cashUsdg: "0" } }));
     await tab("From ETH");
     await ui.click("Base");
     await settle();
@@ -367,7 +368,7 @@ describe("From ETH", () => {
   });
 
   it("says so when it can't price the agent's top-up, rather than spend it", async () => {
-    await ui.render(view({ balances: { ethWei: null, cashUsdg: "0", vaultUsdg: "0" }, fetchImpl: stubFetch({ relay: "refuse" }) }));
+    await ui.render(view({ balances: { ethWei: null, cashUsdg: "0" }, fetchImpl: stubFetch({ relay: "refuse" }) }));
     await tab("From ETH");
     await settle();
     await ui.click("Max");
@@ -376,18 +377,8 @@ describe("From ETH", () => {
     assert.match(text(), /Couldn't price your agent's gas top-up, so Max can't set it aside\. Type an amount instead\./);
   });
 
-  it("on Robinhood Chain itself, says to send the gas straight to the same address", async () => {
-    await ui.render(view({ balances: { ethWei: "0", cashUsdg: "0", vaultUsdg: "0" } }));
-    await tab("From ETH");
-    await ui.click("Robinhood Chain");
-    await typeInto(inputs()[1]!, "0.02");
-    await settle(450);
-    assert.match(ui.container.querySelector(".deposit-gas")!.textContent!, /Also send about 0\.001114 ETH \(about \$2\) straight to the same address on Robinhood Chain\./);
-    assert.match(text(), /Relay swap on Robinhood Chain: ETH → USDG/);
-  });
-
   it("never asks a sponsored agent for gas", async () => {
-    await ui.render(view({ balances: { ethWei: "0", cashUsdg: "0", vaultUsdg: "0" }, gasSponsored: true }));
+    await ui.render(view({ balances: { ethWei: "0", cashUsdg: "0" }, gasSponsored: true }));
     await tab("From ETH");
     await typeInto(inputs()[1]!, "0.02");
     await settle(450);
@@ -397,8 +388,8 @@ describe("From ETH", () => {
 });
 
 describe("after the owner leaves for Relay", () => {
-  async function leave(cashUsdg: string | null = "5000000") {
-    await ui.render(view({ balances: { ethWei: "1", cashUsdg, vaultUsdg: "0" } }));
+  async function leave(cashUsdg: string | null = "5000000000000000000") {
+    await ui.render(view({ balances: { ethWei: "1", cashUsdg } }));
     await tab("From ETH");
     await typeInto(inputs()[1]!, "0.02");
     await settle(450);
@@ -408,18 +399,18 @@ describe("after the owner leaves for Relay", () => {
 
   it("watches the agent's balance from the reading taken when the owner left, until it rises by the minimum", async () => {
     await leave();
-    assert.match(ui.container.querySelector(".deposit-watch")!.textContent!, /Watching for at least 35\.66 USDG to reach your agent\./);
-    await ui.render(view({ balances: { ethWei: "1", cashUsdg: "6000000", vaultUsdg: "0" } }));
-    assert.match(ui.container.querySelector(".deposit-watch")!.textContent!, /Some USDG arrived \(1\.00\), less than the 35\.66 USDG minimum\./);
-    await ui.render(view({ balances: { ethWei: "1", cashUsdg: "45000000", vaultUsdg: "0" } }));
-    assert.match(ui.container.querySelector(".deposit-watch")!.textContent!, /Arrived: 40\.00 USDG reached your agent\./);
+    assert.match(ui.container.querySelector(".deposit-watch")!.textContent!, /Watching for at least 35\.66 USDT to reach your agent\./);
+    await ui.render(view({ balances: { ethWei: "1", cashUsdg: "6000000000000000000" } }));
+    assert.match(ui.container.querySelector(".deposit-watch")!.textContent!, /Some USDT arrived \(1\.00\), less than the 35\.66 USDT minimum\./);
+    await ui.render(view({ balances: { ethWei: "1", cashUsdg: "45000000000000000000" } }));
+    assert.match(ui.container.querySelector(".deposit-watch")!.textContent!, /Arrived: 40\.00 USDT reached your agent\./);
     await ui.click("Done");
     assert.equal(ui.container.querySelector(".deposit-watch"), null);
   });
 
   it("says its read failed, never that nothing arrived, when the balance is unread", async () => {
     await leave();
-    await ui.render(view({ balances: { ethWei: "1", cashUsdg: null, vaultUsdg: null } }));
+    await ui.render(view({ balances: { ethWei: "1", cashUsdg: null } }));
     assert.match(ui.container.querySelector(".deposit-watch")!.textContent!, /We couldn't read your agent's balance just now\. That's our read failing, not your deposit\./);
   });
 
@@ -439,34 +430,34 @@ describe("after the owner leaves for Relay", () => {
     assert.doesNotMatch(watch, /fail/i);
   });
 
-  it("keeps a seen arrival when the agent then trades the USDG away, across a reload too, until Done", async () => {
+  it("keeps a seen arrival when the agent then trades the USDT away, across a reload too, until Done", async () => {
     await leave();
-    await ui.render(view({ balances: { ethWei: "1", cashUsdg: "45000000", vaultUsdg: "0" } }));
-    assert.match(ui.container.querySelector(".deposit-watch")!.textContent!, /Arrived: 40\.00 USDG reached your agent\./);
+    await ui.render(view({ balances: { ethWei: "1", cashUsdg: "45000000000000000000" } }));
+    assert.match(ui.container.querySelector(".deposit-watch")!.textContent!, /Arrived: 40\.00 USDT reached your agent\./);
     // The agent buys with it: the balance falls below where it started.
-    await ui.render(view({ balances: { ethWei: "1", cashUsdg: "1000000", vaultUsdg: "0" } }));
-    assert.match(ui.container.querySelector(".deposit-watch")!.textContent!, /Arrived: 40\.00 USDG reached your agent\./);
-    await ui.render(view({ balances: { ethWei: "1", cashUsdg: null, vaultUsdg: null }, now: () => Date.now() + 16 * 60_000 }));
-    assert.match(ui.container.querySelector(".deposit-watch")!.textContent!, /Arrived: 40\.00 USDG reached your agent\./);
-    await ui.remount(view({ balances: { ethWei: "1", cashUsdg: "1000000", vaultUsdg: "0" } }));
-    assert.match(ui.container.querySelector(".deposit-watch")!.textContent!, /Arrived: 40\.00 USDG reached your agent\./);
+    await ui.render(view({ balances: { ethWei: "1", cashUsdg: "1000000000000000000" } }));
+    assert.match(ui.container.querySelector(".deposit-watch")!.textContent!, /Arrived: 40\.00 USDT reached your agent\./);
+    await ui.render(view({ balances: { ethWei: "1", cashUsdg: null }, now: () => Date.now() + 16 * 60_000 }));
+    assert.match(ui.container.querySelector(".deposit-watch")!.textContent!, /Arrived: 40\.00 USDT reached your agent\./);
+    await ui.remount(view({ balances: { ethWei: "1", cashUsdg: "1000000000000000000" } }));
+    assert.match(ui.container.querySelector(".deposit-watch")!.textContent!, /Arrived: 40\.00 USDT reached your agent\./);
     await ui.click("Done");
     assert.equal(ui.container.querySelector(".deposit-watch"), null);
-    await ui.remount(view({ balances: { ethWei: "1", cashUsdg: "1000000", vaultUsdg: "0" } }));
+    await ui.remount(view({ balances: { ethWei: "1", cashUsdg: "1000000000000000000" } }));
     assert.equal(ui.container.querySelector(".deposit-watch"), null, "dismissed stays dismissed");
   });
 
   it("starts fresh, from the balance now, when the owner leaves for another deposit", async () => {
     await leave();
-    await ui.render(view({ balances: { ethWei: "1", cashUsdg: "45000000", vaultUsdg: "0" } }));
+    await ui.render(view({ balances: { ethWei: "1", cashUsdg: "45000000000000000000" } }));
     assert.match(ui.container.querySelector(".deposit-watch")!.textContent!, /Arrived:/);
     await clickLink("Continue on Relay");
-    assert.match(ui.container.querySelector(".deposit-watch")!.textContent!, /Watching for at least 35\.66 USDG to reach your agent\./);
+    assert.match(ui.container.querySelector(".deposit-watch")!.textContent!, /Watching for at least 35\.66 USDT to reach your agent\./);
   });
 
   it("remembers what it is waiting for across a reload of the tab", async () => {
     await leave();
-    await ui.remount(view({ balances: { ethWei: "1", cashUsdg: "45000000", vaultUsdg: "0" } }));
-    assert.match(ui.container.querySelector(".deposit-watch")!.textContent!, /Arrived: 40\.00 USDG reached your agent\./);
+    await ui.remount(view({ balances: { ethWei: "1", cashUsdg: "45000000000000000000" } }));
+    assert.match(ui.container.querySelector(".deposit-watch")!.textContent!, /Arrived: 40\.00 USDT reached your agent\./);
   });
 });

@@ -20,7 +20,7 @@
  *   - the partner prompt, which already said this, is unchanged.
  *
  * Driven through the real reply builder with a completion stub that captures
- * the request, as agent-chat-energy.test.ts does.
+ * the request, as the other prompt tests do.
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
@@ -82,7 +82,7 @@ describe("the dashboard prompt reads whether it is running instead of asserting 
     assert.match(system, /Tell them to fund, re-sign or turn anything on only when the STATE itself shows that cause/);
     // Started, not trading: the reason only from the STATE.
     assert.match(system, /"I'm not trading right now"/);
-    assert.match(system, /give a reason only when the STATE gives one: `liveBlocker` \(below\), `workerReason`, the ENERGY block or a RECOVERY block/);
+    assert.match(system, /give a reason only when the STATE gives one: `liveBlocker` \(below\), `workerReason` or a RECOVERY block/);
     // The reviewer's case: IDLE before the first pass is not "not started".
     assert.match(system, /`stopped` true or IDLE ALONE NEVER MEANS YOU HAVE NOT STARTED/);
     assert.match(system, /Only `workerHeardFrom` false means not started/);

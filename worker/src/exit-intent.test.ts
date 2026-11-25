@@ -25,23 +25,16 @@ const USDG = "0x00000000000000000000000000000000000000dd" as const;
 const TSLA = "0x0000000000000000000000000000000000000001" as const;
 const MEME = "0x00000000000000000000000000000000000000ee" as const;
 const ROUTER = "0x00000000000000000000000000000000000000ff" as const;
-const VAULT = "0x00000000000000000000000000000000000000aa" as const;
-const ADAPTER = "0x00000000000000000000000000000000000000ab" as const;
-const CURVE = "0x00000000000000000000000000000000000000ac" as const;
 
-/** The expression as it stood inline in checkPolicy before the move, character for character. */
+/** The expression as it stood inline in checkPolicy before the move, less the removed vault kind. */
 function oldInlineIsExit(intent: TradeIntent, limits: Pick<AgentLimits, "cashToken" | "quoteAssets">): boolean {
   const lc = (a: string) => a.toLowerCase();
   const isExit =
-    intent.kind === "vault-withdraw" ||
     intent.kind === "transfer" ||
     (intent.kind === "swap" &&
       limits.cashToken !== undefined &&
       lc(intent.buyToken) === lc(limits.cashToken)) ||
-    (intent.kind === "equity-order" && intent.side === "sell") ||
-    (intent.kind === "curve-trade" &&
-      ((limits.cashToken !== undefined && lc(intent.assetOut) === lc(limits.cashToken)) ||
-        (limits.quoteAssets !== undefined && limits.quoteAssets.map(lc).includes(lc(intent.assetOut)))));
+    (intent.kind === "equity-order" && intent.side === "sell");
   return isExit;
 }
 
@@ -53,27 +46,11 @@ const swap = (sellToken: `0x${string}`, buyToken: `0x${string}`): TradeIntent =>
   sellAmountRaw: 1_000_000n,
   notionalUsdg: 1_000_000n,
 });
-const curve = (assetIn: `0x${string}`, assetOut: `0x${string}`): TradeIntent => ({
-  kind: "curve-trade",
-  target: ADAPTER,
-  curve: CURVE,
-  assetIn,
-  assetOut,
-  amountInRaw: 1_000_000n,
-  minAmountOutRaw: 1n,
-  notionalUsdg: 1_000_000n,
-});
-
 const TABLE: [string, TradeIntent][] = [
   ["swap into cash (a sell)", swap(TSLA, USDG)],
   ["swap into cash, mixed case", swap(TSLA, USDG.toUpperCase().replace("0X", "0x") as `0x${string}`)],
   ["swap out of cash (a buy)", swap(USDG, TSLA)],
   ["stock to stock", swap(TSLA, MEME)],
-  ["curve back into cash", curve(MEME, USDG)],
-  ["curve back into a quote stock", curve(MEME, TSLA)],
-  ["curve into an extra (an entry)", curve(USDG, MEME)],
-  ["vault withdraw", { kind: "vault-withdraw", target: VAULT, amountUsdg: 1_000_000n }],
-  ["vault deposit", { kind: "vault-deposit", target: VAULT, amountUsdg: 1_000_000n }],
   ["transfer", { kind: "transfer", target: USDG, recipient: MEME, amountUsdg: 1_000_000n }],
   ["equity buy", { kind: "equity-order", ticker: "TSLA", side: "buy", notionalUsdg: 1_000_000n }],
   ["equity sell", { kind: "equity-order", ticker: "TSLA", side: "sell", notionalUsdg: 1_000_000n }],
@@ -100,11 +77,6 @@ describe("isExitIntent is the breaker's predicate, moved and not rewritten", () 
     const ask = (n: string) => isExitIntent(TABLE.find(([k]) => k === n)![1], full);
     assert.equal(ask("swap into cash (a sell)"), true);
     assert.equal(ask("swap out of cash (a buy)"), false);
-    assert.equal(ask("curve back into cash"), true);
-    assert.equal(ask("curve back into a quote stock"), true);
-    assert.equal(ask("curve into an extra (an entry)"), false);
-    assert.equal(ask("vault withdraw"), true);
-    assert.equal(ask("vault deposit"), false, "a deposit is not money coming home — the energy gate carves it out itself");
     assert.equal(ask("transfer"), true);
     assert.equal(ask("equity buy"), false);
     assert.equal(ask("equity sell"), true);

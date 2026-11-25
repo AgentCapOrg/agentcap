@@ -78,7 +78,7 @@ const GRANT = path.join(PERPS_HOME, "grant.json");
 const SETTINGS = path.join(PERPS_HOME, "settings.json");
 const ACCOUNT = "0xab000000000000000000000000000000000000c4";
 const grantJson = (grantedAt: number) =>
-  JSON.stringify({ owner: "0x00000000000000000000000000000000000000b1", sessionKeyAddress: "0x00000000000000000000000000000000000000c1", smartAccount: ACCOUNT, purpose: "perps", serialized: "0xserialized", chainId: 4663, grantedAt, demoOwnerPrivateKey: `0x${"77".repeat(32)}` });
+  JSON.stringify({ owner: "0x00000000000000000000000000000000000000b1", sessionKeyAddress: "0x00000000000000000000000000000000000000c1", smartAccount: ACCOUNT, purpose: "perps", serialized: "0xserialized", chainId: 56, grantedAt, demoOwnerPrivateKey: `0x${"77".repeat(32)}` });
 /** The owner's Perps settings: practice perps on, BTC only, and keys the kill must leave alone. */
 const OWNER_SETTINGS = { perpsEnabled: true, perpsMarkets: ["BTC-PERP"], paperStartUsdg: 100, agentName: "Little John", perpsMaxLeverage: 2 };
 
@@ -139,19 +139,12 @@ async function decide(intent: TradeIntent, source: string, reason?: string, know
   return { ok: true as const };
 }
 
-const TICK = { equityKnown: true, breakerIdle: true, breakerLimitBps: 1_000, energyEntriesLeft: true, opsHeadroom: true, spendHeadroomMicro: u(500), strategistLive: false };
+const TICK = { equityKnown: true, breakerIdle: true, breakerLimitBps: 1_000, opsHeadroom: true, spendHeadroomMicro: u(500), strategistLive: false };
 const hooks = (equityUsdg: bigint) => ({
-  claimEntry: async () => ({ ok: true }),
-  refundEntry: async () => {},
-  withholdEntry: async () => {},
   ensureDecision: decide,
-  processIntentReporting: async (i: TradeIntent) => {
+  processIntent: async (i: TradeIntent) => {
     const out = await lane.execute(i as PerpOrderIntent, { equityUsdg, equityKnown: true });
     if ((i as PerpOrderIntent).effect === "open" && out.status === "paper") opens += 1;
-    return out;
-  },
-  processIntent: async (i: TradeIntent) => {
-    await lane.execute(i as PerpOrderIntent, { equityUsdg, equityKnown: true });
   },
 });
 const pass = () => lane.protectPass({ lock: lane.lock, signal: new AbortController().signal, pass: 1 });
@@ -169,7 +162,7 @@ before(async () => {
     caps: { perTradeUsdg: 50, dailyUsdg: 500, expiryDays: 14, maxDrawdownPct: 10, maxOpsPerDay: 48 },
     grantedAt: 1_000_000,
     expiresAt: 2_000_000_000,
-    chainId: 4663,
+    chainId: 56,
   } as never);
   await store.getPaperBook(agentId, 100);
   limits = {

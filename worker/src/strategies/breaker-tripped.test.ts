@@ -33,6 +33,9 @@ import { makeTrencher, TRENCHER_DEFAULTS, type Candidate, type OpenPosition } fr
 import { breakerIdle, breakerTripped, drawdownOf, takeTick, type Snapshot, type Tick } from "./types";
 import { weekendGapTick } from "./weekend-gap";
 
+// 6dp micro figures, scaled to 18dp USDT base units.
+const MICRO = 10n ** 12n;
+
 const ROUTER = "0x1111111111111111111111111111111111111111" as const;
 const VAULT = "0x2222222222222222222222222222222222222222" as const;
 const USDG = "0x3333333333333333333333333333333333333333" as const;
@@ -42,9 +45,9 @@ const TSLA = "0x6666666666666666666666666666666666666666" as const;
 const CATE = "0x00000000000000000000000000000000000000c1" as const;
 
 /** 12.5% below the peak against a 10% limit: tripped, by the wall's own arithmetic. */
-const TRIPPED = drawdownOf({ peakUsdg: 1_000_000_000n, equityUsdg: 875_000_000n, equityKnown: true, maxDrawdownBps: 1_000 });
+const TRIPPED = drawdownOf({ peakUsdg: (1_000_000_000n * MICRO), equityUsdg: (875_000_000n * MICRO), equityKnown: true, maxDrawdownBps: 1_000 });
 /** 2% below it: measured, and nowhere near. */
-const CLEAR = drawdownOf({ peakUsdg: 1_000_000_000n, equityUsdg: 980_000_000n, equityKnown: true, maxDrawdownBps: 1_000 });
+const CLEAR = drawdownOf({ peakUsdg: (1_000_000_000n * MICRO), equityUsdg: (980_000_000n * MICRO), equityKnown: true, maxDrawdownBps: 1_000 });
 
 const basket = (over: Partial<SteadyBasketConfig> = {}): SteadyBasketConfig => ({
   legs: [
@@ -52,10 +55,8 @@ const basket = (over: Partial<SteadyBasketConfig> = {}): SteadyBasketConfig => (
     { symbol: "NVDA", token: NVDA, weightBps: 3333 },
     { symbol: "TSLA", token: TSLA, weightBps: 3333 },
   ],
-  buyPerTickUsdg: 25_000_000n,
-  idleFloorUsdg: 50_000_000n,
+  buyPerTickUsdg: (25_000_000n * MICRO),
   swapRouter: ROUTER,
-  vault: VAULT,
   usdg: USDG,
   ...over,
 });
@@ -66,20 +67,20 @@ const keel = (over: Partial<EvenKeelConfig> = {}): EvenKeelConfig => ({
   usdg: USDG,
   maxTradeUsdg: 10n ** 12n,
   bandBps: 500,
-  seedBudgetUsdg: 30_000_000n,
+  seedBudgetUsdg: (30_000_000n * MICRO),
   ...over,
 });
 
 const snap = (over: Partial<Snapshot> = {}): Snapshot => ({
-  cashUsdg: 900_000_000n,
+  cashUsdg: (900_000_000n * MICRO),
   vaultUsdg: 0n,
   holdings: new Map(),
   prices: new Map(),
   pausedTokens: new Set(),
   staleFeeds: new Set(),
   sequencerUp: true,
-  spendHeadroomUsdg: 1_000_000_000_000n,
-  perTradeCapUsdg: 1_000_000_000_000n,
+  spendHeadroomUsdg: (1_000_000_000_000n * MICRO),
+  perTradeCapUsdg: (1_000_000_000_000n * MICRO),
   ...over,
 });
 
@@ -88,8 +89,8 @@ const sellsOf = (t: Tick) => t.intents.filter((i) => i.kind === "swap" && i.buyT
 
 /** The real wall, with a 10% limit, standing at the TRIPPED drawdown. */
 const limits: AgentLimits = {
-  perTradeUsdg: 1_000_000_000_000n,
-  dailyUsdg: 1_000_000_000_000n,
+  perTradeUsdg: (1_000_000_000_000n * MICRO),
+  dailyUsdg: (1_000_000_000_000n * MICRO),
   allowedTargets: [ROUTER, VAULT, USDG],
   allowedAssets: [USDG, QQQ, NVDA, TSLA, CATE],
   cashToken: USDG,
@@ -100,8 +101,8 @@ const limits: AgentLimits = {
 const atTripped: AgentState = {
   spentTodayUsdg: 0n,
   opsToday: 0,
-  highWaterMarkUsdg: 1_000_000_000n,
-  equityUsdg: 875_000_000n,
+  highWaterMarkUsdg: (1_000_000_000n * MICRO),
+  equityUsdg: (875_000_000n * MICRO),
   equityKnown: true,
   nowSec: 1_800_000_000,
 };
@@ -115,9 +116,9 @@ describe("the snapshot measures the drawdown the way the wall does", () => {
   it("TRIPPED ON EXACTLY THE BOOKS THE WALL REFUSES A BUY FOR, AND ON NO OTHER", () => {
     // Off in either direction is a tick of refusals, or a strategy gone quiet
     // for a breaker nobody tripped.
-    const buy: TradeIntent = { kind: "swap", target: ROUTER, sellToken: USDG, buyToken: NVDA, sellAmountRaw: 1_000_000n, notionalUsdg: 1_000_000n };
-    for (const peak of [0n, 1n, 999_999n, 1_000_000_000n]) {
-      for (const equity of [0n, 1n, 500_000_000n, 899_999_999n, 900_000_000n, 900_000_001n, 1_000_000_000n, 2_000_000_000n]) {
+    const buy: TradeIntent = { kind: "swap", target: ROUTER, sellToken: USDG, buyToken: NVDA, sellAmountRaw: (1_000_000n * MICRO), notionalUsdg: (1_000_000n * MICRO) };
+    for (const peak of [0n, 1n, (999_999n * MICRO), (1_000_000_000n * MICRO)]) {
+      for (const equity of [0n, 1n, (500_000_000n * MICRO), (899_999_999n * MICRO), (900_000_000n * MICRO), (900_000_001n * MICRO), (1_000_000_000n * MICRO), (2_000_000_000n * MICRO)]) {
         for (const known of [true, false]) {
           for (const max of [0, 1, 1_000, 10_000]) {
             const v = checkPolicy(buy, { ...limits, maxDrawdownBps: max }, { ...atTripped, highWaterMarkUsdg: peak, equityUsdg: equity, equityKnown: known });
@@ -140,11 +141,9 @@ describe("the snapshot measures the drawdown the way the wall does", () => {
 });
 
 describe("steady-basket stops buying and keeps selling", () => {
-  it("A TRIPPED BREAKER PROPOSES NO BUY, NO PARK AND NO CURVE BUY — and says why", () => {
+  it("A TRIPPED BREAKER PROPOSES NO BUY — and says why", () => {
     const t = steadyBasketTick(basket(), snap({ drawdown: TRIPPED }));
     assert.deepEqual(buysOf(t), []);
-    assert.equal(t.intents.some((i) => i.kind === "vault-deposit"), false, "a deposit is not an exit, and the wall refuses it");
-    assert.equal(t.intents.some((i) => i.kind === "curve-trade"), false);
     assert.equal(t.idle?.code, "breaker-tripped");
   });
 
@@ -153,15 +152,10 @@ describe("steady-basket stops buying and keeps selling", () => {
       basket({ takeProfitBps: 1_000 }),
       snap({
         drawdown: TRIPPED,
-        holdings: new Map([["NVDA", { token: NVDA, rawBalance: 10n ** 18n, valueUsdg: 30_000_000n, priceStale: false, costUsdg: 20_000_000n }]]),
+        holdings: new Map([["NVDA", { token: NVDA, rawBalance: 10n ** 18n, valueUsdg: (30_000_000n * MICRO), priceStale: false, costUsdg: (20_000_000n * MICRO) }]]),
       }),
     );
     assert.equal(sellsOf(t).length, 1);
-  });
-
-  it("the unpark still goes too — it brings money home, and the wall never refuses that", () => {
-    const t = steadyBasketTick(basket(), snap({ drawdown: TRIPPED, cashUsdg: 1_000_000n, vaultUsdg: 400_000_000n }));
-    assert.equal(t.intents.some((i) => i.kind === "vault-withdraw"), true);
   });
 
   it("A CLEAR OR UNREAD DRAWDOWN LEAVES THE BASKET EXACTLY AS IT WAS", () => {
@@ -182,9 +176,9 @@ describe("even-keel stops topping up and keeps trimming", () => {
 
   it("NO TOP-UP, but the overweight leg is still trimmed", () => {
     const book = new Map([
-      ["QQQ", { token: QQQ, rawBalance: 10n ** 18n, valueUsdg: 300_000_000n, priceStale: false }],
-      ["NVDA", { token: NVDA, rawBalance: 10n ** 18n, valueUsdg: 100_000_000n, priceStale: false }],
-      ["TSLA", { token: TSLA, rawBalance: 10n ** 18n, valueUsdg: 30_000_000n, priceStale: false }],
+      ["QQQ", { token: QQQ, rawBalance: 10n ** 18n, valueUsdg: (300_000_000n * MICRO), priceStale: false }],
+      ["NVDA", { token: NVDA, rawBalance: 10n ** 18n, valueUsdg: (100_000_000n * MICRO), priceStale: false }],
+      ["TSLA", { token: TSLA, rawBalance: 10n ** 18n, valueUsdg: (30_000_000n * MICRO), priceStale: false }],
     ]);
     const tripped = evenKeelTick(keel(), snap({ drawdown: TRIPPED, holdings: book }));
     assert.deepEqual(buysOf(tripped), []);
@@ -199,31 +193,31 @@ describe("dip-hunter goes quiet and keeps watching", () => {
     legs: [{ symbol: "NVDA", token: NVDA }],
     swapRouter: ROUTER,
     usdg: USDG,
-    buyPerTickUsdg: 25_000_000n,
+    buyPerTickUsdg: (25_000_000n * MICRO),
     minDipBps: 100,
   };
   const priced = (price8: bigint) => new Map([["NVDA", { price8, stale: false, updatedAt: 1, source: "chainlink" as const }]]);
 
   it("A DIP WHILE TRIPPED IS NOT BOUGHT, and the owner hears why", async () => {
     const d = makeDipHunter(cfg);
-    await d.tick(snap({ prices: priced(100_00000000n) }));
-    const t = takeTick(await d.tick(snap({ prices: priced(90_00000000n), drawdown: TRIPPED })));
+    await d.tick(snap({ prices: priced((100_00000000n * MICRO)) }));
+    const t = takeTick(await d.tick(snap({ prices: priced((90_00000000n * MICRO)), drawdown: TRIPPED })));
     assert.deepEqual(t.intents, []);
     assert.equal(t.idle?.code, "breaker-tripped");
   });
 
   it("and the rolling high still moves while it waits", async () => {
     const d = makeDipHunter(cfg);
-    await d.tick(snap({ prices: priced(100_00000000n) }));
-    await d.tick(snap({ prices: priced(200_00000000n), drawdown: TRIPPED }));
-    const t = takeTick(await d.tick(snap({ prices: priced(150_00000000n) })));
+    await d.tick(snap({ prices: priced((100_00000000n * MICRO)) }));
+    await d.tick(snap({ prices: priced((200_00000000n * MICRO)), drawdown: TRIPPED }));
+    const t = takeTick(await d.tick(snap({ prices: priced((150_00000000n * MICRO)) })));
     assert.equal(t.intents.length, 1);
     assert.equal(t.why[0]?.code === "dip" && t.why[0].dipBps, 2_500, "judged from the high it saw while tripped");
   });
 });
 
 describe("weekend-gap does not enter, and still exits at the open", () => {
-  const gap = { legs: [{ symbol: "NVDA", token: NVDA, weightBps: 10_000 }], enterBudgetUsdg: 20_000_000n, swapRouter: ROUTER, usdg: USDG };
+  const gap = { legs: [{ symbol: "NVDA", token: NVDA, weightBps: 10_000 }], enterBudgetUsdg: (20_000_000n * MICRO), swapRouter: ROUTER, usdg: USDG };
 
   it("NO ENTRY AT THE CLOSE while tripped, and the reason", () => {
     const t = weekendGapTick(gap, snap({ staleFeeds: new Set(["NVDA"]), drawdown: TRIPPED }));
@@ -233,7 +227,7 @@ describe("weekend-gap does not enter, and still exits at the open", () => {
   });
 
   it("THE EXIT AT THE OPEN STILL GOES", () => {
-    const held = new Map([["NVDA", { token: NVDA, rawBalance: 10n ** 18n, valueUsdg: 21_000_000n, priceStale: false }]]);
+    const held = new Map([["NVDA", { token: NVDA, rawBalance: 10n ** 18n, valueUsdg: (21_000_000n * MICRO), priceStale: false }]]);
     const t = weekendGapTick(gap, snap({ holdings: held, drawdown: TRIPPED }));
     assert.equal(sellsOf(t).length, 1);
     assert.equal(t.idle, undefined, "nothing was withheld, so there is nothing to explain");
@@ -257,7 +251,7 @@ describe("the Trencher reviews exits only — and pays for no entry review", () 
     entryPrice8: 100_000n,
     entryLiquidityUsd: 100_000,
     entrySec: Math.floor(Date.now() / 1000) - 60,
-    costUsdg: 5_000_000n,
+    costUsdg: (5_000_000n * MICRO),
     qtyRaw: 10n ** 18n,
     ...over,
   });
@@ -307,16 +301,16 @@ describe("the Trencher reviews exits only — and pays for no entry review", () 
 describe("nothing proposed while tripped is something the wall refuses for it", () => {
   it("EVERY BUILTIN, AT THE TRIPPED DRAWDOWN", async () => {
     const book = new Map([
-      ["QQQ", { token: QQQ, rawBalance: 10n ** 18n, valueUsdg: 300_000_000n, priceStale: false, costUsdg: 100_000_000n }],
-      ["NVDA", { token: NVDA, rawBalance: 10n ** 18n, valueUsdg: 100_000_000n, priceStale: false }],
-      ["TSLA", { token: TSLA, rawBalance: 10n ** 18n, valueUsdg: 30_000_000n, priceStale: false }],
+      ["QQQ", { token: QQQ, rawBalance: 10n ** 18n, valueUsdg: (300_000_000n * MICRO), priceStale: false, costUsdg: (100_000_000n * MICRO) }],
+      ["NVDA", { token: NVDA, rawBalance: 10n ** 18n, valueUsdg: (100_000_000n * MICRO), priceStale: false }],
+      ["TSLA", { token: TSLA, rawBalance: 10n ** 18n, valueUsdg: (30_000_000n * MICRO), priceStale: false }],
     ]);
-    const s = snap({ drawdown: TRIPPED, holdings: book, vaultUsdg: 400_000_000n });
+    const s = snap({ drawdown: TRIPPED, holdings: book, vaultUsdg: (400_000_000n * MICRO) });
     const proposed = [
       ...steadyBasketTick(basket({ takeProfitBps: 1_000 }), s).intents,
-      ...steadyBasketTick(basket(), { ...s, cashUsdg: 1_000_000n }).intents,
+      ...steadyBasketTick(basket(), { ...s, cashUsdg: (1_000_000n * MICRO) }).intents,
       ...evenKeelTick(keel(), s).intents,
-      ...weekendGapTick({ legs: basket().legs, enterBudgetUsdg: 20_000_000n, swapRouter: ROUTER, usdg: USDG }, { ...s, staleFeeds: new Set(["NVDA"]) }).intents,
+      ...weekendGapTick({ legs: basket().legs, enterBudgetUsdg: (20_000_000n * MICRO), swapRouter: ROUTER, usdg: USDG }, { ...s, staleFeeds: new Set(["NVDA"]) }).intents,
     ];
     assert.ok(proposed.length > 0, "the exits are still proposed, so the check below has something to check");
     assert.deepEqual(breakerRefused(proposed), []);
@@ -344,12 +338,12 @@ describe("what the owner is told, and what the public is not", () => {
     // last all day while equity drifts every tick; a sentence carrying the
     // drawdown would be a fresh event on every one of them.
     const at = (equityUsdg: bigint) =>
-      breakerIdle({ drawdown: drawdownOf({ peakUsdg: 1_000_000_000n, equityUsdg, equityKnown: true, maxDrawdownBps: 1_000 }) });
-    const a = at(875_000_000n);
-    const b = at(861_300_000n);
+      breakerIdle({ drawdown: drawdownOf({ peakUsdg: (1_000_000_000n * MICRO), equityUsdg, equityKnown: true, maxDrawdownBps: 1_000 }) });
+    const a = at((875_000_000n * MICRO));
+    const b = at((861_300_000n * MICRO));
     assert.ok(a && b);
     assert.equal(renderWhy(a), renderWhy(b));
-    assert.equal(at(990_000_000n), undefined, "and nothing at all once it has recovered");
+    assert.equal(at((990_000_000n * MICRO)), undefined, "and nothing at all once it has recovered");
   });
 
   it("AND IT NEVER BECOMES A PUBLIC POST — account state leaves the public feed", () => {
@@ -357,7 +351,7 @@ describe("what the owner is told, and what the public is not", () => {
     // the idle view saying the same thing must not walk it back in.
     assert.equal(publishesIdle(w), false);
     assert.doesNotMatch(renderWhy(w, "public"), /\/grant|re-sign/);
-    for (const other of [{ code: "ops-spent" }, { code: "budget-spent", capRaw: 25_000_000n }] as Why[]) {
+    for (const other of [{ code: "ops-spent" }, { code: "budget-spent", capRaw: (25_000_000n * MICRO) }] as Why[]) {
       assert.equal(publishesIdle(other), true, `${other.code} still publishes, as it did`);
     }
   });

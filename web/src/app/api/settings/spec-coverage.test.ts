@@ -92,18 +92,6 @@ describe("SETTING_SPECS against PUT /api/settings", () => {
       }
     });
   }
-
-  it("the key that drifted: classExitAtGraduationPct is saved, and out of its bounds is refused, not ignored", async () => {
-    const ok = await put({ classExitAtGraduationPct: 50 });
-    assert.equal(ok.status, 200, JSON.stringify(ok.body));
-    assert.equal(ok.body.ignored, undefined);
-    assert.equal(((await getSettingsStore("spot").get(TENANT)) as Record<string, unknown>).classExitAtGraduationPct, 50);
-    for (const bad of [0, 101]) {
-      const res = await put({ classExitAtGraduationPct: bad });
-      assert.equal(res.status, 400, `${bad}: ${JSON.stringify(res.body)}`);
-      assert.match(res.body.errors?.join(" ") ?? "", /classExitAtGraduationPct/);
-    }
-  });
 });
 
 describe("every perps number against PUT /api/settings?wallet=perps, and a Perps worker on the same values", () => {

@@ -1,4 +1,6 @@
 /** Public index reads for the reply-only recovery service. No cache, keys or account state. */
+// TYPES ONLY: the value import would pull viem into this keyless read graph.
+import type { DATA, bnbChain } from "../../../packages/core/src/chain";
 import { coinBrief, coinFloor, coinHeader, marketBrief, marketFloor, marketHeader, measureCoin, measureMarket, type DeskReads } from "../desk/evidence";
 import { coinChartSvg, marketChartSvg, renderPng } from "../desk/chart";
 import { DeskBudget, type DeskReadOptions } from "../desk/deadline";
@@ -11,7 +13,8 @@ import type { GeckoFetch, GeckoPool, GeckoWindow } from "../venues/geckoterminal
 import type { TgDeskAsk, TgDeskOutcome } from "./tg-groups/types";
 
 const ORIGIN = "https://api.geckoterminal.com/api/v2";
-const NETWORK = "robinhood";
+const NETWORK: typeof DATA.geckoTerminalSlug = "bsc";
+const CHAIN_ID: typeof bnbChain.id = 56;
 export const RECOVERY_PUBLIC_MAX_BYTES = 256 * 1024;
 const WINDOWS: readonly GeckoWindow[] = ["m5", "h1", "h6", "h24"];
 const ADDRESS = /^0x[0-9a-f]{40}$/;
@@ -168,7 +171,7 @@ export function createRecoveryPublicLook(deps: RecoveryPublicTransportDeps = {})
         const row = record(record(result.body).data), a = record(row.attributes);
         if (row.type !== "token" || string(row.id, 80).toLowerCase() !== `${NETWORK}_${token}` || string(a.address, 42).toLowerCase() !== token) return { failed: true };
         const description = cleanDescription(a.description);
-        return { failed: false, observedAt: result.observedAt, ...(description ? { profile: { token: token as `0x${string}`, chainId: 4663 as const, description, source: "GeckoTerminal token info" as const, url: `https://www.geckoterminal.com/robinhood/tokens/${token}`, observedAtMs: result.observedAt } } : {}) };
+        return { failed: false, observedAt: result.observedAt, ...(description ? { profile: { token: token as `0x${string}`, chainId: CHAIN_ID, description, source: "GeckoTerminal token info" as const, url: `https://www.geckoterminal.com/${NETWORK}/tokens/${token}`, observedAtMs: result.observedAt } } : {}) };
       },
     };
     const work = async (): Promise<TgDeskOutcome> => {

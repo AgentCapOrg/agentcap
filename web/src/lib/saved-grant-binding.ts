@@ -22,7 +22,7 @@ export async function trustedSavedGrant(grant: Grant | null, session: Session, o
     const binding = grant.binding;
     const version = binding.version ?? "legacy-wallet-owner-v1";
     if (version !== "legacy-wallet-owner-v1" && version !== "privy-did-owner-v1") return false;
-    if (grant.chainId !== 4663 && grant.chainId !== 46630) return false;
+    if (grant.chainId !== 56 && grant.chainId !== 97) return false;
     const purpose = grantPurpose(grant);
     const common = { origin, nonce: binding.nonce, owner: grant.owner, smartAccount: grant.smartAccount, chainId: grant.chainId, purpose };
     if (version === "privy-did-owner-v1") {
@@ -53,10 +53,10 @@ export async function trustedSavedGrant(grant: Grant | null, session: Session, o
 export function saveRecoveryGrant(grant: Grant): void {
   // Whitelist public renewal inputs; never duplicate a root/session secret or
   // overwrite the full local grant held under agentcap.grant.v1.
-  const { purpose, smartAccount, owner, sessionKeyAddress, caps, grantedAt, expiresAt, chainId, grantFeatures, grantTokens, binding, v4AdapterAddress, ponsAdapterAddress, ponsClassVaultAddress, ponsClassVaultFactoryAddress, trencherVaultAddress, trencherFactoryAddress } = grant;
+  const { purpose, smartAccount, owner, sessionKeyAddress, caps, grantedAt, expiresAt, chainId, grantFeatures, grantTokens, binding, trencherVaultAddress, trencherFactoryAddress } = grant;
   localStorage.setItem(`${RECOVERY_PREFIX}${chainId}.${smartAccount.toLowerCase()}`, JSON.stringify({
     ...(purpose === undefined ? {} : { purpose }),
-    smartAccount, owner, sessionKeyAddress, caps, grantedAt, expiresAt, chainId, grantFeatures, grantTokens, binding, v4AdapterAddress, ponsAdapterAddress, ponsClassVaultAddress, ponsClassVaultFactoryAddress, trencherVaultAddress, trencherFactoryAddress,
+    smartAccount, owner, sessionKeyAddress, caps, grantedAt, expiresAt, chainId, grantFeatures, grantTokens, binding, trencherVaultAddress, trencherFactoryAddress,
   }));
 }
 

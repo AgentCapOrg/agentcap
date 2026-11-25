@@ -18,7 +18,7 @@ import { describe, it } from "node:test";
 import { ParamCondition } from "@zerodev/permissions/policies";
 import { decodeFunctionData, erc20Abi } from "viem";
 import { GasRefused, keyInstallCalls, keyInstallRefusal, perOperationGasProof } from "./executor";
-import { CASH, UNISWAP, buildCallPermissions } from "../../packages/core/src/index";
+import { CASH, PANCAKESWAP, buildCallPermissions } from "../../packages/core/src/index";
 
 const CAPS = { perTradeUsdg: 25, dailyUsdg: 100, maxOpsPerDay: 48, maxDrawdownBps: 2000, ttlDays: 14 };
 const ME = "0x1111111111111111111111111111111111111111" as `0x${string}`;
@@ -56,11 +56,11 @@ describe("the install is one fixed call that moves nothing", () => {
     const calls = keyInstallCalls();
     assert.equal(calls.length, 1);
     const [c] = calls;
-    assert.equal(c!.to.toLowerCase(), CASH.USDG.toLowerCase());
+    assert.equal(c!.to.toLowerCase(), CASH.USDT.toLowerCase());
     assert.equal(c!.value, 0n);
     const d = decodeFunctionData({ abi: erc20Abi, data: c!.data });
     assert.equal(d.functionName, "approve");
-    assert.equal(String(d.args[0]).toLowerCase(), UNISWAP.swapRouter02.toLowerCase());
+    assert.equal(String(d.args[0]).toLowerCase(), PANCAKESWAP.smartRouter.toLowerCase());
     assert.equal(d.args[1], 0n, "an allowance can only go down");
   });
 

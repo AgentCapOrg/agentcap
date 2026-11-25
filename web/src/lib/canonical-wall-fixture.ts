@@ -14,8 +14,8 @@
  *                refusal stands between it and the worker.
  *
  * The stub answers exactly the reads a signer makes — the EntryPoint's
- * getSenderAddress (answered by revert, which is how the real one answers),
- * the class-vault factory, the Trencher factory — and refuses anything else, so
+ * getSenderAddress (answered by revert, which is how the real one answers)
+ * and the Trencher factory — and refuses anything else, so
  * a new read in the signer fails loudly here instead of being guessed at.
  */
 import {
@@ -40,16 +40,14 @@ import { toECDSASigner } from "@zerodev/permissions/signers";
 import {
   CASH,
   accountIndexForPurpose,
-  PONS_CLASS_VAULT_FACTORY,
-  PONS_CLASS_VAULT_FACTORY_ABI,
   TRENCHER_FACTORY_ABI,
-  UNISWAP,
+  PANCAKESWAP,
   WALL_POLICY_FLAG,
   assertDerivedAccount,
   buildWallPolicies,
   grantPurpose,
   grantWallOptions,
-  robinhoodChain,
+  bnbChain,
   type GrantPurpose,
   type StoredGrant,
 } from "@agentcap/core";
@@ -59,17 +57,9 @@ const SENDER_ADDRESS_RESULT = [
   { inputs: [{ name: "sender", type: "address" }], name: "SenderAddressResult", type: "error" },
 ] as const;
 
-/** The mainnet class-vault factory every signer seals by default. */
-export const CLASS_FACTORY = (PONS_CLASS_VAULT_FACTORY[robinhoodChain.id] ?? "").toLowerCase() as Address;
-export const CLASS_VAULT = "0x00000000000000000000000000000000000c1a55" as Address;
 export const TRENCHER_FACTORY = "0x000000000000000000000000000000000000f4c7" as Address;
 export const TRENCHER_VAULT = "0x000000000000000000000000000000000000fa17" as Address;
 const TRENCHER_CODE = "0x60006000fd" as Hex;
-const V4_ADAPTERS = new Set([
-  "0xe0ce6bd81a472f021a9e85392a8008b8786f9218",
-  "0x0000000000000000000000000000000000000a4a",
-]);
-
 // trencher-permission.ts reads the trusted bytecode hash once, when it loads.
 // session.ts is imported lazily below, so this is set before that happens.
 process.env.NEXT_PUBLIC_TRENCHER_FACTORY_CODE_HASH = keccak256(TRENCHER_CODE);
@@ -86,19 +76,13 @@ export interface KernelState {
   reads?: Array<{ method: string; params: unknown[] }>;
   installedNonce?: number | "unreadable";
   unreadableCode?: boolean;
-  v4Code?: Hex | "unreadable";
-  v4PoolManager?: Address | "unreadable";
 }
 function answer(account: Address, method: string, params: unknown[], kernel?: KernelState): RpcAnswer {
   kernel?.reads?.push({ method, params });
-  if (method === "eth_chainId") return { result: toHex(robinhoodChain.id) };
+  if (method === "eth_chainId") return { result: toHex(bnbChain.id) };
   if (method === "eth_blockNumber") return { result: toHex(kernel?.blockNumber ?? 12_345n) };
   if (method === "eth_getCode") {
     const target = String(params[0]).toLowerCase();
-    if (V4_ADAPTERS.has(target)) {
-      return kernel?.v4Code === "unreadable" ? reverted() : { result: kernel?.v4Code ?? "0x6000" };
-    }
-    if (target === UNISWAP.v4PoolManager.toLowerCase()) return { result: "0x6000" };
     if (kernel && String(params[0]).toLowerCase() === account.toLowerCase()) {
       return kernel.unreadableCode ? reverted() : { result: kernel.undeployed ? "0x" : "0x6000" };
     }
@@ -107,10 +91,6 @@ function answer(account: Address, method: string, params: unknown[], kernel?: Ke
   if (method === "eth_call") {
     const { to, data } = params[0] as { to: string; data: Hex };
     const target = to.toLowerCase();
-    if (V4_ADAPTERS.has(target)) {
-      if (kernel?.v4PoolManager === "unreadable") return reverted();
-      return { result: encodeAbiParameters([{ type: "address" }], [kernel?.v4PoolManager ?? UNISWAP.v4PoolManager]) };
-    }
     if (kernel && target === account.toLowerCase()) {
       try {
         const call = decodeFunctionData({ abi: KernelV3_3AccountAbi, data });
@@ -129,24 +109,13 @@ function answer(account: Address, method: string, params: unknown[], kernel?: Ke
     if (target === ENTRY_POINT.address.toLowerCase()) {
       return reverted(encodeErrorResult({ abi: SENDER_ADDRESS_RESULT, errorName: "SenderAddressResult", args: [account] }));
     }
-    if (target === CLASS_FACTORY) {
-      // A v1 factory declares no FACTORY_VERSION, so that read reverts — which
-      // is exactly how probeClassFactory recognises v1.
-      try {
-        const call = decodeFunctionData({ abi: PONS_CLASS_VAULT_FACTORY_ABI, data });
-        if (call.functionName === "vaultFor") return { result: encodeAbiParameters([{ type: "address" }], [CLASS_VAULT]) };
-      } catch {
-        /* not vaultFor */
-      }
-      return reverted();
-    }
     if (target === TRENCHER_FACTORY) {
       const call = decodeFunctionData({ abi: TRENCHER_FACTORY_ABI, data });
       const answers: Record<string, Address> = {
-        cash: CASH.USDG as Address,
-        bridge: CASH.WETH as Address,
-        router: UNISWAP.swapRouter02 as Address,
-        poolFactory: UNISWAP.v3Factory as Address,
+        cash: CASH.USDT as Address,
+        bridge: CASH.WBNB as Address,
+        router: PANCAKESWAP.smartRouter as Address,
+        poolFactory: PANCAKESWAP.v3Factory as Address,
         vaultFor: TRENCHER_VAULT,
       };
       const value = answers[call.functionName];
@@ -201,7 +170,7 @@ export function derivingChain(): { install(): void; restore(): void; state: { do
   let real: typeof fetch | null = null;
   const one = (r: { id: number; method: string; params?: unknown[] }): Record<string, unknown> => {
     const head = { jsonrpc: "2.0", id: r.id };
-    if (r.method === "eth_chainId") return { ...head, result: toHex(robinhoodChain.id) };
+    if (r.method === "eth_chainId") return { ...head, result: toHex(bnbChain.id) };
     if (r.method === "eth_call") {
       const { to, data } = (r.params?.[0] ?? {}) as { to?: string; data?: Hex };
       if (to?.toLowerCase() === ENTRY_POINT.address.toLowerCase() && data) {
@@ -242,8 +211,6 @@ export interface SignerOptions {
   owner?: LocalAccount;
   caps?: StoredGrant["caps"];
   extraTokens?: { symbol: string; address: `0x${string}`; decimals: number }[];
-  v4AdapterAddress?: `0x${string}`;
-  ponsAdapterAddress?: `0x${string}`;
   trencher?: boolean;
   kernel?: KernelState;
   /** A NEW perps opt-in: the public key keygen would have returned. */
@@ -266,7 +233,7 @@ export interface SignerOptions {
  * `purpose: "perps"` is the PAPER PERPS GRANT, made by the same signer
  * (session.ts prepareAgentGrant with the purpose, perps slice 5b): the Perps
  * account at Kernel index 1, its EMPTY Perps wall (core wall.ts perpsOnly, no
- * perp block, no energy buy), `purpose: "perps"`, chain 4663, and no marker,
+ * perp block), `purpose: "perps"`, chain 4663, and no marker,
  * token or sealed address. That is what POST /api/grants accepts
  * (canonical-wall.ts, decision D5), so every server test built on it is a test
  * that the browser and the server agree on the Perps wall. (The stub chain
@@ -281,10 +248,8 @@ export async function signerGrant(o: SignerOptions): Promise<{ grant: StoredGran
       purpose: o.purpose,
       caps: o.caps ?? TEST_CAPS,
       onStatus: () => {},
-      chainId: o.chainId ?? robinhoodChain.id,
+      chainId: o.chainId ?? bnbChain.id,
       extraTokens: o.extraTokens,
-      v4AdapterAddress: o.v4AdapterAddress,
-      ponsAdapterAddress: o.ponsAdapterAddress,
       trencherFactory: o.trencher ? TRENCHER_FACTORY : undefined,
       perp: o.perp,
       previousGrant: o.previousGrant,
@@ -312,7 +277,7 @@ export async function sealWall(args: {
 }): Promise<{ serialized: string; sessionKey: Hex }> {
   const sessionKey = args.sessionKey ?? generatePrivateKey();
   const client = createPublicClient({
-    chain: robinhoodChain,
+    chain: bnbChain,
     transport: custom(
       {
         async request({ method, params }: { method: string; params?: unknown[] }) {
@@ -352,10 +317,6 @@ function wallArgs(g: StoredGrant) {
     smartAccount: g.smartAccount,
     now: g.grantedAt,
     ...grantWallOptions(g),
-    v4AdapterAddress: g.v4AdapterAddress as `0x${string}` | undefined,
-    ponsAdapterAddress: g.ponsAdapterAddress as `0x${string}` | undefined,
-    ponsClassVaultAddress: g.ponsClassVaultAddress,
-    ponsClassVaultFactoryAddress: g.ponsClassVaultFactoryAddress,
     trencherVaultAddress: g.trencherVaultAddress,
     trencherFactoryAddress: g.trencherFactoryAddress,
   };

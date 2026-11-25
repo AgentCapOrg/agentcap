@@ -23,7 +23,6 @@ import { describe, it } from "node:test";
 
 import { checkPolicy, type AgentLimits, type AgentState, type TradeIntent } from "../policy";
 import { heldUnreadOf } from "../unread-held";
-import { classEntryGate } from "../class-entry-gate";
 import { makeDipHunter } from "./dip-hunter";
 import { evenKeelTick, type EvenKeelConfig } from "./even-keel";
 import { publishesIdle, renderWhy } from "./reasons";
@@ -53,9 +52,7 @@ const legs = [
 const basket = (over: Partial<SteadyBasketConfig> = {}): SteadyBasketConfig => ({
   legs,
   buyPerTickUsdg: 25_000_000n,
-  idleFloorUsdg: 50_000_000n,
   swapRouter: ROUTER,
-  vault: VAULT,
   usdg: USDG,
   ...over,
 });
@@ -175,10 +172,9 @@ describe("EVEN-KEEL: a leg it cannot read is not a leg at zero", () => {
 });
 
 describe("the builtins withhold entries and keep their exits", () => {
-  it("STEADY-BASKET: no buy and no park, and the reason; the take-profit still goes", () => {
+  it("STEADY-BASKET: no buy, and the reason; the take-profit still goes", () => {
     const t = steadyBasketTick(basket(), snap({ unreadHeld: UNREAD }));
     assert.deepEqual(buysOf(t), []);
-    assert.equal(t.intents.some((i) => i.kind === "vault-deposit"), false);
     assert.equal(t.idle?.code, "holding-unread");
     const tp = steadyBasketTick(
       basket({ takeProfitBps: 1_000 }),
@@ -207,13 +203,6 @@ describe("the builtins withhold entries and keep their exits", () => {
     assert.equal(t.idle?.code, "holding-unread");
   });
 
-  it("THE CLASS ROUTE: no entries, and the reason when something would have bought", () => {
-    assert.deepEqual(classEntryGate({ snap: snap({ unreadHeld: UNREAD }), routeLooks: true, idle: undefined }), {
-      propose: false,
-      idle: { code: "holding-unread", holdings: 1 },
-    });
-    assert.equal(classEntryGate({ snap: snap(), routeLooks: true, idle: undefined }).propose, true, "the control proposes");
-  });
 });
 
 describe("THE TRENCHER: exits first, then no entry is even asked about", () => {

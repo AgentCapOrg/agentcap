@@ -14,8 +14,8 @@
  * `tick` and `resolvePass` below are index.ts reconcileFlows' steady-state
  * branch (scan off) with the tick's fee ratchet, and resolveStrandedOps' loop,
  * run over the real store with the real functions: resolveSubmittedOps over a
- * fake chain, settleEnergyLanding, lookAtCash, settlementDelta, tickRatchets
- * and accrueAboveHwm. energy-buy-wiring.test.ts pins that index.ts has this
+ * fake chain, lookAtCash, settlementDelta, tickRatchets
+ * and accrueAboveHwm. index.ts has this
  * shape.
  *
  * AND THE BREAKER, which a held look must not switch off: `ratchet` observes
@@ -40,16 +40,16 @@ process.env.AGENTCAP_HOME = HOME;
 const store = await import("./store");
 const { homePaths } = await import("./home");
 const { DatabaseSync } = await import("node:sqlite");
-const { CASH, ENERGY_ROUTE_V1, AGENTCAP_TOKEN, VIRTUAL_TOKEN } = await import("../../packages/core/src/index");
+const { CASH } = await import("../../packages/core/src/index");
 const { TRANSFER_TOPIC } = await import("./deposit-log");
-const { isEnergyRow, settleEnergyLanding, settleTransferLanding } = await import("./energy-settle");
+const { settleTransferLanding } = await import("./transfer-settle");
 const { attributeSettlements, expectedCashUsdg, heldBreakerObservationUsdg, lookAtCash, opsHoldInference, settlementDelta, STRANDED_RESOLVE_WINDOW_SEC, wroteSince } = await import("./flow-inference");
 const { planFirstObservation } = await import("./bootstrap-state");
 const { addressTopic, findDroppedOps, resolveSubmittedOps } = await import("./inflight-reconcile");
 const { tickPlan, tickRatchets } = await import("./command-wake");
 const { accrueAboveHwm } = await import("./fees");
 const { checkPolicy } = await import("./policy");
-type Deps = import("./energy-settle").EnergySettleDeps;
+type Deps = import("./transfer-settle").TransferSettleDeps;
 type ReceiptLog = import("./fills").ReceiptLog;
 type RawLog = import("./inflight-reconcile").RawLog;
 type ReconcileChain = import("./inflight-reconcile").ReconcileChain;
@@ -57,13 +57,13 @@ type Settlement = import("./flow-inference").Settlement;
 
 const ACCOUNT = "0x00000000000000000000000000000000000e0e07";
 const OWNER = "0x00000000000000000000000000000000000000ff";
-const USDG = (CASH.USDG as string).toLowerCase();
-const MERRY = AGENTCAP_TOKEN.address.toLowerCase();
+const USDG = (CASH.USDT as string).toLowerCase();
+const MERRY = "0x00000000000000000000000000000000000000ee";
 const STOCK = "0x000000000000000000000000000000000000aa01";
 const PAIR_A = "0x00000000000000000000000000000000000000b1";
 const PAIR_B = "0x00000000000000000000000000000000000000b2";
 const RISK_ID = "flow-inference-risk";
-const U = 1_000_000n;
+const U = 10n ** 18n;
 const FEE_BPS = 2000;
 const GRANT = {
   smartAccount: ACCOUNT,
@@ -133,12 +133,6 @@ const transfer = (token: string, from: string, to: string, amount: bigint, logIn
   logIndex,
   blockNumber: 9_000_001n,
 });
-const energyLogs = (usdg6: bigint): ReceiptLog[] => [
-  transfer(USDG, ACCOUNT, PAIR_A, usdg6, 17),
-  transfer(VIRTUAL_TOKEN, PAIR_A, PAIR_B, 90n * 10n ** 18n, 18),
-  transfer(MERRY, PAIR_B, MERRY, 200n * 10n ** 18n, 19),
-  transfer(MERRY, PAIR_B, ACCOUNT, 19_800n * 10n ** 18n, 20),
-];
 const swapLogs = (usdg6: bigint): ReceiptLog[] => [
   transfer(USDG, ACCOUNT, PAIR_A, usdg6, 3),
   transfer(STOCK, PAIR_A, ACCOUNT, 10n ** 18n, 4),
@@ -183,11 +177,7 @@ function deps(): Deps {
     agentId: ACCOUNT,
     account: ACCOUNT,
     chainId: 4663,
-    paper: false,
     receiptLogs: async (h) => chain.getReceiptLogs(h),
-    netContributionsUsdg: () => store.getNetContributionsUsdg(ACCOUNT),
-    lifetimePeakUsdg: async () => (await store.getAgentFinancials(ACCOUNT)).hwmUsdg,
-    breakerPeakUsdg: () => store.getRiskPeriodPeak(ACCOUNT),
     book: (f) => store.bookCapitalFlow(f),
     event: async () => {},
     flowBookedForTx: (h) => store.hasFlowForTx(ACCOUNT, h),
@@ -231,8 +221,8 @@ async function record(deltaUsdg: bigint): Promise<void> {
   if (deltaUsdg === 0n) return;
   const out = deltaUsdg < 0n;
   const amount = out ? -deltaUsdg : deltaUsdg;
-  assert.equal(await store.addFlow({ agentId: ACCOUNT, direction: out ? "out" : "in", amountUsdg: Number(amount) / 1e6, source: "inferred", mode: "live" }), true);
-  await store.adjustAgentHwm(ACCOUNT, Number(deltaUsdg) / 1e6);
+  assert.equal(await store.addFlow({ agentId: ACCOUNT, direction: out ? "out" : "in", amountUsdg: Number(amount) / 1e18, source: "inferred", mode: "live" }), true);
+  await store.adjustAgentHwm(ACCOUNT, Number(deltaUsdg) / 1e18);
 }
 
 /**
@@ -296,7 +286,7 @@ async function firstLook(cash: bigint, equity: bigint, readAt: number, listedAt:
     out = plan.action as "resume-clean" | "resume-with-drift";
   } else if (prior !== null) {
     const l = lookAtCash({
-      baselineUsdg: BigInt(Math.round(prior.cashUsdg * 1e6)),
+      baselineUsdg: BigInt(Math.round(prior.cashUsdg * 1e6)) * 10n ** 12n,
       since: prior.at,
       unattributed: false,
       settled,
@@ -326,7 +316,7 @@ async function heldCashBaseline(): Promise<bigint | null> {
   if (proc.lastCash !== null) return expectedCashUsdg({ cashUsdg: proc.lastCash, since: proc.since }, proc.queue);
   if (proc.anchor) return expectedCashUsdg({ cashUsdg: proc.anchor.cashUsdg, since: proc.anchor.observedAt }, proc.queue);
   const prior = await store.lastKnownCashReading(ACCOUNT);
-  return expectedCashUsdg(prior === null ? null : { cashUsdg: BigInt(Math.round(prior.cashUsdg * 1e6)), since: prior.at }, proc.queue);
+  return expectedCashUsdg(prior === null ? null : { cashUsdg: BigInt(Math.round(prior.cashUsdg * 1e6)) * 10n ** 12n, since: prior.at }, proc.queue);
 }
 
 /**
@@ -337,22 +327,22 @@ async function heldCashBaseline(): Promise<bigint | null> {
 async function ratchet(cash: bigint, equity: bigint, held: boolean, readAt: number): Promise<void> {
   const ratchet = tickRatchets(tickPlan("regular"), {
     incomplete: false,
-    curveMarked: 0,
+    
     held,
     ...(held
       ? { breakerObservationUsdg: heldBreakerObservationUsdg({ equityUsdg: equity, cashUsdg: cash, expectedCashUsdg: await heldCashBaseline() }) }
       : {}),
   });
-  await ratchet.riskPeak(Number(equity) / 1e6, (observe) => store.getRiskPeriodPeak(ACCOUNT, observe));
-  const mark = BigInt(Math.round((await peak()) * 1e6));
+  await ratchet.riskPeak(Number(equity) / 1e18, (observe) => store.getRiskPeriodPeak(ACCOUNT, observe));
+  const mark = BigInt(Math.round((await peak()) * 1e6)) * 10n ** 12n;
   const accrual = accrueAboveHwm(equity, mark, proc.doubted ? 0 : FEE_BPS);
   const after = await ratchet.accrue(accrual, mark, async () => {
     proc.fees.push(accrual.feeUsdg);
-    await store.setAgentHwm(ACCOUNT, Number(accrual.newHwmUsdg) / 1e6);
+    await store.setAgentHwm(ACCOUNT, Number(accrual.newHwmUsdg) / 1e18);
   });
   proc.lift = ratchet.breakerLift(proc.lift, mark, after);
   await ratchet.equityRow(({ flowsHeld }) =>
-    store.addEquity(ACCOUNT, { mode: "live", ethWei: 0n, cashUsdg: Number(cash) / 1e6, vaultUsdg: 0, positionsUsdg: Number(equity - cash) / 1e6, equityUsdg: Number(equity) / 1e6, flowsHeld, cashReadAt: readAt }),
+    store.addEquity(ACCOUNT, { mode: "live", ethWei: 0n, cashUsdg: Number(cash) / 1e18, vaultUsdg: 0, positionsUsdg: Number(equity - cash) / 1e18, equityUsdg: Number(equity) / 1e18, flowsHeld, cashReadAt: readAt }),
   );
 }
 
@@ -362,7 +352,7 @@ async function ratchet(cash: bigint, equity: bigint, held: boolean, readAt: numb
  * lifetime mark plus the held lift.
  */
 async function breakerPeak(): Promise<number> {
-  return (await riskPeak()) ?? (await peak()) + Number(proc.lift) / 1e6;
+  return (await riskPeak()) ?? (await peak()) + Number(proc.lift) / 1e18;
 }
 const LIMITS = {
   perTradeUsdg: 1_000n * U,
@@ -377,7 +367,7 @@ const LIMITS = {
 async function buyVerdict(equity: bigint): Promise<{ ok: boolean; rule?: string }> {
   const intent = { kind: "swap", target: PAIR_A, sellToken: USDG, buyToken: STOCK, sellAmountRaw: 1n * U, notionalUsdg: 1n * U } as never;
   return checkPolicy(intent, LIMITS, {
-    highWaterMarkUsdg: BigInt(Math.round((await breakerPeak()) * 1e6)),
+    highWaterMarkUsdg: BigInt(Math.round((await breakerPeak()) * 1e6)) * 10n ** 12n,
     equityUsdg: equity,
     nowSec: nowSec(),
     spentTodayUsdg: 0n,
@@ -399,14 +389,8 @@ async function resolvePass(opts: { failRowWrite?: boolean } = {}): Promise<void>
   });
   for (const r of resolved) {
     const row = mine.find((m) => m.userOpHash === r.userOpHash)!;
-    const energyRow = isEnergyRow(row);
     let capitalBooked: boolean | null = null;
-    if (energyRow && r.success) {
-      if (r.usdgDelta6 === null) continue;
-      const settled = await settleEnergyLanding(deps(), r.txHash as `0x${string}`);
-      if (!settled.proceed) continue;
-      capitalBooked = settled.settled === "booked" || settled.settled === "already";
-    } else if (row.kind === "transfer" && r.success) {
+    if (row.kind === "transfer" && r.success) {
       if (r.usdgDelta6 === null) continue;
       const settled = await settleTransferLanding(deps(), r.txHash as `0x${string}`);
       if (!settled.proceed) continue;
@@ -422,8 +406,7 @@ async function resolvePass(opts: { failRowWrite?: boolean } = {}): Promise<void>
       agent_id: ACCOUNT,
       kind: row.kind,
       target: row.target,
-      ...(energyRow ? { sell_token: row.sellToken, buy_token: row.buyToken } : {}),
-      amount_usdg: r.success && r.attributed ? Number(r.notionalUsdg6) / 1e6 : row.amountUsdg,
+      amount_usdg: r.success && r.attributed ? Number(r.notionalUsdg6) / 1e18 : row.amountUsdg,
       user_op_hash: r.userOpHash,
       tx_hash: r.txHash,
       status: r.success ? "landed" : "reverted",
@@ -456,7 +439,7 @@ let n = 0;
 /** A Kernel-shaped nonce: a 24-byte key over an 8-byte sequence, as the executor records it. */
 const nonceAt = (seq: number) => ((0x0102n << 240n) | BigInt(seq)).toString();
 /**
- * A pre-broadcast row the executor never heard back about. Energy by default,
+ * A pre-broadcast row the executor never heard back about. A transfer home by default,
  * signed with a nonce of its own — so no two rows here share one unless a test
  * says so (`user_op_nonce`).
  */
@@ -464,10 +447,8 @@ async function stranded(over: Record<string, unknown> = {}): Promise<string> {
   const h = `0x${(++n).toString(16).padStart(64, "0")}`;
   await store.addTrade({
     agent_id: ACCOUNT,
-    kind: "energy-buy",
-    target: ENERGY_ROUTE_V1.router,
-    sell_token: USDG,
-    buy_token: MERRY,
+    kind: "transfer",
+    target: OWNER,
     amount_usdg: 10,
     user_op_hash: h,
     user_op_nonce: nonceAt(1_000 + n),
@@ -518,37 +499,6 @@ after(() => {
 });
 
 describe("a stranded op is never inferred as capital", () => {
-  it("A STRANDED ENERGY BUY: held while in flight (no fee, no lifetime peak, a FLAGGED equity row), then ONE energy-buy booking with ONE peak move and nothing inferred", async () => {
-    const op = await stranded();
-    // The purchase landed; the receipt wait timed out. Next tick: cash 90.
-    const tx = lands(op, energyLogs(10n * U));
-    assert.equal(await tick(90n * U), "hold");
-    assert.equal(flowsBy("inferred"), 0, "nothing inferred while the op is in flight");
-    assert.equal(await peak(), 100, "no peak moved on a guess");
-    assert.equal(proc.lastCash, 100n * U, "the baseline is kept, so the interval stays open");
-    assert.equal(equityRows(), 1, "a held tick writes its valuation…");
-    assert.equal(readings(), 0, "…flagged, so its cash is never a restart's baseline");
-    assert.equal(await store.lastKnownCashReading(ACCOUNT), null, "the restart baseline skips it");
-    assert.equal(await tick(90n * U), "hold");
-
-    await resolvePass();
-    assert.equal(flowsBy("energy-buy"), 1);
-    assert.equal(await peak(), 90);
-    assert.equal(await riskPeak(), 90);
-    assert.equal(one<{ s: string }>("SELECT status AS s FROM trades WHERE user_op_hash = ?", op).s, "landed");
-    assert.equal(one<{ t: string }>("SELECT tx_hash AS t FROM trades WHERE user_op_hash = ?", op).t, tx);
-
-    // The next tick folds the purchase's own −10 into the baseline: residual 0.
-    assert.equal(await tick(90n * U), "infer");
-    assert.equal(flowsBy("inferred"), 0, "the settlement explained exactly its own cash");
-    assert.equal(await peak(), 90, "both peaks moved exactly once");
-    assert.equal(await riskPeak(), 90);
-    assert.equal(await store.getNetContributionsUsdg(ACCOUNT), 90);
-    assert.deepEqual(proc.fees, [], "no fee at any point");
-    assert.equal(readings(), 1, "the closing tick writes the first row a baseline may be taken from");
-    assert.equal(equityRows(), 3);
-    assert.deepEqual(await store.lastKnownCashReading(ACCOUNT).then((r) => r?.cashUsdg), 90);
-  });
 
   it("A STRANDED SWAP: its cash leg is never booked as a withdrawal, and the peak never moves", async () => {
     const op = await stranded(swapRow);
@@ -560,21 +510,6 @@ describe("a stranded op is never inferred as capital", () => {
     assert.equal(await peak(), 100, "a trade is not capital");
   });
 
-  it("an energy op whose receipt the resolver cannot read stays 'submitted' — inference stays held, nothing is booked twice", async () => {
-    const op = await stranded();
-    const tx = lands(op, null);
-    assert.equal(await tick(90n * U), "hold");
-    await resolvePass();
-    assert.equal(flowsBy("energy-buy"), 0);
-    assert.equal(one<{ s: string }>("SELECT status AS s FROM trades WHERE user_op_hash = ?", op).s, "submitted");
-    assert.equal(await tick(90n * U), "hold", "still in flight: still held");
-    chainState.receipts.set(tx, energyLogs(10n * U));
-    await resolvePass();
-    assert.equal(await tick(90n * U), "infer");
-    assert.equal(flowsBy("energy-buy"), 1);
-    assert.equal(flowsBy("inferred"), 0);
-    assert.equal(await peak(), 90);
-  });
 
   it("A GENUINE WITHDRAWAL WITH NOTHING IN FLIGHT IS STILL INFERRED — the narrow rule is unchanged", async () => {
     assert.equal(await tick(80n * U), "infer");
@@ -596,7 +531,7 @@ describe("a stranded op is never inferred as capital", () => {
 describe("what a settlement explains is ITS OWN cash — nothing else in the held interval", () => {
   it("DEPOSIT DURING A HOLD: booked as a deposit once the op settles — and never charged a fee, not even on the held ticks", async () => {
     const op = await stranded();
-    lands(op, energyLogs(10n * U));
+    lands(op, transferLogs(10n * U));
     assert.equal(await tick(90n * U), "hold");
     // The owner deposits 500 while the purchase is still unresolved.
     assert.equal(await tick(590n * U), "hold");
@@ -606,7 +541,7 @@ describe("what a settlement explains is ITS OWN cash — nothing else in the hel
 
     await resolvePass();
     assert.equal(await tick(590n * U), "infer");
-    assert.equal(flowsBy("energy-buy"), 1, "the purchase: booked once, by the resolver");
+    assert.equal(flowsBy("transfer-intent"), 1, "the purchase: booked once, by the resolver");
     assert.equal(flowsBy("inferred", "in"), 1, "the deposit: booked");
     assert.equal(inferredIn(), 500, "exactly the deposit — the purchase's −10 was explained by its settlement");
     assert.equal(flowsBy("inferred", "out"), 0);
@@ -696,13 +631,13 @@ describe("what a settlement explains is ITS OWN cash — nothing else in the hel
 
   it("A TRADE RECORDED DURING THE HOLD still explains the interval when it ends — the known limitation, now only for trade intervals", async () => {
     const op = await stranded();
-    lands(op, energyLogs(10n * U));
+    lands(op, transferLogs(10n * U));
     assert.equal(await tick(90n * U), "hold");
     proc.writes += 1; // recordTrade(landed) for an ordinary fill during the hold
     assert.equal(await tick(90n * U), "hold", "the hold is asked BEFORE the write rule");
     await resolvePass();
     assert.equal(await tick(90n * U), "explained");
-    assert.equal(flowsBy("energy-buy"), 1);
+    assert.equal(flowsBy("transfer-intent"), 1);
     assert.equal(flowsBy("inferred"), 0);
     assert.equal(await peak(), 90);
   });
@@ -885,10 +820,10 @@ describe("the first look after a restart follows the same rule", () => {
     assert.equal(readings(), 1, "…flagged, over the last process's reading");
     assert.deepEqual(await store.lastKnownCashReading(ACCOUNT), { cashUsdg: 100, at: T0 }, "which is still the restart's baseline");
 
-    chainState.receipts.set(tx, energyLogs(10n * U));
+    chainState.receipts.set(tx, transferLogs(10n * U));
     await resolvePass();
     assert.equal(await tick(90n * U), "infer");
-    assert.equal(flowsBy("energy-buy"), 1, "booked once, by the resolver");
+    assert.equal(flowsBy("transfer-intent"), 1, "booked once, by the resolver");
     assert.equal(flowsBy("inferred"), 0, "and never as downtime movement");
     assert.equal(await peak(), 90, "one peak move");
     assert.equal(await riskPeak(), 90);
@@ -897,10 +832,10 @@ describe("the first look after a restart follows the same rule", () => {
 
   it("ARM-SETTLED OP + DOWNTIME DEPOSIT: the op explains its own −10, and the owner's +50 is booked (it used to be dropped with the whole delta)", async () => {
     const op = await lastProcessSent();
-    lands(op, energyLogs(10n * U));
+    lands(op, transferLogs(10n * U));
     restart(T0 + 20);
     await resolvePass(); // the arm's resolver settles it
-    assert.equal(flowsBy("energy-buy"), 1);
+    assert.equal(flowsBy("transfer-intent"), 1);
     // Cash: 100 − 10 (the purchase) + 50 (deposited while the worker was down).
     assert.equal(await tick(140n * U), "infer");
     assert.equal(inferredIn(), 50, "exactly the deposit");
@@ -921,9 +856,9 @@ describe("the first look after a restart follows the same rule", () => {
 
   it("A STRANDED OP THE LAST PROCESS'S RESOLVER SETTLED BEFORE IT STOPPED is an earlier write: explained, never booked a second time", async () => {
     const op = await lastProcessSent();
-    lands(op, energyLogs(10n * U));
+    lands(op, transferLogs(10n * U));
     await resolvePass(); // the OLD process's resolver books it and settles the row…
-    assert.equal(flowsBy("energy-buy"), 1);
+    assert.equal(flowsBy("transfer-intent"), 1);
     restart(T0 + 20); // …and it stops before its next look
     assert.equal(await tick(90n * U), "explained");
     assert.equal(flowsBy("inferred"), 0, "its −10 is not downtime movement");
@@ -949,7 +884,7 @@ describe("the first look after a restart follows the same rule", () => {
 
   it("HOSTED RESUME: an arm-settled purchase explains its own drift (resume-clean, nothing doubted); an unresolved one holds the look", async () => {
     const op = await lastProcessSent();
-    lands(op, energyLogs(10n * U));
+    lands(op, transferLogs(10n * U));
     restart(T0 + 20, { cashUsdg: 100n * U, observedAt: T0 });
     await resolvePass();
     assert.equal(await tick(90n * U), "resume-clean", "a −10 drift the settlement explains is no drift");

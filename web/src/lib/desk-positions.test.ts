@@ -72,10 +72,10 @@ async function ledger(withTrades = true) {
       ('0xA','REOPEN','0xreopen','7','1',1,0,'pool',8,0),
       ('0xA','NOBASIS','0xnobasis','1','1',1,0,'pool',3,0);
     INSERT INTO cost_basis VALUES
-      ('0xA','live','CASHCAT','10','10000000',0),
-      ('0xA','live','CHUMP','7','5000000',0),
-      ('0xA','live','REOPEN','7','4000000',0),
-      ('0xA','paper','CASHCAT','10','99000000',0);`);
+      ('0xA','live','CASHCAT','10','10000000000000000000',0),
+      ('0xA','live','CHUMP','7','5000000000000000000',0),
+      ('0xA','live','REOPEN','7','4000000000000000000',0),
+      ('0xA','paper','CASHCAT','10','99000000000000000000',0);`);
   if (withTrades) {
     await db.exec(`CREATE TABLE trades(id INTEGER PRIMARY KEY AUTOINCREMENT, agent_id TEXT, kind TEXT, status TEXT,
         buy_token TEXT, sell_token TEXT, user_op_hash TEXT, decision_id TEXT, fill_side TEXT, fill_qty_raw TEXT,
@@ -101,11 +101,11 @@ describe("the owner's positions, as /api/feed reads them", () => {
     try {
       raw.prepare("INSERT INTO positions VALUES (?,?,?,?,?,?,?,?,?,?)")
         .run("0xA", symbol, token.toUpperCase(), "10", "1", 1.2, 0, "pool", 12, 100);
-      raw.prepare("INSERT INTO cost_basis VALUES (?,?,?,?,?,?)").run("0xA", "live", symbol, "10", "10000000", 100);
-      raw.prepare("INSERT INTO cost_basis VALUES (?,?,?,?,?,?)").run("0xA", "paper", symbol, "10", "99000000", 100);
+      raw.prepare("INSERT INTO cost_basis VALUES (?,?,?,?,?,?)").run("0xA", "live", symbol, "10", "10000000000000000000", 100);
+      raw.prepare("INSERT INTO cost_basis VALUES (?,?,?,?,?,?)").run("0xA", "paper", symbol, "10", "99000000000000000000", 100);
       raw.prepare("INSERT INTO position_floors VALUES (?,?,?,?,?,?,?)").run("0xA", "live", symbol, 800, "first", "protected", 100);
       raw.prepare(`INSERT INTO trades (agent_id, kind, status, buy_token, sell_token, user_op_hash, fill_side, fill_qty_raw, basis_source, created_at)
-        VALUES (?,?,?,?,?,?,?,?,?,?)`).run("0xA", "swap", "landed", token, CASH.USDG, "0xoriginal", "buy", "10", "quote", 100);
+        VALUES (?,?,?,?,?,?,?,?,?,?)`).run("0xA", "swap", "landed", token, CASH.USDT, "0xoriginal", "buy", "10", "quote", 100);
       const before = (await readDeskPositions(db, "0xA", "live")).find(p => p.symbol === symbol)!;
       assert.equal(before.display_symbol, null, "old fill schema still returns the holding");
       raw.exec("ALTER TABLE trades ADD COLUMN fill_symbol TEXT");
@@ -150,7 +150,7 @@ describe("the owner's positions, as /api/feed reads them", () => {
     try {
       const rows = await readDeskPositions(db, "0xA", "live");
       const by = new Map(rows.map((r) => [r.symbol, r]));
-      assert.equal(by.get("CASHCAT")!.cost_usdg, 10, "micro-USDG converted at the boundary");
+      assert.equal(by.get("CASHCAT")!.cost_usdg, 10, "18dp base units converted at the boundary");
       assert.equal(by.get("CASHCAT")!.cost_from_quote, true, "its only fill was booked from the quote — the re-recorded copy is not a second one");
       assert.equal(by.get("CHUMP")!.cost_from_quote, false, "a paper fill and another agent's quote fill are not this book's");
       assert.equal(by.get("REOPEN")!.cost_from_quote, false, "the quote-booked position closed before this one opened");
@@ -208,7 +208,7 @@ describe("the owner's positions, as /api/feed reads them", () => {
          VALUES (?,?,?,?,?,?,?,?,?,?)`,
       );
       raw.exec(`INSERT INTO positions VALUES ('0xA','TSLA','0xtsla','1000','1',1.2,0,'pool',1200,0);
-        INSERT INTO cost_basis VALUES ('0xA','live','TSLA','1000','1000000000',0);`);
+        INSERT INTO cost_basis VALUES ('0xA','live','TSLA','1000','1000000000000000000000',0);`);
       raw.exec("BEGIN");
       ins.run("0xA", "swap", "landed", "0xtsla", "0xusdg", "0xq0", "buy", "1000", "quote", 1);
       for (let i = 0; i < PROVENANCE_ROWS; i++) {

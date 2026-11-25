@@ -56,7 +56,7 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { getAddress } from "viem";
-import { UNISWAP } from "../../../packages/core/src/index";
+import { PANCAKESWAP } from "../../../packages/core/src/index";
 import { readBoundedJson } from "../bounded-read";
 import {
   FLOW_LIMITS,
@@ -170,7 +170,7 @@ export function bitqueryLaneSetup(env: Record<string, string | undefined>): Bitq
 
 // ── the catalogue ───────────────────────────────────────────────────────────
 
-const ROBINHOOD_BID = "bid:robinhood";
+const CHAIN_BID = "bid:bsc";
 
 /**
  * Aggregates for one window, as GraphQL. Built from FLOW_WINDOWS at module
@@ -188,7 +188,7 @@ function windowAggregates(m: number): string {
   ].join("\n      ");
 }
 
-const TOKEN_WHERE = `Pair: {Market: {NetworkBid: {is: "${ROBINHOOD_BID}"}}, Token: {Address: {in: $tokens}}}, Block: {Time: {since: $t60}}`;
+const TOKEN_WHERE = `Pair: {Market: {NetworkBid: {is: "${CHAIN_BID}"}}, Token: {Address: {in: $tokens}}}, Block: {Time: {since: $t60}}`;
 
 /**
  * Three cubes in one request: per-window totals, the venue split over the
@@ -239,13 +239,13 @@ export const TOKEN_FLOW_QUERY = `query AgentCapTokenFlow($tokens: [String!], ${F
 export const CREATOR_FLOW_QUERY = `query AgentCapCreatorFlow($tokens: [String!], $creators: [String!], $since: DateTime) {
   Trading {
     creatorSells: Trades(
-      where: {Pair: {Market: {NetworkBid: {is: "${ROBINHOOD_BID}"}}, Token: {Address: {in: $tokens}}}, Trader: {Address: {in: $creators}}, Side: {is: "Sell"}, Block: {Time: {since: $since}}}
+      where: {Pair: {Market: {NetworkBid: {is: "${CHAIN_BID}"}}, Token: {Address: {in: $tokens}}}, Trader: {Address: {in: $creators}}, Side: {is: "Sell"}, Block: {Time: {since: $since}}}
     ) {
       sells: count(distinct: TransactionHeader_Hash)
       sellUsd: sum(of: AmountsInUsd_Quote)
     }
   }
-  EVM(network: robinhood) {
+  EVM(network: bsc) {
     creatorOut: Transfers(
       where: {Transfer: {Currency: {SmartContract: {in: $tokens}}, Sender: {in: $creators}}, Block: {Time: {since: $since}}}
     ) {
@@ -264,7 +264,7 @@ export const CREATOR_FLOW_QUERY = `query AgentCapCreatorFlow($tokens: [String!],
  * never a route by itself.
  */
 export const V3_POOLS_QUERY = `query AgentCapV3Pools($factory: [String!], $tokens: [String!], $since: DateTime, $limit: Int) {
-  EVM(network: robinhood) {
+  EVM(network: bsc) {
     Events(
       limit: {count: $limit}
       orderBy: {descending: Block_Time}
@@ -322,7 +322,8 @@ function addressOf(v: unknown): `0x${string}` | null {
  * `in` with both costs nothing and removes the question.
  */
 function spellings(a: `0x${string}`): string[] {
-  return [...new Set([a, getAddress(a)])];
+  // Lowercased first: a checksummed constant must not lose the lowercase spelling.
+  return [...new Set([a.toLowerCase(), getAddress(a)])];
 }
 
 function clampInt(v: unknown, min: number, max: number, fallback: number): number {
@@ -375,7 +376,7 @@ export function buildLaneRequest(c: Clamped, now: number): { query: string; vari
     case "creatorFlow":
       return { query: CREATOR_FLOW_QUERY, variables: { tokens: spellings(c.token), creators: spellings(c.creator), since: iso(now - c.windowMin * 60_000) } };
     case "v3Pools":
-      return { query: V3_POOLS_QUERY, variables: { factory: spellings(UNISWAP.v3Factory as `0x${string}`), tokens: spellings(c.token), since: iso(now - c.sinceHours * 3_600_000), limit: c.limit } };
+      return { query: V3_POOLS_QUERY, variables: { factory: spellings(PANCAKESWAP.v3Factory as `0x${string}`), tokens: spellings(c.token), since: iso(now - c.sinceHours * 3_600_000), limit: c.limit } };
   }
 }
 
@@ -497,7 +498,7 @@ export function parseV3Pools(data: unknown, token: string): V3PoolCandidate[] | 
   const events = at(data, "EVM", "Events");
   if (!Array.isArray(events)) return null;
   const want = token.toLowerCase();
-  const factory = UNISWAP.v3Factory.toLowerCase();
+  const factory = PANCAKESWAP.v3Factory.toLowerCase();
   const out: V3PoolCandidate[] = [];
   const seen = new Set<string>();
   for (const ev of events) {

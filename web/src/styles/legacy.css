@@ -668,46 +668,6 @@ button { font: inherit; cursor: pointer; }
 .recover-note b { color: var(--text-dim); }
 .recover-done { display: flex; flex-direction: column; gap: 9px; }
 
-/* ---------- the merry circle (holder tier) panel ---------- */
-.circle-panel { display: flex; flex-direction: column; gap: 9px; }
-.circle-sub { font-size: 11.5px; color: var(--text-dim); line-height: 1.55; }
-.circle-sub b { color: var(--text); }
-.circle-badge {
-  display: flex; align-items: center; gap: 11px;
-  padding: 9px 11px; border-radius: 8px;
-  background: color-mix(in srgb, var(--gold) 9%, transparent);
-  border: 1px solid color-mix(in srgb, var(--gold) 35%, transparent);
-}
-.circle-emoji { font-size: 26px; line-height: 1; }
-.circle-badge-txt { display: flex; flex-direction: column; gap: 2px; }
-.circle-tier-name { font-size: 14px; font-weight: 700; color: var(--gold); letter-spacing: 0.2px; }
-.circle-tier-sub { font-size: 10.5px; color: var(--text-dim); }
-.circle-fee { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; font-size: 12px; color: var(--text-dim); }
-.circle-fee b { color: var(--text); font-size: 13px; }
-.circle-save { font-size: 10.5px; color: var(--green); }
-.circle-perks { list-style: none; display: flex; flex-direction: column; gap: 4px; margin: 2px 0; }
-.circle-perks li { font-size: 11px; line-height: 1.4; color: var(--text-dim); padding-left: 15px; position: relative; }
-.circle-perks li::before { content: "🏹"; position: absolute; left: 0; font-size: 9px; top: 1px; }
-.circle-next { font-size: 11px; line-height: 1.5; color: var(--text-faint); }
-.circle-next b { color: var(--text-dim); }
-.circle-ladder { display: flex; flex-direction: column; gap: 3px; margin-top: 2px; }
-.circle-rung {
-  display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
-  font-size: 10.5px; padding: 5px 8px; border-radius: 5px;
-  background: var(--bg-3); border: 1px solid var(--border);
-}
-.circle-rung.here { border-color: color-mix(in srgb, var(--gold) 55%, transparent); background: color-mix(in srgb, var(--gold) 7%, transparent); }
-.circle-rung-name { color: var(--text-dim); }
-.circle-rung.here .circle-rung-name { color: var(--gold); font-weight: 700; }
-.circle-rung-req { color: var(--text-faint); }
-.circle-set { display: flex; flex-direction: column; gap: 7px; }
-.circle-set-actions { display: flex; gap: 8px; }
-.circle-input {
-  width: 100%; box-sizing: border-box;
-  font-family: var(--mono); font-size: 11.5px; color: var(--text);
-  background: var(--bg-3); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px;
-}
-.circle-input:focus { outline: none; border-color: color-mix(in srgb, var(--gold) 55%, var(--border)); }
 .playground-form {
   display: flex;
   flex-direction: column;

@@ -20,6 +20,7 @@ process.env.AGENTCAP_HOME = testHome;
 const store = await import("./store");
 const { homePaths } = await import("./home");
 const { CASH } = await import("../../packages/core/src/index");
+const { usdt } = await import("./testdata/bnb-cash");
 const { TRANSFER_TOPIC, findTransferFlows } = await import("./deposit-log");
 const { scanAndBookDepositWindow } = await import("./deposit-scan");
 
@@ -28,13 +29,13 @@ const OWNER = "0x00000000000000000000000000000000000d0044" as const;
 const POOL = "0x39e28cde55cab798874746ac52cb4b5cc99a0194" as const;
 const COLLECTOR = "0x00000000000000000000000000000000000d0055" as const;
 const OTHER_TOKEN = "0x00000000000000000000000000000000000d0066" as const;
-const USDG = CASH.USDG as Hex;
+const USDG = CASH.USDT as Hex;
 const RISK = "gloam-funding-risk";
 const GRANT = {
   smartAccount: ACCOUNT,
   owner: OWNER,
   sessionKeyAddress: "0x00000000000000000000000000000000000000fe",
-  chainId: 4663,
+  chainId: 56,
   caps: { perTradeUsdg: 10, dailyUsdg: 50, expiryDays: 14, maxDrawdownPct: 5, maxOpsPerDay: 24 },
   grantedAt: 1_700_000_000,
   expiresAt: 2_000_000_000,
@@ -43,11 +44,12 @@ const topic = (address: string): Hex => `0x${address.slice(2).padStart(64, "0")}
 const hash = (id: number): Hex => `0x${id.toString(16).padStart(64, "0")}`;
 type FixtureLog = RawLog & { address: string };
 
-function transfer(from: string, to: string, amount: bigint, tx: number, index: number, token: string = USDG): FixtureLog {
+/** `micro` is the amount in micro-USDT; the log carries it in base units. */
+function transfer(from: string, to: string, micro: bigint, tx: number, index: number, token: string = USDG): FixtureLog {
   return {
     address: token,
     topics: [TRANSFER_TOPIC, topic(from), topic(to)],
-    data: `0x${amount.toString(16).padStart(64, "0")}`,
+    data: `0x${usdt(micro).toString(16).padStart(64, "0")}`,
     transactionHash: hash(tx), blockNumber: "0x64", logIndex: `0x${index.toString(16)}`,
   };
 }
@@ -76,7 +78,7 @@ const peak = async () => (await store.getAgentFinancials(ACCOUNT)).hwmUsdg;
 const scan = (chain: ReconcileChain) => ({
   chain, smartAccount: ACCOUNT, usdgToken: USDG, fromBlock: 100n, toBlock: 100n,
   // Stale on purpose: durable booking, not this cached set, must deduplicate.
-  knownKeys: new Set<string>(), tradeTxHashes: new Set<string>(), chainId: 4663,
+  knownKeys: new Set<string>(), tradeTxHashes: new Set<string>(), chainId: 56,
 });
 const book = (logs: FixtureLog[], unreadable = false) => scanAndBookDepositWindow(scan(receiptChain(logs, unreadable)), {
   agentId: ACCOUNT, mode: "live",
@@ -136,7 +138,7 @@ describe("Gloam funding receipts are external capital, not trading gains", () =>
     // without moving that peak again, then scan the actual shield-side debit.
     assert.equal(await store.addFlow({
       agentId: ACCOUNT, direction: "in", amountUsdg: 100, source: "chain-log",
-      mode: "live", chainId: 4663, txHash: hash(8), blockNumber: 99, logIndex: 0,
+      mode: "live", chainId: 56, txHash: hash(8), blockNumber: 99, logIndex: 0,
     }), true);
     assert.equal(pnlUsdg(100, await store.getNetContributionsUsdg(ACCOUNT), 0), 0);
     const logs = [transfer(ACCOUNT, POOL, 25_000_000n, 9, 11)];

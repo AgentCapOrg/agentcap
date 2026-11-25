@@ -21,7 +21,7 @@ function idInText(text: string): boolean {
 /** Unknown networks and malformed accounts fail closed instead of borrowing a chain label. */
 export function publicWalletSuffix(wallet: PublicWallet | null | undefined): string | null {
   if (!wallet || !ADDRESS.test(wallet.address)) return null;
-  const chain = wallet.chainId === 4663 ? "Robinhood Chain" : wallet.chainId === 46630 ? "Robinhood Chain Testnet" : null;
+  const chain = wallet.chainId === 56 ? "BNB Chain" : wallet.chainId === 97 ? "BNB Chain Testnet" : null;
   return chain ? `${MARKER}${chain}): ${wallet.address.toLowerCase()}` : null;
 }
 
@@ -50,7 +50,7 @@ export function publicWalletStillAllowed(
 }
 
 /** Where a landed Robinhood Chain transaction is shown. Testnet trades get no link. */
-const TX_BASE = "https://robinhoodchain.blockscout.com/tx/";
+const TX_BASE = "https://bscscan.com/tx/";
 
 /**
  * A CA is a completed trade's exact token contract on its verified execution
@@ -60,8 +60,8 @@ const TX_BASE = "https://robinhoodchain.blockscout.com/tx/";
  * goes on its own line just before it.
  */
 export function publicTokenSuffix(token: PublicWallet | null | undefined, withTx = false): string | null {
-  if (!token || !ADDRESS.test(token.address) || ![4663, 46630].includes(token.chainId)) return null;
-  const tx = withTx && token.chainId === 4663 && typeof token.txHash === "string" && /^0x[0-9a-fA-F]{64}$/.test(token.txHash)
+  if (!token || !ADDRESS.test(token.address) || ![56, 97].includes(token.chainId)) return null;
+  const tx = withTx && token.chainId === 56 && typeof token.txHash === "string" && /^0x[0-9a-fA-F]{64}$/.test(token.txHash)
     ? `\n\n${TX_BASE}${token.txHash.toLowerCase()}` : "";
   return `${tx}\n\n${token.address.toLowerCase()}`;
 }

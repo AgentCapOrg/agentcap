@@ -256,7 +256,7 @@ export type TgPublicFact =
   | { kind: "calculation"; input: ChatMathInput }
   | {
       kind: "site";
-      topic: "overview" | "pnl" | "trades" | "attempts" | "wallet" | "groups" | "limits" | "onboarding" | "funding" | "withdrawals" | "modes" | "v4" | "readiness" | "drawdown" | "privacy" | "capabilities" | "dm-policy";
+      topic: "overview" | "pnl" | "trades" | "attempts" | "wallet" | "groups" | "limits" | "onboarding" | "funding" | "withdrawals" | "modes" | "readiness" | "drawdown" | "privacy" | "capabilities" | "dm-policy";
       /**
        * "capabilities" and "dm-policy" only: what is wired in this process,
        * set by the handler (never from the line), so the list names only

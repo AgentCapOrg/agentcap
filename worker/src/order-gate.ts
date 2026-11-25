@@ -266,25 +266,21 @@ export function createTickBook(): TickBook {
  * WHICH SUBMITTER AN ORDER GOES TO — decided by an explicit marker, never by
  * its symbol.
  *
- * 'energy' is the owner's get-energy card and nothing else: the app writes
- * `purpose: "energy"` as a FIXED value of that one command (chat-commands.ts),
- * POST /api/orders keeps the marker only when it is exactly that string, and
- * the ferry carries it through like any scalar. Every other order is 'trade',
- * resolved against the watch set by address like any order.
+ * 'energy' is RETIRED: the removed get-energy card wrote `purpose: "energy"`.
+ * The marker is still recognised so that such an order, queued before the
+ * removal or sent by a stale client, is refused by name (placeOrder) and never
+ * runs as an ordinary trade: its owner confirmed a different act. Every other
+ * order is 'trade', resolved against the watch set like any order.
  *
- * WHY NOT THE SYMBOL. This used to route every order whose symbol read
- * AGENTCAP to the energy buy: a plain buy card the model wrote for it, a snipe
- * that resolved to a coin with that name, an approved MCP proposal for a
- * watched LOOKALIKE at another address. None of those cards showed the energy
- * disclosure, and the lookalike's owner asked for one asset and would have got
- * another — a key-unsellable one, booked as capital leaving the book. A symbol
- * is a name anybody can launch a token under; a marker only one card writes is
- * a statement of intent.
+ * WHY NOT THE SYMBOL. A symbol is a name anybody can launch a token under; a
+ * marker is a statement of intent.
  *
  * 'close-perp' and 'flatten-perps' are the owner's perpetual exits (perps/
  * owner-order.ts), on the same rule: the marker routes them, never a `-PERP`
  * symbol, and they go to the perp lane rather than to any submitter here.
  */
+export const RETIRED_ENERGY_ORDER_LINE = "Energy top-ups have been removed, so nothing was bought.";
+
 export type OrderRoute = "energy" | "trade" | "close-perp" | "flatten-perps";
 
 export function orderRoute(args: Record<string, unknown> | undefined): OrderRoute {
@@ -308,10 +304,9 @@ export function isPerpExitRoute(route: OrderRoute): route is "close-perp" | "fla
  * half of that, for the day an order lands in the wrong home anyway — a
  * self-hosted file written by hand, a route that forgot its wallet:
  *
- *   PERPS takes the owner's perpetual exits and nothing else. A buy, a sell or
- *   an energy buy would spend the perp book's collateral on tokens (policy.ts
- *   perpsWalletRefusal refuses the intent again, and an energy report on this
- *   wallet never says a buy is ready — energy.ts energyBuyOf).
+ *   PERPS takes the owner's perpetual exits and nothing else. A buy would
+ *   spend the perp book's collateral on tokens (policy.ts perpsWalletRefusal
+ *   refuses the intent again).
  *   SPOT holds no perpetual position, so an exit there has nothing to close
  *   and must never be read as a sell of something else.
  */
@@ -331,7 +326,7 @@ export function walletOrderRefusal(wallet: GrantPurpose, route: OrderRoute): str
  * WHAT AN OWNER ORDER IS FILED UNDER: the decision source and its reason.
  *
  * THE SOURCE IS 'chat' FOR EVERY OWNER-APPROVED ORDER — typed in the app chat,
- * a get-energy card, or an approved MCP proposal. It is not a surface name but
+ * or an approved MCP proposal. It is not a surface name but
  * a class, and three readers key on it: provenance.ts maps it to
  * owner-command, the MCP proposal's own outcome reader finds the proposal's
  * trade by it (web services/proposals.ts orderTrade, `d.source = 'chat'`), and
@@ -341,8 +336,7 @@ export function walletOrderRefusal(wallet: GrantPurpose, route: OrderRoute): str
  * WHERE IT CAME FROM GOES IN THE REASON, read off the args the placing route
  * wrote: POST /api/orders never keeps a `source`, and only the MCP proposal
  * service writes `mcp-proposal`. So an approved proposal is no longer filed as
- * "owner asked … in chat" — and an energy ask is filed as one only when it is
- * one (see orderRoute).
+ * "owner asked … in chat".
  */
 export function orderAsked(
   args: Record<string, unknown> | undefined,
@@ -350,9 +344,6 @@ export function orderAsked(
   symbol: string,
   usdgAmount: number,
 ): { source: "chat"; reason: string } {
-  if (orderRoute(args) === "energy") {
-    return { source: "chat", reason: `owner asked to top up $${symbol} energy on the app's get-energy card — at most ${usdgAmount} USDG` };
-  }
   if (args?.source === "mcp-proposal") {
     return { source: "chat", reason: `owner approved a proposal to ${side} ${usdgAmount} USDG ${symbol}` };
   }
@@ -393,6 +384,8 @@ export async function placeOrder<R>(
   // refused by name at once. The book, for the same reason: a tick that could
   // not read a balance or price a holding returns before equity is composed.
   // The same sentences a Telegram order gets from chatOrderGate.
+  // A RETIRED KIND OF ORDER IS REFUSED, never read as an ordinary buy.
+  if (orderRoute(args) === "energy") return no(RETIRED_ENERGY_ORDER_LINE);
   const unread = unreadRefusal(reads);
   if (unread) return no(unread);
   // PAUSE IS HONOURED HERE, not at the drain. The drain runs above the tick's

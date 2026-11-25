@@ -18,7 +18,10 @@ import {
 } from "./pnl-card";
 import { PNL_GLYPHS } from "./pnl-glyphs";
 
-const usdg = (n: number) => BigInt(Math.round(n * 1e6));
+// 6dp micro figures, scaled to 18dp USDT base units.
+const MICRO = 10n ** 12n;
+
+const usdg = (n: number) => BigInt(Math.round(n * 1e6)) * 10n ** 12n;
 
 const WIN: PnlCardData = {
   symbol: "DOGGOS",
@@ -33,15 +36,15 @@ describe("the numbers on the card are the fill's own arithmetic", () => {
     assert.equal(formatUsdg(usdg(1840.02)), "1840.02");
     assert.equal(formatUsdg(0n), "0.00");
     // Half-up at the second decimal, not truncation.
-    assert.equal(formatUsdg(1_005_000n), "1.01");
-    assert.equal(formatUsdg(1_004_999n), "1.00");
+    assert.equal(formatUsdg((1_005_000n * MICRO)), "1.01");
+    assert.equal(formatUsdg((1_004_999n * MICRO)), "1.00");
   });
 
   it("keeps full precision on sums a float would round", () => {
     // 9,007,199,254.740993 USDG is past 2^53 base units: if this ever goes
     // through Number the last digit is lost, and a P&L card that disagrees
     // with the ledger is worse than no card.
-    assert.equal(formatUsdg(9_007_199_254_740_993n), "9007199254.74");
+    assert.equal(formatUsdg((9_007_199_254_740_993n * MICRO)), "9007199254.74");
   });
 
   it("signs the P&L column and only that column", () => {
@@ -222,7 +225,7 @@ describe("a trade row becomes a card only when it closed something knowable", ()
   it("a near-total loss IS a result, even though it sold for under a cent", () => {
     const card = pnlCardFromFill({ ...sell, fill_cash_usdg: 0.003, realized_pnl_usdg: -4.997 }, "RUGCOIN");
     assert.ok(card);
-    assert.equal(card.investedUsdg, 5_000_000n);
+    assert.equal(card.investedUsdg, (5_000_000n * MICRO));
   });
 
   it("a short address passed as the name still draws nothing", () => {
@@ -259,7 +262,7 @@ describe("a live sale's card follows one rule, wherever it is shown", () => {
 
   it("draws a completed, evidenced live sell under its coin's name, never the row's target", async () => {
     const r = await liveSellCard(live, vouched);
-    assert.deepEqual(r, { kind: "card", card: { symbol: "DOGGOS", investedUsdg: 5_000_000n, proceedsUsdg: 17_390_000n, realisedUsdg: 12_390_000n } });
+    assert.deepEqual(r, { kind: "card", card: { symbol: "DOGGOS", investedUsdg: (5_000_000n * MICRO), proceedsUsdg: (17_390_000n * MICRO), realisedUsdg: (12_390_000n * MICRO) } });
   });
 
   it("refuses paper, a buy, a pending attempt and any other kind, before evidence is read", async () => {

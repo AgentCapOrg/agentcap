@@ -25,7 +25,7 @@ afterEach(() => { Reflect.deleteProperty(globalThis, "localStorage"); dom.window
 async function signedGrant(privy: boolean, wallet: GrantPurpose = "spot", signedFor: GrantPurpose = wallet): Promise<Grant> {
   const grant = {
     ...(wallet === "perps" ? { purpose: "perps" } : {}),
-    smartAccount: wallet === "perps" ? `0x${"d".repeat(40)}` : `0x${"a".repeat(40)}`, owner: owner.address, chainId: 4663,
+    smartAccount: wallet === "perps" ? `0x${"d".repeat(40)}` : `0x${"a".repeat(40)}`, owner: owner.address, chainId: 56,
     sessionKeyAddress: other.address, serialized: "private-session-payload", demoOwnerPrivateKey: "private-owner", demoSessionPrivateKey: "private-session",
     caps: { perTradeUsdg: 10, dailyUsdg: 50, maxOpsPerDay: 24, maxDrawdownPct: 5, expiryDays: 7 }, grantedAt: wallet === "perps" ? 3 : 1, expiresAt: 4,
     ...(wallet === "perps" ? {} : { trencherFactoryAddress: `0x${"b".repeat(40)}`, trencherVaultAddress: `0x${"c".repeat(40)}` }),
@@ -50,7 +50,7 @@ it("a historical signed binding proves local recovery association for the authen
     assert.equal(await trustedSavedGrant(grant, { hosted: true, address: null }, ORIGIN), false);
     assert.equal(await trustedSavedGrant(grant, session, "https://other.example"), false);
     for (const mutation of [
-      { owner: other.address }, { smartAccount: other.address }, { chainId: 46630 }, { binding: undefined },
+      { owner: other.address }, { smartAccount: other.address }, { chainId: 97 }, { binding: undefined },
       { binding: { ...grant.binding!, ownerSignature: "0x1234" } },
       { binding: { ...grant.binding!, version: "unknown" } },
     ]) assert.equal(await trustedSavedGrant({ ...grant, ...mutation } as Grant, session, ORIGIN), false);
@@ -114,7 +114,7 @@ describe("two wallets (perps slice 5b)", () => {
   });
 
   it("a saved record naming a wallet this build does not know blocks a fresh mint in either wallet", () => {
-    localStorage.setItem("agentcap.permission-recovery.v1.4663.0xbad", JSON.stringify({ purpose: "other", smartAccount: "0x1", owner: "0x2", caps: {} }));
+    localStorage.setItem("agentcap.permission-recovery.v1.56.0xbad", JSON.stringify({ purpose: "other", smartAccount: "0x1", owner: "0x2", caps: {} }));
     assert.throws(() => loadRecoveryGrants("spot"), /could not be read/);
     assert.throws(() => loadRecoveryGrants("perps"), /could not be read/);
     assert.throws(() => loadRecoveryGrants("other" as never), /Unrecognised wallet/);

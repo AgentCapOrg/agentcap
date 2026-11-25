@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import { runBacktest } from "./backtest";
 import { buildStrategy, legsForUniverse } from "./strategies/registry";
 import { loadBarsFile } from "../../cli/backtest-bars";
-import { CASH, MORPHO } from "../../packages/core/src/index";
+import { CASH, CASH_UNIT, cashNumber, usdgUnits } from "../../packages/core/src/index";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const [name, ...rest] = process.argv.slice(2);
@@ -49,10 +49,9 @@ if (legs.size === 0) {
 const swapRouter = "0x0000000000000000000000000000000000000001" as const;
 const strategy = buildStrategy(name, {
   swapRouter,
-  usdg6: (v: number) => BigInt(Math.round(v * 1e6)),
+  usdg6: usdgUnits,
   basketSymbols,
   buyPerTickUsdg: 25,
-  idleFloorUsdg: 50,
   gapEnterBudgetUsdg: 100,
   llm: { creds: null, intervalMin: 60, maxActionUsdg: 0 },
 });
@@ -61,12 +60,12 @@ const result = await runBacktest(
   {
     strategy,
     legs,
-    initialCashUsdg: 1_000_000_000n,
+    initialCashUsdg: 1_000n * CASH_UNIT,
     limits: {
-      perTradeUsdg: 500_000_000n,
-      dailyUsdg: 500_000_000n,
-      allowedTargets: [swapRouter, MORPHO.steakhouseUsdgVault as `0x${string}`],
-      allowedAssets: [CASH.USDG as `0x${string}`, ...legs.values()],
+      perTradeUsdg: 500n * CASH_UNIT,
+      dailyUsdg: 500n * CASH_UNIT,
+      allowedTargets: [swapRouter],
+      allowedAssets: [CASH.USDT as `0x${string}`, ...legs.values()],
       maxOpsPerDay: 500,
       maxDrawdownBps: 2000,
       expiresAt: Math.floor(Date.now() / 1000) + 365 * 86_400,
@@ -76,8 +75,8 @@ const result = await runBacktest(
 );
 
 console.log(`\nbacktest: ${name}  (${bars.length} bars)`);
-console.log(`  final equity   ${(Number(result.finalEquityUsdg) / 1e6).toFixed(2)} USDG`);
-console.log(`  pnl            ${(Number(result.pnlUsdg) / 1e6).toFixed(2)} USDG`);
+console.log(`  final equity   ${cashNumber(result.finalEquityUsdg).toFixed(2)} USDG`);
+console.log(`  pnl            ${cashNumber(result.pnlUsdg).toFixed(2)} USDG`);
 console.log(`  max drawdown   ${(result.maxDrawdownBps / 100).toFixed(2)}%`);
 console.log(`  executed       ${result.executed}`);
 if (result.rejected.length) {

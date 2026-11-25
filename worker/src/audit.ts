@@ -26,6 +26,8 @@
  * against a file it did not produce, with no access to ~/.agentcap.
  */
 
+import { usdgUnits } from "../../packages/core/src/wall";
+import { CASH_PER_MICRO, formatCash6 } from "../../packages/core/src/cash";
 import { createHash } from "node:crypto";
 
 /** Must match store.JOURNAL_GENESIS — duplicated so a verifier needs no store. */
@@ -312,16 +314,16 @@ export function receiptDeltas(
   return out;
 }
 
-/** 6dp USDG float → integer units, for comparing against an on-chain amount. */
+/** USDT float → base units, for comparing against an on-chain amount. */
 function toUsdgUnits(v: number): bigint {
-  return BigInt(Math.round(v * 1e6));
+  return usdgUnits(v);
 }
 
 /**
  * Check ONE record against the transaction it names.
  *
- * A tolerance of one unit is allowed on the cash leg because the ledger stores
- * USDG as a float (REAL columns) while the chain is exact — a difference in the
+ * A tolerance of one millionth is allowed on the cash leg because the ledger stores
+ * USDT as a float (REAL columns) while the chain is exact — a difference in the
  * last 6dp digit is a rounding artifact of our own storage, not a discrepancy.
  * Anything larger is reported.
  */
@@ -356,7 +358,7 @@ export function compareRecord(args: {
   if (kind === "flow") {
     const claimed = toUsdgUnits(Number(payload.amountUsdg ?? 0));
     const expected = payload.direction === "in" ? claimed : -claimed;
-    if (absDiff(usdgDelta, expected) > 1n) {
+    if (absDiff(usdgDelta, expected) > CASH_PER_MICRO) {
       findings.push({
         check: "onchain",
         seq,
@@ -374,7 +376,7 @@ export function compareRecord(args: {
     if (typeof cash === "number") {
       const claimed = toUsdgUnits(cash);
       const expected = payload.fillSide === "buy" ? -claimed : claimed;
-      if (absDiff(usdgDelta, expected) > 1n) {
+      if (absDiff(usdgDelta, expected) > CASH_PER_MICRO) {
         findings.push({
           check: "onchain",
           seq,
@@ -420,7 +422,7 @@ function absDiff(a: bigint, b: bigint): bigint {
 }
 
 function fmtUsdg(units: bigint): string {
-  return (Number(units) / 1e6).toFixed(6);
+  return formatCash6(units);
 }
 
 /**

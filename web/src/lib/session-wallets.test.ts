@@ -77,7 +77,7 @@ after(() => {
 
 /** A grant as a browser saved it before Perps existed: no purpose, under agentcap.grant.v1. */
 const PRE_PERPS = JSON.stringify({
-  smartAccount: `0x${"a".repeat(40)}`, owner: `0x${"b".repeat(40)}`, chainId: 4663, demoOwnerPrivateKey: `0x${"1".repeat(64)}`,
+  smartAccount: `0x${"a".repeat(40)}`, owner: `0x${"b".repeat(40)}`, chainId: 56, demoOwnerPrivateKey: `0x${"1".repeat(64)}`,
   caps: TEST_CAPS, grantedAt: 1, expiresAt: 2, grantFeatures: ["tradeable-v2"],
 });
 
@@ -94,7 +94,7 @@ describe("the storage slots", () => {
   });
 
   it("each wallet reads its own slot and its own archives; a Perps grant in Spot's slot is nobody's Spot grant", () => {
-    const perps = { purpose: "perps", smartAccount: PERPS_ACCOUNT, owner: owner.address, chainId: 4663, caps: TEST_CAPS, grantFeatures: [] };
+    const perps = { purpose: "perps", smartAccount: PERPS_ACCOUNT, owner: owner.address, chainId: 56, caps: TEST_CAPS, grantFeatures: [] };
     const archivedPerps = { ...perps, smartAccount: `0x${"c".repeat(40)}` };
     localStorage.setItem("agentcap.grant.v1", PRE_PERPS);
     localStorage.setItem("agentcap.grant.perps.v1", JSON.stringify(perps));
@@ -132,7 +132,7 @@ async function mint(wallet: GrantPurpose | undefined, account: `0x${string}`, fe
     }) as typeof fetch;
     return createPrivyOwnedWallet(owner, DID, {
       ...(wallet ? { purpose: wallet } : {}),
-      caps: TEST_CAPS, onStatus: () => {}, chainId: 4663, hostedAs: owner.address, ...fences,
+      caps: TEST_CAPS, onStatus: () => {}, chainId: 56, hostedAs: owner.address, ...fences,
     });
   });
   return { minted, posts };

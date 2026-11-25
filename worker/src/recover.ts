@@ -16,8 +16,6 @@
  * locally and only the signed op reaches the bundler.
  */
 
-import { classSweepCandidates, findClassVaults, planClassSweep, readClassHoldings } from "./class-recovery";
-import { readClassLog } from "./venues/class-log";
 import {
   createPublicClient,
   encodeFunctionData,
@@ -34,43 +32,9 @@ import { createKernelAccount, createKernelAccountClient } from "@zerodev/sdk";
 import { KERNEL_V3_3, getEntryPoint } from "@zerodev/sdk/constants";
 import { signerToEcdsaValidator } from "@zerodev/ecdsa-validator";
 import { accountIndexForPurpose, type GrantPurpose, assertDerivedAccount } from "../../packages/core/src/index";
-import {
-  CASH,
-  AGENTCAP_TOKEN,
-  MORPHO,
-  STOCK_TOKENS,
-  USDG_DECIMALS,
-  energyReserveTokens,
-  isValidCustomToken,
-  shortAddress,
-} from "../../packages/core/src/index";
+import { CASH, STOCK_TOKENS, CASH_DECIMALS, isValidCustomToken, shortAddress } from "../../packages/core/src/index";
 import { userOpGasConfig } from "./gas";
 import { errorText } from "./redact-urls";
-
-/** Shares are an ERC-4626 position: priced, never counted. Same reads snapshot.ts uses. */
-const VAULT_READS = parseAbi(["function convertToAssets(uint256 shares) view returns (uint256)"]);
-
-/** The vault's unconditional exit. No recipient, no amount: one destination, fixed at construction. */
-const CLASS_VAULT_SWEEP = parseAbi(["function sweep(address token) returns (uint256)"]);
-
-/**
- * The vault owner, read to prove the account can actually sweep it.
- *
- * A PonsClassVault is owned by the SMART ACCOUNT, not by the human — measured
- * on chain, and it is why recovery must arrive as a UserOp. Checking it before
- * signing turns a NotOwner() revert into a refusal that costs nothing.
- */
-const CLASS_VAULT_OWNER = parseAbi(["function owner() view returns (address)"]);
-
-/**
- * How far back recovery reads a vault's history. ~7 days at 0.101 s/block.
- *
- * Bounded because an owner running this is waiting at a prompt. A holding older
- * than the window is NOT lost — it is simply absent from the enumeration, which
- * is why `classNote` says the list may be short rather than implying it is
- * complete.
- */
-const CLASS_RECOVERY_LOOKBACK = 6_000_000n;
 
 export interface TokenBalance {
   symbol: string;
@@ -114,51 +78,6 @@ export interface RecoverPlan {
    * non-empty means the plan is incomplete, not that the account is.
    */
   unreadable: string[];
-  /**
-   * What the CLASS VAULT holds, which the account itself does not.
-   *
-   * A separate field because it is a separate contract and a separate
-   * operation: `sweep` moves a token from the vault to the account, and only
-   * then can the ordinary transfer batch reach it. Reported here so an owner
-   * can SEE it before deciding — `recover-cli` used to say "this account is
-   * empty" about an owner whose whole book was class tokens.
-   */
-  classVault: Address | null;
-  classHoldings: { token: Address; symbol: string; raw: bigint; amount: string; decimals: number }[];
-  /**
-   * Why the class list may be short. Null when it is complete.
-   *
-   * The class book is reconstructed from the vault's own ClassBuy logs, which
-   * is the only source that works with no database and no worker — and a log
-   * scan can be refused. An incomplete list must say so, for the same reason
-   * `unreadable` exists.
-   */
-  classNote: string | null;
-  /**
-   * EVERY vault this account could have, because after v2 there are two.
-   *
-   * `classVault` above is still the PRIMARY one and every existing reader keeps
-   * working through it — with one factory pinned there is exactly one candidate
-   * and the two agree exactly, which is the state on this chain today.
-   *
-   * The second one is not hypothetical and the timing is the point. When an
-   * owner re-signs onto a v2 factory their v1 vault stops being reachable by the
-   * session key, so recovery becomes the only way left to whatever is still
-   * sitting in it. A recovery that looks in one place reports "nothing found"
-   * over a real balance.
-   *
-   * THE SWEEP TARGET TRAVELS WITH THE HOLDING. `sweep(token)` is a call ON a
-   * vault, so a plural book needs a plural target — and the batch is atomic, so
-   * two vaults cannot share one operation without a dead one taking the live one
-   * down with it.
-   */
-  classVaults: {
-    vault: Address;
-    /** 1, 2, or null when the factory is in neither pinned table. Never guessed. */
-    version: 1 | 2 | null;
-    holdings: { token: Address; symbol: string; raw: bigint; amount: string; decimals: number }[];
-    note: string | null;
-  }[];
 }
 
 export interface RecoverResult extends RecoverPlan {
@@ -178,23 +97,7 @@ export interface RecoverResult extends RecoverPlan {
   nativeReservedWei: bigint;
 }
 
-/**
- * What EVERY agent can hold without the owner configuring anything.
- *
- * The vault leg is not optional and its absence was the worst of this: the
- * idle-cash sweep parks most of the float in Morpho on the FIRST tick, so an
- * agent doing exactly what it is designed to do holds almost nothing else — and
- * recovery reported it as an empty account.
- *
- * Vault shares are a plain transferable ERC-20, so they move with the same
- * transfer() as anything else and the owner redeems them at leisure. Their
- * decimals are deliberately NOT guessed at 18: nothing in this repo establishes
- * them, and snapshot.ts goes through convertToAssets precisely to avoid the
- * question. The amount an owner confirms a sweep against must not be a number
- * we made up, so the vault row is priced in USDG instead (see planRecovery).
- *
- * $AGENTCAP IS SWEPT TOO, BUT ONLY WHERE IT EXISTS — see `reserveRows`.
- */
+/** What EVERY agent can hold without the owner configuring anything. */
 interface SweepToken {
   symbol: string;
   address: Address;
@@ -209,35 +112,9 @@ interface SweepToken {
 }
 
 const BUILTIN_SWEEPABLE: SweepToken[] = [
-  { symbol: "USDG", address: CASH.USDG as Address, decimals: USDG_DECIMALS },
+  { symbol: "USDG", address: CASH.USDT as Address, decimals: CASH_DECIMALS },
   ...STOCK_TOKENS.map((t) => ({ symbol: t.symbol, address: t.address as Address, decimals: 18 })),
-  { symbol: "vault", address: MORPHO.steakhouseUsdgVault as Address, decimals: USDG_DECIMALS },
 ];
-
-/**
- * The energy reserve's row(s) on THIS chain — none where it is not deployed.
- *
- * The reserve is the agent's energy: bought into the account on the owner's
- * say-so, and deliberately never watched, never a position and never on any
- * token list the owner configures — so without this row the one command that
- * exists to get money out would leave it behind. A sweep of it moves no USDG,
- * so no capital flow is written, which is right: the reserve left the trading
- * book when it was bought.
- *
- * PER CHAIN, FROM `energyReserveTokens`, never a mainnet constant everywhere.
- * An unconditional row on testnet read `absent` (the mainnet address has no
- * code there) and, worse, TOOK THE NAME: an owner whose own custom token was
- * their testnet "AGENTCAP" had it dropped from the sweep as a symbol collision,
- * and was told nothing was left while it sat in the account. The reserve IS
- * $AGENTCAP wherever it is listed, so its label and decimals are the token's.
- */
-function reserveRows(chainId: number): SweepToken[] {
-  return energyReserveTokens(chainId).map((address) => ({
-    symbol: AGENTCAP_TOKEN.symbol,
-    address: address as Address,
-    decimals: AGENTCAP_TOKEN.decimals,
-  }));
-}
 
 /**
  * The builtin set for this chain plus whatever the owner added themselves.
@@ -251,8 +128,7 @@ function reserveRows(chainId: number): SweepToken[] {
  * AN ADDRESS IS A TOKEN; A SYMBOL IS A LABEL. Same address as a row already
  * here → the same token, already swept, so it is skipped. Same SYMBOL at a
  * different address → a different token, and it is swept: dropping it would
- * strand the owner's money on the one path that exists to rescue it, which is
- * what a builtin $AGENTCAP row did to every other token called AGENTCAP. What
+ * strand the owner's money on the one path that exists to rescue it. What
  * symbol-dedupe was protecting still holds: no two rows carry the same label.
  * The first row keeps the bare symbol — builtins come first, so the curated
  * address always does — and a later one is labelled with its address, so the
@@ -280,12 +156,9 @@ function reserveRows(chainId: number): SweepToken[] {
  * they agree to move money. A short address cannot collide with a ticker (the
  * `…` is outside the ticker alphabet); if two share one, the later gets its
  * full address — the same last resort a named collision takes.
- *
- * `chainId` IS REQUIRED: a caller that forgot it would silently never sweep
- * the reserve on mainnet, or sweep a codeless one elsewhere.
  */
-export function sweepList(chainId: number, extra: readonly unknown[] = []): SweepToken[] {
-  const out = [...BUILTIN_SWEEPABLE, ...reserveRows(chainId)];
+export function sweepList(extra: readonly unknown[] = []): SweepToken[] {
+  const out = [...BUILTIN_SWEEPABLE];
   const floor = out.length;
   const addresses = new Set(out.map((t) => t.address.toLowerCase()));
   const labels = new Set(out.map((t) => t.symbol.toUpperCase()));
@@ -517,7 +390,7 @@ export async function planRecovery(opts: {
     );
   }
 
-  const tokens = sweepList(opts.chain.id, opts.extraTokens);
+  const tokens = sweepList(opts.extraTokens);
   const unreadable: string[] = [];
 
   // THREE OUTCOMES, NOT TWO. A read can succeed, or find no contract at that
@@ -569,8 +442,8 @@ export async function planRecovery(opts: {
   const balances: TokenBalance[] = await Promise.all(
     held.map(async ({ t, raw }) => {
       if (t.decimalsUnknown) {
-        // ITS OWN DECIMALS, asked of the token, for the same reason the vault
-        // row below is priced: an address-only entry used to carry a guessed
+        // ITS OWN DECIMALS, asked of the token, so the amount the owner confirms
+        // is never a number we made up: an address-only entry used to carry a guessed
         // 18, and a 9-decimal memecoin formatted at 18 is shown to the owner a
         // billion times smaller than what they are agreeing to move. Bounded as
         // isValidCustomToken bounds a typed-in figure; outside that, or no
@@ -597,170 +470,9 @@ export async function planRecovery(opts: {
           note: "held, but the token would not state its decimals, so this is its raw count. It sweeps regardless.",
         };
       }
-      if (t.address.toLowerCase() !== (MORPHO.steakhouseUsdgVault as string).toLowerCase()) {
-        return { symbol: t.symbol, address: t.address, raw, decimals: t.decimals, amount: formatUnits(raw, t.decimals) };
-      }
-      // The vault row is priced, not counted. A raw share figure formatted at a
-      // decimals we invented would be a number the owner confirms a real sweep
-      // against — so ask the vault what the shares are worth, and say plainly
-      // when it will not tell us rather than printing something plausible.
-      const assets = await publicClient
-        .readContract({
-          address: t.address,
-          abi: VAULT_READS,
-          functionName: "convertToAssets",
-          args: [raw],
-        })
-        .then((v) => v as bigint)
-        .catch(() => null);
-      if (assets === null) unreadable.push("vault value");
-      return {
-        symbol: t.symbol,
-        address: t.address,
-        raw,
-        decimals: t.decimals,
-        amount: assets === null ? "unknown" : formatUnits(assets, USDG_DECIMALS),
-        note:
-          assets === null
-            ? "Morpho vault shares — held, but the vault would not price them. They sweep regardless."
-            : "Morpho vault shares, shown at their USDG value. The shares move; redeem them at your leisure.",
-      };
+      return { symbol: t.symbol, address: t.address, raw, decimals: t.decimals, amount: formatUnits(raw, t.decimals) };
     }),
   );
-
-  // ── AND WHAT THE CLASS VAULT HOLDS ───────────────────────────────────────
-  //
-  // THE PART THAT HAD TO WORK WITH NOTHING RUNNING. The vault's contents are
-  // enumerated from its own `ClassBuy` logs, not from `class_positions` — that
-  // table lives in a child container's sqlite, and this path exists precisely
-  // for the case where no worker, no orchestrator and no database are available
-  // at all. An owner key and an RPC are the whole dependency list.
-  //
-  // Every failure here is reported and none of it stops the plan: a class vault
-  // that cannot be read must not prevent an owner sweeping the USDG and ETH
-  // they can see.
-  let classVault: Address | null = null;
-  let classHoldings: RecoverPlan["classHoldings"] = [];
-  let classNote: string | null = null;
-  const classVaults: RecoverPlan["classVaults"] = [];
-  try {
-    const lookup = await findClassVaults({
-      client: publicClient,
-      chainId: opts.chain.id,
-      smartAccount: account.address,
-      // NO GRANT. Recovery may run from a pasted key with nothing else, so the
-      // vaults are derived from the factory constants — which is exactly why
-      // those constants are a deploy fact and not a setting.
-      grant: null,
-    });
-    for (const u of lookup.unreadable) {
-      // NAMED PER FACTORY. "class vault" as one label cannot say which of two
-      // could not be asked, and an owner reading it would not know whether the
-      // empty list they are looking at covers one vault or none.
-      unreadable.push(`class vault factory ${u.factory}`);
-      // This failure was returned by findClassVaults, so it never reaches the
-      // catch below. The note also leaves through the recovery route's JSON.
-      classNote = `the class vault factory at ${u.factory} could not be read (${errorText(u.why)}), so this list may be short`;
-    }
-    for (const candidate of lookup.candidates) {
-      const head = await publicClient.getBlockNumber();
-      const from = head > CLASS_RECOVERY_LOOKBACK ? head - CLASS_RECOVERY_LOOKBACK : 0n;
-      const scan = await readClassLog(publicClient, candidate.vault, from, head);
-      /**
-       * TWO SOURCES, BECAUSE THE LOGS CANNOT NAME THE QUOTE ASSET.
-       *
-       * `ClassBuy`/`ClassSell`/`Swept` carry the CLASS token in `token` and the
-       * quote only as an amount — the quote asset's address appears in no event
-       * this contract emits. So a vault holding stranded USDG enumerated from
-       * logs alone reads as holding nothing but its class tokens, and the sweep
-       * that follows moves nothing but those.
-       *
-       * That is not hypothetical. Shogun's vault holds 1,063,408.141815 DOGGOS
-       * and 5.785344 USDG; the DOGGOS came from a ClassBuy and the USDG from a
-       * refund leg that did not land, so only the first was ever disclosed. An
-       * owner confirming that plan is told about one of the two assets they are
-       * being asked to recover.
-       *
-       * The registry list is the same one the ACCOUNT sweep already enumerates,
-       * which is the right answer twice over: it certainly contains the quote
-       * asset, and "the assets we check on the account" is a rule that stays
-       * true as the registry changes rather than a hard-coded USDG address that
-       * would go stale on the next chain.
-       *
-       * Costs one balanceOf per registry token against the vault. An owner is
-       * waiting at a prompt, but they are waiting to be told the truth about
-       * what they own, and `readClassHoldings` already degrades a failed read to
-       * `partial` rather than dropping the token.
-       */
-      const candidates = classSweepCandidates(
-        scan.events.map((e) => e.token),
-        tokens,
-      );
-      const contents = await readClassHoldings({
-        client: publicClient,
-        vault: candidate.vault,
-        candidates,
-      });
-      const holdings = contents.holdings.map((h) => ({
-        token: h.token,
-        symbol: h.symbol,
-        raw: h.raw,
-        decimals: h.decimals,
-        /**
-         * THE TOKEN'S OWN DECIMALS, not the launchpad's.
-         *
-         * This hard-coded 18, which was right while a vault could only hold Pons
-         * launch tokens and became wrong the moment the enumeration also asked
-         * about the quote asset. USDG is 6dp, so a real 5.785344 USDG was shown
-         * to an owner as 0.000000000005785344 USDG — the correct money,
-         * misstated by twelve orders of magnitude, on the screen where they
-         * decide whether to sign.
-         *
-         * The old comment was right that the sweep never uses this number —
-         * `sweep(token)` takes no amount and moves the whole balance. That is
-         * precisely what made it dangerous: a disclosure defect with no
-         * execution symptom, which nothing downstream could have caught.
-         */
-        amount: formatUnits(h.raw, h.decimals),
-      }));
-      let note: string | null = null;
-      if (scan.failed) {
-        note =
-          "the vault's history could not be read in full, so this list may be short — there may be more in the vault than it shows";
-      } else if (scan.unreadable > 0) {
-        // A log this build cannot decode is not an absent log. A v2 vault read
-        // by a v1-era build looks exactly like a vault that never traded.
-        note =
-          `${scan.unreadable} of this vault's own log entries could not be decoded by this build, so its ` +
-          `history is incomplete — update before trusting this list`;
-      } else if (contents.kind === "partial") {
-        note = contents.why;
-      }
-      classVaults.push({ vault: candidate.vault, version: candidate.version, holdings, note });
-    }
-
-    /**
-     * THE PRIMARY VAULT, for every reader that still asks for one address.
-     *
-     * The first candidate that actually HOLDS something, else the first at all.
-     * With one factory pinned there is one candidate and this is exactly the old
-     * behaviour — which is the state on this chain today, so nothing changes
-     * until a second factory is deployed.
-     *
-     * "Holds something" rather than "is first" because the singular field is a
-     * disclosure, and a disclosure that names an empty vault while a full one
-     * goes unmentioned is the failure this plurality exists to remove.
-     */
-    const primary = classVaults.find((v) => v.holdings.length > 0) ?? classVaults[0] ?? null;
-    if (primary) {
-      classVault = primary.vault;
-      classHoldings = primary.holdings;
-      classNote = primary.note ?? classNote;
-    }
-  } catch (e) {
-    classNote = `could not check the class vault: ${errorText(e)}`;
-    unreadable.push("class vault");
-  }
 
   // ── HOW MUCH NATIVE ETH WOULD ACTUALLY LEAVE ────────────────────────────
   //
@@ -796,10 +508,6 @@ export async function planRecovery(opts: {
     nativeRecoverableWei,
     nativeReserveWei,
     unreadable,
-    classVault,
-    classHoldings,
-    classNote,
-    classVaults,
   };
 }
 
@@ -852,39 +560,6 @@ export async function recoverFunds(opts: {
   to: Address;
   expectedSmartAccount?: Address;
   extraTokens?: readonly unknown[];
-  /**
-   * THE CLASS RECOVERY THE OWNER ACTUALLY APPROVED.
-   *
-   * Recovery re-plans internally, so without this the text on the confirmation
-   * and the operation that runs are derived from two different reads. Measured
-   * 2026-09-13: an owner approved a sweep naming 1,063,408.141815 DOGGOS, the
-   * re-plan enumerated no class holdings, the vault leg was quietly skipped and
-   * the account sweep went ahead — 20 USDG and the ETH left, the DOGGOS did
-   * not, and the operation reported success.
-   *
-   * Passing this pins WHAT was approved. It is not trusted as a BALANCE: the
-   * amount comes from a fresh `balanceOf(vault)` immediately before signing.
-   * What it pins is the vault, the token and the destination — identity, not
-   * quantity.
-   */
-  approvedClass?: {
-    vault: Address;
-    tokens: readonly Address[];
-    destination: Address;
-  };
-  /**
-   * A DISCLOSED CLASS SWEEP THAT CANNOT RUN IS FATAL, not a skipped line item.
-   *
-   * Default false, which preserves the existing best-effort contract for the
-   * CLI and for any caller that approved no class leg: a vault that will not
-   * give up its tokens must not strand the USDG and ETH an owner can see.
-   *
-   * True for a browser-confirmed class plan, where the opposite is required —
-   * if the thing the owner was shown cannot happen, nothing should happen,
-   * because the alternative is an operation that succeeds while quietly
-   * omitting the largest holding in it.
-   */
-  requireApprovedClassSweep?: boolean;
 }): Promise<RecoverResult> {
   // REFUSED BEFORE ANYTHING ELSE. An address-only owner can reconstruct the
   // account but cannot authorise a transfer, and finding that out at signing
@@ -925,14 +600,7 @@ export async function recoverFunds(opts: {
     // unaffordable. The tokens still move, which is the larger sum.
   }
 
-  // "NOTHING TO RECOVER" MUST NOT BE SAID OVER A FULL VAULT.
-  //
-  // This read `plan.balances.length === 0 && nativeSweptWei === 0n`, and the
-  // class vault is not in `balances` — it is a different contract holding
-  // tokens the ACCOUNT does not. So an owner whose entire book was class
-  // positions was told their account was empty by the one command that exists
-  // to get money out.
-  if (plan.balances.length === 0 && nativeSweptWei === 0n && plan.classHoldings.length === 0) {
+  if (plan.balances.length === 0 && nativeSweptWei === 0n) {
     return { ...plan, txHash: null, to: opts.to, skipped: [], nativeSweptWei: 0n, nativeReservedWei };
   }
   const ownerAccount = ownerAccountOf(opts.owner);
@@ -981,202 +649,6 @@ export async function recoverFunds(opts: {
   const TRANSFER_ANY_RETURN = parseAbi(["function transfer(address,uint256)"]);
   const skipped: { symbol: string; reason: string }[] = [];
 
-  // ── OP 1: EMPTY THE CLASS VAULT INTO THE ACCOUNT ─────────────────────────
-  //
-  // TWO OPERATIONS, NOT ONE, and `planClassSweep` already argues why: `sweep`
-  // takes no recipient and no amount, so the path out is vault → account →
-  // destination, and the amount arriving is not known until the sweep has run.
-  // A Kernel batch cannot thread call N's return into call N+1's arguments, and
-  // predicting it from a pre-read balance is the tempting option that must not
-  // be taken — a curve token is exactly the asset that moves between the read
-  // and the send, an oversized transfer reverts, and the batch is ATOMIC, so it
-  // would take the USDG and the ETH down with it.
-  //
-  // The window between the two ops is safe because the tokens land in an
-  // account the same key controls: if op 2 fails, rerunning `agentcap recover`
-  // sweeps them as ordinary account balances. That property is what makes two
-  // ops safe and one op not.
-  //
-  // Failures here are REPORTED AND SURVIVED. A vault that will not give up its
-  // tokens must not stop an owner recovering the USDG and ETH they can see.
-  // ── WHAT THE OWNER APPROVED IS WHAT GETS ATTEMPTED ──────────────────────
-  //
-  // The approved intent overrides the re-plan for IDENTITY — which vault, which
-  // tokens, where to. The re-plan is still what it always was for everything
-  // else, and the AMOUNT never comes from either: it comes from a fresh
-  // balanceOf(vault) a moment before signing, below.
-  const approved = opts.approvedClass ?? null;
-  const requireClass = opts.requireApprovedClassSweep === true && approved !== null;
-  // FATAL, BEFORE THE ACCOUNT SWEEP. Each of these says the operation about to
-  // be signed is not the one that was shown, and on a withdrawal that is a
-  // reason to stop rather than to proceed with the part that still works.
-  if (requireClass && approved) {
-    const fail = (why: string): never => {
-      throw new Error(
-        `refusing to recover: ${why}. Nothing has been signed, and your funds are where they were. ` +
-          "Re-open recovery so the confirmation is rebuilt from current state.",
-      );
-    };
-    if (approved.destination.toLowerCase() !== opts.to.toLowerCase()) {
-      fail(`the approved destination was ${approved.destination}, but this call would send to ${opts.to}`);
-    }
-    // MEMBERSHIP, not equality, and this is the only rule here that loosens.
-    //
-    // The plan now names every vault this account could have, so an approval of
-    // the v1 vault is legitimate while `plan.classVault` reports the v2 one. It
-    // is still a closed set derived on THIS side from the account — nothing the
-    // caller supplies can add to it — so an approval naming a vault this account
-    // does not derive is refused exactly as before. Every other check in this
-    // block is untouched.
-    const derivable = plan.classVaults.map((v) => v.vault.toLowerCase());
-    if (!derivable.includes(approved.vault.toLowerCase())) {
-      // The vault is a CREATE2 prediction from the account, so a disagreement
-      // here means the two sides derived different accounts.
-      fail(
-        `the approved class vault was ${approved.vault}, but this account derives ` +
-          `${derivable.length > 0 ? derivable.join(", ") : "none"}`,
-      );
-    }
-    const vaultOwner = (await publicClient
-      .readContract({ address: approved.vault, abi: CLASS_VAULT_OWNER, functionName: "owner" })
-      .catch(() => null)) as Address | null;
-    if (!vaultOwner) fail("the class vault would not say who owns it");
-    if (vaultOwner!.toLowerCase() !== account.address.toLowerCase()) {
-      fail(`the class vault is owned by ${vaultOwner}, not by this account (${account.address})`);
-    }
-  }
-
-  /**
-   * ONE OPERATION PER VAULT, because the batch is atomic.
-   *
-   * `sweep(token)` is a call ON a vault, so the target travels with the holding
-   * and two vaults cannot share one operation. If they did, a dead v1 vault
-   * would take the live v2 recovery down with it and `skipped` could not name
-   * which one failed — the owner would be told the whole class leg failed when
-   * half of it would have worked.
-   *
-   * An APPROVED sweep is narrowed to the one vault that was approved. An
-   * unapproved one (the CLI path) sweeps every vault that holds something,
-   * which is the behaviour an owner running `agentcap recover` expects: get my
-   * money out of wherever it is.
-   */
-  const vaultsToSweep = approved
-    ? plan.classVaults.filter((v) => v.vault.toLowerCase() === approved.vault.toLowerCase())
-    : plan.classVaults.filter((v) => v.holdings.length > 0);
-  for (const target of vaultsToSweep) {
-    await sweepOneVault(target.vault, target.holdings);
-  }
-
-  async function sweepOneVault(
-    classVault: Address,
-    vaultHoldings: RecoverPlan["classHoldings"],
-  ): Promise<void> {
-    if (!classVault || !(requireClass || vaultHoldings.length > 0)) return;
-    // THE AMOUNT IS READ FRESH, ALWAYS. The approved intent names the tokens;
-    // the chain says how many there are, at this moment, so a stale UI figure
-    // can never become a transfer amount.
-    const wanted = approved ? approved.tokens : vaultHoldings.map((h) => h.token);
-    const live: { token: Address; symbol: string; raw: bigint }[] = [];
-    for (const token of wanted) {
-      const raw = (await publicClient
-        .readContract({
-          address: token,
-          abi: erc20Abi,
-          functionName: "balanceOf",
-          args: [classVault],
-        })
-        .catch(() => null)) as bigint | null;
-      if (raw === null) {
-        if (requireClass) {
-          throw new Error(
-            `refusing to recover: could not read the class vault balance of ${token}. ` +
-              "That is not a zero balance, and signing against an unread holding is how one gets stranded. " +
-              "Nothing has been signed.",
-          );
-        }
-        continue;
-      }
-      if (raw === 0n) {
-        if (requireClass) {
-          throw new Error(
-            `refusing to recover: the class vault holds no ${token}, but the confirmation you approved said it did. ` +
-              "Nothing has been signed — re-open recovery so the figures are rebuilt from current state.",
-          );
-        }
-        continue;
-      }
-      const known = plan.classHoldings.find((h) => h.token.toLowerCase() === token.toLowerCase());
-      live.push({
-        token,
-        symbol: known?.symbol ?? `${token.slice(0, 6)}…${token.slice(-4)}`,
-        raw,
-      });
-    }
-    const sweepable = planClassSweep(live);
-    if (requireClass && sweepable.length === 0) {
-      throw new Error(
-        "refusing to recover: the class sweep you approved has nothing it can move. Nothing has been signed.",
-      );
-    }
-    if (sweepable.length > 0) {
-      try {
-        const sent = await client.sendUserOperation({
-          calls: sweepable.map((h) => ({
-            to: classVault,
-            value: 0n,
-            data: encodeFunctionData({
-              abi: CLASS_VAULT_SWEEP,
-              functionName: "sweep",
-              args: [h.token],
-            }),
-          })),
-        });
-        await client.waitForUserOperationReceipt({ hash: sent });
-        // The account now holds them. Re-read so op 2 moves the REAL amount
-        // rather than the one predicted before the sweep ran.
-        for (const h of sweepable) {
-          const raw = (await publicClient
-            .readContract({
-              address: h.token,
-              abi: erc20Abi,
-              functionName: "balanceOf",
-              args: [account.address],
-            })
-            .catch(() => 0n)) as bigint;
-          if (raw > 0n) {
-            plan.balances.push({
-              symbol: h.symbol,
-              address: h.token,
-              raw,
-              decimals: 18,
-              amount: formatUnits(raw, 18),
-              note: "swept out of your class vault by this recovery",
-            });
-          }
-        }
-      } catch (e) {
-        const why = errorText(e);
-        // FATAL WHEN IT WAS APPROVED. Continuing here is what produced an
-        // operation that moved the USDG and the ETH, left 1,063,408 DOGGOS in
-        // the vault, and reported success — the owner having approved a
-        // confirmation that named them.
-        if (requireClass) {
-          throw new Error(
-            `refusing to continue: the class vault sweep you approved failed (${why}). ` +
-              "The account sweep has NOT been attempted, so nothing has moved. Your tokens are still in the vault.",
-          );
-        }
-        // NAMES THE VAULT. With one vault "the class vault sweep failed" was a
-        // complete sentence; with two it is a question the owner cannot answer,
-        // and they would not know which address still holds their tokens.
-        skipped.push({
-          symbol: `class vault ${classVault} (${sweepable.length} token(s))`,
-          reason: `the vault sweep did not go through: ${why}. Your tokens are still in that vault — rerun this command.`,
-        });
-      }
-    }
-  }
-
   const movable: TokenBalance[] = [];
   for (const b of plan.balances) {
     try {
@@ -1192,25 +664,10 @@ export async function recoverFunds(opts: {
       // Redacted: these reasons reach the CLI's output and the web route's JSON,
       // and a viem error names the RPC or bundler URL with its key (redact-urls.ts).
       const msg = errorText(e);
-      // NOT EVERY REVERT IS A TOKEN REFUSING TO MOVE.
-      //
-      // This regex was written when every leg was `token.transfer(...)`, where a
-      // revert really does mean "this token will not move and the others still
-      // should". Once a leg can be `vault.sweep(token)` the same regex swallows
-      // a revert that means something completely different:
-      //
-      //   NotOwner()  — we are asking the WRONG VAULT. A different owner key, a
-      //                 stale factory constant, or another account's vault. The
-      //                 class book is untouched and the sweep would report
-      //                 success, which is the failure this whole path exists to
-      //                 prevent. Abort and name it.
-      //   ZeroAmount() — an empty balance. Filtered out before the batch is
-      //                 built; reaching here means a balance moved between the
-      //                 read and the simulation, which is ordinary.
-      //
-      // Everything else keeps the original behaviour, including the fail-open
-      // below: on an escape hatch, attempting a move that might fail beats
-      // leaving money behind because a network call flaked.
+      // NOT EVERY REVERT IS A TOKEN REFUSING TO MOVE. NotOwner() says this key
+      // is asking about something it does not own: abort and name it. Everything
+      // else keeps the fail-open below: on an escape hatch, attempting a move
+      // that might fail beats leaving money behind because a network call flaked.
       if (/NotOwner/.test(msg)) {
         throw new Error(
           `refusing to sweep: ${b.symbol} at ${b.address} answered NotOwner(). This owner key does ` +

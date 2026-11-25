@@ -65,14 +65,17 @@ const wallOfWidth = (extra: number) =>
   );
 
 /**
- * SHOGUN'S WALL IS THREE SLOTS WIDER THAN THE DEFAULT, and that is the whole of
- * what the model sees. The class vault's buy, approve and factory-deploy
- * permissions cost the same 512 bytes apiece that a custom token costs, so the
- * recorded sweep (0 -> 10,932, 1 -> 11,444, 5 -> 13,492) puts this wall at
- * 12,468 bytes. Asserted rather than assumed, below.
+ * THE WALLS THE ESTIMATES BELOW WERE MEASURED AGAINST. SHOGUN'S WAS THREE
+ * SLOTS WIDER THAN THE DEFAULT OF ITS DAY (the recorded sweep: 0 -> 10,932,
+ * 1 -> 11,444, 5 -> 13,492, so 12,468 bytes). Neither wall can be built any
+ * more: the routes they carried are gone, and today's wall is smaller
+ * (first-enable-gas.test.ts). An estimate belongs to the wall it was measured
+ * on, so these two keep their recorded stub size; the rest of the shape is not
+ * read by the envelope. Not re-measured on BNB Chain.
  */
-const SHOGUN_WALL = wallOfWidth(3);
-const DEFAULT_WALL = wallOfWidth(0);
+const recordedWall = (stubBytes: number) => ({ ...wallOfWidth(0), stubBytes });
+const SHOGUN_WALL = recordedWall(12_468);
+const DEFAULT_WALL = recordedWall(10_932);
 
 /**
  * TRANSCRIBED FROM THE `[gas]` LINES THEMSELVES, not from a reconstruction:
@@ -127,10 +130,11 @@ const bound = (g: UserOpGas, bounds: ReturnType<typeof firstEnableBounds> | type
   boundGas(g, g, bounds, sponsoredOf(g));
 
 describe("the observed estimates, reproduced", () => {
-  it("Shogun's wall is 12,468 stub bytes — the recorded default plus three slots", () => {
-    assert.equal(DEFAULT_WALL.stubBytes, 10_932, "the recorded 0-token sweep point");
-    assert.equal(SHOGUN_WALL.stubBytes, 12_468);
-    assert.equal(SHOGUN_WALL.stubBytes - DEFAULT_WALL.stubBytes, 3 * 512);
+  it("today's wall is smaller than the one Shogun's estimates were measured on", () => {
+    // If a wall ever grows past the recorded one, the headroom shown below no
+    // longer covers it and the sweep has to be measured again.
+    assert.ok(wallOfWidth(0).stubBytes <= DEFAULT_WALL.stubBytes);
+    assert.ok(wallOfWidth(3).stubBytes <= SHOGUN_WALL.stubBytes);
   });
 
   it("the envelope predicts the WALL, and the wall fits it with room to spare", () => {

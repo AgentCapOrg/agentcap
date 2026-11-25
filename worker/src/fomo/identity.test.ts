@@ -6,7 +6,7 @@ import {
   executionAvailabilityOf,
   filterCheckIdentity,
   isRobinhoodToken,
-  robinhoodChain,
+  bnbChain,
   tokenFromKey,
   tokenIdentity,
   verifyChainFilter,
@@ -50,17 +50,17 @@ describe("chain identity from provider rows", () => {
 
 describe("token identity", () => {
   it("lowercases EVM addresses and keys them by network", () => {
-    const rh = tokenIdentity(robinhoodChain(), EVM)!;
+    const rh = tokenIdentity(bnbChain(), EVM)!;
     assert.equal(rh.address, EVM.toLowerCase());
-    assert.equal(rh.key, `eip155:4663:${EVM.toLowerCase()}`);
+    assert.equal(rh.key, `eip155:56:${EVM.toLowerCase()}`);
     const base = tokenIdentity(chainFromProvider(8453, "base"), EVM)!;
     assert.notEqual(base.key, rh.key, "the same hex on two EVM networks is two tokens");
   });
 
 
   it("refuses addresses that do not fit the chain", () => {
-    assert.equal(tokenIdentity(robinhoodChain(), "0x1234"), null);
-    assert.equal(tokenIdentity(robinhoodChain(), "PEPE"), null);
+    assert.equal(tokenIdentity(bnbChain(), "0x1234"), null);
+    assert.equal(tokenIdentity(bnbChain(), "PEPE"), null);
   });
 
   it("an EVM address on an unknown chain is kept but never executable", () => {
@@ -72,14 +72,15 @@ describe("token identity", () => {
   });
 
   it("round-trips keys", () => {
-    const t = tokenIdentity(robinhoodChain(), EVM)!;
+    const t = tokenIdentity(bnbChain(), EVM)!;
     assert.deepEqual(tokenFromKey(t.key), t);
     assert.equal(tokenFromKey("eip155:4663:nonsense"), null);
   });
 
   it("classifies execution availability separately from research", () => {
-    const rh = tokenIdentity(robinhoodChain(), EVM)!;
-    const bnb = tokenIdentity(chainFromProvider(56, "bsc"), MINT)!;
+    const rh = tokenIdentity(bnbChain(), EVM)!;
+    // Robinhood Chain is research only now: BNB Chain is the one we trade.
+    const bnb = tokenIdentity(chainFromProvider(4663, "robinhood"), MINT)!;
     assert.equal(executionAvailabilityOf(null, { routeVerified: true, permitted: true }), "unresolved-identity");
     assert.equal(executionAvailabilityOf(bnb, { routeVerified: true, permitted: true }), "unsupported-chain");
     assert.equal(executionAvailabilityOf(rh, { routeVerified: null, permitted: true }), "unsupported-venue");
@@ -90,12 +91,12 @@ describe("token identity", () => {
 
 describe("chain filter verification", () => {
   it("detects a filter the provider ignored", () => {
-    const rh = tokenIdentity(robinhoodChain(), EVM);
-    const bnb = tokenIdentity(chainFromProvider(56, "bsc"), MINT);
-    assert.deepEqual(verifyChainFilter(robinhoodChain(), [rh, rh]), { honoured: true, offending: 0, unplaced: 0 });
-    assert.equal(verifyChainFilter(robinhoodChain(), [rh, bnb]).honoured, false);
-    assert.equal(verifyChainFilter(robinhoodChain(), [null, null]).honoured, null);
-    assert.equal(verifyChainFilter(robinhoodChain(), [rh, null]).honoured, false);
+    const rh = tokenIdentity(bnbChain(), EVM);
+    const bnb = tokenIdentity(chainFromProvider(4663, "robinhood"), MINT);
+    assert.deepEqual(verifyChainFilter(bnbChain(), [rh, rh]), { honoured: true, offending: 0, unplaced: 0 });
+    assert.equal(verifyChainFilter(bnbChain(), [rh, bnb]).honoured, false);
+    assert.equal(verifyChainFilter(bnbChain(), [null, null]).honoured, null);
+    assert.equal(verifyChainFilter(bnbChain(), [rh, null]).honoured, false);
   });
 });
 
@@ -118,7 +119,7 @@ describe("network ids observed live but not documented (2026-10-04)", () => {
   it("an EVM address on a numbered but unknown network keeps the number, so two networks stay two tokens", () => {
     const odd = tokenIdentity(chainFromProvider(777_777, undefined), EVM)!;
     assert.equal(odd.key, `eip155:777777:${EVM.toLowerCase()}`);
-    const bnb = tokenIdentity(chainFromProvider(56, undefined), EVM)!;
+    const bnb = tokenIdentity(chainFromProvider(4663, undefined), EVM)!;
     const eth = tokenIdentity(chainFromProvider(1, undefined), EVM)!;
     assert.notEqual(bnb.key, eth.key);
     assert.equal(isRobinhoodToken(bnb), false);
@@ -148,7 +149,7 @@ describe("network ids observed live but not documented (2026-10-04)", () => {
     assert.equal(requested.namespace, "unknown");
     const row = tokenIdentity(requested, EVM);
     assert.equal(verifyChainFilter(requested, [row]).honoured, true);
-    assert.equal(verifyChainFilter(requested, [tokenIdentity(robinhoodChain(), EVM)]).honoured, false);
+    assert.equal(verifyChainFilter(requested, [tokenIdentity(bnbChain(), EVM)]).honoured, false);
   });
 });
 

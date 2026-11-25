@@ -16,7 +16,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { createPublicClient, custom, decodeFunctionData, encodeFunctionResult, erc20Abi, keccak256, multicall3Abi, type Hex, type PublicClient } from "viem";
-import { CASH, UNISWAP, GRANT_TRENCHER, robinhoodChain, type StoredGrant } from "../../packages/core/src/index";
+import { CASH, PANCAKESWAP, GRANT_TRENCHER, bnbChain, type StoredGrant } from "../../packages/core/src/index";
 import { POOL_REFUSAL_TTL_MS, TrencherPoolCache, discoverTrencherUniverse } from "./trencher-discovery";
 import { CoalescedRefresh } from "./coalesced-refresh";
 import { emptyGeckoBuckets, type GeckoPool } from "./venues/geckoterminal";
@@ -34,7 +34,7 @@ function tape(n: number, from = 1): GeckoPool[] {
     return {
       tokenAddress: `0x${"a".repeat(36)}${hex}`, poolAddress: `0x${"b".repeat(36)}${hex}`, poolId: `0x${"b".repeat(36)}${hex}`,
       priceUsd: 0.01, reserveUsd: 200_000, fdvUsd: 1_000_000, change24hPct: 5, change1hPct: 1, createdAt: 1000,
-      dex: "uniswap-v3-robinhood", name: `COIN${i + from} / USDG`, volume24hUsd: 10_000_000 - (i + from) * 10_000,
+      dex: "pancakeswap-v3-bsc", name: `COIN${i + from} / USDG`, volume24hUsd: 10_000_000 - (i + from) * 10_000,
       buyers24h: 50, buys24h: 100, sells24h: 80,
       buckets: { ...emptyGeckoBuckets(), m5: { volumeUsd: 1000, changePct: 2, buys: 10, sells: 8, buyers: 9, sellers: 8 } },
     } as GeckoPool;
@@ -60,9 +60,9 @@ function chain() {
     const a = address.toLowerCase();
     if (s.pools.has(a)) {
       if (s.failing.has(a)) throw new Error("RPC unavailable");
-      if (functionName === "token0") return s.quote.get(a) ?? CASH.USDG;
+      if (functionName === "token0") return s.quote.get(a) ?? CASH.USDT;
       if (functionName === "token1") return s.pools.get(a);
-      if (functionName === "fee") return 3000;
+      if (functionName === "fee") return 2500;
     }
     if (functionName === "getPool") {
       const coin = String(args?.[1] ?? "").toLowerCase();
@@ -79,7 +79,7 @@ function chain() {
       if (s.tokens instanceof Error) throw s.tokens;
       return s.tokens;
     }
-    const fixed: Record<string, unknown> = { cash: CASH.USDG, bridge: CASH.WETH, router: UNISWAP.swapRouter02, poolFactory: UNISWAP.v3Factory, vaultFor: vault, owner, VERSION: 1n };
+    const fixed: Record<string, unknown> = { cash: CASH.USDT, bridge: CASH.WBNB, router: PANCAKESWAP.smartRouter, poolFactory: PANCAKESWAP.v3Factory, vaultFor: vault, owner, VERSION: 1n };
     if (fixed[functionName] === undefined) throw new Error(`Unexpected read ${functionName}`);
     return fixed[functionName];
   };
@@ -151,7 +151,7 @@ test("decimals use one actual aggregate3 request even with a small client batch 
   c.add(pools);
   const requestSizes: number[] = [];
   const wire = createPublicClient({
-    chain: robinhoodChain,
+    chain: bnbChain,
     // One decimals() selector fits in this default. Discovery must explicitly
     // keep the pass together rather than rely on a caller's batch settings.
     batch: { multicall: { batchSize: 4 } },
@@ -215,7 +215,7 @@ test("changing the connection discards cached evidence and a discovery already i
   worker.tick();
   await new Promise(resolve => setImmediate(resolve));
   const old = pending[0]!;
-  old.cache.rememberVerified(factory, vault, { token0: CASH.USDG, token1: owner, fee: 3000 });
+  old.cache.rememberVerified(factory, vault, { token0: CASH.USDT, token1: owner, fee: 2500 });
   worker.reconnect();
   worker.tick(); // A new connection while the old pass runs owes one new pass.
   assert.notEqual(worker.snapshot().cache, old.cache);
@@ -262,7 +262,7 @@ test("A NEW POOL IS FULLY VERIFIED, and a remembered one is re-checked against w
   assert.ok(!claimed.qualified.some(p => p.tokenAddress === misattributed.tokenAddress), "and a coin not in its pair is not admitted");
 
   // The canonical answer belongs to one factory.
-  assert.ok(cache.verified(UNISWAP.v3Factory, known.poolAddress!));
+  assert.ok(cache.verified(PANCAKESWAP.v3Factory, known.poolAddress!));
   assert.equal(cache.verified(stranger, known.poolAddress!), undefined);
 });
 
@@ -290,7 +290,7 @@ test("A HOLDINGS READ THAT FAILS STILL ABORTS THE PASS, however warm the cache",
   c.s.decimals.clear();
   c.s.decimals.set(pools[1]!.tokenAddress.toLowerCase(), 40);
   const refused = await discoverTrencherUniverse(c.client, grant, pools, { cache });
-  assert.ok(cache.verified(UNISWAP.v3Factory, pools[1]!.poolAddress!), "its pool is still a proved pool");
+  assert.ok(cache.verified(PANCAKESWAP.v3Factory, pools[1]!.poolAddress!), "its pool is still a proved pool");
   assert.ok(!refused.tokens.some(x => x.address === pools[1]!.tokenAddress), "but the coin is not admitted");
 });
 
@@ -325,7 +325,7 @@ test("A POOL THAT FAILED ONCE IS NOT TREATED AS VERIFIED", async (t) => {
   const first = await discoverTrencherUniverse(c.client, grant, all, { cache });
   assert.equal(first.qualified.length, 0);
   assert.equal(cache.size().verified, 0, "no refusal and no failed read is stored as a verification");
-  for (const p of all) assert.equal(cache.verified(UNISWAP.v3Factory, p.poolAddress!), undefined, p.name);
+  for (const p of all) assert.equal(cache.verified(PANCAKESWAP.v3Factory, p.poolAddress!), undefined, p.name);
 
   // Within the refusal window the chain's answers are not re-asked, and even a
   // chain that would now say yes does not admit them: nothing was proved.
@@ -340,7 +340,7 @@ test("A POOL THAT FAILED ONCE IS NOT TREATED AS VERIFIED", async (t) => {
   // A failed READ is not an answer: it is asked again on the very next pass,
   // and qualifies only by passing every check from scratch.
   assert.deepEqual(c.readsOf(flaky!).sort(), ["fee", "token0", "token1"].map(f => `${f}@${flaky!.poolAddress!.toLowerCase()}`).sort());
-  assert.ok(c.s.calls.includes(`getPool@${UNISWAP.v3Factory.toLowerCase()}`));
+  assert.ok(c.s.calls.includes(`getPool@${PANCAKESWAP.v3Factory.toLowerCase()}`));
   assert.ok(second.qualified.some(p => p.tokenAddress === flaky!.tokenAddress));
 
   // After the window, the refused pools are checked from scratch — the full
@@ -356,7 +356,7 @@ test("A POOL THAT FAILED ONCE IS NOT TREATED AS VERIFIED", async (t) => {
 
 test("the cache is bounded, oldest first", () => {
   const cache = new TrencherPoolCache({ maxEntries: 2 });
-  const facts = { token0: CASH.USDG as `0x${string}`, token1: vault as `0x${string}`, fee: 3000 };
+  const facts = { token0: CASH.USDT as `0x${string}`, token1: vault as `0x${string}`, fee: 2500 };
   cache.rememberVerified(factory, "0x01", facts);
   cache.rememberVerified(factory, "0x02", facts);
   cache.rememberVerified(factory, "0x03", facts);

@@ -27,7 +27,7 @@
  */
 
 import { PrivyProvider } from "@privy-io/react-auth";
-import { robinhoodChain } from "@agentcap/core";
+import { bnbChain } from "@agentcap/core";
 import type { ReactNode } from "react";
 import { PRIVY_APP_ID, privyEnabled } from "@/lib/privy-client";
 import { LocaleProvider } from "@/lib/i18n";
@@ -74,8 +74,8 @@ export function Providers({ locale, children }: { locale: LocaleTag; children: R
         // Chain 4663 is not one of Privy's built-ins, so it is supplied
         // explicitly — from @agentcap/core, never redefined here. A second
         // definition is how a testnet id ends up in a mainnet signature.
-        defaultChain: robinhoodChain,
-        supportedChains: [robinhoodChain],
+        defaultChain: bnbChain,
+        supportedChains: [bnbChain],
         appearance: {
           theme: "dark",
           accentColor: "#c8ff00",

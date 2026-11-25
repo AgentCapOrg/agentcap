@@ -60,7 +60,7 @@ describe("amounts the owner types", () => {
 describe("the reserve Max keeps on the source wallet", () => {
   it("uses the agreed floors", () => {
     assert.equal(reserveFor(ethereum), 2_000_000_000_000_000n); // 0.002 ETH
-    for (const id of ["eth-base", "eth-arbitrum", "eth-robinhood"] as const) {
+    for (const id of ["eth-base", "eth-arbitrum"] as const) {
       assert.equal(reserveFor(DEPOSIT_SOURCES[id]), 300_000_000_000_000n, id); // 0.0003 ETH
     }
   });

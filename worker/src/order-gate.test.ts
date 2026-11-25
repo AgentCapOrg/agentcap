@@ -157,10 +157,10 @@ describe("an order that passes every gate is handed on exactly as validated", ()
  * energy buy — a plain buy card, a snipe that resolved to a lookalike, an
  * approved MCP proposal for a watched coin at another address — none of which
  * showed the energy disclosure, and the lookalike's owner got a different,
- * key-unsellable asset. placeOrder now hands the submitter the route it
- * decided, and only get-energy's fixed `purpose: "energy"` makes it 'energy'.
+ * key-unsellable asset. The get-energy order is gone;
+ * its marker is still refused.
  */
-describe("the energy route is reached only by get-energy's marker", () => {
+describe("the retired energy order", () => {
   /** Run placeOrder and record the route each call was handed. */
   async function routeOf(args: Record<string, unknown>): Promise<OrderRoute | null> {
     let got: OrderRoute | null = null;
@@ -182,19 +182,24 @@ describe("the energy route is reached only by get-energy's marker", () => {
     }
   });
 
-  it("the get-energy card's marker, and only that exact value, routes to the energy buy", async () => {
-    assert.equal(await routeOf({ side: "buy", symbol: "AGENTCAP", usdgAmount: 30, purpose: "energy" }), "energy");
+  it("A RETIRED get-energy ORDER IS REFUSED BY NAME AND REACHES NO SUBMITTER", async () => {
+    // Queued before the removal, or sent by a stale client. Falling through to
+    // an ordinary buy would run an act its owner never confirmed.
+    for (const reads of [{}, { paused: true }, { equityKnown: false }]) {
+      const { reply, sent } = await place({ side: "buy", symbol: "AGENTCAP", usdgAmount: 30, purpose: "energy" }, reads);
+      assert.equal(reply.ok, false);
+      assert.match(reply.line, /Energy top-ups have been removed, so nothing was bought/);
+      assert.deepEqual(sent, []);
+    }
+  });
+
+  it("only that exact marker is the retired one", () => {
+    assert.equal(orderRoute({ side: "buy", symbol: "AGENTCAP", usdgAmount: 30, purpose: "energy" }), "energy");
     for (const purpose of ["Energy", "ENERGY", " energy", "energy ", true, 1, null, "reserve"]) {
       assert.equal(orderRoute({ side: "buy", symbol: "AGENTCAP", usdgAmount: 30, purpose }), "trade", String(purpose));
     }
     assert.equal(orderRoute(undefined), "trade");
     assert.equal(orderRoute({}), "trade");
-  });
-
-  it("a refused order is routed nowhere — the gates still run before the route matters", async () => {
-    const { reply, sent } = await place({ side: "buy", symbol: "AGENTCAP", usdgAmount: 30, purpose: "energy" }, { paused: true });
-    assert.equal(reply.ok, false);
-    assert.deepEqual(sent, []);
   });
 });
 
@@ -285,9 +290,7 @@ describe("what an owner order is filed under", () => {
     assert.doesNotMatch(r, /in chat|energy/);
   });
 
-  it("only the marked order is filed as an energy ask", () => {
-    assert.match(orderAsked({ purpose: "energy" }, "buy", "AGENTCAP", 30).reason, /top up \$AGENTCAP energy on the app's get-energy card — at most 30 USDG/);
-    assert.doesNotMatch(orderAsked({}, "buy", "AGENTCAP", 30).reason, /energy/);
+  it("an ordinary order is filed as a chat ask", () => {
     assert.equal(orderAsked({}, "sell", "TSLA", 5).reason, "owner asked to sell 5 USDG TSLA in chat");
   });
 });

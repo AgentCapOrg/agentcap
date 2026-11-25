@@ -38,7 +38,7 @@ export const RETRY_AFTER_MS = [5_000, 15_000, 60_000] as const;
  *
  * All of these rode one 60s pass that waited on every read before anything
  * rendered, so a trade that landed sat unseen for up to a minute, and then
- * for as long as the launchpad sweep took on top. Now:
+ * for as long as the discovery sweep took on top. Now:
  *
  *   theses       every 10s while the tab is visible — this is the feed, the
  *                one read a person watches for something to happen; once a

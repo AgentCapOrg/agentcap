@@ -1,20 +1,21 @@
 /**
  * What a coin says it is, alongside the desk's measured chart evidence.
  *
- * Reads only the exact Robinhood contract: GeckoTerminal token info plus the
+ * Reads only the exact BNB Chain contract: GeckoTerminal token info plus the
  * existing Pons metadata getter. Published descriptions are attributed claims,
  * not verified origin stories, official affiliations, or trading authority.
  * No website/social URL is visited and no additional paid provider is used.
  */
+import { DATA, bnbChain, explorerFor } from "../../../packages/core/src/chain";
 import type { PublicClient } from "viem";
-import { readTokenMeta, type TokenMeta } from "../venues/pons-meta";
+import { readTokenMeta, type TokenMeta } from "../venues/token-meta";
 import type { FeedResult } from "../venues/fleet-feed-cache";
 import { geckoSource } from "../venues/geckoterminal";
 import { cleanProjectText, projectLink, readTokenInfo, type TokenInfoRead } from "./gecko";
 import { DESK_LOOKUP_MS, type DeskReadOptions } from "./deadline";
 
 export const LORE_READ_MS = 3000;
-export const LORE_CHAIN_ID = 4663;
+export const LORE_CHAIN_ID = bnbChain.id;
 
 export interface CoinProfile {
   token: `0x${string}`;
@@ -55,7 +56,7 @@ function publishedProfile(meta: TokenMeta | undefined, token: `0x${string}`, obs
   return {
     token, chainId: LORE_CHAIN_ID, description,
     source: "token-published metadata",
-    url: `https://robinhoodchain.blockscout.com/token/${token}`,
+    url: `${explorerFor(bnbChain.id)}/token/${token}`,
     observedAtMs,
     ...(website ? { website } : {}), ...(twitter ? { twitter } : {}),
   };
@@ -68,7 +69,7 @@ function indexedProfile(read: TokenInfoRead | undefined, token: `0x${string}`, o
     token, chainId: LORE_CHAIN_ID, description: info.description,
     ...(info.name ? { name: info.name } : {}),
     source: "GeckoTerminal token info",
-    url: `https://www.geckoterminal.com/robinhood/tokens/${token}`,
+    url: `https://www.geckoterminal.com/${DATA.geckoTerminalSlug}/tokens/${token}`,
     observedAtMs: read?.observedAt ?? observedAtMs,
     ...(info.website ? { website: info.website } : {}), ...(info.twitter ? { twitter: info.twitter } : {}),
   };

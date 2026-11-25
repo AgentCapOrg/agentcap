@@ -8,7 +8,7 @@
  *
  * THE REGISTRY IS FAIL-CLOSED. A chain this file does not name is not a chain:
  * `chainInfo` answers null and the strict helpers throw. That is the opposite
- * of chain.ts `chainForId`, which maps every id but the testnet to Robinhood
+ * of chain.ts `chainForId`, which maps every id but the testnet to BNB
  * mainnet; that helper stays as it is for the EVM paths that use it today.
  *
  * Pure: no I/O, no clock, and browser-safe (web imports it).
@@ -19,17 +19,17 @@ export type ChainFamily = "evm";
 
 /** CAIP-2 references: `eip155:<chain id>`. */
 export const CHAINS = Object.freeze({
-  robinhood: "eip155:4663",
-  robinhoodTestnet: "eip155:46630",
+  bnb: "eip155:56",
+  bnbTestnet: "eip155:97",
 } as const);
 export type ChainRef = (typeof CHAINS)[keyof typeof CHAINS];
 
-/** The stable a chain's books are kept in: Paxos USDG (6 decimals). */
+/** The stable a chain's books are kept in: Binance-Peg USDT (18 decimals on BNB Chain). */
 export interface CashAsset {
-  symbol: "USDG";
-  /** The token's address on that chain (an ERC-20 proxy on Robinhood Chain); null where none is verified. */
+  symbol: "USDT";
+  /** The token's address on that chain (BSC-USD on BNB Chain); null where none is verified. */
   address: string | null;
-  decimals: 6;
+  decimals: 18;
 }
 
 /** How a chain is shown beside the others: a short name, a glyph and its colours. */
@@ -45,9 +45,9 @@ export interface ChainLook {
 export interface ChainInfo {
   ref: ChainRef;
   family: ChainFamily;
-  /** The full name ("Robinhood Chain"). */
+  /** The full name ("BNB Smart Chain"). */
   label: string;
-  /** The short name for a badge ("Robinhood"). */
+  /** The short name for a badge ("BNB"). */
   short: string;
   /** False on a test network: never shown as real money. */
   realMoney: boolean;
@@ -59,21 +59,21 @@ export interface ChainInfo {
 }
 
 
-/** Robinhood Chain USDG (packages/core/src/tokens.ts CASH.USDG), lowercased. */
-const ROBINHOOD_USDG = "0x5fc5360d0400a0fd4f2af552add042d716f1d168";
+/** BNB Chain USDT (packages/core/src/tokens.ts CASH.USDT), lowercased. */
+const BNB_USDT = "0x55d398326f99059ff775485246999027b3197955";
 
-const ROBINHOOD_LOOK: ChainLook = { glyph: "R", accent: "#CCFF00", gradient: ["#CCFF00", "#00C805"] };
+const BNB_LOOK: ChainLook = { glyph: "B", accent: "#F0B90B", gradient: ["#F0B90B", "#F8D33A"] };
 
 const REGISTRY: ReadonlyMap<string, ChainInfo> = new Map<string, ChainInfo>([
-  [CHAINS.robinhood, {
-    ref: CHAINS.robinhood, family: "evm", label: "Robinhood Chain", short: "Robinhood", realMoney: true, evmChainId: 4663,
-    explorer: { name: "Blockscout", base: "https://robinhoodchain.blockscout.com" },
-    cash: { symbol: "USDG", address: ROBINHOOD_USDG, decimals: 6 }, look: ROBINHOOD_LOOK,
+  [CHAINS.bnb, {
+    ref: CHAINS.bnb, family: "evm", label: "BNB Smart Chain", short: "BNB", realMoney: true, evmChainId: 56,
+    explorer: { name: "BscScan", base: "https://bscscan.com" },
+    cash: { symbol: "USDT", address: BNB_USDT, decimals: 18 }, look: BNB_LOOK,
   }],
-  [CHAINS.robinhoodTestnet, {
-    ref: CHAINS.robinhoodTestnet, family: "evm", label: "Robinhood Chain Testnet", short: "Robinhood test", realMoney: false, evmChainId: 46630,
-    explorer: { name: "Blockscout", base: "https://explorer.testnet.chain.robinhood.com" },
-    cash: { symbol: "USDG", address: null, decimals: 6 }, look: ROBINHOOD_LOOK,
+  [CHAINS.bnbTestnet, {
+    ref: CHAINS.bnbTestnet, family: "evm", label: "BNB Smart Chain Testnet", short: "BNB test", realMoney: false, evmChainId: 97,
+    explorer: { name: "BscScan", base: "https://testnet.bscscan.com" },
+    cash: { symbol: "USDT", address: null, decimals: 18 }, look: BNB_LOOK,
   }],
 ]);
 

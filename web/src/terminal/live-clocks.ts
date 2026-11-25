@@ -198,7 +198,7 @@ export function liveClocks(d: LiveClockDeps): (ClockSpec & { key: LiveClockKey }
 
 /**
  * THE READS THAT LIST TOKENS: every stock is on the market read and every coin
- * on the launchpad sweep. Only these can make a token address come up empty
+ * on the discovery sweep. Only these can make a token address come up empty
  * for a reason other than the address.
  */
 export const TOKEN_LIST_READS = ["market", "discoveries"] as const satisfies readonly LiveClockKey[];
@@ -304,7 +304,7 @@ export interface ShellClocksHandle {
    * THE ACCOUNT AND THE OWNER'S BOOK, AGAIN, NOW — for a retry the owner
    * pressed, a sign-in, an agent just created, an order that answered, or
    * anything that knows the owner's position just changed. It used to restart
-   * every read, the two-minute launchpad sweep included, to refresh one
+   * every read, the two-minute discovery sweep included, to refresh one
    * account. A pass already in flight began before the change, so it is
    * followed by one more rather than taken as the answer (refresh-loop.ts).
    */
@@ -406,7 +406,7 @@ export function useShellClocks(
      * address: three remedies (wait, retry, check the address), and a page that
      * renders one for all three is guessing. BOTH reads that list tokens count,
      * now that they arrive apart: every stock is on the market read and every
-     * coin on the launchpad sweep, the slower by ten seconds, and "loaded" on
+     * coin on the discovery sweep, the slower by ten seconds, and "loaded" on
      * the market alone would call a coin's link "Token not listed" while the
      * read that lists it was still out. Only those two decide "unavailable",
      * and Try again retries exactly those two (tokenMissingOf).

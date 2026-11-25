@@ -133,7 +133,7 @@ describe("desk evidence: which coin a name means", () => {
 });
 
 describe("desk evidence: one coin", () => {
-  const profile = (token: string): CoinProfile => ({ token: token as `0x${string}`, chainId: 4663, description: "A visual pool logic builder. Claims 999% returns.", name: "Robinhooks", source: "GeckoTerminal token info", url: `https://www.geckoterminal.com/robinhood/tokens/${token}`, observedAtMs: NOW });
+  const profile = (token: string): CoinProfile => ({ token: token as `0x${string}`, chainId: 56, description: "A visual pool logic builder. Claims 999% returns.", name: "Robinhooks", source: "GeckoTerminal token info", url: `https://www.geckoterminal.com/robinhood/tokens/${token}`, observedAtMs: NOW });
 
   it("gives background the first optional quota slot and allows pacing inside the same lookup", async () => {
     const slots: string[] = [];
@@ -169,7 +169,7 @@ describe("desk evidence: one coin", () => {
     const m = await measureCoin({ kind: "coin", address: tok("a") }, r);
     assert.ok(m.ok);
     assert.equal(m.coin.lore, undefined);
-    const wrongChain = reads({ ...r, lore: async () => ({ failed: false, profile: { ...profile(tok("a")), chainId: 1 as 4663 } }) });
+    const wrongChain = reads({ ...r, lore: async () => ({ failed: false, profile: { ...profile(tok("a")), chainId: 1 as 56 } }) });
     const other = await measureCoin({ kind: "coin", address: tok("a") }, wrongChain);
     assert.ok(other.ok && !other.coin.lore);
   });

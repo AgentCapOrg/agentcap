@@ -27,10 +27,15 @@
 
 import type { ChainIdentity, ChainNamespace, ExecutionAvailability, TokenIdentity } from "./types";
 
-/** Robinhood Chain mainnet: AgentCap's only executable network, and the provider's "robinhood". */
-export const ROBINHOOD_NETWORK_ID = 4663;
-/** The provider's slug for it, used for chain-scoped queries. */
-export const ROBINHOOD_SLUG = "robinhood";
+/**
+ * BNB Chain mainnet: AgentCap's only executable network. (The names keep
+ * "ROBINHOOD" from the chain this ran on before; they mean OUR chain.) A token
+ * the provider places anywhere else, Robinhood Chain included, is research
+ * only: the same address there is a different token.
+ */
+export const ROBINHOOD_NETWORK_ID = 56;
+/** The provider's slug for it (observed beside chainId 56, 2026-10-04). */
+export const ROBINHOOD_SLUG = "bsc";
 
 /**
  * Network ids the provider DOCUMENTS (fetched 2026-10-04). Only these slugs map
@@ -39,7 +44,7 @@ export const ROBINHOOD_SLUG = "robinhood";
  * with `networkId: null` unless a row carries the number itself.
  */
 const DOCUMENTED: ReadonlyArray<{ slugs: readonly string[]; namespace: ChainNamespace; networkId: number; slug: string }> = [
-  { slugs: ["robinhood", "hood", "rh"], namespace: "eip155", networkId: ROBINHOOD_NETWORK_ID, slug: "robinhood" },
+  { slugs: ["robinhood", "hood", "rh"], namespace: "eip155", networkId: 4663, slug: "robinhood" },
   { slugs: ["arc"], namespace: "eip155", networkId: 5042, slug: "arc" },
   { slugs: ["hyperliquid", "hl"], namespace: "hyperliquid", networkId: 1337, slug: "hyperliquid" },
 ];
@@ -133,7 +138,7 @@ export function chainFromUserText(raw: string): ChainIdentity | null {
   return null;
 }
 
-export function robinhoodChain(): ChainIdentity {
+export function bnbChain(): ChainIdentity {
   return { namespace: "eip155", networkId: ROBINHOOD_NETWORK_ID, slug: ROBINHOOD_SLUG };
 }
 

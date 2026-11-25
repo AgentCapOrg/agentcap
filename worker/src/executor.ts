@@ -19,7 +19,7 @@ import { createKernelAccountClient } from "@zerodev/sdk";
 import { SponsorRefused, assertBoundsHeld, type Sponsor } from "./paymaster";
 import { KERNEL_V3_3, getEntryPoint } from "@zerodev/sdk/constants";
 import { deserializeFlaggedPermissionAccount } from "./session-account";
-import { CASH, FIRST_ENABLE_HARD_MAX_BOUNDED, TRENCHER_FACTORY_ABI, UNISWAP, WALL_POLICY_FLAG } from "../../packages/core/src/index";
+import { CASH, FIRST_ENABLE_HARD_MAX_BOUNDED, TRENCHER_FACTORY_ABI, PANCAKESWAP, WALL_POLICY_FLAG } from "../../packages/core/src/index";
 import { userOpGasConfig } from "./gas";
 import { getUserOperationHash } from "viem/account-abstraction";
 import {
@@ -453,9 +453,9 @@ export function isTrencherVaultDeploy(
 export function keyInstallCalls(): Call[] {
   return [
     {
-      to: CASH.USDG as `0x${string}`,
+      to: CASH.USDT as `0x${string}`,
       value: 0n,
-      data: encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [UNISWAP.swapRouter02 as `0x${string}`, 0n] }),
+      data: encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [PANCAKESWAP.smartRouter as `0x${string}`, 0n] }),
     },
   ];
 }

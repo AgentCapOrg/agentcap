@@ -67,16 +67,6 @@ describe("so the worker says it", () => {
     assert.match(src, /breakerBrickNoted = false;/);
   });
 
-  it("and it is checked BEFORE the Circle gate, being the more absolute of the two", () => {
-    // A Circle block lifts the moment they hold the token. This one does not
-    // lift at all, so it is the truer answer to "why is nothing happening".
-    const src = read("./index.ts");
-    assert.ok(
-      src.indexOf("active.limits.maxDrawdownBps === 0") < src.indexOf("isCircleStrategy(strategy.name)"),
-      "the unfixable-without-a-signature case is reported first",
-    );
-  });
-
   it("and the signing screen can no longer mint another one", () => {
     const wallet = read("../../web/src/terminal/screens/Wallet.tsx");
     assert.match(wallet, /maxDrawdownPct: 1,/, "the floor is what stops this recurring");

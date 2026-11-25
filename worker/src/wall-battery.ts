@@ -1,13 +1,10 @@
 import {
   CASH,
   STOCK_TOKENS,
-  UNISWAP,
-  ENERGY_ROUTE_V1,
+  PANCAKESWAP,
   baseForNotional,
   effectiveMinNotionalMicro,
-  grantEnergyRoute,
   grantHasTransfer,
-  grantPonsClassVault,
   leverageTarget,
   notionalMicro,
   sellableAssets,
@@ -50,14 +47,6 @@ export interface WallBatteryResult {
 const EVIL = "0x000000000000000000000000000000000000dEaD" as const;
 const RANDOM_VENUE = "0x1111111111111111111111111111111111111111" as const;
 const UNKNOWN_TOKEN = "0x2222222222222222222222222222222222222222" as const;
-/** A bonding curve the launch feed never saw — stands in for "vouched for by nobody". */
-const RANDOM_CURVE = "0x3333333333333333333333333333333333333333" as const;
-/** A token minted after this grant was signed. It is un-enumerable BY DEFINITION. */
-const CLASS_TOKEN = "0x4444444444444444444444444444444444444444" as const;
-/** A second one — the case where nothing in the trade is anchored to the grant. */
-const OTHER_CLASS_TOKEN = "0x5555555555555555555555555555555555555555" as const;
-/** A vault address for a grant that never sealed one. Not a target this key has. */
-const UNSEALED_VAULT = "0x6666666666666666666666666666666666666666" as const;
 
 interface BatteryInput {
   attempt: string;
@@ -354,8 +343,8 @@ export function runWallBattery(
     equityUsdg: 0n,
     nowSec,
   };
-  const router = UNISWAP.swapRouter02 as `0x${string}`;
-  const usdgAddr = CASH.USDG as `0x${string}`;
+  const router = PANCAKESWAP.smartRouter as `0x${string}`;
+  const usdgAddr = CASH.USDT as `0x${string}`;
   const sellable = sellableAssets(grant);
   const stock = (STOCK_TOKENS.find((token) => sellable.has(token.address.toLowerCase()))?.address
     ?? usdgAddr) as `0x${string}`;
@@ -367,152 +356,6 @@ export function runWallBattery(
   const noExitLimits = nonSellableStock
     ? limits
     : { ...limits, allowedAssets: [...limits.allowedAssets, nonSellable] };
-
-  // THE CLASS ROUTE, exercised only when this signature actually carries it.
-  const classVault = grantPonsClassVault(grant);
-  const classBuy = (
-    vault: `0x${string}`,
-    assetIn: `0x${string}`,
-    assetOut: `0x${string}`,
-  ): TradeIntent => ({
-    kind: "curve-trade",
-    target: vault,
-    curve: RANDOM_CURVE,
-    assetIn,
-    assetOut,
-    amountInRaw: 1n,
-    minAmountOutRaw: 0n,
-    notionalUsdg: 1n,
-  });
-  // The launch feed, present. limitsFromGrant leaves knownCurves undefined
-  // because this battery has no store to read — which is itself a refusal for a
-  // class trade, and gets its own case below rather than being papered over.
-  const withFeed: AgentLimits = { ...limits, knownCurves: [RANDOM_CURVE] };
-
-  const classCases: BatteryInput[] = classVault
-    ? [
-        {
-          attempt:
-            "sniping a token minted after this grant was signed — the case the class vault exists for",
-          want: "approved",
-          intent: classBuy(classVault, usdgAddr, CLASS_TOKEN),
-          state: calm,
-          limits: withFeed,
-        },
-        {
-          attempt:
-            "the same snipe, but the launch feed is unreadable — provenance is the only thing vouching for a class token",
-          want: "rejected",
-          expectedRule: "curve-provenance",
-          intent: classBuy(classVault, usdgAddr, CLASS_TOKEN),
-          state: calm,
-          // knownCurves undefined. Everywhere else that means "this rule cannot
-          // run"; here it means refuse, because nothing else in the trade names
-          // the output at all.
-          limits,
-        },
-        {
-          // THE EXIT, and until now nothing in this battery proved it reachable.
-          // All three class cases were BUYS — so a wall that could open a class
-          // position and never close one would have printed all-green. That is
-          // the exact trap PonsClassVault exists to remove, and a proof that
-          // does not check it is a proof of the wrong thing.
-          attempt: "selling a class position back out — the exit the vault exists for",
-          want: "approved",
-          intent: classBuy(classVault, CLASS_TOKEN, usdgAddr),
-          state: calm,
-          limits: withFeed,
-        },
-        {
-          // The breaker must never block that exit either. A class buy craters
-          // equity against an unmoved high-water mark, so a drawdown is exactly
-          // the state a class position gets sold in.
-          attempt: "the same exit while the drawdown breaker is tripped",
-          want: "approved",
-          intent: classBuy(classVault, CLASS_TOKEN, usdgAddr),
-          state: {
-            ...calm,
-            highWaterMarkUsdg: usdgUnits(1000),
-            equityUsdg: usdgUnits(1000 - (1000 * grant.caps.maxDrawdownPct) / 100),
-          },
-          limits: withFeed,
-        },
-        {
-          attempt: "rolling one un-enumerated token straight into another (nothing in it is anchored)",
-          want: "rejected",
-          expectedRule: "asset-allowlist",
-          intent: classBuy(classVault, CLASS_TOKEN, OTHER_CLASS_TOKEN),
-          state: calm,
-          limits: withFeed,
-        },
-      ]
-    : [
-        {
-          attempt:
-            "routing through a class vault this key never sealed (this wall has no class route at all)",
-          want: "rejected",
-          expectedRule: "target-allowlist",
-          intent: classBuy(UNSEALED_VAULT, usdgAddr, CLASS_TOKEN),
-          state: calm,
-          limits: withFeed,
-        },
-      ];
-
-  // THE ENERGY BUY, asked the questions THIS signature can answer — the same
-  // rule as the class route below. A grant that sealed the route proves the
-  // honest buy goes and an oversized one does not; one that did not proves the
-  // buy is refused by name. Both prove the router never became a generic swap
-  // target: it is deliberately NOT in allowedTargets.
-  const energyRoute = grantEnergyRoute(grant);
-  const energyBuy = (amount: bigint): TradeIntent => ({
-    kind: "energy-buy",
-    target: ENERGY_ROUTE_V1.router,
-    sellToken: usdgAddr,
-    buyToken: ENERGY_ROUTE_V1.path[2],
-    sellAmountRaw: amount,
-    notionalUsdg: amount,
-  });
-  const routerSwap: BatteryInput = {
-    attempt: "a generic swap aimed at the energy router (it is not a swap venue for this key)",
-    want: "rejected",
-    expectedRule: "target-allowlist",
-    intent: {
-      kind: "swap",
-      target: ENERGY_ROUTE_V1.router,
-      sellToken: usdgAddr,
-      buyToken: stock,
-      sellAmountRaw: 1n,
-      notionalUsdg: 1n,
-    },
-    state: calm,
-  };
-  const energyCases: BatteryInput[] = energyRoute
-    ? [
-        {
-          attempt: "an honest energy buy — USDG into $AGENTCAP over the sealed route",
-          want: "approved",
-          intent: energyBuy(1n),
-          state: calm,
-        },
-        {
-          attempt: `an energy buy above your ${grant.caps.perTradeUsdg} USDG per-trade cap`,
-          want: "rejected",
-          expectedRule: "per-trade-cap",
-          intent: energyBuy(usdgUnits(grant.caps.perTradeUsdg) + 1n),
-          state: calm,
-        },
-        routerSwap,
-      ]
-    : [
-        {
-          attempt: "an energy buy on a key that never sealed the energy route",
-          want: "rejected",
-          expectedRule: "energy-not-granted",
-          intent: energyBuy(1n),
-          state: calm,
-        },
-        routerSwap,
-      ];
 
   const legalSwap = (notional: bigint): TradeIntent => ({
     kind: "swap",
@@ -644,21 +487,10 @@ export function runWallBattery(
       state: calm,
       limits: noExitLimits,
     },
-    // ── the energy buy ──────────────────────────────────────────────────────
-    ...energyCases,
-    // ── the class route ─────────────────────────────────────────────────────
-    //
-    // WHICH CASES RUN DEPENDS ON THE GRANT, exactly like the transfer case at
-    // the top of this battery and for the same reason: a battery that asserts a
-    // capability the signature does not carry prints "⚠ BREACH" about a wall
-    // that is simply narrower than the fixture assumed. So a grant with no
-    // class vault is asked the only honest question available to it — what
-    // happens when something aims at a vault it never sealed.
-    ...classCases,
     // ── perpetuals ──────────────────────────────────────────────────────────
     //
     // Only when this signature sealed the perps route, on the same rule as the
-    // class and energy cases: a battery must not assert a capability the
+    // transfer case above: a battery must not assert a capability the
     // grant does not carry. See perpCases for why these are the order wall.
     ...perpCases(grant, limits, calm, {
       ...calm,

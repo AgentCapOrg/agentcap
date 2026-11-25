@@ -138,13 +138,16 @@
  * Reviewed operator tool: never imported by the orchestrator or a worker.
  * docs/chain-gap-booking.md is the runbook.
  */
+import { bnbChain } from "../../packages/core/src/chain";
+import { bookedCashUsdg } from "./basis";
+import { cashFromMicro, cashNumber, cashSpendNumber } from "../../packages/core/src/cash";
 import { createHash, randomUUID } from "node:crypto";
 import type { Db } from "./db";
-import { CASH, ENTRYPOINT, classifyUsdgMovement, energyReserveTokens, grantPonsClassVault, isEnergyReserveToken } from "../../packages/core/src/index";
+import { CASH, ENTRYPOINT, classifyUsdgMovement } from "../../packages/core/src/index";
 import { segmentReceipt, validatorOfNonce, type OpSegment } from "./asset-movements";
 import { applyFill, ZERO_BASIS, type BasisRow } from "./basis";
 import { legsFromReceipt, TRANSFER_TOPIC, type RawChainLog, type RpcCall } from "./chain-capital";
-import { custodyAddressesOf } from "./custody";
+import { custodyAddressesOf, historicalClassVault } from "./custody";
 import { flowDuplicateReport } from "./distinct-flows";
 import { netTokenDeltas } from "./fills";
 import { pickAcquiredLeg } from "./inflight-reconcile";
@@ -202,7 +205,7 @@ const ADDRESS = /^0x[0-9a-f]{40}$/;
 const HASH = /^0x[0-9a-f]{64}$/;
 const DIGEST = /^[0-9a-f]{64}$/;
 const lower = (s: unknown) => String(s ?? "").toLowerCase();
-const USDG = lower(CASH.USDG);
+const USDG = lower(CASH.USDT);
 const sha256 = (s: string) => createHash("sha256").update(s).digest("hex");
 
 /** Sorted keys at every level, bigints as decimal strings, undefined dropped: the bytes every digest here is over. */
@@ -466,7 +469,7 @@ async function readHoldings(db: Db, tables: ReadonlySet<string>, account: string
 }
 
 /**
- * fill_cash_usdg back in micro-USDG, exactly, or null. The column is a REAL
+ * fill_cash_usdg back in cash base units, exactly, or null. The column is a REAL
  * (DOUBLE PRECISION on Postgres) holding usdgNum of the cash bookFill applied
  * to the basis (index.ts), so a value of at most six decimals and fifteen
  * significant digits reads back as the decimal that was written. Anything
@@ -477,7 +480,7 @@ export function microUsdg(v: unknown): string | null {
   if (v === null || v === undefined || v === "" || (typeof v === "number" && !Number.isFinite(v))) return null;
   const m = /^([0-9]+)(?:\.([0-9]{1,6}))?$/.exec(String(v));
   if (!m || `${m[1]}${m[2] ?? ""}`.replace(/^0+/, "").length > 15) return null;
-  return (BigInt(m[1]!) * 1_000_000n + BigInt((m[2] ?? "").padEnd(6, "0"))).toString();
+  return cashFromMicro(BigInt(m[1]!) * 1_000_000n + BigInt((m[2] ?? "").padEnd(6, "0"))).toString();
 }
 
 /**
@@ -512,13 +515,14 @@ export async function readBookingSnapshot(db: Db, o: { tenant: string; dialect: 
     const raw = typeof g.grant_features === "string" ? (() => { try { return JSON.parse(g.grant_features as string) as unknown; } catch { return null; } })() : g.grant_features;
     const grantFeatures = Array.isArray(raw) ? raw.filter((f): f is string => typeof f === "string") : [];
     const stored = {
-      grantFeatures, ponsClassVaultAddress: strOrNull(g.pons_class_vault_address) ?? undefined,
+      grantFeatures,
       trencherVaultAddress: strOrNull(g.trencher_vault_address) ?? undefined, trencherFactoryAddress: strOrNull(g.trencher_factory_address) ?? undefined,
     } as Parameters<typeof custodyAddressesOf>[0];
-    const custody = custodyAddressesOf(stored).map(lower).sort();
+    const classVault = historicalClassVault(grantFeatures, g.pons_class_vault_address);
+    const custody = [...custodyAddressesOf(stored).map(lower), ...(classVault ? [classVault] : [])].sort();
     const chainId = g.chain_id === null || g.chain_id === undefined ? null : Number(g.chain_id);
     grant = { account: lower(g.smart_account), spelled: String(g.smart_account), owner: ADDRESS.test(lower(g.owner)) ? lower(g.owner) : null,
-      chainId: Number.isSafeInteger(chainId) ? chainId : null, custody, classVault: grantPonsClassVault(stored) };
+      chainId: Number.isSafeInteger(chainId) ? chainId : null, custody, classVault };
   }
   const account = grant?.account ?? "";
   const agents = ((await db.prepare(`SELECT smart_account, epoch, chain_id, mode, hwm_usdg, hwm_withdrawn_usdg FROM agents WHERE LOWER(smart_account) = ?
@@ -925,7 +929,7 @@ export interface BookingPlan {
 }
 
 const keyOf = (f: MissingChainFact) => (f.kind === "operation" ? `op:${f.userOpHash}` : `log:${f.txHash}#${f.logIndex ?? "?"}`);
-const usdgNumber = (raw: bigint) => Number(raw) / 1e6;
+const usdgNumber = cashNumber;
 const factBlock = (f: MissingChainFact) => (f.block === null ? null : BigInt(f.block));
 
 /** USDG Transfer logs naming the account on either side, by log index. */
@@ -1521,7 +1525,7 @@ export function planBooking(snap: BookingSnapshot, ev: ChainEvidence, o: { nowSe
         // record Postgres holds for it, if any. Neither changes the class or
         // the refusal: this tool never books an owner's operation.
         const reading = ownerOperationOf({ receiptLogs: receipt.logs, userOpHash: f.userOpHash, txHash: f.txHash, account, custody: snap.grant?.custody ?? [],
-          usdg: USDG, chainId: chainId ?? 4663 });
+          usdg: USDG, chainId: chainId ?? bnbChain.id });
         const record = snap.ownerRecords.filter((r) => r.userOpHash === f.userOpHash);
         base.evidence = { ...base.evidence,
           ownerReading: reading && { disposition: reading.disposition, reasons: reading.reasons, covers: reading.covers, usdgLegs: reading.usdgLegs, tokenMoves: reading.tokenMoves },
@@ -1574,12 +1578,8 @@ export function planBooking(snap: BookingSnapshot, ev: ChainEvidence, o: { nowSe
       const leg = pickAcquiredLeg(op.deltas, USDG);
       if (!leg) {
         const onlyUsdg = moved.every(([t]) => t === USDG);
-        const energy = moved.some(([t]) => isEnergyReserveToken(t));
-        items.push(unresolved(base, energy
-          ? `a session key's energy purchase (${saidDeltas(op.deltas)}): the worker books it as an 'energy-buy' flow that moves both peaks, beside its row — ` +
-            "not one row this tool can propose"
-          : onlyUsdg
-            ? `a session key moved USDG (${saidDeltas(op.deltas)}) with nothing visible the other way: a transfer home or an energy purchase books a flow beside its row, ` +
+        items.push(unresolved(base, onlyUsdg
+            ? `a session key moved USDG (${saidDeltas(op.deltas)}) with nothing visible the other way: a transfer home books a flow beside its row, ` +
               "which is not one row this tool can propose"
             : `a session key's operation moved ${saidDeltas(op.deltas)}: not one token against USDG in opposite directions, so no fill can be read without choosing one`));
         continue;
@@ -1592,9 +1592,9 @@ export function planBooking(snap: BookingSnapshot, ev: ChainEvidence, o: { nowSe
         `for ${leg.qtyRaw} base units, read off the receipt over the book (${book.join(", ")}). Booked as the reconciler books a landed orphan, with the fill the live path ` +
         "reads from the same receipt; realised P&L stays NULL (the cost basis at that moment is not on the chain)",
       proposal: { table: "trades", row: {
-        ...row, sell_token: leg.side === "buy" ? USDG : leg.token, buy_token: leg.side === "buy" ? leg.token : USDG, amount_usdg: usdgNumber(leg.cashUsdg),
+        ...row, sell_token: leg.side === "buy" ? USDG : leg.token, buy_token: leg.side === "buy" ? leg.token : USDG, amount_usdg: cashSpendNumber(leg.cashUsdg),
         fill_side: leg.side, fill_symbol: fillSymbolFor(leg.token, []), fill_qty_raw: leg.qtyRaw.toString(), fill_price_usd: price === null || !Number.isFinite(price) ? null : price,
-        basis_source: "receipt", fill_cash_usdg: usdgNumber(leg.cashUsdg),
+        basis_source: "receipt", fill_cash_usdg: usdgNumber(bookedCashUsdg(leg.side, leg.cashUsdg)),
       } } });
       continue;
     }
@@ -1620,7 +1620,7 @@ export function planBooking(snap: BookingSnapshot, ev: ChainEvidence, o: { nowSe
       const byOwner = holder !== null && !snap.known.ops.includes(holder.op.userOpHash) && snap.known.ownerOps.includes(`${holder.op.userOpHash}|${f.txHash}`);
       if (holder && byOwner) {
         const reading = ownerOperationOf({ receiptLogs: receipt.logs, userOpHash: holder.op.userOpHash, txHash: f.txHash, account, custody: snap.grant?.custody ?? [],
-          usdg: USDG, chainId: chainId ?? 4663 });
+          usdg: USDG, chainId: chainId ?? bnbChain.id });
         const leg = reading?.usdgLegs.find((l) => l.logIndex === f.logIndex) ?? null;
         base.evidence = { ...base.evidence, ownerOperation: holder.op.userOpHash,
           ownerReading: reading && { disposition: reading.disposition, reasons: reading.reasons, covers: reading.covers, usdgLegs: reading.usdgLegs, tokenMoves: reading.tokenMoves },
@@ -1652,7 +1652,6 @@ export function planBooking(snap: BookingSnapshot, ev: ChainEvidence, o: { nowSe
     const classification = classifyUsdgMovement({
       account, usdg: usdgLeg!, txLegs: legsFromReceipt(receipt.logs), usdgToken: USDG,
       knownAccounts: snap.knownAccounts.filter((a) => a !== account), custodyAddresses: snap.grant?.custody ?? [],
-      reserveTokens: energyReserveTokens(chainId ?? 4663),
     });
     base.evidence = { ...base.evidence, from: lower(usdgLeg!.from), to: lower(usdgLeg!.to), amountRaw: f.amountRaw, txFrom: receipt.from, txTo: receipt.to,
       classification: { kind: classification.kind, rule: classification.evidence.rule, why: classification.why } };

@@ -37,8 +37,8 @@ export async function seedOwnerRevocations(f: Awaited<ReturnType<typeof receiptF
     transactions.set(tx, { hash: tx, blockHash: base.blockHash, blockNumber: base.blockNumber, to: ENTRYPOINT.v07, value: "0x0",
       input: encodeFunctionData({ abi: OWNER_HANDLE_OPS_ABI, functionName: "handleOps", args: [[{ sender: TEST_ACCOUNT.toLowerCase() as Hex, nonce: BigInt(i),
         initCode: "0x", callData, accountGasLimits: WORD, preVerificationGas: 1n, gasFees: WORD, paymasterAndData: "0x", signature: "0x" }], ZERO] }) });
-    const reading = ownerOperationOf({ receiptLogs: logs, userOpHash: opHash, txHash: tx, account: TEST_ACCOUNT, custody: [], usdg: CASH.USDG, chainId: 4663 })!;
-    const row = ownerOperationRow(reading, { agentId: TEST_ACCOUNT, chainId: 4663, blockNumber: 88, blockTime: 1791581459, recordedEpoch: 1 });
+    const reading = ownerOperationOf({ receiptLogs: logs, userOpHash: opHash, txHash: tx, account: TEST_ACCOUNT, custody: [], usdg: CASH.USDT, chainId: 56 })!;
+    const row = ownerOperationRow(reading, { agentId: TEST_ACCOUNT, chainId: 56, blockNumber: 88, blockTime: 1791581459, recordedEpoch: 1 });
     for (const [db, id, tenant] of [[f.local, i, null], [f.shared, 100 + i, TEST_TENANT]] as const) {
       await db.prepare(`INSERT INTO owner_operations(id,tenant,${OWNER_OPERATION_COLUMNS.join(",")},created_at) VALUES(?,?,${OWNER_OPERATION_COLUMNS.map(() => "?").join(",")},?)`)
         .run(id, tenant, ...OWNER_OPERATION_COLUMNS.map(c => row[c]), 1791595802);

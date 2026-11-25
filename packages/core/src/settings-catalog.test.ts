@@ -47,7 +47,7 @@ describe("the catalog", () => {
       const s = entry(k);
       assert.equal(s.risk, undefined, `${k} carries a risk and must not be approved from a chat`);
     }
-    for (const k of ["liveTradingEnabled", "trencherLiveEnabled", "scoutEnabled", "classSnipeEnabled", "minPoolLiquidityUsdg", "telegramNotifyEnabled", "telegramTransferEnabled"]) {
+    for (const k of ["liveTradingEnabled", "trencherLiveEnabled", "scoutEnabled", "minPoolLiquidityUsdg", "telegramNotifyEnabled", "telegramTransferEnabled"]) {
       assert.equal(entry(k).route, "dashboard", k);
     }
   });
@@ -56,7 +56,6 @@ describe("the catalog", () => {
     assert.equal(catalogEntryFor("buyPerTickUsdg")?.key, "buyPerTickUsdg");
     assert.equal(catalogEntryFor("Amount per buy")?.key, "buyPerTickUsdg");
     assert.equal(catalogEntryFor("stop loss")?.key, "strategistStopLossBps");
-    assert.equal(catalogEntryFor("launchpad buying")?.key, "classSnipeEnabled");
     assert.equal(catalogEntryFor("real money")?.key, "liveTradingEnabled");
     assert.equal(catalogEntryFor("something else entirely"), null);
   });
@@ -65,7 +64,7 @@ describe("the catalog", () => {
 describe("parseCatalogValue — the owner's words in, the stored value out", () => {
   it("reads dollars however they are written", () => {
     for (const raw of ["20", "$20", "20 usdg", "20 dollars", "$ 20"]) assert.equal(value("buyPerTickUsdg", raw), 20, raw);
-    assert.equal(value("idleFloorUsdg", "1,500"), 1500);
+    assert.equal(value("gapEnterBudgetUsdg", "1,500"), 1500);
     assert.equal(value("memecoinMinFdvUsd", "1.5m"), 1_500_000);
     assert.equal(value("memecoinMinFdvUsd", "250k"), 250_000);
   });
@@ -82,8 +81,6 @@ describe("parseCatalogValue — the owner's words in, the stored value out", () 
     assert.equal(value("telegramNotifyEveryMin", "hourly"), 60);
     assert.equal(value("telegramNotifyEveryMin", "every 15 minutes"), 15);
     assert.equal(value("telegramNotifyEveryMin", "every trade"), 0);
-    assert.equal(value("classMaxHoldSec", "6h"), 21_600);
-    assert.equal(value("classMaxHoldSec", "2 days"), 172_800);
     assert.equal(value("tickSeconds", "30"), 30);
     assert.equal(value("tickSeconds", "1 minute"), 60);
     assert.equal(value("llmIntervalMin", "2h"), 120);
@@ -160,10 +157,10 @@ describe("understandSettingsText — the way owners actually say it", () => {
   });
 
   it("the key=value shape a model is asked for", () => {
-    assert.deepEqual(keys("buyPerTickUsdg=20; takeProfitBps=25%; classSnipeEnabled=on"), {
+    assert.deepEqual(keys("buyPerTickUsdg=20; takeProfitBps=25%; scoutEnabled=on"), {
       buyPerTickUsdg: 20,
       takeProfitBps: 2500,
-      classSnipeEnabled: true,
+      scoutEnabled: true,
     });
   });
 

@@ -601,7 +601,6 @@ describe("trading never receives message text", () => {
       "NominationBook.reset()",
     ],
     "tg-coin-look.ts": [
-      "TokenProbe.pons: boolean",
       "TokenProbe.erc20: boolean",
       "TokenProbe.pool?: { token0: string; token1: string; canonical: string | null }",
       "CoinLookReaders.own: () => readonly string[]",
@@ -610,7 +609,6 @@ describe("trading never receives message text", () => {
       "CoinLookReaders.dexPairs?: (address: string) => Promise<GeckoPool[] | null>",
       "CoinLookReaders.getCode: (address: `0x${string}`) => Promise<string | undefined>",
       "CoinLookReaders.probe: (address: `0x${string}`) => Promise<TokenProbe | null>",
-      "CoinLookReaders.curveFor?: (address: string) => Promise<unknown>",
       "CoinLookReaders.now?: () => number",
       "createCoinLook(d: CoinLookReaders)",
       "chainTokenProbe(client: PublicClient)",

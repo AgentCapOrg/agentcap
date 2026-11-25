@@ -22,7 +22,7 @@
 
 /** The routes app/(app) owns: every one renders the terminal. */
 const SCREEN_PATHS = new Set([
-  "/", "/home", "/feed", "/chat", "/agent", "/alpha", "/you", "/profile",
+  "/", "/home", "/feed", "/chat", "/agent", "/you", "/profile",
   "/search", "/create", "/settings", "/grant", "/limits", "/groupchat",
   "/perps", "/deposit", "/withdraw", "/leaderboard", "/tokens",
   "/wardrobe", "/leaders", "/markets",

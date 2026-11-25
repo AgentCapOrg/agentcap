@@ -77,15 +77,6 @@ describe("paper fills — the loop with zero funds", () => {
     assert.match(r.reason!, /cash short/);
   });
 
-  it("vault round-trip conserves the book", () => {
-    const dep: TradeIntent = { kind: "vault-deposit", target: ROUTER, amountUsdg: 0n };
-    const wd: TradeIntent = { kind: "vault-withdraw", target: ROUTER, amountUsdg: 0n };
-    const a = applyPaperIntent(dep, book(), [], { ...OPTS, notionalUsdg: 300 });
-    assert.deepEqual([a.book.cashUsdg, a.book.vaultUsdg], [700, 300]);
-    const b = applyPaperIntent(wd, a.book, [], { ...OPTS, notionalUsdg: 300 });
-    assert.deepEqual([b.book.cashUsdg, b.book.vaultUsdg], [1000, 0]);
-  });
-
   it("marks equity to market at live prices", () => {
     const eq = paperEquityUsdg({ cashUsdg: 500, vaultUsdg: 100, hwmUsdg: 0 }, [{ symbol: "QQQ", token: QQQ, shares: 0.2 }], priceUsdOf);
     assert.equal(eq, 700); // 500 + 100 + 0.2×500
@@ -193,29 +184,6 @@ describe("paper fills — ERC-8056 splits", () => {
 });
 
 describe("the energy buy is never simulated", () => {
-  it("applyPaperIntent refuses kind energy-buy and leaves the book exactly as it was", () => {
-    // SECOND LINE OF DEFENCE. processIntentLocked refuses an energy buy with
-    // `energy-needs-live` before the paper fork is ever reached — a practice
-    // book has no reserve to fill, and simulating one would put a purchase on
-    // the tape that no chain ever saw. If that refusal were ever lost, this
-    // is what stands behind it.
-    const b = book();
-    const held: PaperPosition[] = [{ symbol: "QQQ", token: QQQ, shares: 0.1 }];
-    const energy: TradeIntent = {
-      kind: "energy-buy",
-      target: ROUTER,
-      sellToken: USDG,
-      buyToken: QQQ,
-      sellAmountRaw: 10_000_000n,
-      notionalUsdg: 10_000_000n,
-    };
-    const r = applyPaperIntent(energy, b, held, { ...OPTS, notionalUsdg: 10 });
-    assert.equal(r.ok, false);
-    assert.match(r.reason ?? "", /unsupported paper intent energy-buy/);
-    assert.deepEqual(r.book, book());
-    assert.deepEqual(r.positions, held);
-    assert.equal(r.fill, undefined);
-  });
 });
 
 describe("perps never touch the spot paper book", () => {

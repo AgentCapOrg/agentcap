@@ -65,7 +65,7 @@ function agent(opts: { liveMark: number; paperBookPeak: number; guard: Guard }) 
       mem.capitalPeakDirty = false;
       mem.markBook = "live";
     }
-    const ratchet = tickRatchets(tickPlan("regular"), { incomplete: false, curveMarked: 0 });
+    const ratchet = tickRatchets(tickPlan("regular"), { incomplete: false, });
     if (paper) {
       mem.hwm = U(await ratchet.paperPeak(paperBook, equityUsdg, async () => {}));
       mem.markBook = "paper";

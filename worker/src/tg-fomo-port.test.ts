@@ -34,7 +34,7 @@ import type { BrokerCallOptions, FomoBroker } from "./fomo/contract";
 import { createFomoClient } from "./fomo/provider";
 import { FOMO_ATTRIBUTION, FOMO_CAPABILITIES_GROUP, FOMO_GROUP_ON, groupScrub, NOT_PERMISSION_LINE, renderAnswer } from "./fomo/render";
 import { createFomoService } from "./fomo/service";
-import { robinhoodChain, tokenIdentity } from "./fomo/identity";
+import { bnbChain, tokenIdentity } from "./fomo/identity";
 import * as fstore from "./fomo/store";
 import type { FomoEnvelope, FomoToolName, TokenIdentity } from "./fomo/types";
 import type { ResolvedConfig } from "./settings";
@@ -559,7 +559,7 @@ describe("createTgFomoPort", () => {
     const buy = (key: string, at: number) => ({
       eventKey: key, identityBasis: "provider-event-id", identityAmbiguous: false, source: "stream", kind: "buy",
       trader: { userId: FRANK_ID, handle: "frankdegods", displayName: null, verified: null },
-      token: tokenIdentity(robinhoodChain(), PONS_TOKEN)!,
+      token: tokenIdentity(bnbChain(), PONS_TOKEN)!,
       tokenLabel: { symbol: "PONS", name: null }, tradeId: null, swapId: null, transferId: null, txHash: null, fillUsd: null, fillUsdBasis: null,
       positionValueUsd: 5000, positionRealizedPnlUsdCumulative: null, sourceEventAt: at, execAt: null, observedAt: at + 1000, verification: "provider-reported", text: null, replay: false,
     });

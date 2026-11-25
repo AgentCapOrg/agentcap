@@ -108,7 +108,6 @@ describe("publicGrantView carries no secret, sealed or not", () => {
       "perp",
       "sessionKeyAddress",
       "smartAccount",
-      "v4AdapterAddress",
     ]);
     assert.deepEqual(v.perp, { route: "perp-lighter-v1", apiKeyIndex: 16, apiPublicKey: PUBKEY });
     assert.deepEqual(v.binding, { version: "privy-did-owner-v1" });
@@ -116,7 +115,6 @@ describe("publicGrantView carries no secret, sealed or not", () => {
     assert.deepEqual(v.grantFeatures, ["tradeable-v2", "perp-lighter-v1"]);
     assert.deepEqual(v.grantTokens, ["0x00000000000000000000000000000000000000e7"]);
     assert.equal(v.smartAccount, ACCOUNT);
-    assert.equal(v.v4AdapterAddress, ADAPTER);
     assert.equal(v.chainId, 4663);
   });
 

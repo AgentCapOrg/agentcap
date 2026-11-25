@@ -1,5 +1,5 @@
 import { keccak256, type Address, type PublicClient } from "viem";
-import { CASH, UNISWAP, TRENCHER_FACTORY_ABI } from "@agentcap/core";
+import { CASH, PANCAKESWAP, TRENCHER_FACTORY_ABI } from "@agentcap/core";
 
 /** No default deployment: the permission stays unavailable until a verified factory is configured. */
 const configuredFactory = process.env.NEXT_PUBLIC_TRENCHER_FACTORY;
@@ -16,7 +16,7 @@ export async function resolveTrencherPermission(client: PublicClient, factory: A
     client.readContract({address:factory,abi:TRENCHER_FACTORY_ABI,functionName:"poolFactory"}),
     client.readContract({address:factory,abi:TRENCHER_FACTORY_ABI,functionName:"vaultFor",args:[owner]}),
   ]);
-  if (cash.toLowerCase()!==CASH.USDG.toLowerCase() || bridge.toLowerCase()!==CASH.WETH.toLowerCase() || router.toLowerCase()!==UNISWAP.swapRouter02.toLowerCase() || poolFactory.toLowerCase()!==UNISWAP.v3Factory.toLowerCase()) {
+  if (cash.toLowerCase()!==CASH.USDT.toLowerCase() || bridge.toLowerCase()!==CASH.WBNB.toLowerCase() || router.toLowerCase()!==PANCAKESWAP.smartRouter.toLowerCase() || poolFactory.toLowerCase()!==PANCAKESWAP.v3Factory.toLowerCase()) {
     throw new Error("Autonomous Trencher factory does not use the expected cash and router");
   }
   return {trencherFactoryAddress:factory.toLowerCase(),trencherVaultAddress:vault.toLowerCase()};

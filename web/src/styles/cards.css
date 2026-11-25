@@ -106,34 +106,6 @@
   color: var(--mm-down);
 }
 
-/* ── the curve progress bar ──────────────────────────────────────────────── */
-
-.mm-grad {
-  display: flex;
-  align-items: center;
-  gap: var(--mm-2);
-}
-
-.mm-grad .gbar {
-  flex: 1;
-  height: 4px;
-  border-radius: 999px;
-  background: var(--mm-surface-3);
-  overflow: hidden;
-}
-
-.mm-grad .gbar i {
-  display: block;
-  height: 100%;
-  background: var(--mm-wire);
-}
-
-.mm-grad .glab {
-  font-size: var(--mm-t-micro);
-  color: var(--mm-faint);
-  white-space: nowrap;
-}
-
 /* ── what it says about itself ───────────────────────────────────────────── */
 
 .mm-card .say {
@@ -233,26 +205,6 @@
   margin-left: auto;
   color: var(--mm-wire);
   font-weight: 600;
-}
-
-.mm-badge {
-  font-family: var(--mm-mono);
-  font-size: var(--mm-t-micro);
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  padding: 3px 6px;
-  border-radius: var(--mm-r-chip);
-  white-space: nowrap;
-}
-
-.mm-badge.in {
-  color: var(--mm-up);
-  border: 1px solid color-mix(in srgb, var(--mm-up) 30%, transparent);
-}
-
-.mm-badge.out {
-  color: var(--mm-dim);
-  border: 1px solid var(--mm-edge-2);
 }
 
 /* ── the one degraded-read banner ────────────────────────────────────────── */

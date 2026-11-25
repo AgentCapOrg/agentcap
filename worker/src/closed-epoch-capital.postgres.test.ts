@@ -25,7 +25,7 @@ import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync } from "nod
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { CASH, GRANT_PONS_CLASS } from "../../packages/core/src/index";
+import { CASH } from "../../packages/core/src/index";
 import { translateQuery, translateSchema, type Db } from "./db";
 import { applyLedgerSchema } from "./store";
 import { MIRROR_STATE_DDL } from "./ledger-mirror";
@@ -38,6 +38,9 @@ import { OWNER_OPERATION_COLUMNS, ownerOperationOf, ownerOperationRow } from "./
 import { CliError, pgClientDb, targetDigest, type PgClient } from "./chain-gap-booking-cli";
 import { ensureClosedEpochSchema, parseRepairReport, REPAIRS_TABLE } from "./closed-epoch-capital";
 import { connectClosedEpoch, main } from "./closed-epoch-capital-cli";
+
+// The feature marker older stored grant rows carry.
+const GRANT_PONS_CLASS = "pons-class";
 
 const url = process.env.AGENTCAP_TEST_PG_URL ?? process.env.AGENTCAP_TEST_POSTGRES_URL;
 const loadPg = async () => createRequire(import.meta.url)("pg") as unknown;
@@ -53,7 +56,7 @@ const MU = "0xff080c8ce2e5feadaca0da81314ae59d232d4afd";
 const DEPOSIT_TX = "0xc8ab6c45c87afb3d563b098bbee02d46bfb44f459976c7e142f9a32be8ade6c5";
 const SWEEP_TX = "0xffd1143ee9ed3bce4cc9be603391433d28b5c15e5fa181305ab94f1f4369dfb1";
 const DEPOSIT_AT = 1789515138, SWEEP_AT = 1789592963, EPOCH2_AT = 1789593711;
-const USDG = String(CASH.USDG).toLowerCase();
+const USDG = String(CASH.USDT).toLowerCase();
 const EP = "0x0000000071727de22e5e9d8baf0edac6f37da032";
 const UOE = "0x49628fd1471006c1482da88028e9ce4dbb080b815c9b0344d39e5a8e6ec1419f";
 const word = (n: bigint) => n.toString(16).padStart(64, "0");

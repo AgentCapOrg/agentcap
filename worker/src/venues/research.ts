@@ -28,7 +28,7 @@
 import { safeFetchUrl } from "../../../packages/core/src/index";
 import { FINDINGS_MAX, type FoundAddress, type FoundRepo, type FoundWhere, type SiteFindings } from "../../../packages/core/src/site-scan";
 import { readBoundedJson } from "../bounded-read";
-import { sanitizeMeta } from "./pons-meta";
+import { sanitizeMeta } from "./token-meta";
 
 export interface PageRead {
   status: number;

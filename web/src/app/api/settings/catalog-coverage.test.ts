@@ -75,7 +75,9 @@ const proposable = SETTINGS_CATALOG.filter(
 
 describe("SETTINGS_CATALOG against PUT /api/settings", () => {
   it("covers a real share of the page, not a token handful", () => {
-    assert.ok(proposable.length >= 50, `only ${proposable.length} proposable settings`);
+    // 54 before the removed routes' eight settings left the catalog (the vault
+    // cushion, the venue choice and the six launchpad ones).
+    assert.ok(proposable.length >= 46, `only ${proposable.length} proposable settings`);
   });
 
   for (const s of proposable) {

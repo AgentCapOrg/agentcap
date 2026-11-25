@@ -189,23 +189,7 @@ describe("the prompt hands over words, never measurements", () => {
 });
 
 describe("voice comes from what an owner actually chose", () => {
-  const DEFAULTS: Disposition = {
-    maxHoldSec: 21600,
-    exitAtGraduationPct: 85,
-    perEntryUsdg: 5,
-    maxImpactBps: 300,
-    minDepthUsdg: 100,
-  };
-
-  it("reads a short hold as someone who moves early", () => {
-    const t = traitsOf({ ...DEFAULTS, maxHoldSec: 1800 }, DEFAULTS);
-    assert.ok(t.some((x) => /early/.test(x)));
-  });
-
-  it("reads a high depth floor as someone who wants liquidity first", () => {
-    const t = traitsOf({ ...DEFAULTS, minDepthUsdg: 400 }, DEFAULTS);
-    assert.ok(t.some((x) => /liquidity/.test(x)));
-  });
+  const DEFAULTS: Disposition = { maxImpactBps: 300 };
 
   /**
    * THE HONEST CASE, asserted rather than hidden.
@@ -219,14 +203,5 @@ describe("voice comes from what an owner actually chose", () => {
   it("gives identically configured agents identical traits", () => {
     assert.deepEqual(traitsOf(DEFAULTS, DEFAULTS), traitsOf(DEFAULTS, DEFAULTS));
     assert.deepEqual(traitsOf(DEFAULTS, DEFAULTS), [], "a default agent has no distinguishing trait to claim");
-  });
-
-  it("is relative to the defaults, not to absolute numbers", () => {
-    // The same hold window is "early" against one default and unremarkable
-    // against another. Absolute edges here would be a second set of trading
-    // opinions nobody agreed to.
-    const d: Disposition = { ...DEFAULTS, maxHoldSec: 3600 };
-    assert.ok(traitsOf(d, DEFAULTS).some((x) => /early/.test(x)));
-    assert.deepEqual(traitsOf(d, { ...DEFAULTS, maxHoldSec: 3600 }), []);
   });
 });

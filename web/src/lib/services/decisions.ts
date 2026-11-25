@@ -113,8 +113,8 @@ const RAIL_FAMILY: Record<RefuseRule, RuleFamily> = {
 
 /** Refusals written while quoting or routing, before anything was signed (index.ts quote paths, impact.ts). */
 const QUOTE_RULES: ReadonlySet<string> = new Set([
-  "no-route", "no-quote", "no-liquidity", "impact-cap", "impact-unknown", "no-rialto-key", "no-curve-adapter",
-  "router-migrated", "class-side-ambiguous", "class-legs-unconfirmed", "class-sell-needs-vault", "class-vault-unreadable",
+  "no-route", "no-quote", "no-liquidity", "impact-cap", "impact-unknown", "no-curve-adapter",
+  "class-side-ambiguous", "class-legs-unconfirmed", "class-sell-needs-vault", "class-vault-unreadable",
   "curve-graduated",
 ]);
 
@@ -153,8 +153,6 @@ const OWNER_LABELS: Readonly<Record<string, string>> = {
   "transfer-not-permitted": "its signed permission does not allow transfers",
   "impact-cap": "the price impact at this size was above the maximum allowed",
   "impact-unknown": "the price impact could not be computed, so it was not traded blind",
-  "no-rialto-key": "the Rialto route needs a key this deployment does not have",
-  "router-migrated": "the venue's router had moved, so the route was not used",
   "class-side-ambiguous": "it could not tell which side of the launch trade this was",
   "class-legs-unconfirmed": "the launch trade's legs could not be confirmed",
   "class-sell-needs-vault": "the launch position sits in a vault this sell could not use",
@@ -176,7 +174,7 @@ const OWNER_REMEDIES: Readonly<Record<string, string>> = {
   "drawdown-breaker": "New buys stay blocked while drawdown is at or above the signed limit. This rule permits sell attempts. Drawdown must fall below that limit; full recovery to the high-water mark is not required. Review the current limit at /grant#resign. Renewing it unchanged does not clear the drawdown. If the balances look wrong, ask support to check the accounting.",
   "scout-budget": "Raise the scout budget in Settings if you want it to buy coins it discovers (it is 0 by default).",
   "impact-cap": "Raise the maximum price impact in Settings, or let it trade a smaller size.",
-  prefund: "Send a little ETH to the agent's account — every operation pays a fee before it reaches the chain.",
+  prefund: "Send a little BNB to the agent's account — every operation pays a fee before it reaches the chain.",
 };
 
 function labelFor(key: string): string | null {

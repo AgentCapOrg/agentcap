@@ -26,6 +26,8 @@
  * live, and a bug here can only mislabel — never unblock.
  */
 
+import { bnbChain } from "./chain";
+
 /**
  * The leg of the live rail that failed.
  *
@@ -233,7 +235,7 @@ function ownerRemedy(rule: RefuseRule | "expired"): {
         // another testnet grant. The owner re-signed, the banner came back, and
         // he reported the product as broken. `chain` is the intent travelling
         // with the button so the destination can honour what the label promised.
-        action: { label: "Re-sign on Robinhood Chain", kind: "renew-grant", chain: 4663 },
+        action: { label: "Re-sign on BNB Chain", kind: "renew-grant", chain: bnbChain.id },
       };
     case "grant-too-wide":
       return {

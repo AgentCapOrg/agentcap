@@ -79,7 +79,7 @@ function chain(receipts: Record<string, { block: number; logs: unknown[] }>, blo
     if (method === "eth_getBlockByNumber") return { timestamp: toHex(blockTimes[Number(BigInt(String(params[0])))]!) };
     if (method === "eth_call") {
       const { to, data } = params[0] as { to: string; data: string };
-      assert.equal(to.toLowerCase(), CASH_FEEDS.ETH_USD.toLowerCase());
+      assert.equal(to.toLowerCase(), CASH_FEEDS.BNB_USD.toLowerCase());
       if (data === encodeFunctionData({ abi: CHAINLINK_ABI, functionName: "decimals" })) return encodeFunctionResult({ abi: CHAINLINK_ABI, functionName: "decimals", result: 8 });
       if (data === encodeFunctionData({ abi: CHAINLINK_ABI, functionName: "latestRoundData" })) {
         return encodeFunctionResult({ abi: CHAINLINK_ABI, functionName: "latestRoundData", result: [phase | 2n, rounds[1]!.px, 0n, BigInt(rounds[1]!.at), phase | 2n] });
@@ -305,7 +305,7 @@ describe("the shell", () => {
     const rpc = createRepairRpc("https://rpc.example", (async () => new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: "0x1" }))) as typeof fetch);
     await assert.rejects(rpc("eth_sendRawTransaction", ["0x"]), (e: unknown) => e instanceof CliError && e.code === "rpc-method-outside-read-allowlist");
     await assert.rejects(rpc("eth_call", [{ to: A, data: "0x313ce567" }, "latest"]), (e: unknown) => e instanceof CliError && e.code === "rpc-call-outside-read-allowlist");
-    await assert.rejects(rpc("eth_call", [{ to: CASH_FEEDS.ETH_USD, data: "0xa9059cbb" }, "latest"]), (e: unknown) => e instanceof CliError && e.code === "rpc-call-outside-read-allowlist");
-    assert.equal(await rpc("eth_call", [{ to: CASH_FEEDS.ETH_USD, data: "0x313ce567" }, "latest"]), "0x1");
+    await assert.rejects(rpc("eth_call", [{ to: CASH_FEEDS.BNB_USD, data: "0xa9059cbb" }, "latest"]), (e: unknown) => e instanceof CliError && e.code === "rpc-call-outside-read-allowlist");
+    assert.equal(await rpc("eth_call", [{ to: CASH_FEEDS.BNB_USD, data: "0x313ce567" }, "latest"]), "0x1");
   });
 });

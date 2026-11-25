@@ -29,11 +29,11 @@ describe("deployment manifest persistence", () => {
 
   it("re-reads after deployment so an intervening contract record survives", async () => {
     const startup = readDeploymentManifest(file);
-    await recordDeployment(file, 4663, "PonsSelfTrade", { address: "pons" }, { replaceExisting: true });
-    expect(startup["4663"]!.PonsSelfTrade).to.equal(undefined);
-    await recordDeployment(file, 4663, "V4SelfSwap", { address: "v4" });
+    await recordDeployment(file, 4663, "OtherContract", { address: "other" }, { replaceExisting: true });
+    expect(startup["4663"]!.OtherContract).to.equal(undefined);
+    await recordDeployment(file, 4663, "ExampleAdapter", { address: "v4" });
     expect(readDeploymentManifest(file)).to.deep.equal({
-      "4663": { ...initial["4663"], PonsSelfTrade: { address: "pons" }, V4SelfSwap: { address: "v4" } },
+      "4663": { ...initial["4663"], OtherContract: { address: "other" }, ExampleAdapter: { address: "v4" } },
     });
   });
 
@@ -57,7 +57,7 @@ describe("deployment manifest persistence", () => {
     const ready: Promise<void>[] = [];
     const done: Promise<void>[] = [];
     try {
-      for (const [chain, contract] of [["4663", "V4SelfSwap"], ["4663", "PonsSelfTrade"], ["46630", "V4SelfSwap"]]) {
+      for (const [chain, contract] of [["4663", "ExampleAdapter"], ["4663", "OtherContract"], ["46630", "ExampleAdapter"]]) {
         // The contracts-only CI install includes ts-node, not the root's tsx.
         const child = spawn(process.execPath, ["--require", require.resolve("ts-node/register"), "-e", source, file, chain!, contract!],
           { cwd: path.resolve(__dirname, ".."), stdio: ["ignore", "ignore", "pipe", "ipc"] });
@@ -85,8 +85,8 @@ describe("deployment manifest persistence", () => {
       unlinkSync(lock);
       await allDone;
       expect(readDeploymentManifest(file)).to.deep.equal({
-        "4663": { ...initial["4663"], V4SelfSwap: { address: "V4SelfSwap" }, PonsSelfTrade: { address: "PonsSelfTrade" } },
-        "46630": { V4SelfSwap: { address: "V4SelfSwap" } },
+        "4663": { ...initial["4663"], ExampleAdapter: { address: "ExampleAdapter" }, OtherContract: { address: "OtherContract" } },
+        "46630": { ExampleAdapter: { address: "ExampleAdapter" } },
         "999": { Intervening: { address: "keep" } },
       });
       expect(readdirSync(dir)).to.deep.equal(["deployments.json"]);
@@ -97,31 +97,31 @@ describe("deployment manifest persistence", () => {
   });
 
   it("refuses a conflicting record without changing the manifest and releases the lock", async () => {
-    await recordDeployment(file, 4663, "V4SelfSwap", { address: "first" });
+    await recordDeployment(file, 4663, "ExampleAdapter", { address: "first" });
     const before = readFileSync(file, "utf8");
-    await rejection(recordDeployment(file, 4663, "V4SelfSwap", { address: "second" }), "already recorded");
+    await rejection(recordDeployment(file, 4663, "ExampleAdapter", { address: "second" }), "already recorded");
     expect(readFileSync(file, "utf8")).to.equal(before);
     expect(existsSync(`${file}.lock`)).to.equal(false);
-    await recordDeployment(file, 46630, "V4SelfSwap", { address: "testnet" });
+    await recordDeployment(file, 46630, "ExampleAdapter", { address: "testnet" });
   });
 
   it("only initializes a missing manifest and preserves malformed existing files", async () => {
     for (const bad of ["{", "null", "[]", '{"4663":null}', '{"4663":[]}']) {
       writeFileSync(file, bad);
       let failed = false;
-      try { await recordDeployment(file, 4663, "V4SelfSwap", { address: "new" }); } catch { failed = true; }
+      try { await recordDeployment(file, 4663, "ExampleAdapter", { address: "new" }); } catch { failed = true; }
       expect(failed).to.equal(true);
       expect(readFileSync(file, "utf8")).to.equal(bad);
       expect(existsSync(`${file}.lock`)).to.equal(false);
     }
     unlinkSync(file);
-    await recordDeployment(file, 4663, "V4SelfSwap", { address: "first" });
-    expect(readDeploymentManifest(file)).to.deep.equal({ "4663": { V4SelfSwap: { address: "first" } } });
+    await recordDeployment(file, 4663, "ExampleAdapter", { address: "first" });
+    expect(readDeploymentManifest(file)).to.deep.equal({ "4663": { ExampleAdapter: { address: "first" } } });
   });
 
   it("does not steal an abandoned lock and preserves explicit replacement behavior", async () => {
     writeFileSync(`${file}.lock`, "abandoned or still live");
-    await rejection(recordDeployment(file, 4663, "V4SelfSwap", {}, { lockWaitMs: 0 }), "manifest is locked");
+    await rejection(recordDeployment(file, 4663, "ExampleAdapter", {}, { lockWaitMs: 0 }), "manifest is locked");
     expect(readFileSync(`${file}.lock`, "utf8")).to.equal("abandoned or still live");
     expect(readDeploymentManifest(file)).to.deep.equal(initial);
     unlinkSync(`${file}.lock`);
@@ -133,7 +133,7 @@ describe("deployment manifest persistence", () => {
     if (process.platform === "win32") this.skip();
     const link = path.join(dir, "alias.json");
     symlinkSync(file, link);
-    await rejection(recordDeployment(link, 4663, "V4SelfSwap", {}), "must not be a symlink");
+    await rejection(recordDeployment(link, 4663, "ExampleAdapter", {}), "must not be a symlink");
     expect(readDeploymentManifest(file)).to.deep.equal(initial);
   });
 });

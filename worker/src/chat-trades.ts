@@ -9,7 +9,7 @@ export function inferredTradeSide(row:{fill_side?:unknown;buy_token?:unknown;sel
   if(row.fill_side==="buy"||row.fill_side==="sell")return row.fill_side;
   const bought=typeof row.buy_token==="string"?row.buy_token.trim().toLowerCase():"";
   const sold=typeof row.sell_token==="string"?row.sell_token.trim().toLowerCase():"";
-  const cash=CASH.USDG.toLowerCase();
+  const cash=CASH.USDT.toLowerCase();
   if(bought&&sold&&sold===cash&&bought!==cash)return "buy";
   if(bought&&sold&&bought===cash&&sold!==cash)return "sell";
   if(STOCK_TOKENS.some(t=>t.address.toLowerCase()===bought))return "buy";
@@ -74,7 +74,7 @@ export async function readTradeFacts(db: Db, opts: TradeFactsOptions): Promise<T
   if(opts.side){
     const marks=STOCK_TOKENS.map(()=>"?").join(",");
     where.push(`CASE WHEN t.fill_side IN ('buy','sell') THEN t.fill_side WHEN LOWER(t.sell_token) = ? AND LOWER(t.buy_token) <> ? AND t.buy_token <> '' THEN 'buy' WHEN LOWER(t.buy_token) = ? AND LOWER(t.sell_token) <> ? AND t.sell_token <> '' THEN 'sell' WHEN LOWER(t.buy_token) IN (${marks}) THEN 'buy' WHEN LOWER(t.sell_token) IN (${marks}) THEN 'sell' ELSE NULL END = ?`);
-    args.push(CASH.USDG.toLowerCase(),CASH.USDG.toLowerCase(),CASH.USDG.toLowerCase(),CASH.USDG.toLowerCase(),...STOCK_TOKENS.map(t=>t.address.toLowerCase()),...STOCK_TOKENS.map(t=>t.address.toLowerCase()),opts.side);
+    args.push(CASH.USDT.toLowerCase(),CASH.USDT.toLowerCase(),CASH.USDT.toLowerCase(),CASH.USDT.toLowerCase(),...STOCK_TOKENS.map(t=>t.address.toLowerCase()),...STOCK_TOKENS.map(t=>t.address.toLowerCase()),opts.side);
   }
   if (opts.id !== undefined) { where.push("t.id = ?"); args.push(opts.id); }
   if (opts.token) {

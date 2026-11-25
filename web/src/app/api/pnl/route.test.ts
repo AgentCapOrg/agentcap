@@ -31,7 +31,7 @@ before(async () => {
   delete process.env.AGENTCAP_HOSTED;
   resetGrantStoreForTest();
   for (const [tenant, smartAccount] of [[OWNER, ACCOUNT], [OTHER, OTHER_ACCOUNT]] as const) {
-    await getGrantStore("spot").put(tenant, { smartAccount, chainId: 4663, serialized: "test-only", demoSessionPrivateKey: "0x" + "11".repeat(32) } as unknown as StoredGrant);
+    await getGrantStore("spot").put(tenant, { smartAccount, chainId: 56, serialized: "test-only", demoSessionPrivateKey: "0x" + "11".repeat(32) } as unknown as StoredGrant);
   }
   process.env.AGENTCAP_HOSTED = "1";
   process.chdir(fileURLToPath(new URL("../../../../", import.meta.url)));
@@ -101,7 +101,7 @@ describe("private trade P&L PNG", () => {
     assert.deepEqual([meta.format, meta.width, meta.height], ["png", 1280, 853]);
   });
   it("uses the recorded sale proceeds and cost consumed, and resolves only this account's coin name", async () => {
-    const expected = { kind: "card", card: { symbol: "CASHCAT", investedUsdg: 5_000_000n, proceedsUsdg: 7_000_000n, realisedUsdg: 2_000_000n } };
+    const expected = { kind: "card", card: { symbol: "CASHCAT", investedUsdg: 5n * 10n ** 18n, proceedsUsdg: 7n * 10n ** 18n, realisedUsdg: 2n * 10n ** 18n } };
     assert.deepEqual(await readTradePnl(wrapSqlite(raw), ACCOUNT, 2), expected);
     assert.deepEqual(await readTradePnl(wrapSqlite(raw), ACCOUNT, 20), { ...expected, card: { ...expected.card, symbol: "Cash Cat" } });
     assert.equal((await request("?trade=21")).status, 409);

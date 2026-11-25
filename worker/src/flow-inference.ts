@@ -57,6 +57,8 @@
  * time with the opposite sign.
  */
 
+import { isSubMicro } from "../../packages/core/src/cash";
+
 /**
  * The stranded-op resolver's lookback, seconds: the 24h cap window plus two
  * hours (index.ts runStrandedResolve and reconcileInFlightAtArm scan this far
@@ -208,7 +210,8 @@ export function lookAtCash(a: {
       ? { action: "explained", why: "ledger-write" }
       : unattributed
         ? { action: "explained", why: "unread-settlement" }
-        : { action: "infer", deltaUsdg: a.cashUsdg - baselineUsdg };
+        // Under a millionth is below what the book records: no movement.
+        : { action: "infer", deltaUsdg: isSubMicro(a.cashUsdg - baselineUsdg) ? 0n : a.cashUsdg - baselineUsdg };
   return { baselineUsdg, unread, unattributed, verdict };
 }
 
@@ -395,13 +398,13 @@ export function matchInferredDelta<F extends { direction: "in" | "out"; amountUs
   flows: readonly F[],
   deltaUsdg6: bigint,
 ): { match: F } | { none: string } {
-  if (deltaUsdg6 === 0n) return { none: "there is no change to explain" };
+  if (isSubMicro(deltaUsdg6)) return { none: "there is no change to explain" };
   if (flows.length === 0) return { none: "no capital transfer is in the window" };
   if (flows.length > 1) return { none: `${flows.length} capital transfers are in the window, and one change cannot be told from another` };
   const only = flows[0]!;
   const signed = only.direction === "in" ? only.amountUsdg6 : -only.amountUsdg6;
-  if (signed !== deltaUsdg6) {
-    return { none: `the one capital transfer moved ${signed} micro-USDG, not this change's ${deltaUsdg6}` };
+  if (!isSubMicro(signed - deltaUsdg6)) {
+    return { none: `the one capital transfer moved ${signed} base units of USDT, not this change's ${deltaUsdg6}` };
   }
   return { match: only };
 }

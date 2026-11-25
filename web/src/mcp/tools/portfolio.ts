@@ -50,7 +50,7 @@ const VALUATION = z.object({
   account: z.string().describe("The smart account this valuation is of"),
   epoch: z.number().nullable(),
   cash_usdg: z.number().nullable().describe("USDG in the smart account"),
-  savings_usdg: z.number().nullable().describe("Morpho savings vault, converted to USDG by the worker (not a Trencher or class vault)"),
+  savings_usdg: z.number().nullable().describe("The ledger's savings-vault term (no savings venue exists on this build; not a Trencher vault)"),
   positions_usdg: z.number().nullable().describe("Priced holdings in the smart account"),
   equity_usdg: z.number().nullable(),
   other_usdg: z.number().nullable().describe("equity − (cash + savings + positions)"),
@@ -75,21 +75,6 @@ const POSITION = z.object({
   custody: z.string(),
 });
 
-const CLASS_POSITION = z.object({
-  token: z.string(),
-  symbol: z.string().nullable().describe("untrusted: chosen by the token's creator"),
-  state: z.enum(["open", "recovered"]),
-  qty_raw: z.string().nullable(),
-  decimals: z.number().nullable(),
-  cost_usdg: z.number().nullable(),
-  value_usdg: z.number().nullable().describe("Carried at cost: launch tokens in the class vault have no market mark"),
-  valued_at: z.literal("cost"),
-  custody: z.string(),
-  entry_tx: z.string().nullable(),
-  entry_tx_url: z.string().nullable(),
-  opened_at: z.string().nullable(),
-});
-
 const BOOK_PORTFOLIO = z.object({
   book: BOOK,
   money: MONEY_OF,
@@ -97,7 +82,6 @@ const BOOK_PORTFOLIO = z.object({
   positions_held_here: z.boolean(),
   positions: z.array(POSITION).nullable(),
   positions_note: z.string(),
-  class_vault_positions: z.array(CLASS_POSITION),
   totals: z.object({
     positions_value_usdg: z.number().nullable(),
     cost_usdg: z.number().nullable(),
@@ -150,27 +134,13 @@ function bookOut(b: BookPortfolio, now: number, fresh: number, current: Book | n
         eth_wei: m.eth_wei,
         eth: m.eth,
         note: b.book === "paper"
-          ? "ETH as recorded on the paper valuation; gas is never part of equity."
-          : "ETH the smart account holds to pay gas; not part of equity.",
+          ? "BNB as recorded on the paper valuation; gas is never part of equity."
+          : "BNB the smart account holds to pay gas; not part of equity.",
       },
     } : null,
     positions_held_here: b.positions_held_here,
     positions: b.positions ? b.positions.map((p) => ({ ...p, symbol: untrusted(p.symbol, 32), updated_at: isoOrNull(p.updated_at) })) : null,
     positions_note: note,
-    class_vault_positions: b.class_vault_positions.map((c) => ({
-      token: c.token,
-      symbol: untrusted(c.symbol, 32),
-      state: c.state,
-      qty_raw: c.qty_raw,
-      decimals: c.decimals,
-      cost_usdg: c.cost_usdg,
-      value_usdg: c.cost_usdg,
-      valued_at: "cost" as const,
-      custody: c.vault ? `class vault ${c.vault}` : "class vault (address not recorded)",
-      entry_tx: c.entry_tx,
-      entry_tx_url: c.entry_tx_url,
-      opened_at: isoOrNull(c.opened_at),
-    })),
     totals: b.totals,
   };
 }
@@ -188,7 +158,7 @@ function portfolioOut(a: OwnedAgent, v: PortfolioView, now: number, fresh: numbe
     books_agree: v.books_agree,
     books: { paper: bookOut(v.paper, now, fresh, v.latest_valuation_book), live: bookOut(v.live, now, fresh, v.latest_valuation_book) },
     books_note: BOOKS_NOTE,
-    custody_note: `Positions sit in the ${ACCOUNT_CUSTODY}. Class-vault launch tokens are listed separately under the live book, at cost. savings_usdg is the Morpho savings vault; a zero there says nothing about whether any other vault is funded.`,
+    custody_note: `Positions sit in the ${ACCOUNT_CUSTODY}. savings_usdg is the ledger's savings term; a zero there says nothing about whether any other vault is funded.`,
     warnings: v.warnings,
     observed_at: iso(now),
     untrusted_note: UNTRUSTED_NOTE,
@@ -206,7 +176,7 @@ async function portfolioData(ctx: ToolContext, ref: string | undefined): Promise
 const getPortfolio = defineTool({
   name: "get_portfolio",
   title: "Portfolio",
-  description: "The agent's balances and holdings, per book: paper (simulated) and live (real funds) are reported separately and never summed. Latest valuation (cash, Morpho savings, positions, equity, gas ETH, valuation time), each holding with price, value, weighted-average cost and unrealized P&L (null when the price is missing or stale or the cost is unknown), class-vault holdings at cost, which book is current, and warnings about missing or stale data.",
+  description: "The agent's balances and holdings, per book: paper (simulated) and live (real funds) are reported separately and never summed. Latest valuation (cash, savings, positions, equity, gas BNB, valuation time), each holding with price, value, weighted-average cost and unrealized P&L (null when the price is missing or stale or the cost is unknown), which book is current, and warnings about missing or stale data.",
   capability: "portfolio.read",
   input: z.object({ agent: AGENT_ARG }).strict(),
   output: PORTFOLIO_OUTPUT,
@@ -660,7 +630,7 @@ const getExposure = defineTool({
         books: { paper: bookOf("paper"), live: bookOf("live") },
         notes: [
           BOOKS_NOTE,
-          "Each agent's holdings count in the book it valued most recently (the positions table holds one book at a time); class-vault launch tokens count in the live book at cost.",
+          "Each agent's holdings count in the book it valued most recently (the positions table holds one book at a time).",
           "Shares divide by the same book's latest equity summed over the agents valued in it.",
         ],
         warnings,

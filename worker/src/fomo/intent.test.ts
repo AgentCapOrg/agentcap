@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { robinhoodChain, tokenIdentity } from "./identity";
+import { bnbChain, tokenIdentity } from "./identity";
 import { classifyFomoQuestion, PLAN_ARG_KEYS, sanitizePlanArgs, type FomoQuestionPlan, type FomoToolCall } from "./intent";
 import { applyPlan, applyResult, type FomoIntent, type SubjectMemory } from "./subject-memory";
 import type { ResolvedSubject } from "./types";
@@ -536,12 +536,12 @@ describe("the question corpus", () => {
   }
 });
 
-/** A lookup that resolves every token subject on Robinhood Chain, as the tools would. */
+/** A lookup that resolves every token subject on BNB Chain, as the tools would. */
 function lookup(memory: SubjectMemory, plan: FomoQuestionPlan, resolved: ReturnType<typeof applyPlan>["resolved"], revision: number | null, now: number): SubjectMemory {
   const subjects: ResolvedSubject[] = [];
   for (const s of resolved) {
     if (s.kind === "token" && s.address) {
-      const token = tokenIdentity(robinhoodChain(), s.address);
+      const token = tokenIdentity(bnbChain(), s.address);
       assert.ok(token);
       subjects.push({ kind: "token", token, label: { symbol: s.address === A ? "AAA" : "BBB", name: null } });
     }
@@ -573,11 +573,11 @@ describe("the follow-up chain from the spec", () => {
     assert.deepEqual(sellers.subjects, []);
     assert.deepEqual(sellers.usesMemory, ["token"]);
     // Same token AND the chain the first lookup resolved.
-    assert.deepEqual(sellers.toolCalls, [{ tool: "fomo_get_token_activity", args: { token: A, chain: "robinhood", side: "sell" } }]);
+    assert.deepEqual(sellers.toolCalls, [{ tool: "fomo_get_token_activity", args: { token: A, chain: "bsc", side: "sell" } }]);
 
     const words = turn("Does that contradict what those traders said?", 7);
     assert.equal(words.intent, "words-vs-actions");
-    assert.deepEqual(words.toolCalls, [{ tool: "fomo_research_coin", args: { token: A, chain: "robinhood", focus: "words-vs-actions" } }]);
+    assert.deepEqual(words.toolCalls, [{ tool: "fomo_research_coin", args: { token: A, chain: "bsc", focus: "words-vs-actions" } }]);
 
     const corrected = turn(`no I meant ${B}`, 2);
     assert.equal(corrected.correction, true);
@@ -589,13 +589,13 @@ describe("the follow-up chain from the spec", () => {
     const refreshed = turn("refresh it", 3);
     assert.equal(refreshed.intent, "words-vs-actions");
     assert.equal(refreshed.freshness, "force-refresh");
-    assert.deepEqual(refreshed.toolCalls, [{ tool: "fomo_research_coin", args: { token: B, chain: "robinhood", focus: "words-vs-actions", freshness: "force-refresh" } }]);
+    assert.deepEqual(refreshed.toolCalls, [{ tool: "fomo_research_coin", args: { token: B, chain: "bsc", focus: "words-vs-actions", freshness: "force-refresh" } }]);
 
     const yesterday = turn("compare this with yesterday");
     assert.equal(yesterday.intent, "changes-since");
     assert.equal(yesterday.window, "24h");
     assert.equal(yesterday.freshness, "prefer-fresh", "refresh does not stick to later turns");
-    assert.deepEqual(yesterday.toolCalls, [{ tool: "fomo_research_coin", args: { token: B, chain: "robinhood", since_revision: 3, window: "24h" } }]);
+    assert.deepEqual(yesterday.toolCalls, [{ tool: "fomo_research_coin", args: { token: B, chain: "bsc", since_revision: 3, window: "24h" } }]);
 
     const info = turn("just give me the information, not a trading opinion");
     assert.equal(info.infoOnly, true);
@@ -617,11 +617,11 @@ describe("the follow-up chain from the spec", () => {
     assert.deepEqual(p1.toolCalls[0]!.args, { token: "PEPE" });
     const step = applyPlan(memory, p1, NOW);
     // The lookup resolved PEPE to one specific contract on Robinhood Chain.
-    const token = tokenIdentity(robinhoodChain(), A)!;
+    const token = tokenIdentity(bnbChain(), A)!;
     memory = applyResult(step.memory, { subjects: [{ kind: "token", token, label: { symbol: "PEPE", name: "Pepe" } }], requestId: "r1" }, NOW);
     const p2 = classifyFomoQuestion("what about the sellers?", { memory, now: NOW + 1_000 });
     assert.ok(p2);
-    assert.deepEqual(p2.toolCalls[0]!.args, { token: A, chain: "robinhood", side: "sell" });
+    assert.deepEqual(p2.toolCalls[0]!.args, { token: A, chain: "bsc", side: "sell" });
   });
 });
 

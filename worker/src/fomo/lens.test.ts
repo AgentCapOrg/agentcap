@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { STATS_UNAVAILABLE_UNKNOWN, buildDossier, type BuildDossierInput } from "./dossier";
-import { chainFromProvider, robinhoodChain, tokenIdentity } from "./identity";
+import { chainFromProvider, bnbChain, tokenIdentity } from "./identity";
 import { TRADER_FLOW_LENS, lensCitations, lensRefs, renderTraderFlowLens } from "./lens";
 import type { CoinDossier, Thesis, TokenStats, TraderEvent } from "./types";
 
@@ -10,7 +10,7 @@ const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
 const EVM = "0x" + "ab".repeat(20);
 const MINT = "0xd77cf5c8a1c79d6b78408a3f545dea88441790fb";
-const TOKEN = tokenIdentity(robinhoodChain(), EVM)!;
+const TOKEN = tokenIdentity(bnbChain(), EVM)!;
 const BSC_TOKEN = tokenIdentity(chainFromProvider(56, "bsc"), MINT)!;
 
 const ADDRESS_HEX = /0x[0-9a-fA-F]{6,}/;

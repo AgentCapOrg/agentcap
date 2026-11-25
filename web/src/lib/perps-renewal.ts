@@ -38,9 +38,14 @@
  * the grant's own signed purpose, markers, chain and perp block rebuild to
  * (core grantWallOptions, buildCallPermissions — the rebuild POST /api/grants
  * compared byte for byte at intake, canonical-wall.ts) must hold no
- * permission. A Spot grant, a Perps grant carrying the energy buy or a perp
- * block, or anything this cannot read, keeps the revocation — the answer that
- * costs gas, never the one that leaves authority behind.
+ * permission. A Spot grant, a Perps grant declaring ANY marker or sealed
+ * address, a perp block, or anything this cannot read, keeps the revocation —
+ * the answer that costs gas, never the one that leaves authority behind.
+ *
+ * ANY MARKER, because the rebuild only knows what this build grants. A removed
+ * marker (`energy-buy-v1`, `pons-class`, ...) is ignored by grantWallOptions,
+ * so a wall that really carried that permission would rebuild empty. No paper
+ * Perps grant this service stores declares one (canonical-wall.ts).
  *
  * Pure, and NO CALLER YET. The dashboard renewal (Wallet.tsx renewKey) renews
  * Spot only and refuses a Perps grant before anything is read or stopped: its
@@ -74,7 +79,9 @@ export function renewalSkipsRevocation(previous: unknown): boolean {
   }
   // The markers a wall is rebuilt from, as a list. Absent is not "none": a
   // grant whose markers cannot be read cannot be shown to have an empty wall.
-  if (!Array.isArray(g.grantFeatures) || g.grantFeatures.some((f) => typeof f !== "string")) return false;
+  if (!Array.isArray(g.grantFeatures) || g.grantFeatures.length > 0) return false;
+  // Nor a sealed address, of a route this build knows or one it removed.
+  if (Object.entries(g).some(([key, value]) => /(?:Adapter|Vault|Factory)(?:Vault|Factory)?Address$/.test(key) && value !== undefined)) return false;
   if (g.grantTokens !== undefined && !Array.isArray(g.grantTokens)) return false;
   if (typeof g.smartAccount !== "string" || !ADDRESS.test(g.smartAccount)) return false;
   if (typeof g.caps !== "object" || g.caps === null) return false;

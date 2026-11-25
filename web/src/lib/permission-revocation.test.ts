@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import { encodeCallDataEpV07 } from "@zerodev/sdk";
 import { createPublicClient, custom, encodeFunctionData, RpcRequestError, type Hex } from "viem";
 import { getUserOperationError } from "viem/account-abstraction";
-import { robinhoodChain, robinhoodTestnet } from "@agentcap/core";
+import { bnbChain, bnbTestnet } from "@agentcap/core";
 import { invalidatePermissions, isRevocationFeeShortfall, KERNEL_REVOCATION_ABI, nextRevocationNonce, readConfirmedRevocationCutoff, revocationFeeMessage, type PendingRevocation, type RevocationIO, type RevocationReceipt } from "./permission-revocation";
 import { isPermissionRevocationShape, permissionRevocationNonce } from "./recovery-shape";
 import { sdkRevocationCall } from "./permission-revocation-fixture";
@@ -260,7 +260,7 @@ describe("revocation relay scope", () => {
 });
 
 describe("a revocation the account cannot pay for", () => {
-  const relayed = (message: string) => new RpcRequestError({ body: {}, error: { code: -32500, message }, url: "https://app.agentcap.xyz/api/bundler/4663" });
+  const relayed = (message: string) => new RpcRequestError({ body: {}, error: { code: -32500, message }, url: "https://app.agentcap.xyz/api/bundler/56" });
   it("recognises the bundler's AA21 however viem wraps it", () => {
     // The estimation failure an owner saw: viem's own wrapping of the relay reply.
     const estimated = getUserOperationError(relayed("AA21 didn't pay prefund"), {
@@ -283,8 +283,8 @@ describe("a revocation the account cannot pay for", () => {
     ]) assert.equal(isRevocationFeeShortfall(error), false, String(error));
   });
   it("names the account, the network and the coin to send, without the raw operation", () => {
-    const empty = revocationFeeMessage(ACCOUNT, robinhoodChain, true);
-    assert.equal(empty, `Revoking earlier permissions needs ETH for the network fee on Robinhood Chain (4663), and account ${ACCOUNT} has none. Send ETH to that address on Robinhood Chain (4663), then try again.`);
-    assert.match(revocationFeeMessage(ACCOUNT, robinhoodTestnet, false), /does not have enough\. Send testnet ETH to that address on Robinhood Chain Testnet \(46630\)/);
+    const empty = revocationFeeMessage(ACCOUNT, bnbChain, true);
+    assert.equal(empty, `Revoking earlier permissions needs BNB for the network fee on BNB Smart Chain (56), and account ${ACCOUNT} has none. Send BNB to that address on BNB Smart Chain (56), then try again.`);
+    assert.match(revocationFeeMessage(ACCOUNT, bnbTestnet, false), /does not have enough\. Send testnet BNB to that address on BNB Smart Chain Testnet \(97\)/);
   });
 });

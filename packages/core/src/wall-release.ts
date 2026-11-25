@@ -104,13 +104,11 @@ export function wallPermissionKeys(perms: readonly KeyablePermission[]): string[
  * None of those alter the permission keys, none of them require a re-signature
  * for correctness, and prompting for them teaches owners to ignore the prompt.
  *
- * Currently: 2026-09-20T18:56:39Z, commit f96ddd9 "wall: one USDG approve, so a
- * Trencher grant can actually be installed" — the release that removed the
- * duplicate `USDG.approve`. Every grant older than this either carries that
- * duplicate and is uninstallable, or predates the Trencher permissions
- * entirely. Both want the same remedy.
+ * Currently: 2026-11-24T00:00:00Z, the move to BNB Chain — the swap router
+ * changed and the Uniswap v4, Rialto and savings-vault permissions were
+ * removed. SET THIS TO THE MOMENT THAT RELEASE SHIPS if it is later.
  */
-export const WALL_CHANGED_AT = 1_789_930_599;
+export const WALL_CHANGED_AT = 1_795_478_400;
 
 /** What a staleness check can conclude. `unknown` is not `false`. */
 export type WallAge = "current" | "predates-change" | "unknown";

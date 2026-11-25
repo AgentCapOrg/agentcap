@@ -13,37 +13,40 @@ import { describe, it } from "node:test";
 import { DUST_REMAINDER_USDG, TRENCHER_DEFAULTS, exitSize, makeTrencher, type OpenPosition } from "./trencher";
 import { takeTick, type Snapshot } from "./types";
 
+// 6dp micro figures, scaled to 18dp USDT base units.
+const MICRO = 10n ** 12n;
+
 const E18 = 10n ** 18n;
 
 describe("exitSize — a partial never strands a sliver", () => {
   it("THE MUSEBOOK CASE: a sell a hair under the position's value sells all of it", () => {
     const raw = 13_306_845_500_000_000_000_000n; // 13,306.8455 tokens
-    const r = exitSize(raw, 4_636_202n, 4_634_068n, false);
+    const r = exitSize(raw, (4_636_202n * MICRO), (4_634_068n * MICRO), false);
     assert.equal(r.amount, raw, "the whole position, not 99.95% of it");
-    assert.equal(r.notional, 4_636_202n);
+    assert.equal(r.notional, (4_636_202n * MICRO));
   });
 
   it("a deliberate trim still leaves what it meant to", () => {
-    const r = exitSize(10n * E18, 10_000_000n, 5_000_000n, false);
+    const r = exitSize(10n * E18, (10_000_000n * MICRO), (5_000_000n * MICRO), false);
     assert.equal(r.amount, 5n * E18);
-    assert.equal(r.notional, 5_000_000n);
+    assert.equal(r.notional, (5_000_000n * MICRO));
   });
 
   it("a remainder under 1% of the position is not left, however large in dollars", () => {
     // $1,000 position, sell $995: the $5 left is 0.5% — a rounding of intent, not a choice.
-    const r = exitSize(1_000n * E18, 1_000_000_000n, 995_000_000n, false);
+    const r = exitSize(1_000n * E18, (1_000_000_000n * MICRO), (995_000_000n * MICRO), false);
     assert.equal(r.amount, 1_000n * E18);
   });
 
   it("a remainder under $0.10 is not left, even when it is over 1%", () => {
     // $1.00 position, sell $0.95: the $0.05 left is 5%, but worth less than the fee to sell it.
-    const r = exitSize(E18, 1_000_000n, 950_000n, false);
+    const r = exitSize(E18, (1_000_000n * MICRO), (950_000n * MICRO), false);
     assert.equal(r.amount, E18);
-    assert.ok(1_000_000n - 950_000n < DUST_REMAINDER_USDG);
+    assert.ok((1_000_000n * MICRO) - (950_000n * MICRO) < DUST_REMAINDER_USDG);
   });
 
   it("a rule exit sells everything, exactly as before", () => {
-    assert.deepEqual(exitSize(7n * E18, 5_000_000n, 5_000_000n, true), { amount: 7n * E18, notional: 5_000_000n });
+    assert.deepEqual(exitSize(7n * E18, (5_000_000n * MICRO), (5_000_000n * MICRO), true), { amount: 7n * E18, notional: (5_000_000n * MICRO) });
   });
 
   it("nothing to value, nothing sold", () => {
@@ -65,20 +68,20 @@ describe("the Trencher tick sells the whole position on a Brain exit that would 
     entryPrice8: price8,
     entryLiquidityUsd: 50_000,
     entrySec: nowSec - 60,
-    costUsdg: 5_000_000n,
+    costUsdg: (5_000_000n * MICRO),
     qtyRaw: RAW,
   };
 
   const snap = {
-    cashUsdg: 10_000_000n,
+    cashUsdg: (10_000_000n * MICRO),
     vaultUsdg: 0n,
-    holdings: new Map([["MUSE", { symbol: "MUSE", token: HELD, rawBalance: RAW, valueUsdg: 4_636_202n, decimals: 18 }]]),
+    holdings: new Map([["MUSE", { symbol: "MUSE", token: HELD, rawBalance: RAW, valueUsdg: (4_636_202n * MICRO), decimals: 18 }]]),
     prices: new Map([["MUSE", { price8, stale: false, source: "pool" as const }]]),
     pausedTokens: new Set<string>(),
     staleFeeds: new Set<string>(),
     sequencerUp: true,
-    spendHeadroomUsdg: 100_000_000n,
-    perTradeCapUsdg: 10_000_000n,
+    spendHeadroomUsdg: (100_000_000n * MICRO),
+    perTradeCapUsdg: (10_000_000n * MICRO),
   } as unknown as Snapshot;
 
   const tick = async (usdgAmount: number) => {

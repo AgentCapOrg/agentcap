@@ -1,6 +1,6 @@
 /**
  * REAL POSTGRES: EVERY STATEMENT THE TELEGRAM OUTAGE FIX ADDS, OVER THE SCHEMA
- * PRODUCTION RUNS. Opt-in, like pg-upgrade.postgres.test.ts (see its header):
+ * PRODUCTION RUNS. Opt-in:
  *
  *   AGENTCAP_TEST_PG_URL=postgres://agentcap@localhost:55432/agentcap_pgtest \
  *     npx tsx --test worker/src/telegram-fix.postgres.test.ts
@@ -42,8 +42,7 @@
  * that queues it.
  *
  * THE STARTING POINT IS PRODUCTION'S SCHEMA: testdata/shared-schema-75995697.sql
- * with main's own boot run over it (the DDL pg-upgrade.postgres.test.ts
- * applies), and rows written in THAT shape before any of this branch's DDL runs.
+ * with main's own boot run over it, and rows written in THAT shape before any of this branch's DDL runs.
  *
  * THE HOLD NOTICE IS AT LEAST ONCE BY DESIGN (hold-notice.ts: recorded after
  * the send), so two unguarded attempts can both send. What makes concurrent
@@ -69,7 +68,6 @@ import { applyLedgerSchema } from "./store";
 import { PgSettingsStore, resetSettingsStoreForTest, useSettingsStoreForTest, type PgClientLike } from "./settings-store";
 import { resetGrantStoreForTest } from "./grant-store";
 import { MIRROR_STATE_DDL } from "./ledger-mirror";
-import { ENERGY_DAYS_SCHEMA } from "./energy-days";
 import { RISK_PERIOD_SCHEMA } from "./risk-period";
 import { ANNOUNCE_DDL } from "./announce";
 import {
@@ -240,12 +238,11 @@ test("Postgres: the Telegram outage fix over production's schema", { skip: !url,
     await t.test("production's schema, with the energy release booted over it and rows in its shape", async () => {
       // Loaded verbatim, not through Db.exec, whose translation must not touch production's own DDL.
       await (await connect(scoped("fixture"))).query(readFileSync(FIXTURE, "utf8"));
-      // The boot main ships today (pg-upgrade.postgres.test.ts BOOT).
+      // The boot main ships today.
       await settings.listTenants();
       await applyLedgerSchema(orch);
       await orch.exec(translateSchema(MIRROR_STATE_DDL));
       await orch.exec(translateSchema(TELEGRAM_STATE_DDL));
-      await orch.exec(ENERGY_DAYS_SCHEMA);
       await orch.exec(RISK_PERIOD_SCHEMA);
       await orch.exec(ANNOUNCE_DDL);
       // A linked tenant and one that never linked, published by the code

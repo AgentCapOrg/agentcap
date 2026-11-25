@@ -180,11 +180,11 @@ describe("processIntentLocked is reached only through the intent chain", () => {
 describe("THE GATE IS THE FIRST THING THE FUNNEL ASKS", () => {
   const gate = BODY.indexOf("admissionRefusal(");
 
-  it("it is asked with this process's level, its draining flag and the tick's held legs", () => {
+  it("it is asked with this process's level and its draining flag", () => {
     assert.ok(gate > 0, "processIntentLocked must call admissionRefusal");
     assert.match(
       BODY,
-      /const admissionRule = admissionRefusal\(\{ level: admission\.level, draining \}, intent, limits, lastHeldLegs\);/,
+      /const admissionRule = admissionRefusal\(\{ level: admission\.level, draining \}, intent, limits\);/,
     );
     assert.equal((BODY.match(/admissionRefusal\(/g) ?? []).length, 1, "asked once");
   });
@@ -223,14 +223,6 @@ describe("THE GATE IS THE FIRST THING THE FUNNEL ASKS", () => {
     assert.equal(sites(/\bdraining = true;/).length, 1, "raised in one place — the SIGTERM handler");
     assert.equal(sites(/(?<!let )\bdraining = false;/).length, 0, "and never lowered");
     assert.equal(sites(/let draining = false;/).length, 1);
-  });
-
-  it("the held legs it asks with are the tick's own, taken where the energy filter takes them", () => {
-    const held = CODE.indexOf("const heldLegs = heldCurveLegs({");
-    const cached = CODE.indexOf("lastHeldLegs = heldLegs;");
-    const loop = CODE.indexOf("for (const [proposedAt, intent] of proposed.entries()) {");
-    assert.ok(held > 0 && cached > held && loop > cached);
-    assert.equal(sites(/\blastHeldLegs = /).length, 1, "nothing else writes it");
   });
 });
 

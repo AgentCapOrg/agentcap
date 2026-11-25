@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 
 import { legsForUniverse, watchTokensFor } from "./strategies/registry";
-import { officialCoinTokens, officialCoinsFor, robinhoodChain, STOCK_TOKENS } from "../../packages/core/src/index";
+import { officialCoinTokens, officialCoinsFor, bnbChain, STOCK_TOKENS } from "../../packages/core/src/index";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -40,18 +40,15 @@ const CUSTOM: { symbol: string; address: `0x${string}`; decimals: number }[] = [
 
 describe("official coins reach the watch set", () => {
   it("appears with NO settings change, in a default equity basket", () => {
-    // This is the whole point: SirSendIt's owner holds AAPL/GOOGL/TSLA and added
-    // nothing. Before this, the curve fallback had no leg to fall back to.
+    // This is the whole point: an owner who added nothing still watches it.
     const watched = watchTokensFor(BASKET, CUSTOM, OFFICIAL);
     const found = watched.find((t) => t.address.toLowerCase() === COIN.address.toLowerCase());
     assert.ok(found, "an official listing must be watched without the owner adding it");
     assert.equal(found.symbol, COIN.symbol);
   });
 
-  it("carries kind memecoin and a null feed, which is what routes it to curve pricing", () => {
-    // index.ts builds its curve-pricing set as
-    //   watchTokens.filter(t => t.chainlinkFeed === null && t.kind === "memecoin")
-    // so BOTH fields are load-bearing. A listing registered as a stock would be
+  it("carries kind memecoin and a null feed, which is what routes it to coin pricing", () => {
+    // BOTH fields are load-bearing: a listing registered as a stock would be
     // watched and never priced.
     const found = watchTokensFor(BASKET, CUSTOM, OFFICIAL).find(
       (t) => t.address.toLowerCase() === COIN.address.toLowerCase(),
@@ -150,102 +147,11 @@ describe("official coins become legs", () => {
   });
 });
 
-describe("an official listing carries its own provenance", () => {
-  /**
-   * Source-position tests must read CODE, not prose.
-   *
-   * The first version of the ordering test below compared raw offsets and
-   * failed against correct code, because the explanatory comment above the call
-   * mentions `discovered_pools` before the call itself appears. Comments are
-   * stripped here so these assertions cannot be moved by rewording a comment —
-   * in either direction, which is the half that would have been dangerous.
-   */
-  const stripComments = (s: string) =>
-    s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^[ \t]*\/\/.*$/gm, "");
-  const STORE = stripComments(readFileSync(path.join(__dirname, "store.ts"), "utf8"));
-  const bodyOf = (decl: string) => {
-    const at = STORE.indexOf(decl);
-    assert.ok(at > -1, `${decl} must exist`);
-    const fn = STORE.slice(at);
-    return fn.slice(0, fn.indexOf("\n}"));
-  };
-
-  it("curveFor answers from the listing BEFORE touching discovered_pools", () => {
-    // discovered_pools is wiped on every redeploy in hosted mode and pruned to
-    // the 5,000 newest rows against ~475 launches an hour, so a listed coin
-    // would lose its own provenance within hours — unpriceable and unsellable.
-    const body = bodyOf("export async function curveFor");
-    const official = body.indexOf("officialCoinCurve");
-    const table = body.indexOf("discovered_pools");
-    assert.ok(official > -1, "curveFor must consult the listing");
-    assert.ok(table > -1, "curveFor must still read the table");
-    assert.ok(official < table, "the pinned record must be consulted first, not as a fallback");
-  });
-
-  it("knownCurves unions the official curves, so policy does not refuse the exit", () => {
-    // The curve-provenance rule is the only thing vouching for a curve token. A
-    // listed coin whose curve the launch scan never saw would be refused — the
-    // SELL included, which is the no-exit trap.
-    assert.match(
-      bodyOf("export async function knownCurves"),
-      /officialCoinsFor/,
-      "official curves must join the provenance set",
-    );
-  });
-
-  it("knownCurves still returns null on a failed read, never a partial list", () => {
-    // `null` means "could not tell" and makes the caller pass undefined. A list
-    // holding only the official curves would be a PARTIAL answer, which silently
-    // refuses exactly the positions it dropped.
-    const body = bodyOf("export async function knownCurves");
-    const catchAt = body.indexOf("catch");
-    assert.ok(catchAt > -1, "knownCurves must still catch");
-    assert.match(body.slice(catchAt), /return null/, "a failed read must stay null");
-    assert.ok(
-      body.indexOf("officialCoinsFor") < catchAt,
-      "the union must happen on the SUCCESS path only",
-    );
-  });
-});
-
-describe("the two basket filters agree", () => {
-  /**
-   * THE BUG THIS EXISTS TO PREVENT, because it nearly shipped.
-   *
-   * There are TWO independent basket filters. `legsForUniverse` decides what a
-   * strategy may name; `curveLegsNow` decides what the curve venue will build.
-   * Widening one and not the other makes an official coin a leg every strategy
-   * can propose and the curve venue silently refuses — and since the curve venue
-   * is the ONLY route to a listed coin (it has no pool before graduation), that
-   * is the entire feature failing on a shut equity market while every component
-   * reports success.
-   *
-   * Read from source because `curveLegsNow` is a closure over worker state that
-   * a unit test cannot construct. What can be pinned is that its selection set
-   * is built from the official symbols as well as the basket.
-   */
+describe("the worker's legs carry the official symbols", () => {
   const INDEX = readFileSync(path.join(__dirname, "index.ts"), "utf8");
 
-  it("curveLegsNow selects official symbols as well as the basket", () => {
-    const at = INDEX.indexOf("function curveLegsNow");
-    assert.ok(at > -1, "curveLegsNow must exist");
-    // Bounded by the loop that consumes the set, NOT by a closing brace:
-    // `curveLegsNow`'s return type is a multi-line object literal, so the first
-    // `\n  }` after the declaration closes the TYPE and cuts the body off before
-    // the selection is built. The loop is the thing the set feeds, so it is both
-    // a correct boundary and one that cannot drift away from what is measured.
-    const end = INDEX.indexOf("for (const [symbol, leg] of lastCurveLegs)", at);
-    assert.ok(end > at, "curveLegsNow must still iterate lastCurveLegs");
-    const body = INDEX.slice(at, end);
-    const sel = /const selected = new Set\(([^;]*)\);/.exec(body);
-    assert.ok(sel, "curveLegsNow must build a selection set");
-    assert.match(sel[1]!, /cfg\.basketSymbols/, "the owner's basket must still select");
-    assert.match(sel[1]!, /officialCoins\(\)/, "official listings must select too, or the curve venue refuses them");
-  });
-
   it("buildStrategy threads alwaysSymbols from the same source", () => {
-    // The other half of the pair. If this one regressed instead, a listed coin
-    // would be buildable by the curve venue and never proposed by anything.
+    // If this regressed, a listed coin would be watched and never proposed.
     assert.match(INDEX, /alwaysSymbols:\s*officialCoinsIn\(c\)\.map/, "legs must carry the official symbols");
   });
 });
@@ -260,12 +166,12 @@ describe("the signer seals what the worker watches", () => {
     // property a synthetic fixture cannot check: it is about the two production
     // paths agreeing on the live list. Holds trivially while the list is empty,
     // and becomes load-bearing the moment it is not.
-    const real = officialCoinsFor(robinhoodChain.id);
+    const real = officialCoinsFor(bnbChain.id);
     const watched = watchTokensFor(BASKET, CUSTOM, real)
       .filter((t) => t.kind === "memecoin")
       .map((t) => t.address.toLowerCase())
       .sort();
-    const sealed = officialCoinTokens(robinhoodChain.id)
+    const sealed = officialCoinTokens(bnbChain.id)
       .map((t) => t.address.toLowerCase())
       .sort();
     assert.deepEqual(watched, sealed);

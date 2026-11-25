@@ -113,7 +113,7 @@ describe("the chain's cash figure", () => {
 
   it("converts a read balance from 6dp, zero included", () => {
     assert.equal(usdgOrNull("0"), 0);
-    assert.equal(usdgOrNull("12500000"), 12.5);
+    assert.equal(usdgOrNull("12500000000000000000"), 12.5);
   });
 });
 
@@ -216,7 +216,7 @@ describe("the real cash the verdict is decided from", () => {
       ({ session: { hosted: true }, status: { exists: true, balances: { ethWei: "1", cashUsdg, vaultUsdg: null } } }) as never;
     assert.equal(realCashOf(with_(null)), null);
     assert.equal(realCashOf(with_("0")), 0);
-    assert.equal(realCashOf(with_("12500000")), 12.5);
+    assert.equal(realCashOf(with_("12500000000000000000")), 12.5);
     assert.equal(realCashOf({ session: { hosted: true }, status: { exists: true } } as never), null, "a status with no balances");
     assert.equal(realCashOf(null), null);
   });

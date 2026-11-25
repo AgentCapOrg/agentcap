@@ -158,7 +158,7 @@ describe("Brain can tell a winner from a loser", () => {
     // The snapshot type allows null and core refuses on it, which is the honest
     // answer for a position whose origin is genuinely unknown. Zero would say
     // it was free — the accounting bug in miniature, handed to a reasoner.
-    assert.match(INDEX, /return c === null \|\| c === undefined \? null : Number\(c\);/);
+    assert.match(INDEX, /return c === null \|\| c === undefined \? null : Number\(cashToMicroUp\(c\)\);/);
   });
 
   it("and the basis is read BEFORE the brain, not after it", () => {

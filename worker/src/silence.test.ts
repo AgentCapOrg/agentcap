@@ -42,7 +42,7 @@ describe("the three silences each get their own sentence", () => {
     // is empty that the feeds are stale sends them to wait for Monday instead
     // of to the deposit screen.
     const feeds = renderWhy({ code: "all-legs-stale", legs: 3, paused: 0 });
-    const cash = renderWhy({ code: "under-one-buy", cashRaw: 1_000_000n, needRaw: 25_000_000n, vaultRaw: 0n });
+    const cash = renderWhy({ code: "under-one-buy", cashRaw: 1_000_000n, needRaw: 25_000_000n });
     const held = renderWhy({ code: "model-held", held: 4, considered: 4, dropped: 0 });
     assert.match(feeds, /price feeds/);
     assert.match(cash, /Add funds or lower the size per trade/);
@@ -51,14 +51,6 @@ describe("the three silences each get their own sentence", () => {
     // Publishable by the same rule as everything else in that file: counts and
     // configured symbols only, no prose from anywhere else.
     for (const s of [feeds, cash, held]) assert.ok(s.length < 220, "must not truncate on any surface");
-  });
-
-  it("a vault that can cover the shortfall changes the advice", () => {
-    // The agent fixes this one itself on the next unpark. Telling that owner to
-    // add funds would be wrong.
-    const self = renderWhy({ code: "under-one-buy", cashRaw: 1_000_000n, needRaw: 25_000_000n, vaultRaw: 50_000_000n });
-    assert.match(self, /should clear itself/);
-    assert.ok(!/Add funds/.test(self));
   });
 
   it("and a model that held EVERYTHING reads differently from one that held some", () => {

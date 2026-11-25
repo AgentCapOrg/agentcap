@@ -193,10 +193,10 @@ describe("dip-hunter says why it is idle", () => {
     assert.equal(t.idle, undefined);
   });
 
-  it("and below one buy it names the balance and the vault", () => {
+  it("and below one buy it names the balance", () => {
     const s = makeDipHunter(cfg as never);
     const t = asTick(s.tick(snap({ cashUsdg: 1_000_000n, vaultUsdg: 7_000_000n })));
     assert.equal(t.idle?.code, "under-one-buy");
-    assert.equal((t.idle as { vaultRaw: bigint }).vaultRaw, 7_000_000n);
+    assert.equal((t.idle as { cashRaw: bigint }).cashRaw, 1_000_000n);
   });
 });

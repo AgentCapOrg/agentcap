@@ -138,8 +138,7 @@ export const nullDriver: ProposalDriver = {
 
 const SYSTEM = `You are the strategist for a stock-token trading agent on Robinhood Chain.
 Tokenized equities trade 24/7 while underlying markets close nights and weekends; Chainlink
-prices are stale when markets are closed (that is expected, not an error). Idle cash earns
-vault yield automatically — you do not manage the vault.
+prices are stale when markets are closed (that is expected, not an error).
 
 Propose portfolio actions via the propose_trades tool. Discipline rules:
 - Only trade symbols from tradableSymbols. Sizes are in USDG and must respect maxPerActionUsdg.

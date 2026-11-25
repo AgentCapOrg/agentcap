@@ -1,6 +1,7 @@
 /** A public, creator-published description for one ledger-verified token. Read only. */
+import { bnbChain } from "../../packages/core/src/chain";
 import { createPublicClient, http, type PublicClient } from "viem";
-import { readTokenMeta, sanitizeMeta } from "./venues/pons-meta";
+import { readTokenMeta, sanitizeMeta } from "./venues/token-meta";
 
 export interface PublicProjectDescription {
   token: string;
@@ -9,7 +10,7 @@ export interface PublicProjectDescription {
 }
 
 type Dependencies = { client: PublicClient; readMeta: typeof readTokenMeta; budgetMs: number };
-const MAINNET = 4663;
+const MAINNET = bnbChain.id;
 const BUDGET_MS = 3000;
 
 /** No ticker lookup, websites, owner instructions or private trading reason. */
@@ -20,7 +21,7 @@ export async function readPublicProjectDescription(
 ): Promise<PublicProjectDescription | null> {
   if (chainId !== MAINNET || !/^0x[0-9a-fA-F]{40}$/.test(token) || /^0x0{40}$/i.test(token)) return null;
   const address = token.toLowerCase() as `0x${string}`;
-  const client = overrides.client ?? createPublicClient({ transport: http(process.env.AGENTCAP_RPC_MAINNET ?? "https://rpc.mainnet.chain.robinhood.com", { timeout: 1200, retryCount: 0 }) });
+  const client = overrides.client ?? createPublicClient({ transport: http(process.env.AGENTCAP_RPC_MAINNET ?? bnbChain.rpcUrls.default.http[0]!, { timeout: 1200, retryCount: 0 }) });
   const readMeta = overrides.readMeta ?? readTokenMeta;
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {

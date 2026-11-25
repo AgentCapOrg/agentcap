@@ -3,6 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { afterEach, test } from "node:test";
 import { attestOriginalReceipt } from "./receipt-attestation";
+import { usdt } from "./testdata/bnb-cash";
 import { attestReceipt, attestTradedReceipt, MAX_WINDOW_BLOCKS, SCAN_LOOKBACK_BLOCKS, WINDOW_MARGIN_BLOCKS } from "./receipt-attestation-traded";
 import { assertNoPendingReceiptAttestation, readReceiptAttestation } from "./receipt-attestation-state";
 import { receiptAttestationRequest, scopedReceiptAttestationAllowed } from "./receipt-attestation-controls";
@@ -135,7 +136,7 @@ for (const boundary of ["audit", "marker", "local", "shared", "cleared"] as cons
       assert.deepEqual(await money(f), was);
       for (const [db, id, original] of [[f.local, LOCAL_FLOW, flows.local], [f.shared, SHARED_FLOW, flows.shared]] as const) {
         assert.deepEqual(await row(db, id), { ...original, source: "chain-log", tx_hash: TX.deposit,
-          block_number: BLOCK.deposit, log_index: 2, chain_id: 4663 });
+          block_number: BLOCK.deposit, log_index: 2, chain_id: 56 });
       }
       const now = await f.local.prepare("SELECT * FROM journal ORDER BY seq").all() as Row[];
       assert.deepEqual(now.slice(0, -1), journal, "every original journal entry is retained");
@@ -186,7 +187,7 @@ test("a receipt shallower than the scan's lookback, or a window inside the confi
 test("a second unbooked capital transfer in the window refuses, whichever is larger", async () => {
   const f = await fixture();
   try {
-    f.state.logs.push(transferLog({ from: DEPOSITOR, to: TEST_ACCOUNT, raw: 1_000_000n, block: BLOCK.booking + 100, tx: `0x${"c4".repeat(32)}`, index: 0 }));
+    f.state.logs.push(transferLog({ from: DEPOSITOR, to: TEST_ACCOUNT, raw: usdt(1_000_000n), block: BLOCK.booking + 100, tx: `0x${"c4".repeat(32)}`, index: 0 }));
     await refusesWithoutWriting(f, /2 capital transfers are in the window/);
   } finally { f.close(); }
 });
@@ -194,7 +195,7 @@ test("a second unbooked capital transfer in the window refuses, whichever is lar
 test("an unbooked withdrawal in the window refuses too: the change cannot be told from it", async () => {
   const f = await fixture();
   try {
-    f.state.logs.push(transferLog({ from: TEST_ACCOUNT, to: DEPOSITOR, raw: 5_000_000n, block: BLOCK.booking + 100, tx: `0x${"c5".repeat(32)}`, index: 0 }));
+    f.state.logs.push(transferLog({ from: TEST_ACCOUNT, to: DEPOSITOR, raw: usdt(5_000_000n), block: BLOCK.booking + 100, tx: `0x${"c5".repeat(32)}`, index: 0 }));
     await refusesWithoutWriting(f, /2 capital transfers are in the window/);
   } finally { f.close(); }
 });
@@ -203,10 +204,10 @@ test("a withdrawal both books already hold by its transaction is left out, as th
   const f = await fixture();
   try {
     const withdrawal = `0x${"c6".repeat(32)}`;
-    f.state.logs.push(transferLog({ from: TEST_ACCOUNT, to: DEPOSITOR, raw: 5_000_000n, block: BLOCK.booking + 100, tx: withdrawal, index: 0 }));
+    f.state.logs.push(transferLog({ from: TEST_ACCOUNT, to: DEPOSITOR, raw: usdt(5_000_000n), block: BLOCK.booking + 100, tx: withdrawal, index: 0 }));
     for (const db of [f.local, f.shared]) {
       // The executor books a transfer home with its transaction and no log index (the identity index cannot see it).
-      await db.prepare("INSERT INTO flows(agent_id,direction,amount_usdg,tx_hash,source,at,epoch,chain_id) VALUES(?,'out',5,?,'transfer-intent',?,1,4663)").run(TEST_ACCOUNT, withdrawal, BOOKED_AT + 30);
+      await db.prepare("INSERT INTO flows(agent_id,direction,amount_usdg,tx_hash,source,at,epoch,chain_id) VALUES(?,'out',5,?,'transfer-intent',?,1,56)").run(TEST_ACCOUNT, withdrawal, BOOKED_AT + 30);
     }
     assert.equal((await attestTradedReceipt(f.options)).receipt.txHash, TX.deposit);
   } finally { f.close(); }
@@ -216,7 +217,7 @@ for (const [description, shared] of [["the original book", false], ["the shared 
   test(`a receipt ${description} already names by transaction is not unbooked: nothing is left to attest`, async () => {
     const f = await fixture();
     try {
-      await (shared ? f.shared : f.local).prepare("INSERT INTO flows(agent_id,direction,amount_usdg,tx_hash,source,at,epoch,chain_id) VALUES(?,'in',1,?,'transfer-intent',?,1,4663)")
+      await (shared ? f.shared : f.local).prepare("INSERT INTO flows(agent_id,direction,amount_usdg,tx_hash,source,at,epoch,chain_id) VALUES(?,'in',1,?,'transfer-intent',?,1,56)")
         .run(TEST_ACCOUNT, TX.deposit, BOOKED_AT + 30);
       await refusesWithoutWriting(f, shared ? /no capital transfer is in the window/ : /./);
     } finally { f.close(); }
@@ -226,7 +227,7 @@ for (const [description, shared] of [["the original book", false], ["the shared 
 test("a transfer of a different amount is a different movement", async () => {
   const f = await fixture();
   try {
-    f.deposit.data = `0x${(TOP_UP_RAW + 1n).toString(16).padStart(64, "0")}`;
+    f.deposit.data = `0x${(TOP_UP_RAW + usdt(1n)).toString(16).padStart(64, "0")}`;
     await refusesWithoutWriting(f, /not this change's/);
   } finally { f.close(); }
 });
@@ -295,7 +296,7 @@ for (const [description, mutate, pattern] of [
   ["an absent flow id", async (f: Fixture) => { f.options.sharedFlowId = 9999; }, /not exactly one row/],
   ["an original row that differs from its shared copy", async (f: Fixture) => { await f.local.prepare("UPDATE flows SET amount_usdg=59.95445 WHERE id=?").run(LOCAL_FLOW); }, /not exactly one row/],
   ["a shared copy duplicated by a cursor rewind", async (f: Fixture) => {
-    await f.shared.prepare("INSERT INTO flows(agent_id,direction,amount_usdg,source,at,epoch,chain_id) VALUES(?,'in',?,'inferred',?,1,4663)").run(TEST_ACCOUNT, TOP_UP, BOOKED_AT);
+    await f.shared.prepare("INSERT INTO flows(agent_id,direction,amount_usdg,source,at,epoch,chain_id) VALUES(?,'in',?,'inferred',?,1,56)").run(TEST_ACCOUNT, TOP_UP, BOOKED_AT);
   }, /booked more than once/],
   ["an original row the mirror has not copied", async (f: Fixture) => {
     await f.shared.prepare("UPDATE mirror_state SET last_id=1,last_stamp=? WHERE table_name='flows'").run(blockTime(BLOCK.open) + 5);
@@ -372,7 +373,7 @@ test("a pending repair keeps both barriers when its receipt reads differently, a
   try {
     const preview = await attestTradedReceipt(f.options);
     await assert.rejects(commit(f, preview.approvalDigest, { checkpoint(at) { if (at === "local") throw new Error("stop after the original book"); } }), /stop after/);
-    f.state.logs.push(transferLog({ from: DEPOSITOR, to: TEST_ACCOUNT, raw: 1_000_000n, block: BLOCK.booking + 100, tx: `0x${"c7".repeat(32)}`, index: 0 }));
+    f.state.logs.push(transferLog({ from: DEPOSITOR, to: TEST_ACCOUNT, raw: usdt(1_000_000n), block: BLOCK.booking + 100, tx: `0x${"c7".repeat(32)}`, index: 0 }));
     await assert.rejects(commit(f, preview.approvalDigest), /2 capital transfers are in the window/);
     assert.equal((await readReceiptAttestation(f.shared, TEST_TENANT))!.state, "pending");
     assert.equal(existsSync(marker(f)), true);

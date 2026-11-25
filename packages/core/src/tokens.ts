@@ -83,23 +83,13 @@ export interface PriceQuote {
   stale: boolean;
   /**
    * "broker" = Robinhood get_equity_quotes on the Agentic-account rail.
-   * "v4" = a Uniswap v4 pool. Its own class for the same reason "curve" is:
-   * v4 moved TWAP into hooks, so a vanilla pool has no oracle and the spot-vs-
-   * TWAP divergence check cannot be run. It passed a DEPTH floor, an LP-FEE
-   * ceiling and a round-trip cost check instead — good enough to value a
-   * holding, and still inside the scout budget on the buy side.
-   * "curve" = a Pons bonding curve. A DIFFERENT EVIDENTIAL CLASS from "pool":
-   * a pool quote passed a depth floor AND a spot-vs-TWAP divergence band, and
-   * a curve quote passed neither because a curve has no oracle to diverge
-   * from. It is good enough to value something already held; it is not good
-   * enough to authorise a new buy, and the scout ceiling still applies to it.
    * "sampled" = a Uniswap v3 pool too new to keep an oracle of its own, priced
    * at the worker's own time-weighted series of its spot (worker/src/venues/
    * spot-sampler.ts). A ready series passed a depth floor and a spot-vs-average
    * band like a pool quote, over minutes rather than fifteen; it may authorise
    * a fast Trencher vault entry and no other buy. See `sampled` below.
    */
-  source: "chainlink" | "pool" | "broker" | "curve" | "v4" | "sampled";
+  source: "chainlink" | "pool" | "broker" | "sampled";
   /** For pool prices: route + depth, so a human can judge the number. */
   detail?: string;
   /**
@@ -125,7 +115,7 @@ export interface PriceQuote {
   /**
    * On a "sampled" quote only: how much series stands behind it. `ready` is
    * the only thing a buy may be authorised by — an unready series still values
-   * a holding, the way a v4 mark does, and never opens one.
+   * a holding, and never opens one.
    */
   sampled?: { readings: number; spanSec: number; ready: boolean };
 }
@@ -150,18 +140,23 @@ export const STOCK_BEACON = "0xe10b6f6b275de231345c20d14ab812db62151b00" as cons
 export const STOCK_IMPLEMENTATION =
   "0xb35490d6f9163de4f80d88dc75c3516eb64c5ae2" as const;
 
-/** Cash + gas legs. NOTE: USDG is 6 decimals (verified on-chain), stock tokens/WETH are 18. */
+/**
+ * Cash + gas legs on BNB Chain. Symbol and decimals read on-chain 2026-11-24.
+ * USDT here has 18 DECIMALS, not the 6 it has on Ethereum.
+ */
 export const CASH = {
-  /** Paxos Global Dollar — ERC-1967 proxy (impl 0x68184c...f8f). Issuer-controlled. 6 decimals. */
-  USDG: "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168",
-  WETH: "0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73",
+  /** Binance-Peg BSC-USD. Issuer-controlled. 18 decimals. */
+  USDT: "0x55d398326f99059fF775485246999027B3197955",
+  WBNB: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
 } as const;
 
-export const USDG_DECIMALS = 6;
+/** On-chain base-unit decimals of the cash token. */
+export const CASH_DECIMALS = 18;
 
+/** Chainlink USD feeds on chain 56, both 8dp. */
 export const CASH_FEEDS = {
-  ETH_USD: "0x78F3556b67E17Df817D51Ef5a990cDaF09E8d3A9",
-  USDG_USD: "0x61B7e5650328764B076A108EFF5fa7282a1B9aD2",
+  BNB_USD: "0x0567F2323251f0Aab15c8dFb1967E4e8A7D42aeE",
+  USDT_USD: "0xB97Ad0E74fa7d920791E90258A6E2085088b4320",
 } as const;
 
 /** Official Stock Token registry as of 2026-07-09. */
@@ -267,7 +262,7 @@ export const STOCK_ABI = [
  *
  * Exists because the display sites all used to ask `source === "pool"` with an
  * implicit else meaning "Chainlink-grade". That is fine while there are two
- * sources and silently wrong the moment there are four: a bonding-curve mark
+ * sources and silently wrong the moment there are more: an unoracled mark
  * would have rendered with the feed's colour, no tag, and — worst of the three
  * — no marker in the ledger string handed to the strategist, which would then
  * narrate an unoracled number as if a feed had published it.
@@ -282,11 +277,6 @@ export function priceSourceTag(source: string): string {
       return "pool px";
     case "broker":
       return "broker px";
-    case "curve":
-      // Deliberately not "pool px". A curve price passed no divergence band and
-      // has no oracle behind it; showing it as a pool price would overstate
-      // what is known about it.
-      return "curve px";
     case "sampled":
       // Not "pool px" either: the average is ours, not the pool's oracle.
       return "sampled px";
@@ -300,9 +290,9 @@ export function priceSourceTag(source: string): string {
  *
  * Kept beside `priceSourceTag` so a tag can never be shown with the wrong
  * explanation. That is not hypothetical: widening a `=== "pool"` test to
- * `!== "chainlink"` without touching the label showed a bonding-curve mark as
+ * `!== "chainlink"` without touching the label showed an unoracled mark as
  * "pool px" under a tooltip asserting it had passed depth AND divergence
- * checks — two guards that cannot even run on a curve.
+ * checks — two guards it never ran.
  */
 export function priceSourceNote(source: string): string {
   switch (source) {
@@ -310,8 +300,6 @@ export function priceSourceNote(source: string): string {
       return "pool px = a Uniswap time-averaged price, not a Chainlink feed — it passed the depth and divergence checks, but it's a thinner claim.";
     case "broker":
       return "broker px = the venue's own last-trade print, not a Chainlink feed.";
-    case "curve":
-      return "curve px = read straight off a bonding curve. There is no oracle behind it and no divergence check — the reserves are the entire market, so one trade can move it a long way.";
     case "sampled":
       return "sampled px = a new Uniswap pool with no price history of its own, averaged from our own readings over the last few minutes. It passed the depth check, but it's a thinner claim than a pool's own time-averaged price.";
     default:

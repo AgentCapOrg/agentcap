@@ -14,37 +14,25 @@
  *                           child whose smart account the operator listed in
  *                           AGENTCAP_DECISION_RESEARCH_ACCOUNTS may ask at all.
  *
- * THE LAUNCHER IS RESOLVED HERE, FROM THE LAUNCHPAD'S OWN RECORD. Whether a
- * coin's launcher sold needs the launcher's address, and a caller that could
- * supply one could point the lane at any wallet — another tenant's account
- * included — and learn what it sold. So nobody supplies it. Nor does the TOKEN:
- * a deployer the token reports about itself (pons-meta.ts) is whatever the
- * contract chooses to return, and a rug that names a decoy would read as "the
- * creator did not sell" while the real one sells. This process reads the
- * Pons factory's launch event instead (pons.ts readLaunchCreator), which only
- * the factory can emit. A coin with no such record is "not-derivable", never
- * "did not sell". The address is used as a query variable and goes no
- * further: no fact, log line or reply carries it.
+ * THE LAUNCHER IS NOT DERIVABLE. Whether a coin's launcher sold needs the
+ * launcher's address, and nothing a caller or the token itself reports may
+ * supply it: a caller could point the lane at any wallet, and a rug that names
+ * a decoy would read as "the creator did not sell". With no launch record this
+ * build can trust, the answer is "not-derivable", never "did not sell".
  *
- * ONE DEADLINE PER READING. The flow query, the chain read and the launcher's
- * query all spend from FLOW_DEADLINE_MS, which sits under the broker's ceiling
- * on one child answer (flow-broker.ts serveMaxCallMs): a reading that
- * succeeded is never thrown away by that ceiling, and nothing is still
- * spending after the child has been answered. Short of time, the flow facts
- * come back with the launcher marked unavailable rather than late.
+ * ONE DEADLINE PER READING. The flow query spends from FLOW_DEADLINE_MS, which
+ * sits under the broker's ceiling on one child answer (flow-broker.ts
+ * serveMaxCallMs): a reading that succeeded is never thrown away by that
+ * ceiling, and nothing is still spending after the child has been answered.
  */
 
 import type { ChildProcess } from "node:child_process";
 import path from "node:path";
-import { createPublicClient, http, type PublicClient } from "viem";
 import { decisionResearchEnabledFor } from "./decision-research";
 import { childProcessFlowPort, serveFlowRequests } from "./flow-broker";
 import type { CreatorFlow, FlowResult } from "./flow-facts";
 import { agentcapHome } from "./home";
 import { BITQUERY_LANE_DEFAULTS, BitqueryLane, LANE_POINTS, bitqueryLaneSetup, type BitqueryLaneSetup, type LanePurpose } from "./venues/bitquery-lane";
-import { readLaunchCreator, type LaunchCreator } from "./venues/pons";
-
-export type CreatorLookup = LaunchCreator;
 
 export interface FlowService {
   /**
@@ -55,69 +43,21 @@ export interface FlowService {
   flowFor(token: string, opts?: { purpose?: LanePurpose; timeoutMs?: number }): Promise<FlowResult>;
 }
 
-/** The window the creator question covers, in minutes: the widest flow window. */
-export const CREATOR_WINDOW_MIN = 60;
-
 /**
- * One reading's whole budget of time: the flow query, the chain read and the
- * launcher's query together. Under FLOW_BROKER_LIMITS.serveMaxCallMs (22 s),
- * with room for the IPC hop (orchestrator-flow.test.ts pins the order).
+ * One reading's whole budget of time. Under FLOW_BROKER_LIMITS.serveMaxCallMs
+ * (22 s), with room for the IPC hop (orchestrator-flow.test.ts pins the order).
  */
 export const FLOW_DEADLINE_MS = 18_000;
 
-/** One RPC call's own bound for the launcher lookup; the reading's deadline still caps it. */
-const LAUNCHER_RPC_TIMEOUT_MS = 5_000;
-
-/** Resolve to `fallback` once `ms` has passed, whatever `p` is still doing. */
-function within<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
-  if (ms <= 0) return Promise.resolve(fallback);
-  return new Promise<T>((resolve) => {
-    const timer = setTimeout(() => resolve(fallback), ms);
-    p.then(
-      (v) => {
-        clearTimeout(timer);
-        resolve(v);
-      },
-      () => {
-        clearTimeout(timer);
-        resolve(fallback);
-      },
-    );
-  });
-}
-
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
-/** A recorded deployer does not change; a failed read is retried soon. */
-const CREATOR_TTL_MS = { known: 24 * 3_600_000, none: 24 * 3_600_000, unreadable: 60_000 } as const;
-const CREATOR_CACHE_MAX = 2048;
-
 export function makeFlowService(deps: {
-  lane: Pick<BitqueryLane, "tokenFlow" | "creatorFlow">;
-  creatorOf: (token: `0x${string}`) => Promise<CreatorLookup>;
+  lane: Pick<BitqueryLane, "tokenFlow">;
   now?: () => number;
-  /** Test seams: the reading's budget, and the least a lane request is given. */
+  /** Test seam: the reading's budget. */
   deadlineMs?: number;
-  minLaneMs?: number;
 }): FlowService {
   const now = deps.now ?? Date.now;
   const deadlineMs = deps.deadlineMs ?? FLOW_DEADLINE_MS;
-  const minLaneMs = deps.minLaneMs ?? BITQUERY_LANE_DEFAULTS.minRequestMs;
-  const creators = new Map<string, { lookup: CreatorLookup; until: number }>();
-
-  async function creatorOf(token: `0x${string}`): Promise<CreatorLookup> {
-    const hit = creators.get(token);
-    if (hit && hit.until > now()) return hit.lookup;
-    let lookup: CreatorLookup;
-    try {
-      lookup = await deps.creatorOf(token);
-    } catch {
-      lookup = { state: "unreadable" };
-    }
-    if (lookup.state === "known" && (!ADDRESS.test(lookup.creator) || lookup.creator.toLowerCase() === token)) lookup = { state: "none" };
-    if (creators.size >= CREATOR_CACHE_MAX) creators.delete(creators.keys().next().value!);
-    creators.set(token, { lookup, until: now() + CREATOR_TTL_MS[lookup.state] });
-    return lookup;
-  }
 
   return {
     async flowFor(raw, opts = {}) {
@@ -130,42 +70,14 @@ export function makeFlowService(deps: {
         // still spending after that caller has moved on.
         const budget = typeof opts.timeoutMs === "number" && opts.timeoutMs > 0 ? Math.min(deadlineMs, opts.timeoutMs) : deadlineMs;
         const deadline = now() + budget;
-        // The chain read runs beside the flow query; the launcher's own query
-        // waits for the flow to succeed, so a failed reading spends no more.
-        const creatorP = creatorOf(token);
         const flow = await deps.lane.tokenFlow(token, { purpose, deadline });
         if (!flow.ok) return { ok: false, failure: flow.failure };
-        const late: CreatorFlow = { state: "unavailable", failure: "timeout" };
-        let creator: CreatorFlow;
-        // Too little left to ask the lane anything: the flow facts go back now,
-        // with the launcher unknown, rather than late or not at all.
-        if (deadline - now() < minLaneMs) creator = late;
-        else {
-          const look = await within<CreatorLookup | "late">(creatorP, deadline - minLaneMs - now(), "late");
-          if (look === "late") creator = late;
-          else if (look.state === "none") creator = { state: "not-derivable" };
-          else if (look.state === "unreadable") creator = { state: "unavailable", failure: "unavailable" };
-          else {
-            const c = await deps.lane.creatorFlow(token, look.creator, { purpose, windowMin: CREATOR_WINDOW_MIN, deadline });
-            creator = c.ok ? { state: "read", windowMin: CREATOR_WINDOW_MIN, ...c.data } : { state: "unavailable", failure: c.failure };
-          }
-        }
+        const creator: CreatorFlow = { state: "not-derivable" };
         return { ok: true, facts: { token, observedAt: flow.observedAt, ...flow.data, creator } };
       } catch {
         return { ok: false, failure: "unavailable" };
       }
     },
-  };
-}
-
-/** Who the Pons factory recorded as launching a token, through this process's RPC. */
-export function ponsLaunchCreatorLookup(client: () => Pick<PublicClient, "getBlockNumber" | "request">): (token: `0x${string}`) => Promise<CreatorLookup> {
-  return async (token) => {
-    try {
-      return await readLaunchCreator(client(), token);
-    } catch {
-      return { state: "unreadable" };
-    }
   };
 }
 
@@ -177,21 +89,16 @@ export interface FlowRuntime {
 
 /**
  * Read the switches and build the lane, once. Off — no key, or
- * AGENTCAP_BITQUERY_LANE=0 — there is no SQLite file, no RPC client and no
+ * AGENTCAP_BITQUERY_LANE=0 — there is no SQLite file and no
  * request. A lane whose file cannot be opened is off too, and says why.
  */
-export function startFlowRuntime(o: { env: Record<string, string | undefined>; home: string; rpcUrl: string; log: (line: string) => void }): FlowRuntime {
+export function startFlowRuntime(o: { env: Record<string, string | undefined>; home: string; log: (line: string) => void }): FlowRuntime {
   const setup = bitqueryLaneSetup(o.env);
   for (const line of setup.lines) o.log(line);
   if (setup.off || !setup.config) return { setup, service: null };
   try {
     const lane = new BitqueryLane({ dir: path.join(o.home, "bitquery-lane"), config: setup.config, log: o.log });
-    let client: PublicClient | null = null;
-    // BOUNDED HERE TOO, not only by the reading's deadline: viem's default is
-    // ten seconds a call and three retries, and a lookup the reading has given
-    // up on should not keep a socket busy for forty.
-    const rpc = (): PublicClient => (client ??= createPublicClient({ transport: http(o.rpcUrl, { timeout: LAUNCHER_RPC_TIMEOUT_MS, retryCount: 1 }) }));
-    return { setup, service: makeFlowService({ lane, creatorOf: ponsLaunchCreatorLookup(rpc) }) };
+    return { setup, service: makeFlowService({ lane }) };
   } catch (e) {
     o.log(`bitquery lane: off — its store could not be opened (${e instanceof Error ? e.name : "error"})`);
     return { setup, service: null };
@@ -212,14 +119,10 @@ export function startFlowRuntime(o: { env: Record<string, string | undefined>; h
  */
 let runtime: FlowRuntime | null = null;
 
-export const DEFAULT_RPC_MAINNET = "https://rpc.mainnet.chain.robinhood.com";
-
 export function flowRuntimeNow(o: { log?: (line: string) => void } = {}): FlowRuntime {
   runtime ??= startFlowRuntime({
     env: process.env,
     home: agentcapHome(),
-    // The same default every other read in the orchestrator uses.
-    rpcUrl: process.env.AGENTCAP_RPC_MAINNET ?? DEFAULT_RPC_MAINNET,
     log: o.log ?? ((line) => console.log(`[orchestrator] ${line}`)),
   });
   return runtime;

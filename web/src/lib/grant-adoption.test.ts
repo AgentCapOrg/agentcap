@@ -86,7 +86,7 @@ describe("what the endpoint may hand over", () => {
     // such code reads yet, goes out through core's allowlist (public-view.test.ts
     // deep-scans it), and its type says so.
     const src = route();
-    assert.match(src, /export interface PerpsWalletStatus extends Omit<AgentStatus, "grant" \| "energy"> \{\s*grant\?: PublicGrantView;/);
+    assert.match(src, /export interface PerpsWalletStatus extends Omit<AgentStatus, "grant"> \{\s*grant\?: PublicGrantView;/);
     assert.match(src, /if \(wallet === "spot"\) return statusResponse\(status\);/);
     assert.match(src, /grant: publicGrantView\(grant\)/);
     assert.equal([...src.matchAll(/publicGrantView\(/g)].length, 1, "one allowlisted answer, the Perps one");

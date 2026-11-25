@@ -1541,7 +1541,7 @@ describe("what's hot: the chain's trending coins past the fleet's floors, fomo's
       pool(3, { volume24hUsd: 49_000 }),               // too quiet
       pool(4, { buyers24h: 99 }),                      // too few buyers
       pool(5, { sells24h: 0 }),                        // one-sided
-      pool(6, { tokenAddress: CASH.WETH.toLowerCase() as `0x${string}` }),
+      pool(6, { tokenAddress: CASH.WBNB.toLowerCase() as `0x${string}` }),
       pool(7, { tokenAddress: AAPL_TOKEN.toLowerCase() as `0x${string}`, name: "AAPL / USDG 0.3%" }), // a stock token
       pool(8, { name: "SHERWOOD / WETH 1%" }),
       pool(9, { name: "🐸PEPE / WETH 1%" }),

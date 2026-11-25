@@ -25,7 +25,6 @@ import { renderWhy } from "./reasons";
 import { steadyBasketTick, type SteadyBasketConfig } from "./steady-basket";
 import type { Snapshot, Tick } from "./types";
 import { weekendGapTick, type WeekendGapConfig } from "./weekend-gap";
-import type { CurveLeg } from "../strategist/proposals";
 
 const ROUTER = "0x1111111111111111111111111111111111111111" as const;
 const VAULT = "0x2222222222222222222222222222222222222222" as const;
@@ -34,8 +33,6 @@ const QQQ = "0x4444444444444444444444444444444444444444" as const;
 const NVDA = "0x5555555555555555555555555555555555555555" as const;
 const MEME = "0x6666666666666666666666666666666666666666" as const;
 const PEPE = "0x7777777777777777777777777777777777777777" as const;
-const CURVE = "0x8888888888888888888888888888888888888888" as const;
-const ADAPTER = "0x9999999999999999999999999999999999999999" as const;
 
 /** Every leg is watched; MEME is the one the signature does not cover. */
 const gates = (sellable: string[] = [USDG, QQQ, NVDA, PEPE]) =>
@@ -67,19 +64,9 @@ describe("steady-basket", () => {
       { symbol: "MEME", token: MEME, weightBps: 3_334 },
     ],
     buyPerTickUsdg: 25_000_000n,
-    idleFloorUsdg: 1_000_000_000n,
     swapRouter: ROUTER,
-    vault: VAULT,
     usdg: USDG,
     ...over,
-  });
-  // One curve leg, PEPE, with room enough that one tick's buy clears the
-  // impact ceiling — so the only thing that can stop the fallback is the gate.
-  const curve = () => ({
-    legs: new Map([["PEPE", leg()]]),
-    tokens: new Map([["PEPE", PEPE as `0x${string}`]]),
-    slippageBps: 100,
-    maxImpactBps: 10_000,
   });
 
   it("SKIPS THE LOCKED LEG and buys every other one, saying nothing about idling", () => {
@@ -109,23 +96,6 @@ describe("steady-basket", () => {
   it("counts the basket, not the tick: a locked leg that is also stale is still locked", () => {
     const t = steadyBasketTick(cfg(), snap({ staleFeeds: new Set(["QQQ"]), entryGates: NONE_SELLABLE }));
     assert.deepEqual(t.idle, { code: "legs-locked", legs: 3, locked: 3 });
-  });
-
-  it("SHUT IS UNCHANGED — a closed market is all-legs-stale whatever is locked, and the fallback still fires", () => {
-    const allStale = new Set(["QQQ", "NVDA", "MEME"]);
-    const t = steadyBasketTick(cfg(), snap({ staleFeeds: allStale, entryGates: NONE_SELLABLE }));
-    assert.equal(t.idle?.code, "all-legs-stale");
-
-    // MEME is locked AND stale: still counted as stale, so the fallback fires.
-    const fell = steadyBasketTick(cfg({ curve: curve() }), snap({ staleFeeds: allStale, entryGates: gates() }));
-    assert.equal(fell.intents.filter((i) => i.kind === "curve-trade").length, 1, "the 24/7 fallback is untouched");
-  });
-
-  it("pickCurveBuy asks the curve gate: a curve token outside the signed grant is never the fallback", () => {
-    const allStale = new Set(["QQQ", "NVDA", "MEME"]);
-    const t = steadyBasketTick(cfg({ curve: curve() }), snap({ staleFeeds: allStale, entryGates: gates([USDG, QQQ, NVDA]) }));
-    assert.equal(t.intents.filter((i) => i.kind === "curve-trade").length, 0);
-    assert.equal(t.idle?.code, "all-legs-stale", "and the tick still says the true thing");
   });
 
   it("legs-locked is AHEAD of under-one-buy — more cash would not buy a locked leg", () => {
@@ -323,19 +293,3 @@ describe("weekend-gap", () => {
     assert.equal(t.idle?.code, "breaker-tripped");
   });
 });
-
-/** A curve with room in it — reserves large enough that one tick barely moves it. */
-function leg(): CurveLeg {
-  return {
-    curve: CURVE,
-    quoteToken: USDG,
-    adapter: ADAPTER,
-    reserves: {
-      quoteRaw: 400_000_000n,
-      tokenRaw: 4_000_000_000_000_000_000_000n,
-      quoteDecimals: 6,
-      tokenDecimals: 18,
-      graduationThresholdRaw: 5_000_000_000n,
-    },
-  } as CurveLeg;
-}

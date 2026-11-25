@@ -1,5 +1,7 @@
+import { bookedCashUsdg } from "./basis";
+import { cashNumber } from "../../packages/core/src/cash";
 import { createPublicClient, http, erc20Abi, type Hex } from "viem";
-import { CASH, STOCK_TOKENS, isEnergyReserveToken } from "../../packages/core/src/index";
+import { CASH, STOCK_TOKENS } from "../../packages/core/src/index";
 import { netTokenDeltas } from "./fills";
 import { pickAcquiredLeg } from "./inflight-reconcile";
 import type { Db } from "./db";
@@ -12,7 +14,7 @@ import type { ReconcileChain, RawLog } from "./inflight-reconcile";
 export async function repairHistoricalFills(db:Db, rpcUrl:string, clientOverride?: ReturnType<typeof createPublicClient>):Promise<{repaired:number;unavailable:number;pnlRecovered:number;reasons:Record<string,number>}> {
   const client:ReturnType<typeof createPublicClient> = clientOverride ?? createPublicClient({transport:http(rpcUrl,{timeout:8000,retryCount:0})});
   const rows=await db.prepare(`SELECT t.id,t.agent_id,t.tx_hash FROM trades t JOIN agents a ON LOWER(a.smart_account)=LOWER(t.agent_id)
-    WHERE t.status='landed' AND t.kind='swap' AND t.tx_hash IS NOT NULL AND a.chain_id=4663
+    WHERE t.status='landed' AND t.kind='swap' AND t.tx_hash IS NOT NULL AND a.chain_id=56
     AND (t.fill_side IS NULL OR t.buy_token IS NULL OR t.sell_token IS NULL OR t.fill_cash_usdg IS NULL OR t.fill_symbol IS NULL)
     AND (SELECT COUNT(*) FROM trades sibling WHERE LOWER(sibling.agent_id)=LOWER(t.agent_id)
       AND sibling.tx_hash=t.tx_hash AND sibling.status='landed')=1
@@ -33,11 +35,8 @@ export async function repairHistoricalFills(db:Db, rpcUrl:string, clientOverride
       const receipt=await client.getTransactionReceipt({hash:row.tx_hash});
       if(receipt.status!=='success'){unavailableBecause('receipt-not-successful');continue;}
       const deltas=netTokenDeltas(receipt.logs,row.agent_id);
-      const fill=pickAcquiredLeg(deltas,CASH.USDG);
-      // An energy purchase is not a fill: the reserve is capital set aside, booked
-      // as an 'energy-buy' flow, never a position (see pickAcquiredLeg). Named
-      // for what it is rather than lumped in with receipts that were unclear.
-      if(!fill){unavailableBecause([...deltas].some(([t,v])=>v!==0n&&isEnergyReserveToken(t))?'energy-reserve':'no-unambiguous-account-swap');continue;}
+      const fill=pickAcquiredLeg(deltas,CASH.USDT);
+      if(!fill){unavailableBecause('no-unambiguous-account-swap');continue;}
       books.set(`${row.agent_id.toLowerCase()}:${fill.token}`,{account:row.agent_id,token:fill.token as Hex});
       const known=STOCK_TOKENS.find(t=>t.address.toLowerCase()===fill.token.toLowerCase());
       const symbol=known?.symbol ?? await client.readContract({address:fill.token as Hex,abi:erc20Abi,functionName:'symbol'}).catch(()=>null);
@@ -54,8 +53,8 @@ export async function repairHistoricalFills(db:Db, rpcUrl:string, clientOverride
         fill_qty_raw=COALESCE(fill_qty_raw,?),fill_cash_usdg=COALESCE(fill_cash_usdg,?),
         basis_source=CASE WHEN fill_qty_raw IS NULL AND fill_cash_usdg IS NULL THEN 'receipt' ELSE basis_source END
         WHERE id=? AND status='landed' AND tx_hash=? AND ${fills}`).run(fill.side,safeSymbol,
-        fill.side==='buy'?fill.token:CASH.USDG,fill.side==='sell'?fill.token:CASH.USDG,
-        String(fill.qtyRaw),Number(fill.cashUsdg)/1e6,row.id,row.tx_hash);
+        fill.side==='buy'?fill.token:CASH.USDT,fill.side==='sell'?fill.token:CASH.USDT,
+        String(fill.qtyRaw),cashNumber(bookedCashUsdg(fill.side,fill.cashUsdg)),row.id,row.tx_hash);
       if(res.changes>0) repaired++;
     }catch{unavailableBecause(stage+'-failed');}
   }
@@ -68,12 +67,12 @@ export async function repairHistoricalFills(db:Db, rpcUrl:string, clientOverride
   for(const {account,token} of [...books.values()].slice(0,20)) {
     try {
       const heldRaw=await client.readContract({address:token,abi:erc20Abi,functionName:'balanceOf',args:[account as Hex]});
-      const replay=await recoverReceiptBasis({chain,token,account,usdgToken:CASH.USDG,heldRaw,allowClosed:true,lookbackBlocks:2_000_000n,budgetMs:15_000});
+      const replay=await recoverReceiptBasis({chain,token,account,usdgToken:CASH.USDT,heldRaw,allowClosed:true,lookbackBlocks:2_000_000n,budgetMs:15_000});
       if(!replay)continue;
       for(const sale of replay.realized) {
         const matches=await db.prepare(`SELECT id,realized_pnl_usdg FROM trades WHERE LOWER(agent_id)=LOWER(?) AND LOWER(tx_hash)=LOWER(?) AND status='landed'`).all(account,sale.tx) as {id:number;realized_pnl_usdg:number|null}[];
         if(matches.length!==1 || matches[0]!.realized_pnl_usdg!==null)continue;
-        await db.prepare(`UPDATE trades SET realized_pnl_usdg=?,basis_source='receipt' WHERE id=? AND realized_pnl_usdg IS NULL`).run(Number(sale.pnl)/1e6,matches[0]!.id);
+        await db.prepare(`UPDATE trades SET realized_pnl_usdg=?,basis_source='receipt' WHERE id=? AND realized_pnl_usdg IS NULL`).run(cashNumber(sale.pnl),matches[0]!.id);
         pnlRecovered++;
       }
     }catch{/* A partial chain history cannot establish P&L. */}

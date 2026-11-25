@@ -43,9 +43,7 @@ const basket: SteadyBasketConfig = {
     { symbol: "NVDA", token: NVDA, weightBps: 5000 },
   ],
   buyPerTickUsdg: 25_000_000n,
-  idleFloorUsdg: 50_000_000n,
   swapRouter: ROUTER,
-  vault: VAULT,
   usdg: USDG,
 };
 

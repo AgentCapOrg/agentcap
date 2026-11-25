@@ -30,7 +30,7 @@ export type FleetId =
 export function parseFleetId(raw: unknown): FleetId | null {
   if (typeof raw !== "string" || raw.length === 0) return null;
   // canonicalId trims; a fleet id with whitespace in it is not one.
-  const id = raw.trim() === raw ? canonicalId(CHAINS.robinhood, "account", raw) : null;
+  const id = raw.trim() === raw ? canonicalId(CHAINS.bnb, "account", raw) : null;
   return id ? { kind: "evm", id: id as `0x${string}` } : { kind: "unsupported", raw };
 }
 

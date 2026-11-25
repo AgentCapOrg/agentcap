@@ -5,16 +5,13 @@ import { ArrowLeft, ArrowRight, Check, Eye, EyeOff } from "lucide-react";
 import {
   DEFAULT_BASKET_SYMBOLS,
   DEFAULT_PERMISSION_DAYS,
-  ENERGY,
   STOCK_TOKENS,
-  isEnergyReserveToken,
   isValidCustomToken,
   type CustomToken,
   isWallTooWide,
 } from "@agentcap/core";
 import { createPrivyOwnedWallet, isPrivyOwned, loadGrant, retryGrantHandoff, sameGrantPermission, type Grant, type GrantCaps } from "@/lib/session";
 import { usePrivyOwner } from "@/terminal/usePrivyOwner";
-import { verifiedAdapter } from "@/lib/verified-adapter";
 import { TRENCHER_FACTORY } from "@/lib/trencher-permission";
 import { loadRecoveryGrants, trustedSavedGrant } from "@/lib/saved-grant-binding";
 import { needsPermissionReplacement } from "@/lib/permission-replacement";
@@ -23,9 +20,7 @@ import { fetchAccountForSession } from "../account-session";
 import { Face } from "../ui";
 import { SkeletonRows } from "../Skeleton";
 import { CAP_FIELD, parseAmount } from "@/lib/parse-amount";
-import type { TierView } from "@/app/api/tier/route";
-import { loadTier, newAgentQualifies } from "../tier";
-import { count, decimalSeparator, fullDateTime, usd } from "@/lib/format";
+import { decimalSeparator, fullDateTime, usd } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 import { approveMcpCreateSetup, declineMcpCreateSetup, loadMcpCreateReview, mcpSetupRequest, type McpCreateReview } from "../mcp-create-setup";
 import { Wardrobe } from "@/agentcapavatar/Wardrobe";
@@ -33,31 +28,12 @@ import { AgentCapAvatar } from "@/agentcapavatar/AgentCapAvatar";
 import { DRAFT, loadOutfit } from "@/agentcapavatar/wardrobe-store";
 import { seededOutfit } from "@/agentcapavatar/outfit";
 
-/**
- * `circle` MARKS A STRATEGY THE WORKER WILL NOT ACTUALLY RUN FOR A NON-HOLDER.
- *
- * `even-keel` and `dip-hunter` are Merry Circle strategies
- * (worker/src/strategies/registry.ts CIRCLE_STRATEGIES). The tick gates them on
- * `holderTier.bonusStrategies` and, for anyone below Merry Man, writes ONE warn
- * event and returns — every tick, for ever.
- *
- * This list offered both with no marking at all, so the flow was: pick "Even
- * keel", read "Keep the stocks in your basket evenly weighted", sign a grant,
- * send real money, and watch an agent that never buys anything. Reported
- * exactly that way: "the agent hasn't bought automatically a single stock token
- * during all day.... I don't know if it makes sense and first buys must be done
- * by user".
- *
- * Marked rather than hidden, and still selectable: a strategy nobody can see is
- * a strategy nobody buys $AGENTCAP for, and an owner who holds it would find it
- * missing. What was wrong was letting somebody choose it without knowing.
- */
 const STRATEGIES = [
   {id:"trencher",name:"Trencher",description:"Find verified memecoin pools, with Brain reviews and automatic exits."},
   {id:"steady-basket",name:"Steady basket",description:"Buy a little of your selected stocks on a schedule."},
   {id:"weekend-gap",name:"Weekend gap",description:"Buy selected tokenised stocks while their underlying market is closed, then sell when it reopens."},
-  {id:"even-keel",name:"Even keel",description:"Keep the stocks in your basket evenly weighted.",circle:true},
-  {id:"dip-hunter",name:"Dip hunter",description:"Look for pullbacks in the stocks you follow.",circle:true},
+  {id:"even-keel",name:"Even keel",description:"Keep the stocks in your basket evenly weighted."},
+  {id:"dip-hunter",name:"Dip hunter",description:"Look for pullbacks in the stocks you follow."},
   {id:"llm-strategist",name:"Strategist",description:"Assess the market with AI and follow its reasoning."},
 ];
 const EXAMPLES:Record<string,string>={
@@ -93,7 +69,6 @@ function AssistantSetupSummary({setup,showSigningGuidance=false}:{setup:McpCreat
     <p>Setup expires {fullDateTime(setup.expiresAt*1000)}.</p>
     {Object.keys(setup.riskSettings).length>0&&<details><summary>Review strategy settings</summary><dl className="fund-breakdown">{Object.entries(setup.riskSettings).map(([key,value])=><div key={key}><dt>{RISK_LABELS[key]}</dt><dd>{key.endsWith("Bps")?`${value/100}%`:usd(value)}</dd></div>)}</dl><p>Price-impact safety limits stay unchanged.</p></details>}
     {showSigningGuidance&&<p>Your wallet confirms the limits below. Then return to your chat.</p>}
-    {strategy?.circle&&<p>This strategy requires a qualifying $AGENTCAP holding. Until you qualify, it opens no new positions. Ask your assistant for a different strategy if you want to start without that requirement.</p>}
   </div>;
 }
 export function CreateAgent({account,accountFailed=false,retrying=false,assistantProposalId,onRefresh,onSignedIn,onBack,onDone,onFund}:{account:AccountState|null;accountFailed?:boolean;retrying?:boolean;assistantProposalId?:string;onRefresh:()=>void;onSignedIn:()=>void;onBack:()=>void;onDone:()=>void;onFund:(grant:Grant)=>void}) {
@@ -121,17 +96,6 @@ export function CreateAgent({account,accountFailed=false,retrying=false,assistan
   const [wizardTokens,setWizardTokens]=useState<CustomToken[]>([]);
   const [newCoin,setNewCoin]=useState({symbol:"",address:"",decimals:"18"});
   const [coinError,setCoinError]=useState("");
-  /**
-   * THIS READER STANDING AGAINST THE RULE, not the rule.
-   *
-   * The badge states the requirement; it never said whether YOU meet it, which
-   * is the only half that decides whether to press the button. Reported as
-   * "the app should warn more eye-catching when someone has chosen a
-   * holder-only strategy and don't have access to it… I had to go to
-   * /api/circle to check that and that's not good for normies".
-   */
-  const [tier,setTier]=useState<TierView|null>(null);
-  useEffect(()=>{void loadTier().then(setTier);},[]);
   // Null on a legacy session — which is what keeps an existing AgentCapAvatar on
   // its existing owner key.
   const privyOwner=usePrivyOwner();
@@ -311,9 +275,7 @@ export function CreateAgent({account,accountFailed=false,retrying=false,assistan
         if(await recoverableFor(afterApproval.account.session))throw new Error("Resume your saved wallet from Wallet & permissions before creating another permission.");
         setAssistantSetup({owner:setup.owner,id:setup.id,setup,error:""});
       }
-      const settings=await requestJson<{values:{customTokens?:unknown[];v4AdapterAddress?:string;ponsAdapterAddress?:string;ponsClassVaultFactory?:string}}>("/api/settings");
-      const address=(value?:string)=>value&&/^0x[0-9a-fA-F]{40}$/.test(value) ? value as `0x${string}` : undefined;
-      const pons=await verifiedAdapter(address(settings.values.ponsAdapterAddress),4663,setStatus);
+      const settings=await requestJson<{values:{customTokens?:unknown[]}}>("/api/settings");
       // The market answers ride the settings write that was already happening —
       // one round trip, not four.
       await requestJson("/api/settings",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({...setup?.riskSettings,owner:account.session.hosted?account.session.address:undefined,agentName:name.trim(),strategy,paperTradingEnabled:true,liveTradingEnabled:!practice,assetMode:strategy==="trencher"?"crypto":assetMode,basketSymbols:strategy==="trencher"?[]:basket,customTokens:[...((settings.values.customTokens??[]) as CustomToken[]),...wizardTokens],...(strategy==="trencher"?{discoveryEnabled:true,officialCoinsEnabled:true,trencherFastEnabled:true,trencherLiveEnabled:!practice,tickSeconds:15}:{})})});
@@ -330,7 +292,7 @@ export function CreateAgent({account,accountFailed=false,retrying=false,assistan
        */
       // The PARSED values, not `Number(trade)`. The raw string is what the
       // owner typed, and `Number("10,50")` is NaN while `Number("1.000")` is 1.
-      const mintOptions={caps:{...INITIAL_CAPS,perTradeUsdg:perTrade.value,dailyUsdg:perDay.value},chainId:4663,extraTokens:[...((settings.values.customTokens??[]) as CustomToken[]),...wizardTokens].filter(isValidCustomToken) as CustomToken[],v4AdapterAddress:address(settings.values.v4AdapterAddress),ponsAdapterAddress:pons,ponsClassVaultFactory:address(settings.values.ponsClassVaultFactory),...(strategy==="trencher"?{trencherFactory:TRENCHER_FACTORY as `0x${string}`} : {}),hostedAs:account?.session.hosted ? account.session.address as `0x${string}` : undefined,onStatus:setStatus};
+      const mintOptions={caps:{...INITIAL_CAPS,perTradeUsdg:perTrade.value,dailyUsdg:perDay.value},chainId:56,extraTokens:[...((settings.values.customTokens??[]) as CustomToken[]),...wizardTokens].filter(isValidCustomToken) as CustomToken[],...(strategy==="trencher"?{trencherFactory:TRENCHER_FACTORY as `0x${string}`} : {}),hostedAs:account?.session.hosted ? account.session.address as `0x${string}` : undefined,onStatus:setStatus};
       const result=await createPrivyOwnedWallet(privyOwner.account,privyOwner.did,mintOptions);
       setGrant(result.local);setArmed(result.handoff.ok);setStep(isPrivyOwned(result.local)?"fund":"backup");setStatus("");
       if(!result.handoff.ok)setError(result.handoff.error ?? "Your wallet was created, but the service could not activate your agent. Retry activation with this saved permission.");
@@ -420,70 +382,7 @@ export function CreateAgent({account,accountFailed=false,retrying=false,assistan
         </div>
       </fieldset>
     </>}
-    {step==="agent" && <><div className="create-intro"><Face name={name||"Your agent"} slug={null}/><h1>Meet your next agent.</h1><p>A name, a strategy, and room to make its own moves.</p></div><form onSubmit={e=>{e.preventDefault();if(!name.trim()){setError(t("create.errName"));return;}setError("");setStep(strategy==="trencher"?"limits":"market");}}><label className="create-label" htmlFor="agent-name">Agent name</label><input className="create-input" id="agent-name" value={name} maxLength={24} placeholder="What should we call it?" onChange={e=>setName(e.target.value)} required/><fieldset className="create-strategies"><legend>How should it trade?</legend>{STRATEGIES.map(s=><label className={strategy===s.id?"selected":""} key={s.id}><input type="radio" name="strategy" value={s.id} checked={strategy===s.id} onChange={()=>setStrategy(s.id)}/><span><strong>{s.name}{s.circle&&<i className="tag holders" title="Runs only while you hold $AGENTCAP">holders</i>}</strong><small>{s.description}{s.circle?" Runs only while you hold $AGENTCAP — pick it now and it opens nothing new until you do.":""}</small></span><span className="create-radio" aria-hidden>{strategy===s.id&&<Check size={13}/>}</span></label>)}</fieldset><div className="create-example" aria-live="polite"><span>Strategy example</span><p>{EXAMPLES[strategy]}</p></div>
-            {/* THE READER'S STANDING, not the rule. The badge above states the
-                requirement; this says whether THEY meet it, which is the only
-                half that decides whether to press the button. "I had to go to
-                /api/circle to check that and that's not good for normies." */}
-            {/* JUDGED ON THE WALLET ALONE. The standing counts the owner's
-                wallet and their current agent's account together, but a new
-                agent is a new, empty account — so a figure that includes the
-                old one would promise this agent tokens it will not have. And
-                an unread count is a dash, never `?? 0`. */}
-            {STRATEGIES.find((x) => x.id === strategy)?.circle &&
-              tier &&
-              tier.why !== "sign-in" &&
-              !newAgentQualifies(tier) && (
-                <div className="create-locked" role="status">
-                  <strong>This one won&apos;t run yet.</strong>
-                  {tier.why === "unreadable" ? (
-                    <p>
-                      We couldn&apos;t read your $AGENTCAP balance just now, so we can&apos;t tell
-                      whether this strategy will run. That&apos;s our read failing, not your wallet
-                      — try again in a moment.
-                    </p>
-                  ) : (
-                    <p>
-                      Your wallet holds {count(tier.holderTokens)} $AGENTCAP and this one
-                      needs {count(tier.needTokens)}. Your agent will arm and read the
-                      market, but until you hold enough it opens nothing new and leaves its basket as it
-                      is; positions in a class vault are still closed by their own exit rules. Steady
-                      basket and Strategist run
-                      for everyone
-                      {tier.energyGate
-                        ? ` — on about a tenth of a standard day's energy below ${count(ENERGY.fullTokens)}`
-                        : ""}
-                      .
-                    </p>
-                  )}
-                </div>
-              )}
-            {/* WHAT A NEW AGENT DOES NOT INHERIT. $AGENTCAP in the current
-                agent's account counts toward THAT agent; it stays there, and
-                a new agent starts without it. Said here, before the owner
-                builds a second agent expecting the first one's standing. */}
-            {tier && tier.agentTokens !== null && tier.agentTokens > 0 && (
-              <p className="create-energy">
-                The {count(tier.agentTokens)} $AGENTCAP in your current agent&apos;s account stays with
-                that agent — a new agent starts without it.
-              </p>
-            )}
-            {/* AND, ON A DEPLOYMENT THAT GATES ENERGY, THE CAPACITY IT WILL
-                HAVE — said before anybody funds it, never after. */}
-            {tier &&
-              tier.energyGate &&
-              tier.why === "ok" &&
-              tier.holderTokens !== null &&
-              tier.holderTokens < ENERGY.fullTokens &&
-              !STRATEGIES.find((x) => x.id === strategy)?.circle && (
-                <p className="create-energy">
-                  Your agent runs at full energy while your wallet and its account hold{" "}
-                  {count(ENERGY.fullTokens)} $AGENTCAP between them; below that it still runs, on about a
-                  tenth of a standard day&apos;s AI reviews and new trades. Stop-losses, take-profits and your own
-                  orders are never limited; its own AI reviews — including of its open positions — are
-                  paced along with the rest.
-                </p>
-              )}<button className="flow-primary" type="submit">Set trading limits <ArrowRight size={16}/></button></form></>}
+    {step==="agent" && <><div className="create-intro"><Face name={name||"Your agent"} slug={null}/><h1>Meet your next agent.</h1><p>A name, a strategy, and room to make its own moves.</p></div><form onSubmit={e=>{e.preventDefault();if(!name.trim()){setError(t("create.errName"));return;}setError("");setStep(strategy==="trencher"?"limits":"market");}}><label className="create-label" htmlFor="agent-name">Agent name</label><input className="create-input" id="agent-name" value={name} maxLength={24} placeholder="What should we call it?" onChange={e=>setName(e.target.value)} required/><fieldset className="create-strategies"><legend>How should it trade?</legend>{STRATEGIES.map(s=><label className={strategy===s.id?"selected":""} key={s.id}><input type="radio" name="strategy" value={s.id} checked={strategy===s.id} onChange={()=>setStrategy(s.id)}/><span><strong>{s.name}</strong><small>{s.description}</small></span><span className="create-radio" aria-hidden>{strategy===s.id&&<Check size={13}/>}</span></label>)}</fieldset><div className="create-example" aria-live="polite"><span>Strategy example</span><p>{EXAMPLES[strategy]}</p></div><button className="flow-primary" type="submit">Set trading limits <ArrowRight size={16}/></button></form></>}
     {step==="market" && <>
       {/* WHAT IT TRADES, ASKED ONCE, AT THE ONLY MOMENT IT IS FREE.
           Every answer here rides the settings write create() already makes, and
@@ -522,8 +421,6 @@ export function CreateAgent({account,accountFailed=false,retrying=false,assistan
           setCoinError("");
           const candidate={symbol:newCoin.symbol.trim(),address:newCoin.address.trim(),decimals:Number(newCoin.decimals)};
           if(!isValidCustomToken(candidate)){setCoinError("Needs a short symbol, a full 0x… address (42 characters) and whole-number decimals.");return;}
-          // $AGENTCAP is energy, never a coin the permission covers (every signer drops it).
-          if(isEnergyReserveToken(candidate.address)){setCoinError("That's $AGENTCAP — your agent's energy, not a coin it trades, so it isn't added here. Once your agent exists, ask it in chat to get its $AGENTCAP, or send it to the agent's account on Robinhood Chain.");return;}
           if(wizardTokens.some(t=>t.address.toLowerCase()===candidate.address.toLowerCase())){setCoinError("That address is already on the list.");return;}
           // BOTH WRITES, as everywhere else: added AND selected. The distinction
           // between "know about this" and "trade it" is real, but hiding the

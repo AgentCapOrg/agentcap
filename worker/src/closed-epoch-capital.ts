@@ -80,9 +80,11 @@
  * Reviewed operator tool: never imported by the orchestrator or a worker.
  * docs/closed-epoch-capital.md is the runbook.
  */
+import { usdgUnits } from "../../packages/core/src/wall";
+import { cashFromMicro, cashNumber, cashToMicro } from "../../packages/core/src/cash";
 import { createHash, randomUUID } from "node:crypto";
 import type { Db } from "./db";
-import { CASH, ENTRYPOINT, classifyUsdgMovement, energyReserveTokens, type Classification } from "../../packages/core/src/index";
+import { CASH, ENTRYPOINT, classifyUsdgMovement, type Classification } from "../../packages/core/src/index";
 import { decodeUserOperationEvent, segmentReceipt, USER_OPERATION_EVENT_TOPIC, validatorOfNonce } from "./asset-movements";
 import { legsFromReceipt, TRANSFER_TOPIC, type RawChainLog, type RpcCall } from "./chain-capital";
 import { CapitalFlowsWithheld, collapseFlows, flowDuplicateReport, type FlowRecord } from "./distinct-flows";
@@ -132,7 +134,7 @@ const HASH = /^0x[0-9a-f]{64}$/;
 const DIGEST = /^[0-9a-f]{64}$/;
 export const REPAIR_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const lower = (s: unknown) => String(s ?? "").toLowerCase();
-const USDG = lower(CASH.USDG);
+const USDG = lower(CASH.USDT);
 const EP = lower(ENTRYPOINT.v07);
 const num = (v: unknown): number => (v === null || v === undefined ? 0 : Number(v));
 const strOrNull = (v: unknown): string | null => (v === null || v === undefined ? null : String(v));
@@ -144,7 +146,10 @@ const intOrNull = (v: unknown): number | null => {
 const byText = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
 const iso = (sec: number | null): string => (sec === null ? "never" : new Date(sec * 1000).toISOString());
 /** Money compared as integers: a float equality test on USDG is not a check. */
-const micro = (usdg: number): bigint => BigInt(Math.round(usdg * 1e6));
+// In cash base units, rounded to the millionth the REAL columns keep.
+const micro = (usdg: number): bigint => usdgUnits(usdg);
+/** A chain amount as a stored row holds it: its whole micro-USDT, in base units. */
+const asStored = (raw: string): bigint => cashFromMicro(cashToMicro(BigInt(raw)));
 const said = (m: bigint): string => usdg6(m.toString());
 
 /** One refusal, by name and sentence. Nothing in either is private. */
@@ -1030,7 +1035,6 @@ export function planClosedEpoch(snap: ClosedEpochSnapshot, chain: ClosedEpochCha
   if (malformed) refuse("log-unreadable", `${malformed} log(s) the read returned are not USDG transfers of the account as the filter asked`);
   const knownAccounts = booking.knownAccounts.filter((x) => x !== account);
   const custodyAddresses = grant?.custody ?? [];
-  const reserveTokens = energyReserveTokens(chainId ?? 4663);
   const movements: MovementReport[] = [];
   for (const m of [...seen.values()].sort((x, y) => (BigInt(x.block) < BigInt(y.block) ? -1 : BigInt(x.block) > BigInt(y.block) ? 1 : x.logIndex - y.logIndex))) {
     const direction: MovementReport["direction"] = m.from === account && m.to === account ? "self" : m.from === account ? "out" : "in";
@@ -1043,7 +1047,7 @@ export function planClosedEpoch(snap: ClosedEpochSnapshot, chain: ClosedEpochCha
     let signers: MovementReport["signers"] = null;
     if (!bad && inReceipt) {
       const [leg] = legsFromReceipt([inReceipt]);
-      const c = classifyUsdgMovement({ account: account!, usdg: leg!, txLegs: legsFromReceipt(e!.receipt!.logs), usdgToken: USDG, knownAccounts, custodyAddresses, reserveTokens });
+      const c = classifyUsdgMovement({ account: account!, usdg: leg!, txLegs: legsFromReceipt(e!.receipt!.logs), usdgToken: USDG, knownAccounts, custodyAddresses });
       classification = { kind: c.kind, rule: c.evidence.rule, why: c.why, pairedToken: c.pairedToken ?? null };
       signers = signersOf(e!.receipt!.logs, account!, m.logIndex);
     }
@@ -1193,7 +1197,7 @@ export function planClosedEpoch(snap: ClosedEpochSnapshot, chain: ClosedEpochCha
     }
     if (kind === "reserve-out") {
       const present = twins.length === 1 && twins[0]!.epoch === P && twins[0]!.source === "energy-buy" && twins[0]!.direction === "out"
-        && micro(twins[0]!.amountUsdg) === BigInt(m.amountRaw) && twins[0]!.chainId === chainId;
+        && micro(twins[0]!.amountUsdg) === asStored(m.amountRaw) && twins[0]!.chainId === chainId;
       if (present) kept.push({ m, row: twins[0]! });
       else refuse("out-of-scope-reserve", `${m.key} is an energy purchase (reserve-out) with no identical worker-written 'energy-buy' row in epoch ${P}: filing one into a closed epoch is out of scope`);
       continue;
@@ -1201,7 +1205,7 @@ export function planClosedEpoch(snap: ClosedEpochSnapshot, chain: ClosedEpochCha
     if (twins.length > 1) { refuse("identity-conflict", `${m.key} is filed ${twins.length} times (flows ${twins.map((t) => `#${t.id}`).join(", ")})`); continue; }
     const twin = twins[0];
     if (twin) {
-      const same = twin.epoch === P && twin.source === "chain-log" && twin.direction === direction && micro(twin.amountUsdg) === BigInt(m.amountRaw)
+      const same = twin.epoch === P && twin.source === "chain-log" && twin.direction === direction && micro(twin.amountUsdg) === asStored(m.amountRaw)
         && twin.blockNumber === Number(m.block) && twin.chainId === chainId;
       if (same) kept.push({ m, row: twin });
       else refuse("identity-conflict", `${m.key} is filed as flows #${twin.id} (epoch ${twin.epoch}, ${twin.source}, ${twin.direction} ${twin.amountUsdg}, block ${twin.blockNumber}, chain ${twin.chainId}) and the chain says ${direction} ${usdg6(m.amountRaw)} at block ${m.block} on chain ${chainId}`);
@@ -1212,7 +1216,7 @@ export function planClosedEpoch(snap: ClosedEpochSnapshot, chain: ClosedEpochCha
     if (!agentId || chainId === null) continue;
     inserts.push({ key: m.key, amountRaw: m.amountRaw,
       movement: `USDG ${direction} ${usdg6(m.amountRaw)} ${direction === "in" ? "from" : "to"} ${m.counterparty} (${m.classification!.rule}; ${provenanceSaid(m)})`,
-      row: { agent_id: agentId, direction, amount_usdg: Number(BigInt(m.amountRaw)) / 1e6, tx_hash: m.txHash, block_number: Number(m.block), log_index: m.logIndex,
+      row: { agent_id: agentId, direction, amount_usdg: cashNumber(BigInt(m.amountRaw)), tx_hash: m.txHash, block_number: Number(m.block), log_index: m.logIndex,
         source: "chain-log", epoch: P, chain_id: chainId, at: m.at! } });
   }
   // ── the epoch's rows that are not the chain's ─────────────────────────────

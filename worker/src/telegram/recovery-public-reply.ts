@@ -134,7 +134,7 @@ function publicReply(e: TgDeskEvidence, parsed: Exclude<Parsed, string>, questio
   if (!read || watch === null || invalidation === null) return fixed("unavailable");
   const lore = e.lore;
   const description = lore && plain(lore.description, 500);
-  const boundUrl = ref.kind === "coin" && "address" in ref ? `https://www.geckoterminal.com/robinhood/tokens/${ref.address}` : "";
+  const boundUrl = ref.kind === "coin" && "address" in ref ? `https://www.geckoterminal.com/bsc/tokens/${ref.address}` : "";
   const admittedLore = lore && description && lore.source === "GeckoTerminal token info" && lore.url === boundUrl && fresh(lore.observedAtMs, now) ? description : null;
   let body = read;
   if (parsed.lore) body = admittedLore ? `Published project claim (GeckoTerminal token info): “${admittedLore}”` : "I don't have a fresh contract-bound project description. I won't guess its story from the ticker.";

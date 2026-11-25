@@ -15,6 +15,9 @@ import { CASH } from "../../packages/core/src/index";
 import { NominationBook } from "./trencher-nominate";
 import { EARLY_PAGES_MAX, earlyScreenReason } from "./early-candidates";
 
+// 6dp micro figures, scaled to 18dp USDT base units.
+const MICRO = 10n ** 12n;
+
 const TOKEN = "0x0000000000000000000000000000000000000011" as const;
 const USDG = "0x0000000000000000000000000000000000000022" as const;
 const ROUTER = "0x0000000000000000000000000000000000000033" as const;
@@ -162,19 +165,19 @@ test("a coin hours old clears the volume screen on its last hour", () => {
 
 test("cash and wrapped native assets cannot enter the memecoin universe even with qualifying volume", () => {
   const ranked = highVolumePools([
-    pool({ tokenAddress: CASH.USDG, volume24hUsd: 900_000 }),
-    pool({ tokenAddress: CASH.WETH.toLowerCase() as `0x${string}`, volume24hUsd: 800_000 }),
+    pool({ tokenAddress: CASH.USDT, volume24hUsd: 900_000 }),
+    pool({ tokenAddress: CASH.WBNB.toLowerCase() as `0x${string}`, volume24hUsd: 800_000 }),
     pool(),
   ]);
   assert.deepEqual(ranked.map(p => p.tokenAddress), [TOKEN]);
 });
 
 test("pool tape retains venue alternatives and deduplicates repeated feed rows", () => {
-  const v3 = pool({ dex: "uniswap-v3-robinhood", poolAddress: TOKEN });
+  const v3 = pool({ dex: "pancakeswap-v3-bsc", poolAddress: TOKEN });
   const v4 = pool({ dex: "uniswap-v4-robinhood", poolAddress: ROUTER, volume24hUsd: 500_000 });
   const tape = highVolumePools([v3, v4, v3], true);
   assert.equal(tape.length, 2);
-  assert.equal(highVolumePools(tape.filter(p => p.dex === "uniswap-v3-robinhood"))[0], v3);
+  assert.equal(highVolumePools(tape.filter(p => p.dex === "pancakeswap-v3-bsc"))[0], v3);
 });
 
 test("unowned SELL decisions cannot become executable orders and explain why", async () => {
@@ -226,14 +229,14 @@ test("Brain-approved memecoin entry and fast exit fill the paper book with reali
   const candidate: Candidate = { symbol: "MEME", token: TOKEN, decimals: 18, price8: 1_000_000n, priceable: true, liquidityUsd: 100_000, fdvUsd: 1_000_000, ageSec: 3600 };
   let open: OpenPosition[] = [];
   const strategy = makeTrencher({ cfg: TRENCHER_FAST, brainRequired: true, brainOrder: (s,t,p) => review.take(s,t,p,10), swapRouter: ROUTER, usdgToken: USDG, candidates: () => [candidate], open: () => open, liquidityOf: () => 100_000 });
-  const snap = { cashUsdg: 1000_000_000n, vaultUsdg: 0n, holdings: new Map(), prices: new Map(), pausedTokens: new Set(), staleFeeds: new Set(), sequencerUp: true, spendHeadroomUsdg: 100_000_000n, perTradeCapUsdg: 10_000_000n } as Snapshot;
+  const snap = { cashUsdg: (1000_000_000n * MICRO), vaultUsdg: 0n, holdings: new Map(), prices: new Map(), pausedTokens: new Set(), staleFeeds: new Set(), sequencerUp: true, spendHeadroomUsdg: (100_000_000n * MICRO), perTradeCapUsdg: (10_000_000n * MICRO) } as Snapshot;
   assert.equal(takeTick(await strategy.tick(snap)).intents.length, 0, "no rule entry without Brain");
   review.launch("paper", input, TOKEN, async () => answer(), () => {}); await setImmediate();
   const intents = takeTick(await strategy.tick(snap)).intents;
   assert.equal(intents.length, 1); assert.equal(intents[0]!.decisionId, "decision-1");
   const nowSec = Math.floor(Date.now()/1000);
-  const limits: AgentLimits = { perTradeUsdg: 10_000_000n, dailyUsdg: 100_000_000n, maxOpsPerDay: 20, allowedTargets: [ROUTER], allowedAssets: [USDG, TOKEN], maxDrawdownBps: 1000, expiresAt: nowSec + 1000 };
-  const state = { spentTodayUsdg: 0n, opsToday: 0, highWaterMarkUsdg: 1000_000_000n, equityUsdg: 1000_000_000n, nowSec };
+  const limits: AgentLimits = { perTradeUsdg: (10_000_000n * MICRO), dailyUsdg: (100_000_000n * MICRO), maxOpsPerDay: 20, allowedTargets: [ROUTER], allowedAssets: [USDG, TOKEN], maxDrawdownBps: 1000, expiresAt: nowSec + 1000 };
+  const state = { spentTodayUsdg: 0n, opsToday: 0, highWaterMarkUsdg: (1000_000_000n * MICRO), equityUsdg: (1000_000_000n * MICRO), nowSec };
   assert.equal(checkPolicy(intents[0]!, limits, state).ok, true);
   assert.equal(checkPolicy(intents[0]!, { ...limits, allowedAssets: [USDG] }, state).ok, false, "Brain cannot authorize a new token");
   assert.equal(checkPolicy(intents[0]!, { ...limits, perTradeUsdg: 1n }, state).ok, false, "Brain cannot expand spending limits");
@@ -241,16 +244,16 @@ test("Brain-approved memecoin entry and fast exit fill the paper book with reali
   const bought = applyPaperIntent(intents[0]!, { cashUsdg: 1000, vaultUsdg: 0, hwmUsdg: 1000 }, [], opts);
   assert.ok(bought.ok);
   const qty = BigInt(Math.round(bought.fill!.rawShares * 1e18));
-  const basis = applyFill(ZERO_BASIS, { side: "buy", qtyRaw: qty, cashUsdg: 5_000_000n }).basis;
-  open = [{ symbol: "MEME", token: TOKEN, qtyRaw: qty, costUsdg: 5_000_000n, entryPrice8: 1_000_000n, entryLiquidityUsd: 100_000, entrySec: Math.floor(Date.now()/1000) }];
+  const basis = applyFill(ZERO_BASIS, { side: "buy", qtyRaw: qty, cashUsdg: (5_000_000n * MICRO) }).basis;
+  open = [{ symbol: "MEME", token: TOKEN, qtyRaw: qty, costUsdg: (5_000_000n * MICRO), entryPrice8: 1_000_000n, entryLiquidityUsd: 100_000, entrySec: Math.floor(Date.now()/1000) }];
   snap.prices.set("MEME", { price8: 1_300_000n, stale: false } as never);
-  snap.holdings.set("MEME", { token: TOKEN, rawBalance: qty, valueUsdg: 6_435_000n, priceStale: false });
+  snap.holdings.set("MEME", { token: TOKEN, rawBalance: qty, valueUsdg: (6_435_000n * MICRO), priceStale: false });
   const exits = takeTick(await strategy.tick(snap)).intents;
   assert.equal(exits.length, 1, "exit does not wait for another Brain decision");
   const sold = applyPaperIntent(exits[0]!, bought.book, bought.positions, { ...opts, notionalUsdg: 6.435, priceUsdOf: () => ({ priceUsd: .013, stale: false }) });
   assert.ok(sold.ok); assert.equal(sold.positions.length, 0);
-  const closed = applyFill(basis, { side: "sell", qtyRaw: qty, cashUsdg: BigInt(Math.round(sold.fill!.cashUsdg * 1e6)) });
-  assert.equal(Math.round((sold.book.cashUsdg - 1000)*1e6), Number(closed.realizedUsdg));
+  const closed = applyFill(basis, { side: "sell", qtyRaw: qty, cashUsdg: BigInt(Math.round(sold.fill!.cashUsdg * 1e6)) * MICRO });
+  assert.equal(Math.round((sold.book.cashUsdg - 1000)*1e6), Number(closed.realizedUsdg / MICRO));
   assert.ok(closed.realizedUsdg > 0n);
 });
 
@@ -261,13 +264,13 @@ test("Brain can sell early without waiting for a mechanical threshold", async ()
   await setImmediate();
   const strategy = makeTrencher({ cfg: TRENCHER_FAST, brainRequired: true, brainOrder: (s,t,p,h) => review.take(s,t,p,5,h), swapRouter: ROUTER, usdgToken: USDG,
     candidates: () => [], liquidityOf: () => 100_000,
-    open: () => [{ symbol: "MEME", token: TOKEN, qtyRaw: 500n*10n**18n, costUsdg: 5_000_000n, entryPrice8: 1_000_000n, entryLiquidityUsd: 100_000, entrySec: Math.floor(Date.now()/1000) }] });
-  const snap = { sequencerUp: true, holdings: new Map([["MEME", { token: TOKEN, rawBalance: 500n*10n**18n, valueUsdg: 5_000_000n, priceStale: false }]]), prices: new Map([["MEME", { price8: 1_000_000n, stale: false }]]), pausedTokens: new Set() } as unknown as Snapshot;
+    open: () => [{ symbol: "MEME", token: TOKEN, qtyRaw: 500n*10n**18n, costUsdg: (5_000_000n * MICRO), entryPrice8: 1_000_000n, entryLiquidityUsd: 100_000, entrySec: Math.floor(Date.now()/1000) }] });
+  const snap = { sequencerUp: true, holdings: new Map([["MEME", { token: TOKEN, rawBalance: 500n*10n**18n, valueUsdg: (5_000_000n * MICRO), priceStale: false }]]), prices: new Map([["MEME", { price8: 1_000_000n, stale: false }]]), pausedTokens: new Set() } as unknown as Snapshot;
   const orders = takeTick(await strategy.tick(snap)).intents;
   assert.equal(orders.length, 1);
   assert.equal(orders[0]!.decisionId, "decision-1");
   assert.ok(orders[0]!.kind === "swap");
-  assert.equal(orders[0]!.notionalUsdg, 2_000_000n);
+  assert.equal(orders[0]!.notionalUsdg, (2_000_000n * MICRO));
   assert.equal(orders[0]!.sellAmountRaw, 200n*10n**18n);
   assert.equal(takeTick(await strategy.tick(snap)).intents.length, 0, "cannot repeat the same sell approval");
 });
@@ -442,7 +445,7 @@ test("a nominated coin's own page rides the tape: read with it, screened like it
   let now = 1000;
   const tokenReads: string[] = [];
   let feedReads = 0;
-  const nominatedPool = pool({ tokenAddress: NOMINATED, poolAddress: NOMINATED, dex: "uniswap-v3-robinhood" });
+  const nominatedPool = pool({ tokenAddress: NOMINATED, poolAddress: NOMINATED, dex: "pancakeswap-v3-bsc" });
   const quietPool = pool({ tokenAddress: ROUTER, poolAddress: ROUTER, volume24hUsd: 1 });
   const reader = new TrenchTapeReader(
     async () => { feedReads++; return { failed: false, pools: [] }; },
@@ -525,7 +528,7 @@ test("the tape screen, named: highVolumePools keeps exactly the pools trenchScre
   const variants: Partial<GeckoPool>[] = [
     {}, { volume24hUsd: 99_999 }, { volume24hUsd: 100_000 }, { volume24hUsd: null }, { volume24hUsd: Number.NaN },
     { buyers24h: 19 }, { buyers24h: null }, { buys24h: 0 }, { sells24h: 0 }, { sells24h: null },
-    { buckets: emptyGeckoBuckets() }, { tokenAddress: USDG }, { tokenAddress: CASH.USDG.toLowerCase() as `0x${string}` },
+    { buckets: emptyGeckoBuckets() }, { tokenAddress: USDG }, { tokenAddress: CASH.USDT.toLowerCase() as `0x${string}` },
   ];
   const pools = variants.map((over, i) => pool({ poolId: `p${i}`, poolAddress: `0x${(i + 1).toString(16).padStart(40, "0")}` as `0x${string}`, dex: "d", ...over }));
   const kept = new Set(highVolumePools(pools, true).map(p => p.poolId));
@@ -602,7 +605,7 @@ test("a review that produced no decision leaves an earlier ready order alone", a
 
 const EARLY_COIN = "0x00000000000000000000000000000000000000e1" as const;
 const earlyPool = (over: Partial<GeckoPool> = {}) => pool({
-  tokenAddress: EARLY_COIN, poolAddress: EARLY_COIN, poolId: EARLY_COIN, dex: "uniswap-v3-robinhood", reserveUsd: 30_000,
+  tokenAddress: EARLY_COIN, poolAddress: EARLY_COIN, poolId: EARLY_COIN, dex: "pancakeswap-v3-bsc", reserveUsd: 30_000,
   volume24hUsd: 20_000, buyers24h: 12, buys24h: 40, sells24h: 25, ...over,
 });
 

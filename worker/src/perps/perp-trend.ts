@@ -41,7 +41,7 @@
  *           stop, take, risk exit, forced fill or an exit of unknown cause);
  *           not the candle the last entry was taken on (policy refusals
  *           included — a refused entry waits for the next close); fewer than
- *           2 positions; breaker idle, energy and ops headroom left; the grant
+ *           2 positions; breaker idle, ops headroom left; the grant
  *           good for another 168 h; the 8 h mean funding against the side
  *           ≤ 0.005%/h. One open per tick: the largest (close − channel)/ATR.
  * STOP      max(1.5%, 3 × ATR14 / close). Above perpsStopLossPct it idles
@@ -61,7 +61,7 @@
  *           `aged`. Always the whole venue position, reduce-only. Risk exits
  *           (stops, liquidation distance, funding bleed, market status) are
  *           protect.ts's, never this file's, and no exit here reads the
- *           breaker, energy, ops, a cap or the grant.
+ *           breaker, ops, a cap or the grant.
  *
  * PURE. No clock (ctx.nowSec), no I/O, no state between calls: the cooldown
  * clock and the last entry's candle come from the view (the ledger), so a
@@ -121,8 +121,8 @@ export interface PerpTrendCtx {
   breakerIdle: boolean;
   /** The sealed drawdown limit, for the owner's `breaker-tripped` sentence; absent = say nothing. */
   breakerLimitBps?: number | null;
-  /** Today's energy still allows a new position. */
-  energyEntriesLeft: boolean;
+  /** A caller's own bound on opens per day (the backtest). Absent means none. */
+  entriesLeft?: boolean;
   /** The day's operation count is not spent. */
   opsHeadroom: boolean;
   /** USDG still spendable today, micro; null = not read (then it does not size — policy's daily cap still binds). */
@@ -361,7 +361,7 @@ export function perpTrendTick(view: PerpsView | null | undefined, s: PerpTrendSe
         ? { code: "breaker-tripped", limitBps: ctx.breakerLimitBps }
         : null;
     }
-    if (!ctx.energyEntriesLeft) return null;
+    if (ctx.entriesLeft === false) return null;
     if (!ctx.opsHeadroom) return { code: "ops-spent" };
     if (!(view.headroom.opensLeftToday > 0)) return null;
     if (ctx.equityMicro === null) return { code: "perp-signal-unread", market: null };

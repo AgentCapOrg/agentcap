@@ -42,6 +42,7 @@
  * never nominated, never written anywhere a trading decision reads, never
  * traded.
  */
+import { bnbChain } from "../../packages/core/src/chain";
 import type { Db } from "./db";
 import type { AgentFacts } from "./groupchat/facts";
 import type { CoinFacts, CoinFactsReader } from "./coin-facts-types";
@@ -75,7 +76,7 @@ import { coinQuery, LISTINGS_MAX, MAJORS_MAX_RANK, pickMajor, readChainListings,
 const MIN = 60_000;
 const HOUR = 60 * MIN;
 const DAY = 24 * HOUR;
-const CHAIN_ID = 4663;
+const CHAIN_ID = bnbChain.id;
 
 // ── the intent ──────────────────────────────────────────────────────────────
 
@@ -1663,7 +1664,7 @@ export interface HotCoin { token: string; ticker: string; pool: GeckoPool }
  * Whatever fails is silently left out.
  */
 export function hotScreen(pools: readonly GeckoPool[]): HotCoin[] {
-  const cash = new Set([CASH.USDG, CASH.WETH].map((a) => a.toLowerCase()));
+  const cash = new Set([CASH.USDT, CASH.WBNB].map((a) => a.toLowerCase()));
   const out: HotCoin[] = [];
   for (const p of screenPools(pools, DISCOVERY_SCREEN).kept) {
     const token = p.tokenAddress.toLowerCase();
@@ -1736,7 +1737,7 @@ function ownMoney(mode: AgentFacts["mode"], paper: boolean): boolean {
 function ownPostProse(body: string): string {
   // The trusted lines code appends: the older " CA (chain): 0x…" / " Wallet (…)"
   // suffixes, and since 2026-10-13 a blank line then the tx link and the bare CA.
-  const text = String(body ?? "").replace(/(?:\n\nhttps:\/\/robinhoodchain\.blockscout\.com\/tx\/0x[0-9a-fA-F]{64})?\n\n0x[0-9a-fA-F]{40}$/, "");
+  const text = String(body ?? "").replace(/(?:\n\nhttps:\/\/bscscan\.com\/tx\/0x[0-9a-fA-F]{64})?\n\n0x[0-9a-fA-F]{40}$/, "");
   return withoutReplyOptOut(text.split(/ (?:CA|Wallet) \(/)[0] ?? "").replace(/\s+/g, " ").trim();
 }
 

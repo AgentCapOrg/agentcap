@@ -100,14 +100,13 @@ export const STOPS: Stop[] = [
 {titleKey: "tour.stop20.title", copyKey: "tour.stop20.copy", "target": [".feed-page", ".explore-pills", "[data-tour=\"tab-feed\"]"], "screen": {"kind": "tab", "tab": "feed"}},
 {titleKey: "tour.stop21.title", copyKey: "tour.stop21.copy", "target": [".feed-page", ".explore-pills", "[data-tour=\"tab-feed\"]"], "screen": {"kind": "tab", "tab": "feed"}},
 {titleKey: "tour.stop22.title", copyKey: "tour.stop22.copy", "target": [".feed-page", ".explore-pills", "[data-tour=\"tab-feed\"]"], "screen": {"kind": "tab", "tab": "feed"}},
-{titleKey: "tour.stop23.title", copyKey: "tour.stop23.copy", "target": [".alpha-page"], "screen": {"kind": "tab", "tab": "alpha"}},
 {titleKey: "tour.stop24.title", copyKey: "tour.stop24.copy", "target": [".mm-wrap"], "screen": {"kind": "settings"}},
 {titleKey: "tour.stop25.title", copyKey: "tour.stop25.copy", "target": [".mm-wrap"], "screen": {"kind": "settings"}},
 {titleKey: "tour.stop26.title", copyKey: "tour.stop26.copy", "target": ["[data-tour=\"chat-input\"]"], "screen": {"kind": "tab", "tab": "agent"}}
 ];
 
 /** The short first-run path. Every stop remains available from Topics. */
-export const ESSENTIAL_STOP_INDICES: number[] = [0, 1, 8, 2, 9, 5, 4, 25];
+export const ESSENTIAL_STOP_INDICES: number[] = [0, 1, 8, 2, 9, 5, 4, 24];
 const FULL_STOP_INDICES = STOPS.map((_, index) => index);
 
 const KEY = `agentcap.tour.v${TOUR_VERSION}`;

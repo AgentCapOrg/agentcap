@@ -1,4 +1,5 @@
 /** Receipt evidence for a genuinely new hosted book. Never an established-book backfill. */
+import { cashToMicro } from "../../packages/core/src/cash";
 import { CASH } from "../../packages/core/src/index";
 import { scanFleetCapital, TRANSFER_TOPIC, type RawChainLog, type RpcCall } from "./chain-capital";
 import { BOOKING_CONFIRMATIONS } from "./chain-confirmations";
@@ -71,7 +72,7 @@ export async function readUntouchedFundingReceipts(rpc: RpcCall, o: {
   // nothing moved after the confirmed snapshot, even if it moved out and back.
   // This fixed 64-block window needs no broad historical fallback: unread holds.
   for (const topics of [[TRANSFER_TOPIC, accountTopic], [TRANSFER_TOPIC, null, accountTopic]]) {
-    const tail = await rpc("eth_getLogs", [{ address: CASH.USDG, topics,
+    const tail = await rpc("eth_getLogs", [{ address: CASH.USDT, topics,
       fromBlock: `0x${(blockNumber + 1n).toString(16)}`, toBlock: headTag }]);
     if (!Array.isArray(tail) || tail.length !== 0) throw refused();
   }
@@ -110,13 +111,15 @@ export async function readUntouchedFundingReceipts(rpc: RpcCall, o: {
     }
     return value;
   };
-  const capital = (await scanFleetCapital(verified, { accounts: [account], usdgToken: CASH.USDG,
+  const capital = (await scanFleetCapital(verified, { accounts: [account], usdgToken: CASH.USDT,
     fromBlock: 0n, toBlock: blockNumber, includeCapitalTimestamps: true })).get(account);
   if (!capital?.complete || capital.movements.length !== found.size || !capital.movements.length
     || capital.movements.some(m => m.classification.kind !== "capital-in" || m.direction !== "in" || !m.at)) throw refused();
-  const cashUsdg6 = integer(await rpc("eth_call", [{ to: CASH.USDG,
+  const cashUsdg6 = integer(await rpc("eth_call", [{ to: CASH.USDT,
     data: `0x70a08231${account.slice(2).padStart(64, "0")}` }, tag]));
-  if (cashUsdg6 <= 0n || cashUsdg6 > BigInt(Number.MAX_SAFE_INTEGER)
+  // Reconciled in exact base units. The bound is in micro-USDT, the REAL
+  // columns' precision; bookInitialCapital truncates each receipt to it.
+  if (cashUsdg6 <= 0n || cashToMicro(cashUsdg6) > BigInt(Number.MAX_SAFE_INTEGER)
     || capital.movements.reduce((n, m) => n + BigInt(m.amountRaw), 0n) !== cashUsdg6) throw refused();
   const last = await rpc("eth_getBlockByNumber", [tag, false]) as { number?: unknown; hash?: unknown } | null;
   const lastHead = await rpc("eth_getBlockByNumber", [headTag, false]) as { number?: unknown; hash?: unknown } | null;

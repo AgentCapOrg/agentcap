@@ -16,7 +16,7 @@ import {
   type DossierClaimDetail,
   type ThesisCoverageInput,
 } from "./dossier";
-import { robinhoodChain, tokenIdentity } from "./identity";
+import { bnbChain, tokenIdentity } from "./identity";
 import type { Thesis, ThesisComment, TokenStats, TraderEvent } from "./types";
 
 const NOW = 1_790_000_000_000;
@@ -24,8 +24,8 @@ const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
 const EVM = "0x" + "ab".repeat(20);
 const OTHER = "0x" + "cd".repeat(20);
-const TOKEN = tokenIdentity(robinhoodChain(), EVM)!;
-const OTHER_TOKEN = tokenIdentity(robinhoodChain(), OTHER)!;
+const TOKEN = tokenIdentity(bnbChain(), EVM)!;
+const OTHER_TOKEN = tokenIdentity(bnbChain(), OTHER)!;
 
 function author(userId: string, handle: string = userId) {
   return { userId, handle, displayName: null, verified: null };

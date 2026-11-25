@@ -27,6 +27,8 @@
  * rasterising anything.
  */
 
+import { usdgUnits } from "../../packages/core/src/wall";
+import { CASH_CENT, CASH_UNIT } from "../../packages/core/src/cash";
 import { fileURLToPath } from "node:url";
 
 import { PNL_GLYPHS, PNL_GLYPH_EM } from "./pnl-glyphs";
@@ -60,9 +62,6 @@ const LOSS = "#ff6b5e";
 const WHITE = "#ffffff";
 const DIM = "#98a09a";
 
-/** USDG is 6dp everywhere in this codebase. */
-const USDG_DECIMALS = 6;
-
 export interface PnlCardData {
   /** The token that was closed, e.g. "DOGGOS". */
   symbol: string;
@@ -78,7 +77,7 @@ export interface PnlCardData {
 export function formatUsdg(raw: bigint, signed = false): string {
   const neg = raw < 0n;
   const abs = neg ? -raw : raw;
-  const scale = 10n ** BigInt(USDG_DECIMALS);
+  const scale = CASH_UNIT;
   // Round half-up at the second decimal rather than truncating, so a card and a
   // ledger that both claim 2dp cannot disagree by a cent.
   const hundredths = (abs * 100n + scale / 2n) / scale;
@@ -199,8 +198,8 @@ export interface ClosedFillRow {
   status?: string | null;
 }
 
-/** USDG float (as stored) to base units, without compounding the rounding. */
-const toBase = (n: number) => BigInt(Math.round(n * 10 ** USDG_DECIMALS));
+/** USDT float (as stored) to base units, without compounding the rounding. */
+const toBase = usdgUnits;
 
 /**
  * The card for a sale that realised a P&L — or null when there is nothing to
@@ -253,8 +252,8 @@ export function pnlCardFromFill(row: ClosedFillRow, coin?: string | null): PnlCa
   return { symbol, investedUsdg: invested, proceedsUsdg: proceeds, realisedUsdg: realised };
 }
 
-/** One cent, in USDG base units — below this a figure prints as 0.00. */
-const DUST_USDG = 10_000n;
+/** One cent, in USDT base units — below this a figure prints as 0.00. */
+const DUST_USDG = CASH_CENT;
 
 /**
  * A `trades` row as the live-sell card reads it, joined to its decision for

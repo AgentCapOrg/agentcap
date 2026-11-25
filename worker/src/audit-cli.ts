@@ -77,7 +77,7 @@ async function exportContext(agentId: string): Promise<{ chainId: number | null;
   } catch {
     /* the export is still valid without it; the verifier says what is missing */
   }
-  return { chainId, usdgToken: String(CASH.USDG) };
+  return { chainId, usdgToken: String(CASH.USDT) };
 }
 
 async function doExport(): Promise<void> {

@@ -16,7 +16,7 @@
  * a per-token request this file deliberately avoids making.
  */
 import { createPublicClient, http, type PublicClient } from "viem";
-import { CHAINLINK_ABI, robinhoodChain } from "../../packages/core/src/index";
+import { CHAINLINK_ABI, bnbChain } from "../../packages/core/src/index";
 
 /**
  * The reader for callers with no client of their own — the web tier.
@@ -25,7 +25,7 @@ import { CHAINLINK_ABI, robinhoodChain } from "../../packages/core/src/index";
  * transport, and a second unmetered client issuing 400-round multicalls behind
  * the meter is exactly the traffic this chain rate-limits.
  */
-const fallbackClient = createPublicClient({ chain: robinhoodChain, transport: http() });
+const fallbackClient = createPublicClient({ chain: bnbChain, transport: http() });
 
 /** Only the two methods this module uses, so any client shape satisfies it. */
 type FeedClient = Pick<PublicClient, "readContract" | "multicall">;

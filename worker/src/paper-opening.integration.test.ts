@@ -54,7 +54,7 @@ async function buy(id: string, start: number) {
   assert.equal(await store.addTrade({ agent_id: id, kind: "swap", target: TOKEN, status: "paper", amount_usdg: 100,
     sell_token: USDG, buy_token: TOKEN, fill_side: "buy", fill_qty_raw: "990000000000000000",
     fill_cash_usdg: 100, fill_price_usd: 100, basis_source: "paper" }), true);
-  await tickRatchets(tickPlan("command"), { incomplete: false, curveMarked: 0 }).equityRow(async () => {
+  await tickRatchets(tickPlan("command"), { incomplete: false, }).equityRow(async () => {
     assert.fail("command ticks must not manufacture scheduled valuations");
   });
   const equity = paperEquityUsdg(fill.book, fill.positions, price, () => 1);

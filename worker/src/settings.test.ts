@@ -33,14 +33,12 @@ describe("mergeSettings — file > env > default", () => {
   it("defaults hold with nothing set", () => {
     const c = mergeSettings({}, {});
     assert.equal(c.strategy, "steady-basket");
-    assert.equal(c.swapVenue, "uniswap");
     assert.equal(c.slippageBps, 100);
     assert.equal(c.perfFeeBps, 1000);
     assert.equal(c.tickSeconds, 60);
     assert.deepEqual(c.basketSymbols, ["QQQ", "NVDA", "TSLA"]);
     assert.equal(c.bundlerUrl, undefined);
     assert.equal(c.anthropicApiKey, undefined);
-    assert.equal(c.rialtoApiKeyHeader, "x-api-key");
   });
 
   it("env fills what the file leaves empty", () => {
@@ -78,7 +76,6 @@ describe("mergeSettings — file > env > default", () => {
     const c = mergeSettings(
       {
         strategy: "not a token!!" as never,
-        swapVenue: "cex" as never,
         slippageBps: 99_999,
         tickSeconds: 1,
         basketSymbols: ["AAPL", "DOGE", 42 as never],
@@ -87,7 +84,6 @@ describe("mergeSettings — file > env > default", () => {
       {},
     );
     assert.equal(c.strategy, "steady-basket");
-    assert.equal(c.swapVenue, "uniswap");
     assert.equal(c.slippageBps, 100);
     assert.equal(c.tickSeconds, 60);
     assert.deepEqual(c.basketSymbols, ["AAPL"]); // unknown symbols dropped, known kept
@@ -97,20 +93,6 @@ describe("mergeSettings — file > env > default", () => {
   it("a valid breaker address passes through typed", () => {
     const c = mergeSettings({ breakerAddress: "0x" + "ab".repeat(20) }, {});
     assert.equal(c.breakerAddress, "0x" + "ab".repeat(20));
-  });
-
-  it("the v4 adapter address follows the same discipline: file over env, junk becomes undefined", () => {
-    // Same stakes as the breaker: this string becomes a CALL TARGET. A junk
-    // value must vanish rather than reach a wall or a warning path, and the
-    // file must beat the environment so what the owner sees in /settings is
-    // what the worker actually resolved.
-    const file = mergeSettings({ v4AdapterAddress: "0x" + "cd".repeat(20) }, { AGENTCAP_V4_ADAPTER_ADDRESS: "0x" + "ef".repeat(20) });
-    assert.equal(file.v4AdapterAddress, "0x" + "cd".repeat(20), "file wins over env");
-    const env = mergeSettings({}, { AGENTCAP_V4_ADAPTER_ADDRESS: "0x" + "ef".repeat(20) });
-    assert.equal(env.v4AdapterAddress, "0x" + "ef".repeat(20), "env fills in when the file is silent");
-    const junk = mergeSettings({ v4AdapterAddress: "not-an-address" }, {});
-    assert.equal(junk.v4AdapterAddress, undefined, "junk is UNDEFINED, never a call target");
-    assert.equal(mergeSettings({}, {}).v4AdapterAddress, undefined, "absent by default");
   });
 
   it("all unknown basket symbols fall back to the default basket", () => {
@@ -283,48 +265,6 @@ describe("energyGate — env only, hosted only", () => {
       else process.env.AGENTCAP_HOSTED = before;
     }
   };
-
-  it("SELF-HOSTED IS OFF even with AGENTCAP_ENERGY_GATE=1", () => {
-    withHosted(false, () => {
-      assert.equal(mergeSettings({}, { AGENTCAP_ENERGY_GATE: "1" }).energyGate, "off");
-      assert.equal(mergeSettings({}, { AGENTCAP_ENERGY_GATE: "enforce" }).energyGate, "off");
-    });
-  });
-
-  it("hosted: unset is off; 'observe' and '1' parse", () => {
-    withHosted(true, () => {
-      assert.equal(mergeSettings({}, {}).energyGate, "off", "default off in code — the operator flips it");
-      assert.equal(mergeSettings({}, { AGENTCAP_ENERGY_GATE: "observe" }).energyGate, "observe");
-      assert.equal(mergeSettings({}, { AGENTCAP_ENERGY_GATE: "1" }).energyGate, "enforce");
-      assert.equal(mergeSettings({}, { AGENTCAP_ENERGY_GATE: "0" }).energyGate, "off");
-    });
-  });
-
-  it("A FILE KEY IS IGNORED — the throttled party cannot set their own switch", () => {
-    withHosted(true, () => {
-      const file = { energyGate: "off", AGENTCAP_ENERGY_GATE: "0" } as unknown as Parameters<typeof mergeSettings>[0];
-      assert.equal(mergeSettings(file, { AGENTCAP_ENERGY_GATE: "1" }).energyGate, "enforce");
-      const upgrade = { energyGate: "enforce" } as unknown as Parameters<typeof mergeSettings>[0];
-      assert.equal(mergeSettings(upgrade, {}).energyGate, "off", "nor switch one on for somebody else to be billed");
-    });
-  });
-
-  it("exemptions come only from hosted operator env, never a tenant's settings", () => {
-    const account = "0x1234567890abcdef1234567890abcdef12345678";
-    const other = "0x2234567890abcdef1234567890abcdef12345678";
-    const file = {
-      energyExemptAccounts: [other],
-      AGENTCAP_ENERGY_EXEMPT_ACCOUNTS: other,
-    } as unknown as Parameters<typeof mergeSettings>[0];
-    withHosted(true, () => {
-      assert.deepEqual(mergeSettings(file, {}).energyExemptAccounts, []);
-      assert.deepEqual(mergeSettings(file, { AGENTCAP_ENERGY_EXEMPT_ACCOUNTS: account }).energyExemptAccounts, [account]);
-      assert.equal(mergeSettings(file, { AGENTCAP_ENERGY_EXEMPT_ACCOUNTS: account, AGENTCAP_ENERGY_GATE: "1" }).energyGate, "enforce", "the fleet gate is unchanged");
-    });
-    withHosted(false, () => {
-      assert.deepEqual(mergeSettings({}, { AGENTCAP_ENERGY_EXEMPT_ACCOUNTS: account }).energyExemptAccounts, []);
-    });
-  });
 });
 
 describe("mergeSettings — Telegram groups (docs/tg-groups.md \"Settings\")", () => {
@@ -853,7 +793,6 @@ describe("which wallet this worker serves (AGENTCAP_WALLET_PURPOSE)", () => {
       strategy: "steady-basket",
       discoveryEnabled: true,
       officialCoinsEnabled: true,
-      classSnipeEnabled: true,
       scoutEnabled: true,
       trencherLiveEnabled: true,
       trencherFastEnabled: true,
@@ -870,7 +809,7 @@ describe("which wallet this worker serves (AGENTCAP_WALLET_PURPOSE)", () => {
     assert.equal(mergeSettings(file, {}).telegramEnabled, true, "a Spot worker keeps its bot");
     assert.equal(perps.workerWallet, "perps");
     assert.equal(perps.strategy, "perps-only");
-    for (const k of ["discoveryEnabled", "officialCoinsEnabled", "classSnipeEnabled", "scoutEnabled", "trencherLiveEnabled", "trencherFastEnabled", "fomoFollowEnabled"] as const) {
+    for (const k of ["discoveryEnabled", "officialCoinsEnabled", "scoutEnabled", "trencherLiveEnabled", "trencherFastEnabled", "fomoFollowEnabled"] as const) {
       assert.equal(perps[k], false, k);
     }
     assert.equal(perps.perpsEnabled, true, "its perps are its owner's");
@@ -879,6 +818,5 @@ describe("which wallet this worker serves (AGENTCAP_WALLET_PURPOSE)", () => {
     assert.equal(spot.workerWallet, "spot");
     assert.equal(spot.strategy, "steady-basket");
     assert.equal(spot.discoveryEnabled, true);
-    assert.equal(spot.classSnipeEnabled, true);
   });
 });

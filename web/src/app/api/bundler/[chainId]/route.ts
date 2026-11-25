@@ -49,7 +49,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { pimlicoBundlerUrl, robinhoodChain, robinhoodTestnet, ENTRYPOINT } from "@agentcap/core";
+import { pimlicoBundlerUrl, bnbChain, bnbTestnet, ENTRYPOINT } from "@agentcap/core";
 import { readTicket } from "@/lib/recovery-ticket";
 import { isRecoveryShape, isPermissionRevocationShape } from "@/lib/recovery-shape";
 import { isGloamWithdrawalShape } from "@/lib/gloam-withdrawal-shape";
@@ -74,7 +74,7 @@ const ALLOWED = new Set([
 /** The two methods that carry an operation, and therefore need it inspected. */
 const OP_METHODS = new Set(["eth_estimateUserOperationGas", "eth_sendUserOperation"]);
 
-const KNOWN_CHAINS = new Set<number>([robinhoodChain.id, robinhoodTestnet.id]);
+const KNOWN_CHAINS = new Set<number>([bnbChain.id, bnbTestnet.id]);
 const MAX_BODY = 32 * 1024;
 
 /**
@@ -139,7 +139,7 @@ function scrub(s: string): string {
  *
  * -32099 AND NOT -32001, WHICH SWALLOWED THE REASON. viem maps the low codes to
  * its own error classes with FIXED text: -32001 becomes ResourceNotFoundRpcError,
- * whose message is "Requested resource not found." So a class-vault sweep that
+ * whose message is "Requested resource not found." So a withdrawal that
  * this relay refused for a precise, stated reason reached the owner as a
  * four-word string about a missing resource, and diagnosing it took a decode of
  * the callData and a read of this file.
@@ -213,7 +213,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ chainId: strin
     }
 
     const callData = typeof op.callData === "string" ? (op.callData as `0x${string}`) : "0x";
-    const shape = isRecoveryShape(callData, { classVaults: ticket.classVaults });
+    const shape = isRecoveryShape(callData);
     if (!shape.ok && !isPermissionRevocationShape(callData, ticket.smartAccount)) {
       const gloam = isGloamWithdrawalShape(callData, {
         chainId,

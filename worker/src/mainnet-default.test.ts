@@ -24,7 +24,6 @@ function freshInstall(over: Partial<PreflightInput> = {}): PreflightInput {
       bundlerApiKey: "pim_x",
       basketSymbols: SETTINGS_DEFAULTS.basketSymbols as string[],
       buyPerTickUsdg: SETTINGS_DEFAULTS.buyPerTickUsdg,
-      idleFloorUsdg: SETTINGS_DEFAULTS.idleFloorUsdg,
     },
     grant: {
       smartAccount: ACCOUNT,
@@ -34,7 +33,7 @@ function freshInstall(over: Partial<PreflightInput> = {}): PreflightInput {
       caps: { perTradeUsdg: 10, dailyUsdg: 50, expiryDays: 7, maxDrawdownPct: 5, maxOpsPerDay: 24 },
       grantedAt: NOW,
       expiresAt: NOW + 7 * 86_400,
-      chainId: 4663,
+      chainId: 56,
       grantFeatures: ["tradeable-v2"],
     } as never,
     nowSec: NOW,
@@ -67,7 +66,7 @@ test("a fresh mainnet install has NO blockers", () => {
 });
 
 test("the same install on the OLD default is blocked — which is the point", () => {
-  const onTestnet = freshInstall({ grant: { ...freshInstall().grant!, chainId: 46630 } as never });
+  const onTestnet = freshInstall({ grant: { ...freshInstall().grant!, chainId: 97 } as never });
   assert.ok(ids(onTestnet, "blocker").includes("chain"));
 });
 
@@ -89,7 +88,7 @@ test("nothing in web/ still falls back to testnet when a chain is unknown", () =
   // an agent's chain, not to the file that used to.
   for (const f of ["web/src/lib/session.ts", "web/src/app/(app)/you/YouClient.tsx"]) {
     const src = readFileSync(f, "utf8");
-    assert.equal(/\?\?\s*robinhoodTestnet\.id/.test(src), false, `${f} still defaults to testnet`);
+    assert.equal(/\?\?\s*bnbTestnet\.id/.test(src), false, `${f} still defaults to testnet`);
     assert.equal(/\?\?\s*46630/.test(src), false, `${f} still falls back to 46630`);
   }
 });
@@ -99,12 +98,12 @@ test("practice is still reachable — simplification is not removal", () => {
   // A user who wants to watch before risking anything must still be able to.
   const src = readFileSync("web/src/terminal/screens/Wallet.tsx", "utf8");
   assert.match(src, /setChainId\(TESTNET\)/, "the practice card must still be clickable");
-  // "Testnet (46630)", not "Practice (testnet)". The card named the network with
+  // "Testnet (97)", not "Practice (testnet)". The card named the network with
   // the word the product also used for simulated trading, so choosing it felt
   // like choosing a mode — and its sibling said "Real money (mainnet)", naming
   // the other network with a money word. Both now name the network and nothing
   // else; Paper and Live are a setting, and they live in Settings.
-  assert.match(src, /Testnet \(46630\)/);
+  assert.match(src, /Testnet \(97\)/);
 });
 
 test("the real-money acknowledgement survives the flip", () => {

@@ -34,11 +34,13 @@
  * ledger (store.ts getNetContributionsSince) and passes both.
  */
 
-/** A floating USDG figure → raw 6dp, rounded the one way every gate rounds. */
-const usdg6 = (v: number) => BigInt(Math.round(v * 1e6));
+import { usdgUnits } from "../../packages/core/src/wall";
+
+/** A floating USDT figure → base units, rounded the one way every gate rounds. */
+const usdg6 = usdgUnits;
 
 export function durableNetContributionsUsdg6(a: {
-  /** The anchor's net contributions, raw 6dp; null when the anchor established none. */
+  /** The anchor's net contributions, base units; null when the anchor established none. */
   anchorNetUsdg6: bigint | null;
   /** The epoch the anchor's figure is for. */
   anchorEpoch: number | null;

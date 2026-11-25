@@ -25,7 +25,7 @@ import { homePaths } from "../home";
 import { BROKER_LIMITS } from "./broker";
 import { FomoBudget, MemoryAllowance, UsageMeter, type FomoBudgetConfig } from "./budget";
 import type { FomoAccess } from "./contract";
-import { chainFromUserText, robinhoodChain, tokenIdentity } from "./identity";
+import { chainFromUserText, bnbChain, tokenIdentity } from "./identity";
 import { createFomoClient, expectedCredits } from "./provider";
 import {
   BACKGROUND_RESEARCH_CAP,
@@ -241,7 +241,7 @@ function cohort(version: number, userIds: string[], now = NOW): CohortVersion {
 }
 
 function buyEvent(userId: string, token: string, at: number, key: string, handle = "trader"): TraderEvent {
-  const t = tokenIdentity(robinhoodChain(), token)!;
+  const t = tokenIdentity(bnbChain(), token)!;
   return {
     eventKey: key,
     identityBasis: "provider-event-id",
@@ -1421,7 +1421,7 @@ describe("lookups have no side effects on tenant state", () => {
 describe("single flight", () => {
   it("concurrent identical refreshes make ONE provider call per route", async () => {
     const h = await harness({ latencyMs: 15 });
-    const token = tokenIdentity(robinhoodChain(), PONS)!;
+    const token = tokenIdentity(bnbChain(), PONS)!;
     const results = await Promise.all(
       [0, 1, 2].map(() => h.service.refreshDossier(token, { symbol: "PONS", name: null }, { priority: "discovery", depth: "quick", now: NOW })),
     );
@@ -1443,7 +1443,7 @@ describe("refreshDossier (background)", () => {
     const raw = new DatabaseSync(":memory:");
     const db = wrapSqlite(raw);
     const h = await harness({ db, raw });
-    const token = tokenIdentity(robinhoodChain(), PONS)!;
+    const token = tokenIdentity(bnbChain(), PONS)!;
     const first = await h.service.refreshDossier(token, { symbol: "PONS", name: null }, { priority: "discovery", depth: "quick", now: NOW });
     assert.equal(first.status, "ok");
     assert.equal(first.dossier?.revision, 1);
@@ -1462,7 +1462,7 @@ describe("refreshDossier (background)", () => {
     const h = await harness({ background: { sharedDailyCredits: pool, tenantHourlyCredits: pool, tenantDailyCredits: pool, groupHourlyCredits: pool } });
     const bg = h.backgroundBudget!;
     const day = new Date(NOW).toISOString().slice(0, 10);
-    const coin = (n: number) => tokenIdentity(robinhoodChain(), `0x${n.toString(16).padStart(40, "0")}`)!;
+    const coin = (n: number) => tokenIdentity(bnbChain(), `0x${n.toString(16).padStart(40, "0")}`)!;
     // A research queue that never runs dry, on held coins: the protection class may borrow the whole pool.
     const statuses: string[] = [];
     for (let i = 1; i <= 20; i++) {
@@ -1491,7 +1491,7 @@ describe("refreshDossier (background)", () => {
 describe("reports, memory, health", () => {
   it("refuses an assessment that names another tenant; keeps held tokens per tenant", async () => {
     const h = await harness();
-    const token = tokenIdentity(robinhoodChain(), PONS)!;
+    const token = tokenIdentity(bnbChain(), PONS)!;
     const a: FollowAssessment = {
       id: "as-1",
       tenant: "0xsomeoneelse",
@@ -1656,7 +1656,7 @@ describe("a shallower read never replaces a deeper one as a change (C4)", () => 
       assert.equal(u.searchParams.get("sort"), "recent");
       return json({ totalAvailable: 125, source: "live", theses: Array.from({ length: Math.min(125, 25 * pages, limit) }, (_, i) => thesis(i)) }, 200, { "x-credits-cost": String(1250 * pages) });
     });
-    const token = tokenIdentity(robinhoodChain(), PONS)!;
+    const token = tokenIdentity(bnbChain(), PONS)!;
     const deep = await h.service.refreshDossierAs({ tenant: OWNER, surface: "app-chat", priority: "interactive" }, token, { symbol: "PONS", name: null }, { depth: "deep", now: h.clock.now });
     assert.ok(deep.dossier);
     assert.equal(deep.dossier.coverage.pagesReturned, 5);
@@ -2364,7 +2364,7 @@ describe("a held empty thesis page (review on #306)", () => {
   it("the shared research queue keeps the class's window on an empty page; a read someone hears re-reads it after two minutes", async () => {
     const h = await harness();
     h.routes.set("thesis-token", () => json({ theses: [], available: true }, 200, { "x-credits-cost": "1250" }));
-    const token = tokenIdentity(robinhoodChain(), PONS)!;
+    const token = tokenIdentity(bnbChain(), PONS)!;
     await h.service.refreshDossier(token, LABEL, { priority: "discovery", depth: "quick", now: h.clock.now });
     h.clock.now += 3 * 60_000;
     await h.service.refreshDossier(token, LABEL, { priority: "discovery", depth: "quick", now: h.clock.now });
@@ -2414,7 +2414,7 @@ describe("a held empty thesis page (review on #306)", () => {
   it("an empty first page under a count is never expanded to a multi-page read", async () => {
     const h = await harness();
     h.routes.set("thesis-token", () => json({ theses: [], available: false, totalAvailable: 4190 }, 200, { "x-credits-cost": "1250" }));
-    const token = tokenIdentity(robinhoodChain(), PONS)!;
+    const token = tokenIdentity(bnbChain(), PONS)!;
     await h.service.refreshDossier(token, LABEL, { priority: "discovery", depth: "standard", now: h.clock.now });
     assert.equal(h.count("/v2/thesis/token/"), 1, "one page, not page one and then pages 1-3");
     assert.ok(!h.calls.some((c) => c.includes("/v2/thesis/token/") && /[?&]pages=/.test(c)), h.calls.join(" | "));

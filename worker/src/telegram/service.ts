@@ -1794,7 +1794,6 @@ export function startTelegram(deps: TelegramServiceDeps): { stop: () => void } {
         cfg.groqApiKey,
         cfg.llmApiKey,
         cfg.bundlerApiKey,
-        cfg.rialtoApiKey,
         cfg.telegramTranscribeKey,
         cfg.virtualsApiKey,
         // The signed wallet grant custodies funds. Its 0x owner/session keys already

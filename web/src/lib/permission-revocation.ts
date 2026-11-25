@@ -74,7 +74,7 @@ export async function readConfirmedRevocationCutoff(receipt: RevocationReceipt, 
 
 /**
  * EntryPoint AA21: the account cannot prefund its own gas. The relay refuses
- * paymasters by construction, so only ETH sent to the account clears it.
+ * paymasters by construction, so only BNB sent to the account clears it.
  *
  * Checked by viem's error name and by the bundler's own words, through the
  * cause chain. AA21 is word-bounded and case-sensitive, as in
@@ -89,11 +89,11 @@ export function isRevocationFeeShortfall(error: unknown): boolean {
   return false;
 }
 
-/** Names the account and network that need ETH, never the raw operation. */
+/** Names the account and network that need BNB, never the raw operation. */
 export function revocationFeeMessage(account: string, chain: { id: number; name: string; testnet?: boolean }, empty: boolean): string {
   const network = `${chain.name} (${chain.id})`;
-  return `Revoking earlier permissions needs ETH for the network fee on ${network}, and account ${account} ` +
-    `${empty ? "has none" : "does not have enough"}. Send ${chain.testnet ? "testnet ETH" : "ETH"} to that address on ${network}, then try again.`;
+  return `Revoking earlier permissions needs BNB for the network fee on ${network}, and account ${account} ` +
+    `${empty ? "has none" : "does not have enough"}. Send ${chain.testnet ? "testnet BNB" : "BNB"} to that address on ${network}, then try again.`;
 }
 
 export function nextRevocationNonce(current: number): number {

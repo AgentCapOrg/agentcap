@@ -283,7 +283,6 @@ describe("A5 — the meter is a seam, not a policy", () => {
       ["./snapshot.ts", 2],
       ["./index.ts", 1],
       ["./executor.ts", 2],
-      ["./circle.ts", 1],
     ] as const) {
       const code = strip(at(file));
       const metered = (code.match(/metered\(http\(/g) ?? []).length + (code.match(/chainRead\(/g) ?? []).length;

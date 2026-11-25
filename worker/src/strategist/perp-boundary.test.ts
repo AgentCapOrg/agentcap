@@ -36,14 +36,20 @@ import { makeLlmStrategist, mentionsPerps, type StrategistDecision } from "./str
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
 
 /**
+ * Re-taken for the BNB Chain migration: the one change from the pre-perps text
+ * is the removed vault-yield sentence (no vault venue), checked by diffing the
+ * serialized requests against the previous driver.ts and desk.ts.
+ */
+/**
  * sha256 of JSON.stringify({ system: SYSTEM, tool: { name, description, schema:
  * input_schema } }) from main's pre-perps driver.ts (3df50d9b; the branch pinned
  * 738891bf's, and main's prompt has moved since).
  */
-const DRIVER_BASELINE = "898cb85cc1d4ef68d868d0e99e7fbd22c01858059718789f868287dad0c8472b";
+const DRIVER_BASELINE = "7f893376a7f54b48753a9b09e247283415a86eddd598535596cbedafb843faa6";
 /** sha256 of JSON.stringify({ system, tools: researchTools(world, [], []) }) from the pre-perps desk.ts. */
-const DESK_BASELINE = "3835404f827a46f12e532d206e8f35da7a2011c2b28d7ae91ce69801516bd1bb";
+const DESK_BASELINE = "10e09229ec277ce33beb58326ff2bd11db465c7c276be60dafbf8a4d2aadc5b3";
 
+const cash = (n: number) => BigInt(n) * 10n ** 18n;
 const ROUTER = "0x1111111111111111111111111111111111111111" as const;
 const USDG = "0x3333333333333333333333333333333333333333" as const;
 const AAPL = "0x4444444444444444444444444444444444444444" as const;
@@ -325,7 +331,7 @@ describe("parsePerpProposals and the spot backstop", () => {
 
 // ── 4: the strategy ─────────────────────────────────────────────────────────
 
-function strategist(answer: unknown, opts: { perps?: boolean; driverName?: string; perpsSettings?: ReturnType<typeof settings>; null?: boolean } = {}) {
+function strategist(answer: unknown, opts: { perps?: boolean; driverName?: string; perpsSettings?: ReturnType<typeof settings>; null?: boolean; universe?: Partial<StrategistUniverse> } = {}) {
   const seen: Signals[] = [];
   const decisions: StrategistDecision[] = [];
   const delivered: PerpRouteIntent[][] = [];
@@ -341,7 +347,7 @@ function strategist(answer: unknown, opts: { perps?: boolean; driverName?: strin
       };
   const s = makeLlmStrategist({
     driver,
-    universe: universe(),
+    universe: universe(opts.universe),
     decisionIntervalMs: 0,
     now: () => NOW_SEC * 1000,
     onDecision: (d) => {
@@ -451,35 +457,13 @@ describe("the strategy: perp opens are entries, perp exits never wait", () => {
     assert.equal(r.seen.length, 0);
   });
 
-  it("energy spent, holding only a perp: asked; the close goes, the open waits", async () => {
-    const r = strategist(both);
-    await r.s.tick(snap({ perps: holdingBtc("long", 70n), energy: { entriesLeft: 0 } }));
-    assert.equal(r.seen.length, 1);
-    assert.equal(r.delivered[0]!.length, 1);
-    assert.equal(r.delivered[0]![0]!.effect, "close");
-  });
-
-  it("one entry left: the model's spot buy takes it, the perp open is withheld — a short is an entry too", async () => {
-    const answer = {
-      actions: [{ action: "buy", symbol: "AAPL", sizeUsdg: 10, reason: "value" }],
-      perpActions: [{ market: "ETH-PERP", effect: "open", side: "short", notionalUsdg: 20, stopPct: 3, reason: "fade" }],
-    };
-    const r = strategist(answer);
-    const tick = await r.s.tick(snap({ perps: view(), energy: { entriesLeft: 1 } }));
-    const intents = Array.isArray(tick) ? tick : tick.intents;
-    assert.equal(intents.length, 1, "the spot buy");
-    assert.deepEqual(r.delivered[0], []);
-    const two = strategist(answer);
-    await two.s.tick(snap({ perps: view(), energy: { entriesLeft: 2 } }));
-    assert.equal(two.delivered[0]!.length, 1, "with two left, both");
-  });
-
   it("a thesis or spot reason that talks about perps stays private", async () => {
     assert.ok(mentionsPerps("closing my BTC-PERP long"));
     assert.ok(mentionsPerps("leverage is too high"));
     assert.ok(!mentionsPerps("AAPL looks cheap against its range"));
-    const r = strategist({ actions: [{ action: "buy", symbol: "AAPL", sizeUsdg: 10, reason: "hedging my short perp" }], perpActions: [] });
-    await r.s.tick(snap({ perps: view() }));
+    const r = strategist({ actions: [{ action: "buy", symbol: "AAPL", sizeUsdg: 10, reason: "hedging my short perp" }], perpActions: [] }, { universe: { maxPerActionUsdg: cash(50) } });
+    // The spot half of this window is in cash base units (18dp), unlike the perp micro figures.
+    await r.s.tick(snap({ perps: view(), cashUsdg: cash(100), spendHeadroomUsdg: cash(1_000), perTradeCapUsdg: cash(100) }));
     const spot = r.decisions.find((d) => d.symbol === "AAPL")!;
     assert.equal(spot.source, "strategist");
     assert.equal(spot.reason, "");

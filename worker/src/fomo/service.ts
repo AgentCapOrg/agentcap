@@ -71,7 +71,7 @@ import { readThesisForDigest } from "./digest";
 import { chronologicalOrder, dedupeEvents } from "./events";
 import { changeSummary, earlyDiscovery, participationBreadth } from "./features";
 import { GROUP_REUSE_MS, SingleFlight, buildFreshness, decideRead, policyFor, type CacheEntryState } from "./freshness";
-import { chainFromUserText, executionAvailabilityOf, isRobinhoodToken, ROBINHOOD_NETWORK_ID, tokenFromKey, tokenIdentity } from "./identity";
+import { chainFromUserText, executionAvailabilityOf, isRobinhoodToken, ROBINHOOD_NETWORK_ID, ROBINHOOD_SLUG, tokenFromKey, tokenIdentity } from "./identity";
 import { REVIEW_CANDIDATES, ReviewCandidateWindow, type ReviewCandidate } from "./review-candidates";
 import {
   MIN_ATTEMPT_MS,
@@ -518,7 +518,6 @@ function sameAddress(a: string, b: string): boolean {
 }
 
 function thesisNetworkOf(t: TokenIdentity): ThesisNetwork | undefined {
-  if (isRobinhoodToken(t)) return "robinhood";
   if (t.chain.slug === "arc" && t.chain.networkId === 5042) return "arc";
   if (t.chain.namespace === "eip155" && t.chain.slug === "base") return "base";
   if (t.chain.namespace === "eip155" && t.chain.slug === "eth") return "eth";
@@ -528,7 +527,7 @@ function thesisNetworkOf(t: TokenIdentity): ThesisNetwork | undefined {
 
 /** The provider's chain filter spelling for a token, when we know one. */
 function feedChainOf(t: TokenIdentity): string | undefined {
-  if (isRobinhoodToken(t)) return "robinhood";
+  if (isRobinhoodToken(t)) return ROBINHOOD_SLUG;
   return undefined;
 }
 
@@ -2949,7 +2948,7 @@ export function createFomoService(deps: FomoServiceDeps): FomoServiceExt {
       cohortUserIds: cohort.ids,
       stats: statsData,
       marketContext: [],
-      routeContext: [robinhood ? "On Robinhood Chain; a trading route has not been verified by AgentCap." : "Not on a chain AgentCap trades; research only."],
+      routeContext: [robinhood ? "On BNB Chain; a trading route has not been verified by AgentCap." : "Not on a chain AgentCap trades; research only."],
       ownFamilies: new Set<string>(),
       selfNames,
       previous,

@@ -29,7 +29,7 @@ import {
   explorerFor,
   isHostedMode,
   pimlicoBundlerUrl,
-  robinhoodChain,
+  bnbChain,
   type AgentCapSettings,
   type StoredGrant,
 } from "@agentcap/core";
@@ -81,7 +81,7 @@ function bundlerFor(settings: AgentCapSettings, chainId: number): string | undef
 }
 
 function rpcFor(settings: AgentCapSettings, chainId: number): string | undefined {
-  return chainId === robinhoodChain.id ? settings.rpcMainnet : settings.rpcTestnet;
+  return chainId === bnbChain.id ? settings.rpcMainnet : settings.rpcTestnet;
 }
 
 /**
@@ -106,12 +106,12 @@ export async function GET(req: Request) {
   if (isHostedMode()) return json({ hasStoredKey: false, ...HOSTED_RECOVERY });
   let grant: StoredGrant | null;
   const settings = await readSettings(wallet);
-  try { grant = await readGrant(wallet); } catch { return json({ hasStoredKey: false, hasBundler: !!bundlerFor(settings, robinhoodChain.id), error: "The selected wallet grant could not be read. Use a backed-up owner key." }); }
+  try { grant = await readGrant(wallet); } catch { return json({ hasStoredKey: false, hasBundler: !!bundlerFor(settings, bnbChain.id), error: "The selected wallet grant could not be read. Use a backed-up owner key." }); }
 
   if (!grant || !isKey(grant.demoOwnerPrivateKey)) {
     // Killed/expired (or externally-owned) — no stored key. The UI asks for the
     // backed-up owner key. hasBundler is a best-effort mainnet guess for the hint.
-    return json({ hasStoredKey: false, hasBundler: !!bundlerFor(settings, robinhoodChain.id) });
+    return json({ hasStoredKey: false, hasBundler: !!bundlerFor(settings, bnbChain.id) });
   }
 
   const chainId = grant.chainId;
@@ -136,25 +136,6 @@ export async function GET(req: Request) {
       ownerAddress: plan.ownerAddress,
       gasWei: plan.gasWei.toString(),
       balances: plan.balances.map((b) => ({ symbol: b.symbol, amount: b.amount, note: b.note })),
-      // THE CLASS BOOK. Both of these existed on the plan and neither was
-      // returned, so in local mode the panel showed no vault at all while the
-      // sweep still emptied it best-effort — the same "confirmation understates
-      // what it moves" defect the CLI already fixed, on the other surface.
-      classVault: plan.classVault,
-      classNote: plan.classNote,
-      classHoldings: plan.classHoldings.map((h) => ({
-        token: h.token,
-        symbol: h.symbol,
-        amount: h.amount,
-      })),
-      // Every vault, because after v2 an account has two and one approval
-      // covers one of them.
-      classVaults: plan.classVaults.map((v) => ({
-        vault: v.vault,
-        version: v.version,
-        note: v.note,
-        holdings: v.holdings.map((h) => ({ token: h.token, symbol: h.symbol, amount: h.amount })),
-      })),
       // Without this the panel prints "This account is empty" when every
       // balance read FAILED — which is how somebody concludes their money is
       // gone because an RPC blinked. The CLI already branches on it.
@@ -194,7 +175,7 @@ export async function POST(req: Request) {
     return json({ error: "no owner key — paste the owner key you backed up" }, { status: 400 });
   }
 
-  const chainId = Number.isInteger(body.chainId) ? Number(body.chainId) : grant?.chainId ?? robinhoodChain.id;
+  const chainId = Number.isInteger(body.chainId) ? Number(body.chainId) : grant?.chainId ?? bnbChain.id;
   // Only assert an expected account when signing with the grant's OWN stored key
   // (we know which account that is); a pasted key may be for a different wallet.
   const expected = pasted ? undefined : grant?.smartAccount;
@@ -217,25 +198,6 @@ export async function POST(req: Request) {
         explorer: explorerFor(chainId),
         chainId,
         balances: plan.balances.map((b) => ({ symbol: b.symbol, amount: b.amount, note: b.note })),
-        // THE CLASS BOOK. Both of these existed on the plan and neither was
-        // returned, so in local mode the panel showed no vault at all while the
-        // sweep still emptied it best-effort — the same "confirmation understates
-        // what it moves" defect the CLI already fixed, on the other surface.
-        classVault: plan.classVault,
-        classNote: plan.classNote,
-        classHoldings: plan.classHoldings.map((h) => ({
-          token: h.token,
-          symbol: h.symbol,
-          amount: h.amount,
-        })),
-        // Every vault, because after v2 an account has two and one approval
-        // covers one of them.
-        classVaults: plan.classVaults.map((v) => ({
-          vault: v.vault,
-          version: v.version,
-          note: v.note,
-          holdings: v.holdings.map((h) => ({ token: h.token, symbol: h.symbol, amount: h.amount })),
-        })),
         // Absence and ignorance are different facts — the UI must be able to say so.
         unreadable: plan.unreadable,
       });

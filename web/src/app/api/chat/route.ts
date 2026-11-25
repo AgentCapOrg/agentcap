@@ -2,11 +2,9 @@
 import { NextResponse } from "next/server";
 import { isHostedMode, type StoredGrant } from "@agentcap/core";
 import { tenantOf } from "@/lib/auth";
-import { agentReplyResponse, currentEnergy, type AgentChatBody } from "@/lib/agent-chat";
+import { agentReplyResponse, type AgentChatBody } from "@/lib/agent-chat";
 import { diskAgent } from "@/lib/agent-for";
 import { getGrantStore } from "@agentcap/grant-store";
-import { readAgentEnergy } from "@/lib/agent-energy";
-import { ceilingFor } from "@/lib/order-ceiling";
 import { getSettingsStore } from "@agentcap/settings-store";
 import { resolveConfig } from "../../../../../worker/src/settings";
 import { normalizeAgentBrief } from "../../../../../worker/src/agent-brief";
@@ -86,26 +84,8 @@ export async function POST(req: Request) {
   }
   const fomo = fomoTurn && "fomo" in fomoTurn ? fomoTurn.fomo : null;
 
-  // THE AGENT'S ENERGY, FROM ITS WORKER — read here, on the server, and never
-  // taken from the body. The browser's `state` is the browser's own account of
-  // things and iOS sends none at all; this is the report of the one process
-  // that throttles, so it reaches the web, iOS and Android chats alike and a
-  // client cannot write it. The agent is the caller's own (their grant, or the
-  // grant on this disk) — never one the request names. Best effort: no report
-  // is no ENERGY block, and the model is told to say it cannot see its energy.
-  //
-  // With it, the owner's chat-order ceiling: the one figure the model may use
-  // to size a get-energy proposal from the worker's estimate without asking.
-  //
-  // ONLY WHILE ITS DAY LASTS. A report whose day has ended is not today's —
-  // the worker may not have published since (currentEnergy) — so it is no
-  // report, and the model says it cannot see its energy instead of blaming it.
   const account = hosted ? grant?.smartAccount ?? null : await diskAgent("spot");
   const factualReply = fomo ? undefined : await ledgerChatReply(body, account, Math.floor(Date.now() / 1000));
-  const report = currentEnergy(!recovery && account ? await readAgentEnergy(account) : null, Math.floor(Date.now() / 1000));
-  const energy = report
-    ? { ...report, ceilingUsdg: await ceilingFor(req, hosted, "spot").catch(() => null) }
-    : null;
   // The Fomo switches are settings change-settings may name only where this deployment runs Fomo.
   const fomoSettings = fomoEnabledFor(hosted);
   let agentBrief: string | undefined;
@@ -115,5 +95,5 @@ export async function POST(req: Request) {
   } catch { /* Missing preferences do not change account or recovery authority. */ }
   // `hosted` so a failed model call can say whether it ran on the house's key
   // (agent-chat.ts onHouseAccount): ours to fix, or the owner's.
-  return agentReplyResponse(body, { stream, signal: req.signal }, { energy, factualReply, fomo, recovery, fomoSettings, hosted, agentBrief });
+  return agentReplyResponse(body, { stream, signal: req.signal }, { factualReply, fomo, recovery, fomoSettings, hosted, agentBrief });
 }

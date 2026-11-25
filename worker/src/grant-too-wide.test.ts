@@ -24,8 +24,8 @@ import { rejectRuleLabel } from "./thesis-policy";
 const base = {
   armed: true,
   executor: true,
-  chainId: 4663,
-  cashUsdg: 100_000_000n,
+  chainId: 56,
+  cashUsdg: 100n * 10n ** 18n,
   deadPolicy: false,
   gasWei: 0n,
   gasSponsored: true,

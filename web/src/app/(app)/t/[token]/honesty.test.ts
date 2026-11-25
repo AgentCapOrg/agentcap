@@ -48,11 +48,6 @@ describe("the strip only prints figures it has", () => {
     assert.match(FACTS, /label="FDV"/);
   });
 
-  it("never shows an on-curve coin's reserve as depth", () => {
-    // A fresh curve reports about $4,100 of reserve while holding none of it.
-    assert.match(FACTS, /onCurve \?[\s\S]{0,120}?pre-graduation/);
-  });
-
   it("has no 4H cell, because the index has no 4H bucket", () => {
     // The reference product's grid reads 5M / 1H / 4H / 1D. Relabelling the
     // six-hour bucket "4H" is a fabrication nothing downstream could detect.
@@ -112,13 +107,6 @@ describe("a halt is never guessed at", () => {
       "an unread pause state must be null, not 'trading normally'",
     );
     assert.match(MARKET, /paused: boolean \| null;/);
-  });
-
-  it("rialtoLiquid does not fall back to false either", () => {
-    // fetchRialtoLiquidity returns an EMPTY MAP when Rialto is down, so the
-    // fallback stamped "illiquid" on every token during one outage.
-    assert.ok(!/rialtoLiquid:[^,\n]*\?\?\s*false/.test(MARKET));
-    assert.match(MARKET, /rialtoLiquid: boolean \| null;/);
   });
 
   it("the strip asserts halted only when paused is TRUE", () => {

@@ -75,8 +75,8 @@ describe("unsupportedFleetIdLabel", () => {
 
 describe("every orchestrator read of an operator variable naming tenants goes through the parser", () => {
   const src = readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "orchestrator.ts"), "utf8");
-  const SCOPES = ["AGENTCAP_REPAIR_HWM_ONLY", "AGENTCAP_REPAIR_HWM_PHANTOM_PROFIT", "AGENTCAP_REPAIR_CLASS_PNL_ONLY", "AGENTCAP_REPAIR_CLASS_CASH_ROW_ONLY", "AGENTCAP_REPAIR_ACCOUNT"];
-  const TARGETS = ["AGENTCAP_RESUME_CLASS_ENTRIES_FOR", "AGENTCAP_ENABLE_CLASS_FOR", "AGENTCAP_HALT_CLASS_ENTRIES_FOR", "AGENTCAP_INSPECT_TENANT"];
+  const SCOPES = ["AGENTCAP_REPAIR_HWM_ONLY", "AGENTCAP_REPAIR_HWM_PHANTOM_PROFIT", "AGENTCAP_REPAIR_ACCOUNT"];
+  const TARGETS = ["AGENTCAP_INSPECT_TENANT"];
 
   for (const [names, parser] of [[SCOPES, "fleetIdScope"], [TARGETS, "fleetIdTarget"]] as const) {
     for (const name of names) {

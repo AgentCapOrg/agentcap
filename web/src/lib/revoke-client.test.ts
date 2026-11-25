@@ -8,7 +8,7 @@ import { KERNEL_REVOCATION_ABI } from "./permission-revocation";
 import { assertRevocationFunded } from "./revoke-client";
 
 const ACCOUNT = `0x${"ab".repeat(20)}` as const;
-const CHAIN = 4663;
+const CHAIN = 56;
 const KEY = `agentcap.permission-revocation.v1.${CHAIN}.${ACCOUNT}`;
 const realFetch = globalThis.fetch;
 const storageDescriptor = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
@@ -55,7 +55,7 @@ afterEach(() => {
 describe("the revocation fee check that runs before the agent is stopped", () => {
   it("refuses an account with no ETH and no EntryPoint deposit, naming it and its network", async () => {
     await assert.rejects(assertRevocationFunded({ smartAccount: ACCOUNT, chainId: CHAIN }),
-      new RegExp(`Robinhood Chain \\(4663\\), and account ${ACCOUNT} has none\\..*Nothing was stopped or signed\\.`));
+      new RegExp(`BNB Smart Chain \\(56\\), and account ${ACCOUNT} has none\\..*Nothing was stopped or signed\\.`));
     assert.deepEqual(rpcCalls.sort(), ["eth_call", "eth_getBalance"]);
   });
 

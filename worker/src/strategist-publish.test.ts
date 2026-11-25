@@ -108,7 +108,7 @@ describe("no strategy can be published into the void", () => {
     for (const f of readdirSync(dir)) {
       if (!f.endsWith(".ts") || f.endsWith(".test.ts")) continue;
       const src = readFileSync(path.join(dir, f), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
-      for (const m of src.matchAll(/^\s*name: "([a-z0-9-]+)",/gm)) names.add(m[1]!);
+      for (const m of src.matchAll(/\bname: "([a-z0-9-]+)",/g)) names.add(m[1]!);
     }
     assert.ok(names.size >= 3, `expected to find builtin strategy names, found ${[...names].join(", ")}`);
 

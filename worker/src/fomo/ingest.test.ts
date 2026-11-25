@@ -30,7 +30,7 @@ const DAY_MS = 86_400_000;
 const RH_A = "0x1111111111111111111111111111111111111111";
 const RH_B = "0x2222222222222222222222222222222222222222";
 const RH_C = "0x3333333333333333333333333333333333333333";
-const RH_KEY = (a: string) => `eip155:4663:${a}`;
+const RH_KEY = (a: string) => `eip155:56:${a}`;
 const BSC_MINT = "0xd77cf5c8a1c79d6b78408a3f545dea88441790fb";
 
 async function settle(): Promise<void> {
@@ -89,7 +89,7 @@ const uuid = (n: number) => `00000000-0000-4000-8000-${n.toString(16).padStart(1
 const keyOf = (n: number) => `ev:${uuid(n)}`;
 
 function raw(n: number, ts: number, over: Partial<RawAlert> = {}): RawAlert {
-  return { type: "alert", eventId: uuid(n), userId: "trader-a", alertType: "buy", tokenAddress: RH_A, chainId: 4663, chain: "robinhood", ts, ...over };
+  return { type: "alert", eventId: uuid(n), userId: "trader-a", alertType: "buy", tokenAddress: RH_A, chainId: 56, chain: "bsc", ts, ...over };
 }
 
 /** Stand-in for provider.alertFrameToEvent: enough of the real shape to exercise ingestion. */
@@ -827,7 +827,7 @@ describe("coalescing and priority", () => {
     assert.equal(s.ing.health().dropped["not-of-interest"], 1);
 
     for (let i = 2; i <= 5; i++) await s.live(raw(i, T0, { userId: `stranger-${i}`, alertType: "thesis", tokenAddress: RH_C }));
-    await s.live(raw(6, T0, { userId: "stranger", alertType: "thesis", tokenAddress: BSC_MINT, chainId: 56, chain: "bsc" }));
+    await s.live(raw(6, T0, { userId: "stranger", alertType: "thesis", tokenAddress: BSC_MINT, chainId: 4663, chain: "robinhood" }));
     assert.deepEqual(s.routed.map((r) => r.item.eventKey), [keyOf(2), keyOf(3)]);
     assert.deepEqual(s.routed[0]?.item.reasons, ["robinhood-thesis"]);
     const h = s.ing.health();

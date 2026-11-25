@@ -650,7 +650,7 @@ function bookCard(parent, key, b, isCurrent) {
     var fresh = v.fresh === true ? chip("fresh", "ok") : v.fresh === false ? chip("stale", "warn") : chip("freshness not known", "unk");
     row(g, "Valued", when(v.valuation_time), fresh);
     row(g, "Cash", money(v.cash_usdg));
-    row(g, "Savings", money(v.savings_usdg), "Morpho savings vault");
+    row(g, "Savings", money(v.savings_usdg));
     row(g, "Positions", money(v.positions_usdg));
     row(g, "Other", money(v.other_usdg), str(v.other_explained, 300));
     var gas = obj(v.gas_balance);
@@ -674,14 +674,6 @@ function bookCard(parent, key, b, isCurrent) {
       var pnlCell = pnl === null ? h("span", "missing", str(q.pnl_missing_why, 140) || UNKNOWN) : nodes(pnl, pct(q.unrealized_pnl_pct, true));
       return [nodes(utInline(q.symbol, false), shortAddr(q.token)), money(q.value_usdg), priceCell, money(q.cost_usdg), pnlCell];
     }), b.positions.length - ps.length);
-  }
-  var cv = arr(b.class_vault_positions, 50);
-  if (cv.length) {
-    put(card, "h3", null, "Class-vault launch tokens (carried at cost)");
-    table(card, [{ label: "Token" }, { label: "State" }, { label: "Cost", num: true }, { label: "Opened" }], cv.map(function (x) {
-      var c = obj(x) || {};
-      return [nodes(utInline(c.symbol, false), shortAddr(c.token)), human(c.state), money(c.cost_usdg), when(c.opened_at)];
-    }), (b.class_vault_positions.length || 0) - cv.length);
   }
   var t = obj(b.totals);
   if (t) {
@@ -1082,7 +1074,7 @@ function renderToken(d) {
   if (pool) {
     put(mk, "h3", null, "Pool");
     var pg = grid(mk);
-    row(pg, "Venue", str(pool.venue, 64), pool.on_curve === true ? "on the launch curve" : pool.graduated === true ? "graduated" : null);
+    row(pg, "Venue", str(pool.venue, 64), null);
     row(pg, "Pool id", shortAddr(pool.pool_id));
     if (pool.label) row(pg, "Label", utInline(pool.label, false));
     if (pool.note) put(mk, "p", "small muted", str(pool.note, 300));
@@ -1156,7 +1148,6 @@ function renderEligibility(d) {
     row(g, "Min liquidity", money(s.min_pool_liquidity_usdg));
     row(g, "Max divergence", bps(s.max_price_divergence_bps));
     row(g, "Scout", s.scout_enabled === true ? "on" : s.scout_enabled === false ? "off" : null, money(s.scout_budget_usdg));
-    row(g, "Launch buying", s.launch_buying_enabled === true ? "on" : s.launch_buying_enabled === false ? "off" : null);
     row(g, "Permission covers", human(s.grant_tradable_set));
   }
   bullets(root, d.notes, 10, "small muted");

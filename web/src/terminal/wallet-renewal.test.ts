@@ -3,7 +3,7 @@ import Module, { createRequire } from "node:module";
 import { afterEach, before, beforeEach, describe, it, mock } from "node:test";
 import { fileURLToPath } from "node:url";
 import React, { act } from "react";
-import { bindingMessage, buildCallPermissions, firstEnableEnvelope, wallShape, wallSignable, type GrantCaps, type StoredGrant } from "@agentcap/core";
+import { bindingMessage, buildCallPermissions, wallShape, wallSignable, type GrantCaps, type StoredGrant } from "@agentcap/core";
 import type { MintOptions, SavedWallet } from "@/lib/session";
 import { JSDOM } from "jsdom";
 import { privateKeyToAccount } from "viem/accounts";
@@ -21,7 +21,7 @@ const grant = {
   owner: address,
   sessionKeyAddress: `0x${"2".repeat(40)}`,
   demoOwnerPrivateKey: `0x${"3".repeat(64)}`,
-  chainId: 4663,
+  chainId: 56,
   caps: { perTradeUsdg: 50, dailyUsdg: 500, expiryDays: 14, maxDrawdownPct: 5, maxOpsPerDay: 48 },
   grantedAt: Math.floor(Date.now() / 1000),
   expiresAt: Math.floor(Date.now() / 1000) + 14 * 86_400,
@@ -77,7 +77,6 @@ before(async () => {
       if (id === "next/link") return ({ children, ...props }: React.ComponentProps<"a">) => React.createElement("a", props, children);
       if (id === "@/terminal/usePrivyOwner") return { usePrivyOwner: () => privyOwner };
       if (id === "@/lib/trencher-permission") return { TRENCHER_FACTORY: trencherFactory };
-      if (id === "@/lib/verified-adapter") return { verifiedAdapter: async () => undefined };
       if (id === "@/lib/revoke-client") return {
         revokeFromBrowser: async (wallet: RevocationWallet) => { revokeCalls++; revokeWallets.push(wallet); return revoke(wallet); },
         assertRevocationFunded: async (wallet: RevocationWallet) => { fundingChecks.push(wallet); return fundingCheck(wallet); },
@@ -89,13 +88,13 @@ before(async () => {
         },
       };
       if (id === "@/lib/session") return {
-        FAUCET_URL: "https://faucet.testnet.chain.robinhood.com",
+        FAUCET_URL: "https://www.bnbchain.org/en/testnet-faucet",
         loadGrant: () => storedGrantAvailable ? activeGrant : null,
         localGrantsSnapshot: (wallet: string) => snapshot(wallet),
         listSavedWallets: () => savedWallets,
         isPrivyOwned: (g: StoredGrant | null) => g?.binding?.version === "privy-did-owner-v1",
         previewOwnerAccount: (key: string, chainId: number) => previewOwner(key, chainId),
-        readFunding: async () => ({ gasWei: 1n, usdgUnits: 71_580_000n, usdg: 71.58 }),
+        readFunding: async () => ({ gasWei: 1n, usdgUnits: 71_580_000_000_000_000_000n, usdg: 71.58 }),
         preflightAgentGrant: (owner: LocalAccount, options: MintOptions) => { preflightCalls++; return preflight(owner, options); },
         createPrivyOwnedWallet: (_owner: unknown, _did: unknown, options: Parameters<typeof renew>[0]) => { mintCalls++; return renew(options); },
         restoreAgentWallet: (key: unknown, options: Parameters<typeof renew>[0]) => { mintCalls++; restoredKeys.push(key); return renew(options); },
@@ -481,7 +480,7 @@ describe("the funded wallet's re-sign control", () => {
 
   it("does not call a 500 response a discarded wallet, and recovers on retry", async () => {
     let unavailable = true;
-    savedWallets = [{ smartAccount: address, owner: address, chainId: 4663,
+    savedWallets = [{ smartAccount: address, owner: address, chainId: 56,
       ownerKey: grant.demoOwnerPrivateKey as `0x${string}`, current: true }];
     globalThis.fetch = async (input) => {
       const path = String(input);
@@ -536,42 +535,33 @@ describe("the funded wallet's re-sign control", () => {
     assert.match(ui.container.textContent!, /this wallet isn't active/);
   });
 
-  for (const kind of ["legacy", "Privy"] as const) it(`${kind} renewal refuses a real oversized class + Trencher + v4 wall before replacing the active grant`, async () => {
+  for (const kind of ["legacy", "Privy"] as const) it(`${kind} renewal refuses a real oversized Trencher wall before replacing the active grant`, async () => {
     const owner = useRenewalOwner(kind);
-    const tokens = [1, 2, 3].map(n => ({ symbol: `T${n}`, address: fixtureAddress(n + 100), decimals: 18 }));
+    const tokens = Array.from({ length: 30 }, (_, i) => i + 1).map(n => ({ symbol: `T${n}`, address: fixtureAddress(n + 100), decimals: 18 }));
     activeGrant = {
       ...activeGrant,
-      grantFeatures: ["pons-class", "trencher-vault-v1"],
+      grantFeatures: ["trencher-vault-v1"],
       grantTokens: tokens.map(token => token.address),
-      ponsClassVaultAddress: fixtureAddress(400),
-      ponsClassVaultFactoryAddress: fixtureAddress(500),
       trencherFactoryAddress: trencherFactory,
       trencherVaultAddress: fixtureAddress(700),
     };
     localStorage.setItem("agentcap.grant.v1", JSON.stringify({ ...activeGrant, serialized: "existing recoverable permission" }));
     const fetch = globalThis.fetch;
     globalThis.fetch = (input, init) => String(input) === "/api/settings"
-      ? Promise.resolve(json({ values: { customTokens: tokens, basketSymbols: [], v4AdapterAddress: fixtureAddress(800), ponsClassVaultFactory: fixtureAddress(500) } }))
+      ? Promise.resolve(json({ values: { customTokens: tokens, basketSymbols: [] } }))
       : fetch(input, init);
     let tooWide = "";
     preflight = async (signer, options) => {
       assert.equal(signer.address, owner.address);
       assert.equal(options.expectAccount, address);
       assert.deepEqual(options.extraTokens, tokens);
-      assert.equal(options.v4AdapterAddress, fixtureAddress(800));
-      assert.equal(options.ponsClassVaultFactory, fixtureAddress(500));
       assert.equal(options.trencherFactory, trencherFactory);
-      const shapeWith = (count: number, v4 = true) => wallShape(buildCallPermissions(options.caps, address, {
+      const shapeWith = (count: number) => wallShape(buildCallPermissions(options.caps, address, {
         extraTokens: options.extraTokens!.slice(0, count),
-        ponsClassVaultAddress: fixtureAddress(400),
-        ponsClassVaultFactoryAddress: options.ponsClassVaultFactory,
         trencherVaultAddress: fixtureAddress(700),
         trencherFactoryAddress: options.trencherFactory,
-        ...(v4 ? { v4AdapterAddress: options.v4AdapterAddress } : {}),
       }) as never);
-      assert.equal(shapeWith(3, false).permissions, 27, "the existing pre-v4 wall matches the production shape");
-      const shape = shapeWith(3);
-      assert.equal(firstEnableEnvelope(shape, { deploying: false }).expectedBounded, 15_749_392n);
+      const shape = shapeWith(tokens.length);
       const verdict = wallSignable(shape, { deploying: false, basket: { count: tokens.length, shapeWith } });
       assert.equal(verdict.ok, false, "the real wall sizing gate must refuse this renewal");
       if (verdict.ok) throw new Error("fixture unexpectedly fits");
@@ -758,25 +748,25 @@ describe("the funded wallet's re-sign control", () => {
     assert.equal(activeGrant.demoOwnerPrivateKey, grant.demoOwnerPrivateKey);
   });
 
-  it("an account with no ETH for the revocation fee is refused before the agent is stopped", async () => {
-    activeGrant = { ...grant, chainId: 46630 };
-    ui.dom.window.history.replaceState({}, "", "/grant?chain=4663");
+  it("an account with no BNB for the revocation fee is refused before the agent is stopped", async () => {
+    activeGrant = { ...grant, chainId: 97 };
+    ui.dom.window.history.replaceState({}, "", "/grant?chain=56");
     fundingCheck = async wallet => {
-      if (wallet.chainId === 4663) throw new Error(`Revoking earlier permissions needs ETH for the network fee on Robinhood Chain (4663), and account ${wallet.smartAccount} has none. Send ETH to that address on Robinhood Chain (4663), then try again. Nothing was stopped or signed.`);
+      if (wallet.chainId === 56) throw new Error(`Revoking earlier permissions needs BNB for the network fee on BNB Smart Chain (56), and account ${wallet.smartAccount} has none. Send BNB to that address on BNB Smart Chain (56), then try again. Nothing was stopped or signed.`);
     };
     await ui.render(React.createElement(Wallet));
     const before = storageSnapshot();
     await acknowledge("I authorize revoking");
     await acknowledge("I understand — real funds");
-    await ui.click("move to Robinhood Chain & re-sign");
-    assert.deepEqual(fundingChecks, [{ smartAccount: address, chainId: 46630 }, { smartAccount: address, chainId: 4663 }], "both networks are checked before anything changes");
+    await ui.click("move to BNB Chain & re-sign");
+    assert.deepEqual(fundingChecks, [{ smartAccount: address, chainId: 97 }, { smartAccount: address, chainId: 56 }], "both networks are checked before anything changes");
     assert.equal(preflightCalls, 0, "no replacement is prepared for a revocation that cannot run");
     assertExistingPermissionKept(before);
-    assert.match(ui.container.textContent!, new RegExp(`kept your existing permission unchanged\\. Revoking earlier permissions needs ETH .*${address} has none\\..*Nothing was stopped or signed`));
+    assert.match(ui.container.textContent!, new RegExp(`kept your existing permission unchanged\\. Revoking earlier permissions needs BNB .*${address} has none\\..*Nothing was stopped or signed`));
   });
 
-  it("restoring an account with no ETH for revocation stops nothing and signs nothing", async () => {
-    fundingCheck = async () => { throw new Error("Revoking earlier permissions needs ETH for the network fee. Nothing was stopped or signed."); };
+  it("restoring an account with no BNB for revocation stops nothing and signs nothing", async () => {
+    fundingCheck = async () => { throw new Error("Revoking earlier permissions needs BNB for the network fee. Nothing was stopped or signed."); };
     await ui.render(React.createElement(Wallet));
     await ui.click("switch to another wallet");
     await enterRestoreKey();
@@ -784,12 +774,12 @@ describe("the funded wallet's re-sign control", () => {
     await acknowledge("I understand — real funds");
     await acknowledge("I understand restore first stops");
     await ui.click("Restore & arm 0x1111…1111");
-    assert.deepEqual(fundingChecks, [{ smartAccount: address, chainId: 4663 }]);
+    assert.deepEqual(fundingChecks, [{ smartAccount: address, chainId: 56 }]);
     assert.equal(stopCalls, 0);
     assert.equal(revokeCalls, 0);
     assert.equal(mintCalls, 0);
     assert.equal(needsPermissionReplacement(activeGrant), false);
-    assert.match(ui.container.textContent!, /needs ETH for the network fee\. Nothing was stopped or signed/);
+    assert.match(ui.container.textContent!, /needs BNB for the network fee\. Nothing was stopped or signed/);
   });
 
   /**
@@ -822,7 +812,7 @@ describe("the funded wallet's re-sign control", () => {
 
   it("restoring with the Perps wallet's own owner key goes on as before, to the fee check", async () => {
     perpsAnswer = () => json({ exists: true, grant: { owner: privateKeyToAccount(grant.demoOwnerPrivateKey!).address.toLowerCase(), purpose: "perps" } });
-    fundingCheck = async () => { throw new Error("Revoking earlier permissions needs ETH for the network fee. Nothing was stopped or signed."); };
+    fundingCheck = async () => { throw new Error("Revoking earlier permissions needs BNB for the network fee. Nothing was stopped or signed."); };
     await ui.render(React.createElement(Wallet));
     await ui.click("switch to another wallet");
     await enterRestoreKey();
@@ -830,7 +820,7 @@ describe("the funded wallet's re-sign control", () => {
     await acknowledge("I understand — real funds");
     await acknowledge("I understand restore first stops");
     await ui.click("Restore & arm 0x1111…1111");
-    assert.deepEqual(fundingChecks, [{ smartAccount: address, chainId: 4663 }], "past the Perps owner, to the fee check");
+    assert.deepEqual(fundingChecks, [{ smartAccount: address, chainId: 56 }], "past the Perps owner, to the fee check");
     assert.doesNotMatch(ui.container.textContent!, /Your Perps wallet/);
   });
 
@@ -904,7 +894,7 @@ describe("the funded wallet's re-sign control", () => {
   it("on-chain revocation remains available when the service stop fails", async () => {
     stop = async () => { throw new Error("service unavailable"); };
     await ui.render(React.createElement(Wallet));
-    await acknowledge("I understand revocation uses ETH");
+    await acknowledge("I understand revocation uses BNB");
     await ui.click("Stop & revoke on-chain");
     assert.equal(revokeCalls, 1);
     assert.equal(mintCalls, 0);
@@ -914,23 +904,23 @@ describe("the funded wallet's re-sign control", () => {
   });
 
   it("moving to mainnet requires real-funds consent separately from fee consent", async () => {
-    activeGrant = { ...grant, chainId: 46630 };
-    ui.dom.window.history.replaceState({}, "", "/grant?chain=4663");
+    activeGrant = { ...grant, chainId: 97 };
+    ui.dom.window.history.replaceState({}, "", "/grant?chain=56");
     await ui.render(React.createElement(Wallet));
     const funding = ui.container.querySelector("[data-renewal-funding]")!;
     assert.ok(funding.textContent?.includes(address), "revocation funding names the exact smart account");
-    assert.match(funding.textContent!, /Robinhood Chain testnet \(46630\).*testnet ETH/);
-    assert.match(funding.textContent!, /Robinhood Chain \(4663\).*ETH/);
+    assert.match(funding.textContent!, /BNB Chain testnet \(97\).*testnet BNB/);
+    assert.match(funding.textContent!, /BNB Chain \(56\).*BNB/);
     assert.match(funding.textContent!, /Balances do not move between networks/);
     assert.match(funding.textContent!, /AA21.*fund the named network and retry/);
-    assert.equal(funding.querySelector("a")?.getAttribute("href"), "https://faucet.testnet.chain.robinhood.com");
+    assert.equal(funding.querySelector("a")?.getAttribute("href"), "https://www.bnbchain.org/en/testnet-faucet");
     await acknowledge("I authorize revoking");
-    await ui.click("move to Robinhood Chain & re-sign");
+    await ui.click("move to BNB Chain & re-sign");
     assert.equal(revokeCalls, 0);
     assert.equal(mintCalls, 0);
     revoke = async () => { throw new Error("stop here after consent"); };
     await acknowledge("I understand — real funds");
-    await ui.click("move to Robinhood Chain & re-sign");
+    await ui.click("move to BNB Chain & re-sign");
     assert.equal(revokeCalls, 1);
   });
 
@@ -960,20 +950,20 @@ describe("the funded wallet's re-sign control", () => {
   });
 
   it("restoring the same account across networks waits for source and destination revocations", async () => {
-    activeGrant = { ...grant, chainId: 46630 };
-    ui.dom.window.history.replaceState({}, "", "/grant?chain=4663");
+    activeGrant = { ...grant, chainId: 97 };
+    ui.dom.window.history.replaceState({}, "", "/grant?chain=56");
     const source = deferred<unknown>();
     const destination = deferred<unknown>();
-    revoke = wallet => wallet.chainId === 46630 ? source.promise : destination.promise;
+    revoke = wallet => wallet.chainId === 97 ? source.promise : destination.promise;
     stop = async () => {
       assert.equal(needsPermissionReplacement(activeGrant), true, "old-chain marker precedes DELETE");
-      assert.equal(loadRecoveryGrants("spot")[0]?.chainId, 46630, "old-chain recovery snapshot precedes DELETE");
+      assert.equal(loadRecoveryGrants("spot")[0]?.chainId, 97, "old-chain recovery snapshot precedes DELETE");
     };
     renew = async options => {
-      assert.equal(options.chainId, 4663);
+      assert.equal(options.chainId, 56);
       assert.equal(options.expectAccount, address);
       assert.equal(options.minimumValidationNonce, 3, "signing uses the destination chain's cutoff, not the source's");
-      return { local: { ...activeGrant, chainId: 4663, sessionKeyAddress: `0x${"8".repeat(40)}` }, handoff: { ok: true } };
+      return { local: { ...activeGrant, chainId: 56, sessionKeyAddress: `0x${"8".repeat(40)}` }, handoff: { ok: true } };
     };
     await ui.render(React.createElement(Wallet));
     await ui.click("switch to another wallet");
@@ -982,20 +972,20 @@ describe("the funded wallet's re-sign control", () => {
     const funding = ui.container.querySelector("[data-restore-funding]")!;
     assert.match(funding.textContent!, /both networks.*starting with the current network/);
     assert.ok(funding.textContent?.includes(address));
-    assert.match(funding.textContent!, /Robinhood Chain testnet \(46630\).*testnet ETH/);
-    assert.match(funding.textContent!, /Robinhood Chain \(4663\).*ETH/);
+    assert.match(funding.textContent!, /BNB Chain testnet \(97\).*testnet BNB/);
+    assert.match(funding.textContent!, /BNB Chain \(56\).*BNB/);
     assert.match(funding.textContent!, /AA21.*fund the named network and retry/);
     assert.ok(funding.querySelector("a")?.href.includes("faucet"));
     await acknowledge("I understand — real funds");
     await acknowledge("I understand restore first stops");
     await ui.click("Restore & arm 0x1111…1111");
-    assert.deepEqual(revokeWallets.map(w => w.chainId), [46630]);
+    assert.deepEqual(revokeWallets.map(w => w.chainId), [97]);
     assert.deepEqual(replacementStops, [{ wallet: "spot", tenant: undefined, account: activeGrant.smartAccount, session: activeGrant.sessionKeyAddress }]);
     assert.equal(destructiveStops, 0, "cross-network restore never uses destructive deletion");
     assert.equal(mintCalls, 0);
     assert.equal(input.matches(":disabled"), true);
     await act(async () => { source.resolve({ transactionHash: `0x${"4".repeat(64)}`, validNonceFrom: 12 }); });
-    assert.deepEqual(revokeWallets.map(w => w.chainId), [46630, 4663]);
+    assert.deepEqual(revokeWallets.map(w => w.chainId), [97, 56]);
     assert.equal(mintCalls, 0, "a source receipt alone cannot mint the replacement");
     assert.ok(revokeWallets.every(w => w.smartAccount === address && w.ownerKey === grant.demoOwnerPrivateKey));
     await act(async () => { destination.resolve({ transactionHash: `0x${"5".repeat(64)}`, validNonceFrom: 3 }); });
@@ -1003,9 +993,9 @@ describe("the funded wallet's re-sign control", () => {
     assert.deepEqual(restoredKeys, [grant.demoOwnerPrivateKey]);
   });
 
-  for (const failedChain of [46630, 4663]) it(`cross-network restore retains recovery after an unconfirmed revocation on ${failedChain}`, async () => {
-    activeGrant = { ...grant, chainId: 46630 };
-    ui.dom.window.history.replaceState({}, "", "/grant?chain=4663");
+  for (const failedChain of [97, 56]) it(`cross-network restore retains recovery after an unconfirmed revocation on ${failedChain}`, async () => {
+    activeGrant = { ...grant, chainId: 97 };
+    ui.dom.window.history.replaceState({}, "", "/grant?chain=56");
     let exists = true;
     globalThis.fetch = async input => {
       const path = String(input);
@@ -1028,10 +1018,10 @@ describe("the funded wallet's re-sign control", () => {
     await acknowledge("I understand restore first stops");
     await ui.click("Restore & arm 0x1111…1111");
     assert.equal(mintCalls, 0);
-    assert.deepEqual(revokeWallets.map(w => w.chainId), failedChain === 46630 ? [46630] : [46630, 4663]);
+    assert.deepEqual(revokeWallets.map(w => w.chainId), failedChain === 97 ? [97] : [97, 56]);
     assert.match(ui.container.textContent!, /Receipt unconfirmed/);
     assert.equal(needsPermissionReplacement(activeGrant), true);
-    assert.equal(loadRecoveryGrants("spot")[0]?.chainId, 46630);
+    assert.equal(loadRecoveryGrants("spot")[0]?.chainId, 97);
     storedGrantAvailable = false;
     await ui.remount(React.createElement(Wallet));
     assert.ok(ui.container.querySelector("#resign"), "the public snapshot survives losing the server grant");
@@ -1046,7 +1036,7 @@ describe("the funded wallet's re-sign control", () => {
     await enterRestoreKey();
     await ui.click("check this wallet");
     await acknowledge("I understand restore first stops");
-    const testnet = [...ui.container.querySelectorAll("button.chain-card")].find(b => b.textContent?.includes("Testnet (46630)")) as HTMLButtonElement;
+    const testnet = [...ui.container.querySelectorAll("button.chain-card")].find(b => b.textContent?.includes("Testnet (97)")) as HTMLButtonElement;
     await act(async () => { testnet.click(); });
     assert.equal(ui.container.querySelector(".restore-preview"), null);
     const ack = [...ui.container.querySelectorAll("label")].find(l => l.textContent?.includes("I understand restore first stops"))!.querySelector("input")!;
@@ -1091,7 +1081,7 @@ describe("the funded wallet's re-sign control", () => {
     await ui.click("check this wallet");
     await acknowledge("I understand — real funds");
     await acknowledge("I understand restore first stops");
-    serverGrant = change === "chain" ? { ...grant, chainId: 46630 } : { ...grant, sessionKeyAddress: `0x${"8".repeat(40)}` };
+    serverGrant = change === "chain" ? { ...grant, chainId: 97 } : { ...grant, sessionKeyAddress: `0x${"8".repeat(40)}` };
     await ui.click("Restore & arm 0x1111…1111");
     assert.equal(stopCalls, 0);
     assert.equal(revokeCalls, 0);
@@ -1116,7 +1106,7 @@ describe("the funded wallet's re-sign control", () => {
 
   for (const matchingOwner of [true, false]) it(`adopting a fresh legacy grant ${matchingOwner ? "retains only a proven owner key" : "refuses an unrelated saved owner key"}`, async () => {
     const owner = privateKeyToAccount(grant.demoOwnerPrivateKey as `0x${string}`);
-    activeGrant = { ...grant, owner: owner.address, chainId: 46630, serialized: "old serialized permission", demoSessionPrivateKey: `0x${"6".repeat(64)}` };
+    activeGrant = { ...grant, owner: owner.address, chainId: 97, serialized: "old serialized permission", demoSessionPrivateKey: `0x${"6".repeat(64)}` };
     const serverGrant = { ...grant, owner: matchingOwner ? owner.address : address, demoOwnerPrivateKey: undefined, sessionKeyAddress: `0x${"8".repeat(40)}` };
     globalThis.fetch = async input => {
       const path = String(input);
@@ -1157,7 +1147,7 @@ describe("the funded wallet's re-sign control", () => {
     const owner = privateKeyToAccount(`0x${"7".repeat(64)}`);
     const did = "did:privy:recovery-test";
     const nonce = "historical-binding-nonce";
-    const ownerSignature = await owner.signMessage({ message: bindingMessage({ version: "privy-did-owner-v1", origin: window.location.origin, nonce, owner: owner.address, smartAccount: address, chainId: 4663, did }) });
+    const ownerSignature = await owner.signMessage({ message: bindingMessage({ version: "privy-did-owner-v1", origin: window.location.origin, nonce, owner: owner.address, smartAccount: address, chainId: 56, did }) });
     activeGrant = { ...grant, owner: owner.address, demoOwnerPrivateKey: undefined, binding: { version: "privy-did-owner-v1", did, nonce, ownerSignature } };
     storedGrantAvailable = false; // Only the authenticated server supplied this grant.
     privyOwner = { account: owner, did };
@@ -1211,7 +1201,7 @@ describe("the funded wallet's re-sign control", () => {
     const b = privateKeyToAccount(`0x${"8".repeat(64)}`);
     const did = "did:privy:original-owner";
     const nonce = "historical";
-    activeGrant = { ...grant, owner: a.address, demoOwnerPrivateKey: undefined, binding: { version: "privy-did-owner-v1", did, nonce, ownerSignature: await a.signMessage({ message: bindingMessage({ version: "privy-did-owner-v1", origin: window.location.origin, nonce, owner: a.address, smartAccount: address, chainId: 4663, did }) }) } };
+    activeGrant = { ...grant, owner: a.address, demoOwnerPrivateKey: undefined, binding: { version: "privy-did-owner-v1", did, nonce, ownerSignature: await a.signMessage({ message: bindingMessage({ version: "privy-did-owner-v1", origin: window.location.origin, nonce, owner: a.address, smartAccount: address, chainId: 56, did }) }) } };
     privyOwner = { account: b, did: "did:privy:different-owner" };
     globalThis.fetch = async input => {
       const path = String(input);
@@ -1287,7 +1277,7 @@ describe("the funded wallet's re-sign control", () => {
     await ui.click("revoke earlier permissions & re-sign");
     assertExistingPermissionKept(before);
     assert.equal(preflightCalls, 0);
-    assert.deepEqual(fundingChecks, [], "never told to send ETH for a renewal that cannot land");
+    assert.deepEqual(fundingChecks, [], "never told to send BNB for a renewal that cannot land");
     assert.deepEqual(replacementStops, [], "no stop names any wallet");
     assert.match(ui.container.textContent!, said);
   });
@@ -1345,7 +1335,7 @@ describe("the funded wallet's re-sign control", () => {
     // THE PATH THIS CLOSES (perps slice 5b review): renewKey followed whatever
     // wallet the grant named, but its account read is Spot's GET /api/grants
     // and its revocation derives the owner's Kernel account at index 0. A
-    // paper Perps grant renewed here was asked for ETH it never holds, or, with
+    // paper Perps grant renewed here was asked for BNB it never holds, or, with
     // some, had its stop accepted and then failed revocation against an
     // account its owner key does not control. The Perps renewal, with D6's
     // exemption (perps-renewal.test.ts), is the Perps desk's; this screen
@@ -1362,7 +1352,7 @@ describe("the funded wallet's re-sign control", () => {
     assert.deepEqual(reads.slice(mounted), [], "not even the account is read for it");
     assertExistingPermissionKept(before);
     assert.equal(preflightCalls, 0, "nothing is checked for signing");
-    assert.deepEqual(fundingChecks, [], "no ETH is asked of it");
+    assert.deepEqual(fundingChecks, [], "no BNB is asked of it");
     assert.deepEqual(replacementStops, [], "no stop names any wallet");
     assert.deepEqual(snapshotWallets, [], "and no wallet's local grants are read");
     assert.match(ui.container.textContent!, /This attempt kept your existing permission unchanged/);

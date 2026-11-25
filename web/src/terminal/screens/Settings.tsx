@@ -2,17 +2,13 @@
 
 import Link from "../Link";
 import { useEffect, useRef, useState } from "react";
-import { HolderLink } from "../HolderLink";
 import { XPosting } from "../XPosting";
 import { TelegramCreateBot } from "../TelegramCreateBot";
 import { requestJson } from "../request-json";
 import { AgentImageField } from "../AgentImageField";
 import { basketAfterAdd, basketNow } from "../basket";
-import { isCircleStrategyId } from "../strategy";
-import type { TierView } from "@/app/api/tier/route";
-import { loadTier } from "../tier";
 import { FormPage as AppShell, FormHeading as PageHeader } from "../FormPage";
-import { ENERGY, AGENTCAP_GATEWAY_ORIGIN, SLIPPAGE_BPS_MAX, TELEGRAM_GROUPS_CHATTINESS, isEnergyReserveToken, isValidCustomToken, uncoveredBasketSymbols, type CustomToken, type StoredGrant, type TelegramGroupsChattiness } from "@agentcap/core";
+import { SLIPPAGE_BPS_MAX, TELEGRAM_GROUPS_CHATTINESS, isValidCustomToken, uncoveredBasketSymbols, type CustomToken, type StoredGrant, type TelegramGroupsChattiness } from "@agentcap/core";
 import type { SettingsView } from "@/app/api/settings/route";
 import type { TelegramStatus } from "@/app/api/telegram/route";
 import { telegramLabel, telegramRow, type AgentDown, type TelegramRow } from "../agent-status";
@@ -175,7 +171,6 @@ export default function SettingsPage({onFund, slug, onSaved, agentDown = null}:{
   const [xTokenAddresses, setXTokenAddresses] = useState<boolean | null>(null);
   const [xTradeResults, setXTradeResults] = useState<boolean | null>(null);
   const [scoutEnabled, setScoutEnabled] = useState<boolean | null>(null);
-  const [classSnipe, setClassSnipe] = useState<boolean | null>(null);
   /** The owner's consent to spend real money. Null = untouched this session. */
   const [liveTrading, setLiveTrading] = useState<boolean | null>(null);
   /** Which kinds of thing the agent may BUY. Null = untouched this session. */
@@ -247,18 +242,6 @@ export default function SettingsPage({onFund, slug, onSaved, agentDown = null}:{
     }
     return `couldn't reach ${provider.label} — check connection`;
   };
-  /**
-   * This account standing against the Circle rule.
-   *
-   * The CREATE flow warns; this one never did — and this is the flow a beta
-   * tester with an existing agent actually uses. A bare dropdown of raw ids let
-   * somebody switch to a strategy their tier will not run and answered ok.
-   */
-  const [tier, setTier] = useState<TierView | null>(null);
-  useEffect(() => {
-    void loadTier().then(setTier);
-  }, []);
-
   const loadTelegram = () =>
     fetch("/api/telegram")
       .then((r) => (r.ok ? (r.json() as Promise<TelegramStatus>) : null))
@@ -351,10 +334,9 @@ export default function SettingsPage({onFund, slug, onSaved, agentDown = null}:{
 
   // A LINK TO ONE SETTING OPENS THE GROUP IT SITS IN. The chat's "Open
   // Settings" button and the pages that point here link to a control by its
-  // id (#launchpad-buying, #trencher-mode, #telegram, #x-posting). A control
+  // id (#trencher-mode, #telegram, #x-posting). A control
   // inside a collapsed group made that a link to a page that seemed not to have
-  // it: an owner told launchpad buying was "on the dashboard" could not find
-  // it, because it sat closed inside "Custom tokens & discovery". Run once the
+  // it. Run once the
   // form is on screen (the ids do not exist before), and on every later hash.
   const formShown = view !== null;
   useEffect(() => {
@@ -501,16 +483,6 @@ export default function SettingsPage({onFund, slug, onSaved, agentDown = null}:{
       setTokenError("needs a short symbol, a full 0x… address (42 chars) and whole-number decimals");
       return;
     }
-    // $AGENTCAP IS ENERGY, NOT A COIN TO TRADE. Every signer drops it from the
-    // sealed tokens and the worker never watches it, so adding it here would
-    // only produce a token that can never be covered, whatever gets re-signed.
-    if (isEnergyReserveToken(candidate.address)) {
-      setTokenError(
-        "that's $AGENTCAP — your agent's energy, not a coin it trades, so it isn't added here. " +
-          "Ask your agent in chat to get its $AGENTCAP, or send it to the agent's account on Robinhood Chain.",
-      );
-      return;
-    }
     const current = tokens ?? (view?.values.customTokens as CustomToken[] | undefined) ?? [];
     if (current.some((t) => t.address.toLowerCase() === candidate.address.toLowerCase())) {
       setTokenError(`${candidate.address.slice(0, 10)}… is already in the list`);
@@ -576,7 +548,6 @@ export default function SettingsPage({onFund, slug, onSaved, agentDown = null}:{
     if (xTokenAddresses !== null) body.xTokenAddresses = xTokenAddresses;
     if (xTradeResults !== null) body.xTradeResults = xTradeResults;
     if (scoutEnabled !== null) body.scoutEnabled = scoutEnabled;
-    if (classSnipe !== null) body.classSnipeEnabled = classSnipe;
     if (liveTrading !== null) body.liveTradingEnabled = liveTrading;
     if (assetMode !== null) body.assetMode = assetMode;
     if (discoveryEnabled !== null) body.discoveryEnabled = discoveryEnabled;
@@ -692,7 +663,6 @@ export default function SettingsPage({onFund, slug, onSaved, agentDown = null}:{
       setXPublicWalletIntro(null);
       setXTokenAddresses(null);
       setXTradeResults(null);
-      setClassSnipe(null);
       setOfficialCoins(null);
       void loadTelegram();
       if (statusTimer.current) clearTimeout(statusTimer.current);
@@ -724,7 +694,7 @@ export default function SettingsPage({onFund, slug, onSaved, agentDown = null}:{
   const hasUnsavedChanges = Object.keys(draft).length > 0 || [
     symbols, tokens, tgEnabled, tgControl, tgTransfer, tgNotify, tgGroups,
     tgGroupCoins, tgChattiness, virtualsEnabled, deskEnabled, scoutEnabled,
-    classSnipe, liveTrading, assetMode, discoveryEnabled, fomoData, fomoMonitoring, fomoFollow, trencherLive,
+    liveTrading, assetMode, discoveryEnabled, fomoData, fomoMonitoring, fomoFollow, trencherLive,
     trencherFast, officialCoins, allowlist, pcEnabled, caps, shellList,
     appList, agentEnabled, agentAutoShell,
   ].some(value => value !== null);
@@ -782,7 +752,6 @@ export default function SettingsPage({onFund, slug, onSaved, agentDown = null}:{
   const virtualsEnabledVal = virtualsEnabled ?? view.values.virtualsEnabled ?? d.virtualsEnabled;
   const deskEnabledVal = deskEnabled ?? view.values.deskEnabled ?? d.deskEnabled;
   const scoutEnabledVal = scoutEnabled ?? view.values.scoutEnabled ?? d.scoutEnabled;
-  const classSnipeVal = classSnipe ?? view.values.classSnipeEnabled ?? d.classSnipeEnabled;
   const liveTradingVal = liveTrading ?? view.values.liveTradingEnabled ?? d.liveTradingEnabled;
   const assetModeVal = assetMode ?? view.values.assetMode ?? d.assetMode;
   const discoveryEnabledVal = discoveryEnabled ?? view.values.discoveryEnabled ?? d.discoveryEnabled;
@@ -1043,7 +1012,7 @@ export default function SettingsPage({onFund, slug, onSaved, agentDown = null}:{
               <span className="mm-hint">{t("settings.hint.allowsLiveTrencherTrades")}</span>
             </label>
             {activeTokens.length === 0 && (view.officialCoins?.length ?? 0) === 0 && <p>
-              You do not need to enter token contracts for Autonomous Trencher. Enable its permission when renewing your key. The new route supports verified Uniswap v3 pools; ungraduated bonding curves use a separate route.
+              You do not need to enter token contracts for Autonomous Trencher. Enable its permission when renewing your key. The new route supports verified Uniswap v3 pools.
             </p>}
             <button type="button" className="mm-btn primary" onClick={() => void save()} disabled={status === "saving…" || telegramCreating}>Save settings</button>
             <p className="mm-hint">Saves all changes on this page. Preparing settings does not turn on real-money trading or change your signed limits.</p>
@@ -1113,7 +1082,6 @@ export default function SettingsPage({onFund, slug, onSaved, agentDown = null}:{
                   {providers.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.label}
-                      {p.holder ? " · 🏹 holders" : ""}
                       {p.free ? " · free" : ""}
                       {p.vision ? " · vision" : ""}
                       {p.needsKey === false ? " · local" : ""}
@@ -1245,14 +1213,7 @@ export default function SettingsPage({onFund, slug, onSaved, agentDown = null}:{
               <select value={v("strategy") || d.strategy} onChange={set("strategy")}>
                 {view.strategies.builtin.map((s) => (
                   <option key={s} value={s}>
-                    {/* MARKED IN THE LIST ITSELF. A dropdown has nowhere to put
-                        a badge, so the requirement goes in the option label —
-                        the only thing somebody reads before choosing.
-                        (Written without the tag name on purpose: the control
-                        census in app/settings/honesty.test.ts counts the literal
-                        string, and it is more useful dumb than clever.) */}
                     {s}
-                    {isCircleStrategyId(s) ? " · holders only" : ""}
                   </option>
                 ))}
                 {view.strategies.custom.length > 0 && <option disabled>── your strategies ──</option>}
@@ -1263,35 +1224,6 @@ export default function SettingsPage({onFund, slug, onSaved, agentDown = null}:{
                 ))}
               </select>
             </Field>
-            {/* AND THE READER'S STANDING, at the moment of choosing.
-                The create flow warns and this one never did — which is the flow
-                a tester with an existing agent actually uses. Selecting a
-                holder-only strategy here answered {ok:true} and left them to
-                discover days later that nothing had happened. */}
-            {isCircleStrategyId(v("strategy") || d.strategy || "") &&
-              tier &&
-              tier.why !== "sign-in" &&
-              !tier.bonusStrategies && (
-                <div className="create-locked" role="status">
-                  <strong>That one won&apos;t run yet.</strong>
-                  {tier.why === "unreadable" ? (
-                    <p>
-                      We couldn&apos;t read your $AGENTCAP balance just now, so we can&apos;t tell
-                      whether it will run. That&apos;s our read failing, not your wallet.
-                    </p>
-                  ) : (
-                    /* THE COMBINED FIGURE, the one the worker counts — the
-                       owner's wallet and this agent's account together — and
-                       a dash for a count nobody read, never `?? 0`. */
-                    <p>
-                      Your wallet and your agent&apos;s account hold {count(tier.tokens)} $AGENTCAP and it
-                      needs {count(tier.needTokens)}. Until you hold enough it opens nothing new and leaves
-                      its basket as it is; positions in a class vault are still closed by their own exit
-                      rules. Saving this won&apos;t change that.
-                    </p>
-                  )}
-                </div>
-              )}
           </div>
 
           {/* Model-list status: missing_key renders as the neutral hint (nothing
@@ -1685,92 +1617,6 @@ export default function SettingsPage({onFund, slug, onSaved, agentDown = null}:{
           </div>
           {fomoFleetOnly && <p className="mm-hint">{t("settings.hint.fomoHostedOnly")}</p>}
           </>)}
-
-          {/* ── THE CLASS ROUTE ────────────────────────────────────────────
-              Four settings that had a type, a PUT-allowlist entry and a worker
-              read, and NO control — so the only way to configure the route was
-              to call the API by hand, and `classSnipeEnabled` could not be
-              turned on at all. The factory field alone sat in Connections,
-              which made the page look like the feature was reachable when
-              nothing downstream of it could be set.
-
-              Deliberately BELOW the scout block and after its warning: a class
-              buy is gated by the scout budget, so an owner who has not read
-              that paragraph is not ready to read this one.
-
-              CALLED WHAT THE CHAT CALLS IT. The agent says "launchpad buying"
-              (chat-tools.ts settings, setting-spec.ts DASHBOARD_ONLY) and the
-              iOS app says it too; this block said only "class route", so an
-              owner sent here looking for launchpad buying found nothing by
-              that name. #launchpad-buying is where the chat's button lands,
-              and the effect above opens this group for it. */}
-          <div className="mm-subtle mono" id="launchpad-buying">launchpad buying · class route · buying a coin nobody listed</div>
-          <p className="mm-hint" style={{ marginTop: 0 }}>
-            Buy a coin straight off a Pons launchpad&apos;s bonding curve, held in your own vault so
-            it can be sold again. It buys nothing until scout mode above is on, with its budget and max
-            per token each at least one entry; live trading is on; and a class vault factory is set in
-            Connections, with your key re-signed after.
-          </p>
-          <div className="mm-grid">
-            <label className="mm-field">
-              <span className="mm-label">{t("settings.label.classRoute")}</span>
-              <span className="mm-input">
-                <input
-                  type="checkbox"
-                  checked={classSnipeVal}
-                  onChange={(e) => setClassSnipe(e.target.checked)}
-                  style={{ width: "auto" }}
-                />
-                <span className="mm-unit">
-                  {classSnipeVal ? "may buy newly launched coins" : "off — no coin is bought unless you listed it"}
-                </span>
-              </span>
-              <span className="mm-hint">{t("settings.hint.separateFromSealingA")}</span>
-            </label>
-            <Field
-              label={t("settings.label.perEntryUsdg")}
-              hint={t("settings.hint.spentOnASingle")}
-            >
-              <input
-                value={v("classPerEntryUsdg")}
-                inputMode="numeric"
-                placeholder={String(d.classPerEntryUsdg)}
-                onChange={setNum("classPerEntryUsdg")} aria-invalid={!!numError.classPerEntryUsdg}
-              />
-            </Field>
-            <Field
-              label={t("settings.label.maxOpenPositions")}
-              hint={t("settings.hint.howManyClassPositions")}
-            >
-              <input
-                value={v("classMaxPositions")}
-                inputMode="numeric"
-                placeholder={String(d.classMaxPositions)}
-                onChange={setNum("classMaxPositions")} aria-invalid={!!numError.classMaxPositions}
-              />
-            </Field>
-            <Field label={t("settings.label.maximumHoldingTimeSeconds")} hint={t("settings.hint.forBondingCurvePositions")}>
-              <input type="text" inputMode="numeric" value={v("classMaxHoldSec")} placeholder={String(d.classMaxHoldSec)} onChange={setNum("classMaxHoldSec")} aria-invalid={!!numError.classMaxHoldSec} />
-            </Field>
-            <Field
-              label={t("settings.label.minimumCurveDepthUsdg")}
-              hint={t("settings.hint.realMoneyRaisedInto")}
-            >
-              <input
-                value={v("classMinDepthUsdg")}
-                inputMode="numeric"
-                placeholder={String(d.classMinDepthUsdg)}
-                onChange={setNum("classMinDepthUsdg")} aria-invalid={!!numError.classMinDepthUsdg}
-              />
-            </Field>
-          </div>
-          {classSnipeVal && Number(v("classPerEntryUsdg") || d.classPerEntryUsdg) === 0 && (
-            <div className="mm-danger">
-              The class route is on but the size is <b>0</b>, so nothing will be bought. Two
-              switches rather than one, because they fail differently — set a size or turn the
-              route back off.
-            </div>
-          )}
 
           </details>
           <details className="settings-group" id="telegram"><summary>Telegram</summary>
@@ -2282,37 +2128,16 @@ export default function SettingsPage({onFund, slug, onSaved, agentDown = null}:{
             <span className="mm-hint">{t("settings.hint.namesOpenMayLaunch")}</span>
           </div>
 
-          <div className="mm-section">{t("settings.section.merryCircle")}</div>
-          {/* The tier reads a $AGENTCAP balance. By default that is the wallet you
-              sign in with, which is the only address the server can verify without
-              being told. Holding the token elsewhere is a real case and needs a
-              proof, not a text box — see /api/holder. */}
-          <HolderLink />
-          {/* WHAT THE TOKEN IS FOR, said where it is linked. Text only — this
-              section's controls are HolderLink's, and the census in
-              app/settings/honesty.test.ts counts every one. ONLY WHILE THE
-              DEPLOYMENT GATES ENERGY (tier.energyGate, as CreateAgent asks):
-              the gate is off until an operator turns it on, and a throttle
-              described while nothing is limited is a false reason to buy. */}
-          {tier?.energyGate && (
-            <p className="mm-hint">
-              On the hosted service your agent runs at full energy while your wallet and its account hold{" "}
-              {count(ENERGY.fullTokens)} $AGENTCAP between them; below that it gets about a tenth of a standard day&apos;s AI reviews and
-              new trades. Stop-losses, take-profits and your own orders are never limited; its own AI
-              reviews — including of its open positions — are paced along with the rest. $AGENTCAP buys
-              capacity, nothing else — we make no promise about its price.
-            </p>
-          )}
           <div className="mm-section">{t("settings.section.connections")}</div>
           <div className="mm-grid">
             <Field
               label={t("settings.label.mainnetRpcOverride")}
               hint={t("settings.hint.optionalCustomConnectionTo")}
             >
-              <input type="url" placeholder={urlPlaceholder("rpcMainnet", "default: rpc.mainnet.chain.robinhood.com")} value={draft.rpcMainnet ?? ""} onChange={set("rpcMainnet")} />
+              <input type="url" placeholder={urlPlaceholder("rpcMainnet", "default: bsc-dataseed.bnbchain.org")} value={draft.rpcMainnet ?? ""} onChange={set("rpcMainnet")} />
             </Field>
             <Field label={t("settings.label.testnetRpcOverride")} hint={t("settings.hint.optional")}>
-              <input type="url" placeholder={urlPlaceholder("rpcTestnet", "default: rpc.testnet.chain.robinhood.com")} value={draft.rpcTestnet ?? ""} onChange={set("rpcTestnet")} />
+              <input type="url" placeholder={urlPlaceholder("rpcTestnet", "default: bsc-testnet-dataseed.bnbchain.org")} value={draft.rpcTestnet ?? ""} onChange={set("rpcTestnet")} />
             </Field>
             <Field
               label={t("settings.label.bundlerUrlOverride")}
@@ -2326,48 +2151,6 @@ export default function SettingsPage({onFund, slug, onSaved, agentDown = null}:{
             >
               <input type="text" placeholder="0x…" value={v("breakerAddress")} onChange={set("breakerAddress")} />
             </Field>
-            <Field
-              label={t("settings.label.v4AdapterContract")}
-              hint={t("settings.hint.v4selfswapContractOnYour")}
-            >
-              <input type="text" placeholder="0x…" value={v("v4AdapterAddress")} onChange={set("v4AdapterAddress")} />
-            </Field>
-            <Field
-              label={t("settings.label.ponsCurveAdapterContract")}
-              hint={t("settings.hint.ponsselftradeContractOnYour")}
-            >
-              <input type="text" placeholder="0x…" value={v("ponsAdapterAddress")} onChange={set("ponsAdapterAddress")} />
-            </Field>
-            <Field
-              label={t("settings.label.classVaultFactoryContract")}
-              hint={t("settings.hint.ponsclassvaultfactoryOnYourWallet")}
-            >
-              <input
-                type="text"
-                placeholder="0x…"
-                value={v("ponsClassVaultFactory")}
-                onChange={set("ponsClassVaultFactory")}
-              />
-            </Field>
-            <Field
-              label={t("settings.label.rialtoIntegratorKey")}
-              hint={t("settings.hint.requiredToTradeThrough")}
-            >
-              <input
-                type="password"
-                placeholder={secretPlaceholder(view.rialtoApiKey)}
-                value={draft.rialtoApiKey ?? ""}
-                onChange={set("rialtoApiKey")}
-              />
-              {view.rialtoApiKey.set && (
-                <button type="button" className="mm-btn danger sm" onClick={() => setDraft((x) => ({ ...x, rialtoApiKey: "" }))}>
-                  clear
-                </button>
-              )}
-            </Field>
-            <Field label={t("settings.label.rialtoKeyHeader")} hint={`Header name their API expects (default ${d.rialtoApiKeyHeader}).`}>
-              <input type="text" placeholder={d.rialtoApiKeyHeader} value={v("rialtoApiKeyHeader")} onChange={set("rialtoApiKeyHeader")} />
-            </Field>
           </div>
 
           <div className="mm-section">{t("settings.section.virtuals")}</div>
@@ -2376,7 +2159,7 @@ export default function SettingsPage({onFund, slug, onSaved, agentDown = null}:{
               <span className="mm-label">{t("settings.label.streamToVirtuals")}</span>
               <span className="mm-input">
                 <input type="checkbox" checked={virtualsEnabledVal} onChange={(e) => setVirtualsEnabled(e.target.checked)} style={{ width: "auto" }} />
-                <span className="mm-unit">{virtualsEnabledVal ? "live activity → your $AGENTCAP agent page" : "off"}</span>
+                <span className="mm-unit">{virtualsEnabledVal ? "live activity → your Virtuals agent page" : "off"}</span>
               </span>
               <span className="mm-hint">{t("settings.hint.publishesLandedTradesAnd")}<b>Outbound &amp; public</b> — off by default; nothing streams until
                 you turn this on and add a key.
@@ -2416,9 +2199,8 @@ export default function SettingsPage({onFund, slug, onSaved, agentDown = null}:{
               )}
             </Field>
             <Field
-              label={t("settings.label.merryCircleToken")}
-              action={{ href: `${AGENTCAP_GATEWAY_ORIGIN}/claim`, label: "claim one" }}
-              hint={t("settings.hint.claimWithYourAgentCap")}
+              label={t("settings.label.gatewayToken")}
+              hint={t("settings.hint.gatewayToken")}
             >
               <input
                 type="password"
@@ -2436,12 +2218,6 @@ export default function SettingsPage({onFund, slug, onSaved, agentDown = null}:{
 
           <div className="mm-section">{t("settings.section.tradingPreferences")}</div>
           <div className="mm-grid">
-            <Field label={t("settings.label.swapVenue")} hint={t("settings.hint.rialtoRequiresAnIntegrator")}>
-              <select value={v("swapVenue") || d.swapVenue} onChange={set("swapVenue")}>
-                <option value="uniswap">uniswap</option>
-                <option value="rialto">rialto</option>
-              </select>
-            </Field>
             <Field label={t("settings.label.maxSlippage")} hint={t("settings.hint.vsThePreTrade")}>
               <input type="text" inputMode="numeric" placeholder={String(d.slippageBps)} value={v("slippageBps")} onChange={setNum("slippageBps")} aria-invalid={!!numError.slippageBps} />
               <span className="mm-unit">{t("settings.unit.bps")}</span>
@@ -2464,10 +2240,6 @@ export default function SettingsPage({onFund, slug, onSaved, agentDown = null}:{
             >
               <input type="text" inputMode="numeric" placeholder={String(d.takeProfitBps)} value={v("takeProfitBps")} onChange={setNum("takeProfitBps")} aria-invalid={!!numError.takeProfitBps} />
               <span className="mm-unit">{t("settings.unit.bps")}</span>
-            </Field>
-            <Field label={t("settings.label.idleCashFloor")} hint={t("settings.hint.steadyBasketCashKept")}>
-              <input type="text" inputMode="decimal" placeholder={String(d.idleFloorUsdg)} value={v("idleFloorUsdg")} onChange={setNum("idleFloorUsdg")} aria-invalid={!!numError.idleFloorUsdg} />
-              <span className="mm-unit">{t("settings.unit.usdg")}</span>
             </Field>
             <Field label={t("settings.label.gapBudget")} hint={t("settings.hint.weekendGapTotalUsdg")}>
               <input type="text" inputMode="decimal" placeholder={String(d.gapEnterBudgetUsdg)} value={v("gapEnterBudgetUsdg")} onChange={setNum("gapEnterBudgetUsdg")} aria-invalid={!!numError.gapEnterBudgetUsdg} />

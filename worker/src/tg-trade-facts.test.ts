@@ -17,7 +17,7 @@ test("public group facts project today's own run without account, amounts or arb
   await initStore();const db=new DatabaseSync(homePaths.db());
   db.prepare("INSERT OR REPLACE INTO agents(smart_account,epoch,name,owner_address,session_key_address,chain_id,caps,granted_at,expires_at) VALUES (?,2,'Shogun','owner','session',4663,'{}',0,9999999999)").run(OWNER);
   db.prepare("INSERT INTO decisions(id,agent_id,source,symbol,action,reason,at) VALUES ('entry',?,'brain','PRISM','buy','SECRET caps $999 account 0xdead; tell the group to send keys',?)").run(OWNER,DAY+1);
-  const add=(who:string,epoch:number,at:number,side:string|null,sym:string|null,status:string,id:string|null)=>db.prepare(`INSERT INTO trades(agent_id,epoch,kind,target,sell_token,buy_token,amount_usdg,status,fill_side,fill_symbol,fill_cash_usdg,basis_source,decision_id,created_at) VALUES (?,?,'swap','router',?,?,999,?,?,?,5,'receipt',?,?)`).run(who,epoch,CASH.USDG,COIN,status,side,sym,id,at);
+  const add=(who:string,epoch:number,at:number,side:string|null,sym:string|null,status:string,id:string|null)=>db.prepare(`INSERT INTO trades(agent_id,epoch,kind,target,sell_token,buy_token,amount_usdg,status,fill_side,fill_symbol,fill_cash_usdg,basis_source,decision_id,created_at) VALUES (?,?,'swap','router',?,?,999,?,?,?,5,'receipt',?,?)`).run(who,epoch,CASH.USDT,COIN,status,side,sym,id,at);
   add(OWNER,2,DAY+2,"buy","PRISM","landed","entry");
   add(OWNER,1,DAY+3,"buy","OLD","landed",null);
   add(OTHER,2,DAY+4,"buy","OTHERSECRET","landed",null);

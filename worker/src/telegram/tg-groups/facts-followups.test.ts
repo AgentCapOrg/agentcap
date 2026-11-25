@@ -27,10 +27,6 @@ const HELP: readonly (readonly [string, Topic])[] = [
   ["how do i enable live trading?", "modes"],
   ["does switching to paper mode sell real holdings?", "modes"],
   ["are simulated funds withdrawable?", "modes"],
-  ["Uniswap v4 — not granted. what do i do?", "v4"],
-  ["where do i save the v4 adapter?", "v4"],
-  ["do i need to deploy V4SelfSwap again?", "v4"],
-  ["i saved the v4 adapter but permission is not granted", "v4"],
   ["how do i renew trading permission?", "wallet"],
   ["the re-sign key button is stuck on the app", "wallet"],
   ["my wallet isn't active; how do i renew it?", "wallet"],
@@ -85,15 +81,11 @@ describe("public product and troubleshooting follow-ups", () => {
     assert.doesNotMatch(withdraw, /recover your key|reset your key|funds (?:are|will be) safe|transfer permission is needed/iu);
   });
 
-  it("does not switch modes, grant v4 or widen the breaker from a public question", () => {
+  it("does not switch modes or widen the breaker from a public question", () => {
     const modes = publicFactLine({ kind: "site", topic: "modes" })!;
     assert.match(modes, /simulated money.*signed permission/iu);
     assert.match(modes, /switching to paper doesn't sell real positions/iu);
     assert.match(modes, /simulated money that can't be withdrawn/iu);
-    const v4 = publicFactLine({ kind: "site", topic: "v4" })!;
-    assert.match(v4, /deployed.*correct network.*review and renew/iu);
-    assert.match(v4, /saving its address alone doesn't grant access/iu);
-    assert.doesNotMatch(v4, /deploy (?:it|a new)|0x[0-9a-f]{40}|now granted/iu);
     const drawdown = publicFactLine({ kind: "site", topic: "drawdown" })!;
     assert.match(drawdown, /pauses new buys.*permits sell attempts/iu);
     assert.match(drawdown, /renewing the same limit doesn't clear it/iu);

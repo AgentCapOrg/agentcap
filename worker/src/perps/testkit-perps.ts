@@ -192,7 +192,7 @@ export interface TestCtx {
   equityMicro: bigint | null;
   breakerIdle: boolean;
   breakerLimitBps?: number | null;
-  energyEntriesLeft: boolean;
+  entriesLeft?: boolean;
   opsHeadroom: boolean;
   spendHeadroomMicro: bigint | null;
   perTradeSealedMicro: bigint;
@@ -201,7 +201,6 @@ export interface TestCtx {
 export const CTX: Readonly<TestCtx> = Object.freeze<TestCtx>({
   equityMicro: u(1_000),
   breakerIdle: true,
-  energyEntriesLeft: true,
   opsHeadroom: true,
   spendHeadroomMicro: u(100),
   perTradeSealedMicro: u(100),

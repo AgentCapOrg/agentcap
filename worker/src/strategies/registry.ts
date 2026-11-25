@@ -5,7 +5,7 @@
  * changes settings.
  */
 
-import { CASH, ENERGY_RESERVE_TOKENS, MORPHO, STOCK_TOKENS, assetModeAllows, isHostedMode, type AssetMode, type StockToken } from "../../../packages/core/src/index";
+import { CASH, STOCK_TOKENS, assetModeAllows, isHostedMode, type AssetMode, type StockToken } from "../../../packages/core/src/index";
 import type { LlmCreds } from "../llm";
 import { createDriver, nullDriver } from "../strategist/driver";
 import { makeLlmStrategist, type StrategistDecision } from "../strategist/strategy";
@@ -20,12 +20,15 @@ import type { TrenchBrainOrder } from "../trencher-brain";
 import type { PerpBoundarySettings } from "../strategist/proposals";
 import type { PerpRouteIntent } from "../perps/route";
 
-/** Free, open strategies — available to everyone. */
-const FREE_STRATEGIES = ["steady-basket", "weekend-gap", "llm-strategist", "trencher"] as const;
-/** Merry Circle strategies — buildable and selectable, but only RUN for holders
- * (Merry Man tier and up). The worker gates them at tick time by holder tier. */
-export const CIRCLE_STRATEGIES = ["even-keel", "dip-hunter"] as const;
-export const BUILTIN_STRATEGIES = [...FREE_STRATEGIES, ...CIRCLE_STRATEGIES] as const;
+/** The builtin strategies — all available to everyone. */
+export const BUILTIN_STRATEGIES = [
+  "steady-basket",
+  "weekend-gap",
+  "llm-strategist",
+  "trencher",
+  "even-keel",
+  "dip-hunter",
+] as const;
 export type BuiltinStrategyName = (typeof BUILTIN_STRATEGIES)[number];
 
 /**
@@ -37,11 +40,6 @@ export type BuiltinStrategyName = (typeof BUILTIN_STRATEGIES)[number];
  */
 export const PERPS_ONLY_STRATEGY = "perps-only";
 
-/** Is this a holder-only (Merry Circle) strategy? */
-export function isCircleStrategy(name: string): boolean {
-  return (CIRCLE_STRATEGIES as readonly string[]).includes(name);
-}
-
 export interface StrategyBuildOpts {
   trencherFastEnabled?: boolean;
   /**
@@ -49,20 +47,6 @@ export interface StrategyBuildOpts {
    * does not set it is unchanged.
    */
   assetMode?: AssetMode;
-  /**
-   * The bonding-curve legs available right now, re-read per decision.
-   *
-   * Supplied by the host (the worker tick), because a curve leg carries THIS
-   * TICK’S reserves — the input a slippage floor is derived from. Optional, so
-   * a host that does not trade curves is unchanged.
-   */
-  curveLegsNow?: () => {
-    legs: ReadonlyMap<string, import("../strategist/proposals").CurveLeg>;
-    tokens: ReadonlyMap<string, `0x${string}`>;
-    slippageBps: number;
-    /** How far one buy may move the curve, bps. Travels with the legs. */
-    maxImpactBps: number;
-  } | null;
   swapRouter: `0x${string}`;
   usdg6: (v: number) => bigint;
   basketSymbols: string[];
@@ -82,7 +66,6 @@ export interface StrategyBuildOpts {
   strategistStopLossBps?: number;
   takeProfitBps?: number;
   buyPerTickUsdg: number;
-  idleFloorUsdg: number;
   gapEnterBudgetUsdg: number;
   llm: {
     creds: LlmCreds | null;
@@ -90,12 +73,6 @@ export interface StrategyBuildOpts {
     maxActionUsdg: number;
     /** Persist each strategist decision (survivor + drop) — see makeLlmStrategist. */
     onDecision?: (d: StrategistDecision) => void | Promise<void>;
-    /**
-     * The energy allowance's claim on a paid model window — see
-     * makeLlmStrategist's `claimWindow`. Forwarded ONLY when there is a real
-     * model: the null driver pays for nothing, so it must spend nothing.
-     */
-    claimWindow?: () => Promise<boolean>;
     /**
      * Research instead of one-shot. Present only when the owner turned it on
      * AND there is a model to run it — see makeLlmStrategist's `desk`.
@@ -166,16 +143,6 @@ export function tokensForSymbols(symbols: readonly string[]): StockToken[] {
  * The caller passes the list rather than this function reading it, so that "which
  * chain" and "did the owner opt out" are decided once, by code that knows the
  * answer, instead of being guessed here.
- *
- * THE ENERGY RESERVE IS NEVER WATCHED, whoever lists it. $AGENTCAP held by the
- * account is energy, not a position: watched, it would be valued into equity
- * (an owner sending it in would read as profit, ratchet the peak and accrue a
- * fee), or — unpriceable — pause equity, fees and the breaker every tick; and
- * steady-basket take-profit and the strategist stop-floor sell EVERY holding.
- * Its address is taken before any list is read, on every chain at once, by
- * ADDRESS — never by mode, because the watch set is never narrowed by the
- * asset mode (asset-mode.test.ts), and never by symbol, which a list can spell
- * any way it likes.
  */
 export function watchTokensFor(
   basketSymbols: readonly string[],
@@ -185,7 +152,6 @@ export function watchTokensFor(
   const basket = tokensForSymbols(basketSymbols);
   const takenSymbols = new Set(STOCK_TOKENS.map((t) => t.symbol.toUpperCase()));
   const takenAddresses = new Set([
-    ...Object.values(ENERGY_RESERVE_TOKENS).flatMap((list) => list.map((a) => a.toLowerCase())),
     ...basket.map((t) => t.address.toLowerCase()),
   ]);
   const official: StockToken[] = [];
@@ -316,13 +282,10 @@ export function buildStrategy(name: string, opts: StrategyBuildOpts): Strategy {
       universe: {
         legs: new Map(legsFor(opts.basketSymbols).map((l) => [l.symbol, l.token])),
         swapRouter: opts.swapRouter,
-        usdg: CASH.USDG as `0x${string}`,
+        usdg: CASH.USDT as `0x${string}`,
         maxPerActionUsdg: opts.usdg6(opts.llm.maxActionUsdg),
         maxActionsPerTick: 4,
       },
-      // The curve venue, re-read per decision. Undefined when the host does
-      // not supply one, which keeps every existing strategy identical.
-      curveLegsNow: opts.curveLegsNow,
       // The mechanical floor. 0 = off, which is the shipped default.
       stopLossBps: opts.strategistStopLossBps ?? 0,
       // AND THE CEILING, which this branch never forwarded. `takeProfitBps`
@@ -333,10 +296,6 @@ export function buildStrategy(name: string, opts: StrategyBuildOpts): Strategy {
       decisionIntervalMs: opts.llm.intervalMin * 60_000,
       onNote: opts.onNote,
       onDecision: opts.llm.onDecision,
-      // Only a real model is a review worth claiming. The null driver answers
-      // nothing and costs nothing; claiming for it would spend a low-energy
-      // agent's reviews on silence.
-      ...(driver !== nullDriver && opts.llm.claimWindow ? { claimWindow: opts.llm.claimWindow } : {}),
       // Perps ride a real model only (docs/perps.md "The perps route"): with
       // the null driver nothing is proposed, and the lane resolves a
       // `strategist` perps driver to `manual`.
@@ -359,7 +318,7 @@ export function buildStrategy(name: string, opts: StrategyBuildOpts): Strategy {
       brainRequired: opts.trencherFastEnabled === true,
       brainOrder: t?.brainOrder,
       swapRouter: opts.swapRouter,
-      usdgToken: t?.usdgToken ?? (CASH.USDG as `0x${string}`),
+      usdgToken: t?.usdgToken ?? (CASH.USDT as `0x${string}`),
       candidates: t?.candidates ?? (() => []),
       open: t?.open ?? (() => []),
       liquidityOf: t?.liquidityOf ?? (() => null),
@@ -372,7 +331,7 @@ export function buildStrategy(name: string, opts: StrategyBuildOpts): Strategy {
       legs: legsFor(opts.basketSymbols),
       enterBudgetUsdg: opts.usdg6(opts.gapEnterBudgetUsdg),
       swapRouter: opts.swapRouter,
-      usdg: CASH.USDG as `0x${string}`,
+      usdg: CASH.USDT as `0x${string}`,
     };
     return { name, tick: (snap) => weekendGapTick(cfg, snap) };
   }
@@ -380,7 +339,7 @@ export function buildStrategy(name: string, opts: StrategyBuildOpts): Strategy {
     const cfg: EvenKeelConfig = {
       legs: legsFor(opts.basketSymbols).map((l) => ({ symbol: l.symbol, token: l.token })),
       swapRouter: opts.swapRouter,
-      usdg: CASH.USDG as `0x${string}`,
+      usdg: CASH.USDT as `0x${string}`,
       maxTradeUsdg: opts.usdg6(opts.buyPerTickUsdg),
       bandBps: 500, // rebalance a leg once it's ~5% off equal weight
       seedBudgetUsdg: opts.usdg6(opts.buyPerTickUsdg),
@@ -391,7 +350,7 @@ export function buildStrategy(name: string, opts: StrategyBuildOpts): Strategy {
     const cfg: DipHunterConfig = {
       legs: legsFor(opts.basketSymbols).map((l) => ({ symbol: l.symbol, token: l.token })),
       swapRouter: opts.swapRouter,
-      usdg: CASH.USDG as `0x${string}`,
+      usdg: CASH.USDT as `0x${string}`,
       buyPerTickUsdg: opts.usdg6(opts.buyPerTickUsdg),
       minDipBps: 150, // buy once a token is ~1.5% below its rolling high
     };
@@ -400,23 +359,9 @@ export function buildStrategy(name: string, opts: StrategyBuildOpts): Strategy {
   const cfg: SteadyBasketConfig = {
     legs: legsFor(opts.basketSymbols),
     buyPerTickUsdg: opts.usdg6(opts.buyPerTickUsdg),
-    idleFloorUsdg: opts.usdg6(opts.idleFloorUsdg),
     swapRouter: opts.swapRouter,
-    vault: MORPHO.steakhouseUsdgVault as `0x${string}`,
-    usdg: CASH.USDG as `0x${string}`,
+    usdg: CASH.USDT as `0x${string}`,
     takeProfitBps: opts.takeProfitBps ?? 0,
   };
-  // RE-READ PER TICK, NOT CAPTURED IN cfg. A curve leg carries that tick's
-  // reserves, and curve-prices.ts refuses to cache them for a measured reason:
-  // p99 movement is 1,546 bps over 240 seconds, so last tick's reserves are a
-  // slippage floor for a market that no longer exists.
-  //
-  // AND SUPPLIED HERE OR THE FALLBACK IS INERT. curve-wiring.test.ts exists
-  // because exactly this line was missing for the strategist: every layer
-  // looked wired, the production call site never passed it, and every memecoin
-  // came back "not in the tradable universe".
-  return {
-    name: "steady-basket",
-    tick: (snap) => steadyBasketTick({ ...cfg, curve: opts.curveLegsNow?.() ?? null }, snap),
-  };
+  return { name: "steady-basket", tick: (snap) => steadyBasketTick(cfg, snap) };
 }

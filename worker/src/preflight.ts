@@ -21,6 +21,7 @@
  * CLI gathers, this decides.
  */
 
+import { bnbChain } from "../../packages/core/src/chain";
 import {
   DEFAULT_BASKET_SYMBOLS,
   LEGACY_TRADEABLE_SYMBOLS,
@@ -28,13 +29,12 @@ import {
   STOCK_TOKENS,
   TRADEABLE_SYMBOLS,
   grantHasMultihop,
-  isEnergyReserveToken,
   sellableAssets,
   type StoredGrant,
 } from "../../packages/core/src/index";
 
 /** Mainnet. Anything else cannot execute a real swap — see the chain check. */
-export const TRADEABLE_CHAIN_ID = 4663;
+export const TRADEABLE_CHAIN_ID: number = bnbChain.id;
 
 /**
  * Below this, gas is most of a round trip rather than a rounding error.
@@ -64,7 +64,6 @@ export interface PreflightInput {
     buyPerTickUsdg?: number;
     /** Seconds between ticks. Paired with buyPerTickUsdg it IS the spend rate. */
     tickSeconds?: number;
-    idleFloorUsdg?: number;
     /**
      * The owner's own tokens, needed to resolve a basket symbol that is not in
      * the shipped registry — see the `sellable` check below, which reported
@@ -304,10 +303,6 @@ export function preflight(input: PreflightInput): Check[] {
   ]);
   const uncovered = basket.filter((sym) => {
     const address = known.get(sym);
-    // $AGENTCAP is energy, never a basket leg: no signature covers it (every
-    // signer drops it from the sealed extras) and the worker never watches it,
-    // so "re-sign to cover it" would be a blocker nothing can clear.
-    if (address && isEnergyReserveToken(address)) return false;
     return !address || !sellable.has(address.toLowerCase());
   });
   if (uncovered.length) {
@@ -431,22 +426,6 @@ export function preflight(input: PreflightInput): Check[] {
     });
   } else {
     out.push(ok("leg-size", `${legSize.toFixed(2)} USDG per leg`));
-  }
-
-  // The vault sweep is a real day-one surprise: it fires on the first tick and
-  // a vault deposit counts against the DAILY spend cap, so it can consume most
-  // of the day's allowance before the agent has traded anything.
-  const idleFloor = s.idleFloorUsdg ?? 50;
-  if (input.usdg !== null && input.usdg > idleFloor + perTick) {
-    out.push({
-      id: "idle-sweep",
-      level: "warn",
-      title: `idle cash above ${idleFloor} USDG is swept to the vault on the first tick`,
-      detail:
-        `About ${(input.usdg - idleFloor - perTick).toFixed(2)} USDG would move to Morpho immediately, ` +
-        "and that deposit counts against the daily spend cap — so it can eat most of the day's " +
-        "allowance before any trading happens. Raise idleFloorUsdg above your deposit to stop it.",
-    });
   }
 
   // ── THE TICK RATE AGAINST THE DAILY CAP ─────────────────────────────────

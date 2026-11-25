@@ -72,11 +72,7 @@ function bounded(v: unknown, fallback: number, min: number, max: number): number
  * against different baselines would give one agent two personalities.
  */
 const DISPOSITION_DEFAULTS: Disposition = {
-  maxHoldSec: SETTINGS_DEFAULTS.classMaxHoldSec ?? 21600,
-  exitAtGraduationPct: SETTINGS_DEFAULTS.classExitAtGraduationPct ?? 85,
-  perEntryUsdg: SETTINGS_DEFAULTS.classPerEntryUsdg ?? 5,
   maxImpactBps: SETTINGS_DEFAULTS.maxImpactBps ?? 300,
-  minDepthUsdg: SETTINGS_DEFAULTS.classMinDepthUsdg ?? 100,
 };
 
 /**
@@ -106,11 +102,7 @@ export function chatProfileOf(settings: unknown): ChatProfile {
 
   const d = DISPOSITION_DEFAULTS;
   const own: Disposition = {
-    maxHoldSec: bounded(file.classMaxHoldSec, d.maxHoldSec, 60, 30 * 86_400),
-    exitAtGraduationPct: bounded(file.classExitAtGraduationPct, d.exitAtGraduationPct, 1, 100),
-    perEntryUsdg: bounded(file.classPerEntryUsdg, d.perEntryUsdg, 0, 1_000_000),
     maxImpactBps: bounded(file.maxImpactBps, d.maxImpactBps, 0, 10_000),
-    minDepthUsdg: bounded(file.classMinDepthUsdg, d.minDepthUsdg, 0, 10_000_000),
   };
   return { strategy, traits: traitsOf(own, d) };
 }
@@ -208,7 +200,7 @@ export const addressy = (s: string): boolean => ADDRESSY.test(s);
 
 /** What CallRef.token may be: a contract, for /t/<token>. The cash legs are never the coin. */
 const CONTRACT = /^0x[0-9a-fA-F]{40}$/;
-const CASH_LEGS: ReadonlySet<string> = new Set([CASH.USDG.toLowerCase(), CASH.WETH.toLowerCase()]);
+const CASH_LEGS: ReadonlySet<string> = new Set([CASH.USDT.toLowerCase(), CASH.WBNB.toLowerCase()]);
 
 /** A ticker as the ledger recorded it, or null when it is not one a reader could be shown. */
 const SYMBOL = /^[A-Za-z0-9._-]{1,24}$/;

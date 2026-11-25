@@ -19,7 +19,6 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, it } from "node:test";
 
-import type { HeldCurveLeg } from "./energy";
 import { DRAIN_LIMITS } from "./fleet-drain";
 import { isExitIntent, type AgentLimits, type PerpOrderIntent, type TradeIntent } from "./policy";
 import { buildExitDraft } from "./perps/drafts";
@@ -89,50 +88,20 @@ const swap = (sellToken: `0x${string}`, buyToken: `0x${string}`): TradeIntent =>
   sellAmountRaw: 1_000_000n,
   notionalUsdg: 1_000_000n,
 });
-const curve = (assetIn: `0x${string}`, assetOut: `0x${string}`): TradeIntent => ({
-  kind: "curve-trade",
-  target: ADAPTER,
-  curve: CURVE,
-  assetIn,
-  assetOut,
-  amountInRaw: 1_000_000n,
-  minAmountOutRaw: 1n,
-  notionalUsdg: 1_000_000n,
-});
-
-/**
- * Every kind of intent, and whether exits-only lets it go on to the usual
- * gates. A LEGACY grant's limits (quote assets = cash plus one stock), so the
- * curve sale quoted in an owner-added stock (EXTRA) is the one the breaker's
- * test calls an entry and the held-leg test calls a sale.
- */
-const LIMITS: Pick<AgentLimits, "cashToken" | "quoteAssets"> = { cashToken: USDG, quoteAssets: [USDG, TSLA] };
-const HELD: ReadonlyMap<string, HeldCurveLeg> = new Map([[MEME, { curve: CURVE, quote: EXTRA }]]);
+/** Every kind of intent, and whether exits-only lets it go on to the usual gates. */
+const LIMITS: Pick<AgentLimits, "cashToken"> = { cashToken: USDG };
 
 const EXITS_ONLY: [string, TradeIntent, "admitted" | "refused"][] = [
   ["swap into cash (a sell)", swap(TSLA, USDG), "admitted"],
   ["swap out of cash (a buy)", swap(USDG, TSLA), "refused"],
   ["stock to stock", swap(TSLA, MEME), "refused"],
-  ["curve back into cash", curve(MEME, USDG), "admitted"],
-  ["curve back into a built-in quote stock", curve(MEME, TSLA), "admitted"],
-  ["curve sale of a held leg into its own owner-added quote", curve(MEME, EXTRA), "admitted"],
-  ["curve buy paid in that same quote", curve(EXTRA, MEME), "refused"],
-  ["curve into an extra (an entry)", curve(USDG, MEME), "refused"],
-  ["vault withdraw", { kind: "vault-withdraw", target: VAULT, amountUsdg: 1_000_000n }, "admitted"],
-  // countsAsEntry's own carve-out: parking cash is not a new position.
-  ["vault deposit", { kind: "vault-deposit", target: VAULT, amountUsdg: 1_000_000n }, "admitted"],
   ["transfer home", { kind: "transfer", target: USDG, recipient: MEME, amountUsdg: 1_000_000n }, "admitted"],
   ["equity buy", { kind: "equity-order", ticker: "TSLA", side: "buy", notionalUsdg: 1_000_000n }, "refused"],
   ["equity sell", { kind: "equity-order", ticker: "TSLA", side: "sell", notionalUsdg: 1_000_000n }, "admitted"],
-  [
-    "the energy buy",
-    { kind: "energy-buy", target: ROUTER, sellToken: USDG, buyToken: MEME, sellAmountRaw: 1_000_000n, notionalUsdg: 1_000_000n },
-    "refused",
-  ],
 ];
 
-const judge = (level: AdmissionLevel, intent: TradeIntent, draining = false, held = HELD) =>
-  admissionRefusal({ level, draining }, intent, LIMITS, held);
+const judge = (level: AdmissionLevel, intent: TradeIntent, draining = false) =>
+  admissionRefusal({ level, draining }, intent, LIMITS);
 
 describe("which intents a level refuses", () => {
   it("OBSERVE REFUSES EVERYTHING, exits included", () => {
@@ -155,12 +124,6 @@ describe("which intents a level refuses", () => {
     }
   });
 
-  it("BEFORE ANY TICK HAS SAID WHAT IT HOLDS, the held-leg sale is judged by the breaker's test alone — the strict reading", () => {
-    const sale = curve(MEME, EXTRA);
-    assert.equal(judge("exits-only", sale, false, new Map()), "rollout-hold");
-    assert.equal(judge("exits-only", sale), null, "and admitted once the tick has seen the leg");
-  });
-
   it("THE LATE REFUSAL AT A BROADCAST SAYS WHAT THE GATE SAYS: `draining`, and that nothing was sent", () => {
     const e = new DrainingRefused();
     assert.ok(e instanceof Error);
@@ -168,15 +131,6 @@ describe("which intents a level refuses", () => {
     assert.equal(e.rule, "draining");
     assert.equal(e.rule, judge("trade", EXITS_ONLY[0]![1], true), "the same rule however late it came");
     assert.match(e.message, /Nothing was sent/);
-  });
-
-  it("a held-leg map cannot turn a buy into a sale: only paying WITH the held token, on its curve, into its quote", () => {
-    // The buy that pays in the held leg's quote, the same leg on another
-    // curve, and the leg sold into something other than its recorded quote.
-    const otherCurve: TradeIntent = { ...(curve(MEME, EXTRA) as Extract<TradeIntent, { kind: "curve-trade" }>), curve: ROUTER };
-    for (const intent of [curve(EXTRA, MEME), otherCurve, curve(MEME, VAULT)]) {
-      assert.equal(judge("exits-only", intent), "rollout-hold", JSON.stringify(intent, (_, v) => (typeof v === "bigint" ? `${v}` : v)));
-    }
   });
 });
 
@@ -203,7 +157,7 @@ describe("an owner's perpetual exit meets the same levels", () => {
       assert.ok(isExitIntent(intent, LIMITS), "the lane's close is an exit by the breaker's own test");
       for (const level of ["observe", "exits-only", "trade"] as const) {
         for (const draining of [false, true]) {
-          assert.equal(ownerPerpExitRefusal({ level, draining }), admissionRefusal({ level, draining }, intent, LIMITS, new Map()), `${level}, draining=${draining}, ${intent.side}`);
+          assert.equal(ownerPerpExitRefusal({ level, draining }), admissionRefusal({ level, draining }, intent, LIMITS), `${level}, draining=${draining}, ${intent.side}`);
         }
       }
     }

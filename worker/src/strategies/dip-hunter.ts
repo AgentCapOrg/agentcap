@@ -43,7 +43,6 @@ export function makeDipHunter(cfg: DipHunterConfig): Strategy {
             code: "under-one-buy",
             cashRaw: snap.cashUsdg,
             needRaw: cfg.buyPerTickUsdg,
-            vaultRaw: snap.vaultUsdg,
           },
         };
       }
@@ -164,7 +163,6 @@ export function makeDipHunter(cfg: DipHunterConfig): Strategy {
             code: "under-one-buy",
             cashRaw: snap.cashUsdg,
             needRaw: cfg.buyPerTickUsdg,
-            vaultRaw: snap.vaultUsdg,
           },
         };
       }

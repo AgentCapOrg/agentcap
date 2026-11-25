@@ -18,13 +18,13 @@ const PAIR = "0x0000000000000000000000000000000000000011";
 const CREATED_MS = Date.parse("2026-09-20T08:00:00Z");
 
 const pair = (over: Record<string, unknown> = {}): Record<string, unknown> => ({
-  chainId: "robinhood",
-  dexId: "uniswap",
-  url: `https://dexscreener.com/robinhood/${PAIR}`,
+  chainId: "bsc",
+  dexId: "pancakeswap",
+  url: `https://dexscreener.com/bsc/${PAIR}`,
   pairAddress: "0x0000000000000000000000000000000000000011",
   labels: ["v3"],
   baseToken: { address: "0x00000000000000000000000000000000000C0111", name: "Commander Vrax", symbol: "VRAX" },
-  quoteToken: { address: CASH.WETH, name: "Wrapped Ether", symbol: "WETH" },
+  quoteToken: { address: CASH.WBNB, name: "Wrapped Ether", symbol: "WETH" },
   priceNative: "0.00000012",
   priceUsd: "0.00041",
   txns: { m5: { buys: 12, sells: 9 }, h1: { buys: 140, sells: 90 }, h6: { buys: 500, sells: 380 }, h24: { buys: 1900, sells: 1400 } },
@@ -38,14 +38,14 @@ const pair = (over: Record<string, unknown> = {}): Record<string, unknown> => ({
 });
 
 describe("a DexScreener pair, read as a GeckoPool", () => {
-  it("a Robinhood Chain Uniswap v3 pair of the token: every figure it publishes, and none it does not", () => {
+  it("a BNB Chain PancakeSwap v3 pair of the token: every figure it publishes, and none it does not", () => {
     const p = parseDexPair(pair(), TOKEN);
     assert.ok(p);
-    assert.equal(DEX_CHAIN, "robinhood");
+    assert.equal(DEX_CHAIN, "bsc");
     assert.equal(p.poolAddress, PAIR);
     assert.equal(p.poolId, PAIR);
     assert.equal(p.tokenAddress, TOKEN, "lowercased, the posted token");
-    assert.equal(p.dex, "uniswap-v3-robinhood", "named the way GeckoTerminal names it, so the look sees a v3 pool");
+    assert.equal(p.dex, "pancakeswap-v3-bsc", "named the way GeckoTerminal names it, so the look sees a v3 pool");
     assert.equal(p.name, "VRAX / WETH", "GeckoTerminal's label shape: the coin before the slash");
     assert.equal(p.reserveUsd, 190_000);
     assert.equal(p.fdvUsd, 1_200_000);
@@ -64,7 +64,7 @@ describe("a DexScreener pair, read as a GeckoPool", () => {
     assert.equal(parseDexPair(pair({ chainId: "ethereum" }), TOKEN), null);
     assert.equal(parseDexPair(pair({ chainId: "base" }), TOKEN), null);
     assert.equal(
-      parseDexPair(pair({ baseToken: { address: CASH.WETH, symbol: "WETH" }, quoteToken: { address: TOKEN, symbol: "VRAX" } }), TOKEN),
+      parseDexPair(pair({ baseToken: { address: CASH.WBNB, symbol: "WETH" }, quoteToken: { address: TOKEN, symbol: "VRAX" } }), TOKEN),
       null,
     );
     assert.equal(parseDexPair(pair({ pairAddress: "not-an-address" }), TOKEN), null);
@@ -75,11 +75,11 @@ describe("a DexScreener pair, read as a GeckoPool", () => {
   it("the venue is v3 only when the pair says so: a v4 id or label keeps no contract, anything else keeps its own dex id", () => {
     const v4 = parseDexPair(pair({ pairAddress: `0x${"4".repeat(64)}`, labels: ["v4"] }), TOKEN);
     assert.equal(v4?.poolAddress, null);
-    assert.equal(v4?.dex, "uniswap-v4-robinhood");
-    assert.equal(parseDexPair(pair({ labels: ["v4"] }), TOKEN)?.dex, "uniswap-v4-robinhood");
-    assert.equal(parseDexPair(pair({ labels: ["v2"] }), TOKEN)?.dex, "uniswap-robinhood");
-    assert.equal(parseDexPair(pair({ labels: undefined }), TOKEN)?.dex, "uniswap-robinhood", "an unlabelled pair is not assumed to be v3");
-    assert.equal(parseDexPair(pair({ dexId: "somedex" }), TOKEN)?.dex, "somedex-robinhood");
+    assert.equal(v4?.dex, "pancakeswap-v4-bsc");
+    assert.equal(parseDexPair(pair({ labels: ["v4"] }), TOKEN)?.dex, "pancakeswap-v4-bsc");
+    assert.equal(parseDexPair(pair({ labels: ["v2"] }), TOKEN)?.dex, "pancakeswap-bsc");
+    assert.equal(parseDexPair(pair({ labels: undefined }), TOKEN)?.dex, "pancakeswap-bsc", "an unlabelled pair is not assumed to be v3");
+    assert.equal(parseDexPair(pair({ dexId: "somedex" }), TOKEN)?.dex, "somedex-bsc");
   });
 
   it("a figure left out is null, never zero", () => {
@@ -101,10 +101,10 @@ describe("reading DexScreener's Robinhood Chain pairs of a token", () => {
     const urls: string[] = [];
     const fetchFn = (async (url: string) => {
       urls.push(url);
-      return new Response(JSON.stringify([pair(), pair({ chainId: "ethereum" }), pair({ baseToken: { address: CASH.WETH } })]), { status: 200 });
+      return new Response(JSON.stringify([pair(), pair({ chainId: "ethereum" }), pair({ baseToken: { address: CASH.WBNB } })]), { status: 200 });
     }) as unknown as typeof fetch;
     const pools = await readDexTokenPairs(TOKEN.toUpperCase().replace("0X", "0x"), { fetchFn });
-    assert.deepEqual(urls, [`https://api.dexscreener.com/tokens/v1/robinhood/${TOKEN}`]);
+    assert.deepEqual(urls, [`https://api.dexscreener.com/tokens/v1/bsc/${TOKEN}`]);
     assert.equal(pools?.length, 1);
     assert.equal(pools?.[0]?.tokenAddress, TOKEN);
   });

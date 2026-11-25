@@ -20,41 +20,41 @@ const EVM = "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168";
 const EVM_HASH = `0x${"Ab".repeat(32)}`;
 
 describe("the chain registry", () => {
-  it("names Robinhood Chain, mainnet and test, and nothing else", () => {
-    assert.deepEqual(allChains().map((c) => c.ref), [CHAINS.robinhood, CHAINS.robinhoodTestnet]);
-    assert.equal(chainInfo(CHAINS.robinhood)?.family, "evm");
-    assert.equal(chainInfo(CHAINS.robinhood)?.evmChainId, 4663);
-    assert.equal(chainInfo(CHAINS.robinhoodTestnet)?.realMoney, false);
+  it("names BNB Chain, mainnet and test, and nothing else", () => {
+    assert.deepEqual(allChains().map((c) => c.ref), [CHAINS.bnb, CHAINS.bnbTestnet]);
+    assert.equal(chainInfo(CHAINS.bnb)?.family, "evm");
+    assert.equal(chainInfo(CHAINS.bnb)?.evmChainId, 56);
+    assert.equal(chainInfo(CHAINS.bnbTestnet)?.realMoney, false);
   });
 
   it("is fail-closed: an unknown chain is null, never a default", () => {
-    for (const bad of ["eip155:1", "", null, 4663, "EIP155:4663"]) assert.equal(chainInfo(bad), null, String(bad));
+    for (const bad of ["eip155:1", "eip155:4663", "", null, 56, "EIP155:56"]) assert.equal(chainInfo(bad), null, String(bad));
     assert.throws(() => requireChain("eip155:8453"), /unknown chain/);
-    assert.equal(chainOfEvmId(4663), CHAINS.robinhood);
-    assert.equal(chainOfEvmId(46630), CHAINS.robinhoodTestnet);
-    for (const id of [1, 8453, 0, -1, 4663.5, "4663"]) assert.equal(chainOfEvmId(id), null, String(id));
+    assert.equal(chainOfEvmId(56), CHAINS.bnb);
+    assert.equal(chainOfEvmId(97), CHAINS.bnbTestnet);
+    for (const id of [1, 8453, 4663, 46630, 0, -1, 56.5, "56"]) assert.equal(chainOfEvmId(id), null, String(id));
   });
 
-  it("keeps the books in USDG on both chains, at 6 decimals", () => {
-    assert.equal(chainInfo(CHAINS.robinhood)?.cash.address, CASH.USDG.toLowerCase());
-    for (const c of allChains()) assert.equal(c.cash.decimals, 6);
+  it("keeps the books in USDT on both chains, at 18 decimals", () => {
+    assert.equal(chainInfo(CHAINS.bnb)?.cash.address, CASH.USDT.toLowerCase());
+    for (const c of allChains()) assert.equal(c.cash.decimals, 18);
   });
 });
 
 describe("canonical ids", () => {
   it("lowercases EVM ids", () => {
-    assert.equal(canonicalId(CHAINS.robinhood, "token", EVM), EVM.toLowerCase());
-    assert.equal(canonicalId(CHAINS.robinhood, "op", EVM_HASH), EVM_HASH.toLowerCase());
+    assert.equal(canonicalId(CHAINS.bnb, "token", EVM), EVM.toLowerCase());
+    assert.equal(canonicalId(CHAINS.bnb, "op", EVM_HASH), EVM_HASH.toLowerCase());
   });
 
   it("treats case-folded EVM ids as the same id", () => {
-    assert.equal(sameId(CHAINS.robinhood, "token", EVM, EVM.toLowerCase()), true);
+    assert.equal(sameId(CHAINS.bnb, "token", EVM, EVM.toLowerCase()), true);
   });
 
   it("refuses the wrong length, a bad shape, or an unknown chain", () => {
-    assert.equal(canonicalId(CHAINS.robinhood, "op", EVM), null, "an address is not a hash");
-    assert.equal(canonicalId(CHAINS.robinhood, "token", EVM_HASH), null, "a hash is not an address");
-    assert.equal(canonicalId(CHAINS.robinhood, "token", "not-an-address"), null);
+    assert.equal(canonicalId(CHAINS.bnb, "op", EVM), null, "an address is not a hash");
+    assert.equal(canonicalId(CHAINS.bnb, "token", EVM_HASH), null, "a hash is not an address");
+    assert.equal(canonicalId(CHAINS.bnb, "token", "not-an-address"), null);
     assert.equal(canonicalId("eip155:1", "token", EVM), null);
   });
 
@@ -66,11 +66,11 @@ describe("canonical ids", () => {
 });
 
 describe("explorer links", () => {
-  it("Blockscout for Robinhood Chain", () => {
-    assert.equal(explorerUrl(CHAINS.robinhood, "op", EVM_HASH), `https://robinhoodchain.blockscout.com/tx/${EVM_HASH.toLowerCase()}`);
-    assert.equal(explorerUrl(CHAINS.robinhood, "token", EVM), `https://robinhoodchain.blockscout.com/token/${EVM.toLowerCase()}`);
-    assert.equal(explorerUrl(CHAINS.robinhood, "account", EVM), `https://robinhoodchain.blockscout.com/address/${EVM.toLowerCase()}`);
-    assert.equal(explorerUrl(CHAINS.robinhood, "token", "not-a-token"), null);
+  it("BscScan for BNB Chain", () => {
+    assert.equal(explorerUrl(CHAINS.bnb, "op", EVM_HASH), `https://bscscan.com/tx/${EVM_HASH.toLowerCase()}`);
+    assert.equal(explorerUrl(CHAINS.bnb, "token", EVM), `https://bscscan.com/token/${EVM.toLowerCase()}`);
+    assert.equal(explorerUrl(CHAINS.bnb, "account", EVM), `https://bscscan.com/address/${EVM.toLowerCase()}`);
+    assert.equal(explorerUrl(CHAINS.bnb, "token", "not-a-token"), null);
   });
 });
 

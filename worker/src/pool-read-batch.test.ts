@@ -20,7 +20,7 @@ import {
   type Hex,
   type PublicClient,
 } from "viem";
-import { CASH, UNISWAP, robinhoodChain, type StockToken } from "../../packages/core/src/index";
+import { CASH, PANCAKESWAP, bnbChain, type StockToken } from "../../packages/core/src/index";
 import { POOL_READ_BATCH } from "./snapshot";
 import { createPoolPriceReader } from "./venues/pool-prices";
 import { revertedOld } from "./venues/pool-price";
@@ -28,7 +28,7 @@ import { revertedOld } from "./venues/pool-price";
 const ABI = parseAbi([
   "function getPool(address tokenA, address tokenB, uint24 fee) view returns (address)",
   "function balanceOf(address) view returns (uint256)",
-  "function slot0() view returns (uint160 sqrtPriceX96, int24 tick, uint16 observationIndex, uint16 observationCardinality, uint16 observationCardinalityNext, uint8 feeProtocol, bool unlocked)",
+  "function slot0() view returns (uint160 sqrtPriceX96, int24 tick, uint16 observationIndex, uint16 observationCardinality, uint16 observationCardinalityNext, uint32 feeProtocol, bool unlocked)",
   "function observe(uint32[] secondsAgos) view returns (int56[] tickCumulatives, uint160[] secondsPerLiquidityCumulativeX128)",
   "function token0() view returns (address)",
   "function liquidity() view returns (uint128)",
@@ -38,9 +38,9 @@ const OLD = encodeErrorResult({
   errorName: "Error",
   args: ["OLD"],
 });
-const MULTICALL3 = robinhoodChain.contracts!.multicall3!.address.toLowerCase();
+const MULTICALL3 = bnbChain.contracts!.multicall3!.address.toLowerCase();
 const ZERO = "0x0000000000000000000000000000000000000000";
-const USDG = (CASH.USDG as string).toLowerCase();
+const USDG = (CASH.USDT as string).toLowerCase();
 
 const token = (i: number): StockToken => ({
   symbol: `T${i}`,
@@ -53,7 +53,7 @@ const token = (i: number): StockToken => ({
 const poolOf = (t: string) => `0x${"ee"}${t.slice(4)}` as `0x${string}`;
 
 /**
- * A chain with one 0.3% USDG pool per token. `noHistory` pools answer
+ * A chain with one 0.25% USDT pool per token. `noHistory` pools answer
  * observe() with Uniswap's "OLD". Counts every eth_call the node is sent.
  */
 function fakeChain(tokens: StockToken[], noHistory = new Set<string>()) {
@@ -65,7 +65,7 @@ function fakeChain(tokens: StockToken[], noHistory = new Set<string>()) {
       case "getPool": {
         const [a, b, fee] = (args as [string, string, number]).map((x) => (typeof x === "string" ? x.toLowerCase() : x));
         const t = a === USDG ? b : b === USDG ? a : null;
-        return ok(fee === 3000 && t && tokens.some((x) => x.address.toLowerCase() === t) ? poolOf(t as string) : ZERO);
+        return ok(fee === 2500 && t && tokens.some((x) => x.address.toLowerCase() === t) ? poolOf(t as string) : ZERO);
       }
       case "balanceOf":
         return ok(10n ** 12n);
@@ -83,7 +83,7 @@ function fakeChain(tokens: StockToken[], noHistory = new Set<string>()) {
   const sent = { ethCalls: 0, aggregated: 0 };
   const transport = custom({
     async request({ method, params }: { method: string; params: unknown[] }) {
-      if (method === "eth_chainId") return `0x${robinhoodChain.id.toString(16)}`;
+      if (method === "eth_chainId") return `0x${bnbChain.id.toString(16)}`;
       if (method !== "eth_call") throw new Error(`unexpected ${method}`);
       sent.ethCalls += 1;
       const { to, data } = params[0] as { to: string; data: Hex };
@@ -104,8 +104,8 @@ function fakeChain(tokens: StockToken[], noHistory = new Set<string>()) {
   });
   return {
     sent,
-    batched: createPublicClient({ chain: robinhoodChain, transport, batch: POOL_READ_BATCH }) as PublicClient,
-    plain: createPublicClient({ chain: robinhoodChain, transport }) as PublicClient,
+    batched: createPublicClient({ chain: bnbChain, transport, batch: POOL_READ_BATCH }) as PublicClient,
+    plain: createPublicClient({ chain: bnbChain, transport }) as PublicClient,
   };
 }
 
@@ -118,10 +118,10 @@ describe("the pool client packs concurrent reads into one eth_call", () => {
     const pools = await Promise.all(
       tokens.map((t) =>
         chain.batched.readContract({
-          address: UNISWAP.v3Factory as `0x${string}`,
+          address: PANCAKESWAP.v3Factory as `0x${string}`,
           abi: ABI,
           functionName: "getPool",
-          args: [t.address, CASH.USDG as `0x${string}`, 3000],
+          args: [t.address, CASH.USDT as `0x${string}`, 2500],
         }),
       ),
     );

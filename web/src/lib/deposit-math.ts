@@ -19,8 +19,8 @@
  * "unread", never a Max of 0 and never "this wallet is empty".
  */
 
-/** Where an owner's ETH starts. Every option routes into USDG on Robinhood Chain. */
-export type SourceId = "eth-robinhood" | "eth-ethereum" | "eth-base" | "eth-arbitrum";
+/** Where an owner's ETH starts. Every option routes into USDT on BNB Chain. */
+export type SourceId = "eth-ethereum" | "eth-base" | "eth-arbitrum";
 
 export interface DepositSource {
   id: SourceId;
@@ -57,14 +57,13 @@ const ETH_FLOOR_L2 = 300_000_000_000_000n; //   0.0003 ETH
 export const EVM_NATIVE = "0x0000000000000000000000000000000000000000";
 
 export const DEPOSIT_SOURCES: Readonly<Record<SourceId, DepositSource>> = Object.freeze({
-  "eth-robinhood": { id: "eth-robinhood", family: "evm", relayChainId: 4663, network: "Robinhood Chain", asset: "ETH", decimals: 18, currency: EVM_NATIVE, floor: ETH_FLOOR_L2, slippageBps: 50, inputDecimals: 6 },
   "eth-ethereum": { id: "eth-ethereum", family: "evm", relayChainId: 1, network: "Ethereum", asset: "ETH", decimals: 18, currency: EVM_NATIVE, floor: ETH_FLOOR_L1, slippageBps: 50, inputDecimals: 6 },
   "eth-base": { id: "eth-base", family: "evm", relayChainId: 8453, network: "Base", asset: "ETH", decimals: 18, currency: EVM_NATIVE, floor: ETH_FLOOR_L2, slippageBps: 50, inputDecimals: 6 },
   "eth-arbitrum": { id: "eth-arbitrum", family: "evm", relayChainId: 42161, network: "Arbitrum", asset: "ETH", decimals: 18, currency: EVM_NATIVE, floor: ETH_FLOOR_L2, slippageBps: 50, inputDecimals: 6 },
 });
 
 /** The ETH sources, in the order the panel offers them. */
-export const ETH_SOURCES: readonly SourceId[] = ["eth-ethereum", "eth-base", "eth-arbitrum", "eth-robinhood"];
+export const ETH_SOURCES: readonly SourceId[] = ["eth-ethereum", "eth-base", "eth-arbitrum"];
 
 /**
  * A decimal the owner typed, as base units, or null when it is not one.

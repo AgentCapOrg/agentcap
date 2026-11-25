@@ -2,20 +2,16 @@
  * A current, indicative quote for an owner trade, computed the way the agent's
  * worker would route it — and nothing more.
  *
- * Same venue code the worker executes with (Uniswap QuoterV2 / v4 quoter via
- * eth_call simulation: no state changes, nothing signed), the same grant gates
- * (a WETH hop only when the signed permission carries multi-hop, v4 only when
- * it carries v4), the same impact probe and the same minOut rule. What it does
- * NOT have: the worker's discovered hooked-v4 pool keys and launchpad curve
- * state live on the agent's own machine, so a coin that only trades on a
- * launchpad curve or a hooked pool quotes as "no route here" even though the
- * agent may be able to trade it. That is reported as unknown, never as zero.
+ * Same venue code the worker executes with (PancakeSwap v3 QuoterV2 via
+ * eth_call simulation: no state changes, nothing signed), the same grant gate
+ * (a WETH hop only when the signed permission carries multi-hop), the same
+ * impact probe and the same minOut rule.
  *
  * A quote is not permission. The worker re-quotes at execution, re-applies the
  * owner's caps and the policy, and the on-chain wall has the last word.
  */
 import { createPublicClient, erc20Abi, parseAbi, type PublicClient } from "viem";
-import { CASH, STOCK_TOKENS, SETTINGS_DEFAULTS, CASH_FEEDS, robinhoodChain, grantHasMultihop, grantHasV4 } from "@agentcap/core";
+import { CASH, STOCK_TOKENS, SETTINGS_DEFAULTS, CASH_FEEDS, CASH_DECIMALS, bnbChain, cashNumber, grantHasMultihop, usdgUnits } from "@agentcap/core";
 import { webChainRead } from "../chain-read";
 import { bestRoute, minOutWithSlippage, requoteRoute, type Quote } from "../../../../worker/src/venues/uniswap";
 import { impactBps, judgeImpact, probeAmountIn } from "../../../../worker/src/impact";
@@ -49,8 +45,8 @@ export interface TradeQuote {
   implied_price_usd: number | null;
   price_impact_bps: number | null;
   impact_verdict: { ok: boolean; rule: string | null; detail: string | null; cap_bps: number };
-  route: { venue: "uniswap-v3" | "uniswap-v4"; fee_tier_bps: number | null; hops: string[] } | null;
-  routes_considered: { direct_v3: boolean; via_weth: boolean; v4: boolean; hooked_v4_pools: false; launchpad_curve: false };
+  route: { venue: "pancakeswap-v3"; fee_tier_bps: number | null; hops: string[] } | null;
+  routes_considered: { direct_v3: boolean; via_weth: boolean };
   gas: { units_estimate: string | null; swap_leg_units: string | null; expected_usdg: number | null; note: string };
   agentcap_trade_fee: { bps: number; usdg: number; note: string };
   block_number: string | null;
@@ -60,12 +56,12 @@ export interface TradeQuote {
 }
 
 const CHAINLINK_ABI = parseAbi(["function latestRoundData() view returns (uint80, int256, uint256, uint256, uint80)"]);
-const USDG = CASH.USDG as `0x${string}`;
-const WETH = CASH.WETH as `0x${string}`;
+const USDG = CASH.USDT as `0x${string}`;
+const WETH = CASH.WBNB as `0x${string}`;
 
 let client: PublicClient | null = null;
 export function quoteClient(): PublicClient {
-  if (!client) client = createPublicClient({ chain: robinhoodChain, transport: webChainRead(process.env.AGENTCAP_RPC_MAINNET) }) as PublicClient;
+  if (!client) client = createPublicClient({ chain: bnbChain, transport: webChainRead(process.env.AGENTCAP_RPC_MAINNET) }) as PublicClient;
   return client;
 }
 /** Test seam: a fake chain for quotes. No test reaches a real RPC. */
@@ -90,7 +86,7 @@ async function decimalsOf(c: PublicClient, token: `0x${string}`): Promise<number
 
 async function ethPrice8(c: PublicClient): Promise<bigint | null> {
   try {
-    const [, answer, , updatedAt] = await c.readContract({ address: CASH_FEEDS.ETH_USD as `0x${string}`, abi: CHAINLINK_ABI, functionName: "latestRoundData" });
+    const [, answer, , updatedAt] = await c.readContract({ address: CASH_FEEDS.BNB_USD as `0x${string}`, abi: CHAINLINK_ABI, functionName: "latestRoundData" });
     // A feed older than two hours is not a price to cost gas with.
     if (answer <= 0n || Number(updatedAt) < Date.now() / 1000 - 7200) return null;
     return answer;
@@ -103,7 +99,6 @@ export async function quoteTrade(input: QuoteInput, c: PublicClient = quoteClien
   const slippage = input.slippageBps ?? SETTINGS_DEFAULTS.slippageBps;
   const cap = input.maxImpactBps ?? SETTINGS_DEFAULTS.maxImpactBps;
   const multihop = grantHasMultihop({ grantFeatures: input.grantFeatures });
-  const v4 = grantHasV4({ grantFeatures: input.grantFeatures });
   const feeBps = SETTINGS_DEFAULTS.tradeFeeBps;
   const base: TradeQuote = {
     quoted: false,
@@ -118,8 +113,8 @@ export async function quoteTrade(input: QuoteInput, c: PublicClient = quoteClien
     price_impact_bps: null,
     impact_verdict: { ok: false, rule: null, detail: null, cap_bps: cap },
     route: null,
-    routes_considered: { direct_v3: true, via_weth: multihop, v4, hooked_v4_pools: false, launchpad_curve: false },
-    gas: { units_estimate: null, swap_leg_units: null, expected_usdg: null, note: "Paid in ETH by the agent's account unless the house sponsors it. Estimated for a whole operation from measured swaps on this chain." },
+    routes_considered: { direct_v3: true, via_weth: multihop },
+    gas: { units_estimate: null, swap_leg_units: null, expected_usdg: null, note: "Paid in BNB by the agent's account unless the house sponsors it. Estimated for a whole operation from measured swaps on this chain." },
     agentcap_trade_fee: {
       bps: feeBps,
       usdg: Math.floor(input.amountUsdg * feeBps) / 10_000,
@@ -127,10 +122,9 @@ export async function quoteTrade(input: QuoteInput, c: PublicClient = quoteClien
     },
     block_number: null,
     quoted_at: new Date(nowMs).toISOString(),
-    source: "Uniswap quoter via eth_call on Robinhood Chain (a simulation; nothing is signed or sent)",
+    source: "PancakeSwap v3 quoter via eth_call on BNB Chain (a simulation; nothing is signed or sent)",
     caveats: [
       "Indicative only: the agent re-quotes when it executes and refuses if its own limits, policy or the on-chain permission say no.",
-      "Hooked Uniswap v4 pools and launchpad curves are only visible to the agent's own worker; a token that trades only there shows no route here.",
     ],
   };
   if (!Number.isFinite(input.amountUsdg) || input.amountUsdg <= 0) return { ...base, why_not: "amount must be a positive USDG figure" };
@@ -140,7 +134,7 @@ export async function quoteTrade(input: QuoteInput, c: PublicClient = quoteClien
   base.token_decimals = decimals;
   let amountIn: bigint;
   if (input.side === "buy") {
-    amountIn = BigInt(Math.round(input.amountUsdg * 1e6));
+    amountIn = usdgUnits(input.amountUsdg);
   } else {
     if (!input.holding || input.holding.rawBalance <= 0n) return { ...base, why_not: "the agent holds none of this token in its current book" };
     if (input.holding.valueUsdg === null || input.holding.valueUsdg <= 0) {
@@ -159,7 +153,7 @@ export async function quoteTrade(input: QuoteInput, c: PublicClient = quoteClien
   let block: bigint | null = null;
   try {
     [route, block] = await Promise.all([
-      bestRoute(c, { tokenIn, tokenOut, amountIn, via: multihop ? WETH : undefined, v4 }),
+      bestRoute(c, { tokenIn, tokenOut, amountIn, via: multihop ? WETH : undefined }),
       c.getBlockNumber().catch(() => null),
     ]);
   } catch {
@@ -170,7 +164,7 @@ export async function quoteTrade(input: QuoteInput, c: PublicClient = quoteClien
     const hint = multihop ? "" : " Many tokens have no direct USDG pool; this agent's permission does not include multi-hop routes.";
     return { ...base, why_not: `no pool the agent's permission can reach quoted this trade.${hint}` };
   }
-  const outDecimals = input.side === "buy" ? decimals : 6;
+  const outDecimals = input.side === "buy" ? decimals : CASH_DECIMALS;
   const probeIn = probeAmountIn(amountIn);
   const probeOut = probeIn === null ? null : await requoteRoute(c, route, { tokenIn, tokenOut, amountIn: probeIn }).catch(() => null);
   const impact = probeIn === null || probeOut === null ? null : impactBps({ amountIn, amountOut: route.amountOut, probeIn, probeOut });
@@ -190,7 +184,7 @@ export async function quoteTrade(input: QuoteInput, c: PublicClient = quoteClien
   try {
     const [gasPrice, eth] = await Promise.all([c.getGasPrice(), ethPrice8(c)]);
     const micro = expectedTradeGasUsdg({ gasUnits, gasPriceWei: gasPrice, ethPrice8: eth });
-    gasUsdg = micro === null ? null : Number(micro) / 1e6;
+    gasUsdg = micro === null ? null : cashNumber(micro);
   } catch {
     gasUsdg = null;
   }
@@ -206,8 +200,8 @@ export async function quoteTrade(input: QuoteInput, c: PublicClient = quoteClien
       ? { ok: true, rule: null, detail: verdict.note ?? null, cap_bps: cap }
       : { ok: false, rule: verdict.rule, detail: verdict.detail, cap_bps: cap },
     route: {
-      venue: route.v4 ? "uniswap-v4" : "uniswap-v3",
-      fee_tier_bps: route.v4 ? null : route.fee / 100,
+      venue: "pancakeswap-v3",
+      fee_tier_bps: route.fee / 100,
       hops: route.path ? route.path.tokens.map((t) => t.toLowerCase()) : [tokenIn.toLowerCase(), tokenOut.toLowerCase()],
     },
     gas: { ...base.gas, units_estimate: gasUnits.toString(), expected_usdg: gasUsdg, swap_leg_units: route.gasEstimate.toString() },

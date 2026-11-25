@@ -81,8 +81,7 @@ describe("the confirmation names everything that will move", () => {
     return c.slice(start, c.indexOf("window.confirm", start));
   })();
 
-  it("class vault, smart account, native ETH, and destination — all four", () => {
-    assert.match(dialog, /"CLASS VAULT"/, "the vault");
+  it("smart account, native ETH, and destination — all three", () => {
     assert.match(dialog, /SMART ACCOUNT \$\{smartAccount/, "the account");
     assert.match(dialog, /"NATIVE ETH"/, "the ETH leg that used to be omitted");
     assert.match(dialog, /"DESTINATION"/, "and where it all goes");

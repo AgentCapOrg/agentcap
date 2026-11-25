@@ -474,7 +474,7 @@ function coinName(ev: ChildTailEvent): string {
 
 function chainWords(ev: ChildTailEvent): string {
   const slug = ev.token?.chain.slug;
-  return slug === "robinhood" ? "Robinhood Chain" : slug ? sanitizeText(slug, 24) : "an unnamed chain";
+  return slug === "bsc" ? "BNB Chain" : slug === "robinhood" ? "Robinhood Chain" : slug ? sanitizeText(slug, 24) : "an unnamed chain";
 }
 
 function shortUsd(n: number): string {

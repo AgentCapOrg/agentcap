@@ -200,7 +200,7 @@ describe("it is stamped once, at an entry that could actually be graded", () => 
 
   it("STAMPED AT THE LIVE FILL, not inside bookFill", async () => {
     // bookFill has five callers and two of them are arm-time recovery paths
-    // that run before any pricing pass — where `lastCurveLegs` is empty and a
+    // that run before any pricing pass — where a
     // memecoin would be graded as though its venue were unreadable, which is
     // the WIDE rung. Grading there would stamp the most permissive floor on the
     // riskiest asset for no reason but call ordering.
@@ -212,15 +212,6 @@ describe("it is stamped once, at an entry that could actually be graded", () => 
   it("AND ONLY WHILE THE OWNER HAS A FLOOR ARMED", async () => {
     const src = await worker();
     assert.match(src, /if \(!cfg\.strategistStopLossBps \|\| cfg\.strategistStopLossBps <= 0\) return;/);
-  });
-
-  it("and the overhang comes from THIS tick's reserves", async () => {
-    // Not a cached figure: curve-prices.ts forbids caching reserves and says
-    // why — p99 movement is 1,546bps over 240 seconds, so two reads of one tick
-    // are two different markets.
-    const src = await worker();
-    assert.match(src, /const leg = lastCurveLegs\.get\(symbol\);/);
-    assert.match(src, /const overhangBps = leg \? curveFloorDrawdownBps\(leg\.reserves\) : null;/);
   });
 
   it("and a stale Brain reading does not grade a new entry", async () => {

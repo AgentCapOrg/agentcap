@@ -92,7 +92,7 @@ describe("an owner is told when permission renewal is the remedy", () => {
     // And the one whose remedy is NOT a plain renewal says so, in both fields.
     const chain = autonomyOf({ mode: "paper", liveBlocker: "wrong-chain" });
     assert.notEqual(chain.action?.label, "Renew permission");
-    assert.match(chain.action!.label, /Robinhood Chain/i);
+    assert.match(chain.action!.label, /BNB Chain/i);
   });
 
   it("BLOCKED outranks PAPER, because only one of them has an action", () => {
@@ -185,7 +185,7 @@ describe("the remedy offered must be able to fix the cause", () => {
     );
     assert.match(a.headline!, /different network/i);
     // The button names the network, because the screen opens on the wrong one.
-    assert.match(a.action!.label, /Robinhood Chain/i);
+    assert.match(a.action!.label, /BNB Chain/i);
   });
 
   it("does NOT offer a plain renewal for a wall that is too wide", () => {
@@ -226,7 +226,7 @@ describe("the remedy offered must be able to fix the cause", () => {
     // Two fields, one claim. A headline saying "different network" beside a
     // button saying "Renew permission" is the original bug wearing half a fix.
     const chain = blocked("wrong-chain");
-    assert.ok(/network/i.test(chain.headline!) && /Robinhood Chain/i.test(chain.action!.label));
+    assert.ok(/network/i.test(chain.headline!) && /BNB Chain/i.test(chain.action!.label));
     const wide = blocked("grant-too-wide");
     assert.ok(/too much/i.test(wide.headline!) && /smaller/i.test(wide.action!.label));
   });

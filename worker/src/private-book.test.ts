@@ -117,13 +117,15 @@ describe("a private book's strategy reason carries no figure — the rows alread
     row({ source: "strategy:steady-basket", reason, action: "buy", symbol: "TSLA", size_usdg: 5, status: "landed", ...over });
 
   // [the old public register's sentence, the Why that wrote it]
-  const LEGACY: [string, Why][] = [
+  // A string in the second place is a sentence no current Why writes: rows
+  // already on the feed from the removed savings vault, still scrubbed.
+  const LEGACY: [string, Why | string][] = [
     ["the schedule says buy — 4.40 USDG into NVDA, its 33% of a 3-leg basket", { code: "dca-leg", symbol: "NVDA", usdgRaw: 4_400_000n, weightBps: 3_333, legs: 3 }],
-    ["4.40 USDG idle above the 61.23 floor — parking it in the vault until the next buy", { code: "park", usdgRaw: 4_400_000n, floorRaw: 61_230_000n, clamped: false }],
-    ["parking 4.40 USDG of the cash idle above the 61.23 floor — what today's budget still allows", { code: "park", usdgRaw: 4_400_000n, floorRaw: 61_230_000n, clamped: true }],
-    ["cash is under one tick's buy — pulling 4.40 USDG back from the vault so the next tick can trade", { code: "unpark", usdgRaw: 4_400_000n, needRaw: 5_170_000n }],
-    ["nothing bought — 4.40 USDG on hand and one buy costs 5.17. There is 61.23 USDG in the vault I can pull back, so this should clear itself", { code: "under-one-buy", cashRaw: 4_400_000n, needRaw: 5_170_000n, vaultRaw: 61_230_000n }],
-    ["nothing bought — 4.40 USDG on hand and one buy costs 5.17, and the vault is empty", { code: "under-one-buy", cashRaw: 4_400_000n, needRaw: 5_170_000n, vaultRaw: 0n }],
+    ["4.40 USDG idle above the 61.23 floor — parking it in the vault until the next buy", "cash idle above the floor — parking it in the vault until the next buy"],
+    ["parking 4.40 USDG of the cash idle above the 61.23 floor — what today's budget still allows", "parking some of the cash idle above the floor — what today's budget still allows"],
+    ["cash is under one tick's buy — pulling 4.40 USDG back from the vault so the next tick can trade", "cash is under one tick's buy — pulling some back from the vault so the next tick can trade"],
+    ["nothing bought — 4.40 USDG on hand and one buy costs 5.17. There is 61.23 USDG in the vault I can pull back, so this should clear itself", "nothing bought — the cash on hand is short of one buy. There is cash in the vault I can pull back, so this should clear itself"],
+    ["nothing bought — 4.40 USDG on hand and one buy costs 5.17, and the vault is empty", "nothing bought — the cash on hand is short of one buy, and the vault is empty"],
     ["nothing bought — today's buying budget is spent. That is the daily cap in your signature doing its job, not a fault: I buy 5.17 USDG a tick, so a small cap is gone quickly. Selling is never blocked by this", { code: "budget-spent", capRaw: 5_170_000n }],
     ["TSLA is up 20% on what it cost — selling all 61.23 USDG of it against the 5.17 paid, and taking the profit rather than watching it", { code: "take-profit", symbol: "TSLA", gainBps: 2_000, usdgRaw: 61_230_000n, costRaw: 5_170_000n }],
     ["TSLA is 12% below what it cost — selling all 4.40 USDG of it against the 5.17 paid. A floor, not a view: the rule fired, I did not change my mind. Its floor was graded at 8% when I bought it, not your usual level", { code: "stop-floor", symbol: "TSLA", lossBps: 1_200, usdgRaw: 4_400_000n, costRaw: 5_170_000n, floorBps: 800 }],
@@ -144,7 +146,7 @@ describe("a private book's strategy reason carries no figure — the rows alread
 
   it("EVERY OLD SENTENCE READS BACK AS THE NEW ONE — exactly what the public register now writes", () => {
     for (const [old, w] of LEGACY) {
-      assert.equal(withoutBookFigures(old), renderWhy(w, "public"), old);
+      assert.equal(withoutBookFigures(old), typeof w === "string" ? w : renderWhy(w, "public"), old);
     }
   });
 

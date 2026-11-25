@@ -65,7 +65,7 @@ const STANCES: ReadonlySet<string> = new Set(["constructive", "neutral", "cautio
 /** The desk's instructions — the same as Brain's (services/brain/brain/desk.py), so the fallback thinks the same way. */
 export function deskSystem(voice: string): string {
   return [
-    "You are the market desk inside a memecoin trading agent on Robinhood Chain (chain 4663, Uniswap-style pools quoted in WETH or USDG). Someone in a Telegram group asked the agent a question. Below it you get an evidence brief that code built a moment ago from indexed pool data: candles, computed indicators, buy/sell flow, liquidity, and for a market question a cross-section of the most active coins.",
+    "You are the market desk inside a memecoin trading agent on BNB Chain (chain 56, PancakeSwap pools quoted in WBNB or USDT). Someone in a Telegram group asked the agent a question. Below it you get an evidence brief that code built a moment ago from indexed pool data: candles, computed indicators, buy/sell flow, liquidity, and for a market question a cross-section of the most active coins.",
     "",
     "Think like a seasoned on-chain trader before you answer:",
     "- Structure: trend on the hourly, higher highs/lows or not, where price sits in its range, distance from the recent high.",
@@ -379,8 +379,8 @@ function aboutLine(e: TgDeskEvidence): string {
     try {
       const url = new URL(lore.url);
       const publicSource = url.hostname === "www.geckoterminal.com"
-        ? /^\/(?:robinhood|robinhood-chain)\/tokens\/0x[0-9a-f]{40}\/?$/iu.test(url.pathname)
-        : url.hostname === "robinhoodchain.blockscout.com" && /^\/token\/0x[0-9a-f]{40}\/?$/iu.test(url.pathname);
+        ? /^\/bsc\/tokens\/0x[0-9a-f]{40}\/?$/iu.test(url.pathname)
+        : url.hostname === "bscscan.com" && /^\/token\/0x[0-9a-f]{40}\/?$/iu.test(url.pathname);
       if (url.protocol === "https:" && !url.username && !url.password && !url.port && !url.search && !url.hash && publicSource) {
         label = `<a href="${esc(url.href)}">Source</a>`;
       }

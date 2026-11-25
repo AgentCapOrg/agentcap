@@ -8,7 +8,7 @@ import { signerToEcdsaValidator } from "@zerodev/ecdsa-validator";
 import { serializePermissionAccount, toPermissionValidator } from "@zerodev/permissions";
 import { toECDSASigner } from "@zerodev/permissions/signers";
 import { toTimestampPolicy } from "@zerodev/permissions/policies";
-import { robinhoodChain, WALL_POLICY_FLAG } from "../../packages/core/src/index";
+import { bnbChain, WALL_POLICY_FLAG } from "../../packages/core/src/index";
 import { AccountAddressMismatch, deserializeFlaggedPermissionAccount } from "./session-account";
 
 /**
@@ -51,11 +51,11 @@ const SENDER_ADDRESS_RESULT = [
 function chainThatDeploysTo(where: Address) {
   const seen: string[] = [];
   const client = createPublicClient({
-    chain: robinhoodChain,
+    chain: bnbChain,
     transport: custom({
       async request({ method }: { method: string }) {
         seen.push(method);
-        if (method === "eth_chainId") return `0x${robinhoodChain.id.toString(16)}`;
+        if (method === "eth_chainId") return `0x${bnbChain.id.toString(16)}`;
         if (method === "eth_call") {
           throw Object.assign(new Error("execution reverted"), {
             code: 3,

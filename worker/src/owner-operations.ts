@@ -61,6 +61,7 @@
  * (ledger-resume.ts planAttestedSeed). Neither is decided here. ETH is fuel and
  * ignored.
  */
+import { formatCash6 } from "../../packages/core/src/cash";
 import { classifyUsdgMovement, ENTRYPOINT, type CapitalKind } from "../../packages/core/src/index";
 import { BEFORE_EXECUTION_TOPIC, segmentReceipt, USER_OPERATION_EVENT_TOPIC, validatorOfNonce } from "./asset-movements";
 import type { RawChainLog } from "./chain-capital";
@@ -306,7 +307,6 @@ export function ownerOperationOf(o: {
           txLegs,
           usdgToken: usdg,
           custodyAddresses: context.custodyAddresses,
-          reserveTokens: context.reserveTokens,
         });
         let answeredBy: OwnerUsdgLeg["answeredBy"] = "none";
         if (v.kind === "capital-in" || v.kind === "capital-out") answeredBy = "flow";
@@ -466,10 +466,7 @@ export function ownerOperationRow(r: OwnerOperationReading, o: {
 
 // ── what the owner is told ───────────────────────────────────────────────────
 
-const usdg6 = (raw: string) => {
-  const v = BigInt(raw);
-  return `${v / 1_000_000n}.${(v % 1_000_000n).toString().padStart(6, "0")}`;
-};
+const usdg6 = (raw: string) => formatCash6(BigInt(raw));
 
 /**
  * One event for everything an arm recorded. 'ok' when every operation was

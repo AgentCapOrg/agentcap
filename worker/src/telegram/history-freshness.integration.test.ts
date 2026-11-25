@@ -53,7 +53,7 @@ function history(symbol: string, at: number): TradeHistory {
     decisions: [],
     trades: [
       {
-        kind: "swap", target: "0xvault", sell_token: CASH.USDG, buy_token: "0x7a11ce0000000000000000000000000000000001", amount_usdg: 5,
+        kind: "swap", target: "0xvault", sell_token: CASH.USDT, buy_token: "0x7a11ce0000000000000000000000000000000001", amount_usdg: 5,
         user_op_hash: null, tx_hash: null, status: "landed", reject_rule: null, decision_id: null, fill_side: "buy", fill_symbol: symbol,
         fill_qty_raw: null, fill_price_usd: null, realized_pnl_usdg: null, fill_cash_usdg: 5, gas_usdg: null, gas_wei: null, epoch: 1, created_at: at,
       },

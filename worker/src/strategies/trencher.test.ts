@@ -19,6 +19,9 @@ import {
 import { takeTick, type Snapshot, type Strategy } from "./types";
 import { entryGatesOf } from "../entry-gates";
 
+// 6dp micro figures, scaled to 18dp USDT base units.
+const MICRO = 10n ** 12n;
+
 /**
  * A strategy may now return reasons alongside its intents. These tests are about
  * the intents, so normalise and keep asserting on those.
@@ -103,7 +106,7 @@ const position = (over: Partial<OpenPosition> = {}): OpenPosition => ({
   entryPrice8: p8(0.001),
   entryLiquidityUsd: 120_000,
   entrySec: NOW - 3600,
-  costUsdg: 5_000_000n,
+  costUsdg: (5_000_000n * MICRO),
   qtyRaw: 10n ** 18n,
   ...over,
 });
@@ -187,8 +190,8 @@ describe("fast Trencher exits", () => {
   });
   it("keeps entry quality, and halves the size to trade ten times in the vault's day", () => {
     // The vault caps 25 USDG of buys a day at most 5 a buy: dollars, not trades.
-    assert.equal(TRENCHER_FAST.perEntryUsdg, 2_500_000n);
-    assert.equal(25_000_000n / TRENCHER_FAST.perEntryUsdg, 10n);
+    assert.equal(TRENCHER_FAST.perEntryUsdg, (2_500_000n * MICRO));
+    assert.equal((25_000_000n * MICRO) / TRENCHER_FAST.perEntryUsdg, 10n);
     assert.ok(TRENCHER_FAST.perEntryUsdg <= TRENCHER_DEFAULTS.perEntryUsdg, "fast never sizes above the default");
     assert.equal(shouldEnter(candidate({ liquidityUsd: 5000 }), TRENCHER_FAST, NOW).enter, false);
     assert.equal(shouldEnter(candidate({ ageSec: 30 }), TRENCHER_FAST, NOW).enter, false);
@@ -222,15 +225,15 @@ describe("the unpriceable exit, once it can actually be reached", () => {
 
   const snap = (over: Partial<Snapshot> = {}): Snapshot =>
     ({
-      cashUsdg: 1_000_000_000n,
+      cashUsdg: (1_000_000_000n * MICRO),
       vaultUsdg: 0n,
       holdings: new Map(),
       prices: new Map(),
       pausedTokens: new Set<string>(),
       staleFeeds: new Set<string>(),
       sequencerUp: true,
-      spendHeadroomUsdg: 1_000_000_000n,
-      perTradeCapUsdg: 100_000_000n,
+      spendHeadroomUsdg: (1_000_000_000n * MICRO),
+      perTradeCapUsdg: (100_000_000n * MICRO),
       ...over,
     }) as Snapshot;
 
@@ -261,7 +264,7 @@ describe("the unpriceable exit, once it can actually be reached", () => {
     // into equity. Inventing a mark for a token nobody can price would be
     // exactly the fabrication this repo keeps getting burned by.
     const intents = await run(makeTrencher(deps() as never), snap());
-    assert.equal((intents[0] as { notionalUsdg: bigint }).notionalUsdg, 5_000_000n);
+    assert.equal((intents[0] as { notionalUsdg: bigint }).notionalUsdg, (5_000_000n * MICRO));
   });
 
   it("does NOT sell a position that is simply absent from the ledger's view", async () => {
@@ -278,7 +281,7 @@ describe("the unpriceable exit, once it can actually be reached", () => {
 
   it("still prefers the PRICED holding's own numbers when there is one", async () => {
     // The unpriceable path must not take over the ordinary one.
-    const holdings = new Map([["CATE", { symbol: "CATE", token: HELD, rawBalance: 3n * 10n ** 18n, valueUsdg: 9_000_000n, decimals: 18 }]]);
+    const holdings = new Map([["CATE", { symbol: "CATE", token: HELD, rawBalance: 3n * 10n ** 18n, valueUsdg: (9_000_000n * MICRO), decimals: 18 }]]);
     const prices = new Map([["CATE", { price8: 1n, stale: false, source: "pool" as const }]]);
     const d = deps({ unpriceable: () => new Set<string>() });
     const intents = await run(makeTrencher(d as never), snap({ holdings: holdings as never, prices: prices as never }));
@@ -297,14 +300,14 @@ describe("the unpriceable exit, once it can actually be reached", () => {
       else {
         const order = orders[0];
         assert.ok(order?.kind === "swap");
-        assert.equal(order.notionalUsdg, BigInt(Math.min(amount, 5) * 1e6));
+        assert.equal(order.notionalUsdg, BigInt(Math.min(amount, 5) * 1e6) * 10n ** 12n);
       }
-      assert.equal((await run(makeTrencher(d as never), snap({ perTradeCapUsdg: 1_000_000n }))).length, 0);
+      assert.equal((await run(makeTrencher(d as never), snap({ perTradeCapUsdg: (1_000_000n * MICRO) }))).length, 0);
     }
   });
   it("exits only the vault quantity when the same asset also sits in the account", async () => {
     const custodyVault="0x00000000000000000000000000000000000000f1" as const;
-    const holdings=new Map([["CATE",{symbol:"CATE",token:HELD,rawBalance:10n*10n**18n,valueUsdg:10_000_000n,decimals:18}]]);
+    const holdings=new Map([["CATE",{symbol:"CATE",token:HELD,rawBalance:10n*10n**18n,valueUsdg:(10_000_000n * MICRO),decimals:18}]]);
     const prices=new Map([["CATE",{price8:1n,stale:false,source:"pool" as const}]]);
     const d=deps({open:async()=>[position({symbol:"CATE",token:HELD,custodyVault,qtyRaw:3n*10n**18n})],unpriceable:()=>new Set<string>()});
     const [intent]=await run(makeTrencher(d as never),snap({holdings:holdings as never,prices:prices as never}));
@@ -312,7 +315,7 @@ describe("the unpriceable exit, once it can actually be reached", () => {
     assert.equal(intent.custody,"trencher");
     assert.equal(intent.target,custodyVault);
     assert.equal(intent.sellAmountRaw,3n*10n**18n);
-    assert.equal(intent.notionalUsdg,3_000_000n);
+    assert.equal(intent.notionalUsdg,(3_000_000n * MICRO));
   });
 });
 
@@ -334,15 +337,15 @@ describe("entry gates: skipped before shouldEnter and the Brain", () => {
 
   const snap = (over: Partial<Snapshot> = {}): Snapshot =>
     ({
-      cashUsdg: 1_000_000_000n,
+      cashUsdg: (1_000_000_000n * MICRO),
       vaultUsdg: 0n,
       holdings: new Map(),
       prices: new Map(),
       pausedTokens: new Set<string>(),
       staleFeeds: new Set<string>(),
       sequencerUp: true,
-      spendHeadroomUsdg: 1_000_000_000n,
-      perTradeCapUsdg: 100_000_000n,
+      spendHeadroomUsdg: (1_000_000_000n * MICRO),
+      perTradeCapUsdg: (100_000_000n * MICRO),
       entryGates: gates,
       ...over,
     }) as Snapshot;

@@ -25,7 +25,7 @@
 
 import type { PublicClient } from "viem";
 import type { GeckoPool } from "../venues/geckoterminal";
-import { readTokenMeta, type TokenMeta } from "../venues/pons-meta";
+import { readTokenMeta, type TokenMeta } from "../venues/token-meta";
 import {
   readPage,
   signalsFrom,

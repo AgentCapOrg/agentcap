@@ -389,7 +389,7 @@ const MOVES_ROWS = 3;
 
 function chainWords(t: TokenIdentity | null): string {
   const slug = t?.chain.slug ?? "";
-  return slug === "robinhood" ? "Robinhood Chain" : slug ? slug : "an unnamed chain";
+  return slug === "bsc" ? "BNB Chain" : slug === "robinhood" ? "Robinhood Chain" : slug ? slug : "an unnamed chain";
 }
 
 interface MoveCoin {

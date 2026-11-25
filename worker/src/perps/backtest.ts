@@ -18,7 +18,7 @@ export interface PerpsReplayConfig {
   perTradeUsdg?: number;
   dailyUsdg?: number;
   maxOpsPerDay?: number;
-  energyOpensPerDay?: number;
+  opensPerDay?: number;
   maxDrawdownBps?: number;
 }
 export interface PerpsReplayFrame {
@@ -65,7 +65,7 @@ export function runPerpsReplay(config: PerpsReplayConfig, frames: readonly Perps
   const sealed = perpsUsdgToMicro(positive(config.perTradeUsdg ?? 50, "perTradeUsdg"));
   const daily = perpsUsdgToMicro(positive(config.dailyUsdg ?? 500, "dailyUsdg"));
   const maxOps = positive(config.maxOpsPerDay ?? 50, "maxOpsPerDay", true);
-  const energy = positive(config.energyOpensPerDay ?? 2, "energyOpensPerDay", true);
+  const dayOpens = positive(config.opensPerDay ?? 2, "opensPerDay", true);
   const breakerBps = positive(config.maxDrawdownBps ?? 500, "maxDrawdownBps", true);
   if (breakerBps > 10000 || initial <= 0n || sealed <= 0n || daily <= 0n)
     throw new RangeError("invalid cash or breaker cap");
@@ -224,7 +224,7 @@ export function runPerpsReplay(config: PerpsReplayConfig, frames: readonly Perps
     const term = valuation();
     const equity = book.cashMicro + term.isolatedMarginMicro + term.unrealizedMicro;
     breakerPeak = breakerPeak > equity - term.unrealizedGainMicro ? breakerPeak : equity - term.unrealizedGainMicro;
-    const trend = perpTrendTick(buildPerpsView(input()), settings, { equityMicro: equity, breakerIdle: equity * 10000n >= breakerPeak * BigInt(10000 - breakerBps), breakerLimitBps: breakerBps, energyEntriesLeft: today().length < energy, opsHeadroom: ops() < maxOps, spendHeadroomMicro: daily > spent() ? daily - spent() : 0n, perTradeSealedMicro: sealed, nowSec });
+    const trend = perpTrendTick(buildPerpsView(input()), settings, { equityMicro: equity, breakerIdle: equity * 10000n >= breakerPeak * BigInt(10000 - breakerBps), breakerLimitBps: breakerBps, entriesLeft: today().length < dayOpens, opsHeadroom: ops() < maxOps, spendHeadroomMicro: daily > spent() ? daily - spent() : 0n, perTradeSealedMicro: sealed, nowSec });
     for (const exit of trend.exits)
       execute(exit, "strategy-close");
     if (trend.entry) {
@@ -247,7 +247,7 @@ export function runPerpsReplay(config: PerpsReplayConfig, frames: readonly Perps
       atMs: number;
       reason: string;
     } | null, settings,
-    limits: { perTradeMicro: sealed, dailyMicro: daily, maxOpsPerDay: maxOps, energyOpensPerDay: energy, maxDrawdownBps: breakerBps, budgetWindow: "trailing-24-hours" },
+    limits: { perTradeMicro: sealed, dailyMicro: daily, maxOpsPerDay: maxOps, opensPerDay: dayOpens, maxDrawdownBps: breakerBps, budgetWindow: "trailing-24-hours" },
     assumptions: REPLAY_LIMITS, maxSampleGapMs, snapshotsProcessed: curve.length,
     initialCashMicro: initial, finalEquityMicro: failure ? null : curve.at(-1)!.equityMicro,
     realizedMicro: realized, fundingMicro: funding, feesMicro: fees, maxDrawdownMicro,

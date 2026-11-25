@@ -96,7 +96,7 @@ after(() => {
   rmSync(scratch, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
 });
 
-const USDG = String(CASH.USDG);
+const USDG = String(CASH.USDT);
 // The account as the grant carries it: EIP-55, the spelling the child keys on.
 const AGENT = getAddress("0x9999999999999999999999999999999999990b09");
 const TOKEN = "0x5555555555555555555555555555555555555555";
@@ -491,15 +491,14 @@ describe("until a seed exists, entries get no headroom — and exits stay open",
     assert.ok(body.indexOf("holdAtCaps(") > body.indexOf("getOpsToday("), "held after both reads");
   });
 
-  it("the orchestrator seeds beside the energy seed before spawn, and retries beside it every pass", () => {
+  it("the orchestrator seeds the budget before spawn, and retries it every pass", () => {
     const src = readFileSync(new URL("./orchestrator.ts", import.meta.url), "utf8");
     const from = src.indexOf("async function spawnChild(");
     const spawn = src.slice(from, src.indexOf("\nasync function ", from + 1));
-    const energy = spawn.indexOf("await seedEnergyForChild(tenant, smartAccount);");
     const budget = spawn.indexOf("if (!(await seedBudgetForChild(tenant, smartAccount))) return;");
-    assert.ok(energy > 0 && budget > energy, "beside the energy seed");
+    assert.ok(budget > 0, "seeded in spawnChild");
     assert.ok(budget < spawn.indexOf("const late = lateSpawnRefusal(tenant, lease);"), "before the worker starts");
-    assert.match(src, /await retryEnergySeed\(tenant as `0x\$\{string\}`\);\s*(\/\/[^\n]*\n\s*)*await retryBudgetSeed\(tenant as `0x\$\{string\}`\);/);
+    assert.match(src, /await retryBudgetSeed\(tenant as `0x\$\{string\}`\);/);
   });
 
   it("the orchestrator looks again when a seed's pending op comes due, and puts an unknown day in front of an operator", () => {

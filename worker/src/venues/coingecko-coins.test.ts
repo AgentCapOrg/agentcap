@@ -174,8 +174,8 @@ describe("read on the fleet's CoinGecko Pro lane, and only with its key", () => 
       assert.equal(new Headers(init?.headers).get("x-cg-pro-api-key"), "private-pro-key");
       assert.equal(init?.redirect, "error");
       if (String(input).includes("/tokens/multi/")) return Response.json({ data: [
-        { id: `robinhood_${A}`, type: "token", attributes: { address: A, symbol: "CHUMP", coingecko_coin_id: "chump-robinhood" } },
-        { id: `robinhood_${B}`, type: "token", attributes: { address: B, symbol: "FUHRER", coingecko_coin_id: null } },
+        { id: `bsc_${A}`, type: "token", attributes: { address: A, symbol: "CHUMP", coingecko_coin_id: "chump-robinhood" } },
+        { id: `bsc_${B}`, type: "token", attributes: { address: B, symbol: "FUHRER", coingecko_coin_id: null } },
         // Another network's record, or another address's, never names this contract's coin.
         { id: `base_${C}`, type: "token", attributes: { address: C, symbol: "WLFI", coingecko_coin_id: "world-liberty-financial" } },
       ] });
@@ -185,10 +185,10 @@ describe("read on the fleet's CoinGecko Pro lane, and only with its key", () => 
     assert.equal(r.failed, false);
     assert.deepEqual(r.listings, [{ address: A, id: "chump-robinhood", symbol: "chump", name: "Chump", rank: 3100 }]);
     assert.deepEqual(urls, [
-      `https://pro-api.coingecko.com/api/v3/onchain/networks/robinhood/tokens/multi/${A},${B},${C}`,
+      `https://pro-api.coingecko.com/api/v3/onchain/networks/bsc/tokens/multi/${A},${B},${C}`,
       "https://pro-api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=chump-robinhood",
     ]);
-    assert.deepEqual([...parseTokenCoinIds({ data: [{ id: `robinhood_${A}`, type: "token", attributes: { address: A, coingecko_coin_id: "../x" } }] }, [A])], [], "an id that is no lookup key");
+    assert.deepEqual([...parseTokenCoinIds({ data: [{ id: `bsc_${A}`, type: "token", attributes: { address: A, coingecko_coin_id: "../x" } }] }, [A])], [], "an id that is no lookup key");
     // No key: nothing asked. A refused read is a failure, never "not listed".
     delete process.env.AGENTCAP_COINGECKO_PRO_API_KEY;
     assert.equal((await readChainListings([A], { timeoutMs: 4000 })).failure, "no-pro-key");

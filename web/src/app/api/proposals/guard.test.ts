@@ -130,9 +130,4 @@ describe("what the owner is told a re-sign actually does", () => {
     assert.match(CODE, /watched: watched\.has\(row\.token\.toLowerCase\(\)\)/);
   });
 
-  it("a curve coin says so, because a swap cannot route to it", () => {
-    // No pool. The wall can cover the token and a swap still has nowhere to go —
-    // TokenCards calls this out as two different noes, and the curve one first.
-    assert.match(CODE, /onCurve: row\.onCurve/);
-  });
 });

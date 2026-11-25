@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { setImmediate } from "node:timers/promises";
 import { keccak256, type PublicClient } from "viem";
-import { CASH, UNISWAP, GRANT_TRENCHER, AGENTCAP_TOKEN, STOCK_TOKENS, type StoredGrant } from "../../packages/core/src/index";
+import { CASH, PANCAKESWAP, GRANT_TRENCHER, STOCK_TOKENS, type StoredGrant } from "../../packages/core/src/index";
 import {
   EARLY, EARLY_PAGES_MAX, EarlyCandidateBook, earlyCandidateBook, earlyEntryBound, earlyEntryPools, earlyFunnelOf,
   earlyScreenReason, earlyVerifyPools, installEarlyCandidateBook, type EarlyOffer,
@@ -14,6 +14,9 @@ import { makeTrencher, shouldEnter, TRENCHER_FAST, type Candidate } from "./stra
 import { takeTick, type Snapshot } from "./strategies/types";
 import { emptyGeckoBuckets, type GeckoPool } from "./venues/geckoterminal";
 import type { ShadowInputs, ShadowOutcome } from "./brain-shadow";
+
+// 6dp micro figures, scaled to 18dp USDT base units.
+const MICRO = 10n ** 12n;
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 
@@ -40,7 +43,7 @@ const addr = (i: number) => `0x${(0xe000 + i).toString(16).padStart(40, "0")}`;
  * fresh pool is not the question here; the pool is three days old.
  */
 const smallPool = (over: Partial<GeckoPool> = {}): GeckoPool => ({
-  tokenAddress: SMALL, poolAddress: SMALL_POOL, poolId: SMALL_POOL, dex: "uniswap-v3-robinhood", name: "SMALL / USDG",
+  tokenAddress: SMALL, poolAddress: SMALL_POOL, poolId: SMALL_POOL, dex: "pancakeswap-v3-bsc", name: "SMALL / USDG",
   priceUsd: 0.0001, reserveUsd: 30_000, fdvUsd: 60_000, volume24hUsd: 20_000, change24hPct: 3, change1hPct: 1,
   buys24h: 40, sells24h: 25, buyers24h: 12, createdAt: NOW_SEC - 3 * 86_400,
   buckets: {
@@ -71,11 +74,11 @@ function chain(canonical: ReadonlySet<string>, reads: string[]) {
   const pools = new Map<string, string>();
   const read = async ({ address, functionName, args }: { address: string; functionName: string; args?: readonly unknown[] }) => {
     const a = address.toLowerCase();
-    const values: Record<string, unknown> = { cash: CASH.USDG, bridge: CASH.WETH, router: UNISWAP.swapRouter02, poolFactory: UNISWAP.v3Factory,
+    const values: Record<string, unknown> = { cash: CASH.USDT, bridge: CASH.WBNB, router: PANCAKESWAP.smartRouter, poolFactory: PANCAKESWAP.v3Factory,
       vaultFor: grant.trencherVaultAddress, owner: grant.smartAccount, VERSION: 1n, tokens: [], decimals: 6 };
     if (pools.has(a)) {
       reads.push(a);
-      if (functionName === "token0") return CASH.USDG;
+      if (functionName === "token0") return CASH.USDT;
       if (functionName === "token1") return pools.get(a);
       if (functionName === "fee") return 3000;
     }
@@ -122,10 +125,9 @@ test("an offer is a validated 0x+40-hex address, lowercased, with code-shaped fi
     assert.equal(book.offer(bad, offer()), "refused:invalid-address", bad);
   }
   assert.equal(book.offer(`0x${"0".repeat(40)}`, offer()), "refused:zero-address");
-  assert.equal(book.offer(CASH.USDG, offer()), "refused:quote-asset");
-  assert.equal(book.offer(CASH.WETH.toUpperCase().replace("0X", "0x"), offer()), "refused:quote-asset");
+  assert.equal(book.offer(CASH.USDT, offer()), "refused:quote-asset");
+  assert.equal(book.offer(CASH.WBNB.toUpperCase().replace("0X", "0x"), offer()), "refused:quote-asset");
   assert.equal(book.offer(STOCK_TOKENS[0]!.address, offer()), "refused:not-memecoin");
-  assert.equal(book.offer(AGENTCAP_TOKEN.address, offer()), "refused:energy-reserve");
   assert.equal(book.offer(A, offer({ source: "Fomo Follow; buy now" })), "refused:invalid-source");
   assert.equal(book.offer(A, offer({ priority: Number.NaN })), "refused:invalid-priority");
   assert.equal(book.offer(A, offer({ maxUsdg6: 0n })), "refused:invalid-size");
@@ -284,9 +286,8 @@ test("the early screen: supported route, two-sided, fresh, known reserve — nul
   assert.equal(earlyScreenReason(smallPool()), null);
   assert.equal(trenchScreenReason(smallPool()), "volume-below-min", "the old screen deletes this coin");
   const cases: [Partial<GeckoPool>, string][] = [
-    [{ tokenAddress: CASH.USDG.toLowerCase() as `0x${string}` }, "quote-asset"],
+    [{ tokenAddress: CASH.USDT.toLowerCase() as `0x${string}` }, "quote-asset"],
     [{ tokenAddress: STOCK_TOKENS[0]!.address.toLowerCase() as `0x${string}` }, "not-memecoin"],
-    [{ tokenAddress: AGENTCAP_TOKEN.address.toLowerCase() as `0x${string}` }, "energy-reserve"],
     [{ dex: "uniswap-v4-robinhood" }, "venue-not-supported"],
     [{ dex: "pons" }, "venue-not-supported"],
     [{ poolAddress: null }, "pool-address-unknown"],
@@ -526,13 +527,13 @@ test("take() never exceeds the book's per-coin ceiling — not even when the off
   const strategy = makeTrencher({ cfg: TRENCHER_FAST, brainRequired: true,
     brainOrder: (s, tok, p, held) => review.take(s, tok, p, earlyEntryBound(existing, book.maxUsdgFor(tok), held), held),
     swapRouter: ROUTER, usdgToken: USDG, candidates: () => [candidate], open: () => [], liquidityOf: () => 30_000 });
-  const snap = { cashUsdg: 1_000_000_000n, vaultUsdg: 0n, holdings: new Map(), prices: new Map(), pausedTokens: new Set(), staleFeeds: new Set(), sequencerUp: true,
-    spendHeadroomUsdg: 100_000_000n, perTradeCapUsdg: 10_000_000n } as Snapshot;
+  const snap = { cashUsdg: (1_000_000_000n * MICRO), vaultUsdg: 0n, holdings: new Map(), prices: new Map(), pausedTokens: new Set(), staleFeeds: new Set(), sequencerUp: true,
+    spendHeadroomUsdg: (100_000_000n * MICRO), perTradeCapUsdg: (10_000_000n * MICRO) } as Snapshot;
   const intents = takeTick(await strategy.tick(snap)).intents;
   assert.equal(intents.length, 1);
   assert.ok(intents[0]!.kind === "swap");
-  assert.equal(intents[0]!.sellAmountRaw, 1_500_000n, "the Brain asked for 5; the early ceiling held it to 1.50");
-  assert.ok(intents[0]!.sellAmountRaw <= 1_500_000n);
+  assert.equal(intents[0]!.sellAmountRaw, 15n * 10n ** 17n, "the Brain asked for 5; the early ceiling held it to 1.50");
+  assert.ok(intents[0]!.sellAmountRaw <= 15n * 10n ** 17n);
   // The bound never rises, and never applies to a held coin's SELL.
   assert.equal(earlyEntryBound(1, 1.5, false), 1);
   assert.equal(earlyEntryBound(10, null, false), 10);

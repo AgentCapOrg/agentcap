@@ -19,12 +19,11 @@ export function RecoveryNotice({ recovery, funds }: { recovery?: FleetRecoveryVi
     {memory ? <p>{memory}</p> : null}
     {funds ? <>
       {/* "VAULTS IT OWNS", NOT "VAULTS IT CONTROLS". The per-account vaults —
-          the class vault(s) and the Trencher vault — are CREATE2-salted with
+          the Trencher vault among them — are CREATE2-salted with
           this smart account as their owner, so "owns" is the chain's own word
           for them. The Morpho vault is not one of them: the account holds its
           shares as a balance in the account itself and controls nothing about
-          the vault. "Any", because an account may have none of these yet, or
-          several (class v1 and v2, Trencher). */}
+          the vault. "Any", because an account may have none of these yet. */}
       <p>
         Your funds are in your smart account{" "}
         {funds.explorer

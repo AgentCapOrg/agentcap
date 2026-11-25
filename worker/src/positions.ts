@@ -9,11 +9,11 @@
  *
  * UI shares  = rawBalance × uiMultiplier / 1e18
  * USD value  = UI shares × chainlinkPrice / 1e8
- * USDG (6dp) = USD value × 1e6
+ * cash (18dp base units) = USD value × 1e18, floored to a millionth
  */
 
 import type { PublicClient } from "viem";
-import { STOCK_ABI, type PriceQuote, type StockToken } from "../../packages/core/src/index";
+import { STOCK_ABI, cashFromMicro, type PriceQuote, type StockToken } from "../../packages/core/src/index";
 
 /** One valued holding. price8 = USD price, 8 decimals. */
 export interface Position {
@@ -35,13 +35,15 @@ export interface Position {
    * say so rather than presenting both as the same kind of fact.
    */
   priceSource: PriceQuote["source"];
-  /** Multiplier-aware value in USDG units (6dp). */
+  /** Multiplier-aware value in cash base units (18dp), a whole number of micro-USDT. */
   valueUsdg: bigint;
 }
 
 /**
- * rawBalance(10^decimals) × uiMultiplier(1e18) × price8(1e8) → USDG(6dp).
- * Single division so precision is lost exactly once.
+ * rawBalance(10^decimals) × uiMultiplier(1e18) × price8(1e8) → cash base units.
+ * Single division so precision is lost exactly once. FLOORED TO A MILLIONTH of a
+ * USDT, so a value is never overstated and the book's REAL columns, which hold
+ * micro figures, add up to the same total as these integers do.
  *
  * `decimals` defaults to 18 — every Stock Token and WETH — but a memecoin can be
  * 6 or 9, and assuming 18 there would undervalue the position by a factor of a
@@ -54,9 +56,9 @@ export function positionValueUsdg(args: {
   decimals?: number;
 }): bigint {
   const decimals = args.decimals ?? 18;
-  // denominator: 10^decimals (raw) × 1e18 (multiplier unit) × 1e8 (price dp) / 1e6 (USDG dp)
+  // denominator: 10^decimals (raw) × 1e18 (multiplier unit) × 1e8 (price dp) / 1e6 (micro)
   const DENOM = 10n ** BigInt(decimals + 20);
-  return (args.rawBalance * args.uiMultiplier * args.price8) / DENOM;
+  return cashFromMicro((args.rawBalance * args.uiMultiplier * args.price8) / DENOM);
 }
 
 export interface PositionsRead {
@@ -169,17 +171,6 @@ export function valuationMultiplierFor(source: PriceQuote["source"], uiMultiplie
     // if one ever grew a split, the curve's reserves would already reflect it,
     // so applying a multiplier here would count it twice.
     //
-    // Note this is the ONLY question this switch asks. It decides a UNIT, not
-    // whether the price can be trusted: a curve quote is a weaker kind of
-    // evidence than a pool quote, and that difference is enforced elsewhere —
-    // it stays inside the scout ceiling and out of the high-water mark.
-    case "curve":
-    // A Uniswap v4 pool quotes USD per whole ERC-20, exactly as v3 does — the
-    // VENUE changed, the unit did not. Graduated memecoins are plain ERC-20s
-    // with no ERC-8056 multiplier to apply. (That a v4 quote is weaker evidence
-    // than a v3 one — no oracle behind it — is enforced elsewhere, by keeping it
-    // inside the scout ceiling; it is not a question about units.)
-    case "v4":
     // A sampled price is a v3 pool's own spot, averaged: USD per whole ERC-20.
     case "sampled":
       return UI_MULTIPLIER_ONE;
@@ -393,37 +384,6 @@ export async function readPositions(
 }
 
 /**
- * Positions valued off a bonding curve. None of them may ratchet a peak.
- *
- * A NAMED RULE RATHER THAN AN INLINE FILTER, because it has to hold in three
- * places at once and got half-applied the first time: the live fee accrual, the
- * live in-memory peak the drawdown breaker divides by, and the persisted paper
- * peak. Guarding only the first two left the breaker measuring against a mark
- * no oracle stands behind — so a curve spike, then a revert, halted every
- * non-exit intent on a drawdown that never happened, for the whole process.
- *
- * Why it exists at all: both high-water marks are monotonic and persisted
- * (`MAX(hwm_usdg, ?)` for the live one, with a performance fee written in the
- * same breath), and nothing walks either back. A curve mark has no oracle
- * behind it, moves 1,546 bps at p99 over four minutes, and arrives
- * DISCONTINUOUSLY — the tick a curve first clears its guard, the holding jumps
- * from carried-at-cost to carried-at-mark with no trade having happened.
- *
- * Skipping is conservative in both directions: a fee not charged, and a
- * drawdown measured from the last peak that a feed or a pool stood behind.
- *
- * A SAMPLED MARK IS NOT IN THIS SET, and that is deliberate: skipping freezes
- * every peak of the WHOLE book, and the fast Trencher holds a sampled coin for
- * most of the day — so a $2.50 position would stop the breaker learning the
- * rest of the book's peak. A sampled holding is held to cost instead
- * (sampledGainUsdg): no peak or fee is set off its mark, and everything else
- * still ratchets.
- */
-export function curveMarkedSymbols(positions: readonly Position[]): string[] {
-  return positions.filter((p) => p.priceSource === "curve").map((p) => p.symbol);
-}
-
-/**
  * WHAT SAMPLED MARKS ADD ABOVE WHAT THEY COST, USDG 6dp. PURE.
  *
  * A sampled price is our own minutes-long series of a pool too new to keep an
@@ -443,9 +403,4 @@ export function sampledGainUsdg(positions: readonly Position[], costOf: (symbol:
     if (p.valueUsdg > cost) gain += p.valueUsdg - cost;
   }
   return gain;
-}
-
-/** May this book's equity set a new high-water mark? */
-export function mayRatchetHwm(positions: readonly Position[]): boolean {
-  return curveMarkedSymbols(positions).length === 0;
 }

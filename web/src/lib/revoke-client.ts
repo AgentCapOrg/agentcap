@@ -6,14 +6,14 @@ import { formatUserOperation, formatUserOperationRequest, getUserOperationHash, 
 import { createKernelAccount, createKernelAccountClient } from "@zerodev/sdk";
 import { KERNEL_V3_3, getEntryPoint } from "@zerodev/sdk/constants";
 import { signerToEcdsaValidator } from "@zerodev/ecdsa-validator";
-import { accountIndexForPurpose, assertDerivedAccount, robinhoodChain, robinhoodTestnet } from "@agentcap/core";
+import { accountIndexForPurpose, assertDerivedAccount, bnbChain, bnbTestnet } from "@agentcap/core";
 import { userOpGasConfig } from "../../../worker/src/gas";
 import { getRecoveryTicket, relayUrl, redact, type BrowserWallet } from "./recover-client";
 import { invalidatePermissions, isRevocationFeeShortfall, KERNEL_REVOCATION_ABI, readConfirmedRevocationCutoff, revocationFeeMessage, type PendingRevocation } from "./permission-revocation";
 import { readRevocationRecord } from "./revocation-journal";
 
 const revocationChain = (chainId: number) =>
-  chainId === robinhoodChain.id ? robinhoodChain : chainId === robinhoodTestnet.id ? robinhoodTestnet : null;
+  chainId === bnbChain.id ? bnbChain : chainId === bnbTestnet.id ? bnbTestnet : null;
 
 /** The signed operation is public, contains no private key, and survives reloads. */
 function pendingStore(w: Pick<BrowserWallet, "chainId" | "smartAccount">) {
@@ -30,7 +30,7 @@ function pendingStore(w: Pick<BrowserWallet, "chainId" | "smartAccount">) {
 }
 
 /**
- * An account with no ETH and no EntryPoint deposit cannot pay for a revocation,
+ * An account with no BNB and no EntryPoint deposit cannot pay for a revocation,
  * and the relay sponsors none. Renewal and restore ask this BEFORE stopping the
  * service, so an empty account is not stopped for a revocation that cannot run.
  *

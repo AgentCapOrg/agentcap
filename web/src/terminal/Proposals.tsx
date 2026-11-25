@@ -317,9 +317,6 @@ export function Proposals({ onResign }: { onResign: () => void }) {
               <span className="pips" aria-label={`conviction ${p.conviction} of 5`}>
                 {"▮".repeat(Math.max(1, Math.min(5, p.conviction)))}
               </span>
-              {/* THE CURVE CASE FIRST, and it is not a footnote: covering the
-                  token does not give a swap anywhere to route. */}
-              {p.onCurve && <span className="proposal-chip">on its launch curve</span>}
             </div>
             <p className="proposal-why">{p.reason}</p>
             <p className="proposal-figs mono">
@@ -327,13 +324,6 @@ export function Proposals({ onResign }: { onResign: () => void }) {
               <span>24h {compactUsd(p.volume24hUsd)}</span>
               <span>{p.buyers24h === null ? "—" : `${p.buyers24h} buyers`}</span>
             </p>
-            {p.onCurve && (
-              <p className="proposal-caveat">
-                No pool yet. Approving lets your agent hold it, but a normal swap has nowhere to
-                route until it graduates.
-              </p>
-            )}
-
             {added.has(p.token) ? (
               <p className="proposal-done" role="status">
                 Added to your watchlist and basket. It is <b>not tradable yet</b> — your permission

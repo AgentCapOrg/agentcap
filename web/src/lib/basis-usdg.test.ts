@@ -27,16 +27,16 @@ describe("the ledger's basis column is micro-USDG", () => {
     // Read off an owner's book. The trade was 8.3325 USDG and the position is
     // marked at 8.32 — the two figures have to be comparable, or the unrealised
     // return computed from them is −99.99% on a flat position.
-    assert.equal(basisUsdg("8332500"), 8.3325);
+    assert.equal(basisUsdg("8332500000000000000"), 8.3325);
     const value = 8.319616;
-    const pnlPct = ((value - basisUsdg("8332500")!) / basisUsdg("8332500")!) * 100;
+    const pnlPct = ((value - basisUsdg("8332500000000000000")!) / basisUsdg("8332500000000000000")!) * 100;
     assert.ok(Math.abs(pnlPct) < 1, `a flat position must read as flat, got ${pnlPct}%`);
   });
 
   it("and it accepts the number form as well as the string", () => {
     // SQLite hands back the TEXT column as a string; a Postgres driver may
     // widen it. Both are the same quantity and neither may change the unit.
-    assert.equal(basisUsdg(8332500), 8.3325);
+    assert.equal(basisUsdg(8332500e12), 8.3325);
   });
 });
 

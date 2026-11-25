@@ -644,9 +644,6 @@ describe("the fleet-wide writers", () => {
       return src.slice(at, src.indexOf("\n}\n", at));
     };
     assert.match(body("function startHistoryRepair("), /if \(!rolloutAdmitsWholeFleet\(\)\) return;/);
-    const backfill = body("async function runHolderClaimsBackfill(");
-    const gate = backfill.indexOf("if (!rolloutAdmitsWholeFleet()) return;");
-    assert.ok(gate > 0 && gate < backfill.indexOf("acquireTenantLease(HOLDER_BACKFILL_LEASE)"), "before it takes its lease");
     assert.match(body("export async function runOrchestrator("), /if \(rolloutAdmitsWholeFleet\(\)\) \(mcpBackground \?\?= makeMcpBackground\(/);
   });
 });

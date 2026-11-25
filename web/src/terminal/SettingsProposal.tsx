@@ -81,7 +81,7 @@ export function glanceLines(v: Readonly<Record<string, unknown>>): string[] {
     money,
     `Strategy: ${shown("strategy", v.strategy)} · buys ${buys}`,
     `Each buy: ${shown("buyPerTickUsdg", v.buyPerTickUsdg)} · stop loss: ${shown("strategistStopLossBps", v.strategistStopLossBps)} · take profit: ${shown("takeProfitBps", v.takeProfitBps)}`,
-    `Launchpad buying: ${v.classSnipeEnabled && Number(v.classPerEntryUsdg) > 0 ? "on" : "off"} · new-coin scanning: ${shown("discoveryEnabled", v.discoveryEnabled)}`,
+    `New-coin scanning: ${shown("discoveryEnabled", v.discoveryEnabled)}`,
     `Telegram trade messages: ${Number(v.telegramNotifyEveryMin) > 0 ? `one summary every ${v.telegramNotifyEveryMin} min` : "one per trade"}`,
   ];
 }

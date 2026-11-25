@@ -4,11 +4,11 @@ import { getEntryPoint, KERNEL_V3_3 } from "@zerodev/sdk/constants";
 import { signerToEcdsaValidator } from "@zerodev/ecdsa-validator";
 import { createPublicClient, custom, encodeFunctionData, type Address } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { assertDerivedAccount, robinhoodChain } from "@agentcap/core";
+import { assertDerivedAccount, bnbChain } from "@agentcap/core";
 import { KERNEL_REVOCATION_ABI } from "./permission-revocation";
 
 export async function sdkRevocationCall(accountAddress: Address, nonce = 2) {
-  const client = createPublicClient({ chain: robinhoodChain, transport: custom({
+  const client = createPublicClient({ chain: bnbChain, transport: custom({
     async request({ method }) {
       if (method === "eth_chainId") return "0x1237";
       throw new Error(`Unexpected RPC during local encoding: ${method}`);

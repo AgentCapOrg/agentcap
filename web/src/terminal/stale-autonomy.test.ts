@@ -8,8 +8,8 @@
  *   - the server decides "stopped" by its own clock and the watchdog's rule,
  *     never the browser's clock and never a second rule (worker-stale.ts);
  *   - the route carries that answer and the page reads it back unchanged;
- *   - the desk keeps every remedy it had: a silent agent short of ETH is still
- *     told to send ETH, an expired one is still offered the renewal, and a held
+ *   - the desk keeps every remedy it had: a silent agent short of BNB is still
+ *     told to send BNB, an expired one is still offered the renewal, and a held
  *     one is offered nothing.
  */
 import assert from "node:assert/strict";
@@ -182,16 +182,16 @@ describe("the page reads the server's answer back, and nothing else", () => {
 });
 
 describe("the desk says NOT RUNNING without losing a remedy", () => {
-  it("A SILENT WORKER SHORT OF ETH STILL SHOWS THE FUNDING PANEL", () => {
+  it("A SILENT WORKER SHORT OF BNB STILL SHOWS THE FUNDING PANEL", () => {
     // The panel used to hide on `state === "checking"`. Silence is not about
-    // ETH, and the owner who reads NOT RUNNING still needs to know to send it.
+    // BNB, and the owner who reads NOT RUNNING still needs to know to send it.
     const mine = mineFor({ mode: "paper", liveBlocker: "no-gas", realCashUsd: 0, workerSilentSince: SILENT });
     assert.equal(mine.autonomy.label, "NOT RUNNING");
     for (const staleBlocker of [false, true]) {
       const page = desk(mine, "no-gas", staleBlocker);
       const panel = page.querySelector(".desk-blocked");
-      assert.ok(panel, `no-gas must render its panel (staleBlocker=${staleBlocker}): a signature says nothing about ETH`);
-      assert.match(panel.textContent!, /no ETH/);
+      assert.ok(panel, `no-gas must render its panel (staleBlocker=${staleBlocker}): a signature says nothing about BNB`);
+      assert.match(panel.textContent!, /no BNB/);
       assert.equal(page.querySelector(".desk-status")!.textContent, "Asleep");
     }
   });
@@ -237,7 +237,7 @@ describe("the desk says NOT RUNNING without losing a remedy", () => {
   it("the time sits BELOW a remedy, never in place of one", () => {
     const page = desk(mineFor({ mode: "paper", liveBlocker: "no-gas", realCashUsd: 0, workerSilentSince: SILENT }), "no-gas");
     const panels = [...page.querySelectorAll(".desk-blocked, .desk-note")].map((n) => n.textContent!);
-    const funding = panels.findIndex((t) => /no ETH/.test(t));
+    const funding = panels.findIndex((t) => /no BNB/.test(t));
     const quiet = panels.findIndex((t) => /not reported/.test(t));
     assert.ok(funding >= 0 && quiet > funding, "the funding panel first, then when it went quiet");
   });
@@ -301,7 +301,7 @@ describe("an expired key is renewed from the desk, and only outside a hold", () 
     assert.equal(panels.length, 1, "one panel: the renewal replaces the stale blocker, never sits beside it");
     assert.match(panels[0]!.textContent!, /trading permission has expired/);
     assert.match(panels[0]!.querySelector("button")!.textContent!, /^Renew permission/);
-    assert.doesNotMatch(page.body.textContent!, /no ETH/, "the blocker on record predates the expiry");
+    assert.doesNotMatch(page.body.textContent!, /no BNB/, "the blocker on record predates the expiry");
   });
 
   it("silent + expired is still BLOCKED with the renewal", () => {

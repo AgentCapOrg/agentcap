@@ -25,7 +25,7 @@ import path from "node:path";
 const HOME = mkdtempSync(path.join(os.tmpdir(), "agentcap-inflight-"));
 process.env.AGENTCAP_HOME = HOME;
 
-const { closeStoreForTest, initStore, addTrade, energyBuysInFlight, getOpsToday, getSpentTodayUsdg, listOpHashes, listSubmittedOps, opsSignedWithNonce } =
+const { closeStoreForTest, initStore, addTrade, getOpsToday, getSpentTodayUsdg, listOpHashes, listSubmittedOps, opsSignedWithNonce } =
   await import("./store");
 const { homePaths } = await import("./home");
 const { DatabaseSync } = await import("node:sqlite");
@@ -289,7 +289,6 @@ describe("a dropped op is terminal, and nothing counts it", () => {
     assert.deepEqual(await opsSignedWithNonce(AGENT2, NONCE, RIVAL), [DROPPED]);
     assert.deepEqual(await opsSignedWithNonce(AGENT2, NONCE + 1n, DROPPED), []);
     assert.equal(await getSpentTodayUsdg(AGENT2, "live"), 20, "both charge the live rail while one is in flight");
-    assert.equal(await energyBuysInFlight(AGENT2, 0), true);
   });
 
   it("written off, it charges no cap, holds nothing in flight, and cannot be rewritten", async () => {
@@ -298,7 +297,6 @@ describe("a dropped op is terminal, and nothing counts it", () => {
     assert.equal(rowsOf(DROPPED)[0]!.status, "dropped");
     assert.equal(await getSpentTodayUsdg(AGENT2, "live"), 10, "only the op that executed is spend");
     assert.equal(await getOpsToday(AGENT2, "live"), 1);
-    assert.equal(await energyBuysInFlight(AGENT2, 0), false, "and the next energy ask is not blocked by it");
     assert.deepEqual(await listSubmittedOps(AGENT2), []);
   });
 

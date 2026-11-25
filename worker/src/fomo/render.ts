@@ -847,7 +847,7 @@ function windowWords(w: string | null | undefined): string {
 /** A chain as people say it: "Robinhood Chain", "Base", "Ethereum". */
 export function chainLabel(slug: string | null | undefined): string {
   const s = typeof slug === "string" ? chainFromUserText(slug)?.slug ?? slug : "";
-  const named: Record<string, string> = { robinhood: "Robinhood Chain", base: "Base", eth: "Ethereum", bsc: "BSC", arc: "Arc", hyperliquid: "Hyperliquid" };
+  const named: Record<string, string> = { robinhood: "Robinhood Chain", base: "Base", eth: "Ethereum", bsc: "BNB Chain", arc: "Arc", hyperliquid: "Hyperliquid" };
   return named[s] ?? (/^[a-z][a-z0-9-]{0,23}$/.test(s) ? s : "that chain");
 }
 
@@ -920,10 +920,10 @@ function bodyRankings(env: FomoEnvelope<RankingsData>, audience: Audience, view:
       return s ? [finite(r.rank) ? `${s} (${ordinal(r.rank)})` : s] : [];
     });
     hoodLine = d.robinhood.rows > 0 && named.length
-      ? `On Robinhood Chain, the chain I trade: ${named.join(", ")}.`
+      ? `On BNB Chain, the chain I trade: ${named.join(", ")}.`
       : d.robinhood.rows === 0
         // Rows that could not be placed on a chain may be Robinhood Chain's (a new chain's id is the likeliest to be unplaceable): said, as on a filtered board.
-        ? `None of ${top} ${lower} coins are on Robinhood Chain, the chain I trade${unplaced}.`
+        ? `None of ${top} ${lower} coins are on BNB Chain, the chain I trade${unplaced}.`
         : null;
   }
   const out = [`${name} on Fomo (board position is popularity, not quality):`];

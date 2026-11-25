@@ -28,6 +28,7 @@
  * leave that order to the four-minute wait this exists to remove.
  */
 
+import { cashNumber } from "../../packages/core/src/cash";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
@@ -219,12 +220,8 @@ export function tickPlan(kind: TickKind): TickPlan {
  * every test, because the only test read the constant. So the guards live here,
  * and tick() passes the writer to the one call that decides whether it runs.
  *
- * Two more rules than the plan ride along, because they gate the same writes:
+ * More rules than the plan ride along, because they gate the same writes:
  *
- *   curveMarked — a holding valued off a bonding curve has no oracle behind it
- *                 and arrives discontinuously, so no peak may move while one is
- *                 held (index.ts, at curveMarkedSymbols). The equity row is not
- *                 a peak, and is still written.
  *   incomplete  — a book that could not be totalled has no equity to write: a
  *                 gap is honest, a partial total is not. tick() skips the peaks
  *                 for it before it gets here; this holds that too.
@@ -309,7 +306,6 @@ export function tickRatchets(
   plan: TickPlan,
   book: {
     incomplete: boolean;
-    curveMarked: number;
     held?: boolean;
     transitHeld?: boolean;
     breakerObservationUsdg?: bigint;
@@ -318,10 +314,10 @@ export function tickRatchets(
   const held = book.held === true;
   // Either hold stops the same writes; only `held` flags the row (see above).
   const holding = held || book.transitHeld === true;
-  const may = plan.ratchets && !book.incomplete && book.curveMarked === 0;
+  const may = plan.ratchets && !book.incomplete;
   const peaks = may && !holding;
   // A held tick's breaker observation, when it may make one: the same guards as
-  // every other peak (a command tick or a curve mark observes nothing), and
+  // every other peak (a command tick observes nothing), and
   // only with the figure the caller computed — never the raw equity.
   const observation = may && holding && book.breakerObservationUsdg !== undefined ? book.breakerObservationUsdg : null;
   return {
@@ -332,7 +328,7 @@ export function tickRatchets(
       }
       return b.hwmUsdg;
     },
-    riskPeak: (basisUsdg, read) => read(peaks ? basisUsdg : observation !== null ? Number(observation) / 1e6 : null),
+    riskPeak: (basisUsdg, read) => read(peaks ? basisUsdg : observation !== null ? cashNumber(observation) : null),
     async accrue(accrual, peakUsdg, persist) {
       if (!peaks) return peakUsdg;
       if (accrual.profitUsdg > 0n) await persist();

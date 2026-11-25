@@ -23,7 +23,10 @@ import {
   type Settlement,
 } from "./flow-inference";
 
-const U = 1_000_000n;
+// One USDT, 18dp.
+const U = 10n ** 18n;
+const MICRO = 10n ** 12n;
+const TOPUP = 59_954_460n * MICRO;
 const s = (createdAt: number, usdgDelta6: bigint | null, userOpHash = `0x${createdAt}`): Settlement => ({ userOpHash, createdAt, usdgDelta6 });
 const base = { baselineUsdg: 100n * U, since: 1_000, unattributed: false, settled: [] as Settlement[], cashUsdg: 100n * U, opsInFlight: false, writesInInterval: false };
 
@@ -195,17 +198,20 @@ describe("RULE 4 — a receipt before an opinion: where to look, and what counts
   });
 
   it("EXACTLY ONE capital transfer, equal to the change to the micro-USDG, in its direction", () => {
-    const deposit = flow("in", 59_954_460n);
-    assert.deepEqual(matchInferredDelta([deposit], 59_954_460n), { match: deposit }, "Alan's 10-18 top-up");
-    const withdrawal = flow("out", 5_000_000n);
-    assert.deepEqual(matchInferredDelta([withdrawal], -5_000_000n), { match: withdrawal });
+    const deposit = flow("in", TOPUP);
+    assert.deepEqual(matchInferredDelta([deposit], TOPUP), { match: deposit }, "Alan's 10-18 top-up");
+    const withdrawal = flow("out", 5n * U);
+    assert.deepEqual(matchInferredDelta([withdrawal], -5n * U), { match: withdrawal });
   });
 
   it("anything else is no receipt: none, two, another amount, the wrong direction, or no change at all", () => {
-    assert.ok("none" in matchInferredDelta([], 59_954_460n));
-    assert.ok("none" in matchInferredDelta([flow("in", 30_000_000n), flow("in", 29_954_460n, "0xbb")], 59_954_460n), "two that sum to it are not one that is it");
-    assert.ok("none" in matchInferredDelta([flow("in", 59_954_461n)], 59_954_460n), "a micro-USDG off is a different movement");
-    assert.ok("none" in matchInferredDelta([flow("out", 59_954_460n)], 59_954_460n), "a withdrawal does not explain a deposit");
+    assert.ok("none" in matchInferredDelta([], TOPUP));
+    assert.ok("none" in matchInferredDelta([flow("in", 30n * U), flow("in", 29_954_460n * MICRO, "0xbb")], TOPUP), "two that sum to it are not one that is it");
+    assert.ok("none" in matchInferredDelta([flow("in", TOPUP + MICRO)], TOPUP), "a micro-USDG off is a different movement");
+    assert.ok("none" in matchInferredDelta([flow("out", TOPUP)], TOPUP), "a withdrawal does not explain a deposit");
     assert.ok("none" in matchInferredDelta([flow("in", 1n)], 0n));
+    // Under a millionth is below the book: it matches, and alone is no change.
+    assert.ok("match" in matchInferredDelta([flow("in", TOPUP + 1n)], TOPUP));
+    assert.ok("none" in matchInferredDelta([flow("in", 1n)], 1n));
   });
 });

@@ -12,13 +12,14 @@ import {
 } from "./following";
 import { AUTONOMOUS_ENTRY_CAP_6, entryCeiling, type EntryCeilingInput } from "./sizing";
 import { reviewHeldPosition } from "./lifecycle";
-import { chainFromProvider, robinhoodChain, tokenIdentity } from "./identity";
+import { chainFromProvider, bnbChain, tokenIdentity } from "./identity";
 import type { ActivityKind, CoinDossier, DossierClaim, FollowAssessment, TokenIdentity, TraderEvent } from "./types";
 
 const NOW = 1_800_000_000_000;
 const ADDR = "0x2222222222222222222222222222222222222222";
-const TOKEN = tokenIdentity(robinhoodChain(), ADDR)!;
-const BNB = tokenIdentity(chainFromProvider(56, "bsc"), "0xd77cf5c8a1c79d6b78408a3f545dea88441790fb")!;
+const TOKEN = tokenIdentity(bnbChain(), ADDR)!;
+// A chain AgentCap does not trade (BNB Chain is ours).
+const BNB = tokenIdentity(chainFromProvider(8453, "base"), "0xd77cf5c8a1c79d6b78408a3f545dea88441790fb")!;
 const P = (usd: number) => BigInt(Math.round(usd * 1e8));
 const U = (n: number) => BigInt(Math.round(n * 100)) * 10_000n;
 
@@ -249,7 +250,7 @@ describe("assessFollow: refusals", () => {
     assert.equal(a.priceMovePct, 3);
     assert.equal(a.signalDelayMs, 10_000);
     assert.deepEqual(a.dossierRevision, { dossierId: "dos-1", revision: 3 });
-    assert.equal(a.token.address, BNB.address, "a BSC mint keeps its case");
+    assert.equal(a.token.address, BNB.address, "a foreign-chain address is carried through");
     assert.deepEqual(toExecutionHint(a), { kind: "none" });
   });
 

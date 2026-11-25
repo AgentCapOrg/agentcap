@@ -57,8 +57,6 @@ import {
 } from "../../../packages/core/src/perps";
 import { perpsModeOf, type ExecMode, type PerpsMode } from "../exec-mode";
 import { perpAccountUsdg, type PerpBookPart, type PerpBookTerm } from "../equity";
-import { countsAsEntry } from "../energy";
-import { tradeConsumesSnapshot } from "../brain-live";
 import type { LedgerFacts } from "../order-receipt";
 import {
   checkPolicy as realCheckPolicy,
@@ -301,7 +299,6 @@ export interface PerpRouteTick {
   /** The drawdown breaker is NOT tripped (breakerIdle(snap) === undefined). */
   breakerIdle: boolean;
   breakerLimitBps?: number | null;
-  energyEntriesLeft: boolean;
   opsHeadroom: boolean;
   /** micro-USDG; null = not read. */
   spendHeadroomMicro: bigint | null;
@@ -309,14 +306,9 @@ export interface PerpRouteTick {
   strategistLive: boolean;
 }
 
-/** index.ts's own producer plumbing, in the class route's shape. */
-export interface PerpRouteHooks<C extends { ok: boolean }> {
-  claimEntry: () => Promise<C>;
-  refundEntry: (claim: C | null) => Promise<void>;
-  withholdEntry: () => Promise<void>;
+/** index.ts's own producer plumbing. */
+export interface PerpRouteHooks {
   ensureDecision: DecideFn;
-  /** processIntentReporting — the facts ITS OWN run produced. */
-  processIntentReporting: (intent: TradeIntent) => Promise<{ status?: string } | null>;
   processIntent: (intent: TradeIntent) => Promise<void>;
 }
 
@@ -413,7 +405,7 @@ export interface PerpLane {
     base?: Omit<AgentState, "perp">,
   ): Promise<PerpOutcome>;
   /** The perps route, after the strategy loop and the class route (docs/perps.md "The perps route"). */
-  runRoute<C extends { ok: boolean }>(t: PerpRouteTick, hooks: PerpRouteHooks<C>): Promise<void>;
+  runRoute(t: PerpRouteTick, hooks: PerpRouteHooks): Promise<void>;
   /** The strategist's one-shot handoff (makeLlmStrategist `perps.deliver`). */
   deliverStrategist(intents: readonly PerpRouteIntent[]): void;
   /** One protective pass — the loop's `run`, and a test's. */
@@ -1174,11 +1166,11 @@ export function createPerpLane(deps: PerpLaneDeps): PerpLane {
     // A BOOKING IS NOT UNDONE BY A COUNT THAT FAILED AFTER IT. place()
     // returned, so the paper engine committed the fill, and it is announced
     // and answered as one. (The count used to share place()'s try, and a busy
-    // store made a booked close "refused" and refunded a placed open's energy.)
+    // store made a booked close "refused".)
     // A throw from place() that is not the executor's own refusal (PerpRefused,
     // always before anything is booked) may have come after its commit, so it
     // is counted the same way. An open is then reconciled against the held
-    // position, or stays uncertain without refunding its entry energy.
+    // position, or stays uncertain.
     const spend = intent.effect === "open" ? reviewed.notionalUsdg : 0n;
     const count = async (): Promise<void> => {
       try {
@@ -1198,8 +1190,7 @@ export function createPerpLane(deps: PerpLaneDeps): PerpLane {
           await count();
           if (intent.effect === "open") {
             // An unknown failure can follow the booking's commit. Returning
-            // rejected then refunds the route's durable energy claim for a
-            // position it actually opened. While this lock excludes another
+            // rejected would then deny a position it actually opened. While this lock excludes another
             // booking or reset, compare the previously empty market with the
             // ledger. Only a readable empty market proves no entry filled.
             if (!r.view || r.view.positions.has(intent.market)) throw e;
@@ -1208,9 +1199,8 @@ export function createPerpLane(deps: PerpLaneDeps): PerpLane {
               held = (await deps.store.getPerpPositions(a.agentId, "paper"))
                 .find((p) => p.marketId === intent.marketId && p.base > 0n);
             } catch (readError) {
-              log(`${intent.market} entry outcome unread; its energy stays claimed: ${errText(readError)}`);
-              // No ledger verdict exists: propagating preserves the claim,
-              // without inventing a fill or calling paper a live submission.
+              log(`${intent.market} entry outcome unread: ${errText(readError)}`);
+              // No ledger verdict exists: propagate it, without inventing a fill or calling paper a live submission.
               throw e;
             }
             if (held !== undefined) {
@@ -1402,7 +1392,7 @@ export function createPerpLane(deps: PerpLaneDeps): PerpLane {
 
   // ── the route ───────────────────────────────────────────────────────────
 
-  async function runRoute<C extends { ok: boolean }>(t: PerpRouteTick, hooks: PerpRouteHooks<C>): Promise<void> {
+  async function runRoute(t: PerpRouteTick, hooks: PerpRouteHooks): Promise<void> {
     const a = agentNow();
     // One-shot: a window's strategist intents are this tick's or nobody's.
     const handoff = strategistIntents;
@@ -1426,7 +1416,6 @@ export function createPerpLane(deps: PerpLaneDeps): PerpLane {
         equityMicro: t.equityKnown ? t.equityUsdg : null,
         breakerIdle: t.breakerIdle,
         breakerLimitBps: t.breakerLimitBps ?? null,
-        energyEntriesLeft: t.energyEntriesLeft,
         opsHeadroom: t.opsHeadroom,
         spendHeadroomMicro: t.spendHeadroomMicro,
         perTradeSealedMicro: a.limits.perTradeUsdg,
@@ -1443,26 +1432,12 @@ export function createPerpLane(deps: PerpLaneDeps): PerpLane {
       ...out.exits.map((intent, i) => ({ intent, why: out.why[i] ?? null })),
       ...(out.entry !== null ? [{ intent: out.entry, why: out.why[out.exits.length] ?? null }] : []),
     ];
-    // EXITS FIRST, THEN THE ONE ENTRY — each the class route's shape.
+    // EXITS FIRST, THEN THE ONE ENTRY.
     for (const { intent: draft, why } of all) {
       const intent = { ...draft } as TradeIntent;
-      const entry = countsAsEntry(intent.kind, isExitIntent(intent, a.limits));
-      const claim = entry ? await hooks.claimEntry() : null;
-      if (claim !== null && !claim.ok) {
-        await hooks.withholdEntry();
-        continue;
-      }
       const stamped = await hooks.ensureDecision(intent, source, why ? renderWhy(why, "public") : undefined, why ? { whyCode: why.code } : undefined);
-      if (!stamped.ok) {
-        await hooks.refundEntry(claim);
-        continue;
-      }
-      if (entry) {
-        const facts = await hooks.processIntentReporting(intent);
-        if (!tradeConsumesSnapshot(facts?.status)) await hooks.refundEntry(claim);
-      } else {
-        await hooks.processIntent(intent);
-      }
+      if (!stamped.ok) continue;
+      await hooks.processIntent(intent);
     }
     // WHY NO ENTRY, once per change and to the owner only — every perp idle
     // code is withheld from publication (reasons.ts publishesIdle).

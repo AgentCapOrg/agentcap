@@ -23,16 +23,16 @@
  * NAMING: the web room's name never appears in code here (see
  * worker/src/groupchat/boundary.test.ts). This is "Telegram groups".
  */
+import { DATA } from "../../packages/core/src/chain";
 import { parseAbi, type PublicClient } from "viem";
-import { CASH, STOCK_TOKENS, UNISWAP, isEnergyReserveToken } from "../../packages/core/src/index";
+import { CASH, STOCK_TOKENS, PANCAKESWAP } from "../../packages/core/src/index";
 import type { BrainDecision } from "./brain-client";
 import { coinDisplayName } from "./coin-name";
-import { PONS_CURVE_DEX } from "./discovery";
 import { TRENCHER_FAST, shouldEnter, type Candidate } from "./strategies/trencher";
 import { highVolumePools } from "./trencher-brain";
 import { isCaAddress, type EntryClaim, type NominationBook, type ReviewedDecision } from "./trencher-nominate";
 import type { GeckoPool } from "./venues/geckoterminal";
-import { aggregate3, parseTokenMeta } from "./venues/pons-meta";
+import { aggregate3 } from "./venues/token-meta";
 import type {
   CoinKind,
   CoinLook,
@@ -139,19 +139,17 @@ function within<T>(f: () => Promise<T> | T, ms: number): Promise<T | typeof TIME
   });
 }
 
-const DEX_V3 = "uniswap-v3-robinhood";
+const DEX_V3 = DATA.pancakeswapV3DexId;
 const ZERO_ADDRESS = "0x" + "0".repeat(40);
 
 /** What one multicall says an address with code is. */
 export interface TokenProbe {
-  /** Answers the Pons template's metadata getter (venues/pons-meta.ts). */
-  pons: boolean;
   /** Answers `decimals()` with a uint8 — an ERC-20, or something shaped like one. */
   erc20: boolean;
   /**
    * Answers `token0()`, `token1()` and `fee()` the way a Uniswap v3 pool does:
    * its two tokens, lowercased, and `canonical`, the pool the CANONICAL v3
-   * factory (UNISWAP.v3Factory) names for those two tokens at that fee,
+   * factory (PANCAKESWAP.v3Factory) names for those two tokens at that fee,
    * lowercased — null when that read failed. Absent when the address is not
    * shaped like a pool.
    */
@@ -181,10 +179,8 @@ export interface CoinLookReaders {
    * undefined or "0x" = no code. A rejection is a failed read, never "no code".
    */
   getCode: (address: `0x${string}`) => Promise<string | undefined>;
-  /** One multicall: Pons template + ERC-20 shape. null = the batch could not be read. */
+  /** One multicall: ERC-20 and pool shape. null = the batch could not be read. */
   probe: (address: `0x${string}`) => Promise<TokenProbe | null>;
-  /** Pons curve provenance from the local ledger (0 RPC). A rejection counts as "not known here". */
-  curveFor?: (address: string) => Promise<unknown>;
   now?: () => number;
 }
 
@@ -216,13 +212,13 @@ const NOT_TOKEN: CoinLook = Object.freeze({ kind: "not-token", source: "chain" }
 const WALLET: CoinLook = Object.freeze({ kind: "wallet", source: "chain" });
 
 /** The quote side a pool must have to be a coin's pool — discovery's own rule (trencher-discovery.ts). */
-const CASH_SIDES: ReadonlySet<string> = new Set([CASH.USDG.toLowerCase(), CASH.WETH.toLowerCase()]);
+const CASH_SIDES: ReadonlySet<string> = new Set([CASH.USDT.toLowerCase(), CASH.WBNB.toLowerCase()]);
 
 /**
  * THE QUICK LOOK — `(address) => CoinLook`, cheapest first, every read bounded
  * (COIN_LOOK.readMs, COIN_LOOK.poolsMs) so a look always settles.
  *
- * 1. FREE: its own wallet or vault, cash, the energy reserve, a stock token.
+ * 1. FREE: its own wallet or vault, cash, a stock token.
  *    Holding classification is also read every time, so a coin bought since
  *    the last look is `held` and not a stale `candidate`. Its public market
  *    snapshot may be refreshed under the same full-look allowance below,
@@ -250,7 +246,7 @@ const CASH_SIDES: ReadonlySet<string> = new Set([CASH.USDG.toLowerCase(), CASH.W
  *    anything can be bought.
  * 4. RATE-CAPPED: past the full-look allowance the answer is `unknown`.
  * 5. GeckoTerminal's page for the token. When pools are known they decide:
- *    a Pons curve pool → `curve`; only 32-byte pool ids → `v4-only`; no
+ *    only 32-byte pool ids → `v4-only`; no
  *    Uniswap v3 pool at all → `no-pool`; a v3 pool that fails
  *    `highVolumePools` → `too-quiet`; fails `shouldEnter(TRENCHER_FAST)` on
  *    depth or size → `too-thin`, on age → `too-new`; else `candidate`.
@@ -266,9 +262,8 @@ const CASH_SIDES: ReadonlySet<string> = new Set([CASH.USDG.toLowerCase(), CASH.W
  *    COIN_LOOK.dexAfterMs unanswered, so the look still fits its bound. Only
  *    what it can place decides: a Uniswap v3 pair (every kind of step 5) or
  *    only v4 pairs (`v4-only`). No pairs, pairs it cannot place, or
- *    DexScreener failing too, is `unknown`, never `no-pool` or `curve`.
- * 6. No pool known: local curve provenance, then ONE multicall probe: a Pons
- *    template → `curve`; an ERC-20 → `no-pool`; a Uniswap v3 pool → step 7;
+ *    DexScreener failing too, is `unknown`, never `no-pool`.
+ * 6. No pool known: ONE multicall probe: an ERC-20 → `no-pool`; a Uniswap v3 pool → step 7;
  *    anything else → `not-token`.
  * 7. A CHART LINK CARRIES THE POOL. A GeckoTerminal `/pools/…` or DexScreener
  *    pair link is how most coins get posted, and the only address in it is
@@ -320,9 +315,8 @@ export function createCoinLook(d: CoinLookReaders): (address: string) => Promise
   const free = (a: string): CoinLook | null => {
     const source = "free";
     if (d.own().some((x) => typeof x === "string" && x.toLowerCase() === a)) return { kind: "own", source };
-    if (a === CASH.USDG.toLowerCase()) return { kind: "cash", name: "USDG", source };
-    if (a === CASH.WETH.toLowerCase()) return { kind: "cash", name: "WETH", source };
-    if (isEnergyReserveToken(a)) return { kind: "energy", source };
+    if (a === CASH.USDT.toLowerCase()) return { kind: "cash", name: "USDT", source };
+    if (a === CASH.WBNB.toLowerCase()) return { kind: "cash", name: "WBNB", source };
     const stock = STOCK_TOKENS.find((t) => t.address.toLowerCase() === a);
     if (stock) return { kind: "stock", name: stock.symbol, source };
     const held = d.held(a);
@@ -474,15 +468,9 @@ export function createCoinLook(d: CoinLookReaders): (address: string) => Promise
     const found = await indexed(a, false);
     if (found === null) return UNKNOWN;
     if (found.pools.length > 0) return classifyPools(a, found.pools, Math.floor(now() / 1000), found.source);
-    if (d.curveFor) {
-      // A ledger that cannot be read, or not in time, is "not known here".
-      const curve = await within(() => d.curveFor!(a), COIN_LOOK.readMs).catch(() => null);
-      if (curve !== TIMED_OUT && curve) return { kind: "curve", source: "chain" };
-    }
     // A multicall and, for a pool-shaped answer, the factory's one more read.
     const probe = await within(() => d.probe(a), 2 * COIN_LOOK.readMs).catch(() => null);
     if (probe === null || probe === TIMED_OUT) return UNKNOWN;
-    if (probe.pons) return { kind: "curve", source: "chain" };
     if (probe.erc20) return { kind: "no-pool", source: "chain" };
     if (depth === 0 && probe.pool) return poolLook(a, probe.pool);
     return NOT_TOKEN;
@@ -592,9 +580,8 @@ function classifyPools(a: string, mine: readonly GeckoPool[], nowSec: number, so
   const v3 = mine.filter((p) => p.dex === DEX_V3 && p.poolAddress !== null);
   // A DexScreener pair it cannot place (unlabelled, another venue) is not
   // "no pool": it says nothing, and a `no-pool` answer would be remembered.
-  if (v3.length === 0 && source === "dexscreener") return mine.every((p) => p.dex === "uniswap-v4-robinhood") ? as("v4-only") : UNKNOWN;
+  if (v3.length === 0 && source === "dexscreener") return mine.every((p) => p.dex.endsWith("-v4-bsc")) ? as("v4-only") : UNKNOWN;
   if (v3.length === 0) {
-    if (mine.some((p) => p.dex === PONS_CURVE_DEX)) return as("curve");
     if (mine.every((p) => p.poolAddress === null)) return as("v4-only");
     return as("no-pool");
   }
@@ -642,9 +629,6 @@ function publicPoolResearch(p: GeckoPool, nowSec: number, source: CoinLookSource
   };
 }
 
-/** Pons template metadata getter — the selector venues/pons-meta.ts reads. */
-const PONS_METADATA_SELECTOR = "0xabb1dc44" as const;
-/** ERC-20 `decimals()`. */
 const DECIMALS_SELECTOR = "0x313ce567" as const;
 /** Uniswap v3 pool `token0()`, `token1()`, `fee()`. */
 const TOKEN0_SELECTOR = "0x0dfe1681" as const;
@@ -674,13 +658,13 @@ function wordAddress(r: SubCall): `0x${string}` | null {
 
 /**
  * The probe `createCoinLook` wants, over the chain: ONE Multicall3 aggregate3
- * with five sub-calls, so "is it a Pons coin", "is it a token at all" and "is
- * it a Uniswap v3 pool" cost one eth_call. aggregate3 returns [] when the
+ * with four sub-calls, so "is it a token at all" and "is it a Uniswap v3 pool"
+ * cost one eth_call. aggregate3 returns [] when the
  * batch itself failed, which is the one answer that means "could not read" — a
  * sub-call that reverts is an ordinary "no".
  *
  * Only for an address that answered like a pool, ONE more read: what the
- * canonical v3 factory (UNISWAP.v3Factory, the factory trencher-vault.ts pins)
+ * canonical v3 factory (PANCAKESWAP.v3Factory, the factory trencher-vault.ts pins)
  * says the pool for those two tokens at that fee is. That read failing is
  * `canonical: null` — unknown to the look, never "not that coin's pool".
  *
@@ -692,7 +676,6 @@ export function chainTokenProbe(client: PublicClient): (address: `0x${string}`) 
     const batch = await within(
       () =>
         aggregate3(client, [
-          { target: address, callData: PONS_METADATA_SELECTOR },
           { target: address, callData: DECIMALS_SELECTOR },
           { target: address, callData: TOKEN0_SELECTOR },
           { target: address, callData: TOKEN1_SELECTOR },
@@ -703,20 +686,19 @@ export function chainTokenProbe(client: PublicClient): (address: `0x${string}`) 
     // No answer in time is a batch that could not be read.
     if (batch === TIMED_OUT) return null;
     const r = batch;
-    if (r.length !== 5) return null;
-    const pons = !!r[0]?.success && parseTokenMeta(address, r[0].returnData) !== null;
-    const dec = word(r[1]);
+    if (r.length !== 4) return null;
+    const dec = word(r[0]);
     const erc20 = dec !== null && dec <= 255n;
-    const token0 = wordAddress(r[2]);
-    const token1 = wordAddress(r[3]);
-    const fee = word(r[4]);
-    if (token0 === null || token1 === null || fee === null || fee > 0xffffffn) return { pons, erc20 };
+    const token0 = wordAddress(r[1]);
+    const token1 = wordAddress(r[2]);
+    const fee = word(r[3]);
+    if (token0 === null || token1 === null || fee === null || fee > 0xffffffn) return { erc20 };
     let canonical: string | null = null;
     try {
       const got: unknown = await within(
         () =>
           client.readContract({
-            address: UNISWAP.v3Factory as `0x${string}`,
+            address: PANCAKESWAP.v3Factory as `0x${string}`,
             abi: V3_FACTORY_ABI,
             functionName: "getPool",
             args: [token0, token1, Number(fee)],
@@ -728,7 +710,7 @@ export function chainTokenProbe(client: PublicClient): (address: `0x${string}`) 
     } catch {
       canonical = null;
     }
-    return { pons, erc20, pool: { token0, token1, canonical } };
+    return { erc20, pool: { token0, token1, canonical } };
   };
 }
 
@@ -876,7 +858,7 @@ export type GroupEntryClaim =
   | { group: true; address: string; ok: false; why: "cap" | "resolved" };
 
 /**
- * THE GROUP-ENTRY CAP, ASKED ONCE PER ENTRY — before the energy claim, before
+ * THE GROUP-ENTRY CAP, ASKED ONCE PER ENTRY — before
  * ensureDecision, before anything is built.
  *
  * An entry is GROUP-SOURCED when the coin it buys is an unresolved nomination,
@@ -955,8 +937,8 @@ export function groupExitOf(
 ): { address: string; notes: string[] } | null {
   if (intent.kind !== "swap" || typeof intent.sellToken !== "string" || typeof intent.buyToken !== "string") return null;
   const address = intent.sellToken.toLowerCase();
-  if (address === CASH.USDG.toLowerCase() || address === CASH.WETH.toLowerCase()) return null;
-  if (intent.buyToken.toLowerCase() !== CASH.USDG.toLowerCase()) return null;
+  if (address === CASH.USDT.toLowerCase() || address === CASH.WBNB.toLowerCase()) return null;
+  if (intent.buyToken.toLowerCase() !== CASH.USDT.toLowerCase()) return null;
   if (why?.code === "trench-exit") {
     const note = typeof why.cause === "string" && Object.hasOwn(EXIT_NOTES, why.cause) ? EXIT_NOTES[why.cause]! : BRAIN_EXIT_NOTE;
     return { address, notes: [note] };

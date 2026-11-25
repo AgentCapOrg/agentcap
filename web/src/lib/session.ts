@@ -1,7 +1,6 @@
 "use client";
 
 import { resolveTrencherPermission } from "./trencher-permission";
-import { assertV4Deployment } from "./v4-deployment";
 import { GRANT_TRENCHER } from "@agentcap/core";
 
 /**
@@ -49,23 +48,15 @@ import {
 } from "@zerodev/permissions/policies";
 import {
   CASH,
-  MORPHO,
-  RIALTO,
   STOCK_TOKENS,
   TRADEABLE_SYMBOLS,
-  UNISWAP,
   UNISWAP_SWAP_ROUTER_ABI,
-  PERMIT2_ABI,
-  UNIVERSAL_ROUTER_ABI,
   buildWallPolicies,
   WALL_POLICY_FLAG,
   usableExtraTokens,
   buildCallPermissions,
   wallShape,
   wallSignable,
-  energyBuyFits,
-  GRANT_ENERGY,
-  ENERGY_ROUTE_V1,
   perpFits,
   grantPerp,
   validatePerpPubKey,
@@ -73,22 +64,12 @@ import {
   LIGHTER_ROUTE_V1,
   chainForId,
   officialCoinTokens,
-  ponsAdapterForSigning,
-  PONS_CLASS_VAULT_FACTORY,
-  PONS_CLASS_VAULT_FACTORY_V2,
-  robinhoodChain,
-  robinhoodTestnet,
-  
-  GRANT_V4,
-  GRANT_V4_ADAPTER,
-  GRANT_PONS_ADAPTER,
-  GRANT_PONS_CLASS,
-  GRANT_SCOPED_SPENDERS,
-  resolveClassVault,
-  probeClassFactory,
+  bnbChain,
+  bnbTestnet,
+    GRANT_SCOPED_SPENDERS,
   bindingMessage,
   TRADEABLE_V2,
-  USDG_DECIMALS,
+  cashNumber,
   assertDerivedAccount,
   accountIndexForPurpose,
   grantPurpose,
@@ -106,12 +87,7 @@ import { walletUrl } from "./wallet-param";
 export type { GrantCaps, StoredGrant };
 
 /** Testnet gas faucet — where users top up the account's native balance. */
-export const FAUCET_URL = "https://faucet.testnet.chain.robinhood.com";
-
-const VAULT_ABI = parseAbi([
-  "function deposit(uint256 assets, address receiver) returns (uint256)",
-  "function withdraw(uint256 assets, address receiver, address owner) returns (uint256)",
-]);
+export const FAUCET_URL = "https://www.bnbchain.org/en/testnet-faucet";
 
 export type Grant = StoredGrant;
 
@@ -215,7 +191,6 @@ export function clearGrant(wallet: GrantPurpose): void {
   localStorage.removeItem(storageKey(wallet));
 }
 
-const usdgUnits = (v: number) => BigInt(Math.round(v * 10 ** USDG_DECIMALS));
 
 /** An address, abbreviated for a sentence a person has to read. */
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
@@ -272,7 +247,7 @@ export type OwnerSigner =
 // ── PERPETUALS: WHAT A SIGNATURE MAY SEAL, AND WHAT IT MAY NEVER DROP ───────
 //
 // docs/perps.md rules 3 and 5. The perps permission is the one opt-in in this
-// wall that CANNOT be silently dropped the way the energy buy is. A Lighter API
+// wall that CANNOT be silently dropped. A Lighter API
 // key, once the worker has registered it, stays valid at the venue whatever any
 // later grant says — dropping the perp block revokes nothing there, it only
 // takes the key away from the one process that can close the positions it
@@ -608,27 +583,24 @@ export function decidePerpSeal(a: {
  * recovery of one either.
  *
  * REFUSED, NOT QUIETLY LEFT OUT. A caller handing a Perps signature a token
- * list, an adapter, a class factory or Trencher is a caller that thinks it is
+ * list or Trencher is a caller that thinks it is
  * signing for the Spot wallet, and the owner should hear about it before
  * signing rather than receive a quieter wall than the one they reviewed. The
- * platform defaults (official listings, the Pons adapter, the class factory)
- * are not inputs, so they are skipped in prepareGrantCore instead.
+ * platform defaults (official listings) are not inputs, so they are skipped in
+ * prepareGrantCore instead.
  */
 function refusePerpsWalletInputs(a: {
   chainId: number;
   extraTokens: readonly CustomToken[];
-  v4AdapterAddress?: `0x${string}`;
-  ponsAdapterAddress?: `0x${string}`;
-  ponsClassVaultFactory?: `0x${string}`;
   trencherFactory?: `0x${string}`;
   perpIn: PerpSigningInput;
 }): void {
-  if (a.chainId !== robinhoodChain.id) {
+  if (a.chainId !== bnbChain.id) {
     throw new Error("A Perps wallet exists only on Robinhood Chain mainnet. Nothing was signed.");
   }
-  if (a.extraTokens.length > 0 || a.v4AdapterAddress || a.ponsAdapterAddress || a.ponsClassVaultFactory || a.trencherFactory) {
+  if (a.extraTokens.length > 0 || a.trencherFactory) {
     throw new Error(
-      "A Perps wallet's permission carries no Spot route: no token, adapter, class vault or Trencher. Nothing was signed.",
+      "A Perps wallet's permission carries no Spot route: no token or Trencher. Nothing was signed.",
     );
   }
   if (a.perpIn.perp != null || a.perpIn.perpDrop === true || a.perpIn.recovery !== undefined) {
@@ -647,20 +619,6 @@ async function prepareGrantCore(
    * adding a token in settings does nothing until a grant covering it is signed.
    */
   extraTokens: readonly CustomToken[] = [],
-  /**
-   * The deployed V4SelfSwap adapter to seal into the wall, or absent for no
-   * v4 route. Per-chain and per-deploy — the caller reads it from /settings
-   * for the chain being signed. The marker and the permission are minted
-   * together below, or not at all.
-   */
-  v4AdapterAddress?: `0x${string}`,
-  /**
-   * The deployed PonsSelfTrade adapter to seal into the wall, or absent for no
-   * bonding-curve route. A SECOND, SEPARATE opt-in from the v4 adapter: two
-   * venues, two risks, two decisions. Marker and permission are minted
-   * together below, or not at all.
-   */
-  ponsAdapterAddress?: `0x${string}`,
   /**
    * Whether this deployment is the hosted service, from GET /api/auth/session.
    *
@@ -683,24 +641,6 @@ async function prepareGrantCore(
    * below, before the wall is pinned to anything.
    */
   expectAccount?: Address,
-  /**
-   * The deployed PonsClassVaultFactory, or absent for no class route.
-   *
-   * A FACTORY, NOT A VAULT, and the distinction is not a detail. The vault is
-   * per-account and derived from a smart account that, on a fresh mint, does not
-   * exist until several steps into this function — so no caller could hand us
-   * the address even in principle. The factory is the deployment constant; the
-   * vault comes out of it below, once the account is known.
-   *
-   * A THIRD, SEPARATE opt-in: v4, Pons and class are three venues, three risks,
-   * three decisions. Marker, sealed address and permission are minted together
-   * or not at all — and if the factory cannot be read, nothing is signed, see
-   * resolveClassVault.
-   *
-   * APPENDED AT THE END on purpose. The comment on MintOptions records what
-   * inserting an optional address in the middle of this list cost last time.
-   */
-  ponsClassVaultFactory?: `0x${string}`,
   trencherFactory?: `0x${string}`,
   preflightOnly = false,
   minimumValidationNonce?: number,
@@ -734,12 +674,12 @@ async function prepareGrantCore(
   }
   if (purpose === "perps") {
     refusePerpsWalletInputs({
-      chainId, extraTokens, v4AdapterAddress, ponsAdapterAddress, ponsClassVaultFactory, trencherFactory, perpIn,
+      chainId, extraTokens, trencherFactory, perpIn,
     });
   }
   // Testnet is the sandbox; mainnet (4663) is real funds — the UI gates that
   // choice behind an explicit consent step. Note: the call-policy addresses
-  // below (UNISWAP/RIALTO/MORPHO/USDG) are MAINNET deployments — the wall is
+  // below (PANCAKESWAP and cash) are MAINNET deployments — the wall is
   // real on mainnet and inert on testnet, where those contracts don't exist
   // and swaps no-route by design.
   const chain = chainForId(chainId);
@@ -771,25 +711,6 @@ async function prepareGrantCore(
    */
   const sealedTokens: readonly CustomToken[] =
     purpose === "perps" ? [] : [...officialCoinTokens(chainId), ...extraTokens];
-
-  /**
-   * The Pons adapter this signature seals: the owner's own if they named one,
-   * else the chain's deployed adapter.
-   *
-   * RESOLVED HERE for the same reason as the tokens above — the address reached
-   * a grant only if an owner had pasted it into /settings, and essentially none
-   * had, so the weekend curve fallback could not fire for anybody. Defaulting at
-   * the call sites would leave the phone signer out, which has no /settings
-   * fetch wired at all.
-   *
-   * A SIGNING-TIME DEFAULT ONLY. The worker still calls whatever address the
-   * signature sealed (`grantPonsAdapter`) and never this constant, so a later
-   * redeploy cannot redirect an existing grant's trades, and an owner who names
-   * their own address still wins over the platform's.
-   *
-   * NO DEFAULT FOR A PERPS WALLET: the platform's adapter is a Spot venue.
-   */
-  const sealedPonsAdapter = purpose === "perps" ? undefined : ponsAdapterForSigning(chainId, ponsAdapterAddress);
 
   const entryPoint = getEntryPoint("0.7");
   const kernelVersion = KERNEL_V3_3;
@@ -863,149 +784,9 @@ async function prepareGrantCore(
     );
   }
 
-  // The renewal preflight runs this before stopping or revoking the old key.
-  // Keep it in the canonical signer so SDK and phone callers also cannot seal
-  // a v4 route that only the worker later discovers is missing or on another
-  // network. The actual mint checks again after revocation.
-  await assertV4Deployment(publicClient, v4AdapterAddress, chainId, onStatus);
-
   // THE WALL now lives in packages/core/src/wall.ts, so the phone app signs the
   // IDENTICAL permission set rather than a second copy that could drift from this
   // one with nothing failing when it did. worker/src/wall.test.ts pins its shape.
-  // Uniswap v4 is OFF — see WallOptions.allowUniswapV4. This flag and the
-  // GRANT_V4 marker below MUST move together: the marker is what the worker
-  // reads to decide whether to route through v4, and until now it claimed a
-  // capability the wall granted regardless of it. Deriving both from one
-  // constant is what stops them drifting apart again.
-  const allowUniswapV4: boolean = false;
-
-  // THE CLASS VAULT, RESOLVED FROM THE ACCOUNT THAT WAS JUST DERIVED. It has to
-  // happen here and not earlier: `sudoOnlyAccount.address` is the vault's owner
-  // and the CREATE2 salt, and it is only known now. Throws rather than falling
-  // back if the factory cannot be read — see resolveClassVault.
-  /**
-   * THE FACTORY IS A PLATFORM ANSWER, NOT A THING EACH OWNER MUST TYPE.
-   *
-   * This read the address from the tenant's own settings and skipped the whole
-   * vault block when it was absent — which it is for everyone, because nothing
-   * ever asked them for it. So the class route, whose entire purpose is trading
-   * a launch that did not exist at signing, could only be reached by an owner
-   * who had somehow learned a deploy address and pasted it in. Measured: every
-   * tenant on the platform except one has no vault sealed, and a re-sign would
-   * have sealed nothing and told them it succeeded.
-   *
-   * `PONS_CLASS_VAULT_FACTORY` makes the same argument its own docstring makes
-   * for the adapter constant: a deploy fact, decided once per chain by whoever
-   * ran the deploy, identical for every tenant, and about which no tenant has
-   * information the platform lacks.
-   *
-   * THIS IS NOT THE ADAPTER, and the distinction is the whole safety case.
-   * `ponsAdapterForSigning` deliberately refuses to default, because
-   * `tradeExactIn` takes the curve as a CALLER-SUPPLIED argument the wall cannot
-   * pin and hands it a live allowance. A class vault is the opposite shape: the
-   * wall pins the vault itself as a literal target, the vault validates the
-   * curve internally, and `sweep` has no recipient — it pays `owner`, fixed at
-   * construction. Sealing it widens nothing the owner does not already control.
-   *
-   * AND IT STARTS NOTHING. A sealed vault is a capability, not an instruction:
-   * `proposeClassEntries` still requires `classSnipeEnabled`, a non-zero entry
-   * size and room for a position, all of which default off. Re-signing gives an
-   * owner the ABILITY to trade launches autonomously; turning it on stays a
-   * separate, deliberate act.
-   *
-   * A tenant who has set their own factory keeps it — grant-first precedence,
-   * exactly as the adapter path does.
-   *
-   * A PERPS WALLET GETS NO VAULT, default or otherwise, and so no factory read:
-   * a class vault is a Spot venue.
-   */
-  const sealedClassFactory =
-    purpose === "perps"
-      ? undefined
-      : ponsClassVaultFactory ??
-        ((PONS_CLASS_VAULT_FACTORY[chainId] ?? undefined) as `0x${string}` | undefined);
-
-  let ponsClassVaultAddress: `0x${string}` | undefined;
-  if (sealedClassFactory) {
-    /**
-     * ── WHICH VAULT FAMILY IS THIS, AND DOES IT MATCH WHAT WAS ASKED FOR ────
-     *
-     * NOTHING ELSE CAN TELL. `vaultFor`, `deploy`, `buy`, `sell` and `sweep` are
-     * signature-identical across the two versions, so the wall this signature
-     * seals is BYTE-IDENTICAL either way. A v1 address answers `vaultFor`
-     * plausibly, returns a real deployed vault, mints the marker, pins a real
-     * target, and reports a successful re-sign — while the chain quietly
-     * enforces v1's single global ceiling in raw units, which is ~250 for USDG
-     * and eight orders of magnitude wrong for anything else.
-     *
-     * The factory address is free text in /settings and that setting takes
-     * PRECEDENCE over the constant, so this is not a hypothetical paste.
-     *
-     * CHECKED AGAINST BOTH CONSTANTS RATHER THAN AGAINST PROVENANCE. An address
-     * that equals a pinned constant must be the version that constant is for;
-     * anything else is the owner's own and is reported rather than refused. A
-     * provenance rule ("it came from the constant, so it is v1") would quietly
-     * stop being true the day the default is repointed.
-     */
-    onStatus("checking the class vault factory…");
-    const probe = await probeClassFactory(publicClient, sealedClassFactory);
-    const lower = sealedClassFactory.toLowerCase();
-    const pinnedV1 = (PONS_CLASS_VAULT_FACTORY[chainId] ?? "").toLowerCase();
-    const pinnedV2 = (PONS_CLASS_VAULT_FACTORY_V2[chainId] ?? "").toLowerCase();
-    if (pinnedV1 && lower === pinnedV1 && probe.version !== 1) {
-      throw new Error(
-        `refusing to seal a class permission: ${sealedClassFactory} is pinned as this chain's v1 class ` +
-          `vault factory, but it answers version ${probe.version}. One of the two is wrong, and signing ` +
-          `would seal a vault nobody meant.`,
-      );
-    }
-    if (pinnedV2 && lower === pinnedV2 && probe.version !== 2) {
-      throw new Error(
-        `refusing to seal a class permission: ${sealedClassFactory} is pinned as this chain's v2 class ` +
-          `vault factory, but it does not answer FACTORY_VERSION — which is what a v1 factory looks ` +
-          `like. A v1 vault charges every buy against one global ceiling whatever asset funded it.`,
-      );
-    }
-
-    if (probe.version === 2) {
-      /**
-       * A V2 VAULT IS BORN WITH ITS FACTORY'S SEED CAPS, AND THERE IS NO SECOND
-       * TRANSACTION TO FIX THEM IN. The vault is created inside the same
-       * operation as its first class buy and that batch reverts whole, so a
-       * seed without USDG means every buy the wall permits reverts
-       * `QuoteNotApproved` AFTER the USDG approve leg has already landed — a
-       * grant that looks complete, burns gas every tick, and can never trade.
-       *
-       * SUBSET, NOT EQUALITY. The wall pins the class buy's quote word to USDG
-       * alone, and a multi-quote factory's seed is legitimately wider. What has
-       * to hold is that everything the wall permits, the vault will accept.
-       */
-      const usdg = CASH.USDG.toLowerCase();
-      const i = probe.seedQuotes.findIndex((q) => q.toLowerCase() === usdg);
-      if (i < 0) {
-        throw new Error(
-          `refusing to seal a class permission: the v2 factory at ${sealedClassFactory} seeds no USDG ` +
-            `cap, and the wall only ever permits a class buy funded in USDG. Every buy would revert ` +
-            `after the approve had landed.`,
-        );
-      }
-      if (probe.seedCaps[i] === 0n) {
-        throw new Error(
-          `refusing to seal a class permission: the v2 factory at ${sealedClassFactory} seeds USDG at a ` +
-            `cap of zero, and in this vault a cap of zero is how an asset is refused.`,
-        );
-      }
-    }
-
-    onStatus("locating your class vault…");
-    ponsClassVaultAddress = await resolveClassVault(
-      publicClient,
-      sealedClassFactory,
-      sudoOnlyAccount.address,
-    );
-    onStatus(`class vault v${probe.version} at ${ponsClassVaultAddress.slice(0, 10)}…`);
-  }
-
   const trenchScope = trencherFactory ? await resolveTrencherPermission(publicClient, trencherFactory, sudoOnlyAccount.address) : {};
 
   // ── IS THIS A FIRST INSTALL, OR A RE-SIGN ONTO AN ACCOUNT THAT EXISTS? ────
@@ -1021,9 +802,8 @@ async function prepareGrantCore(
   // whose first operation the executor then refuses forever, which they cannot.
   // Only one of those is recoverable, so the RPC failing picks that one.
   //
-  // READ BEFORE THE WALL OPTIONS, because one of them now depends on it: the
-  // energy buy is sealed only when the wall still fits, and whether it fits
-  // depends on whether this signature also pays for the account's deployment.
+  // READ BEFORE THE WALL OPTIONS, because whether perps fit depends on whether
+  // this signature also pays for the account's deployment.
   let alreadyDeployed = false;
   try {
     const code = await publicClient.getBytecode({ address: sudoOnlyAccount.address });
@@ -1036,14 +816,10 @@ async function prepareGrantCore(
   //
   // After the account is known (the previous grant is matched by it) and after
   // the deployment read (whether perps fit depends on it), and BEFORE the
-  // energy buy and the signability check — because of what each does when
-  // the wall is full. The energy buy is DROPPED when it does not fit, and the
-  // agent is funded another way. Perps are REFUSED (docs/perps.md rule 3): a
-  // registered Lighter key outlives any grant, so a re-sign that quietly lost
-  // the block would leave a live venue account with no worker holding its key.
-  // So perps claim their room first, and energy — the capability that can
-  // give way — is asked about the wall that already carries them. Stage 1
-  // measured perps at ~2.5M bounded first-enable gas, twice the energy buy.
+  // signability check. Perps are REFUSED when they do not fit (docs/perps.md
+  // rule 3): a registered Lighter key outlives any grant, so a re-sign that
+  // quietly lost the block would leave a live venue account with no worker
+  // holding its key.
   //
   // `decidePerpSeal` refuses by name (carried key changed, drop without a flat
   // venue, off mainnet, another account's key armed); the fit check below is
@@ -1085,37 +861,25 @@ async function prepareGrantCore(
     // A PERPS WALLET'S WALL CARRIES NO SPOT ROUTE (core WallOptions.perpsOnly),
     // set from the purpose this signature signs and nothing else, as the
     // server's rebuild sets it from the purpose the grant declares
-    // (grantWallOptions). With no perp block and no energy buy below, it is
+    // (grantWallOptions). With no perp block below, it is
     // EMPTY: the paper Perps wallet, a key that can do nothing on chain.
     perpsOnly: purpose === "perps",
     ...trenchScope,
     extraTokens: sealedTokens,
-    allowUniswapV4,
     // EACH SPENDER ONLY ON THE TOKENS IT PULLS (WallOptions.scopedSpenders),
     // always on Spot, and GRANT_SCOPED_SPENDERS below is minted from this same
-    // field. It is what lets class + Trencher + the v4 adapter + a few coins
-    // fit the first-enable maximum at all; unscoped, three coins came to
-    // ~15.75M. A Perps wall names no Spot spender to scope, so it carries
+    // field. It is what keeps a Trencher + a few coins wall inside the
+    // first-enable maximum. A Perps wall names no Spot spender to scope, so it carries
     // neither the shape nor its marker, and the server refuses a Perps grant
     // that declares it (canonical-wall.ts).
     scopedSpenders: purpose === "spot",
-    v4AdapterAddress,
-    ponsAdapterAddress: sealedPonsAdapter,
-    ponsClassVaultAddress,
-    // The factory rides with the vault. buildWallPolicies THROWS on a vault
-    // without one — two of three class permissions is a key that can reach a
-    // vault it can never create.
-    ponsClassVaultFactoryAddress: sealedClassFactory,
-    // Decided just below, by energyBuyFits, and nowhere else.
-    energyBuy: false as boolean,
     // Decided just above, by decidePerpSeal, and nowhere else — never
     // reassigned below, so the wall, the marker and grant.perp describe one
     // decision.
     perpLighter,
   };
   // DOES THE WALL HOLD PERPS? The same policy `wallSignable` applies, one
-  // question earlier, over the options that will be signed (energy still
-  // closed). A NAMED refusal with the remedy, never a silent drop: the owner
+  // question earlier, over the options that will be signed. A NAMED refusal with the remedy, never a silent drop: the owner
   // chooses what gives way, not this function.
   if (wallOpts.perpLighter && !perpFits(caps, sudoOnlyAccount.address, chain.id, !alreadyDeployed, wallOpts)) {
     throw new PerpSigningRefusal(
@@ -1129,29 +893,6 @@ async function prepareGrantCore(
             "opt-in) from this signature, or leave perpetuals off.",
     );
   }
-  // ── THE ENERGY BUY: SEALED ONLY WHERE IT EXISTS AND ONLY WHEN IT FITS ─────
-  //
-  // USDG into $AGENTCAP over the frozen v2 route, into this account, and
-  // nothing else (packages/core/src/wall.ts). Mainnet only — elsewhere the
-  // router is codeless and a buy would land having bought nothing — and only
-  // when this wall still fits the first-enable ceiling WITH it: sealing it
-  // unconditionally would turn a full basket's re-sign into a refusal. An owner
-  // without room signs exactly the wall they would have signed anyway, and
-  // their agent's energy arrives as $AGENTCAP sent to it directly.
-  //
-  // ONE BOOLEAN decides the permission (through wallOpts, below) AND the
-  // GRANT_ENERGY marker (in grantFeatures) — marker and permission move
-  // together, which signer-lockstep.test.ts pins in both signers.
-  //
-  // NEVER ON A PERPS WALLET IN THIS BUILD (decision D5). Its account is a
-  // mainnet account, so the energy route exists and would fit an empty wall;
-  // sealing it would give a paper wallet's key the one thing it must not have,
-  // a USDG approve that can spend the real money its account holds.
-  wallOpts.energyBuy = purpose === "spot" && energyBuyFits(caps, sudoOnlyAccount.address, chain.id, !alreadyDeployed, wallOpts);
-  if (!wallOpts.energyBuy && purpose === "spot" && chain.id === ENERGY_ROUTE_V1.chainId) {
-    onStatus("no room in this permission for the agent to buy its own energy — $AGENTCAP can still be sent to it directly");
-  }
-
   // ── CAN THIS WALL EVER BE INSTALLED? ASKED BEFORE A SIGNATURE EXISTS ──────
   //
   // A session key installs its validator lazily: the enable data rides in the
@@ -1166,8 +907,7 @@ async function prepareGrantCore(
   // signature is about to be made over — not the same arithmetic reproduced
   // here. Two implementations of one policy is exactly how the two sides came
   // to disagree, and `wall-policy-lockstep.test.ts` fails if either grows its
-  // own. `wallOpts` already carries the energy decision, so this asks about the
-  // wall that will actually be signed.
+  // own. This asks about the wall that will actually be signed.
   const signable = wallSignable(
     wallShape(buildCallPermissions(caps, sudoOnlyAccount.address, wallOpts)),
     {
@@ -1211,7 +951,7 @@ async function prepareGrantCore(
     policies,
     // Execute, but never sign. Without this the session key can produce
     // ERC-1271 signatures — which a CALL policy cannot constrain — and a
-    // signed Permit2 transfer drains the account with no UserOp at all.
+    // signed permit or order can move funds with no UserOp at all.
     // See WALL_POLICY_FLAG in packages/core/src/wall.ts.
     flag: WALL_POLICY_FLAG,
   });
@@ -1335,29 +1075,12 @@ async function prepareGrantCore(
     // destination is registered above, and until this signer offers that,
     // money leaves through the owner key (`agentcap recover`) — which is what
     // /grant already tells the owner, and which no wall can block.
-    // GRANT_V4_ADAPTER is minted ONLY when the permission was — marker and
-    // wall move together, the same lockstep rule as GRANT_V4 above. The sealed
-    // address rides with it because the marker alone is a claim, not evidence.
     ...trenchScope,
     grantFeatures: [
       ...(trencherFactory ? [GRANT_TRENCHER] : []),
       // A Spot marker, so Spot only: a Perps wall seals no stock at all, and
       // the server refuses a Perps grant that claims it (canonical-wall.ts).
       ...(purpose === "spot" ? [TRADEABLE_V2] : []),
-      ...(allowUniswapV4 ? [GRANT_V4] : []),
-      ...(v4AdapterAddress ? [GRANT_V4_ADAPTER] : []),
-      ...(sealedPonsAdapter ? [GRANT_PONS_ADAPTER] : []),
-      // GRANT_PONS_CLASS is minted from `ponsClassVaultAddress`, NOT from
-      // `ponsClassVaultFactory`. The factory is what the owner asked for; the
-      // vault address is what the wall actually pinned, and only the second one
-      // is evidence. They differ in exactly the case that matters — a factory
-      // that could not be read — and that case never gets here, because
-      // resolveClassVault throws instead of returning undefined.
-      ...(ponsClassVaultAddress ? [GRANT_PONS_CLASS] : []),
-      // From the SAME boolean that put the router permission into the wall
-      // above — never from the chain id or a setting. A marker the wall does
-      // not back sends the worker building an energy buy the chain refuses.
-      ...(wallOpts.energyBuy ? [GRANT_ENERGY] : []),
       // From the field that scoped the wall above. Without it the server and
       // the executor rebuild the UNSCOPED wall, which is not what was signed.
       ...(wallOpts.scopedSpenders ? [GRANT_SCOPED_SPENDERS] : []),
@@ -1382,14 +1105,6 @@ async function prepareGrantCore(
             apiPublicKey: wallOpts.perpLighter.apiPublicKey.toLowerCase() as `0x${string}`,
             ...(sealedPerp?.apiKeySealed ? { apiKeySealed: sealedPerp.apiKeySealed } : {}),
           },
-        }
-      : {}),
-    ...(v4AdapterAddress ? { v4AdapterAddress: v4AdapterAddress.toLowerCase() } : {}),
-    ...(sealedPonsAdapter ? { ponsAdapterAddress: sealedPonsAdapter.toLowerCase() } : {}),
-    ...(ponsClassVaultAddress
-      ? {
-          ponsClassVaultAddress: ponsClassVaultAddress.toLowerCase(),
-          ponsClassVaultFactoryAddress: sealedClassFactory!.toLowerCase(),
         }
       : {}),
     // What this signature ACTUALLY covers — the worker compares it against the
@@ -1425,11 +1140,8 @@ async function mintGrant(
   onStatus: (status: string) => void,
   chainId: number,
   extraTokens: readonly CustomToken[] = [],
-  v4AdapterAddress?: `0x${string}`,
-  ponsAdapterAddress?: `0x${string}`,
   hostedAs?: Address,
   expectAccount?: Address,
-  ponsClassVaultFactory?: `0x${string}`,
   trencherFactory?: `0x${string}`,
   minimumValidationNonce?: number,
   perpIn: PerpSigningInput = {},
@@ -1449,8 +1161,8 @@ async function mintGrant(
   // storage; prepare-agent-grant.test.ts pins that.) THIS WALLET'S grants
   // only: the other wallet's armed grant is not replaced by this signature.
   const grant = await prepareGrantCore(
-    ownerSigner, caps, onStatus, chainId, extraTokens, v4AdapterAddress,
-    ponsAdapterAddress, hostedAs, expectAccount, ponsClassVaultFactory, trencherFactory,
+    ownerSigner, caps, onStatus, chainId, extraTokens,
+    hostedAs, expectAccount, trencherFactory,
     false, minimumValidationNonce,
     // A snapshot the caller already took (a renewal hands the SAME one to its
     // preflight) wins; otherwise this mint reads storage itself.
@@ -1675,7 +1387,7 @@ export function listSavedWallets(wallet: GrantPurpose): SavedWallet[] {
         // describing another. Mainnet is both the product default and the
         // conservative guess: it makes the page say REAL MONEY about a wallet
         // that may hold some, rather than the reverse.
-        chainId: typeof g.chainId === "number" ? g.chainId : robinhoodChain.id,
+        chainId: typeof g.chainId === "number" ? g.chainId : bnbChain.id,
         ownerKey: g.demoOwnerPrivateKey,
         current,
       });
@@ -1934,7 +1646,7 @@ export function sameGrantPermission(a: GrantPermissionView | undefined, b: Grant
     const normalize = (values: string[]) => [...values].map(value => key === "grantTokens" ? value.toLowerCase() : value).sort();
     if (JSON.stringify(normalize(x)) !== JSON.stringify(normalize(y))) return false;
   }
-  for (const key of ["v4AdapterAddress", "ponsAdapterAddress", "ponsClassVaultAddress", "ponsClassVaultFactoryAddress", "trencherVaultAddress", "trencherFactoryAddress"] as const) {
+  for (const key of ["trencherVaultAddress", "trencherFactoryAddress"] as const) {
     const x = a[key], y = b[key];
     if (x === undefined || y === undefined) { if (x !== y) return false; continue; }
     if (!address(x) || !address(y) || x.toLowerCase() !== y.toLowerCase()) return false;
@@ -1987,7 +1699,7 @@ export async function retryGrantHandoff(grant: Grant, proof?: GrantRetryProof, a
  * An options object rather than positional arguments, because of a bug that
  * actually shipped. These entry points took seven positional parameters, four
  * optional and three of them the same type — so inserting a new one
- * (`ponsAdapterAddress`) before `hostedAs` silently shifted every existing call
+ * (an adapter address) before `hostedAs` silently shifted every existing call
  * site: the signed-in WALLET address landed in the adapter slot and `hostedAs`
  * became undefined. TypeScript cannot catch that, because an optional address
  * is an optional address whatever it is supposed to mean.
@@ -1995,7 +1707,7 @@ export async function retryGrantHandoff(grant: Grant, proof?: GrantRetryProof, a
  * The consequences were not cosmetic. No `hostedAs` meant no binding, so the
  * server refused every newly created hosted wallet with "this grant isn't
  * linked to your login" — and the owner's own wallet address was being sealed
- * into the wall as a Pons adapter, i.e. as a call target and an approve spender
+ * into the wall as an adapter, i.e. as a call target and an approve spender
  * it should never have been.
  *
  * With names, adding a field can only ever be additive.
@@ -2019,8 +1731,6 @@ export interface MintOptions {
   onStatus: (status: string) => void;
   chainId?: number;
   extraTokens?: readonly CustomToken[];
-  v4AdapterAddress?: `0x${string}`;
-  ponsAdapterAddress?: `0x${string}`;
   /** The signed-in wallet, on the hosted service. Absent when self-hosted. */
   hostedAs?: Address;
   /**
@@ -2030,14 +1740,6 @@ export interface MintOptions {
    * difference is invisible without this: see the refusal in mintGrant.
    */
   expectAccount?: Address;
-  /**
-   * The deployed PonsClassVaultFactory, or absent for no class route.
-   *
-   * The FACTORY, because the vault is per-account and derives from a smart
-   * account this call is about to create — see the parameter of the same name
-   * on mintGrant.
-   */
-  ponsClassVaultFactory?: `0x${string}`;
   trencherFactory?: `0x${string}`;
   /** Selected account's confirmed revocation cutoff; signing refuses an older RPC view. */
   minimumValidationNonce?: number;
@@ -2127,9 +1829,9 @@ export async function preflightAgentGrant(owner: LocalAccount, o: MintOptions): 
   if (!o.expectAccount) throw new Error("A renewal preflight requires the existing account address.");
   await prepareGrantCore(
     { account: owner, binding: "external-owner" },
-    o.caps, o.onStatus, o.chainId ?? robinhoodChain.id, o.extraTokens ?? [],
-    o.v4AdapterAddress, o.ponsAdapterAddress, undefined, o.expectAccount,
-    o.ponsClassVaultFactory, o.trencherFactory, true, o.minimumValidationNonce,
+    o.caps, o.onStatus, o.chainId ?? bnbChain.id, o.extraTokens ?? [],
+    undefined, o.expectAccount,
+    o.trencherFactory, true, o.minimumValidationNonce,
     // THE SAME PERPS DECISION THE MINT WILL MAKE, before anything is revoked:
     // a carried Lighter key that no longer fits must refuse here, not after.
     // Storage-free like the rest of the preflight, so the caller passes the
@@ -2147,13 +1849,10 @@ export async function prepareAgentGrant(owner: LocalAccount, o: PrepareAgentOpti
     { account: owner, binding: "external-owner" },
     o.caps,
     o.onStatus,
-    o.chainId ?? robinhoodChain.id,
+    o.chainId ?? bnbChain.id,
     o.extraTokens ?? [],
-    o.v4AdapterAddress,
-    o.ponsAdapterAddress,
     undefined,
     o.expectAccount,
-    o.ponsClassVaultFactory,
     o.trencherFactory,
     false,
     o.minimumValidationNonce,
@@ -2170,7 +1869,7 @@ export async function createAgentWallet(o: MintOptions): Promise<MintedGrant> {
   // An unrestricted owner key in localStorage bypasses every session limit
   // if page script is compromised. Keep the old-key restore/recovery path,
   // but require an external or embedded owner signer for new real-fund wallets.
-  if ((o.chainId ?? robinhoodChain.id) !== robinhoodTestnet.id) {
+  if ((o.chainId ?? bnbChain.id) !== bnbTestnet.id) {
     throw new Error("New mainnet wallets require an embedded or external owner wallet. Sign in to create one; existing recovery keys can still be restored.");
   }
   // A Perps wallet is mainnet-only and owned by the signed-in wallet (decision
@@ -2184,13 +1883,10 @@ export async function createAgentWallet(o: MintOptions): Promise<MintedGrant> {
     { account: privateKeyToAccount(key), binding: "legacy-wallet-owner-v1", privateKey: key },
     o.caps,
     o.onStatus,
-    o.chainId ?? robinhoodChain.id,
+    o.chainId ?? bnbChain.id,
     o.extraTokens ?? [],
-    o.v4AdapterAddress,
-    o.ponsAdapterAddress,
     o.hostedAs,
     o.expectAccount,
-    o.ponsClassVaultFactory,
     o.trencherFactory,
     o.minimumValidationNonce,
     perpInput(o),
@@ -2221,13 +1917,10 @@ export async function createPrivyOwnedWallet(
     { account: owner, binding: "privy-did-owner-v1", did },
     o.caps,
     o.onStatus,
-    o.chainId ?? robinhoodChain.id,
+    o.chainId ?? bnbChain.id,
     o.extraTokens ?? [],
-    o.v4AdapterAddress,
-    o.ponsAdapterAddress,
     o.hostedAs,
     o.expectAccount,
-    o.ponsClassVaultFactory,
     o.trencherFactory,
     o.minimumValidationNonce,
     perpInput(o),
@@ -2258,13 +1951,10 @@ export async function restoreAgentWallet(
     },
     o.caps,
     o.onStatus,
-    o.chainId ?? robinhoodChain.id,
+    o.chainId ?? bnbChain.id,
     o.extraTokens ?? [],
-    o.v4AdapterAddress,
-    o.ponsAdapterAddress,
     o.hostedAs,
     o.expectAccount,
-    o.ponsClassVaultFactory,
     o.trencherFactory,
     o.minimumValidationNonce,
     perpInput(o),
@@ -2363,13 +2053,13 @@ export interface Funding {
   usdg: number;
 }
 
-export async function readFunding(smartAccount: Address, chainId: number = robinhoodChain.id): Promise<Funding> {
+export async function readFunding(smartAccount: Address, chainId: number = bnbChain.id): Promise<Funding> {
   const publicClient = createPublicClient({ chain: chainForId(chainId), transport: http() });
-  const [gasWei, usdgUnits] = await Promise.all([
+  const [gasWei, units] = await Promise.all([
     publicClient.getBalance({ address: smartAccount }).catch(() => 0n),
     publicClient
       .readContract({
-        address: CASH.USDG as Address,
+        address: CASH.USDT as Address,
         abi: erc20Abi,
         functionName: "balanceOf",
         args: [smartAccount],
@@ -2377,5 +2067,5 @@ export async function readFunding(smartAccount: Address, chainId: number = robin
       .then((v) => v as bigint)
       .catch(() => 0n),
   ]);
-  return { gasWei, usdgUnits, usdg: Number(usdgUnits) / 10 ** USDG_DECIMALS };
+  return { gasWei, usdgUnits: units, usdg: cashNumber(units) };
 }

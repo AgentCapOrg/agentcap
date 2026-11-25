@@ -58,8 +58,8 @@ const KILL_PAUSE_NOTE = "paused by a kill that could not archive the owner key, 
 const PKG_STRATEGIES = path.join(ROOT, "strategies");
 const WELCOMED = path.join(HOME, ".welcomed");
 
-const RPC_MAINNET = "https://rpc.mainnet.chain.robinhood.com";
-const RPC_TESTNET = "https://rpc.testnet.chain.robinhood.com";
+const RPC_MAINNET = "https://bsc-dataseed.bnbchain.org";
+const RPC_TESTNET = "https://bsc-testnet-dataseed.bnbchain.org";
 const BUILTINS = ["steady-basket", "weekend-gap", "llm-strategist"];
 // Merry Circle strategies — selectable, but only RUN for $AGENTCAP holders (the
 // worker gates them by tier). Listed apart so the lock is obvious.
@@ -67,8 +67,8 @@ const CIRCLE_STRATEGIES = ["even-keel", "dip-hunter"];
 // tsx worker entry that rebuilds the Kernel account and sweeps it (agentcap recover).
 const RECOVER_CLI = path.join(ROOT, "worker", "src", "recover-cli.ts");
 const EXPLORER = {
-  4663: "https://robinhoodchain.blockscout.com",
-  46630: "https://explorer.testnet.chain.robinhood.com",
+  56: "https://bscscan.com",
+  97: "https://testnet.bscscan.com",
 };
 
 const green = c.green;
@@ -223,7 +223,7 @@ async function rpcCall(url, method, params = []) {
 
 // ───────────────────────────────────────────────────────── wallets/archive ──
 
-const USDG_ADDR = "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168"; // 6 decimals
+const USDG_ADDR = "0x55d398326f99059fF775485246999027B3197955"; // BNB Chain USDT, 18 decimals
 
 /**
  * Copy the live grant into the archive before anything destroys it.
@@ -274,13 +274,14 @@ async function localRecoveryWallets() {
 }
 
 const rpcFor = (s, chainId) =>
-  chainId === 46630 ? (s.rpcTestnet ?? RPC_TESTNET) : (s.rpcMainnet ?? RPC_MAINNET);
+  chainId === 97 ? (s.rpcTestnet ?? RPC_TESTNET) : (s.rpcMainnet ?? RPC_MAINNET);
 
 async function usdgBalance(rpc, addr) {
   const data = "0x70a08231" + addr.toLowerCase().replace(/^0x/, "").padStart(64, "0");
   const r = await rpcCall(rpc, "eth_call", [{ to: USDG_ADDR, data }, "latest"]);
   try {
-    return Number(BigInt(r)) / 1e6;
+    // Truncated to a millionth first, so a balance is never shown above what is there.
+    return Number(BigInt(r) / 10n ** 12n) / 1e6;
   } catch {
     return null;
   }
@@ -554,10 +555,10 @@ async function onboard() {
   console.log(`
 ${bold(`  ${c.arrow} ride out`)}
   1. ${bold("agentcap start")} — opens the tavern (dashboard) at http://localhost:3100 + looses the worker
-  2. at ${bold("/grant")}, create your agent wallet — pick testnet 46630 (practice) or mainnet 4663 (real funds)
-  3. testnet ${bold("gas")} from the sheriff's vault: ${dim("https://faucet.testnet.chain.robinhood.com")}
-     ${dim("gas only — USDG sent to a testnet account is never shown and never traded.")}
-     ${dim("mainnet: send ETH (gas) + USDG (capital) from your own wallet.")}
+  2. at ${bold("/grant")}, create your agent wallet — pick testnet 97 (practice) or mainnet 56 (real funds)
+  3. testnet ${bold("gas")} from the sheriff's vault: ${dim("https://www.bnbchain.org/en/testnet-faucet")}
+     ${dim("gas only — USDT sent to a testnet account is never shown and never traded.")}
+     ${dim("mainnet (BNB Chain): send BNB (gas) + USDT (capital) from your own wallet.")}
   4. prove the shot lands: ${bold("agentcap selftest")}
   5. muster check anytime: ${bold("agentcap doctor")} · tune the band: ${dim("http://localhost:3100/settings")}
 
@@ -970,9 +971,9 @@ const TEMPLATE = (name) => `/**
  * wall disposes. See README.md and example-dip-buyer.mjs in this folder.
  *
  * No imports needed — ctx injects the registry:
- *   ctx.tokenBySymbol.QQQ · ctx.CASH.USDG · ctx.UNISWAP.swapRouter02
- *   ctx.MORPHO.steakhouseUsdgVault · ctx.STOCK_TOKENS · ctx.usdg(25)
- * Units: USDG = 6dp bigint · stock balances = 18dp bigint · prices = 8dp bigint.
+ *   ctx.tokenBySymbol.QQQ · ctx.CASH.USDT · ctx.PANCAKESWAP.smartRouter
+ *   ctx.STOCK_TOKENS · ctx.usdg(25)
+ * Units: USDT = 18dp bigint · stock balances = 18dp bigint · prices = 8dp bigint.
  */
 
 export default {
@@ -984,8 +985,8 @@ export default {
     // your logic here — e.g. buy 10 USDG of QQQ when you like the setup:
     // return [{
     //   kind: "swap",
-    //   target: ctx.UNISWAP.swapRouter02,
-    //   sellToken: ctx.CASH.USDG,
+    //   target: ctx.PANCAKESWAP.smartRouter,
+    //   sellToken: ctx.CASH.USDT,
     //   buyToken: ctx.tokenBySymbol.QQQ,
     //   sellAmountRaw: ctx.usdg(10),
     //   notionalUsdg: ctx.usdg(10),
@@ -1335,8 +1336,8 @@ async function recover() {
       bad("that isn't a 32-byte hex private key (expected 0x + 64 hex chars).");
       return;
     }
-    const chainAns = (await p.ask("  chain — [1] mainnet 4663 (real funds)  ·  [2] testnet 46630  [1]: ")).trim();
-    chainId = chainAns === "2" ? 46630 : 4663;
+    const chainAns = (await p.ask("  chain — [1] mainnet 56 (real funds)  ·  [2] testnet 97  [1]: ")).trim();
+    chainId = chainAns === "2" ? 97 : 56;
     expect = "";
     const purposeAnswer = (await p.ask("  wallet — [1] Spot  ·  [2] Perps  [1]: ")).trim();
     if (purposeAnswer && purposeAnswer !== "1" && purposeAnswer !== "2") { p.close(); bad("unknown wallet; nothing was signed."); return; }
@@ -1380,36 +1381,6 @@ async function recover() {
   // was told it held nothing while its whole balance sat there.
   const heldWei = BigInt(plan.result.gasWei ?? "0");
   const heldEth = Number(heldWei) / 1e18;
-  // MONEY THE ACCOUNT DOES NOT HOLD, and which this prompt used to omit.
-  //
-  // A class position lives in a separate PonsClassVault contract, so it appears
-  // in no `balances` entry. The engine has always swept it — recover.ts:591-638
-  // encodes `vault.sweep(token)` — and recover-cli puts the holdings on the wire
-  // at :112-116. This file simply never read them.
-  //
-  // Measured 2026-09-12 on Shogun: the owner would have been asked to type
-  // `sweep` against the words "20.000000 USDG" while the operation also moved
-  // 1,063,408.141815 DOGGOS out of the vault. The engine was right; the
-  // disclosure was not, and a confirmation that understates what it moves is
-  // not a confirmation.
-  // EVERY VAULT, not the primary one. After v2 an account has two, and this
-  // early return is the line that used to say "nothing to recover" over a full
-  // vault — printing it over a full SECOND vault would be the same defect with
-  // a different cause. `classVaults` is absent from an older worker's output,
-  // so the singular fields are the fallback rather than the source.
-  const classVaults =
-    plan.result.classVaults ??
-    (plan.result.classVault
-      ? [
-          {
-            vault: plan.result.classVault,
-            version: null,
-            note: plan.result.classNote ?? null,
-            holdings: plan.result.classHoldings ?? [],
-          },
-        ]
-      : []);
-  const classHoldings = classVaults.flatMap((v) => v.holdings ?? []);
   // A BALANCE WE COULD NOT READ IS NOT A ZERO, and this is the one place that
   // forgot. The child already refuses to say "empty" when anything was
   // unreadable — recover-cli writes "that is NOT a zero balance. Check the RPC
@@ -1420,12 +1391,7 @@ async function recover() {
   // It matters most on the path where being wrong costs the most: an owner told
   // their account is empty stops looking for the money.
   const unreadable = plan.result.unreadable ?? [];
-  // `classHoldings` counts here too, for the same reason ETH does: an account
-  // whose whole book is class tokens was told it held nothing and returned
-  // BEFORE the sweep prompt, so recovery was unreachable for exactly the
-  // positions the vault exists to hold. recover.ts:526 already tests all three;
-  // this line was the one that did not.
-  if (balances.length === 0 && heldWei === 0n && classHoldings.length === 0) {
+  if (balances.length === 0 && heldWei === 0n) {
     p.close();
     if (unreadable.length) {
       warn(`could not read ${unreadable.join(", ")} for ${plan.result.smartAccount}.`);
@@ -1443,31 +1409,13 @@ async function recover() {
     warn(`heads up: ${unreadable.join(", ")} could not be read, so there may be more here than this shows.`);
   }
 
-  // ── THE DISCLOSURE, BY CUSTODY ──────────────────────────────────────────
-  //
-  // Grouped by WHERE the money sits rather than flattened into one sentence,
-  // because the two custodies behave differently: the vault is emptied by a
-  // first operation and the account by a second, and an owner reading a single
-  // comma-separated list cannot see that a whole contract is being drained.
+  // ── THE DISCLOSURE: everything the sweep will move ───────────────────────
   const accountParts = balances.map((b) => `${b.amount} ${b.symbol}`);
   if (heldWei > 0n) accountParts.push(`${heldEth.toFixed(6)} ETH ${dim("(minus gas)")}`);
-  const classParts = classHoldings.map((h) => `${h.amount} ${h.symbol}`);
-  // Kept for the success line, and now it names everything that moved.
-  const list = [...classParts, ...accountParts].join(", ");
+  // Kept for the success line, and it names everything that moved.
+  const list = accountParts.join(", ");
   console.log();
   warn("about to sweep — read this before confirming:");
-  // ONE BLOCK PER VAULT, labelled by version. Both are "this account's class
-  // vault" and only one is the current one, so an owner needs to be able to tell
-  // which address a given balance is sitting at — the confirmation naming a
-  // strict subset of what the operation moves has shipped here once already.
-  for (const v of classVaults) {
-    const parts = (v.holdings ?? []).map((h) => `${h.amount} ${h.symbol}`);
-    if (parts.length === 0) continue;
-    console.log();
-    const label = v.version === null ? "CLASS VAULT" : `CLASS VAULT v${v.version}`;
-    console.log(`  ${bold(label)}${v.vault ? ` ${dim(v.vault)}` : ""}`);
-    for (const line of parts) console.log(`  ${bold(line)}`);
-  }
   if (accountParts.length) {
     console.log();
     console.log(`  ${bold("SMART ACCOUNT")} ${dim(plan.result.smartAccount)}`);
@@ -1477,12 +1425,6 @@ async function recover() {
   console.log(`  ${bold("DESTINATION")}`);
   console.log(`  ${bold(to)}`);
   console.log();
-  if (plan.result.classNote) console.log(dim(`  note: ${plan.result.classNote}`));
-  if (classParts.length) {
-    console.log(
-      dim("  the vault is emptied into the account first, then everything moves in a second operation."),
-    );
-  }
   console.log(dim("  real and irreversible. a little ETH stays behind to pay for this operation.\n"));
   const confirm = (await p.ask(`  type ${bold("sweep")} to confirm: `)).trim().toLowerCase();
   p.close();
@@ -1494,7 +1436,7 @@ async function recover() {
   console.log(dim("\n  signing the recovery op with your owner key…\n"));
   const done = await runRecoverChild("sweep", { ownerKey, to, chainId, expect, purpose });
   if (done.result?.ok && done.result.txHash) {
-    const base = EXPLORER[chainId] ?? EXPLORER[4663];
+    const base = EXPLORER[chainId] ?? EXPLORER[56];
     console.log(`\n  ${green("✓")} ${bold("recovered.")} ${list} → ${to}`);
     console.log(`  proof: ${bold(`${base}/tx/${done.result.txHash}`)}\n`);
   } else {

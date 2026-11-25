@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 import {ITrencherV3Router} from "../TrencherVault.sol";
-import {IERC20Trade} from "../interfaces/IPonsCurve.sol";
+import {IERC20Trade} from "../interfaces/IERC20Trade.sol";
 
 contract TrencherMockRouter is ITrencherV3Router {
     mapping(bytes32 => address) private pools;

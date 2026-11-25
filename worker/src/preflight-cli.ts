@@ -7,6 +7,8 @@
  * from the chain the grant is actually on.
  */
 
+import { bnbChain, bnbTestnet } from "../../packages/core/src/chain";
+import { cashNumber } from "../../packages/core/src/cash";
 import { readFileSync } from "node:fs";
 import { homePaths } from "./home";
 import { loadGrantFile } from "./grant";
@@ -47,8 +49,8 @@ async function rpc(url: string, method: string, params: unknown[]): Promise<unkn
 async function usdgBalance(url: string, account: string): Promise<number | null> {
   try {
     const data = `0x70a08231${account.toLowerCase().replace(/^0x/, "").padStart(64, "0")}`;
-    const r = await rpc(url, "eth_call", [{ to: CASH.USDG, data }, "latest"]);
-    return Number(BigInt(r as string)) / 1e6;
+    const r = await rpc(url, "eth_call", [{ to: CASH.USDT, data }, "latest"]);
+    return cashNumber(BigInt(r as string));
   } catch {
     return null;
   }
@@ -154,10 +156,10 @@ async function main(): Promise<void> {
 
   const settings = readSettings();
   const grant = loadGrantFile();
-  const chainId = grant?.chainId ?? 4663;
+  const chainId = grant?.chainId ?? bnbChain.id;
   const chain = chainForId(chainId);
   const rpcUrl =
-    (chainId === 46630 ? settings.rpcTestnet : settings.rpcMainnet) ??
+    (chainId === bnbTestnet.id ? settings.rpcTestnet : settings.rpcMainnet) ??
     chain.rpcUrls.default.http[0]!;
 
   const [usdg, ethWei, bundlerReachable, missingPolicy, accountDeployed] = await Promise.all([

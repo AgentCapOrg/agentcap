@@ -91,7 +91,7 @@ describe("store.ownerNotice is the desk's notice", () => {
 
 describe("the idle channel on the real store", () => {
   const breaker: Why = { code: "breaker-tripped", limitBps: 1_000 };
-  const underOne: Why = { code: "under-one-buy", cashRaw: 1_000_000n, needRaw: 5_000_000n, vaultRaw: 0n };
+  const underOne: Why = { code: "under-one-buy", cashRaw: 1_000_000n, needRaw: 5_000_000n };
   // The factory the tick calls, so its binding to the store is run here.
   const channel = () => idleChannelOnStore();
   const decisions = (a: string) =>

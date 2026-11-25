@@ -7,8 +7,6 @@ import {
   TRADEABLE_SYMBOLS,
   type CustomToken,
 } from "./tokens";
-// energy.ts imports only a TYPE from this file, so this is no runtime cycle.
-import { isEnergyReserveToken } from "./energy";
 // perps.ts imports only perps-styles.ts, which imports nothing (its grant reader
 // takes a structural type for exactly this reason), so neither is this.
 import { GRANT_PERP_LIGHTER, validatePerpPubKey, type PerpGrant, type PerpRecoveryReference } from "./perps";
@@ -63,21 +61,6 @@ export function accountIndexForPurpose(purpose: GrantPurpose): bigint {
 export const TRADEABLE_V2 = "tradeable-v2";
 
 /**
- * grantFeatures marker meaning "this signature can reach Uniswap v4".
- *
- * v4 needs two call-policy permissions v3 never did — Permit2's approve, scoped
- * to the UniversalRouter, and the router's execute. A key signed before those
- * existed has neither, so a v4 swap from it reverts at the wall. The worker
- * checks for this rather than attempting the trade and reading the failure.
- */
-export const GRANT_V4 = "v4";
-
-/** Can this signature actually execute a Uniswap v4 swap? */
-export function grantHasV4(grant: Pick<StoredGrant, "grantFeatures"> | null | undefined): boolean {
-  return grant?.grantFeatures?.includes(GRANT_V4) ?? false;
-}
-
-/**
  * grantFeatures marker meaning "this signature can execute a MULTI-HOP swap".
  *
  * A route through WETH is not the same call as a direct one: the router takes
@@ -87,7 +70,7 @@ export function grantHasV4(grant: Pick<StoredGrant, "grantFeatures"> | null | un
  * burning gas every tick with an opaque reason, and invisible in paper mode
  * because paper never builds calldata.
  *
- * Same rule the v4 marker exists for: quoting a route the key cannot reach is
+ * The rule: quoting a route the key cannot reach is
  * worse than never having considered it. Until a grant carries this, the router
  * is asked for single-hop quotes only.
  */
@@ -97,20 +80,6 @@ export const GRANT_MULTIHOP = "multihop";
 export function grantHasMultihop(grant: Pick<StoredGrant, "grantFeatures"> | null | undefined): boolean {
   return grant?.grantFeatures?.includes(GRANT_MULTIHOP) ?? false;
 }
-
-/**
- * grantFeatures marker meaning "this signature can call the V4SelfSwap
- * adapter" — the contract that makes Uniswap v4 constrainable by the wall.
- *
- * DISTINCT FROM GRANT_V4, deliberately. GRANT_V4 means the OLD route: Permit2
- * plus the UniversalRouter, whose `execute(bytes, bytes[])` hides the swap
- * recipient in opaque bytes the policy cannot constrain — which is why neither
- * signer has ever minted it. This marker means the adapter route: one declared
- * selector whose recipient is `msg.sender` in bytecode. The two permission
- * sets are disjoint, so conflating the markers would tell the worker a route
- * exists that the signature does not carry.
- */
-export const GRANT_V4_ADAPTER = "v4-adapter";
 
 /**
  * grantFeatures marker meaning "this wall names each spender only on the
@@ -127,133 +96,6 @@ export const GRANT_V4_ADAPTER = "v4-adapter";
  * the wall they built (signer-lockstep.test.ts).
  */
 export const GRANT_SCOPED_SPENDERS = "scoped-spenders";
-
-/**
- * The adapter address this signature can actually call, or null.
- *
- * BOTH the marker and a valid address are required — the GRANT_TRANSFER
- * lesson, applied before the wound this time: a marker alone is a claim, not
- * evidence, and a claim the wall does not back means the worker builds a
- * UserOp the account contract refuses. The address is per-deploy (testnet and
- * mainnet adapters differ), sealed into the signature at signing time; the
- * worker must call THIS address, never whatever settings says at tick time.
- */
-export function grantV4Adapter(
-  grant: Pick<StoredGrant, "grantFeatures" | "v4AdapterAddress"> | null | undefined,
-): `0x${string}` | null {
-  if (!grant?.grantFeatures?.includes(GRANT_V4_ADAPTER)) return null;
-  const a = grant.v4AdapterAddress;
-  if (typeof a !== "string" || !/^0x[0-9a-fA-F]{40}$/.test(a)) return null;
-  return a.toLowerCase() as `0x${string}`;
-}
-
-/**
- * grantFeatures marker meaning "this signature can call the PonsSelfTrade
- * adapter" — the contract that makes a bonding curve constrainable by the wall.
- *
- * DISTINCT FROM GRANT_V4_ADAPTER, and the distinction is the point. The two
- * adapters reach different venues, carry different risks, and are granted by
- * separate opt-ins; one marker covering both would tell the worker a route
- * exists that the signature does not carry. It would also make the owner's
- * only choice all-or-nothing.
- *
- * What this marker does NOT mean, so nobody reads more into it than is there:
- * it does not mean native-quoted curves are reachable — they are 53.6% of the
- * launchpad and the adapter is non-payable, so they are not — and it does not
- * mean the wall vouches for the curve, which it structurally cannot.
- */
-export const GRANT_PONS_ADAPTER = "pons-adapter";
-
-/**
- * The Pons adapter address this signature can actually call, or null.
- *
- * BOTH the marker and a valid address are required, for the same reason
- * grantV4Adapter demands both: a marker alone is a claim, not evidence, and a
- * claim the wall does not back means the worker builds a UserOp the account
- * contract refuses — gas spent to be told no, with a revert reason that
- * explains nothing. The address is per-deploy and sealed into the signature at
- * signing time; the worker must call THIS address, never whatever settings says
- * at tick time.
- */
-export function grantPonsAdapter(
-  grant: Pick<StoredGrant, "grantFeatures" | "ponsAdapterAddress"> | null | undefined,
-): `0x${string}` | null {
-  if (!grant?.grantFeatures?.includes(GRANT_PONS_ADAPTER)) return null;
-  const a = grant.ponsAdapterAddress;
-  if (typeof a !== "string" || !/^0x[0-9a-fA-F]{40}$/.test(a)) return null;
-  return a.toLowerCase() as `0x${string}`;
-}
-
-/**
- * The CLASS permission: this signature can trade Pons tokens it never named.
- *
- * DISTINCT FROM GRANT_PONS_ADAPTER, and the distinction carries the whole
- * security difference. `pons-adapter` lets the agent trade the curve tokens the
- * owner ENUMERATED at signing time. This one lets it trade tokens that did not
- * exist when the grant was signed — which is what a sniper needs and what no
- * enumerated list can express. An owner may hold the first without the second,
- * and the separate marker is what makes that choice available.
- *
- * WHAT THE OWNER IS ACTUALLY OPTING INTO, said plainly because a marker name
- * cannot say it: an agent that may convert up to the per-trade USDG cap,
- * repeatedly until expiry, into ANY token reachable through a curve — one
- * nobody enumerated or reviewed. What still bounds it: the funding leg stays
- * the enumerated quote asset, the amount stays under the capped USDG approve,
- * and the vault can pay nobody but the account. What does NOT bound it: the
- * chain cannot check the curve's provenance (a curve self-reports its factory
- * and the Pons factory publishes no registry), so for the class case the CHAIN
- * IS LOOSER THAN THE OFF-CHAIN MIRROR and `knownCurves` is the only provenance
- * gate. That inversion is the price of the capability.
- */
-export const GRANT_PONS_CLASS = "pons-class";
-
-/**
- * The per-account class vault this signature can call, or null.
- *
- * BOTH the marker and a valid address are required, for exactly the reason
- * grantPonsAdapter demands both: a marker alone is a claim, not evidence.
- *
- * WHY AN ADDRESS AT ALL, when the vault is derivable from the owner: because
- * the wall pins it as a literal `target`, and the worker must call THE ADDRESS
- * THE SIGNATURE SEALED rather than one it re-derives at tick time. A derivation
- * that drifted — a different factory, a changed init code — would send the
- * agent's money to a contract the wall never authorised, and the failure would
- * look like a revert with no explanation. Sealing it makes the two agree by
- * construction.
- */
-export function grantPonsClassVault(
-  grant: Pick<StoredGrant, "grantFeatures" | "ponsClassVaultAddress"> | null | undefined,
-): `0x${string}` | null {
-  if (!grant?.grantFeatures?.includes(GRANT_PONS_CLASS)) return null;
-  const a = grant.ponsClassVaultAddress;
-  if (typeof a !== "string" || !/^0x[0-9a-fA-F]{40}$/.test(a)) return null;
-  return a.toLowerCase() as `0x${string}`;
-}
-
-/**
- * The FACTORY this signature's `deploy` permission was sealed against, or null.
- *
- * SAME MARKER as the vault, deliberately, and not a second one. `wall.ts` emits
- * all three class permissions from one branch, so a separate marker would allow
- * a grant that claims a class route, can buy through a vault, and has no way to
- * CREATE the vault it buys through — "a marker alone is a claim" wearing a new
- * costume. One decision, one marker, three permissions.
- *
- * The address is sealed for the same reason the vault's is: the worker must call
- * the factory the SIGNATURE covers, not one it re-derives or reads from settings.
- * A settings-sourced factory would let a settings write redirect where a vault
- * gets created — and since the vault address is a CREATE2 function OF the
- * factory, that silently moves the account's custody somewhere the wall never
- * pinned.
- */
-export function grantPonsClassVaultFactory(
-  grant: Pick<StoredGrant, "grantFeatures" | "ponsClassVaultFactoryAddress"> | null | undefined,
-): `0x${string}` | null {
-  if (!grant?.grantFeatures?.includes(GRANT_PONS_CLASS)) return null;
-  const a = grant.ponsClassVaultFactoryAddress;
-  if (typeof a !== "string" || !/^0x[0-9a-fA-F]{40}$/.test(a)) return null;
-  return a.toLowerCase() as `0x${string}`;
-}
 
 export const GRANT_TRANSFER = "transfer";
 
@@ -471,45 +313,6 @@ export interface StoredGrant {
    * thought they'd enabled it.
    */
   grantTokens?: string[];
-  /**
-   * The V4SelfSwap adapter this signature's `swapExactIn` permission was
-   * sealed against, lowercased. Per-deploy and per-chain, so it lives on the
-   * grant rather than in a registry constant — see grantV4Adapter, which is
-   * the only reader and requires the GRANT_V4_ADAPTER marker alongside it.
-   */
-  v4AdapterAddress?: string;
-  /**
-   * The PonsSelfTrade adapter this signature's `tradeExactIn` permission was
-   * sealed against, lowercased. Per-deploy and per-chain like its v4 sibling,
-   * so it lives on the grant rather than in a registry constant — see
-   * grantPonsAdapter, which is the only reader and requires the
-   * GRANT_PONS_ADAPTER marker alongside it.
-   */
-  ponsAdapterAddress?: string;
-  /**
-   * The PonsClassVault this signature's class `buy`/`sell` permissions were
-   * sealed against, lowercased. PER ACCOUNT, not per deploy — unlike its two
-   * adapter siblings, every account has its own vault, so this address is
-   * unique to this grant.
-   *
-   * It is knowable before the vault exists (CREATE2, owner as salt), which is
-   * the only reason a class permission can be written at all: the wall has to
-   * name the target at signing time, and at signing time the vault has usually
-   * not been deployed. See grantPonsClassVault, its only reader, which requires
-   * the GRANT_PONS_CLASS marker alongside it.
-   */
-  ponsClassVaultAddress?: string;
-  /**
-   * The PonsClassVaultFactory this signature's `deploy` permission was sealed
-   * against, lowercased.
-   *
-   * A DEPLOY CONSTANT, unlike the vault above — the same address for every
-   * account on a chain. Sealed anyway, because the vault address is a CREATE2
-   * function OF this one: a factory read from settings could silently relocate
-   * where the account's custody gets created, to somewhere the wall never
-   * pinned. See grantPonsClassVaultFactory.
-   */
-  ponsClassVaultFactoryAddress?: string;
   /** Explicit autonomous pool-token custody permission, sealed at signing. */
   trencherVaultAddress?: string;
   trencherFactoryAddress?: string;
@@ -619,10 +422,6 @@ export interface PublicGrantView {
   chainId?: number;
   grantFeatures?: string[];
   grantTokens?: string[];
-  v4AdapterAddress?: string;
-  ponsAdapterAddress?: string;
-  ponsClassVaultAddress?: string;
-  ponsClassVaultFactoryAddress?: string;
   trencherVaultAddress?: string;
   trencherFactoryAddress?: string;
   /** The security model only. The nonce, the DID and both signatures stay home. */
@@ -636,10 +435,6 @@ const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
 const MARKER_RE = /^[A-Za-z][A-Za-z0-9-]{0,39}$/;
 const CAP_FIELDS = ["perTradeUsdg", "dailyUsdg", "expiryDays", "maxDrawdownPct", "maxOpsPerDay"] as const;
 const SEALED_ADDRESS_FIELDS = [
-  "v4AdapterAddress",
-  "ponsAdapterAddress",
-  "ponsClassVaultAddress",
-  "ponsClassVaultFactoryAddress",
   "trencherVaultAddress",
   "trencherFactoryAddress",
 ] as const;
@@ -755,7 +550,7 @@ export function builtinGrantTargets(grant?: Pick<StoredGrant, "grantFeatures"> |
       ? (TRADEABLE_SYMBOLS as readonly string[])
       : (LEGACY_TRADEABLE_SYMBOLS as readonly string[]);
   return new Set<string>([
-    (CASH.USDG as string).toLowerCase(),
+    (CASH.USDT as string).toLowerCase(),
     ...STOCK_TOKENS.filter((t) => symbols.includes(t.symbol)).map((t) => t.address.toLowerCase()),
   ]);
 }
@@ -778,14 +573,6 @@ export function sellableAssets(grant: Pick<StoredGrant, "grantFeatures" | "grant
  * sell. `grantTokens` absent means the grant predates the field entirely — and a
  * grant signed before extras existed genuinely has no extra approve permission
  * in its call policy, so "unknown" and "none" are the same fact here.
- *
- * THE ENERGY RESERVE IS IN NEITHER LIST. $AGENTCAP is energy, not a token the
- * agent trades: every signer drops it from the sealed extras
- * (wall.ts usableExtraTokens), so no signature will ever "cover" it and the
- * worker never watches it. Reported as uncovered it would tell an owner who
- * listed it to "re-sign to cover AGENTCAP" — a signature that changes nothing,
- * asked for again after every one. It is bought only by the agent's
- * get-energy route, and nothing here is advice about it.
  */
 export function tokenCoverage(
   configured: readonly CustomToken[],
@@ -797,7 +584,6 @@ export function tokenCoverage(
   const covered: CustomToken[] = [];
   const uncovered: CustomToken[] = [];
   for (const t of configured) {
-    if (isEnergyReserveToken(t.address)) continue;
     (sellable.has(t.address.toLowerCase()) ? covered : uncovered).push(t);
   }
   return { covered, uncovered };
@@ -839,10 +625,7 @@ export function uncoveredBasketSymbols(
     .filter(
       (t) =>
         basketSymbols.includes(t.symbol) &&
-        !sellable.has(t.address.toLowerCase()) &&
-        // Energy, never a leg: no signature covers it, so "re-sign" would be
-        // false advice (see tokenCoverage). The worker never watches it either.
-        !isEnergyReserveToken(t.address),
+        !sellable.has(t.address.toLowerCase()),
     )
     .map((t) => t.symbol);
 }
